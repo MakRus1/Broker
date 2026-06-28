@@ -141,11 +141,10 @@ DOCKER_MAKE_TARGETS := testsuite-clean \
 $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
-		-u $(DOCKER_UID):$(DOCKER_GID) \
 		-v "$$PWD:$$PWD" \
 		-w "$$PWD" \
 		-e HOME="$$PWD/.docker-home" \
 		-e CCACHE_DIR="$$PWD/.ccache" \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$HOME" && make $*'
+		sh -c './run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "mkdir -p \"$$HOME\" && make $*"'

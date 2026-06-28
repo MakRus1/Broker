@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -euo
+set -eu
 
 OLD_UID=$1
 OLD_GID=$2

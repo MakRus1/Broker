@@ -48,8 +48,8 @@ $(addprefix build-, $(PRESETS)): build-%: build-%/CMakeCache.txt
 .PHONY: testsuite-clean
 testsuite-clean:
 	-$(MAKE) db-down-all
-	-pkill -f '/tmp/.yasuite-user.*postgres' 2>/dev/null || true
-	rm -rf /tmp/.yasuite-user
+	-pkill -f '/tmp/.yasuite-.*postgres' 2>/dev/null || true
+	rm -rf /tmp/.yasuite-user /tmp/.yasuite-hostuser
 	@for svc in build-*/services/*/; do \
 		rm -rf "$$svc/Testing/Temporary"; \
 		mkdir -p "$$svc/Testing/Temporary"; \
@@ -76,8 +76,13 @@ $(addprefix test-only-, $(PRESETS)): test-only-%: build-%/CMakeCache.txt
 	cd build-$* && ((test -t 1 && GTEST_COLOR=1 PYTEST_ADDOPTS="--color=yes" ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V) || ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V)
 	pycodestyle services/$(SERVICE)/tests
 
+.PHONY: $(addprefix run-, $(PRESETS))
+$(addprefix run-, $(PRESETS)): run-%: build-%/CMakeCache.txt
+	./build-$*/services/$(SERVICE)/$(SERVICE) -c services/$(SERVICE)/configs/static_config.yaml
+
 .PHONY: $(addprefix start-, $(PRESETS))
 $(addprefix start-, $(PRESETS)): start-%:
+	$(MAKE) testsuite-clean
 	cmake --build build-$* -v --target start-$(SERVICE)
 
 .PHONY: $(addprefix clean-, $(PRESETS))
@@ -135,7 +140,22 @@ DOCKER_MAKE_TARGETS := testsuite-clean \
 	$(addprefix test-only-, $(PRESETS)) \
 	$(addprefix test-, $(PRESETS)) \
 	$(addprefix clean-, $(PRESETS)) \
-	$(addprefix start-, $(PRESETS))
+	$(addprefix start-, $(PRESETS)) \
+	$(addprefix run-, $(PRESETS))
+
+.PHONY: docker-run-debug
+docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
+	$(MAKE) db-up SERVICE=$(SERVICE)
+	docker run $(DOCKER_ARGS) \
+		$(DOCKER_RUN_OPTS) \
+		-v "$$PWD:$$PWD" \
+		-w "$$PWD" \
+		-e USER=user \
+		-e LOGNAME=user \
+		-e HOME="$$PWD/.docker-home" \
+		-e SERVICE=$(SERVICE) \
+		$(DOCKER_IMAGE) \
+		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) ./build-debug/services/$(SERVICE)/$(SERVICE) -c services/$(SERVICE)/configs/static_config.yaml'
 
 .PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
 $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform

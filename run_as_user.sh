@@ -15,4 +15,4 @@ else
   useradd --uid "$OLD_UID" --gid "$OLD_GID" --non-unique "$RUN_AS"
 fi
 
-exec sudo -E -u "$RUN_AS" "$@"
+exec sudo -E -u "$RUN_AS" env USER=user LOGNAME=user "$@"

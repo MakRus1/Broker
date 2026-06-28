@@ -68,3 +68,8 @@ echo ""
 echo "Сервис создан: services/${SERVICE_NAME}"
 echo "Добавьте в корневой CMakeLists.txt:"
 echo "  add_subdirectory(services/${SERVICE_NAME})"
+if [[ " ${EXTRA_FLAGS[*]} " == *" --postgresql "* ]]; then
+  echo ""
+  echo "Добавьте в docker-compose.yml контейнер postgres-${SERVICE_NAME}"
+  echo "  (свой порт, например 15434, и POSTGRES_DB: ${SERVICE_NAME}_db_1)"
+fi

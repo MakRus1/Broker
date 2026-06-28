@@ -47,7 +47,7 @@ $(addprefix build-, $(PRESETS)): build-%: build-%/CMakeCache.txt
 
 .PHONY: testsuite-clean
 testsuite-clean:
-	-$(MAKE) db-down
+	-$(MAKE) db-down-all
 	-pkill -f '/tmp/.yasuite-user.*postgres' 2>/dev/null || true
 	rm -rf /tmp/.yasuite-user
 	@for svc in build-*/services/*/; do \
@@ -95,12 +95,19 @@ format:
 deps-macos:
 	./scripts/install-deps-macos.sh
 
-.PHONY: db-up db-down
+.PHONY: db-up db-down db-up-all db-down-all
 db-up:
 	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
-	$(DOCKER_COMPOSE) up -d postgres
+	$(DOCKER_COMPOSE) up -d postgres-$(SERVICE)
 
 db-down:
+	@if [ -n "$(DOCKER_COMPOSE)" ]; then $(DOCKER_COMPOSE) stop postgres-$(SERVICE); fi
+
+db-up-all:
+	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
+	$(DOCKER_COMPOSE) up -d
+
+db-down-all:
 	@if [ -n "$(DOCKER_COMPOSE)" ]; then $(DOCKER_COMPOSE) down; fi
 
 .PHONY: new-service
@@ -112,10 +119,11 @@ new-service:
 $(addprefix docker-cmake-, $(PRESETS)) $(addprefix docker-build-, $(PRESETS)) $(addprefix docker-test-, $(PRESETS)) $(addprefix docker-clean-, $(PRESETS)) $(addprefix docker-start-, $(PRESETS)): docker-%: check-docker-platform
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
+		-u $(DOCKER_UID):$(DOCKER_GID) \
 		-v "$$PWD:$$PWD" \
 		-w "$$PWD" \
+		-e HOME="$$PWD/.docker-home" \
+		-e CCACHE_DIR="$$PWD/.ccache" \
+		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		env CCACHE_DIR="$$PWD/.ccache" \
-		HOME="$$HOME" \
-		SERVICE=$(SERVICE) \
-		"$$PWD/run_as_user.sh" $(DOCKER_UID) $(DOCKER_GID) make $*
+		sh -c 'mkdir -p "$$HOME" && make $*'

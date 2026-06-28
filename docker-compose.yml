@@ -1,6 +1,10 @@
-# PostgreSQL для локального запуска сервиса (тесты поднимают БД сами через testsuite).
+# PostgreSQL для ручного запуска сервисов (тесты поднимают БД сами через testsuite).
+# У каждого сервиса — свой контейнер и порт.
+#
+# broker  -> localhost:15433
+# orders  -> localhost:15434  (пример для нового сервиса)
 services:
-  postgres:
+  postgres-broker:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: testsuite

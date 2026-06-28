@@ -15,4 +15,4 @@ Testing/
 .DS_Store
 Makefile.local
 CMakeUserPresets.json
-third_party/userver/
+.docker-home/

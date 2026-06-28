@@ -69,12 +69,14 @@ make testsuite-clean   # остановить зависший postgres и docke
 make test-debug
 ```
 
-**Ручной запуск** сервиса без testsuite (бинарник напрямую):
+**Ручной запуск** сервиса без testsuite (бинарник напрямую). У каждого сервиса свой контейнер PostgreSQL в `docker-compose.yml`:
 
 ```bash
-make db-up          # docker compose postgres на порту 15433
+make db-up                    # postgres-broker на порту 15433 (SERVICE=broker)
+make db-up SERVICE=orders     # postgres-orders, если добавлен в compose
+make db-up-all                # все postgres-* контейнеры
 ./build-debug/services/broker/broker -c services/broker/configs/static_config.yaml
-make db-down
+make db-down                  # остановить postgres для текущего SERVICE
 ```
 
 `make start-debug` использует testsuite и поднимает PostgreSQL сам — `make db-up` для него не нужен.

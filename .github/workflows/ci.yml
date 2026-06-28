@@ -26,7 +26,9 @@ jobs:
             ccache-
 
       - name: Configure
-        run: make docker-cmake-debug
+        run: |
+          rm -rf build-debug build-release .docker-home
+          make docker-cmake-debug
 
       - name: Build
         run: make docker-build-debug

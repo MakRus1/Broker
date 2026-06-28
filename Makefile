@@ -143,8 +143,10 @@ $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform
 		$(DOCKER_RUN_OPTS) \
 		-v "$$PWD:$$PWD" \
 		-w "$$PWD" \
+		-e USER=user \
+		-e LOGNAME=user \
 		-e HOME="$$PWD/.docker-home" \
 		-e CCACHE_DIR="$$PWD/.ccache" \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c './run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "mkdir -p \"$$HOME\" && make $*"'
+		sh -c 'mkdir -p "$$PWD/.docker-home" "$$PWD/.ccache" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" "$$PWD/.ccache" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "make $*"'

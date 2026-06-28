@@ -71,6 +71,7 @@ jobs:
       - name: Configure
         run: |
           rm -rf build-debug build-release .docker-home
+          mkdir -p .docker-home .ccache
           make docker-cmake-debug
 
       - name: Build and test affected services

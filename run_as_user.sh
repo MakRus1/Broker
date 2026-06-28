@@ -4,9 +4,15 @@ set -eu
 
 OLD_UID=$1
 OLD_GID=$2
-shift; shift
+shift 2
 
-groupadd --gid $OLD_GID --non-unique user 2>/dev/null || true
-useradd --uid $OLD_UID --gid $OLD_GID --non-unique user 2>/dev/null || true
+RUN_AS=hostuser
 
-sudo -E -u user "$@"
+if id -u "$OLD_UID" >/dev/null 2>&1; then
+  RUN_AS=$(getent passwd "$OLD_UID" | cut -d: -f1)
+else
+  groupadd --gid "$OLD_GID" --non-unique hostgroup 2>/dev/null || true
+  useradd --uid "$OLD_UID" --gid "$OLD_GID" --non-unique "$RUN_AS"
+fi
+
+exec sudo -E -u "$RUN_AS" "$@"

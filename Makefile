@@ -143,10 +143,9 @@ DOCKER_MAKE_TARGETS := testsuite-clean \
 	$(addprefix build-, $(PRESETS)) \
 	$(addprefix test-only-, $(PRESETS)) \
 	$(addprefix test-, $(PRESETS)) \
-	$(addprefix clean-, $(PRESETS)) \
-	$(addprefix start-, $(PRESETS))
+	$(addprefix clean-, $(PRESETS))
 
-.PHONY: docker-run-debug
+.PHONY: docker-run-debug docker-start-debug docker-start-release
 docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
 	$(MAKE) db-up SERVICE=$(SERVICE)
 	docker run $(DOCKER_ARGS) \
@@ -160,6 +159,34 @@ docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
 		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make run-debug SERVICE=$(SERVICE)'
+
+docker-start-debug: check-docker-platform build-debug/CMakeCache.txt
+	@$(MAKE) db-down-all
+	docker run $(DOCKER_ARGS) \
+		$(DOCKER_RUN_OPTS) \
+		-v "$$PWD:$$PWD" \
+		-w "$$PWD" \
+		-e USER=user \
+		-e LOGNAME=user \
+		-e HOME="$$PWD/.docker-home" \
+		-e CPU_LIMIT=$(CPU_LIMIT) \
+		-e SERVICE=$(SERVICE) \
+		$(DOCKER_IMAGE) \
+		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-debug SERVICE=$(SERVICE)'
+
+docker-start-release: check-docker-platform build-release/CMakeCache.txt
+	@$(MAKE) db-down-all
+	docker run $(DOCKER_ARGS) \
+		$(DOCKER_RUN_OPTS) \
+		-v "$$PWD:$$PWD" \
+		-w "$$PWD" \
+		-e USER=user \
+		-e LOGNAME=user \
+		-e HOME="$$PWD/.docker-home" \
+		-e CPU_LIMIT=$(CPU_LIMIT) \
+		-e SERVICE=$(SERVICE) \
+		$(DOCKER_IMAGE) \
+		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-release SERVICE=$(SERVICE)'
 
 .PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
 $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform

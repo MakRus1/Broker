@@ -102,15 +102,23 @@ make testsuite-clean   # остановить зависший postgres и docke
 make test-debug
 ```
 
-**Ручной запуск** сервиса без testsuite (бинарник напрямую). У каждого сервиса свой контейнер PostgreSQL в `docker-compose.yml`:
+**Ручной запуск** (два режима, порт **15433** один — не смешивать):
+
+| Команда | PostgreSQL |
+|---------|------------|
+| `make docker-run-debug` | compose (`make db-up`) |
+| `make docker-start-debug` | testsuite сам |
 
 ```bash
-make db-up                    # postgres-broker на порту 15433 (SERVICE=broker)
-make run-debug                # или make docker-run-debug
-make db-down                  # остановить postgres для текущего SERVICE
-```
+# Вариант A — compose postgres + бинарник (проще для curl)
+make docker-run-debug SERVICE=broker
 
-`make start-debug` использует testsuite и поднимает PostgreSQL сам — `make db-up` для него не нужен.
+# Вариант B — testsuite postgres + service-runner
+make db-down-all   # если до этого был docker-run-debug
+make docker-start-debug SERVICE=broker
+
+make db-down       # остановить compose-postgres
+```
 
 На Apple Silicon образ userver — **amd64**. Colima с `aarch64` эмулирует его через qemu — бинарник `broker` падает с `SIGKILL` / `Subprocess killed`, все functional-тесты валятся на setup.
 

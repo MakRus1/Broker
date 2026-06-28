@@ -129,8 +129,16 @@ new-service:
 	@test -n "$(NAME)" || (echo "Usage: make new-service NAME=my_service [POSTGRES=1 GRPC=1]" && exit 1)
 	./scripts/create-service.sh $(NAME) $(if $(POSTGRES),--postgresql,) $(if $(GRPC),--grpc,)
 
-.PHONY: $(addprefix docker-cmake-, $(PRESETS)) $(addprefix docker-build-, $(PRESETS)) $(addprefix docker-test-, $(PRESETS)) $(addprefix docker-clean-, $(PRESETS)) $(addprefix docker-start-, $(PRESETS))
-$(addprefix docker-cmake-, $(PRESETS)) $(addprefix docker-build-, $(PRESETS)) $(addprefix docker-test-, $(PRESETS)) $(addprefix docker-clean-, $(PRESETS)) $(addprefix docker-start-, $(PRESETS)): docker-%: check-docker-platform
+DOCKER_MAKE_TARGETS := testsuite-clean \
+	$(addprefix cmake-, $(PRESETS)) \
+	$(addprefix build-, $(PRESETS)) \
+	$(addprefix test-only-, $(PRESETS)) \
+	$(addprefix test-, $(PRESETS)) \
+	$(addprefix clean-, $(PRESETS)) \
+	$(addprefix start-, $(PRESETS))
+
+.PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
+$(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
 		-u $(DOCKER_UID):$(DOCKER_GID) \

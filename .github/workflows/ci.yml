@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reuse ccache directory
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ github.ref }}-${{ github.run_number }}
+          restore-keys: |
+            ccache-${{ github.ref }}-
+            ccache-
+
+      - name: Configure
+        run: make docker-cmake-debug
+
+      - name: Build
+        run: make docker-build-debug
+
+      - name: Test
+        run: make docker-test-debug

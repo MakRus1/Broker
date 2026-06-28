@@ -1,0 +1,47 @@
+{
+  "name": "Broker (userver pg+grpc)",
+  "image": "ghcr.io/userver-framework/ubuntu-22.04-userver-pg-dev:v2.15",
+  "workspaceFolder": "/workspaces/broker",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/broker,type=bind",
+  "remoteUser": "user",
+  "containerEnv": {
+    "CCACHE_DIR": "/workspaces/broker/.ccache",
+    "CORES_DIR": "/cores",
+    "PREFIX": "${localEnv:HOME}/.local",
+    "SHELL": "/bin/bash"
+  },
+  "forwardPorts": [8080, 8081, 15433],
+  "postCreateCommand": "pip3 install --user -r requirements.txt && make cmake-debug",
+  "onCreateCommand": "sudo git config --global --add safe.directory /workspaces/broker",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined",
+    "--network=host"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.makefile-tools",
+        "vadimcn.vscode-lldb",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "clangd.arguments": [
+          "--background-index",
+          "--compile-commands-dir=${workspaceFolder}/.vscode",
+          "--clang-tidy",
+          "--completion-style=detailed",
+          "--header-insertion=never"
+        ],
+        "clangd.path": "/usr/bin/clangd",
+        "cmake.automaticReconfigure": false,
+        "cmake.configureOnEdit": false,
+        "cmake.configureOnOpen": false,
+        "cmake.copyCompileCommands": "${workspaceFolder}/.vscode/compile_commands.json"
+      }
+    }
+  }
+}

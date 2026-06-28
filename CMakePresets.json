@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build (Dev Container / Linux / CI)",
+      "inherits": ["common-flags"],
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Release build (Dev Container / Linux / CI)",
+      "inherits": ["common-flags"],
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "common-flags",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "cc",
+        "CMAKE_CXX_COMPILER": "c++",
+        "USERVER_FEATURE_GRPC": "ON",
+        "USERVER_FEATURE_POSTGRESQL": "ON"
+      }
+    }
+  ]
+}

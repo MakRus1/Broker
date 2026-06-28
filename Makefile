@@ -1,3 +1,9 @@
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+_cwd_rel := $(patsubst $(REPO_ROOT)/%,%,$(CURDIR))
+_service_from_dir := $(if $(filter services/%,$(_cwd_rel)),$(word 2,$(subst /, ,$(_cwd_rel))),)
+ifneq ($(_service_from_dir),)
+  SERVICE ?= $(_service_from_dir)
+endif
 SERVICE ?= broker
 NPROCS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 CPU_LIMIT ?= $(NPROCS)
@@ -121,17 +127,17 @@ deps-macos:
 .PHONY: db-up db-down db-up-all db-down-all
 db-up:
 	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
-	$(DOCKER_COMPOSE) up -d postgres-$(SERVICE)
+	cd $(REPO_ROOT) && $(DOCKER_COMPOSE) up -d postgres-$(SERVICE)
 
 db-down:
-	@if [ -n "$(DOCKER_COMPOSE)" ]; then $(DOCKER_COMPOSE) stop postgres-$(SERVICE); fi
+	@if [ -n "$(DOCKER_COMPOSE)" ]; then cd $(REPO_ROOT) && $(DOCKER_COMPOSE) stop postgres-$(SERVICE); fi
 
 db-up-all:
 	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
-	$(DOCKER_COMPOSE) up -d
+	cd $(REPO_ROOT) && $(DOCKER_COMPOSE) up -d
 
 db-down-all:
-	@if [ -n "$(DOCKER_COMPOSE)" ]; then $(DOCKER_COMPOSE) down; fi
+	@if [ -n "$(DOCKER_COMPOSE)" ]; then cd $(REPO_ROOT) && $(DOCKER_COMPOSE) down; fi
 
 .PHONY: new-service
 new-service:
@@ -150,54 +156,54 @@ docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
 	$(MAKE) db-up SERVICE=$(SERVICE)
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
-		-v "$$PWD:$$PWD" \
-		-w "$$PWD" \
+		-v "$(REPO_ROOT):$(REPO_ROOT)" \
+		-w "$(REPO_ROOT)" \
 		-e USER=user \
 		-e LOGNAME=user \
-		-e HOME="$$PWD/.docker-home" \
+		-e HOME="$(REPO_ROOT)/.docker-home" \
 		-e CPU_LIMIT=$(CPU_LIMIT) \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make run-debug SERVICE=$(SERVICE)'
+		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make run-debug SERVICE=$(SERVICE)'
 
 docker-start-debug: check-docker-platform build-debug/CMakeCache.txt
 	@$(MAKE) db-down-all
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
-		-v "$$PWD:$$PWD" \
-		-w "$$PWD" \
+		-v "$(REPO_ROOT):$(REPO_ROOT)" \
+		-w "$(REPO_ROOT)" \
 		-e USER=user \
 		-e LOGNAME=user \
-		-e HOME="$$PWD/.docker-home" \
+		-e HOME="$(REPO_ROOT)/.docker-home" \
 		-e CPU_LIMIT=$(CPU_LIMIT) \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-debug SERVICE=$(SERVICE)'
+		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-debug SERVICE=$(SERVICE)'
 
 docker-start-release: check-docker-platform build-release/CMakeCache.txt
 	@$(MAKE) db-down-all
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
-		-v "$$PWD:$$PWD" \
-		-w "$$PWD" \
+		-v "$(REPO_ROOT):$(REPO_ROOT)" \
+		-w "$(REPO_ROOT)" \
 		-e USER=user \
 		-e LOGNAME=user \
-		-e HOME="$$PWD/.docker-home" \
+		-e HOME="$(REPO_ROOT)/.docker-home" \
 		-e CPU_LIMIT=$(CPU_LIMIT) \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-release SERVICE=$(SERVICE)'
+		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-release SERVICE=$(SERVICE)'
 
 .PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
 $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform
 	docker run $(DOCKER_ARGS) \
 		$(DOCKER_RUN_OPTS) \
-		-v "$$PWD:$$PWD" \
-		-w "$$PWD" \
+		-v "$(REPO_ROOT):$(REPO_ROOT)" \
+		-w "$(REPO_ROOT)" \
 		-e USER=user \
 		-e LOGNAME=user \
-		-e HOME="$$PWD/.docker-home" \
-		-e CCACHE_DIR="$$PWD/.ccache" \
+		-e HOME="$(REPO_ROOT)/.docker-home" \
+		-e CCACHE_DIR="$(REPO_ROOT)/.ccache" \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$PWD/.docker-home" "$$PWD/.ccache" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" "$$PWD/.ccache" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "make $*"'
+		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" "$(REPO_ROOT)/.ccache" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" "$(REPO_ROOT)/.ccache" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "make $*"'

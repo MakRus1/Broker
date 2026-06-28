@@ -62,7 +62,8 @@ text = re.sub(
 path.write_text(text)
 PY
 
-rm -rf "${SERVICE_DIR}/cmake" "${SERVICE_DIR}/Makefile" "${SERVICE_DIR}/CMakePresets.json" "${SERVICE_DIR}/.devcontainer" "${SERVICE_DIR}/.github"
+rm -rf "${SERVICE_DIR}/cmake" "${SERVICE_DIR}/CMakePresets.json" "${SERVICE_DIR}/.devcontainer" "${SERVICE_DIR}/.github"
+sed "s/@SERVICE_NAME@/${SERVICE_NAME}/g" "${ROOT}/scripts/service-Makefile.template" > "${SERVICE_DIR}/Makefile"
 
 POSTGRES_FLAG=()
 if [[ " ${EXTRA_FLAGS[*]} " == *" --postgresql "* ]]; then

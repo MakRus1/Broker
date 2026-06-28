@@ -110,14 +110,12 @@ make test-debug
 | `make docker-start-debug` | testsuite сам |
 
 ```bash
-# Вариант A — compose postgres + бинарник (проще для curl)
-make docker-run-debug SERVICE=broker
+# Из корня репозитория или из services/broker/ (SERVICE подставится сам)
+cd services/broker
+make docker-run-debug          # вариант A — compose postgres + бинарник
+make docker-start-debug        # вариант B — testsuite postgres + service-runner
 
-# Вариант B — testsuite postgres + service-runner
-make db-down-all   # если до этого был docker-run-debug
-make docker-start-debug SERVICE=broker
-
-make db-down       # остановить compose-postgres
+make db-down                   # остановить compose-postgres
 ```
 
 На Apple Silicon образ userver — **amd64**. Colima с `aarch64` эмулирует его через qemu — бинарник `broker` падает с `SIGKILL` / `Subprocess killed`, все functional-тесты валятся на setup.

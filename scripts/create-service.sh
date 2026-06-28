@@ -64,12 +64,19 @@ PY
 
 rm -rf "${SERVICE_DIR}/cmake" "${SERVICE_DIR}/Makefile" "${SERVICE_DIR}/CMakePresets.json" "${SERVICE_DIR}/.devcontainer" "${SERVICE_DIR}/.github"
 
+POSTGRES_FLAG=()
+if [[ " ${EXTRA_FLAGS[*]} " == *" --postgresql "* ]]; then
+  POSTGRES_FLAG=(--postgresql)
+fi
+
+python3 "${ROOT}/scripts/service_deps.py" add-service "${SERVICE_NAME}" "${POSTGRES_FLAG[@]}"
+
 echo ""
 echo "Сервис создан: services/${SERVICE_NAME}"
-echo "Добавьте в корневой CMakeLists.txt:"
-echo "  add_subdirectory(services/${SERVICE_NAME})"
+echo "Зарегистрирован в .github/service-deps.yaml и CMakeLists.txt"
 if [[ " ${EXTRA_FLAGS[*]} " == *" --postgresql "* ]]; then
-  echo ""
-  echo "Добавьте в docker-compose.yml контейнер postgres-${SERVICE_NAME}"
-  echo "  (свой порт, например 15434, и POSTGRES_DB: ${SERVICE_NAME}_db_1)"
+  echo "PostgreSQL контейнер добавлен в docker-compose.yml"
 fi
+echo ""
+echo "Сборка и тесты:"
+echo "  make test-debug SERVICE=${SERVICE_NAME}"

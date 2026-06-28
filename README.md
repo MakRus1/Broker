@@ -58,7 +58,40 @@ make docker-build-debug
 make docker-test-debug
 ```
 
-Переменная `SERVICE` выбирает сервис (по умолчанию `broker`).
+## Тесты
+
+По умолчанию `SERVICE=broker`. Локально запускаются тесты **только выбранного сервиса**:
+
+```bash
+make test-debug                  # broker (по умолчанию)
+make test-debug SERVICE=orders   # другой сервис
+make test-all-debug              # все сервисы
+```
+
+В Docker то же самое:
+
+```bash
+make docker-test-debug SERVICE=broker
+```
+
+## Selective CI
+
+CI запускает тесты **только для изменённых сервисов** (см. `.github/service-deps.yaml`):
+
+| Изменения | Что тестируется |
+|-----------|-----------------|
+| `services/broker/...` | только `broker` |
+| `libs/common/...` | все сервисы, зависящие от `common` |
+| `Makefile`, `cmake/`, `CMakeLists.txt`, `.github/`, ... | все сервисы |
+| только docs / `.md` | тесты пропускаются |
+
+Локально — какие сервисы попадут в CI:
+
+```bash
+./scripts/affected-services.sh origin/main
+```
+
+При добавлении сервиса регистрация в CI — через `make new-service`.
 
 ## PostgreSQL
 
@@ -139,7 +172,8 @@ make cmake-debug && make build-debug
 | Команда | Описание |
 |---------|----------|
 | `make build-debug` | Сборка (внутри Dev Container) |
-| `make test-debug` | Unit + functional тесты |
+| `make test-debug` | Unit + functional тесты сервиса `SERVICE` (по умолчанию broker) |
+| `make test-all-debug` | Тесты всех сервисов подряд |
 | `make docker-test-debug` | То же через Docker с хоста |
 | `make testsuite-clean` | Очистить зависший PostgreSQL testsuite перед тестами |
 | `make dist-clean` | Очистка артефактов |

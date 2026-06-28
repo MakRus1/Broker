@@ -55,11 +55,25 @@ testsuite-clean:
 		mkdir -p "$$svc/Testing/Temporary"; \
 	done
 
-.PHONY: $(addprefix test-, $(PRESETS))
+.PHONY: test-all-debug test-all-release
+test-all-debug:
+	@for svc in $$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort); do \
+		$(MAKE) test-debug SERVICE=$$svc || exit 1; \
+	done
+
+test-all-release:
+	@for svc in $$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort); do \
+		$(MAKE) test-release SERVICE=$$svc || exit 1; \
+	done
+
+.PHONY: $(addprefix test-, $(PRESETS)) $(addprefix test-only-, $(PRESETS))
 $(addprefix test-, $(PRESETS)): test-%: build-%/CMakeCache.txt
 	$(MAKE) testsuite-clean
-	cmake --build build-$* -j $(NPROCS)
-	cd build-$* && ((test -t 1 && GTEST_COLOR=1 PYTEST_ADDOPTS="--color=yes" ctest -V) || ctest -V)
+	$(MAKE) test-only-$*
+
+$(addprefix test-only-, $(PRESETS)): test-only-%: build-%/CMakeCache.txt
+	cmake --build build-$* -j $(NPROCS) --target $(SERVICE) $(SERVICE)_unittest $(SERVICE)_benchmark
+	cd build-$* && ((test -t 1 && GTEST_COLOR=1 PYTEST_ADDOPTS="--color=yes" ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V) || ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V)
 	pycodestyle services/$(SERVICE)/tests
 
 .PHONY: $(addprefix start-, $(PRESETS))

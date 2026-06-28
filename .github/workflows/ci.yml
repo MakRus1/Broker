@@ -11,7 +11,50 @@ env:
   UBSAN_OPTIONS: print_stacktrace=1
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+      run_all: ${{ steps.detect.outputs.run_all }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect affected services
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+              BASE="HEAD~1"
+            fi
+          fi
+
+          echo "Diff base: ${BASE}"
+          AFFECTED="$(./scripts/affected-services.sh "${BASE}" | tr '\n' ' ' | xargs || true)"
+
+          if [ "${AFFECTED}" = "all" ]; then
+            SERVICES="$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | tr '\n' ' ' | xargs)"
+            echo "run_all=true" >> "${GITHUB_OUTPUT}"
+          elif [ -z "${AFFECTED}" ]; then
+            echo "No service changes detected, skipping tests."
+            echo "services=" >> "${GITHUB_OUTPUT}"
+            echo "run_all=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          else
+            SERVICES="${AFFECTED}"
+            echo "run_all=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+          echo "Affected services: ${SERVICES}"
+          echo "services=${SERVICES}" >> "${GITHUB_OUTPUT}"
+
   docker:
+    needs: detect
+    if: needs.detect.outputs.services != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +73,12 @@ jobs:
           rm -rf build-debug build-release .docker-home
           make docker-cmake-debug
 
-      - name: Build
-        run: make docker-build-debug
-
-      - name: Test
-        run: make docker-test-debug
+      - name: Build and test affected services
+        run: |
+          SERVICES="${{ needs.detect.outputs.services }}"
+          make docker-testsuite-clean
+          for svc in ${SERVICES}; do
+            echo "=== Build & test: ${svc} ==="
+            make docker-build-debug SERVICE="${svc}"
+            make docker-test-only-debug SERVICE="${svc}"
+          done

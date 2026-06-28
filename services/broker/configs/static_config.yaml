@@ -36,7 +36,7 @@ components_manager:
         testsuite-support: {}
 
         congestion-control:
-
+            fake-mode: true
         http-client:
         http-client-core:
             load-enabled: $is_testing

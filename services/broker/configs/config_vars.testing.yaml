@@ -7,4 +7,4 @@ is-testing: true
 server-port: 8080
 grpc-server-port: 8081
 
-pg-connection: postgresql://testsuite@localhost:15433/broker_db_1
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15433/broker_db_1

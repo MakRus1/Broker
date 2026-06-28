@@ -1,5 +1,6 @@
 SERVICE ?= broker
 NPROCS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+CPU_LIMIT ?= $(NPROCS)
 CLANG_FORMAT ?= clang-format
 DOCKER_IMAGE ?= ghcr.io/userver-framework/ubuntu-22.04-userver-pg-dev:v2.15
 DOCKER_ARGS = $(shell if [ -t 0 ]; then echo -it; fi)
@@ -78,7 +79,10 @@ $(addprefix test-only-, $(PRESETS)): test-only-%: build-%/CMakeCache.txt
 
 .PHONY: $(addprefix run-, $(PRESETS))
 $(addprefix run-, $(PRESETS)): run-%: build-%/CMakeCache.txt
-	./build-$*/services/$(SERVICE)/$(SERVICE) -c services/$(SERVICE)/configs/static_config.yaml
+	export CPU_LIMIT=$(CPU_LIMIT); \
+	./build-$*/services/$(SERVICE)/$(SERVICE) \
+		-c services/$(SERVICE)/configs/static_config.yaml \
+		--config_vars services/$(SERVICE)/configs/config_vars.yaml
 
 .PHONY: $(addprefix start-, $(PRESETS))
 $(addprefix start-, $(PRESETS)): start-%:
@@ -140,8 +144,7 @@ DOCKER_MAKE_TARGETS := testsuite-clean \
 	$(addprefix test-only-, $(PRESETS)) \
 	$(addprefix test-, $(PRESETS)) \
 	$(addprefix clean-, $(PRESETS)) \
-	$(addprefix start-, $(PRESETS)) \
-	$(addprefix run-, $(PRESETS))
+	$(addprefix start-, $(PRESETS))
 
 .PHONY: docker-run-debug
 docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
@@ -153,9 +156,10 @@ docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
 		-e USER=user \
 		-e LOGNAME=user \
 		-e HOME="$$PWD/.docker-home" \
+		-e CPU_LIMIT=$(CPU_LIMIT) \
 		-e SERVICE=$(SERVICE) \
 		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) ./build-debug/services/$(SERVICE)/$(SERVICE) -c services/$(SERVICE)/configs/static_config.yaml'
+		sh -c 'mkdir -p "$$PWD/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$$PWD/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make run-debug SERVICE=$(SERVICE)'
 
 .PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
 $(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform

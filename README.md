@@ -106,9 +106,7 @@ make test-debug
 
 ```bash
 make db-up                    # postgres-broker на порту 15433 (SERVICE=broker)
-make db-up SERVICE=orders     # postgres-orders, если добавлен в compose
-make db-up-all                # все postgres-* контейнеры
-./build-debug/services/broker/broker -c services/broker/configs/static_config.yaml
+make run-debug                # или make docker-run-debug
 make db-down                  # остановить postgres для текущего SERVICE
 ```
 

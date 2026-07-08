@@ -52,6 +52,14 @@ jobs:
           echo "Affected services: ${SERVICES}"
           echo "services=${SERVICES}" >> "${GITHUB_OUTPUT}"
 
+  codegen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check OpenAPI codegen
+        run: make check-gen-all
+
   docker:
     needs: detect
     if: needs.detect.outputs.services != ''

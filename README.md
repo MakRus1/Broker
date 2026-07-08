@@ -181,6 +181,7 @@ make cmake-debug && make build-debug
 | `make docker-test-debug` | То же через Docker с хоста |
 | `make testsuite-clean` | Очистить зависший PostgreSQL testsuite перед тестами |
 | `make dist-clean` | Очистка артефактов |
-| `make gen SERVICE=broker` | Кодогенерация из OpenAPI (`docs/api/` → `src/views/`, `.gen/`) |
+| `make gen SERVICE=broker` | Кодогенерация из OpenAPI (`docs/api/` → `src/views/`, `.gen/`, `codegen.lock`) |
+| `make check-gen-all` | Проверка, что кодоген актуален (как в CI) |
 
 Документация userver: https://userver.tech

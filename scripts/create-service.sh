@@ -121,6 +121,31 @@ mkdir -p "${SERVICE_DIR}/docs/api"
 cp "${ROOT}/scripts/openapi_gen/docs-api-README.md" "${SERVICE_DIR}/docs/api/README.md"
 sed "s/@SERVICE_NAME@/${SERVICE_NAME}/g" "${ROOT}/scripts/service-Makefile.template" > "${SERVICE_DIR}/Makefile"
 
+python3 - "${SERVICE_DIR}/configs/static_config.yaml" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    raise SystemExit(0)
+
+text = path.read_text()
+markers = '''
+        # OPENAPI_HANDLERS_BEGIN
+        # OPENAPI_HANDLERS_END
+'''
+if 'OPENAPI_HANDLERS_BEGIN' in text:
+    raise SystemExit(0)
+
+for anchor in ('        postgres-db-1:', '        grpc-server:'):
+    if anchor in text:
+        text = text.replace(anchor, markers + '\n' + anchor, 1)
+        path.write_text(text)
+        break
+else:
+    raise SystemExit('Could not find insertion point for OpenAPI handler markers')
+PY
+
 POSTGRES_FLAG=()
 if [[ " ${EXTRA_FLAGS[*]} " == *" --postgresql "* ]]; then
   POSTGRES_FLAG=(--postgresql)

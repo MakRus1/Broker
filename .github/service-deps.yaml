@@ -18,3 +18,4 @@ shared_paths:
   - docker-compose.yml
   - run_as_user.sh
   - requirements.txt
+  - scripts/openapi_gen/

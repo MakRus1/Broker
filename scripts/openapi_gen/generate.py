@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -18,6 +19,10 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit(1) from exc
 
 HTTP_METHODS = frozenset({'get', 'post', 'put', 'patch', 'delete', 'head', 'options'})
+LOCK_FILE_NAME = 'codegen.lock'
+GENERATOR_DIR = Path(__file__).resolve().parent
+OPENAPI_HANDLERS_BEGIN = '# OPENAPI_HANDLERS_BEGIN'
+OPENAPI_HANDLERS_END = '# OPENAPI_HANDLERS_END'
 
 
 @dataclass(frozen=True)
@@ -392,7 +397,7 @@ def _render_handler_visit_cases(responses: list[ResponseSpec]) -> str:
     for response in responses:
         if response.schema is None:
             continue
-        type_name = _response_type_name(response.status)
+        schema_name = response.schema.name
         status_name = HTTP_STATUS_NAMES.get(response.status)
         if status_name:
             status_line = (
@@ -405,19 +410,21 @@ def _render_handler_visit_cases(responses: list[ResponseSpec]) -> str:
 
         if response.status == 200:
             cases.append(
-                f'''        if constexpr (std::is_same_v<Body, {type_name}>) {{
+                f'''        if constexpr (std::is_same_v<Body, {schema_name}>) {{
             return ToJson(body);
         }}'''
             )
         else:
             cases.append(
-                f'''        if constexpr (std::is_same_v<Body, {type_name}>) {{
+                f'''        if constexpr (std::is_same_v<Body, {schema_name}>) {{
             {status_line}
             return ToJson(body);
         }}'''
             )
 
-    cases.append('        return {};')
+    cases.append(
+        '        throw std::logic_error("Unexpected OpenAPI response variant alternative");'
+    )
     return '\n'.join(cases)
 
 
@@ -447,7 +454,7 @@ def _render_handler_cpp(op: Operation, ns: str, service_name: str) -> str:
     else:
         visit_cases = _render_handler_visit_cases(op.responses)
         response_return = f'''const auto response = View::Handle(std::move(request), context);
-    return std::visit([&](const auto& body) {{
+    return std::visit([&](const auto& body) -> std::string {{
         using Body = std::decay_t<decltype(body)>;
 {visit_cases}
     }}, response);'''
@@ -455,6 +462,7 @@ def _render_handler_cpp(op: Operation, ns: str, service_name: str) -> str:
     extra_includes = ''
     if len(typed_responses) > 1:
         extra_includes = '''
+#include <stdexcept>
 #include <type_traits>
 
 #include <userver/server/http/http_status.hpp>'''
@@ -531,8 +539,8 @@ Response View::Handle(
 '''
 
 
-def _render_config_fragment(operations: list[Operation]) -> str:
-    lines = ['components_manager:', '    components:']
+def _render_openapi_handlers_block(operations: list[Operation]) -> str:
+    lines: list[str] = []
     for op in operations:
         lines.extend(
             [
@@ -542,7 +550,62 @@ def _render_config_fragment(operations: list[Operation]) -> str:
                 '            task_processor: main-task-processor',
             ]
         )
-    return '\n'.join(lines) + '\n'
+    return '\n'.join(lines)
+
+
+def _render_config_fragment(operations: list[Operation]) -> str:
+    return (
+        'components_manager:\n'
+        '    components:\n'
+        + '\n'.join(
+            line
+            for line in _render_openapi_handlers_block(operations).splitlines()
+            if line.strip()
+        )
+        + '\n'
+    )
+
+
+def _extract_openapi_handlers_section(static_config_text: str) -> str | None:
+    begin = static_config_text.find(OPENAPI_HANDLERS_BEGIN)
+    end = static_config_text.find(OPENAPI_HANDLERS_END)
+    if begin == -1 or end == -1 or end < begin:
+        return None
+    return static_config_text[begin + len(OPENAPI_HANDLERS_BEGIN):end].strip('\n')
+
+
+def sync_static_config_handlers(service_dir: Path, operations: list[Operation]) -> None:
+    static_path = service_dir / 'configs' / 'static_config.yaml'
+    if not static_path.exists():
+        raise SystemExit(f'Missing static config: {static_path}')
+
+    text = static_path.read_text(encoding='utf-8')
+    if OPENAPI_HANDLERS_BEGIN not in text or OPENAPI_HANDLERS_END not in text:
+        raise SystemExit(
+            f'Add markers {OPENAPI_HANDLERS_BEGIN} / {OPENAPI_HANDLERS_END} '
+            f'to {static_path} under components_manager.components'
+        )
+
+    block = _render_openapi_handlers_block(operations)
+    replacement_block = block
+    if block:
+        replacement_block = f'\n{block}\n        '
+
+    pattern = re.compile(
+        rf'({re.escape(OPENAPI_HANDLERS_BEGIN)})'
+        rf'.*?'
+        rf'(\s*{re.escape(OPENAPI_HANDLERS_END)})',
+        re.DOTALL,
+    )
+    new_text, count = pattern.subn(
+        rf'\1{replacement_block}\2',
+        text,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f'Failed to update OpenAPI handlers in {static_path}')
+
+    static_path.write_text(new_text, encoding='utf-8')
 
 
 def _render_handlers_list(operations: list[Operation], service_name: str) -> str:
@@ -602,6 +665,117 @@ def generate(service_dir: Path) -> list[Operation]:
     return operations
 
 
+def _generator_inputs() -> list[Path]:
+    return sorted(GENERATOR_DIR.glob('*.py'))
+
+
+def _spec_files(spec_dir: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in spec_dir.glob('**/*')
+        if path.is_file() and path.suffix in {'.yaml', '.yml', '.json'} and path.name != LOCK_FILE_NAME
+    )
+
+
+def _hash_file(hasher: hashlib._Hash, path: Path, label: str | None = None) -> None:
+    hasher.update((label or str(path)).encode())
+    hasher.update(path.read_bytes())
+
+
+def compute_codegen_digest(service_dir: Path) -> str:
+    spec_dir = service_dir / 'docs' / 'api'
+    gen_dir = service_dir / '.gen'
+    hasher = hashlib.sha256()
+
+    for path in _spec_files(spec_dir):
+        _hash_file(hasher, path)
+    for path in _generator_inputs():
+        _hash_file(hasher, path)
+
+    if gen_dir.exists():
+        for path in sorted(gen_dir.rglob('*')):
+            if path.is_file():
+                _hash_file(hasher, path, str(path.relative_to(gen_dir)))
+
+    static_config_path = service_dir / 'configs' / 'static_config.yaml'
+    if static_config_path.exists():
+        section = _extract_openapi_handlers_section(static_config_path.read_text(encoding='utf-8'))
+        if section is not None:
+            hasher.update(section.encode())
+
+    return hasher.hexdigest()
+
+
+def _lock_path(service_dir: Path) -> Path:
+    return service_dir / 'docs' / 'api' / LOCK_FILE_NAME
+
+
+def write_codegen_lock(service_dir: Path, digest: str) -> None:
+    lock_path = _lock_path(service_dir)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text(f'sha256={digest}\n', encoding='utf-8')
+
+
+def read_codegen_lock(service_dir: Path) -> str | None:
+    lock_path = _lock_path(service_dir)
+    if not lock_path.exists():
+        return None
+    for line in lock_path.read_text(encoding='utf-8').splitlines():
+        if line.startswith('sha256='):
+            return line.removeprefix('sha256=').strip()
+    return None
+
+
+def verify_static_config(service_dir: Path, operations: list[Operation]) -> list[str]:
+    static_config_path = service_dir / 'configs' / 'static_config.yaml'
+    if not static_config_path.exists():
+        return [f'Missing static config: {static_config_path}']
+
+    text = static_config_path.read_text(encoding='utf-8')
+    section = _extract_openapi_handlers_section(text)
+    if section is None:
+        return [
+            f'Markers {OPENAPI_HANDLERS_BEGIN} / {OPENAPI_HANDLERS_END} '
+            f'missing in {static_config_path}'
+        ]
+
+    expected = _render_openapi_handlers_block(operations).strip()
+    if section.strip() != expected:
+        return [
+            f'OpenAPI handlers block in {static_config_path} is out of date (run make gen)'
+        ]
+
+    return []
+
+
+def verify_view_stubs(service_dir: Path, operations: list[Operation]) -> list[str]:
+    views_dir = service_dir / 'src' / 'views'
+    errors: list[str] = []
+    for op in operations:
+        view_dir = views_dir / op.rel_path
+        for name in ('view.hpp', 'view.cpp'):
+            path = view_dir / name
+            if not path.exists():
+                errors.append(f'Missing view stub: {path} (run make gen)')
+    return errors
+
+
+def verify_codegen(service_dir: Path, operations: list[Operation]) -> list[str]:
+    errors: list[str] = []
+    expected = compute_codegen_digest(service_dir)
+    committed = read_codegen_lock(service_dir)
+    if committed is None:
+        errors.append(f'Missing {LOCK_FILE_NAME} in {service_dir / "docs" / "api"} (run make gen)')
+    elif committed != expected:
+        errors.append(
+            f'{LOCK_FILE_NAME} is out of date for {service_dir.name} '
+            f'(run make gen and commit {LOCK_FILE_NAME})'
+        )
+    errors.extend(verify_static_config(service_dir, operations))
+    errors.extend(verify_view_stubs(service_dir, operations))
+    return errors
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -609,6 +783,11 @@ def main() -> None:
         type=Path,
         required=True,
         help='Path to service directory (e.g. services/broker)',
+    )
+    parser.add_argument(
+        '--check',
+        action='store_true',
+        help='Verify codegen.lock, static_config.yaml and view stubs (implies generation)',
     )
     args = parser.parse_args()
 
@@ -618,9 +797,26 @@ def main() -> None:
 
     operations = generate(service_dir)
     rel = service_dir.name
+
+    if args.check:
+        errors = verify_codegen(service_dir, operations)
+        if errors:
+            print(f'OpenAPI codegen check failed for {rel}:', file=sys.stderr)
+            for error in errors:
+                print(f'  - {error}', file=sys.stderr)
+            raise SystemExit(1)
+        print(f'OpenAPI codegen check passed for {rel}')
+        return
+
+    sync_static_config_handlers(service_dir, operations)
+
+    digest = compute_codegen_digest(service_dir)
+    write_codegen_lock(service_dir, digest)
+
     print(f'Generated {len(operations)} handler(s) for {rel}:')
     for op in operations:
         print(f'  {op.method} {op.path} -> src/views/{op.rel_path}')
+    print(f'Updated {LOCK_FILE_NAME} and configs/static_config.yaml')
 
 
 if __name__ == '__main__':

@@ -120,6 +120,19 @@ gen:
 	@PYTHON=$$($(REPO_ROOT)/scripts/openapi_gen/ensure_venv.sh); \
 	"$$PYTHON" $(REPO_ROOT)/scripts/openapi_gen/generate.py --service-dir $(REPO_ROOT)/services/$(SERVICE)
 
+.PHONY: check-gen check-gen-all
+check-gen-all:
+	@failed=0; \
+	for spec_dir in $$(find $(REPO_ROOT)/services -path '*/docs/api' -type d 2>/dev/null | sort); do \
+		svc=$$(echo "$$spec_dir" | sed 's|.*/services/\([^/]*\)/docs/api|\1|'); \
+		$(MAKE) check-gen SERVICE=$$svc || failed=1; \
+	done; \
+	exit $$failed
+
+check-gen:
+	@PYTHON=$$($(REPO_ROOT)/scripts/openapi_gen/ensure_venv.sh); \
+	"$$PYTHON" $(REPO_ROOT)/scripts/openapi_gen/generate.py --service-dir $(REPO_ROOT)/services/$(SERVICE) --check
+
 .PHONY: format
 format:
 	find libs services -name '*pp' -type f | xargs $(CLANG_FORMAT) -i

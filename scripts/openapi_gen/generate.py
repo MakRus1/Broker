@@ -683,12 +683,13 @@ def _hash_file(hasher: hashlib._Hash, path: Path, label: str | None = None) -> N
 
 
 def compute_codegen_digest(service_dir: Path, operations: list[Operation]) -> str:
+    spec_dir = service_dir / 'docs' / 'api'
     hasher = hashlib.sha256()
 
-    for path in _spec_files(service_dir / 'docs' / 'api'):
-        _hash_file(hasher, path)
+    for path in _spec_files(spec_dir):
+        _hash_file(hasher, path, path.relative_to(spec_dir).as_posix())
     for path in _generator_inputs():
-        _hash_file(hasher, path)
+        _hash_file(hasher, path, path.relative_to(GENERATOR_DIR).as_posix())
 
     hasher.update(_render_openapi_handlers_block(operations).encode())
 

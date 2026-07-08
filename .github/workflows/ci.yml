@@ -7,6 +7,11 @@ on:
       - main
       - develop
 
+# Новый push в ту же ветку/PR отменяет ещё идущий прогон — актуален только последний коммит.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   UBSAN_OPTIONS: print_stacktrace=1
 
@@ -61,7 +66,7 @@ jobs:
         run: make check-gen-all
 
   docker:
-    needs: detect
+    needs: [detect, codegen]
     if: needs.detect.outputs.services != ''
     runs-on: ubuntu-latest
     steps:

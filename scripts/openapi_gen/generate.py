@@ -682,26 +682,20 @@ def _hash_file(hasher: hashlib._Hash, path: Path, label: str | None = None) -> N
     hasher.update(path.read_bytes())
 
 
-def compute_codegen_digest(service_dir: Path) -> str:
-    spec_dir = service_dir / 'docs' / 'api'
-    gen_dir = service_dir / '.gen'
+def compute_codegen_digest(service_dir: Path, operations: list[Operation]) -> str:
     hasher = hashlib.sha256()
 
-    for path in _spec_files(spec_dir):
+    for path in _spec_files(service_dir / 'docs' / 'api'):
         _hash_file(hasher, path)
     for path in _generator_inputs():
         _hash_file(hasher, path)
 
-    if gen_dir.exists():
-        for path in sorted(gen_dir.rglob('*')):
-            if path.is_file():
-                _hash_file(hasher, path, str(path.relative_to(gen_dir)))
+    hasher.update(_render_openapi_handlers_block(operations).encode())
 
-    static_config_path = service_dir / 'configs' / 'static_config.yaml'
-    if static_config_path.exists():
-        section = _extract_openapi_handlers_section(static_config_path.read_text(encoding='utf-8'))
-        if section is not None:
-            hasher.update(section.encode())
+    for op in operations:
+        hasher.update(
+            f'{op.handler_name}\0{op.method}\0{op.path}\0{op.rel_path}\n'.encode()
+        )
 
     return hasher.hexdigest()
 
@@ -762,7 +756,7 @@ def verify_view_stubs(service_dir: Path, operations: list[Operation]) -> list[st
 
 def verify_codegen(service_dir: Path, operations: list[Operation]) -> list[str]:
     errors: list[str] = []
-    expected = compute_codegen_digest(service_dir)
+    expected = compute_codegen_digest(service_dir, operations)
     committed = read_codegen_lock(service_dir)
     if committed is None:
         errors.append(f'Missing {LOCK_FILE_NAME} in {service_dir / "docs" / "api"} (run make gen)')
@@ -810,7 +804,7 @@ def main() -> None:
 
     sync_static_config_handlers(service_dir, operations)
 
-    digest = compute_codegen_digest(service_dir)
+    digest = compute_codegen_digest(service_dir, operations)
     write_codegen_lock(service_dir, digest)
 
     print(f'Generated {len(operations)} handler(s) for {rel}:')

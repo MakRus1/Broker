@@ -76,6 +76,7 @@ components_manager:
         
         
         
+        
         # OPENAPI_HANDLERS_END
 
         postgres-db-1:

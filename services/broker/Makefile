@@ -1,5 +1,9 @@
 SERVICE := broker
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 
+.PHONY: gen
+gen:
+	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) gen
+
 .DEFAULT:
 	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) $(MAKECMDGOALS)

@@ -115,6 +115,11 @@ $(addprefix install-, $(PRESETS)): install-%: build-%
 .PHONY: install
 install: install-release
 
+.PHONY: gen
+gen:
+	@PYTHON=$$($(REPO_ROOT)/scripts/openapi_gen/ensure_venv.sh); \
+	"$$PYTHON" $(REPO_ROOT)/scripts/openapi_gen/generate.py --service-dir $(REPO_ROOT)/services/$(SERVICE)
+
 .PHONY: format
 format:
 	find libs services -name '*pp' -type f | xargs $(CLANG_FORMAT) -i
@@ -149,7 +154,8 @@ DOCKER_MAKE_TARGETS := testsuite-clean \
 	$(addprefix build-, $(PRESETS)) \
 	$(addprefix test-only-, $(PRESETS)) \
 	$(addprefix test-, $(PRESETS)) \
-	$(addprefix clean-, $(PRESETS))
+	$(addprefix clean-, $(PRESETS)) \
+	gen
 
 .PHONY: docker-run-debug docker-start-debug docker-start-release
 docker-run-debug: check-docker-platform build-debug/CMakeCache.txt

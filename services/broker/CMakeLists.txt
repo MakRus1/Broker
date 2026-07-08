@@ -1,6 +1,12 @@
 project(broker CXX)
 
+include("${CMAKE_SOURCE_DIR}/cmake/OpenApiCodegen.cmake")
+broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
+
 include_directories(src)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gen/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/.gen/include")
+endif()
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
@@ -8,6 +14,7 @@ add_library(
     src/hello.cpp
     src/hello_postgres.cpp
     src/hello_grpc.cpp
+    ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(
     ${PROJECT_NAME}_objs
@@ -19,6 +26,10 @@ target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_proto)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_objs)
+if(OPENAPI_VIEW_SRCS)
+    target_sources(${PROJECT_NAME} PRIVATE ${OPENAPI_VIEW_SRCS})
+    broker_openapi_apply(${PROJECT_NAME})
+endif()
 
 add_executable(${PROJECT_NAME}_unittest src/greeting_test.cpp)
 target_link_libraries(${PROJECT_NAME}_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)

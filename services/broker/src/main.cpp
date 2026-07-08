@@ -15,6 +15,8 @@
 #include <hello_grpc.hpp>
 #include <hello_postgres.hpp>
 
+#include <openapi/handlers.hpp>
+
 int main(int argc, char* argv[]) {
     auto component_list =
         userver::components::MinimalServerComponentList()
@@ -29,6 +31,8 @@ int main(int argc, char* argv[]) {
             .Append<broker::HelloPostgres>()
             .AppendComponentList(userver::ugrpc::server::MinimalComponentList())
             .Append<broker::HelloGrpc>();
+
+    component_list = broker::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);
 }

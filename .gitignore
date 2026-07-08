@@ -3,6 +3,8 @@ build*/
 compile_commands.json
 .cache/
 .ccache/
+.venv-gen/
+.gen/
 .idea/
 .vscode/
 !.vscode/c_cpp_properties.json

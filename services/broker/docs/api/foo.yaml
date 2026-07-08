@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: broker API
+  version: '1.0'
+
+paths:
+  /foo/bar:
+    get:
+      operationId: getFooBar
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FooBarResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
+
+components:
+  schemas:
+    FooBarResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - greeting
+      properties:
+        greeting:
+          type: string
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string

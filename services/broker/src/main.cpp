@@ -11,9 +11,7 @@
 #include <userver/ugrpc/server/component_list.hpp>
 #include <userver/utils/daemon_run.hpp>
 
-#include <hello.hpp>
 #include <hello_grpc.hpp>
-#include <hello_postgres.hpp>
 
 #include <openapi/handlers.hpp>
 
@@ -26,9 +24,7 @@ int main(int argc, char* argv[]) {
             .Append<userver::clients::dns::Component>()
             .Append<userver::server::handlers::TestsControl>()
             .Append<userver::congestion_control::Component>()
-            .Append<broker::Hello>()
             .Append<userver::components::Postgres>("postgres-db-1")
-            .Append<broker::HelloPostgres>()
             .AppendComponentList(userver::ugrpc::server::MinimalComponentList())
             .Append<broker::HelloGrpc>();
 

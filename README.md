@@ -149,7 +149,7 @@ docker context use colima
 | Протокол | Адрес | Описание |
 |----------|-------|----------|
 | HTTP | `GET/POST /hello` | простой hello |
-| HTTP | `GET/POST /hello-postgres?name=...` | hello с PostgreSQL |
+| HTTP | `GET/POST /hello_postgres?name=...` | hello с PostgreSQL |
 | gRPC | `:8081` `HelloService.SayHello` | gRPC hello |
 
 ## Новый сервис

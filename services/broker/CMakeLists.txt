@@ -11,8 +11,6 @@ endif()
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/greeting.cpp
-    src/hello.cpp
-    src/hello_postgres.cpp
     src/hello_grpc.cpp
     ${OPENAPI_GEN_SRCS}
 )

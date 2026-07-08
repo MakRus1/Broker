@@ -43,6 +43,8 @@ class Schema:
 class ResponseSpec:
     status: int
     schema: Schema | None
+    plain_text: bool = False
+
 
 
 @dataclass
@@ -51,10 +53,21 @@ class Operation:
     method: str
     operation_id: str
     rel_path: str
-    handler_name: str
     request_schema: Schema | None
     responses: list[ResponseSpec]
     query_params: list[Field]
+
+
+@dataclass
+class HandlerGroup:
+    path: str
+    rel_path: str
+    handler_name: str
+    methods: list[str]
+    request_schema: Schema | None
+    responses: list[ResponseSpec]
+    query_params: list[Field]
+    has_deps: bool = False
 
 
 HTTP_STATUS_NAMES: dict[int, str] = {
@@ -201,14 +214,34 @@ def _collect_operations(spec: dict[str, Any]) -> list[Operation]:
             for status_raw, response in operation.get('responses', {}).items():
                 status = int(str(status_raw).split()[0])
                 response_schema = None
-                for _, body in response.get('content', {}).items():
+                plain_text = False
+                for content_type, body in response.get('content', {}).items():
                     schema = body.get('schema', {})
-                    if '$ref' in schema:
+                    if content_type == 'text/plain' and schema.get('type') == 'string':
+                        response_schema = Schema(
+                            name='PlainTextResponse',
+                            fields=[
+                                Field(
+                                    cpp_name='body',
+                                    json_name='body',
+                                    cpp_type='std::string',
+                                    required=True,
+                                )
+                            ],
+                        )
+                        plain_text = True
+                    elif '$ref' in schema:
                         name = schema['$ref'].rsplit('/', 1)[-1]
                         response_schema = _schema_from_components(name, schema, schemas)
                     break
                 if response_schema:
-                    responses.append(ResponseSpec(status=status, schema=response_schema))
+                    responses.append(
+                        ResponseSpec(
+                            status=status,
+                            schema=response_schema,
+                            plain_text=plain_text,
+                        )
+                    )
 
             responses.sort(key=lambda item: item.status)
 
@@ -218,7 +251,6 @@ def _collect_operations(spec: dict[str, Any]) -> list[Operation]:
                     method=method.upper(),
                     operation_id=operation_id,
                     rel_path=rel_path,
-                    handler_name=_handler_name(path, method),
                     request_schema=request_schema,
                     responses=responses,
                     query_params=query_params,
@@ -226,6 +258,41 @@ def _collect_operations(spec: dict[str, Any]) -> list[Operation]:
             )
 
     return operations
+
+
+def _group_operations(operations: list[Operation]) -> list[HandlerGroup]:
+    grouped: dict[str, list[Operation]] = {}
+    for op in operations:
+        grouped.setdefault(op.rel_path, []).append(op)
+
+    result: list[HandlerGroup] = []
+    for rel_path in sorted(grouped):
+        ops = sorted(grouped[rel_path], key=lambda item: item.method)
+        path = ops[0].path
+        methods = [op.method for op in ops]
+        slug = rel_path.replace('/', '-')
+        if len(methods) == 1:
+            handler_name = f'handler-{slug}-{methods[0].lower()}'
+        else:
+            handler_name = f'handler-{slug}'
+
+        result.append(
+            HandlerGroup(
+                path=path,
+                rel_path=rel_path,
+                handler_name=handler_name,
+                methods=methods,
+                request_schema=ops[0].request_schema,
+                responses=ops[0].responses,
+                query_params=ops[0].query_params,
+            )
+        )
+
+    return result
+
+
+def _has_deps(view_dir: Path) -> bool:
+    return (view_dir / 'deps.hpp').exists()
 
 
 def _write_if_missing(path: Path, content: str) -> None:
@@ -274,12 +341,12 @@ def _render_json_serializer(schema: Schema) -> str:
     return '\n'.join(lines)
 
 
-def _render_requests_header(op: Operation, ns: str, service_name: str) -> str:
+def _render_requests_header(group: HandlerGroup, ns: str, service_name: str) -> str:
     structs: list[str] = []
-    if op.query_params:
-        structs.append(_render_struct('Request', op.query_params))
-    if op.request_schema and op.request_schema.fields:
-        structs.append(_render_struct(op.request_schema.name, op.request_schema.fields))
+    if group.query_params:
+        structs.append(_render_struct('Request', group.query_params))
+    if group.request_schema and group.request_schema.fields:
+        structs.append(_render_struct(group.request_schema.name, group.request_schema.fields))
 
     if not structs:
         structs.append('struct Request {};')
@@ -316,8 +383,9 @@ def _collect_unique_schemas(responses: list[ResponseSpec]) -> list[Schema]:
     return result
 
 
-def _render_responses_header(op: Operation, ns: str, service_name: str) -> str:
-    schemas = _collect_unique_schemas(op.responses)
+def _render_responses_header(group: HandlerGroup, ns: str, service_name: str) -> str:
+    schemas = _collect_unique_schemas(group.responses)
+    plain_only = all(response.plain_text for response in group.responses if response.schema)
     if not schemas:
         body = 'struct Response200 {\n    std::string body;\n};'
         response_type = 'using Response = Response200;'
@@ -327,12 +395,12 @@ def _render_responses_header(op: Operation, ns: str, service_name: str) -> str:
         serializers = [_render_json_serializer(schema) for schema in schemas]
         aliases = [
             f'using {_response_type_name(response.status)} = {response.schema.name};'
-            for response in op.responses
+            for response in group.responses
             if response.schema is not None
         ]
         variant_members = [
             _response_type_name(response.status)
-            for response in op.responses
+            for response in group.responses
             if response.schema is not None
         ]
         if len(variant_members) == 1:
@@ -341,11 +409,13 @@ def _render_responses_header(op: Operation, ns: str, service_name: str) -> str:
             response_type = f'using Response = std::variant<{", ".join(variant_members)}>;'
 
         body = '\n\n'.join(struct_blocks)
-        serializer_block = '\n\n' + '\n\n'.join(serializers)
+        serializer_block = ''
+        if not plain_only:
+            serializer_block = '\n\n' + '\n\n'.join(serializers)
         body = body + '\n\n' + '\n'.join(aliases) + '\n\n' + response_type
 
     includes = ['<cstdint>', '<string>', '<vector>']
-    if len(op.responses) > 1:
+    if len(group.responses) > 1:
         includes.append('<variant>')
 
     includes_block = '\n'.join(f'#include {inc}' for inc in includes)
@@ -355,8 +425,8 @@ def _render_responses_header(op: Operation, ns: str, service_name: str) -> str:
 {includes_block}
 
 #include <userver/formats/json/value.hpp>
-#include <userver/formats/json/value_builder.hpp>
-#include <userver/formats/json/serialize.hpp>
+{'#include <userver/formats/json/value_builder.hpp>' if not plain_only else ''}
+{'#include <userver/formats/json/serialize.hpp>' if not plain_only else ''}
 
 namespace {service_name}::views::{ns} {{
 
@@ -366,26 +436,49 @@ namespace {service_name}::views::{ns} {{
 '''
 
 
-def _render_handler_header(op: Operation, ns: str, service_name: str) -> str:
+def _response_body_expr(response: ResponseSpec, body_var: str = 'body') -> str:
+    if response.plain_text:
+        return f'return {body_var}.body;'
+    return f'return ToJson({body_var});'
+
+
+def _render_handler_header(group: HandlerGroup, ns: str, service_name: str) -> str:
+    postgres_includes = ''
+    postgres_member = ''
+    deps_includes = ''
+    constructor_decl = '    using HttpHandlerBase::HttpHandlerBase;'
+    deps_member = ''
+
+    if group.has_deps:
+        deps_includes = f'''
+#include <views/{group.rel_path}/deps.hpp>'''
+        constructor_decl = '''
+    Handler(
+        const userver::components::ComponentConfig& config,
+        const userver::components::ComponentContext& component_context);'''
+        deps_member = '''
+
+private:
+    Deps deps_;'''
+
     return f'''#pragma once
 
-#include <views/{op.rel_path}/requests.hpp>
-#include <views/{op.rel_path}/responses.hpp>
+#include <views/{group.rel_path}/requests.hpp>
+#include <views/{group.rel_path}/responses.hpp>
 
 #include <userver/components/component.hpp>
-#include <userver/server/handlers/http_handler_base.hpp>
+#include <userver/server/handlers/http_handler_base.hpp>{deps_includes}
 
 namespace {service_name}::views::{ns} {{
 
 class Handler final : public userver::server::handlers::HttpHandlerBase {{
 public:
-    static constexpr std::string_view kName = "{op.handler_name}";
-
-    using HttpHandlerBase::HttpHandlerBase;
+    static constexpr std::string_view kName = "{group.handler_name}";
+{constructor_decl}
 
     std::string HandleRequestThrow(
         const userver::server::http::HttpRequest& request,
-        userver::server::request::RequestContext& context) const override;
+        userver::server::request::RequestContext& context) const override;{deps_member}
 }};
 
 }}  // namespace {service_name}::views::{ns}
@@ -394,6 +487,11 @@ public:
 
 def _render_handler_visit_cases(responses: list[ResponseSpec]) -> str:
     cases: list[str] = []
+    response_by_schema: dict[str, ResponseSpec] = {}
+    for response in responses:
+        if response.schema is not None:
+            response_by_schema[response.schema.name] = response
+
     for response in responses:
         if response.schema is None:
             continue
@@ -408,17 +506,18 @@ def _render_handler_visit_cases(responses: list[ResponseSpec]) -> str:
                 f'request_http.SetResponseStatus(userver::server::http::HttpStatus{{{response.status}}});'
             )
 
+        body_expr = _response_body_expr(response, 'body')
         if response.status == 200:
             cases.append(
                 f'''        if constexpr (std::is_same_v<Body, {schema_name}>) {{
-            return ToJson(body);
+            {body_expr}
         }}'''
             )
         else:
             cases.append(
                 f'''        if constexpr (std::is_same_v<Body, {schema_name}>) {{
             {status_line}
-            return ToJson(body);
+            {body_expr}
         }}'''
             )
 
@@ -428,9 +527,9 @@ def _render_handler_visit_cases(responses: list[ResponseSpec]) -> str:
     return '\n'.join(cases)
 
 
-def _render_handler_cpp(op: Operation, ns: str, service_name: str) -> str:
+def _render_handler_cpp(group: HandlerGroup, ns: str, service_name: str) -> str:
     parse_lines: list[str] = []
-    for param in op.query_params:
+    for param in group.query_params:
         if param.cpp_type == 'std::string':
             parse_lines.append(
                 f'    request.{param.cpp_name} = request_http.GetArg("{param.json_name}");'
@@ -446,14 +545,21 @@ def _render_handler_cpp(op: Operation, ns: str, service_name: str) -> str:
 
     parse_block = '\n'.join(parse_lines) if parse_lines else '    (void)request_http;'
 
-    typed_responses = [response for response in op.responses if response.schema is not None]
+    typed_responses = [response for response in group.responses if response.schema is not None]
+    single_response = typed_responses[0] if len(typed_responses) == 1 else None
 
-    if len(typed_responses) <= 1:
-        response_return = '''const auto response = View::Handle(std::move(request), context);
-    return ToJson(response);'''
+    view_call = 'View::Handle(std::move(request), context'
+    if group.has_deps:
+        view_call += ', deps_'
+    view_call += ')'
+
+    if len(typed_responses) <= 1 and single_response:
+        body_expr = _response_body_expr(single_response, 'response')
+        response_return = f'''const auto response = {view_call};
+    {body_expr};'''
     else:
-        visit_cases = _render_handler_visit_cases(op.responses)
-        response_return = f'''const auto response = View::Handle(std::move(request), context);
+        visit_cases = _render_handler_visit_cases(group.responses)
+        response_return = f'''const auto response = {view_call};
     return std::visit([&](const auto& body) -> std::string {{
         using Body = std::decay_t<decltype(body)>;
 {visit_cases}
@@ -467,11 +573,24 @@ def _render_handler_cpp(op: Operation, ns: str, service_name: str) -> str:
 
 #include <userver/server/http/http_status.hpp>'''
 
-    return f'''#include <views/{op.rel_path}/handler.hpp>
+    deps_cpp = ''
+    if group.has_deps:
+        deps_cpp = '''
 
-#include <views/{op.rel_path}/view.hpp>{extra_includes}
+Handler::Handler(
+    const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& component_context)
+    : HttpHandlerBase(config, component_context),
+      deps_(ResolveDeps(component_context)) {}
+'''
 
-namespace {service_name}::views::{ns} {{
+    deps_include = f'\n#include <views/{group.rel_path}/deps.hpp>' if group.has_deps else ''
+
+    return f'''#include <views/{group.rel_path}/handler.hpp>
+
+#include <views/{group.rel_path}/view.hpp>{deps_include}{extra_includes}
+
+namespace {service_name}::views::{ns} {{{deps_cpp}
 
 std::string Handler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request_http,
@@ -486,11 +605,11 @@ std::string Handler::HandleRequestThrow(
 '''
 
 
-def _render_view_header(op: Operation, ns: str, service_name: str) -> str:
+def _render_view_header(group: HandlerGroup, ns: str, service_name: str) -> str:
     return f'''#pragma once
 
-#include <views/{op.rel_path}/requests.hpp>
-#include <views/{op.rel_path}/responses.hpp>
+#include <views/{group.rel_path}/requests.hpp>
+#include <views/{group.rel_path}/responses.hpp>
 
 #include <userver/server/request/request_context.hpp>
 
@@ -507,8 +626,8 @@ public:
 '''
 
 
-def _render_view_cpp(op: Operation, ns: str, service_name: str) -> str:
-    success = next((r for r in op.responses if r.status == 200 and r.schema), None)
+def _render_view_cpp(group: HandlerGroup, ns: str, service_name: str) -> str:
+    success = next((r for r in group.responses if r.status == 200 and r.schema), None)
     if success and success.schema:
         inits: list[str] = []
         for fld in success.schema.fields:
@@ -517,21 +636,22 @@ def _render_view_cpp(op: Operation, ns: str, service_name: str) -> str:
             else:
                 inits.append(f'.{fld.cpp_name} = {{}}')
         return_stmt = f'return {_response_type_name(200)}{{{", ".join(inits)}}};'
-    elif op.responses and op.responses[0].schema:
-        response = op.responses[0]
+    elif group.responses and group.responses[0].schema:
+        response = group.responses[0]
         inits = [f'.{fld.cpp_name} = ""' if fld.cpp_type == 'std::string' else f'.{fld.cpp_name} = {{}}'
                  for fld in response.schema.fields]
         return_stmt = f'return {_response_type_name(response.status)}{{{", ".join(inits)}}};'
     else:
         return_stmt = 'return Response200{.body = "Not implemented\\n"};'
 
-    return f'''#include <views/{op.rel_path}/view.hpp>
+    handle_params = 'Request&& /*request*/,\n    userver::server::request::RequestContext& /*context*/'
+
+    return f'''#include <views/{group.rel_path}/view.hpp>
 
 namespace {service_name}::views::{ns} {{
 
 Response View::Handle(
-    Request&& /*request*/,
-    userver::server::request::RequestContext& /*context*/) {{
+    {handle_params}) {{
     {return_stmt}
 }}
 
@@ -539,27 +659,28 @@ Response View::Handle(
 '''
 
 
-def _render_openapi_handlers_block(operations: list[Operation]) -> str:
+def _render_openapi_handlers_block(groups: list[HandlerGroup]) -> str:
     lines: list[str] = []
-    for op in operations:
+    for group in groups:
+        methods = ','.join(group.methods)
         lines.extend(
             [
-                f'        {op.handler_name}:',
-                f'            path: {op.path}',
-                f'            method: {op.method}',
+                f'        {group.handler_name}:',
+                f'            path: {group.path}',
+                f'            method: {methods}',
                 '            task_processor: main-task-processor',
             ]
         )
     return '\n'.join(lines)
 
 
-def _render_config_fragment(operations: list[Operation]) -> str:
+def _render_config_fragment(groups: list[HandlerGroup]) -> str:
     return (
         'components_manager:\n'
         '    components:\n'
         + '\n'.join(
             line
-            for line in _render_openapi_handlers_block(operations).splitlines()
+            for line in _render_openapi_handlers_block(groups).splitlines()
             if line.strip()
         )
         + '\n'
@@ -574,7 +695,7 @@ def _extract_openapi_handlers_section(static_config_text: str) -> str | None:
     return static_config_text[begin + len(OPENAPI_HANDLERS_BEGIN):end].strip('\n')
 
 
-def sync_static_config_handlers(service_dir: Path, operations: list[Operation]) -> None:
+def sync_static_config_handlers(service_dir: Path, groups: list[HandlerGroup]) -> None:
     static_path = service_dir / 'configs' / 'static_config.yaml'
     if not static_path.exists():
         raise SystemExit(f'Missing static config: {static_path}')
@@ -586,7 +707,7 @@ def sync_static_config_handlers(service_dir: Path, operations: list[Operation]) 
             f'to {static_path} under components_manager.components'
         )
 
-    block = _render_openapi_handlers_block(operations)
+    block = _render_openapi_handlers_block(groups)
     replacement_block = block
     if block:
         replacement_block = f'\n{block}\n        '
@@ -608,11 +729,11 @@ def sync_static_config_handlers(service_dir: Path, operations: list[Operation]) 
     static_path.write_text(new_text, encoding='utf-8')
 
 
-def _render_handlers_list(operations: list[Operation], service_name: str) -> str:
-    includes = '\n'.join(f'#include <views/{op.rel_path}/handler.hpp>' for op in operations)
+def _render_handlers_list(groups: list[HandlerGroup], service_name: str) -> str:
+    includes = '\n'.join(f'#include <views/{group.rel_path}/handler.hpp>' for group in groups)
     appends = '\n'.join(
-        f'        .Append<{service_name}::views::{_cpp_namespace(op.rel_path)}::Handler>()'
-        for op in operations
+        f'        .Append<{service_name}::views::{_cpp_namespace(group.rel_path)}::Handler>()'
+        for group in groups
     )
     return f'''#pragma once
 
@@ -630,7 +751,19 @@ inline auto AppendGeneratedHandlers(userver::components::ComponentList& componen
 '''
 
 
-def generate(service_dir: Path) -> list[Operation]:
+def _cleanup_stale_generated_handlers(gen_dir: Path, active_rel_paths: set[str]) -> None:
+    import shutil
+
+    for base in (gen_dir / 'include' / 'views', gen_dir / 'src' / 'views'):
+        if not base.exists():
+            continue
+        for handler_marker in list(base.glob('**/handler.hpp')) + list(base.glob('**/handler.cpp')):
+            rel_path = handler_marker.parent.relative_to(base).as_posix()
+            if rel_path not in active_rel_paths:
+                shutil.rmtree(handler_marker.parent)
+
+
+def generate(service_dir: Path) -> list[HandlerGroup]:
     spec_dir = service_dir / 'docs' / 'api'
     gen_dir = service_dir / '.gen'
     views_dir = service_dir / 'src' / 'views'
@@ -643,26 +776,32 @@ def generate(service_dir: Path) -> list[Operation]:
     if not operations:
         raise SystemExit(f'No HTTP operations found in {spec_dir}')
 
-    for op in operations:
-        ns = _cpp_namespace(op.rel_path)
-        gen_include = gen_dir / 'include' / 'views' / op.rel_path
-        gen_src = gen_dir / 'src' / 'views' / op.rel_path
-        view_dir = views_dir / op.rel_path
+    groups = _group_operations(operations)
 
-        _write_always(gen_include / 'requests.hpp', _render_requests_header(op, ns, service_name))
-        _write_always(gen_include / 'responses.hpp', _render_responses_header(op, ns, service_name))
-        _write_always(gen_include / 'handler.hpp', _render_handler_header(op, ns, service_name))
-        _write_always(gen_src / 'handler.cpp', _render_handler_cpp(op, ns, service_name))
+    for group in groups:
+        ns = _cpp_namespace(group.rel_path)
+        gen_include = gen_dir / 'include' / 'views' / group.rel_path
+        gen_src = gen_dir / 'src' / 'views' / group.rel_path
+        view_dir = views_dir / group.rel_path
 
-        _write_if_missing(view_dir / 'view.hpp', _render_view_header(op, ns, service_name))
-        _write_if_missing(view_dir / 'view.cpp', _render_view_cpp(op, ns, service_name))
+        group.has_deps = _has_deps(view_dir)
+
+        _write_always(gen_include / 'requests.hpp', _render_requests_header(group, ns, service_name))
+        _write_always(gen_include / 'responses.hpp', _render_responses_header(group, ns, service_name))
+        _write_always(gen_include / 'handler.hpp', _render_handler_header(group, ns, service_name))
+        _write_always(gen_src / 'handler.cpp', _render_handler_cpp(group, ns, service_name))
+
+        _write_if_missing(view_dir / 'view.hpp', _render_view_header(group, ns, service_name))
+        _write_if_missing(view_dir / 'view.cpp', _render_view_cpp(group, ns, service_name))
+
+    _cleanup_stale_generated_handlers(gen_dir, {group.rel_path for group in groups})
 
     _write_always(
         gen_dir / 'include' / 'openapi' / 'handlers.hpp',
-        _render_handlers_list(operations, service_name),
+        _render_handlers_list(groups, service_name),
     )
-    _write_always(gen_dir / 'config.openapi.yaml', _render_config_fragment(operations))
-    return operations
+    _write_always(gen_dir / 'config.openapi.yaml', _render_config_fragment(groups))
+    return groups
 
 
 def _generator_inputs() -> list[Path]:
@@ -682,7 +821,7 @@ def _hash_file(hasher: hashlib._Hash, path: Path, label: str | None = None) -> N
     hasher.update(path.read_bytes())
 
 
-def compute_codegen_digest(service_dir: Path, operations: list[Operation]) -> str:
+def compute_codegen_digest(service_dir: Path, groups: list[HandlerGroup]) -> str:
     spec_dir = service_dir / 'docs' / 'api'
     hasher = hashlib.sha256()
 
@@ -691,11 +830,11 @@ def compute_codegen_digest(service_dir: Path, operations: list[Operation]) -> st
     for path in _generator_inputs():
         _hash_file(hasher, path, path.relative_to(GENERATOR_DIR).as_posix())
 
-    hasher.update(_render_openapi_handlers_block(operations).encode())
+    hasher.update(_render_openapi_handlers_block(groups).encode())
 
-    for op in operations:
+    for group in groups:
         hasher.update(
-            f'{op.handler_name}\0{op.method}\0{op.path}\0{op.rel_path}\n'.encode()
+            f'{group.handler_name}\0{",".join(group.methods)}\0{group.path}\0{group.rel_path}\n'.encode()
         )
 
     return hasher.hexdigest()
@@ -721,7 +860,7 @@ def read_codegen_lock(service_dir: Path) -> str | None:
     return None
 
 
-def verify_static_config(service_dir: Path, operations: list[Operation]) -> list[str]:
+def verify_static_config(service_dir: Path, groups: list[HandlerGroup]) -> list[str]:
     static_config_path = service_dir / 'configs' / 'static_config.yaml'
     if not static_config_path.exists():
         return [f'Missing static config: {static_config_path}']
@@ -734,7 +873,7 @@ def verify_static_config(service_dir: Path, operations: list[Operation]) -> list
             f'missing in {static_config_path}'
         ]
 
-    expected = _render_openapi_handlers_block(operations).strip()
+    expected = _render_openapi_handlers_block(groups).strip()
     if section.strip() != expected:
         return [
             f'OpenAPI handlers block in {static_config_path} is out of date (run make gen)'
@@ -743,11 +882,11 @@ def verify_static_config(service_dir: Path, operations: list[Operation]) -> list
     return []
 
 
-def verify_view_stubs(service_dir: Path, operations: list[Operation]) -> list[str]:
+def verify_view_stubs(service_dir: Path, groups: list[HandlerGroup]) -> list[str]:
     views_dir = service_dir / 'src' / 'views'
     errors: list[str] = []
-    for op in operations:
-        view_dir = views_dir / op.rel_path
+    for group in groups:
+        view_dir = views_dir / group.rel_path
         for name in ('view.hpp', 'view.cpp'):
             path = view_dir / name
             if not path.exists():
@@ -755,9 +894,9 @@ def verify_view_stubs(service_dir: Path, operations: list[Operation]) -> list[st
     return errors
 
 
-def verify_codegen(service_dir: Path, operations: list[Operation]) -> list[str]:
+def verify_codegen(service_dir: Path, groups: list[HandlerGroup]) -> list[str]:
     errors: list[str] = []
-    expected = compute_codegen_digest(service_dir, operations)
+    expected = compute_codegen_digest(service_dir, groups)
     committed = read_codegen_lock(service_dir)
     if committed is None:
         errors.append(f'Missing {LOCK_FILE_NAME} in {service_dir / "docs" / "api"} (run make gen)')
@@ -766,8 +905,8 @@ def verify_codegen(service_dir: Path, operations: list[Operation]) -> list[str]:
             f'{LOCK_FILE_NAME} is out of date for {service_dir.name} '
             f'(run make gen and commit {LOCK_FILE_NAME})'
         )
-    errors.extend(verify_static_config(service_dir, operations))
-    errors.extend(verify_view_stubs(service_dir, operations))
+    errors.extend(verify_static_config(service_dir, groups))
+    errors.extend(verify_view_stubs(service_dir, groups))
     return errors
 
 
@@ -790,11 +929,11 @@ def main() -> None:
     if not service_dir.is_dir():
         raise SystemExit(f'Service directory not found: {service_dir}')
 
-    operations = generate(service_dir)
+    groups = generate(service_dir)
     rel = service_dir.name
 
     if args.check:
-        errors = verify_codegen(service_dir, operations)
+        errors = verify_codegen(service_dir, groups)
         if errors:
             print(f'OpenAPI codegen check failed for {rel}:', file=sys.stderr)
             for error in errors:
@@ -803,14 +942,15 @@ def main() -> None:
         print(f'OpenAPI codegen check passed for {rel}')
         return
 
-    sync_static_config_handlers(service_dir, operations)
+    sync_static_config_handlers(service_dir, groups)
 
-    digest = compute_codegen_digest(service_dir, operations)
+    digest = compute_codegen_digest(service_dir, groups)
     write_codegen_lock(service_dir, digest)
 
-    print(f'Generated {len(operations)} handler(s) for {rel}:')
-    for op in operations:
-        print(f'  {op.method} {op.path} -> src/views/{op.rel_path}')
+    print(f'Generated {len(groups)} handler(s) for {rel}:')
+    for group in groups:
+        methods = ','.join(group.methods)
+        print(f'  {methods} {group.path} -> src/views/{group.rel_path}')
     print(f'Updated {LOCK_FILE_NAME} and configs/static_config.yaml')
 
 

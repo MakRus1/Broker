@@ -5,5 +5,9 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 gen:
 	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) gen
 
+.PHONY: check-gen
+check-gen:
+	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) check-gen
+
 .DEFAULT:
 	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) $(MAKECMDGOALS)

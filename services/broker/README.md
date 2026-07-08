@@ -14,6 +14,8 @@ make gen          # из папки сервиса
 make gen SERVICE=broker
 ```
 
+`make gen` также обновляет блок OpenAPI-ручек в `configs/static_config.yaml` (между маркерами `# OPENAPI_HANDLERS_BEGIN` / `# OPENAPI_HANDLERS_END`).
+
 Результат:
 
 | Путь | Содержимое |
@@ -23,4 +25,4 @@ make gen SERVICE=broker
 
 Для `/foo/bar` → `src/views/foo/bar/`.
 
-После добавления новых ручек перенесите блоки из `.gen/config.openapi.yaml` в `configs/static_config.yaml` и пересоберите проект (`make cmake-debug` при появлении новых файлов).
+Пересоберите проект (`make cmake-debug`) при появлении новых файлов в `.gen/`.

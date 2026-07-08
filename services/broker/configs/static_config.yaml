@@ -68,10 +68,15 @@ components_manager:
             method: GET,POST
             task_processor: main-task-processor
 
+        # OPENAPI_HANDLERS_BEGIN
         handler-foo-bar-get:
             path: /foo/bar
             method: GET
             task_processor: main-task-processor
+        
+        
+        
+        # OPENAPI_HANDLERS_END
 
         postgres-db-1:
             dbconnection: $pg-connection

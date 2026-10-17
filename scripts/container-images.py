@@ -62,6 +62,10 @@ def main():
     for variant in ('dev', 'sanitize'):
         if not re.fullmatch(re.escape(REGISTRY) + r'@sha256:[0-9a-f]{64}', data['images'][variant]):
             raise ValueError(f'Неверная ссылка на образ {variant}')
+    if args.command == 'check':
+        config = json.loads((ROOT / '.devcontainer/devcontainer.json').read_text())
+        if config.get('image') != data['images']['dev'] or 'build' in config:
+            raise ValueError('Dev Container не соответствует lock-файлу; выполните make lock-images')
     if args.command == 'ref':
         print(data['images'][args.variant])
 

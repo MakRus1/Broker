@@ -21,7 +21,19 @@ defaults:
   run:
     shell: bash
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      key: ${{ steps.key.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: key
+        run: echo "value=$(python3 scripts/container-images.py key)" >> "$GITHUB_OUTPUT"
   build:
+    needs: plan
+    concurrency:
+      group: environment-${{ needs.plan.outputs.key }}-${{ matrix.runner }}-${{ matrix.variant }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +78,10 @@ jobs:
           cache-from: type=gha,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
           cache-to: type=gha,mode=max,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
   manifest:
-    needs: build
+    needs: [plan, build]
+    concurrency:
+      group: environment-manifest-${{ needs.plan.outputs.key }}
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
@@ -84,6 +99,8 @@ jobs:
             if ! docker buildx imagetools inspect "$tag" >/dev/null 2>&1; then
               docker buildx imagetools create --tag "$tag" "$tag-amd64" "$tag-arm64"
             fi
-            docker buildx imagetools inspect "$tag" >> "$GITHUB_STEP_SUMMARY"
+            docker buildx imagetools inspect "$tag" | tee -a "$GITHUB_STEP_SUMMARY"
           done
+          python3 scripts/container-images.py lock
+          cat tools/container-images.json | tee -a "$GITHUB_STEP_SUMMARY"
           echo 'Обновите закрепление: make lock-images' >> "$GITHUB_STEP_SUMMARY"

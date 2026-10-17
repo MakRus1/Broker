@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Проверка сгенерированных HTTP-контрактов
+  version: '1'
+paths:
+  /items/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '204':
+          description: Нет тела
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                count:
+                  type: integer
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                required:
+                - id
+        '409':
+          description: Конфликт
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                required:
+                - id
+  /validated:
+    get:
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: &id001
+          - new
+          - in_transit
+          - closed
+          default: new
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          default: 10
+      - name: day
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: token
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: ratio
+        in: query
+        schema:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          multipleOf: 0.25
+      responses:
+        '200':
+          description: Эффективные значения и признак переданного параметра
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - limit
+                - provided
+                - status
+                properties:
+                  limit:
+                    type: integer
+                  provided:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: *id001
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum: *id001
+                labels:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 5
+                    pattern: ^[a-z]+$
+                  minItems: 1
+                  maxItems: 3
+                  uniqueItems: true
+                  default:
+                  - a
+                created:
+                  type: string
+                  format: date-time
+                amount:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  multipleOf: 0.5
+                count:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  default: 3
+                description:
+                  type: string
+                  minLength: 2
+                  maxLength: 4
+                encoded:
+                  type: string
+                  format: byte
+      responses:
+        '201':
+          description: Значения тела после применения default
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - count
+                - count_provided
+                - labels
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  count:
+                    type: integer
+                  count_provided:
+                    type: boolean
+                  labels:
+                    type: array
+                    items:
+                      type: string

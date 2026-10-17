@@ -8,3 +8,8 @@ server-port: 8080
 grpc-server-port: 8081
 
 pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15433/broker_db_1
+
+monitor-port: 8082
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local

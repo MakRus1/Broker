@@ -12,10 +12,10 @@ std::string SayHelloTo(std::string_view name, UserType type) {
     }
 
     switch (type) {
-        case UserType::kFirstTime:
-            return fmt::format("Hello, {}!\n", name);
-        case UserType::kKnown:
-            return fmt::format("Hi again, {}!\n", name);
+    case UserType::kFirstTime:
+        return fmt::format("Hello, {}!\n", name);
+    case UserType::kKnown:
+        return fmt::format("Hi again, {}!\n", name);
     }
 
     UASSERT(false);

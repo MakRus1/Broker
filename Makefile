@@ -1,228 +1,70 @@
+.DEFAULT_GOAL := help
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-_cwd_rel := $(patsubst $(REPO_ROOT)/%,%,$(CURDIR))
-_service_from_dir := $(if $(filter services/%,$(_cwd_rel)),$(word 2,$(subst /, ,$(_cwd_rel))),)
-ifneq ($(_service_from_dir),)
-  SERVICE ?= $(_service_from_dir)
-endif
+include $(REPO_ROOT)/tools/versions.env
 SERVICE ?= broker
-NPROCS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-CPU_LIMIT ?= $(NPROCS)
-CLANG_FORMAT ?= clang-format
-DOCKER_IMAGE ?= ghcr.io/userver-framework/ubuntu-22.04-userver-pg-dev:v2.15
-DOCKER_ARGS = $(shell if [ -t 0 ]; then echo -it; fi)
-DOCKER_UID ?= $(shell /usr/bin/id -u 2>/dev/null || id -u)
-DOCKER_GID ?= $(shell /usr/bin/id -g 2>/dev/null || id -g)
-PRESETS ?= debug release
-DOCKER_COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi)
-# userver needs userfaultfd (StackUsageMonitor); same flags as .devcontainer/devcontainer.json
-DOCKER_RUN_OPTS = --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --network=host
+PYTHON3 ?= $(shell command -v python3.12 || command -v python3)
+NPROCS ?= 4
+DOCKER_IMAGE ?= $(BROKER_IMAGE)
+DOCKER_PLATFORM ?= $(shell docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
+DOCKER_VOLUME_PREFIX = broker-$(subst /,-,$(DOCKER_PLATFORM))
+# Linux-окружение и результаты сборки не смешиваются с нативными файлами хоста.
+DOCKER_STATE_VOLUMES = $(foreach dir,.venv-gen build-debug build-release build-sanitize,-v $(DOCKER_VOLUME_PREFIX)-$(subst .,_,$(dir)):/workspaces/broker/$(dir))
+PRESETS := debug release sanitize
+.PHONY: $(addprefix cmake-,$(PRESETS)) $(addprefix build-,$(PRESETS)) $(addprefix test-,$(PRESETS)) $(addprefix test-only-,$(PRESETS)) $(addprefix test-all-,$(PRESETS)) $(addprefix run-,$(PRESETS)) $(addprefix start-,$(PRESETS))
 
-.PHONY: check-docker-platform
-check-docker-platform:
-	@if [ "$$(uname -m)" = "arm64" ] && command -v colima >/dev/null 2>&1; then \
-		ctx=$$(docker context show 2>/dev/null); \
-		case "$$ctx" in \
-			colima) profile=default ;; \
-			colima-*) profile=$${ctx#colima-} ;; \
-			*) profile= ;; \
-		esac; \
-		if [ -n "$$profile" ]; then \
-			arch=$$(colima list 2>/dev/null | awk -v p="$$profile" '$$1 == p {print $$3}'); \
-			if [ "$$arch" = "aarch64" ]; then \
-				echo "Ошибка: Docker context $$ctx (Colima $$profile, $$arch) не может стабильно запускать amd64-образ userver." >&2; \
-				echo "  colima start userver --arch x86_64 --memory 8" >&2; \
-				echo "  docker context use colima-userver" >&2; \
-				echo "  make dist-clean && make docker-test-debug" >&2; \
-				exit 1; \
-			fi; \
-		fi; \
-	fi
+.PHONY: format check-format help gen check-gen check-gen-all test-tools doctor docker-image new-service testsuite-clean
+help:
+	@echo 'make doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-image | docker-test-debug'
 
-.PHONY: all
-all: test-debug test-release
-
-.PHONY: $(addprefix cmake-, $(PRESETS))
-$(addprefix cmake-, $(PRESETS)): cmake-%:
-	cmake --preset $*
-
-$(addsuffix /CMakeCache.txt, $(addprefix build-, $(PRESETS))): build-%/CMakeCache.txt:
-	$(MAKE) cmake-$*
-
-.PHONY: $(addprefix build-, $(PRESETS))
-$(addprefix build-, $(PRESETS)): build-%: build-%/CMakeCache.txt
-	cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
-
-.PHONY: testsuite-clean
-testsuite-clean:
-	-$(MAKE) db-down-all
-	-pkill -f '/tmp/.yasuite-.*postgres' 2>/dev/null || true
-	rm -rf /tmp/.yasuite-user /tmp/.yasuite-hostuser
-	@for svc in build-*/services/*/; do \
-		rm -rf "$$svc/Testing/Temporary"; \
-		mkdir -p "$$svc/Testing/Temporary"; \
-	done
-
-.PHONY: test-all-debug test-all-release
-test-all-debug:
-	@for svc in $$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort); do \
-		$(MAKE) test-debug SERVICE=$$svc || exit 1; \
-	done
-
-test-all-release:
-	@for svc in $$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort); do \
-		$(MAKE) test-release SERVICE=$$svc || exit 1; \
-	done
-
-.PHONY: $(addprefix test-, $(PRESETS)) $(addprefix test-only-, $(PRESETS))
-$(addprefix test-, $(PRESETS)): test-%: build-%/CMakeCache.txt
-	$(MAKE) testsuite-clean
-	$(MAKE) test-only-$*
-
-$(addprefix test-only-, $(PRESETS)): test-only-%: build-%/CMakeCache.txt
-	cmake --build build-$* -j $(NPROCS) --target $(SERVICE) $(SERVICE)_unittest $(SERVICE)_benchmark
-	cd build-$* && ((test -t 1 && GTEST_COLOR=1 PYTEST_ADDOPTS="--color=yes" ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V) || ctest -R '^($(SERVICE)_unittest|$(SERVICE)_benchmark|testsuite-$(SERVICE))$$' -V)
-	pycodestyle services/$(SERVICE)/tests
-
-.PHONY: $(addprefix run-, $(PRESETS))
-$(addprefix run-, $(PRESETS)): run-%: build-%/CMakeCache.txt
-	export CPU_LIMIT=$(CPU_LIMIT); \
-	./build-$*/services/$(SERVICE)/$(SERVICE) \
-		-c services/$(SERVICE)/configs/static_config.yaml \
-		--config_vars services/$(SERVICE)/configs/config_vars.yaml
-
-.PHONY: $(addprefix start-, $(PRESETS))
-$(addprefix start-, $(PRESETS)): start-%:
-	$(MAKE) testsuite-clean
-	cmake --build build-$* -v --target start-$(SERVICE)
-
-.PHONY: $(addprefix clean-, $(PRESETS))
-$(addprefix clean-, $(PRESETS)): clean-%:
-	cmake --build build-$* --target clean
-
-.PHONY: dist-clean
-dist-clean:
-	rm -rf build*
-	rm -rf services/*/tests/__pycache__/
-	rm -rf services/*/tests/.pytest_cache/
-	rm -rf .ccache
-	rm -rf .vscode/.cache
-	rm -rf .vscode/compile_commands.json
-
-.PHONY: $(addprefix install-, $(PRESETS))
-$(addprefix install-, $(PRESETS)): install-%: build-%
-	cmake --install build-$* -v --component $(SERVICE)
-
-.PHONY: install
-install: install-release
-
-.PHONY: gen
 gen:
-	@PYTHON=$$($(REPO_ROOT)/scripts/openapi_gen/ensure_venv.sh); \
-	"$$PYTHON" $(REPO_ROOT)/scripts/openapi_gen/generate.py --service-dir $(REPO_ROOT)/services/$(SERVICE)
-
-.PHONY: check-gen check-gen-all
-check-gen-all:
-	@failed=0; \
-	for spec_dir in $$(find $(REPO_ROOT)/services -path '*/docs/api' -type d 2>/dev/null | sort); do \
-		svc=$$(echo "$$spec_dir" | sed 's|.*/services/\([^/]*\)/docs/api|\1|'); \
-		$(MAKE) check-gen SERVICE=$$svc || failed=1; \
-	done; \
-	exit $$failed
-
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)"
 check-gen:
-	@PYTHON=$$($(REPO_ROOT)/scripts/openapi_gen/ensure_venv.sh); \
-	"$$PYTHON" $(REPO_ROOT)/scripts/openapi_gen/generate.py --service-dir $(REPO_ROOT)/services/$(SERVICE) --check
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)" --check
+check-gen-all:
+	@set -e; for svc in services/*; do $(MAKE) check-gen SERVICE=$$(basename "$$svc"); done
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-config.py && "$$PYTHON" scripts/openapi_gen/generate.py --service-dir tests/fixtures/contract_service --check
 
-.PHONY: format
-format:
-	find libs services -name '*pp' -type f | xargs $(CLANG_FORMAT) -i
-	find services -name '*.py' -type f | xargs autopep8 -i
+test-tools:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" -m unittest discover -s tests -v
 
-.PHONY: deps-macos
-deps-macos:
-	./scripts/install-deps-macos.sh
+format check-format:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-format.py $(if $(filter format,$@),--fix,)
 
-.PHONY: db-up db-down db-up-all db-down-all
-db-up:
-	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
-	cd $(REPO_ROOT) && $(DOCKER_COMPOSE) up -d postgres-$(SERVICE)
+doctor:
+	@$(PYTHON3) scripts/doctor.py
 
-db-down:
-	@if [ -n "$(DOCKER_COMPOSE)" ]; then cd $(REPO_ROOT) && $(DOCKER_COMPOSE) stop postgres-$(SERVICE); fi
+$(addprefix cmake-,$(PRESETS)): cmake-%:
+	@PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh >/dev/null
+	$(REPO_ROOT)/.venv-gen/bin/cmake --preset $* -DCMAKE_MAKE_PROGRAM=$(REPO_ROOT)/.venv-gen/bin/ninja -DPython3_EXECUTABLE=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh)
+$(addprefix build-,$(PRESETS)): build-%: cmake-%
+	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
+$(addprefix test-,$(PRESETS)): test-%: cmake-%
+	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
+	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)|testsuite-contract_service)$$'
+$(addprefix test-only-,$(PRESETS)): test-only-%: test-%
+$(addprefix test-all-,$(PRESETS)): test-all-%: cmake-%
+	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
+	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error
+$(addprefix run-,$(PRESETS)): run-%: build-%
+	./build-$*/services/$(SERVICE)/$(SERVICE) -c services/$(SERVICE)/configs/static_config.yaml --config_vars services/$(SERVICE)/configs/config_vars.yaml
+$(addprefix start-,$(PRESETS)): start-%: cmake-%
+	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* --target start-$(SERVICE)
 
-db-up-all:
-	@test -n "$(DOCKER_COMPOSE)" || (echo "docker compose / docker-compose not found" >&2 && exit 1)
-	cd $(REPO_ROOT) && $(DOCKER_COMPOSE) up -d
-
-db-down-all:
-	@if [ -n "$(DOCKER_COMPOSE)" ]; then cd $(REPO_ROOT) && $(DOCKER_COMPOSE) down; fi
-
-.PHONY: new-service
 new-service:
-	@test -n "$(NAME)" || (echo "Usage: make new-service NAME=my_service [POSTGRES=1 GRPC=1]" && exit 1)
-	./scripts/create-service.sh $(NAME) $(if $(POSTGRES),--postgresql,) $(if $(GRPC),--grpc,)
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/create_service.py "$(NAME)" $(if $(filter 1,$(POSTGRES)),--postgresql,) $(if $(filter 1,$(GRPC)),--grpc,)
 
-DOCKER_MAKE_TARGETS := testsuite-clean \
-	$(addprefix cmake-, $(PRESETS)) \
-	$(addprefix build-, $(PRESETS)) \
-	$(addprefix test-only-, $(PRESETS)) \
-	$(addprefix test-, $(PRESETS)) \
-	$(addprefix clean-, $(PRESETS)) \
-	gen
+docker-image:
+	docker build --platform $(DOCKER_PLATFORM) -f tools/Dockerfile -t $(DOCKER_IMAGE) .
+docker-%:
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
 
-.PHONY: docker-run-debug docker-start-debug docker-start-release
-docker-run-debug: check-docker-platform build-debug/CMakeCache.txt
-	$(MAKE) db-up SERVICE=$(SERVICE)
-	docker run $(DOCKER_ARGS) \
-		$(DOCKER_RUN_OPTS) \
-		-v "$(REPO_ROOT):$(REPO_ROOT)" \
-		-w "$(REPO_ROOT)" \
-		-e USER=user \
-		-e LOGNAME=user \
-		-e HOME="$(REPO_ROOT)/.docker-home" \
-		-e CPU_LIMIT=$(CPU_LIMIT) \
-		-e SERVICE=$(SERVICE) \
-		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make run-debug SERVICE=$(SERVICE)'
-
-docker-start-debug: check-docker-platform build-debug/CMakeCache.txt
-	@$(MAKE) db-down-all
-	docker run $(DOCKER_ARGS) \
-		$(DOCKER_RUN_OPTS) \
-		-v "$(REPO_ROOT):$(REPO_ROOT)" \
-		-w "$(REPO_ROOT)" \
-		-e USER=user \
-		-e LOGNAME=user \
-		-e HOME="$(REPO_ROOT)/.docker-home" \
-		-e CPU_LIMIT=$(CPU_LIMIT) \
-		-e SERVICE=$(SERVICE) \
-		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-debug SERVICE=$(SERVICE)'
-
-docker-start-release: check-docker-platform build-release/CMakeCache.txt
-	@$(MAKE) db-down-all
-	docker run $(DOCKER_ARGS) \
-		$(DOCKER_RUN_OPTS) \
-		-v "$(REPO_ROOT):$(REPO_ROOT)" \
-		-w "$(REPO_ROOT)" \
-		-e USER=user \
-		-e LOGNAME=user \
-		-e HOME="$(REPO_ROOT)/.docker-home" \
-		-e CPU_LIMIT=$(CPU_LIMIT) \
-		-e SERVICE=$(SERVICE) \
-		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) make start-release SERVICE=$(SERVICE)'
-
-.PHONY: $(addprefix docker-, $(DOCKER_MAKE_TARGETS))
-$(addprefix docker-, $(DOCKER_MAKE_TARGETS)): docker-%: check-docker-platform
-	docker run $(DOCKER_ARGS) \
-		$(DOCKER_RUN_OPTS) \
-		-v "$(REPO_ROOT):$(REPO_ROOT)" \
-		-w "$(REPO_ROOT)" \
-		-e USER=user \
-		-e LOGNAME=user \
-		-e HOME="$(REPO_ROOT)/.docker-home" \
-		-e CCACHE_DIR="$(REPO_ROOT)/.ccache" \
-		-e SERVICE=$(SERVICE) \
-		$(DOCKER_IMAGE) \
-		sh -c 'mkdir -p "$(REPO_ROOT)/.docker-home" "$(REPO_ROOT)/.ccache" && chown -R $(DOCKER_UID):$(DOCKER_GID) "$(REPO_ROOT)/.docker-home" "$(REPO_ROOT)/.ccache" && ./run_as_user.sh $(DOCKER_UID) $(DOCKER_GID) sh -c "make $*"'
+.PHONY: db-up db-down testsuite-clean dist-clean
+db-up:
+	docker compose up -d postgres-$(SERVICE)
+db-down:
+	docker compose stop postgres-$(SERVICE)
+# Testsuite самостоятельно управляет своими процессами; чужие PostgreSQL не останавливаем.
+testsuite-clean:
+	@echo 'Testsuite очищает свои процессы при завершении; локальные БД не затрагиваются.'
+dist-clean:
+	rm -rf build-debug build-release build-sanitize

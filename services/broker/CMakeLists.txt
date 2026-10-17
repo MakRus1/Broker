@@ -3,21 +3,34 @@ project(broker CXX)
 include("${CMAKE_SOURCE_DIR}/cmake/OpenApiCodegen.cmake")
 broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
-include_directories(src)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gen/include")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/.gen/include")
-endif()
-
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/greeting.cpp
     src/hello_grpc.cpp
+    src/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(
     ${PROJECT_NAME}_objs
-    PUBLIC userver::core userver::grpc userver::postgresql broker_common
+    PUBLIC userver::core userver::grpc userver::postgresql userver::otlp broker_common
 )
+
+if(BUILD_TESTING)
+    target_sources(${PROJECT_NAME}_objs PRIVATE tests/support/trace_probe.cpp)
+    target_include_directories(${PROJECT_NAME}_objs PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tests/support")
+    target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_TRACE_TESTS=1)
+endif()
+# SQL_QUERIES_BEGIN
+file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
+userver_add_sql_library(${PROJECT_NAME}_sql
+    NAMESPACE ${PROJECT_NAME}
+    SOURCE_DIR postgresql/queries
+    OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_sql
+    SQL_FILES *.sql)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
+# SQL_QUERIES_END
+broker_openapi_apply(${PROJECT_NAME}_objs)
+target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")
 
 userver_add_grpc_library(${PROJECT_NAME}_proto PROTOS handlers/hello.proto)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_proto)
@@ -29,15 +42,17 @@ if(OPENAPI_VIEW_SRCS)
     broker_openapi_apply(${PROJECT_NAME})
 endif()
 
-add_executable(${PROJECT_NAME}_unittest src/greeting_test.cpp)
-target_link_libraries(${PROJECT_NAME}_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
-add_google_tests(${PROJECT_NAME}_unittest)
+if(BUILD_TESTING)
+    add_executable(${PROJECT_NAME}_unittest src/greeting_test.cpp)
+    target_link_libraries(${PROJECT_NAME}_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
+    add_google_tests(${PROJECT_NAME}_unittest)
 
-add_executable(${PROJECT_NAME}_benchmark src/greeting_benchmark.cpp)
-target_link_libraries(${PROJECT_NAME}_benchmark PRIVATE ${PROJECT_NAME}_objs userver::ubench)
-add_google_benchmark_tests(${PROJECT_NAME}_benchmark)
+    add_executable(${PROJECT_NAME}_benchmark src/greeting_benchmark.cpp)
+    target_link_libraries(${PROJECT_NAME}_benchmark PRIVATE ${PROJECT_NAME}_objs userver::ubench)
+    add_google_benchmark_tests(${PROJECT_NAME}_benchmark)
 
-userver_testsuite_add_simple()
+    userver_testsuite_add_simple()
+endif()
 
 include(GNUInstallDirs)
 

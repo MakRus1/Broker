@@ -1,10 +1,11 @@
+#include <cstdlib>
+#include <string_view>
 #include <userver/clients/dns/component.hpp>
 #include <userver/clients/http/component_list.hpp>
 #include <userver/components/component.hpp>
 #include <userver/components/component_list.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/congestion_control/component.hpp>
-#include <userver/server/handlers/ping.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
@@ -12,13 +13,22 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <hello_grpc.hpp>
+#include <platform/grpc_telemetry.hpp>
+#include <platform/telemetry.hpp>
+#ifdef BROKER_TRACE_TESTS
+#include <trace_probe.hpp>
+#endif
+#include <ping.hpp>
+#include <userver/otlp/logs/component.hpp>
+#include <userver/server/handlers/server_monitor.hpp>
+#include <userver/ugrpc/client/client_factory_component.hpp>
+#include <userver/ugrpc/client/component_list.hpp>
 
 #include <openapi/handlers.hpp>
 
 int main(int argc, char* argv[]) {
     auto component_list =
         userver::components::MinimalServerComponentList()
-            .Append<userver::server::handlers::Ping>()
             .Append<userver::components::TestsuiteSupport>()
             .AppendComponentList(userver::clients::http::ComponentList())
             .Append<userver::clients::dns::Component>()
@@ -26,7 +36,25 @@ int main(int argc, char* argv[]) {
             .Append<userver::congestion_control::Component>()
             .Append<userver::components::Postgres>("postgres-db-1")
             .AppendComponentList(userver::ugrpc::server::MinimalComponentList())
-            .Append<broker::HelloGrpc>();
+            .Append<broker::HelloGrpc>()
+            .Append<platform::HttpTelemetryFactory>()
+            .Append<platform::HttpTelemetryPipeline>()
+            .Append<platform::GrpcTelemetryFactory>()
+            .Append<broker::Ping>()
+            .Append<broker::PingReady>()
+            .Append<userver::server::handlers::ServerMonitor>()
+            .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
+            .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
+            .Append<userver::otlp::LoggerComponent>();
+
+#ifdef BROKER_TRACE_TESTS
+    // Testsuite включает вспомогательную ручку вместе с ее конфигурацией.
+    const auto* trace_tests = std::getenv("BROKER_TRACE_TESTS");
+    if (trace_tests && std::string_view{trace_tests} == "1") {
+        component_list.Append<broker::TraceProbe>()
+            .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-probe-factory");
+    }
+#endif
 
     component_list = broker::openapi::AppendGeneratedHandlers(component_list);
 

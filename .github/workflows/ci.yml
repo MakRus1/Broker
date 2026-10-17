@@ -1,98 +1,87 @@
 name: CI
-
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - develop
-
-# Новый push в ту же ветку/PR отменяет ещё идущий прогон — актуален только последний коммит.
+    branches: [main, develop]
+permissions:
+  contents: read
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-env:
-  UBSAN_OPTIONS: print_stacktrace=1
-
+defaults:
+  run:
+    shell: bash
 jobs:
-  detect:
-    runs-on: ubuntu-latest
+  tools:
+    runs-on: ubuntu-24.04
     outputs:
       services: ${{ steps.detect.outputs.services }}
-      run_all: ${{ steps.detect.outputs.run_all }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Detect affected services
-        id: detect
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-            if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
-              BASE="HEAD~1"
-            fi
-          fi
-
-          echo "Diff base: ${BASE}"
-          AFFECTED="$(./scripts/affected-services.sh "${BASE}" | tr '\n' ' ' | xargs || true)"
-
-          if [ "${AFFECTED}" = "all" ]; then
-            SERVICES="$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | tr '\n' ' ' | xargs)"
-            echo "run_all=true" >> "${GITHUB_OUTPUT}"
-          elif [ -z "${AFFECTED}" ]; then
-            echo "No service changes detected, skipping tests."
-            echo "services=" >> "${GITHUB_OUTPUT}"
-            echo "run_all=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          else
-            SERVICES="${AFFECTED}"
-            echo "run_all=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-          echo "Affected services: ${SERVICES}"
-          echo "services=${SERVICES}" >> "${GITHUB_OUTPUT}"
-
-  codegen:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check OpenAPI codegen
-        run: make check-gen-all
-
-  docker:
-    needs: [detect, codegen]
-    if: needs.detect.outputs.services != ''
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Reuse ccache directory
-        uses: actions/cache@v4
+      - uses: actions/setup-python@v5
         with:
-          path: .ccache
-          key: ccache-${{ github.ref }}-${{ github.run_number }}
-          restore-keys: |
-            ccache-${{ github.ref }}-
-            ccache-
-
-      - name: Configure
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - run: make check-gen-all check-format
+      - name: Определение затронутых сервисов
+        id: detect
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          rm -rf build-debug build-release .docker-home
-          mkdir -p .docker-home .ccache
-          make docker-cmake-debug
-
-      - name: Build and test affected services
+          set -euo pipefail
+          affected=$(./scripts/affected-services.sh "${BASE:-missing-base}")
+          if [[ "$affected" == all ]]; then
+            affected=$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | xargs)
+          fi
+          echo "services=$affected" >> "$GITHUB_OUTPUT"
+      - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
+  build:
+    needs: tools
+    if: needs.tools.outputs.services != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            preset: debug
+          - runner: ubuntu-24.04
+            preset: release
+          - runner: ubuntu-24.04
+            preset: sanitize
+          - runner: ubuntu-24.04-arm
+            preset: debug
+    runs-on: ${{ matrix.runner }}
+    env:
+      ASAN_OPTIONS: detect_leaks=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Сборка общего окружения
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/Dockerfile
+          load: true
+          tags: broker-dev:userver-3.2
+          cache-from: type=gha,scope=dev-${{ runner.arch }}
+          cache-to: type=gha,mode=max,scope=dev-${{ runner.arch }}
+      - name: Права рабочего каталога для контейнера
+        run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
+      - name: Чистая сборка и проверки
+        env:
+          SERVICES: ${{ needs.tools.outputs.services }}
+          PRESET: ${{ matrix.preset }}
         run: |
-          SERVICES="${{ needs.detect.outputs.services }}"
-          make docker-testsuite-clean
-          for svc in ${SERVICES}; do
-            echo "=== Build & test: ${svc} ==="
-            make docker-build-debug SERVICE="${svc}"
-            make docker-test-only-debug SERVICE="${svc}"
+          set -euo pipefail
+          for svc in $SERVICES; do
+            make "docker-test-$PRESET" SERVICE="$svc"
           done
+      - name: Четыре варианта создания сервиса
+        if: matrix.preset == 'debug' && runner.arch == 'X64'
+        run: docker run --rm --network=host -v "$PWD:/workspaces/broker" broker-dev:userver-3.2 python3 scripts/smoke-services.py --build
+      - name: Исходники не изменились
+        run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"

@@ -12,10 +12,11 @@ shared_paths:
   - cmake/
   - .github/
   - .devcontainer/
+  - tools/
+  - scripts/
+  - tests/
   - CMakeLists.txt
   - CMakePresets.json
   - Makefile
   - docker-compose.yml
-  - run_as_user.sh
   - requirements.txt
-  - scripts/openapi_gen/

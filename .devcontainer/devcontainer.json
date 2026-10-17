@@ -1,24 +1,18 @@
 {
   "name": "Broker (userver pg+grpc)",
-  "image": "ghcr.io/userver-framework/ubuntu-22.04-userver-pg-dev:v2.15",
   "workspaceFolder": "/workspaces/broker",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/broker,type=bind",
-  "remoteUser": "user",
+  "remoteUser": "builder",
   "containerEnv": {
-    "CCACHE_DIR": "/workspaces/broker/.ccache",
-    "CORES_DIR": "/cores",
-    "PREFIX": "${localEnv:HOME}/.local",
     "SHELL": "/bin/bash"
   },
-  "forwardPorts": [8080, 8081, 15433],
-  "postCreateCommand": "pip3 install --user -r requirements.txt && make cmake-debug",
-  "onCreateCommand": "sudo git config --global --add safe.directory /workspaces/broker",
-  "runArgs": [
-    "--cap-add=SYS_PTRACE",
-    "--security-opt",
-    "seccomp=unconfined",
-    "--network=host"
+  "forwardPorts": [
+    8080,
+    8081,
+    8082
   ],
+  "postCreateCommand": "make check-gen-all && make cmake-debug",
+  "runArgs": [],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -43,5 +37,15 @@
         "cmake.copyCompileCommands": "${workspaceFolder}/.vscode/compile_commands.json"
       }
     }
-  }
+  },
+  "build": {
+    "dockerfile": "../tools/Dockerfile",
+    "context": ".."
+  },
+  "mounts": [
+    "source=broker-devcontainer-${devcontainerId}-_venv-gen,target=/workspaces/broker/.venv-gen,type=volume",
+    "source=broker-devcontainer-${devcontainerId}-build-debug,target=/workspaces/broker/build-debug,type=volume",
+    "source=broker-devcontainer-${devcontainerId}-build-release,target=/workspaces/broker/build-release,type=volume",
+    "source=broker-devcontainer-${devcontainerId}-build-sanitize,target=/workspaces/broker/build-sanitize,type=volume"
+  ]
 }

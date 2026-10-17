@@ -1,38 +1,22 @@
 include_guard(GLOBAL)
-
 function(download_userver)
-    set(OPTIONS)
-    set(ONE_VALUE_ARGS TRY_DIR VERSION GIT_TAG)
-    set(MULTI_VALUE_ARGS)
-    cmake_parse_arguments(ARG "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
-
-    if(ARG_TRY_DIR)
-        get_filename_component(ARG_TRY_DIR "${ARG_TRY_DIR}" REALPATH)
-        if(EXISTS "${ARG_TRY_DIR}")
-            message(STATUS "Using userver from ${ARG_TRY_DIR}")
-            add_subdirectory("${ARG_TRY_DIR}" third_party/userver)
-            return()
+    set(source "${CMAKE_SOURCE_DIR}/third_party/userver")
+    if(EXISTS "${source}")
+        find_package(Git REQUIRED)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${source}" rev-parse HEAD
+            OUTPUT_VARIABLE actual OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${source}" status --porcelain --untracked-files=no
+            OUTPUT_VARIABLE dirty COMMAND_ERROR_IS_FATAL ANY)
+        if(NOT actual STREQUAL BROKER_USERVER_COMMIT OR NOT dirty STREQUAL "")
+            message(FATAL_ERROR "third_party/userver must be clean at ${BROKER_USERVER_COMMIT}, got ${actual}")
         endif()
+        add_subdirectory("${source}" "${CMAKE_BINARY_DIR}/third_party/userver")
+    else()
+        include(FetchContent)
+        FetchContent_Declare(userver
+            URL "https://github.com/userver-framework/userver/archive/${BROKER_USERVER_COMMIT}.tar.gz"
+            URL_HASH SHA256=${BROKER_USERVER_ARCHIVE_SHA256}
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+        FetchContent_MakeAvailable(userver)
     endif()
-
-    # CMP0077 and CMP0126 are required for correct option forwarding.
-    cmake_minimum_required(VERSION 3.21)
-    include(get_cpm)
-
-    if(NOT DEFINED ARG_VERSION AND NOT DEFINED ARG_GIT_TAG)
-        set(ARG_GIT_TAG develop)
-    endif()
-
-    if(NOT DEFINED CPM_USE_NAMED_CACHE_DIRECTORIES)
-        set(CPM_USE_NAMED_CACHE_DIRECTORIES ON)
-    endif()
-
-    CPMAddPackage(
-        NAME userver
-        GITHUB_REPOSITORY userver-framework/userver
-        VERSION ${ARG_VERSION}
-        GIT_TAG ${ARG_GIT_TAG}
-        GIT_SHALLOW TRUE
-        ${ARG_UNPARSED_ARGUMENTS}
-    )
 endfunction()

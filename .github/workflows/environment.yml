@@ -1,0 +1,114 @@
+name: Publish environment
+on:
+  push:
+    paths:
+      - tools/Dockerfile
+      - tools/build-userver.sh
+      - tools/apt-packages.txt
+      - tools/versions.env
+      - tools/python-constraints.txt
+      - requirements.txt
+      - scripts/container-images.py
+      - .github/workflows/environment.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: environment-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      key: ${{ steps.key.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: key
+        run: echo "value=$(python3 scripts/container-images.py key)" >> "$GITHUB_OUTPUT"
+  build:
+    needs: plan
+    concurrency:
+      group: environment-${{ needs.plan.outputs.key }}-${{ matrix.runner }}-${{ matrix.variant }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        variant: [dev, sanitize]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Версия окружения
+        id: image
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          key=$(python3 scripts/container-images.py key)
+          arch=$(case "$RUNNER_ARCH" in X64) echo amd64;; ARM64) echo arm64;; *) exit 1;; esac)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "tag=ghcr.io/makrus1/broker-dev:$key-$VARIANT-$arch" >> "$GITHUB_OUTPUT"
+      - name: Вход в GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Проверка опубликованной версии
+        id: lookup
+        env:
+          IMAGE: ${{ steps.image.outputs.tag }}
+        run: |
+          if docker buildx imagetools inspect "$IMAGE" >/tmp/image-inspect.log 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          elif grep -Fq -- "$IMAGE: not found" /tmp/image-inspect.log; then
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          else
+            cat /tmp/image-inspect.log >&2
+            exit 1
+          fi
+      - name: Сборка и публикация
+        if: steps.lookup.outputs.exists != 'true'
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: tools/Dockerfile
+          target: ${{ matrix.variant }}
+          push: true
+          tags: ${{ steps.image.outputs.tag }}
+          cache-from: type=registry,ref=ghcr.io/makrus1/broker-dev:cache-${{ matrix.variant }}-${{ runner.arch }}
+          cache-to: type=registry,ref=ghcr.io/makrus1/broker-dev:cache-${{ matrix.variant }}-${{ runner.arch }},mode=max,ignore-error=true
+  manifest:
+    needs: [plan, build]
+    concurrency:
+      group: environment-manifest-${{ needs.plan.outputs.key }}
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Вход в GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Объединение архитектур
+        run: |
+          set -euo pipefail
+          key=$(python3 scripts/container-images.py key)
+          for variant in dev sanitize; do
+            tag="ghcr.io/makrus1/broker-dev:$key-$variant"
+            if docker buildx imagetools inspect "$tag" >/tmp/image-inspect.log 2>&1; then
+              :
+            elif grep -Fq -- "$tag: not found" /tmp/image-inspect.log; then
+              docker buildx imagetools create --tag "$tag" "$tag-amd64" "$tag-arm64"
+            else
+              cat /tmp/image-inspect.log >&2
+              exit 1
+            fi
+            docker buildx imagetools inspect "$tag" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          python3 scripts/container-images.py lock
+          cat tools/container-images.json | tee -a "$GITHUB_STEP_SUMMARY"
+          echo 'Обновите закрепление: make lock-images' >> "$GITHUB_STEP_SUMMARY"

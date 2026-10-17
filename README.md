@@ -11,13 +11,16 @@
 для родной архитектуры, без обязательной эмуляции amd64.
 
 ```sh
-make docker-image
+make docker-pull
 make docker-test-debug
 make docker-test-release
 ```
 
-Первая сборка образа компилирует userver и занимает заметное время. CI и Dev Container
-используют тот же `tools/Dockerfile`. Открытие в VS Code: **Dev Containers: Reopen in Container**.
+Готовые окружения с userver скачиваются из GHCR по digest в `tools/container-images.json`.
+CI и Dev Container используют опубликованный образ; userver в каждом PR не пересобирается.
+Первое скачивание может занять время из-за размера образа.
+Локальная пересборка доступна через `make docker-image`; для ее использования задайте
+`DOCKER_IMAGE=broker-dev:userver-3.2`. Открытие в VS Code: **Dev Containers: Reopen in Container**.
 Внутри контейнера команды выполняются без префикса `docker-`.
 
 ## Нативная сборка macOS
@@ -69,3 +72,5 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 
 Наличие workflow не означает, что проверки уже прошли: фактические результаты текущего
 рефакторинга записаны в [docs/validation.md](docs/validation.md).
+
+Образы окружения, публикация и обновление: [docs/container-images.md](docs/container-images.md).

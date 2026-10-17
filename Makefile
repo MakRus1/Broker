@@ -40,7 +40,7 @@ $(addprefix build-,$(PRESETS)): build-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
 $(addprefix test-,$(PRESETS)): test-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
-	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)|testsuite-contract_service)$$'
+	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)|testsuite-contract_service|client_contract_unittest)$$'
 $(addprefix test-only-,$(PRESETS)): test-only-%: test-%
 $(addprefix test-all-,$(PRESETS)): test-all-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)

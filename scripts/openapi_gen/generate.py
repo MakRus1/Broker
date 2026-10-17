@@ -10,6 +10,7 @@ import yaml
 from model import identifier, parse_spec
 from render import config_block, outputs, view
 from features import prepare
+from clients import client_outputs, client_specs
 
 class UniqueLoader(yaml.SafeLoader):
     """Повторяющиеся ключи YAML считаются ошибкой контракта."""
@@ -31,17 +32,23 @@ BEGIN = '# OPENAPI_HANDLERS_BEGIN'
 END = '# OPENAPI_HANDLERS_END'
 
 
-def specification_files(service, additions=None):
-    files = {p: p.read_text() for p in (service / 'docs/api').rglob('*')
+def public_schema_dir(service):
+    root = service.parent.parent if service.parent.name == 'services' else Path(__file__).resolve().parents[2]
+    return root / 'schemas/services' / service.name
+
+
+def specification_files(service, additions=None, public_only=False):
+    roots = [public_schema_dir(service)] + ([] if public_only else [service / 'docs/api'])
+    files = {p: p.read_text() for base in roots for p in base.rglob('*')
              if p.suffix in {'.yaml', '.yml', '.json'}}
     files.update({p: text for p, text in (additions or {}).items()
                   if p.is_relative_to(service / 'docs/api') and p.suffix in {'.yaml', '.yml', '.json'}})
     return files
 
 
-def load(service, additions=None):
+def load(service, additions=None, public_only=False):
     identifier(service.name)
-    files = specification_files(service, additions)
+    files = specification_files(service, additions, public_only)
     if not files:
         raise ValueError(f'{service}: no OpenAPI specs')
     ops = []
@@ -49,13 +56,16 @@ def load(service, additions=None):
         try:
             ops.extend(parse_spec(yaml.load(content, Loader=UniqueLoader)))
         except (ValueError, KeyError, TypeError, yaml.YAMLError) as exc:
-            raise ValueError(f'{path.relative_to(service)}: {exc}') from exc
+            raise ValueError(f'{path}: {exc}') from exc
     if not ops:
         raise ValueError('No HTTP operations')
     for selector in (lambda op: op.rel, lambda op: op.handler, lambda op: (op.path, op.method), lambda op: (re.sub(r'\{[^}]+\}', '{}', op.path), op.method)):
         values = [selector(op) for op in ops]
         if len(values) != len(set(values)):
             raise ValueError('Duplicate or colliding operations/paths')
+    ids = [op.operation_id for op in ops if op.operation_id]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate operationId across service specifications")
     return sorted(ops, key=lambda op: op.rel)
 
 
@@ -70,7 +80,11 @@ def configuration(service, ops, source=None):
 def digest(service, ops, additions=None):
     h = hashlib.sha256()
     for p, content in sorted(specification_files(service, additions).items()):
-        h.update(p.relative_to(service / 'docs/api').as_posix().encode() + b'\0' + content.encode())
+        h.update((('public/' + p.relative_to(public_schema_dir(service)).as_posix()) if p.is_relative_to(public_schema_dir(service)) else ('internal/' + p.relative_to(service / 'docs/api').as_posix())).encode() + b'\0' + content.encode())
+    for alias, provider in client_specs(service, UniqueLoader):
+        h.update(alias.encode())
+        for p, content in sorted(specification_files(provider, public_only=True).items()):
+            h.update(p.relative_to(public_schema_dir(provider)).as_posix().encode() + b"\0" + content.encode())
     base = Path(__file__).parent
     for p in sorted(base.glob('*.py')):
         h.update(p.relative_to(base).as_posix().encode() + b'\0' + p.read_bytes())
@@ -97,6 +111,7 @@ def run(service, check=False, output=None):
         if stale:
             raise ValueError('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
     ops = load(service, feature_files)
+    generated_clients = client_outputs(service, UniqueLoader, load)
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
@@ -117,6 +132,7 @@ def run(service, check=False, output=None):
         return
     if output is not None:
         generated = outputs(service.name, ops, dependencies)
+        generated.update(generated_clients)
         # Удаляем только файлы, ранее созданные этим генератором.
         manifest = output / 'manifest.json'
         previous = json.loads(manifest.read_text()) if manifest.exists() else []
@@ -171,7 +187,9 @@ def main():
         if args.list_outputs:
             ops = load(service)
             deps = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
-            print('\n'.join(sorted(outputs(service.name, ops, deps))))
+            generated = outputs(service.name, ops, deps)
+            generated.update(client_outputs(service, UniqueLoader, load))
+            print('\n'.join(sorted(generated)))
         else:
             run(service, args.check, args.output_dir)
     except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as exc:

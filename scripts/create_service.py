@@ -20,6 +20,9 @@ def _create(name, postgres=False, grpc=False):
     identifier(name)
     services = ROOT / 'services'
     destination = services / name
+    schema_destination = ROOT / 'schemas/services' / name
+    if schema_destination.exists() or schema_destination.is_symlink():
+        raise ValueError(f'Контракт сервиса уже существует: {schema_destination}')
     if destination.exists() or destination.is_symlink():
         raise ValueError(f'Сервис уже существует: {destination}')
     registered = [ROOT / 'CMakeLists.txt', ROOT / '.github/service-deps.yaml', ROOT / 'docker-compose.yml']
@@ -60,6 +63,12 @@ def _create(name, postgres=False, grpc=False):
         subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(stage), '--check'], check=True)
         try:
             stage.rename(destination)
+            schema_destination.mkdir(parents=True)
+            for spec in (destination / 'docs/api').glob('*'):
+                if spec.suffix in {'.yaml', '.yml', '.json'}:
+                    spec.rename(schema_destination / spec.name)
+            # После переноса меняется путь входов lock-файла, но ручной код сохраняется.
+            subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(destination)], check=True)
             deps = yaml.safe_load(before[ROOT / '.github/service-deps.yaml'])
             deps['libs']['common']['services'] = sorted(set(deps['libs']['common']['services'] + [name]))
             (ROOT / '.github/service-deps.yaml').write_text(yaml.safe_dump(deps, sort_keys=False, indent=2))
@@ -76,6 +85,8 @@ def _create(name, postgres=False, grpc=False):
         except BaseException:
             for p, data in before.items():
                 p.write_bytes(data)
+            if schema_destination.exists():
+                shutil.rmtree(schema_destination)
             if destination.exists():
                 shutil.rmtree(destination)
             raise

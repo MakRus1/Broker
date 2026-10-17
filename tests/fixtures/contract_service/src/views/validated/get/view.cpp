@@ -2,7 +2,7 @@
 
 namespace contract_service::views::validated::get {
 
-Response View::Handle(Request&& request, userver::server::request::RequestContext&) {
+Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps) {
     return Response200{
         .limit = request.limit,
         .provided = request.WasProvided("limit"),

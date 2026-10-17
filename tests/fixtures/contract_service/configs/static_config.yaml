@@ -30,6 +30,17 @@ components_manager:
             path: /tests/{action}
             method: POST
             task_processor: main-task-processor
+        client-probe:
+            path: /client-probe
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        # SERVICE_CONFIG_BEGIN
+        client-broker:
+            base-url: $client-broker-base-url
+            timeout-ms: $client-broker-timeout-ms
+        # SERVICE_CONFIG_END
         # OPENAPI_HANDLERS_BEGIN
         handler-items-by_id-get:
             path: /items/{id}

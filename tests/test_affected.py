@@ -44,6 +44,19 @@ class AffectedTest(unittest.TestCase):
             (repo / 'libs/common/a.hpp').write_text('second change')
             git('add', '.');git('commit', '-m', 'Изменение общей библиотеки')
             self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker other')
+            # Публичный контракт затрагивает поставщика и транзитивных потребителей.
+            (repo / 'services/third').mkdir()
+            (repo / 'services/other/service.yaml').write_text('version: 1\nlibraries: [common]\nclients: {api: {service: broker, transport: http}}\n')
+            (repo / 'services/third/service.yaml').write_text('version: 1\nlibraries: [common]\nclients: {api: {service: other, transport: http}}\n')
+            # Взаимная ссылка — HTTP-зависимость, а не цикл CMake.
+            (repo / 'services/broker/service.yaml').write_text('version: 1\nlibraries: [common, extra]\nclients: {api: {service: third, transport: http}}\n')
+            git('add', '.');git('commit', '-m', 'Клиенты')
+            base = git('rev-parse', 'HEAD')
+            contract = repo / 'schemas/services/broker/openapi.yaml'
+            contract.parent.mkdir(parents=True)
+            contract.write_text('contract')
+            git('add', '.');git('commit', '-m', 'Изменение публичного контракта')
+            self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker other third')
             (repo / '.github/service-deps.yaml').write_text('libs: broken\nshared_paths: []\n')
             self.assertNotEqual(subprocess.run(script + ['HEAD'], capture_output=True).returncode, 0)
             shutil.copy(ROOT / '.github/service-deps.yaml', repo / '.github/service-deps.yaml')

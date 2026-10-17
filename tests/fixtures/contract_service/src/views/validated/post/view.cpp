@@ -2,7 +2,7 @@
 
 namespace contract_service::views::validated::post {
 
-Response View::Handle(Request&& request, userver::server::request::RequestContext&) {
+Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps) {
     return Response201{
         .count = request.body.count,
         .count_provided = request.body.WasProvided("count"),

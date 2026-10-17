@@ -40,6 +40,7 @@ class ServicesTest(unittest.TestCase):
             directory = create_service.create(name, pg, grpc)
             run(directory, check=True)
             self.assertFalse(list(directory.rglob('*.pyc')))
+            self.assertTrue((self.root / 'schemas/services' / name / 'hello.yaml').is_file())
             config = yaml.safe_load((directory / 'configs/static_config.yaml').read_text())['components_manager']['components']
             self.assertEqual(config['handler-ping']['path'], '/ping')
             self.assertEqual(config['handler-ping-ready']['path'], '/ping/ready')
@@ -75,6 +76,7 @@ class ServicesTest(unittest.TestCase):
         with mock.patch.object(Path, 'write_text', fail):
             with self.assertRaises(OSError): create_service.create('rollback_test')
         self.assertFalse((self.root / 'services/rollback_test').exists())
+        self.assertFalse((self.root / 'schemas/services/rollback_test').exists())
         self.assertEqual(before, {p: p.read_bytes() for p in paths})
 
     def test_manifest_enables_features_and_preserves_manual_code(self):

@@ -78,6 +78,7 @@ class Operation:
     params: tuple[Field, ...]
     body: Body | None
     responses: tuple[Response, ...]
+    operation_id: str | None = None
 
     @property
     def ns(self):
@@ -244,7 +245,7 @@ def parse_spec(spec):
                 responses.append(Response(status, media, rb))
             if not responses:
                 raise ValueError('At least one response is required')
-            operations.append(Operation(path, method.upper(), '/'.join(names + [('delete_' if method == 'delete' else method)]), tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status))))
+            operations.append(Operation(path, method.upper(), '/'.join(names + [('delete_' if method == 'delete' else method)]), tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), identifier(op["operationId"]) if "operationId" in op else None))
     normalized = []
     for operation in operations:
         canonical = {typ.enum_name: tuple(typ.schema['enum']) for typ in enum_types(operation)}

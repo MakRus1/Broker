@@ -1,8 +1,8 @@
 name: CI
 on:
   pull_request:
-  push:
-    branches: [main, develop]
+    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -87,3 +87,23 @@ jobs:
         run: docker run --rm --network=host -v "$PWD:/workspaces/broker" broker-dev:userver-3.2 python3 scripts/smoke-services.py --build
       - name: Исходники не изменились
         run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
+
+  result:
+    name: CI result
+    if: ${{ always() }}
+    needs: [tools, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Проверка обязательных результатов
+        env:
+          TOOLS_RESULT: ${{ needs.tools.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          SERVICES: ${{ needs.tools.outputs.services }}
+        run: |
+          set -euo pipefail
+          [[ "$TOOLS_RESULT" == success ]]
+          if [[ -n "$SERVICES" ]]; then
+            [[ "$BUILD_RESULT" == success ]]
+          else
+            [[ "$BUILD_RESULT" == skipped ]]
+          fi

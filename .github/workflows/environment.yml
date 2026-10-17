@@ -1,0 +1,89 @@
+name: Publish environment
+on:
+  push:
+    paths:
+      - tools/Dockerfile
+      - tools/build-userver.sh
+      - tools/apt-packages.txt
+      - tools/versions.env
+      - tools/python-constraints.txt
+      - requirements.txt
+      - scripts/container-images.py
+      - .github/workflows/environment.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: environment-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        variant: [dev, sanitize]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Версия окружения
+        id: image
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          key=$(python3 scripts/container-images.py key)
+          arch=$(case "$RUNNER_ARCH" in X64) echo amd64;; ARM64) echo arm64;; *) exit 1;; esac)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "tag=ghcr.io/makrus1/broker-dev:$key-$VARIANT-$arch" >> "$GITHUB_OUTPUT"
+      - name: Вход в GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Проверка опубликованной версии
+        id: lookup
+        env:
+          IMAGE: ${{ steps.image.outputs.tag }}
+        run: |
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Сборка и публикация
+        if: steps.lookup.outputs.exists != 'true'
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          file: tools/Dockerfile
+          target: ${{ matrix.variant }}
+          push: true
+          tags: ${{ steps.image.outputs.tag }}
+          cache-from: type=gha,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
+          cache-to: type=gha,mode=max,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
+  manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Вход в GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Объединение архитектур
+        run: |
+          set -euo pipefail
+          key=$(python3 scripts/container-images.py key)
+          for variant in dev sanitize; do
+            tag="ghcr.io/makrus1/broker-dev:$key-$variant"
+            if ! docker buildx imagetools inspect "$tag" >/dev/null 2>&1; then
+              docker buildx imagetools create --tag "$tag" "$tag-amd64" "$tag-arm64"
+            fi
+            docker buildx imagetools inspect "$tag" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo 'Обновите закрепление: make lock-images' >> "$GITHUB_STEP_SUMMARY"

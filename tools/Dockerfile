@@ -1,6 +1,6 @@
 # Один и тот же образ используется в CI и Dev Container, для amd64 и arm64.
 FROM curlimages/curl:8.12.1@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6 AS certificates
-FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS dependencies
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 # Минимальный Ubuntu еще не содержит CA для HTTPS-снимка apt.
@@ -18,21 +18,6 @@ RUN source /opt/broker/versions.env && python3 -m venv /opt/broker/venv && \
     echo "$USERVER_ARCHIVE_SHA256  /tmp/userver.tar.gz" | sha256sum -c - && \
     mkdir /opt/userver && tar -xzf /tmp/userver.tar.gz -C /opt/userver --strip-components=1 && rm /tmp/userver.tar.gz
 ENV PATH=/opt/broker/venv/bin:$PATH CC=clang-18 CXX=clang++-18
-ARG TARGETARCH
-RUN --mount=type=cache,id=broker-userver-${TARGETARCH},target=/tmp/userver-build cmake -S /opt/userver -B /tmp/userver-build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DCMAKE_INSTALL_PREFIX=/opt/userver-install \
-    -DUSERVER_PIP_OPTIONS="--constraint;/opt/broker/python-constraints.txt" \
-    -DUSERVER_INSTALL=ON -DUSERVER_FEATURE_GRPC=ON -DUSERVER_FEATURE_POSTGRESQL=ON -DUSERVER_FEATURE_OTLP=ON \
-    -DUSERVER_FEATURE_CHAOTIC=ON -DUSERVER_FEATURE_CHAOTIC_OPENAPI=OFF && \
-    cmake --build /tmp/userver-build -j 4 && cmake --install /tmp/userver-build || { cat /tmp/userver-build/CMakeFiles/CMakeConfigureLog.yaml; exit 1; }
-# userver устанавливает отдельные библиотеки и CMake-экспорты для Debug и Release.
-RUN --mount=type=cache,id=broker-userver-debug-${TARGETARCH},target=/tmp/userver-debug-build cmake -S /opt/userver -B /tmp/userver-debug-build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DCMAKE_INSTALL_PREFIX=/opt/userver-install \
-    -DUSERVER_PIP_OPTIONS="--constraint;/opt/broker/python-constraints.txt" \
-    -DUSERVER_INSTALL=ON -DUSERVER_FEATURE_GRPC=ON -DUSERVER_FEATURE_POSTGRESQL=ON -DUSERVER_FEATURE_OTLP=ON \
-    -DUSERVER_FEATURE_CHAOTIC=ON -DUSERVER_FEATURE_CHAOTIC_OPENAPI=OFF && \
-    cmake --build /tmp/userver-debug-build -j 4 && cmake --install /tmp/userver-debug-build || { cat /tmp/userver-debug-build/CMakeFiles/CMakeConfigureLog.yaml; exit 1; }
-ENV CMAKE_PREFIX_PATH=/opt/userver-install
 # Testsuite требует en_US.UTF-8, а ASan/UBSan — заголовки и runtime Clang.
 RUN apt-get update && apt-get install -y --no-install-recommends locales libclang-rt-18-dev && \
     echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen && locale-gen && rm -rf /var/lib/apt/lists/*
@@ -41,5 +26,23 @@ ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 ENV USERVER_ENABLE_STACK_USAGE_MONITOR=0
 # PostgreSQL testsuite отказывается работать от root.
 RUN useradd --create-home --uid 1001 builder && mkdir -p /workspaces/broker/{.venv-gen,build-debug,build-release,build-sanitize} && chown -R builder:builder /workspaces/broker
-USER builder
+COPY tools/build-userver.sh /opt/broker/build-userver.sh
+LABEL org.opencontainers.image.source="https://github.com/MakRus1/Broker"
 WORKDIR /workspaces/broker
+
+FROM dependencies AS dev
+ARG TARGETARCH
+RUN --mount=type=cache,id=broker-userver-dev-${TARGETARCH},target=/tmp/userver-build \
+    bash /opt/broker/build-userver.sh dev
+ENV CMAKE_PREFIX_PATH=/opt/userver-install BROKER_USERVER_PREFIX=/opt/userver-install
+USER builder
+
+FROM dependencies AS sanitize
+ARG TARGETARCH
+RUN --mount=type=cache,id=broker-userver-sanitize-${TARGETARCH},target=/tmp/userver-build \
+    bash /opt/broker/build-userver.sh sanitize
+ENV CMAKE_PREFIX_PATH=/opt/userver-sanitize BROKER_USERVER_PREFIX=/opt/userver-sanitize
+USER builder
+
+# Обычная локальная сборка без --target сохраняет окружение Debug/Release.
+FROM dev AS default

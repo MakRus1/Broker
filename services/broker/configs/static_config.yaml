@@ -1,88 +1,44 @@
 components_manager:
-    task_processors:  # Task processor is an executor for coroutine tasks
-
-        main-task-processor:  # Make a task processor for CPU-bound coroutine tasks.
-            worker_threads: $worker-threads  # Process tasks in 4 threads.
-
-        fs-task-processor:  # Make a separate task processor for filesystem bound tasks.
+    task_processors:
+        main-task-processor:
+            worker_threads: $worker-threads
+        fs-task-processor:
             worker_threads: $worker-fs-threads
-
     default_task_processor: main-task-processor
-
-    components:  # Configuring components that were registered via component_list
-        server:
-            listener:  # configuring the main listening socket...
-                port: $server-port  # ...to listen on this port and...
-                task_processor: main-task-processor  # ...process incoming requests on this task processor.
-
-        logging:
-            fs-task-processor: fs-task-processor
-            loggers:
-                default:
-                    file_path: '@stderr'
-                    level: $logger-level
-                    overflow_behavior: discard  # Drop logs if the system is too busy to write them down.
-
-        # Dynamic config options. Cache is disabled, updates are disabled.
-        dynamic-config:
-            # For most of userver dynamic configs, defaults are used, some are overridden here.
-            # See userver "dynamic config" docs for what configs exist.
-            defaults:
-                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
-                POSTGRES_DEFAULT_COMMAND_CONTROL:
-                    network_timeout_ms: 750
-                    statement_timeout_ms: 500
-
-        testsuite-support: {}
-
-        congestion-control:
-            fake-mode: true
-        http-client:
-        http-client-core:
-            load-enabled: $is_testing
-            fs-task-processor: fs-task-processor
-
-        dns-client:
-            fs-task-processor: fs-task-processor
-
-        tests-control:
-            load-enabled: $is-testing
-            path: /tests/{action}
-            method: POST
-            task_processor: main-task-processor
-
-        handler-ping:
-            path: /ping
-            method: GET
-            task_processor: main-task-processor
-            throttling_enabled: false
-            url_trailing_slash: strict-match
-
+    components:
         # OPENAPI_HANDLERS_BEGIN
         handler-foo-bar-get:
             path: /foo/bar
             method: GET
             task_processor: main-task-processor
-        handler-hello:
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello-get:
             path: /hello
-            method: GET,POST
+            method: GET
             task_processor: main-task-processor
-        handler-hello_postgres:
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello-post:
+            path: /hello
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello_postgres-get:
             path: /hello_postgres
-            method: GET,POST
+            method: GET
             task_processor: main-task-processor
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello_postgres-post:
+            path: /hello_postgres
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
         # OPENAPI_HANDLERS_END
-
+        # SERVICE_CONFIG_BEGIN
         postgres-db-1:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -90,10 +46,110 @@ components_manager:
             dns_resolver: async
             sync-start: true
             connlimit_mode: manual
-
+        platform-grpc-telemetry: {}
+        grpc-server-middlewares-pipeline:
+            middlewares:
+                platform-grpc-telemetry:
+                    enabled: true
+        grpc-server-logging:
+            msg-log-level: none
         grpc-server:
             port: $grpc-server-port
             completion-queue-count: 3
-
         handler-hello-grpc:
             task-processor: main-task-processor
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: broker
+            environment: $environment
+        platform-http-pipeline: {}
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: $server-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+            listener-monitor:
+                address: 127.0.0.1
+                port: $monitor-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $logger-level
+                    format: json
+                    overflow_behavior: discard
+        tracing-manager-locator:
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
+            otel-trace-sampling-enabled: true
+        grpc-client-common:
+            blocking-task-processor: fs-task-processor
+        grpc-otlp-factory:
+            load-enabled: $otlp-enabled
+            middlewares:
+                grpc-client-logging:
+                    enabled: false
+        otlp-logger:
+            load-enabled: $otlp-enabled
+            endpoint: $otlp-endpoint
+            endpoint#env: OTEL_EXPORTER_OTLP_ENDPOINT
+            client-factory-name: grpc-otlp-factory
+            service-name: broker
+            log-level: $logger-level
+            sinks:
+                logs: both
+                tracing: both
+            extra-attributes:
+                service.version: 0.1.0
+                deployment.environment.name: $environment
+        grpc-client-logging:
+            msg-log-level: none
+        handler-server-monitor:
+            path: /metrics
+            method: GET
+            task_processor: main-task-processor
+            format: prometheus
+            common-labels:
+                service: broker
+                environment: $environment
+        handler-ping:
+            path: /ping
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+        testsuite-support: {}
+        congestion-control:
+            fake-mode: true
+        http-client: null
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        dns-client:
+            fs-task-processor: fs-task-processor
+        tests-control:
+            load-enabled: $is-testing
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor

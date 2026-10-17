@@ -1,0 +1,7 @@
+.git
+build*
+.venv*
+.ccache
+third_party
+services/*/.gen
+__pycache__

@@ -1,55 +1,24 @@
 #!/usr/bin/env bash
-# Creates .venv-gen with PyYAML and prints the venv python path.
+# Зависимости генератора устанавливаются в отдельное окружение с фиксированными версиями.
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-VENV="${ROOT}/.venv-gen"
-PYTHON="${VENV}/bin/python"
-REQUIREMENTS="${ROOT}/requirements.txt"
-
-_find_python3() {
-    local candidate
-    for candidate in \
-        "${PYTHON3:-}" \
-        python3 \
-        /opt/homebrew/bin/python3 \
-        /usr/local/bin/python3 \
-        /usr/bin/python3
-    do
-        [[ -n "${candidate}" ]] || continue
-        if command -v "${candidate}" >/dev/null 2>&1 \
-            && "${candidate}" -c 'import sys; assert sys.version_info >= (3, 9)' 2>/dev/null
-        then
-            command -v "${candidate}"
-            return 0
-        fi
-    done
-    return 1
-}
-
-_python_works() {
-    [[ -x "$1" ]] && "$1" -c 'import yaml' 2>/dev/null
-}
-
-_create_venv() {
-    local base_python="$1"
-    rm -rf "${VENV}"
-    "${base_python}" -m venv "${VENV}"
-    "${PYTHON}" -m pip install -q --upgrade pip
-    "${PYTHON}" -m pip install -q -r "${REQUIREMENTS}"
-}
-
-if ! _python_works "${PYTHON}"; then
-    base_python="$(_find_python3)" || {
-        echo 'python3 >= 3.9 not found (install Homebrew python or Xcode CLT)' >&2
-        exit 1
-    }
-    _create_venv "${base_python}"
+VENV="$ROOT/.venv-gen"
+BASE="${PYTHON3:-$(command -v python3.12 || command -v python3)}"
+"$BASE" -c 'import sys; assert sys.version_info >= (3, 10), "Нужен Python >= 3.10"'
+# При смене базового Python пересоздаем только наше служебное окружение.
+if [[ -x "$VENV/bin/python" ]]; then
+    ACTUAL_BASE="$("$VENV/bin/python" -c 'import sys; print(sys.base_prefix)')"
+    EXPECTED_BASE="$("$BASE" -c 'import sys; print(sys.base_prefix)')"
+    if [[ "$ACTUAL_BASE" != "$EXPECTED_BASE" ]]; then
+        rm -rf "$VENV"
+    fi
 fi
-
-if ! _python_works "${PYTHON}"; then
-    echo "Failed to prepare codegen venv with PyYAML (${PYTHON})" >&2
-    exit 1
+if [[ ! -x "$VENV/bin/python" ]]; then
+    "$BASE" -m venv "$VENV"
 fi
-
-printf '%s\n' "${PYTHON}"
+EXPECTED="$("$BASE" -c 'import hashlib, pathlib; print(hashlib.sha256(pathlib.Path(__import__("sys").argv[1]).read_bytes()).hexdigest())' "$ROOT/requirements.txt")"
+if [[ ! -f "$VENV/.requirements.sha256" ]] || [[ "$(cat "$VENV/.requirements.sha256")" != "$EXPECTED" ]]; then
+    "$VENV/bin/python" -m pip install --disable-pip-version-check -r "$ROOT/requirements.txt" >&2
+    printf '%s' "$EXPECTED" > "$VENV/.requirements.sha256"
+fi
+printf '%s\n' "$VENV/bin/python"

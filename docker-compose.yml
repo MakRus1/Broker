@@ -5,13 +5,13 @@
 # orders  -> localhost:15434  (пример для нового сервиса)
 services:
   postgres-broker:
-    image: postgres:16-alpine
+    image: postgres:16.8-alpine
     environment:
       POSTGRES_USER: testsuite
       POSTGRES_PASSWORD: testsuite
       POSTGRES_DB: broker_db_1
     ports:
-      - "15433:5432"
+      - "127.0.0.1:15433:5432"
     volumes:
       - ./services/broker/postgresql/schemas/db_1.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:

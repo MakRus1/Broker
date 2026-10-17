@@ -1,0 +1,37 @@
+openapi: 3.0.3
+info:
+  title: broker hello_postgres API
+  version: '1.0'
+
+paths:
+  /hello_postgres:
+    get:
+      operationId: helloPostgresGet
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      operationId: helloPostgresPost
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string

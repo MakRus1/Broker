@@ -1,28 +1,19 @@
-# broker
+# Разработка сервиса
 
-Сервис HTTP + PostgreSQL + gRPC на [userver](https://github.com/userver-framework/userver).
+Общие инструкции находятся в README корня репозитория и docs/development.md.
+В VS Code используйте Dev Containers: Reopen in Container или нативный Clang.
 
-Сборка, тесты и запуск — из **корня монорепозитория**. См. [README.md](../../README.md).
+Команды из каталога сервиса перенаправляются в корень монорепозитория:
 
-## OpenAPI кодогенерация
-
-Спеки лежат в `docs/api/`. После изменений:
-
-```bash
-make gen          # из папки сервиса
-# или из корня:
-make gen SERVICE=broker
+```sh
+make gen
+make test-debug
 ```
 
-`make gen` также обновляет блок OpenAPI-ручек в `configs/static_config.yaml` (между маркерами `# OPENAPI_HANDLERS_BEGIN` / `# OPENAPI_HANDLERS_END`).
+Новый API описывается в docs/api. После изменения контракта выполните make gen.
+Файлы ручной реализации не перезаписываются; DTO и обработчики создаются в каталоге сборки.
+Внутренние /ping и /ping/ready добавляются автоматически при создании сервиса.
 
-Результат:
-
-| Путь | Содержимое |
-|------|------------|
-| `src/views/<path>/` | `view.hpp` / `view.cpp` — бизнес-логика (не перезаписываются) |
-| `.gen/` | DTO, handler-классы, `config.openapi.yaml` |
-
-Для `/foo/bar` → `src/views/foo/bar/`.
-
-Пересоберите проект (`make cmake-debug`) при появлении новых файлов в `.gen/`.
+Инфраструктура и библиотеки описываются в service.yaml; изменения применяются через make gen.
+Структура каталогов: docs/service-layout.md в корне монорепозитория.
+Правила manifest и границы генерации: docs/service-manifest.md.

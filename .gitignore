@@ -18,3 +18,6 @@ Testing/
 Makefile.local
 CMakeUserPresets.json
 .docker-home/
+
+.service-create.lock
+work-local.yaml

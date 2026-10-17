@@ -1,0 +1,58 @@
+components_manager:
+    task_processors:
+        main-task-processor:
+            worker_threads: 2
+        fs-task-processor:
+            worker_threads: 1
+    default_task_processor: main-task-processor
+    components:
+        platform-http-telemetry:
+            service-name: contract_service
+            environment: testing
+        platform-http-pipeline: {}
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: 8084
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: info
+        dns-client:
+            fs-task-processor: fs-task-processor
+        http-client: {}
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        testsuite-support: {}
+        tests-control:
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor
+        # OPENAPI_HANDLERS_BEGIN
+        handler-items-by_id-get:
+            path: /items/{id}
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-items-by_id-post:
+            path: /items/{id}
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-validated-get:
+            path: /validated
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-validated-post:
+            path: /validated
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        # OPENAPI_HANDLERS_END

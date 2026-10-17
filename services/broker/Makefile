@@ -1,13 +1,6 @@
+# Все команды выполняются единообразно из корня монорепозитория.
 SERVICE := broker
-ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
-
-.PHONY: gen
-gen:
-	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) gen
-
-.PHONY: check-gen
-check-gen:
-	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) check-gen
-
-.DEFAULT:
-	$(MAKE) -C $(ROOT) SERVICE=$(SERVICE) $(MAKECMDGOALS)
+ROOT := $(abspath ../..)
+.DEFAULT_GOAL := help
+%:
+	$(MAKE) -C $(ROOT) $@ SERVICE=$(SERVICE)

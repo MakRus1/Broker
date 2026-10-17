@@ -1,4 +1,4 @@
-# Start via `make test-debug` or `make test-release`
+# Запуск: make test-debug или make test-release
 
 
 async def test_basic(service_client):

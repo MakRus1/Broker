@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import create_service
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
 from generate import run
+import features
 
 
 class ServicesTest(unittest.TestCase):
@@ -23,8 +24,11 @@ class ServicesTest(unittest.TestCase):
         shutil.copytree(ROOT, self.root, ignore=shutil.ignore_patterns('.git', '.venv*', 'build-*', '__pycache__', '.cache', '.ccache', '.new-service-*'))
         self.patch = mock.patch.object(create_service, 'ROOT', self.root)
         self.patch.start()
+        self.feature_patch = mock.patch.object(features, 'ROOT', self.root)
+        self.feature_patch.start()
 
     def tearDown(self):
+        self.feature_patch.stop()
         self.patch.stop(); self.temp.cleanup()
 
     def test_four_feature_combinations_and_automatic_ping(self):
@@ -46,12 +50,14 @@ class ServicesTest(unittest.TestCase):
             self.assertIn(f'.Append<{name}::Ping>()', main)
             self.assertEqual(f'.Append<{name}::HelloGrpc>()' in main, grpc)
             cmake = (directory / 'CMakeLists.txt').read_text()
-            self.assertEqual('src/hello_grpc.cpp' in cmake, grpc)
+            self.assertEqual('src/transport/grpc/hello_grpc.cpp' in cmake, grpc)
             self.assertIn('broker_common', cmake)
             self.assertIn('broker_openapi_generate', cmake)
-            self.assertEqual('pg_->Execute' in (directory / 'src/ping.cpp').read_text(), pg)
-            self.assertEqual('userver/storages/postgres/' in (directory / 'src/ping.cpp').read_text(), pg)
-            self.assertEqual('userver/storages/postgres/' in (directory / 'src/ping.hpp').read_text(), pg)
+            self.assertEqual('deps_.pg_cluster->Execute' in (directory / 'src/bootstrap/ping.cpp').read_text(), pg)
+            self.assertEqual('userver/storages/postgres/' in (directory / 'src/bootstrap/ping.cpp').read_text(), pg)
+            self.assertEqual('pg_cluster' in (directory / 'src/deps.hpp').read_text(), pg)
+            self.assertTrue((directory / 'src/domain/greeting.hpp').is_file())
+            self.assertTrue((directory / 'tests/unit/greeting_test.cpp').is_file())
             with self.assertRaises(ValueError): create_service.create(name, pg, grpc)
 
     def test_invalid_names_leave_no_files(self):
@@ -70,3 +76,66 @@ class ServicesTest(unittest.TestCase):
             with self.assertRaises(OSError): create_service.create('rollback_test')
         self.assertFalse((self.root / 'services/rollback_test').exists())
         self.assertEqual(before, {p: p.read_bytes() for p in paths})
+
+    def test_manifest_enables_features_and_preserves_manual_code(self):
+        directory = create_service.create('upgrade')
+        main = directory / 'src/main.cpp'
+        main.write_text(main.read_text() + '\n// Ручной код сохраняется.\n')
+        view = directory / 'src/views/hello/get/view.cpp'
+        view.write_text(view.read_text() + '\n// Ручная реализация.\n')
+        view_before = view.read_bytes()
+        manifest = directory / 'service.yaml'
+        manifest.write_text('version: 1\nlibraries: [common]\npostgresql: {enabled: true}\ngrpc: {enabled: false}\n')
+        before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+        with self.assertRaisesRegex(ValueError, 'make gen'):
+            run(directory, check=True)
+        self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+        run(directory)
+        self.assertTrue((directory / 'postgresql/schemas/db_1.sql').exists())
+        manifest.write_text(manifest.read_text().replace('grpc: {enabled: false}', 'grpc: {enabled: true}'))
+        run(directory)
+        run(directory, check=True)
+        self.assertIn('Ручной код сохраняется', main.read_text())
+        self.assertEqual(view_before, view.read_bytes())
+        self.assertTrue((directory / 'proto/handlers/hello.proto').exists())
+        demo = directory / 'src/transport/grpc/hello_grpc.cpp'
+        demo.write_text(demo.read_text() + '\n// Сохраняем и измененный gRPC-код.\n')
+        before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+        run(directory)
+        self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+
+    def test_manifest_validation_and_additional_library(self):
+        directory = create_service.create('manifest')
+        manifest = directory / 'service.yaml'
+        for content in ['version: 2', 'version: 1\npostgresql: {enabled: yes_}', 'version: 1\nunknown: true', 'version: 1\nlibraries: [../escape]', 'version: 1\nlibraries: [common, unknown]', 'version: 1\nlibraries: [common, common]', 'version: 1\nlibraries: [common]\nlibraries: [common]']:
+            manifest.write_text(content)
+            before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+            with self.assertRaises(ValueError):
+                run(directory)
+            self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+        library = self.root / 'libs/example'
+        library.mkdir()
+        (library / 'CMakeLists.txt').write_text('add_library(broker_example INTERFACE)\n')
+        manifest.write_text('version: 1\nlibraries: [common, example]\n')
+        run(directory)
+        self.assertIn('broker_common broker_example', (directory / 'CMakeLists.txt').read_text())
+        manifest.write_text('version: 1\nlibraries: [common]\npostgresql: {enabled: true}\n')
+        run(directory)
+        manifest.write_text('version: 1\nlibraries: [common]\n')
+        with self.assertRaisesRegex(ValueError, 'Отключение postgresql'):
+            run(directory)
+
+    def test_manifest_write_failure_rolls_back(self):
+        directory = create_service.create('transaction')
+        manifest = directory / 'service.yaml'
+        manifest.write_text('version: 1\nlibraries: [common]\npostgresql: {enabled: true}\n')
+        before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+        original = Path.write_text
+        def fail(path, *args, **kwargs):
+            if path == directory / 'tests/conftest.py':
+                raise OSError('Тестовый отказ генерации')
+            return original(path, *args, **kwargs)
+        with mock.patch.object(Path, 'write_text', fail):
+            with self.assertRaises(OSError):
+                run(directory)
+        self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})

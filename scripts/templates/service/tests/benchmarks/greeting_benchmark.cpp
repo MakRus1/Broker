@@ -1,4 +1,4 @@
-#include <greeting.hpp>
+#include <domain/greeting.hpp>
 
 #include <cstdint>   // for std::uint64_t
 #include <iterator>  // for std::size
@@ -7,7 +7,7 @@
 #include <benchmark/benchmark.h>
 #include <userver/engine/run_standalone.hpp>
 
-using broker::UserType;
+using broker::domain::UserType;
 
 void HelloBenchmark(benchmark::State& state) {
     userver::engine::RunStandalone([&] {
@@ -16,7 +16,7 @@ void HelloBenchmark(benchmark::State& state) {
 
         for (auto _ : state) {
             const auto name = kNames[i++ % std::size(kNames)];
-            auto result = broker::SayHelloTo(name, UserType::kFirstTime);
+            auto result = broker::domain::SayHelloTo(name, UserType::kFirstTime);
             benchmark::DoNotOptimize(result);
         }
     });

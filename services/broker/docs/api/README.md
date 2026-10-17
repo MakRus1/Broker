@@ -1,67 +1,59 @@
-# OpenAPI спецификации
+# HTTP API и кодогенерация
 
-Сюда кладутся YAML/JSON файлы с описанием HTTP API.
+Контракты OpenAPI 3.0.3 находятся в YAML/JSON-файлах этого каталога.
+Из каталога сервиса выполните `make gen`; из корня — `make gen SERVICE=broker`.
 
-После изменения спеки запустите кодогенерацию из папки сервиса:
+Каждая пара HTTP-метод + путь получает независимый каталог:
+`/items/{id}` + GET → `src/views/items/by_id/get/view.hpp` и `view.cpp`.
+Заготовки создаются только при отсутствии файла; ручная реализация сохраняется.
+Явная генерация также обновляет блок HTTP-ручек в `configs/static_config.yaml`
+и `codegen.lock`. Эти изменения коммитятся вместе с контрактом.
 
-```bash
-make gen
-```
+DTO, типы enum и handler-классы генерируются CMake в
+`build-<preset>/services/<service>/generated/`. Каталога `.gen/` в исходниках нет.
+Сборка и `make check-gen-all` исходники не исправляют: при устаревшей генерации
+нужно выполнить `make gen`. Генератор явно отклоняет неподдерживаемые конструкции.
 
-Генерация:
+## Типы и ответы
 
-- `src/views/<path>/` — заготовки ручек (для `/foo/bar` → `src/views/foo/bar/`);
-- `.gen/` — сгенерированные DTO, handler-классы и фрагмент `config.openapi.yaml`.
-- `codegen.lock` — хеш сгенерированного вывода (коммитить вместе со спекой).
+Необязательное поле без default имеет тип `std::optional<T>`.
+Поле с default имеет обычный тип `T`: переданное значение заменяет default.
+Например, для `limit` с default 10:
 
-Существующие `view.hpp`, `view.cpp` и `deps.hpp` не перезаписываются.
+| Запрос | `request.limit` | `request.WasProvided("limit")` |
+|---|---|---|
+| Без limit | 10 | false |
+| `?limit=10` | 10 | true |
+| `?limit=25` | 25 | true |
 
-`make gen` автоматически обновляет блок между `# OPENAPI_HANDLERS_BEGIN` / `# OPENAPI_HANDLERS_END` в `configs/static_config.yaml`.
+`WasProvided` сообщает только о явной передаче поля. Для обычной пагинации
+достаточно `request.limit`; метаданные нужны, когда важно отличить пропуск
+от явного значения, например при частичном обновлении.
+`required: true` требует явного значения даже при наличии default.
 
-CI проверяет: `make check-gen-all` (актуальный `codegen.lock`, `static_config.yaml`, view-заготовки).
+Enum становится `enum class`: `success` → `status::Success`, `new` → `status::New`.
+JSON сохраняет исходные значения. Коллизии имен отклоняются.
+`View::Handle` возвращает вариант объявленных `Response200`, `Response201` и других
+статусов. Статус и Content-Type выставляет handler; ответ 204 не содержит тела.
+Ошибки типов и обязательных полей возвращают 400.
 
-### Несколько статусов (200, 404, …)
+Пути в YAML пишем без кавычек: `path: /items/{id}`.
+Ключи HTTP-статусов оставляем строками: `'200':`, `'201':`.
+Удаление этих кавычек превратит ключи YAML в числа и нарушит OpenAPI.
 
-`View::Handle` возвращает `std::variant<Response200, Response404, …>`. Пример:
+## Зависимости
 
-```cpp
-if (request.name == "missing") {
-    return Response404{.message = "user not found"};
-}
-return Response200{.greeting = fmt::format("Hello, {}!", request.name)};
-```
+`src/deps.hpp` общий для всего сервиса. `Deps` передается обработчикам,
+`ResolveDeps(context)` получает зависимости из контейнера userver.
+Его можно использовать и в конструкторах компонентов; пример — `bootstrap/ping.cpp`.
+Обычным C++ компонентам зависимости передаются через конструктор, без ComponentContext.
+Не включайте компонент в набор зависимостей, который он сам разрешает: это создаст цикл.
 
-HTTP-статус выставляет сгенерированный handler — вручную `SetResponseStatus` в view не нужен.
+В `service.yaml` подключаются PostgreSQL, gRPC и библиотеки сервиса.
+После изменения выполняется `make gen`. Код вне блоков `SERVICE_*` сохраняется.
+SQL находятся в `postgresql/queries/*.sql`; userver генерирует именованные запросы
+в каталоге сборки `generated_sql`. Это не ORM: параметры передаются через `$1`, `$2`,
+а преобразование результата в бизнес-сущности остается в ручном коде.
 
-### Зависимости (PostgreSQL и др.)
-
-По аналогии с gRPC-компонентами: зависимости резолвятся из `ComponentContext` в отдельном файле `deps.hpp` рядом с view. Если файл есть — кодоген подключает его в handler.
-
-```cpp
-// src/views/hello_postgres/deps.hpp
-#pragma once
-
-#include <userver/components/component_context.hpp>
-#include <userver/storages/postgres/cluster.hpp>
-#include <userver/storages/postgres/component.hpp>
-
-namespace broker::views::hello_postgres {
-
-struct Deps {
-    userver::storages::postgres::ClusterPtr pg_cluster;
-};
-
-inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
-    return Deps{
-        .pg_cluster = component_context
-            .FindComponent<userver::components::Postgres>("postgres-db-1")
-            .GetCluster(),
-    };
-}
-
-}  // namespace broker::views::hello_postgres
-```
-
-В `view.hpp` подключите `deps.hpp` и примите `Deps` в `Handle`. Имя компонента (`postgres-db-1`) должно совпадать с тем, что зарегистрировано в `main.cpp`.
-
-`deps.hpp` не перезаписывается кодогеном.
+Полное описание ограничений генератора: `docs/codegen.md` в корне репозитория.
+Структура сервиса и зависимости: `docs/service-layout.md`, `docs/service-manifest.md`.

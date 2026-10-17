@@ -6,15 +6,63 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
-        platform-http-telemetry:
-            service-name: broker
-            environment: $environment
-        platform-http-pipeline: {}
+        # OPENAPI_HANDLERS_BEGIN
+        handler-foo-bar-get:
+            path: /foo/bar
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello-get:
+            path: /hello
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello-post:
+            path: /hello
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello_postgres-get:
+            path: /hello_postgres
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-hello_postgres-post:
+            path: /hello_postgres
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        # OPENAPI_HANDLERS_END
+        # SERVICE_CONFIG_BEGIN
+        postgres-db-1:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
         platform-grpc-telemetry: {}
         grpc-server-middlewares-pipeline:
             middlewares:
                 platform-grpc-telemetry:
                     enabled: true
+        grpc-server-logging:
+            msg-log-level: none
+        grpc-server:
+            port: $grpc-server-port
+            completion-queue-count: 3
+        handler-hello-grpc:
+            task-processor: main-task-processor
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: broker
+            environment: $environment
+        platform-http-pipeline: {}
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:
@@ -41,8 +89,10 @@ components_manager:
                     format: json
                     overflow_behavior: discard
         tracing-manager-locator:
-            incoming-format: [opentelemetry]
-            new-requests-format: [opentelemetry]
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
             otel-trace-sampling-enabled: true
         grpc-client-common:
             blocking-task-processor: fs-task-processor
@@ -62,10 +112,8 @@ components_manager:
                 logs: both
                 tracing: both
             extra-attributes:
-                service.version: '0.1.0'
+                service.version: 0.1.0
                 deployment.environment.name: $environment
-        grpc-server-logging:
-            msg-log-level: none
         grpc-client-logging:
             msg-log-level: none
         handler-server-monitor:
@@ -95,7 +143,7 @@ components_manager:
         testsuite-support: {}
         congestion-control:
             fake-mode: true
-        http-client:
+        http-client: null
         http-client-core:
             fs-task-processor: fs-task-processor
         dns-client:
@@ -105,47 +153,3 @@ components_manager:
             path: /tests/{action}
             method: POST
             task_processor: main-task-processor
-        # OPENAPI_HANDLERS_BEGIN
-        handler-foo-bar-get:
-            path: "/foo/bar"
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
-        handler-hello-get:
-            path: "/hello"
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
-        handler-hello-post:
-            path: "/hello"
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
-        handler-hello_postgres-get:
-            path: "/hello_postgres"
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
-        handler-hello_postgres-post:
-            path: "/hello_postgres"
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
-        # OPENAPI_HANDLERS_END
-        postgres-db-1:
-            dbconnection: $pg-connection
-            dbconnection#env: DB_CONNECTION
-            blocking_task_processor: fs-task-processor
-            dns_resolver: async
-            sync-start: true
-            connlimit_mode: manual
-        grpc-server:
-            port: $grpc-server-port
-            completion-queue-count: 3
-        handler-hello-grpc:
-            task-processor: main-task-processor

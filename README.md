@@ -55,6 +55,9 @@ SQL-запросы генерируются из `postgresql/queries`; `src/deps
 Метаданные логов и трасс автоматически добавляет middleware.
 Новый сервис автоматически получает `/ping`, `/ping/ready` и `/metrics` на служебном listener.
 
+Структура сервиса: [docs/service-layout.md](docs/service-layout.md).
+Подключение БД, gRPC и библиотек: [docs/service-manifest.md](docs/service-manifest.md).
+
 Поддерживаемый OpenAPI-контракт: [docs/codegen.md](docs/codegen.md).
 Логирование, метрики и трассировка: [docs/observability.md](docs/observability.md).
 

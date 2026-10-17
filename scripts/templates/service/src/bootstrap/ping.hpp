@@ -1,7 +1,7 @@
 #pragma once
+#include <deps.hpp>
 #include <userver/components/state.hpp>
 #include <userver/server/handlers/http_handler_base.hpp>
-#include <userver/storages/postgres/cluster.hpp>
 namespace broker {
 class Ping final : public userver::server::handlers::HttpHandlerBase {
   public:
@@ -20,6 +20,6 @@ class PingReady final : public userver::server::handlers::HttpHandlerBase {
 
   private:
     userver::components::State state_;
-    userver::storages::postgres::ClusterPtr pg_;
+    Deps deps_;
 };
 }  // namespace broker

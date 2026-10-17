@@ -1,0 +1,6 @@
+version: 1
+libraries: [common]
+postgresql:
+  enabled: true
+grpc:
+  enabled: true

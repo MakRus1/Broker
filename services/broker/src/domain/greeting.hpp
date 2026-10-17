@@ -3,10 +3,10 @@
 #include <string>
 #include <string_view>
 
-namespace broker {
+namespace broker::domain {
 
 enum class UserType { kFirstTime, kKnown };
 
 std::string SayHelloTo(std::string_view name, UserType type);
 
-}  // namespace broker
+}  // namespace broker::domain

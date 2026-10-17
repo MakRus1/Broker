@@ -1,9 +1,11 @@
 # Результаты проверки стабилизации Broker
 
 17 октября 2026 года. userver v3.2, C++20, CMake 3.31.6, Python 3.12.
-Репозиторий: `/Users/maksim/projects/Broker`. Изменения в GitHub не отправлялись.
+Репозиторий: `/Users/maksim/projects/Broker`. Изменения опубликованы в draft PR #1.
+Исходная стабилизация bc2f355 прошла [GitHub CI](https://github.com/MakRus1/Broker/actions/runs/39020555990):
+tools, Linux amd64 Debug/Release/ASan+UBSan и Linux arm64 Debug.
 
-## Проверенные сборки и тесты
+## Исходная стабилизация bc2f355
 
 | Окружение | Debug | Release | ASan + UBSan |
 | --- | --- | --- | --- |
@@ -29,8 +31,24 @@
 
 В dev-образе штатной переменной USERVER_ENABLE_STACK_USAGE_MONITOR=0 отключен необязательный учет стека корутин: обычный Docker запрещает необходимый ему userfaultfd. Дополнительные привилегии контейнеру не выдаются; логи, трассы, остальные метрики и санитайзеры работают.
 
-## Осталось
+## Дополнительные изменения: service.yaml и структура сервиса
 
-Запустить удаленный GitHub CI, включая санитайзеры на нативном amd64 и проверку на нативных Linux runners. Для этого нужны отправка ветки и открытие PR: workflow запускается на pull_request, а push отслеживает только main/develop. Локальные amd64-результаты получены под эмуляцией.
+После перехода на service.yaml локально повторно пройдены:
+
+- Linux arm64: Debug, Release и ASan+UBSan, включая HTTP/PostgreSQL/gRPC;
+- контрактный testsuite: 58 случаев, malformed/missing body параметризованы;
+- macOS arm64: Debug-сборка, unit и контрактный testsuite;
+- 19 проверок инструментов, check-gen-all, check-format и git diff --check;
+- четыре сочетания PostgreSQL/gRPC: создание, настоящая сборка и testsuite;
+- существующий сервис без зависимостей: добавление PostgreSQL, затем gRPC,
+  с повторной сборкой/testsuites и дополнительной библиотекой из libraries;
+- сохранение ручного кода, немутирующая проверка, откат при отказе записи,
+  отклонение неверного manifest и выборочный CI по библиотекам manifest.
+
+GitHub Actions обновлены на версии с Node.js 24. Для этих дополнительных изменений
+удаленный CI запускается следующим коммитом в PR; результаты исходного запуска
+выше не подменяют проверку нового коммита.
+
+## Осталось
 
 Полный стек Prometheus/Grafana/Loki/Tempo, IaC, CD, бизнес-модули и миграция Firebird остаются отдельными этапами.

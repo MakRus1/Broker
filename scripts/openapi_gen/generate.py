@@ -9,6 +9,7 @@ import sys
 import yaml
 from model import identifier, parse_spec
 from render import config_block, outputs, view
+from features import prepare
 
 class UniqueLoader(yaml.SafeLoader):
     """Повторяющиеся ключи YAML считаются ошибкой контракта."""
@@ -30,15 +31,23 @@ BEGIN = '# OPENAPI_HANDLERS_BEGIN'
 END = '# OPENAPI_HANDLERS_END'
 
 
-def load(service):
+def specification_files(service, additions=None):
+    files = {p: p.read_text() for p in (service / 'docs/api').rglob('*')
+             if p.suffix in {'.yaml', '.yml', '.json'}}
+    files.update({p: text for p, text in (additions or {}).items()
+                  if p.is_relative_to(service / 'docs/api') and p.suffix in {'.yaml', '.yml', '.json'}})
+    return files
+
+
+def load(service, additions=None):
     identifier(service.name)
-    files = sorted(p for p in (service / 'docs/api').rglob('*') if p.suffix in {'.yaml', '.yml', '.json'})
+    files = specification_files(service, additions)
     if not files:
         raise ValueError(f'{service}: no OpenAPI specs')
     ops = []
-    for path in files:
+    for path, content in sorted(files.items()):
         try:
-            ops.extend(parse_spec(yaml.load(path.read_text(), Loader=UniqueLoader)))
+            ops.extend(parse_spec(yaml.load(content, Loader=UniqueLoader)))
         except (ValueError, KeyError, TypeError, yaml.YAMLError) as exc:
             raise ValueError(f'{path.relative_to(service)}: {exc}') from exc
     if not ops:
@@ -50,21 +59,25 @@ def load(service):
     return sorted(ops, key=lambda op: op.rel)
 
 
-def configuration(service, ops):
+def configuration(service, ops, source=None):
     path = service / 'configs/static_config.yaml'
-    text = path.read_text()
+    text = path.read_text() if source is None else source
     if text.count(BEGIN) != 1 or text.count(END) != 1 or text.index(BEGIN) > text.index(END):
         raise ValueError('Exactly one ordered pair of OpenAPI handler markers is required')
     return re.sub(r'(?m)^ *' + BEGIN + r'.*?^ *' + END, '        ' + BEGIN + '\n' + config_block(ops) + '\n        ' + END, text, flags=re.S)
 
 
-def digest(service, ops):
+def digest(service, ops, additions=None):
     h = hashlib.sha256()
-    for base, paths in [(service / 'docs/api', sorted(p for p in (service / 'docs/api').rglob('*') if p.suffix in {'.yaml', '.yml', '.json'})), (Path(__file__).parent, sorted(Path(__file__).parent.glob('*.py')))]:
-        for p in paths:
-            h.update(p.relative_to(base).as_posix().encode() + b'\0' + p.read_bytes())
+    for p, content in sorted(specification_files(service, additions).items()):
+        h.update(p.relative_to(service / 'docs/api').as_posix().encode() + b'\0' + content.encode())
+    base = Path(__file__).parent
+    for p in sorted(base.glob('*.py')):
+        h.update(p.relative_to(base).as_posix().encode() + b'\0' + p.read_bytes())
     for op in ops:
         h.update(f'{op.rel}:{(service / "src/deps.hpp").exists()}'.encode())
+    if (service / "service.yaml").exists():
+        h.update((service / "service.yaml").read_bytes())
     style = Path(__file__).resolve().parents[2] / '.clang-format'
     h.update(style.read_bytes())
     return 'sha256=' + h.hexdigest() + '\n'
@@ -77,10 +90,17 @@ def write(path, text):
 
 
 def run(service, check=False, output=None):
-    ops = load(service)
+    feature_files = prepare(service, UniqueLoader)
+    stale = [str(path.relative_to(service)) for path, content in feature_files.items()
+             if not path.exists() or path.read_text() != content]
+    if check or output is not None:
+        if stale:
+            raise ValueError('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
+    ops = load(service, feature_files)
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
-    expected_config = configuration(service, ops)
-    expected_lock = digest(service, ops)
+    config_path = service / 'configs/static_config.yaml'
+    expected_config = configuration(service, ops, feature_files.get(config_path))
+    expected_lock = digest(service, ops, feature_files)
     lock = service / 'docs/api/codegen.lock'
     if check:
         errors = []
@@ -109,14 +129,31 @@ def run(service, check=False, output=None):
             write(output / name, text)
         write(manifest, json.dumps(sorted(generated), indent=2) + '\n')
         return
+    planned = dict(feature_files)
     for op in ops:
         header, source = view(service.name, op, op.rel in dependencies)
         for name, content in [('view.hpp', header), ('view.cpp', source)]:
             path = service / 'src/views' / op.rel / name
-            if not path.exists():
-                write(path, content)
-    write(service / 'configs/static_config.yaml', expected_config)
-    write(lock, expected_lock)
+            if not path.exists() and path not in planned:
+                planned[path] = content
+    planned[config_path] = expected_config
+    planned[lock] = expected_lock
+    changed = {path: content for path, content in planned.items()
+               if not path.exists() or path.read_text() != content}
+    for path in changed:
+        if not path.resolve().is_relative_to(service.resolve()):
+            raise ValueError(f'Выход за каталог сервиса запрещен: {path}')
+    before = {path: path.read_bytes() if path.exists() else None for path in changed}
+    try:
+        for path, content in changed.items():
+            write(path, content)
+    except BaseException:
+        for path, content in before.items():
+            if content is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(content)
+        raise
 
 
 def main():
@@ -137,7 +174,7 @@ def main():
             print('\n'.join(sorted(outputs(service.name, ops, deps))))
         else:
             run(service, args.check, args.output_dir)
-    except (ValueError, OSError, KeyError, TypeError) as exc:
+    except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as exc:
         parser.exit(1, f'{args.service_dir}: {exc}\n')
 
 

@@ -2,6 +2,7 @@
 """Определение затронутых сервисов: ошибки Git и конфигурации не скрываются."""
 from pathlib import Path
 import subprocess
+import re
 import sys
 import yaml
 
@@ -23,6 +24,22 @@ def main():
         if not isinstance(entries, list) or not set(entries) <= services:
             raise ValueError(f'Неизвестный сервис в зависимостях {name}')
         dependencies[name] = entries
+    # service.yaml — источник зависимостей новых сервисов; карта остается для старых.
+    for service in services:
+        manifest = ROOT / 'services' / service / 'service.yaml'
+        if not manifest.exists():
+            continue
+        spec = yaml.safe_load(manifest.read_text())
+        if not isinstance(spec, dict):
+            raise ValueError(f'Некорректный manifest {manifest}')
+        libraries = spec.get('libraries', ['common'])
+        if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file() for lib in libraries):
+            raise ValueError(f'Некорректные libraries в {manifest}')
+        for entries in dependencies.values():
+            if service in entries:
+                entries.remove(service)
+        for lib in libraries:
+            dependencies.setdefault(lib, []).append(service)
     git('rev-parse', '--is-inside-work-tree')
     base = sys.argv[1] if len(sys.argv) > 1 else 'origin/main'
     if git('rev-parse', '--verify', base + '^{commit}', check=False).returncode:
@@ -50,5 +67,5 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, yaml.YAMLError, subprocess.CalledProcessError) as exc:
         sys.exit(f'Ошибка определения сервисов: {exc}')

@@ -20,3 +20,15 @@ with tempfile.TemporaryDirectory(prefix='broker-service-smoke-') as tmp:
         subprocess.run([sys.executable, 'scripts/create_service.py', name, *flags], cwd=work, check=True)
         if args.build:
             subprocess.run(['make', 'test-debug', f'SERVICE={name}'], cwd=work, check=True)
+
+    # Подключаем зависимости к уже созданному сервису и повторяем настоящую сборку.
+    library = work / 'libs/smoke_support'
+    library.mkdir()
+    (library / 'CMakeLists.txt').write_text('add_library(broker_smoke_support INTERFACE)\n')
+    service = work / 'services/smoke_00'
+    for pg, grpc in [(True, False), (True, True)]:
+        (service / 'service.yaml').write_text(
+            f'version: 1\nlibraries: [common, smoke_support]\npostgresql: {{enabled: {str(pg).lower()}}}\ngrpc: {{enabled: {str(grpc).lower()}}}\n')
+        subprocess.run([sys.executable, 'scripts/openapi_gen/generate.py', '--service-dir', str(service)], cwd=work, check=True)
+        if args.build:
+            subprocess.run(['make', 'test-debug', 'SERVICE=smoke_00'], cwd=work, check=True)

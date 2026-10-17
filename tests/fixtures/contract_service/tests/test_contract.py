@@ -36,10 +36,15 @@ async def test_query_validation(service_client, value):
     assert response.status == 400
 
 
-async def test_missing_and_malformed_body(service_client):
-    for body in ['', '{', '[]', 'null']:
-        response = await service_client.post('/items/42', data=body, headers={'Content-Type': 'application/json'})
-        assert response.status == 400
+@pytest.mark.parametrize('body', ['', '{', '[]', 'null'],
+                         ids=['missing', 'malformed', 'array', 'null'])
+async def test_missing_and_malformed_body(service_client, body):
+    response = await service_client.post('/items/42', data=body,
+                                         headers={'Content-Type': 'application/json'})
+    assert response.status == 400
+
+
+async def test_repeated_query_parameter(service_client):
     response = await service_client.get('/items/42?active=true&active=false')
     assert response.status == 400
 

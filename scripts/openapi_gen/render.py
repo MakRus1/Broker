@@ -296,4 +296,4 @@ def outputs(service, operations, dependencies):
 
 
 def config_block(operations):
-    return '\n'.join(f'        {op.handler}:\n            path: {quote(op.path)}\n            method: {op.method}\n            task_processor: main-task-processor\n            request_body_size_log_limit: 0\n            response_data_size_log_limit: 0' for op in operations)
+    return '\n'.join(f'        {op.handler}:\n            path: {op.path}\n            method: {op.method}\n            task_processor: main-task-processor\n            request_body_size_log_limit: 0\n            response_data_size_log_limit: 0' for op in operations)

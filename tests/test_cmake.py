@@ -19,6 +19,7 @@ class CMakeTest(unittest.TestCase):
             shutil.copytree(ROOT / 'scripts/openapi_gen', root / 'scripts/openapi_gen', ignore=shutil.ignore_patterns('__pycache__'))
             shutil.copytree(ROOT / 'services/broker', root / 'services/broker', ignore=shutil.ignore_patterns('__pycache__'))
             shutil.copytree(ROOT / 'cmake', root / 'cmake')
+            shutil.copytree(ROOT / 'libs', root / 'libs')
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(broker LANGUAGES NONE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

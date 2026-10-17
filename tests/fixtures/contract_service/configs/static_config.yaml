@@ -32,25 +32,25 @@ components_manager:
             task_processor: main-task-processor
         # OPENAPI_HANDLERS_BEGIN
         handler-items-by_id-get:
-            path: "/items/{id}"
+            path: /items/{id}
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
         handler-items-by_id-post:
-            path: "/items/{id}"
+            path: /items/{id}
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
         handler-validated-get:
-            path: "/validated"
+            path: /validated
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
         handler-validated-post:
-            path: "/validated"
+            path: /validated
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0

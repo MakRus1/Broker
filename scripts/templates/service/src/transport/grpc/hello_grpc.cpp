@@ -1,6 +1,6 @@
-#include <hello_grpc.hpp>
+#include <transport/grpc/hello_grpc.hpp>
 
-#include <greeting.hpp>
+#include <domain/greeting.hpp>
 #include <userver/logging/log.hpp>
 
 namespace broker {
@@ -12,7 +12,7 @@ HelloGrpc::HelloGrpc(const userver::components::ComponentConfig& config,
 HelloGrpc::SayHelloResult HelloGrpc::SayHello(CallContext&, handlers::api::HelloRequest&& request) {
     LOG_INFO() << "SayHello";
     handlers::api::HelloResponse response;
-    response.set_text(SayHelloTo(request.name(), UserType::kFirstTime));
+    response.set_text(domain::SayHelloTo(request.name(), domain::UserType::kFirstTime));
     return response;
 }
 

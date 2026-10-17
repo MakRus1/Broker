@@ -4,7 +4,8 @@ function(broker_openapi_generate SERVICE_DIR)
     file(GLOB_RECURSE specs CONFIGURE_DEPENDS "${SERVICE_DIR}/docs/api/*.yaml" "${SERVICE_DIR}/docs/api/*.json" "${SERVICE_DIR}/docs/api/*.yml")
     file(GLOB generator_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/*.py")
     file(GLOB_RECURSE views CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp" "${SERVICE_DIR}/src/deps.hpp")
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views})
+    file(GLOB service_manifest CONFIGURE_DEPENDS "${SERVICE_DIR}/service.yaml")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${service_manifest} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views})
     set(out "${CMAKE_CURRENT_BINARY_DIR}/generated")
     execute_process(COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --list-outputs
         OUTPUT_VARIABLE names RESULT_VARIABLE result ERROR_VARIABLE error OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -23,7 +24,7 @@ function(broker_openapi_generate SERVICE_DIR)
     add_custom_command(OUTPUT ${generated}
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --check
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --output-dir "${out}"
-        DEPENDS "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
+        DEPENDS ${service_manifest} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
         VERBATIM)
     add_custom_target(${PROJECT_NAME}_codegen DEPENDS ${generated})
     file(GLOB_RECURSE view_sources CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp")

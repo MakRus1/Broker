@@ -8,19 +8,19 @@ async def test_no_content(service_client):
 
 
 async def test_independent_post_and_conflict(service_client):
-    response = await service_client.post('/items/42', json={'name': '', 'count': 0, 'tags': []})
+    response = await service_client.post('/items/42/create', json={'name': '', 'count': 0, 'tags': []})
     assert response.status == 201
     assert response.json() == {'id': 42}
-    response = await service_client.post('/items/42', json={'name': 'Тест', 'count': -1})
+    response = await service_client.post('/items/42/create', json={'name': 'Тест', 'count': -1})
     assert response.status == 409
     assert response.json() == {'id': 42}
-    response = await service_client.post('/items/42', json={'name': 'Тест'})
+    response = await service_client.post('/items/42/create', json={'name': 'Тест'})
     assert response.status == 201
 
 
 @pytest.mark.parametrize('payload', [{}, {'name': None}, {'name': 3}, {'name': 'x', 'count': False}, {'name': 'x', 'tags': [1]}, {'name': 'x', 'extra': 'x'}])
 async def test_body_validation(service_client, payload):
-    response = await service_client.post('/items/42', json=payload)
+    response = await service_client.post('/items/42/create', json=payload)
     assert response.status == 400
 
 
@@ -39,7 +39,7 @@ async def test_query_validation(service_client, value):
 @pytest.mark.parametrize('body', ['', '{', '[]', 'null'],
                          ids=['missing', 'malformed', 'array', 'null'])
 async def test_missing_and_malformed_body(service_client, body):
-    response = await service_client.post('/items/42', data=body,
+    response = await service_client.post('/items/42/create', data=body,
                                          headers={'Content-Type': 'application/json'})
     assert response.status == 400
 
@@ -53,7 +53,7 @@ async def test_repeated_query_parameter(service_client):
 async def test_automatic_metadata(service_client, method, payload, status):
     trace_id = '1234567890abcdef1234567890abcdef'
     async with service_client.capture_logs() as capture:
-        response = await service_client.request(method, '/items/42', json=payload,
+        response = await service_client.request(method, '/items/42' + ('/create' if method == 'post' else ''), json=payload,
             headers={'traceparent': f'00-{trace_id}-1234567890abcdef-01'})
         assert response.status == status
     records = capture.select(trace_id=trace_id)
@@ -85,7 +85,7 @@ async def test_valid_formats(service_client):
     response = await service_client.get('/validated', params={
         'day': '2024-02-29', 'token': '12345678-1234-1234-1234-123456789abc', 'ratio': '0.5'})
     assert response.status == 200
-    response = await service_client.post('/validated', json={
+    response = await service_client.post('/validated/create', json={
         'status': 'closed', 'labels': ['abc', 'def'], 'created': '2026-10-17T12:30:20.123+03:00',
         'amount': 3.5, 'count': 0, 'description': '🚢🚂', 'encoded': 'dGVzdA=='})
     assert response.status == 201
@@ -100,19 +100,28 @@ async def test_valid_formats(service_client):
     {'description': '🚢'}, {'description': 'пятья'}, {'encoded': 'invalid=='},
 ])
 async def test_body_constraints(service_client, extra):
-    response = await service_client.post('/validated', json={'status': 'new', **extra})
+    response = await service_client.post('/validated/create', json={'status': 'new', **extra})
     assert response.status == 400
 
 
 async def test_body_defaults_are_values(service_client):
-    response = await service_client.post('/validated', json={'status': 'new'})
+    response = await service_client.post('/validated/create', json={'status': 'new'})
     assert response.status == 201
     assert response.json() == {'status': 'success', 'count': 3, 'count_provided': False, 'labels': ['a']}
-    response = await service_client.post('/validated', json={'status': 'new', 'count': 0, 'labels': ['b']})
+    response = await service_client.post('/validated/create', json={'status': 'new', 'count': 0, 'labels': ['b']})
     assert response.status == 201
     assert response.json() == {'status': 'success', 'count': 0, 'count_provided': True, 'labels': ['b']}
 
 
 async def test_response_enum_value_is_not_allowed_in_request(service_client):
-    response = await service_client.post('/validated', json={'status': 'success'})
+    response = await service_client.post('/validated/create', json={'status': 'success'})
     assert response.status == 400
+
+
+@pytest.mark.parametrize('method,path', [
+    ('post', '/items/42'), ('get', '/items/42/create'),
+    ('post', '/validated'), ('get', '/validated/create'),
+])
+async def test_path_has_one_http_method(service_client, method, path):
+    response = await service_client.request(method, path)
+    assert response.status == 405

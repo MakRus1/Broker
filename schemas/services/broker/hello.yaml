@@ -6,7 +6,6 @@ info:
 paths:
   /hello:
     get:
-      operationId: helloGet
       parameters:
         - name: name
           in: query
@@ -20,8 +19,8 @@ paths:
             text/plain:
               schema:
                 type: string
+  /hello/create:
     post:
-      operationId: helloPost
       parameters:
         - name: name
           in: query

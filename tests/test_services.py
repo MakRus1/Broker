@@ -83,7 +83,7 @@ class ServicesTest(unittest.TestCase):
         directory = create_service.create('upgrade')
         main = directory / 'src/main.cpp'
         main.write_text(main.read_text() + '\n// Ручной код сохраняется.\n')
-        view = directory / 'src/views/hello/get/view.cpp'
+        view = directory / 'src/views/hello/view.cpp'
         view.write_text(view.read_text() + '\n// Ручная реализация.\n')
         view_before = view.read_bytes()
         manifest = directory / 'service.yaml'

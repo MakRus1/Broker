@@ -24,7 +24,7 @@ services/<service>/
 │   ├── components/                # Обычные C++ компоненты и сценарии
 │   ├── repositories/              # Загрузка и сохранение сущностей
 │   ├── clients/                   # Внешние сервисы и интеграции
-│   ├── views/<path>/<method>/     # HTTP-адаптеры
+│   ├── views/<path>/                 # HTTP-адаптеры
 │   ├── transport/grpc/            # gRPC-адаптеры
 │   └── bootstrap/                 # Обвязка userver, ping
 └── tests/

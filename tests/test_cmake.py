@@ -33,7 +33,7 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/services/broker")
             before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file() and '__pycache__' not in str(p)}
             run('cmake', '-S', str(root), '-B', str(build), f'-DPython3_EXECUTABLE={sys.executable}')
             run('cmake', '--build', str(build), '--target', 'broker_codegen')
-            generated = build / 'generated/src/views/hello/get/handler.cpp'
+            generated = build / 'generated/src/views/hello/handler.cpp'
             self.assertTrue(generated.exists())
             generated.unlink()
             run('cmake', '--build', str(build), '--target', 'broker_codegen')
@@ -62,9 +62,9 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/tests/fixtures/contract_service")
             run('cmake', '-G', 'Ninja', '-S', str(root), '-B', str(build), f'-DPython3_EXECUTABLE={sys.executable}')
             run('cmake', '--build', str(build), '--target', 'consumer_codegen')
             header = build / 'generated/include/clients/broker/client.hpp'
-            self.assertIn('helloGet', header.read_text())
+            self.assertIn('Hello', header.read_text())
             spec = root / 'schemas/services/broker/hello.yaml'
-            spec.write_text(spec.read_text().replace('operationId: helloGet', 'operationId: HelloRenamed'))
+            spec.write_text(spec.read_text().replace('  /hello:', '  /hello-renamed:'))
             # Сборка обнаруживает устаревший lock, но не исправляет исходники.
             before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file() and '__pycache__' not in str(p)}
             with self.assertRaises(subprocess.CalledProcessError):
@@ -73,4 +73,4 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/tests/fixtures/contract_service")
             run(*generate)
             run('cmake', '--build', str(build), '--target', 'consumer_codegen')
             self.assertIn('HelloRenamed', header.read_text())
-            self.assertNotIn('helloGet', header.read_text())
+            self.assertNotIn('namespace Hello {', header.read_text())

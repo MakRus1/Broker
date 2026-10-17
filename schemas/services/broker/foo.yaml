@@ -6,7 +6,6 @@ info:
 paths:
   /foo/bar:
     get:
-      operationId: getFooBar
       parameters:
         - name: name
           in: query

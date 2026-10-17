@@ -78,7 +78,10 @@ class Operation:
     params: tuple[Field, ...]
     body: Body | None
     responses: tuple[Response, ...]
-    operation_id: str | None = None
+
+    @property
+    def name(self):
+        return ''.join(word[:1].upper() + word[1:] for word in re.split(r'[/_]', self.rel) if word)
 
     @property
     def ns(self):
@@ -174,7 +177,7 @@ def parse_spec(spec):
         parse_body(schema, schemas)
     operations = []
     for path, item in spec.get('paths', {}).items():
-        if not isinstance(path, str) or not re.fullmatch(r'/(?:[a-zA-Z0-9_{}-]+/?)*', path) or '//' in path:
+        if not isinstance(path, str) or not re.fullmatch(r'/(?:[a-zA-Z0-9_{}-]+/?)*', path) or '//' in path or (path != '/' and path.endswith('/')):
             raise ValueError(f'Unsupported URL path: {path!r}')
         segments = [p for p in path.split('/') if p]
         placeholders = []
@@ -187,10 +190,13 @@ def parse_spec(spec):
             else:
                 names.append(identifier(p.replace('-', '_')))
         keys(item, {'parameters', 'summary', 'description', 'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}, path)
+        methods = set(item) & {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}
+        if len(methods) != 1:
+            raise ValueError(f'{path}: one HTTP method per path is required')
         for method, op in item.items():
             if method not in {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}:
                 continue
-            keys(op, {'operationId', 'summary', 'description', 'tags', 'parameters', 'requestBody', 'responses', 'deprecated'}, f'{method} {path}')
+            keys(op, {'summary', 'description', 'tags', 'parameters', 'requestBody', 'responses', 'deprecated'}, f'{method} {path}')
             params = {}
             for level in (item.get('parameters', []), op.get('parameters', [])):
                 seen = set()
@@ -245,7 +251,7 @@ def parse_spec(spec):
                 responses.append(Response(status, media, rb))
             if not responses:
                 raise ValueError('At least one response is required')
-            operations.append(Operation(path, method.upper(), '/'.join(names + [('delete_' if method == 'delete' else method)]), tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), identifier(op["operationId"]) if "operationId" in op else None))
+            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status))))
     normalized = []
     for operation in operations:
         canonical = {typ.enum_name: tuple(typ.schema['enum']) for typ in enum_types(operation)}
@@ -265,4 +271,34 @@ def parse_spec(spec):
                                   body=normalize_body(operation.body),
                                   responses=tuple(replace(response, body=normalize_body(response.body))
                                                   for response in operation.responses)))
+    validate_operations(normalized)
     return normalized
+
+
+def validate_operations(operations):
+    """Один путь — одна операция; имена и namespaces не должны конфликтовать."""
+    for label, selector in (
+        ('path', lambda op: op.path),
+        ('URL template', lambda op: re.sub(r'\{[^}]+\}', '{}', op.path)),
+        ('C++ namespace', lambda op: op.rel),
+        ('handler name', lambda op: op.handler),
+        ('client method', lambda op: op.name),
+    ):
+        seen = {}
+        for op in operations:
+            value = selector(op)
+            if value in seen:
+                raise ValueError(f'Colliding {label}: {seen[value]} and {op.path}')
+            seen[value] = op.path
+    for op in operations:
+        if op.name in {'Client', 'Component'}:
+            raise ValueError(f'{op.path}: generated client method {op.name} is reserved')
+        # Классы и enum родительской ручки не могут стать namespace дочерней.
+        reserved = {'Request', 'RequestBody', 'Response', 'Handler', 'View', 'ToJson', 'Serialize', 'EnumValue', 'ParseEnumScalar', 'ParseEnumJson'}
+        reserved.update(f'Response{response.status}' for response in op.responses)
+        reserved.update(typ.enum_name for typ in enum_types(op))
+        for child in operations:
+            if child.rel.startswith(op.rel + '/'):
+                segment = child.rel[len(op.rel) + 1:].split('/')[0]
+                if segment in reserved:
+                    raise ValueError(f'Colliding C++ namespace: {child.path} uses generated name {segment} of {op.path}')

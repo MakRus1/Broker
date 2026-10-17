@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
             .Append<userver::otlp::LoggerComponent>();
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<userver::components::Postgres>("postgres-db-1");
+    component_list.Append<userver::components::Postgres>("postgres-main");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()
         .Append<platform::GrpcTelemetryFactory>();

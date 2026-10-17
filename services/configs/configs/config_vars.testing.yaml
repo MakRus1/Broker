@@ -1,0 +1,18 @@
+worker-threads: 2
+worker-fs-threads: 2
+logger-level: debug
+
+is-testing: true
+
+server-port: 8090
+grpc-server-port: 8081
+
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15434/configs_db_1
+
+monitor-port: 8092
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''

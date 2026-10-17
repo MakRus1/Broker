@@ -1,0 +1,9 @@
+name: CONFIGS_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /configs/status
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

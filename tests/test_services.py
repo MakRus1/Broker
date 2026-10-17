@@ -45,7 +45,7 @@ class ServicesTest(unittest.TestCase):
             self.assertEqual(config['handler-ping']['path'], '/ping')
             self.assertEqual(config['handler-ping-ready']['path'], '/ping/ready')
             self.assertTrue(config['handler-ping']['monitor-handler'])
-            self.assertEqual('postgres-db-1' in config, pg)
+            self.assertEqual('postgres-main' in config, pg)
             self.assertEqual('grpc-server' in config, grpc)
             main = (directory / 'src/main.cpp').read_text()
             self.assertIn(f'.Append<{name}::Ping>()', main)
@@ -77,6 +77,7 @@ class ServicesTest(unittest.TestCase):
             with self.assertRaises(OSError): create_service.create('rollback_test')
         self.assertFalse((self.root / 'services/rollback_test').exists())
         self.assertFalse((self.root / 'schemas/services/rollback_test').exists())
+        self.assertFalse((self.root / 'schemas/configs/rollback_test').exists())
         self.assertEqual(before, {p: p.read_bytes() for p in paths})
 
     def test_manifest_enables_features_and_preserves_manual_code(self):
@@ -93,7 +94,7 @@ class ServicesTest(unittest.TestCase):
             run(directory, check=True)
         self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
         run(directory)
-        self.assertTrue((directory / 'postgresql/schemas/db_1.sql').exists())
+        self.assertTrue((directory / 'postgresql/schemas/db_1/V0001__create_hello_users.sql').exists())
         manifest.write_text(manifest.read_text().replace('grpc: {enabled: false}', 'grpc: {enabled: true}'))
         run(directory)
         run(directory, check=True)
@@ -126,6 +127,25 @@ class ServicesTest(unittest.TestCase):
         manifest.write_text('version: 1\nlibraries: [common]\n')
         with self.assertRaisesRegex(ValueError, 'Отключение postgresql'):
             run(directory)
+
+    def test_postgresql_cluster_name_and_rename(self):
+        directory = create_service.create('named_cluster', True)
+        manifest = directory / 'service.yaml'
+        for cluster in ['primary', 'accounting-read']:
+            manifest.write_text(f'version: 1\npostgresql: {{enabled: true, cluster: {cluster}}}\n')
+            run(directory)
+            run(directory, check=True)
+            config = yaml.safe_load((directory / 'configs/static_config.yaml').read_text())['components_manager']['components']
+            self.assertIn('postgres-' + cluster, config)
+            self.assertEqual([key for key in config if key.startswith('postgres-')], ['postgres-' + cluster])
+            for path in ['src/main.cpp', 'src/deps.hpp']:
+                self.assertIn('"postgres-' + cluster + '"', (directory / path).read_text())
+        for invalid in ['../escape', 'two words', '', 1, 'UPPER', 'bad__name']:
+            manifest.write_text(yaml.safe_dump({'version': 1, 'postgresql': {'enabled': True, 'cluster': invalid}}))
+            before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+            with self.subTest(cluster=invalid), self.assertRaisesRegex(ValueError, 'postgresql.cluster'):
+                run(directory)
+            self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
 
     def test_manifest_write_failure_rolls_back(self):
         directory = create_service.create('transaction')

@@ -1,0 +1,18 @@
+openapi: 3.0.3
+info:
+  title: Состояние сервиса конфигурации
+  version: '1'
+paths:
+  /configs/status:
+    get:
+      responses:
+        '200':
+          description: Текущая ревизия
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revision]
+                properties:
+                  revision:
+                    type: integer

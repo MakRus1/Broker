@@ -13,3 +13,6 @@ monitor-port: 8082
 otlp-enabled: false
 otlp-endpoint: localhost:4317
 environment: local
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''

@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -16,6 +17,10 @@ class AffectedTest(unittest.TestCase):
             (repo / 'scripts').mkdir(); (repo / '.github').mkdir(); (repo / 'services/broker').mkdir(parents=True)
             shutil.copy(ROOT / 'scripts/affected-services.py', repo / 'scripts')
             shutil.copy(ROOT / '.github/service-deps.yaml', repo / '.github')
+            deps = yaml.safe_load((repo / '.github/service-deps.yaml').read_text())
+            for entry in deps['libs'].values():
+                entry['services'] = ['broker']
+            (repo / '.github/service-deps.yaml').write_text(yaml.safe_dump(deps))
             def git(*args):
                 return subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True).stdout.decode().strip()
             git('init');git('config', 'user.name', 'Тест');git('config', 'user.email', 'test@example.invalid')
@@ -44,6 +49,8 @@ class AffectedTest(unittest.TestCase):
             (repo / 'libs/common/a.hpp').write_text('second change')
             git('add', '.');git('commit', '-m', 'Изменение общей библиотеки')
             self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker other')
+            (repo / 'libs/configs').mkdir(parents=True)
+            (repo / 'libs/configs/CMakeLists.txt').write_text('add_library(broker_configs INTERFACE)')
             # Публичный контракт затрагивает поставщика и транзитивных потребителей.
             (repo / 'services/third').mkdir()
             (repo / 'services/other/service.yaml').write_text('version: 1\nlibraries: [common]\nclients: {api: {service: broker, transport: http}}\n')

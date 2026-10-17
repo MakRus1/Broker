@@ -12,12 +12,12 @@ target_link_libraries(contract_service PRIVATE userver::core broker_common)
 userver_testsuite_add_simple()
 
 # SERVICE_CMAKE_BEGIN
-foreach(service_library IN ITEMS broker_common)
+foreach(service_library IN ITEMS broker_common broker_configs)
     if(NOT TARGET ${service_library})
         message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")
     endif()
 endforeach()
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs)
 # SERVICE_CMAKE_END
 
 set(client_contract "${CMAKE_CURRENT_BINARY_DIR}/client_test/client_contract.hpp")

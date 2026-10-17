@@ -17,7 +17,7 @@ class CMakeTest(unittest.TestCase):
             (root / 'services').mkdir(parents=True)
             shutil.copy2(ROOT / '.clang-format', root / '.clang-format')
             shutil.copytree(ROOT / 'scripts/openapi_gen', root / 'scripts/openapi_gen', ignore=shutil.ignore_patterns('__pycache__'))
-            shutil.copytree(ROOT / 'services/broker', root / 'services/broker', ignore=shutil.ignore_patterns('__pycache__'))
+            shutil.copytree(ROOT / 'services', root / 'services', dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__'))
             shutil.copytree(ROOT / 'schemas', root / 'schemas')
             shutil.copytree(ROOT / 'cmake', root / 'cmake')
             shutil.copytree(ROOT / 'libs', root / 'libs')
@@ -46,7 +46,7 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/services/broker")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / 'source';build = Path(tmp) / 'build'
             root.mkdir()
-            for directory in ['scripts/openapi_gen', 'cmake', 'libs', 'schemas', 'services/broker', 'tests/fixtures/contract_service']:
+            for directory in ['scripts/openapi_gen', 'cmake', 'libs', 'schemas', 'services', 'tests/fixtures/contract_service']:
                 shutil.copytree(ROOT / directory, root / directory, ignore=shutil.ignore_patterns('__pycache__'))
             shutil.copy2(ROOT / '.clang-format', root / '.clang-format')
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)

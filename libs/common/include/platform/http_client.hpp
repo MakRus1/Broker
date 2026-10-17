@@ -2,6 +2,7 @@
 
 #include <charconv>
 #include <chrono>
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -103,13 +104,21 @@ inline void RequireContentType(const Response& response, const std::string& expe
         throw ContractError("Unexpected HTTP response Content-Type");
 }
 
+struct ClientSettings {
+    int Timeout;
+    int MaxRetries;
+};
+using SettingsProvider = std::function<ClientSettings(const std::string&)>;
+
 class HttpTransport final : public Transport {
   public:
     HttpTransport(const userver::components::ComponentConfig& config,
-                  const userver::components::ComponentContext& context)
+                  const userver::components::ComponentContext& context,
+                  SettingsProvider settings = {})
         : client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()),
-          base_url_(config["base-url"].As<std::string>()), timeout_(config["timeout-ms"].As<int>()),
-          destination_(config.Name()) {
+          base_url_(config["base-url"].As<std::string>()),
+          timeout_(config["timeout-ms"].As<int>(1000)), destination_(config.Name()),
+          settings_(std::move(settings)) {
         if ((base_url_.rfind("http://", 0) != 0 && base_url_.rfind("https://", 0) != 0) ||
             base_url_.find_first_of("?#@\r\n") != std::string::npos || timeout_.count() <= 0) {
             throw std::invalid_argument("Invalid HTTP client base-url or timeout-ms");
@@ -126,11 +135,17 @@ class HttpTransport final : public Transport {
                 separator + userver::http::UrlEncode(name) + "=" + userver::http::UrlEncode(value);
             separator = '&';
         }
+        const auto settings = settings_ ? settings_(input.path_template)
+                                        : ClientSettings{static_cast<int>(timeout_.count()), 0};
+        // Повторы разрешены только для безопасных методов; POST не становится идемпотентным из-за
+        // конфига.
+        const bool safe =
+            input.method == "GET" || input.method == "HEAD" || input.method == "OPTIONS";
         auto request = client_.CreateRequest();
         request.url(std::move(url))
             .method(Method(input.method))
-            .timeout(timeout_)
-            .retry(1, false)
+            .timeout(std::chrono::milliseconds(settings.Timeout))
+            .retry(static_cast<short>(1 + (safe ? settings.MaxRetries : 0)), true)
             .follow_redirects(false)
             .SetLoggedUrl(input.path_template)
             .SetUrlTemplate(input.path_template)
@@ -176,6 +191,7 @@ class HttpTransport final : public Transport {
     std::string base_url_;
     std::chrono::milliseconds timeout_;
     std::string destination_;
+    SettingsProvider settings_;
 };
 
 inline userver::yaml_config::Schema ClientConfigSchema() {

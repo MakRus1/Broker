@@ -7,14 +7,14 @@
 
 ```text
 services/<service>/
-├── service.yaml                   # Инфраструктура, клиенты и библиотеки
+├── service.yaml                   # Инфраструктура, клиенты, конфиги и библиотеки
 ├── CMakeLists.txt
 ├── Makefile                       # Команды из каталога сервиса
 ├── configs/                       # userver и переменные окружения
 ├── docs/api/                      # Внутренние OpenAPI и codegen.lock
 ├── proto/                         # gRPC-контракты
 ├── postgresql/
-│   ├── schemas/                   # Схема БД для testsuite
+│   ├── schemas/db_1/              # V0001__migration_name.sql для БД
 │   ├── data/                      # Тестовые данные
 │   └── queries/                   # Именованные SQL-запросы
 ├── src/

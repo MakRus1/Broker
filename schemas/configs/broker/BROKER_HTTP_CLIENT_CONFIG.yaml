@@ -1,0 +1,13 @@
+name: BROKER_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /foo/bar
+- /hello
+- /hello/create
+- /hello_postgres
+- /hello_postgres/create
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

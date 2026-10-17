@@ -1,6 +1,8 @@
 version: 1
-libraries: [common]
+libraries: [common, configs]
+configs: [SHIPMENT_TERMS_CONFIG]
 postgresql:
   enabled: true
+  cluster: broker
 grpc:
   enabled: true

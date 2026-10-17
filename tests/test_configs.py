@@ -1,0 +1,92 @@
+"""Контракты конфигов, уникальные имена и воспроизводимая генерация."""
+from copy import deepcopy
+import importlib.util
+from pathlib import Path
+import shutil
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
+import configs
+from generate import UniqueLoader, run
+
+
+class ConfigSchemasTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        shutil.copytree(ROOT / 'schemas', self.root / 'schemas')
+        shutil.copytree(ROOT / 'services', self.root / 'services', ignore=shutil.ignore_patterns('__pycache__'))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_duplicates_and_invalid_defaults_rejected(self):
+        path = self.root / 'schemas/configs/shipment/SHIPMENT_TERMS_CONFIG.yaml'
+        original = yaml.safe_load(path.read_text())
+        for mutation in [lambda value: value['default'].pop('is_enabled'),
+                         lambda value: value['default'].update(max_days=0),
+                         lambda value: value.update(context='unknown/CONTEXT'),
+                         lambda value: value.update(mode='unknown'),
+                         lambda value: value['schema'].update(additionalProperties=True)]:
+            value = deepcopy(original);mutation(value)
+            path.write_text(yaml.safe_dump(value))
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                configs.catalog(self.root, UniqueLoader)
+        path.write_text(yaml.safe_dump(original))
+        duplicate = path.parent.parent / 'other' / path.name
+        duplicate.parent.mkdir()
+        duplicate.write_text(path.read_text())
+        with self.assertRaisesRegex(ValueError, 'Duplicate global'):
+            configs.catalog(self.root, UniqueLoader)
+
+    def test_automatic_http_schema_is_provider_owned_and_plain(self):
+        files = configs.auto_files(self.root / 'services/broker', UniqueLoader)
+        target = self.root / 'schemas/configs/broker/BROKER_HTTP_CLIENT_CONFIG.yaml'
+        self.assertIn(target, files)
+        value = yaml.safe_load(files[target])
+        self.assertEqual(value['mode'], 'http-client')
+        self.assertNotIn('context', value)
+        self.assertEqual(value['default']['**default**'], {'timeout': 1000, 'max_retries': 0})
+        self.assertIn('/hello/create', value['paths'])
+
+    def test_plain_config_has_typed_key(self):
+        path = self.root / 'schemas/configs/shipment/PLAIN_CONFIG.yaml'
+        path.write_text(yaml.safe_dump({'name': 'PLAIN_CONFIG', 'mode': 'plain',
+            'schema': {'type': 'object', 'required': ['is_enabled'], 'properties': {'is_enabled': {'type': 'boolean'}}},
+            'default': {'is_enabled': True}}))
+        manifest = self.root / 'services/broker/service.yaml'
+        spec = yaml.safe_load(manifest.read_text());spec['configs'] = ['PLAIN_CONFIG']
+        manifest.write_text(yaml.safe_dump(spec))
+        generated = configs.outputs(self.root / 'services/broker', UniqueLoader)['include/configs/keys.hpp']
+        self.assertIn('PlainKey<configs::detail_PLAIN_CONFIG::Value>', generated)
+        self.assertIn('bool IsEnabled', generated)
+        self.assertNotIn('ConditionalKey', generated)
+
+    def test_manifest_resolves_global_names_without_paths(self):
+        service = self.root / 'services/broker'
+        manifest = service / 'service.yaml'
+        spec = yaml.safe_load(manifest.read_text())
+        _, catalog, entries = configs.selected(service, UniqueLoader)
+        self.assertEqual([catalog[entry]['name'] for entry in entries], ['SHIPMENT_TERMS_CONFIG'])
+        for references in [['shipment/SHIPMENT_TERMS_CONFIG'], ['UNKNOWN_CONFIG'],
+                           ['SHIPMENT_TERMS_CONFIG', 'SHIPMENT_TERMS_CONFIG']]:
+            spec['configs'] = references
+            manifest.write_text(yaml.safe_dump(spec))
+            with self.subTest(references=references), self.assertRaises(ValueError):
+                configs.selected(service, UniqueLoader)
+
+    def test_migration_names_and_duplicate_versions(self):
+        spec = importlib.util.spec_from_file_location('migration_check', ROOT / 'scripts/check-migrations.py')
+        module = importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        module.check(self.root)
+        database = self.root / 'services/broker/postgresql/schemas/db_1'
+        for name in ['001_old.sql', 'V0000__zero.sql', 'V0001__duplicate.sql']:
+            target = database / name;target.write_text('SELECT 1;')
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                module.check(self.root)
+            target.unlink()

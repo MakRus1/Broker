@@ -39,7 +39,7 @@ components_manager:
             response_data_size_log_limit: 0
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
-        postgres-db-1:
+        postgres-main:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
             blocking_task_processor: fs-task-processor

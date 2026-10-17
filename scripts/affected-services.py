@@ -41,6 +41,8 @@ def main():
                 raise ValueError(f'Некорректный клиент {alias} в {manifest}')
             consumers[client['service']].add(service)
         libraries = spec.get('libraries', ['common'])
+        if clients and 'configs' not in libraries:
+            libraries = [*libraries, 'configs']
         if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file() for lib in libraries):
             raise ValueError(f'Некорректные libraries в {manifest}')
         for entries in dependencies.values():
@@ -68,6 +70,8 @@ def main():
             affected.update(dependencies[parts[1]])
         elif parts[:2] == ['schemas', 'services'] and len(parts) > 2 and parts[2] in services:
             affected.add(parts[2])
+            if 'configs' in services:
+                affected.add('configs')
         elif parts[0] == 'schemas':
             print('all')
             return

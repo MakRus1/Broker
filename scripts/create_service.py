@@ -26,7 +26,12 @@ def _create(name, postgres=False, grpc=False):
     if destination.exists() or destination.is_symlink():
         raise ValueError(f'Сервис уже существует: {destination}')
     registered = [ROOT / 'CMakeLists.txt', ROOT / '.github/service-deps.yaml', ROOT / 'docker-compose.yml']
+    registry_lock = services / 'configs/docs/api/codegen.lock'
+    if registry_lock.is_file():
+        registered.append(registry_lock)
     before = {p: p.read_bytes() for p in registered}
+    auto_schema = ROOT / 'schemas/configs' / name / (name.upper() + '_HTTP_CLIENT_CONFIG.yaml')
+    auto_before = auto_schema.read_bytes() if auto_schema.exists() else None
     with tempfile.TemporaryDirectory(prefix='.new-service-', dir=services) as temporary:
         stage = Path(temporary) / name
         shutil.copytree(ROOT / 'scripts/templates/service', stage,
@@ -73,16 +78,25 @@ def _create(name, postgres=False, grpc=False):
             deps['libs']['common']['services'] = sorted(set(deps['libs']['common']['services'] + [name]))
             (ROOT / '.github/service-deps.yaml').write_text(yaml.safe_dump(deps, sort_keys=False, indent=2))
             (ROOT / 'CMakeLists.txt').write_bytes(before[ROOT / 'CMakeLists.txt'] + f'\nadd_subdirectory(services/{name})\n'.encode())
+            if registry_lock.exists():
+                from generate import digest, load
+                registry_lock.write_text(digest(registry_lock.parents[2], load(registry_lock.parents[2])))
             if postgres:
                 compose['services'][f'postgres-{name}'] = {
                     'image': 'postgres:16.8-alpine',
                     'environment': {'POSTGRES_USER': 'testsuite', 'POSTGRES_PASSWORD': 'testsuite', 'POSTGRES_DB': f'{name}_db_1'},
                     'ports': [f'127.0.0.1:{port}:5432'],
-                    'volumes': [f'./services/{name}/postgresql/schemas/db_1.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro'],
+                    'volumes': [f'./services/{name}/postgresql/schemas/db_1:/docker-entrypoint-initdb.d:ro'],
                     'healthcheck': {'test': ['CMD-SHELL', f'pg_isready -U testsuite -d {name}_db_1'], 'interval': '2s', 'timeout': '5s', 'retries': 10},
                 }
                 (ROOT / 'docker-compose.yml').write_text(yaml.safe_dump(compose, sort_keys=False))
         except BaseException:
+            if auto_before is None:
+                auto_schema.unlink(missing_ok=True)
+                if auto_schema.parent.exists() and not any(auto_schema.parent.iterdir()):
+                    auto_schema.parent.rmdir()
+            else:
+                auto_schema.write_bytes(auto_before)
             for p, data in before.items():
                 p.write_bytes(data)
             if schema_destination.exists():

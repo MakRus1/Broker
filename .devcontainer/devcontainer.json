@@ -11,7 +11,7 @@
     8081,
     8082
   ],
-  "postCreateCommand": "make check-gen-all && make cmake-debug",
+  "postCreateCommand": "python3 scripts/container-images.py check && make check-gen-all && make cmake-debug",
   "runArgs": [],
   "customizations": {
     "vscode": {
@@ -38,14 +38,11 @@
       }
     }
   },
-  "build": {
-    "dockerfile": "../tools/Dockerfile",
-    "context": ".."
-  },
   "mounts": [
     "source=broker-devcontainer-${devcontainerId}-_venv-gen,target=/workspaces/broker/.venv-gen,type=volume",
     "source=broker-devcontainer-${devcontainerId}-build-debug,target=/workspaces/broker/build-debug,type=volume",
     "source=broker-devcontainer-${devcontainerId}-build-release,target=/workspaces/broker/build-release,type=volume",
     "source=broker-devcontainer-${devcontainerId}-build-sanitize,target=/workspaces/broker/build-sanitize,type=volume"
-  ]
+  ],
+  "image": "ghcr.io/makrus1/broker-dev@sha256:d18873e87b566c185dca2427c3c44f7cba05ae4fa80ad3c6d79004b927ba6e7c"
 }

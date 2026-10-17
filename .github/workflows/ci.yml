@@ -86,7 +86,7 @@ jobs:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: |
           docker run --rm "$IMAGE" bash -euc '
-            archive=$(find "$BROKER_USERVER_PREFIX" -name libuserver-core.a -print -quit)
+            archive=$(find "$BROKER_USERVER_PREFIX" -name libuserver-cored.a -print -quit)
             test -n "$archive"
             nm --undefined-only "$archive" > /tmp/userver-symbols.txt
             grep -q __asan_ /tmp/userver-symbols.txt

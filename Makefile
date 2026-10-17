@@ -14,7 +14,7 @@ PRESETS := debug release sanitize
 
 .PHONY: format check-format help gen check-gen check-gen-all test-tools doctor docker-image docker-pull lock-images new-service testsuite-clean
 help:
-	@echo 'make doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-image | docker-test-debug'
+	@echo 'make doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-pull | docker-image | docker-test-debug | lock-images'
 
 gen:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)"
@@ -57,7 +57,7 @@ lock-images:
 	$(PYTHON3) scripts/container-images.py lock
 
 docker-pull:
-	docker pull $(DOCKER_IMAGE)
+	docker pull --platform $(DOCKER_PLATFORM) $(DOCKER_IMAGE)
 
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .

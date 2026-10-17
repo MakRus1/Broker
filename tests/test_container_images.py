@@ -71,3 +71,12 @@ class ContainerImagesTest(unittest.TestCase):
         self.assertEqual(ci['permissions']['packages'], 'read')
         self.assertFalse(any(step.get('uses', '').startswith('docker/build-push-action')
                              for step in ci['jobs']['build']['steps']))
+
+    def test_all_local_docker_copies_are_fingerprinted(self):
+        import shlex
+        for line in (ROOT / 'tools/Dockerfile').read_text().splitlines():
+            if not line.startswith('COPY ') or line.startswith('COPY --from='):
+                continue
+            sources = shlex.split(line)[1:-1]
+            for source in sources:
+                self.assertIn(source, images.INPUTS, f'Добавьте {source} в fingerprint окружения')

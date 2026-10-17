@@ -61,10 +61,13 @@ jobs:
         env:
           IMAGE: ${{ steps.image.outputs.tag }}
         run: |
-          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+          if docker buildx imagetools inspect "$IMAGE" >/tmp/image-inspect.log 2>&1; then
             echo 'exists=true' >> "$GITHUB_OUTPUT"
-          else
+          elif grep -Fq -- "$IMAGE: not found" /tmp/image-inspect.log; then
             echo 'exists=false' >> "$GITHUB_OUTPUT"
+          else
+            cat /tmp/image-inspect.log >&2
+            exit 1
           fi
       - name: Сборка и публикация
         if: steps.lookup.outputs.exists != 'true'
@@ -75,8 +78,8 @@ jobs:
           target: ${{ matrix.variant }}
           push: true
           tags: ${{ steps.image.outputs.tag }}
-          cache-from: type=gha,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
-          cache-to: type=gha,mode=max,scope=environment-${{ matrix.variant }}-${{ runner.arch }}
+          cache-from: type=registry,ref=ghcr.io/makrus1/broker-dev:cache-${{ matrix.variant }}-${{ runner.arch }}
+          cache-to: type=registry,ref=ghcr.io/makrus1/broker-dev:cache-${{ matrix.variant }}-${{ runner.arch }},mode=max,ignore-error=true
   manifest:
     needs: [plan, build]
     concurrency:
@@ -96,8 +99,13 @@ jobs:
           key=$(python3 scripts/container-images.py key)
           for variant in dev sanitize; do
             tag="ghcr.io/makrus1/broker-dev:$key-$variant"
-            if ! docker buildx imagetools inspect "$tag" >/dev/null 2>&1; then
+            if docker buildx imagetools inspect "$tag" >/tmp/image-inspect.log 2>&1; then
+              :
+            elif grep -Fq -- "$tag: not found" /tmp/image-inspect.log; then
               docker buildx imagetools create --tag "$tag" "$tag-amd64" "$tag-arm64"
+            else
+              cat /tmp/image-inspect.log >&2
+              exit 1
             fi
             docker buildx imagetools inspect "$tag" | tee -a "$GITHUB_STEP_SUMMARY"
           done

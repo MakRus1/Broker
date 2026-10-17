@@ -60,13 +60,30 @@ client-broker-timeout-ms: 1000
 
 ```cpp
 const auto response = deps.broker.getFooBar({.name = "Груз"});
-// Ответ содержит Response200 либо объявленный Response404.
+UseGreeting(response.greeting);
 ```
 
 Типы находятся в `<consumer>::clients::<alias>::<operationId>`, например
 `orders::clients::broker::getFooBar::Request` и `Response200`.
-Ответ — std::variant объявленных ResponseNNN; ожидаемые 404/409 остаются ответами API.
-Для обработки используйте std::visit или std::get_if.
+При единственном успешном ответе с телом метод возвращает его DTO напрямую:
+
+```cpp
+try {
+    const auto response = deps.broker.getFooBar({.name = "Груз"});
+    UseGreeting(response.greeting);
+} catch (const orders::clients::broker::getFooBar::Error404& error) {
+    HandleNotFound(error.response.message);
+}
+```
+
+Единственный успех без тела (например, 204) дает void: просто вызовите метод.
+Несколько успешных статусов дают std::variant только успешных ResponseNNN;
+ответ без тела в таком варианте представлен пустым ResponseNNN.
+Объявленные 3xx/4xx/5xx выбрасываются как ErrorNNN с типизированным DTO в поле response.
+У всех ошибок API есть общий базовый тип platform::http::ApiError с GetStatus().
+Сообщение what() содержит только HTTP-статус, без бизнес-данных из тела.
+У операции, объявляющей только ошибки, возвращаемый тип void; любой объявленный
+ответ выбрасывает исключение, а необъявленный статус дает ContractError.
 DTO клиента не содержат WasProvided и не зависят от серверных handler-классов.
 Необязательное значение без default — std::optional, с default — обычное значение T.
 Запрос отправляет default, если вызывающий код не заменил его.
@@ -75,6 +92,7 @@ DTO клиента не содержат WasProvided и не зависят от
 Path/query кодируются, тело сериализуется в JSON, ответ проверяется по статусу,
 Content-Type, обязательности, типам и ограничениям полей. Ответ без тела не принимает тело.
 
+- platform::http::ApiError: общий тип объявленных ошибок API; конкретные ErrorNNN доступны в namespace операции.
 - platform::http::ContractError: неожиданный статус или нарушение контракта ответа.
 - platform::http::TimeoutError: штатный TimeoutException userver.
 - platform::http::CancelledError: штатный CancelException userver; не подавляйте отмену задачи.

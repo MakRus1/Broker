@@ -49,7 +49,7 @@ def json_write(name, items):
     return '\n'.join(lines) + '\nreturn userver::formats::json::ToString(json.ExtractValue());'
 
 
-def json_read(response):
+def json_read(response, finish):
     name = f'Response{response.status}'
     lines = ['platform::http::RequireContentType(raw, "application/json");',
              'const auto json = userver::formats::json::FromString(raw.body);',
@@ -62,12 +62,16 @@ def json_read(response):
         if f.required:
             lines.append(f'if (!json.HasMember({key})) throw std::invalid_argument("missing field");')
         lines.append(f'if (json.HasMember({key})) {{ auto item = broker_codegen::ParseJson<{f.type.cpp}>(json[{key}]); Validate_{name}_{f.name}(item); value.{f.name} = std::move(item); }}')
-    return '\n'.join(lines) + '\nreturn value;'
+    return '\n'.join(lines) + '\n' + finish
 
 
 def operation_code(scope, op):
     text = f'namespace {op.operation_id} {{\n'
-    text += ''.join(enums(t) for t in enum_types(op))
+    types = enum_types(op)
+    error_names = {f'Error{r.status}' for r in op.responses if r.status >= 300}
+    if any(t.enum_name in error_names for t in types):
+        raise ValueError(f'{op.operation_id}: enum name collides with generated API error')
+    text += ''.join(enums(t) for t in types)
     if op.body:
         text += dto('RequestBody', op.body.fields, scope)
         text += 'inline std::string ToJson(const RequestBody& value) {\n' + json_write('RequestBody', op.body.fields) + '\n}\n'
@@ -78,7 +82,22 @@ def operation_code(scope, op):
     for response in op.responses:
         name = f'Response{response.status}'
         text += (f'struct {name} {{ std::string body; }};\n' if response.media == 'text/plain' else dto(name, response.body.fields if response.body else (), scope))
-    text += 'using Response = std::variant<' + ', '.join(f'Response{r.status}' for r in op.responses) + '>;\n'
+        if response.status >= 300:
+            text += f'''class Error{response.status} final : public platform::http::ApiError {{
+public:
+explicit Error{response.status}(Response{response.status} value)
+: ApiError({response.status}), response(std::move(value)) {{}}
+Response{response.status} response;
+}};
+'''
+    successes = [r for r in op.responses if r.status < 300]
+    if not successes or (len(successes) == 1 and successes[0].media is None):
+        result = 'void'
+    elif len(successes) == 1:
+        result = f'Response{successes[0].status}'
+    else:
+        result = 'std::variant<' + ', '.join(f'Response{r.status}' for r in successes) + '>'
+    text += f'using Response = {result};\n'
     text += 'inline platform::http::Request Encode(const Request& request) {\nplatform::http::Request raw;\n'
     text += f'raw.method = {quoted(op.method)}; raw.path = {quoted(op.path)}; raw.operation = {quoted(op.operation_id)}; raw.url_template = {quoted(op.path)};\n'
     for f in op.params:
@@ -95,16 +114,21 @@ def operation_code(scope, op):
     text += 'return raw;\n}\ninline Response Decode(const platform::http::Response& raw) {\ntry {\nswitch (raw.status) {\n'
     for response in op.responses:
         text += f'case {response.status}: {{\n'
+        finish = f'throw Error{response.status}{{std::move(value)}};' if response.status >= 300 else ('return;' if result == 'void' else 'return value;')
         if response.body:
-            text += json_read(response)
+            text += json_read(response, finish)
         elif response.media == 'text/plain':
-            text += f'platform::http::RequireContentType(raw, "text/plain"); return Response{response.status}{{raw.body}};'
+            text += f'platform::http::RequireContentType(raw, "text/plain"); Response{response.status} value{{raw.body}}; {finish}'
         else:
-            text += f'if (!raw.body.empty()) throw std::invalid_argument("unexpected body"); return Response{response.status}{{}};'
+            text += 'if (!raw.body.empty()) throw std::invalid_argument("unexpected body"); '
+            if result != 'void' or response.status >= 300:
+                text += f'Response{response.status} value; '
+            text += finish
         text += '\n}\n'
     text += '''default: throw platform::http::ContractError("Undeclared HTTP response status");
 }
 } catch (const std::bad_alloc&) { throw;
+} catch (const platform::http::ApiError&) { throw;
 } catch (const platform::http::ContractError&) { throw;
 } catch (const std::exception&) { throw platform::http::ContractError("Invalid HTTP response contract"); }
 }

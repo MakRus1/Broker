@@ -18,8 +18,8 @@ class MockTransport final : public platform::http::Transport {
 UTEST(ClientContract, PathQueryAndEmptyResponse) {
     MockTransport transport;
     api::Client client(transport);
-    const auto reply = client.GetItemsId({.id = 42, .active = false});
-    EXPECT_TRUE(std::holds_alternative<api::GetItemsId::Response204>(reply));
+    static_assert(std::is_void_v<api::GetItemsId::Response>);
+    client.GetItemsId({.id = 42, .active = false});
     EXPECT_EQ(transport.last.path, "/items/42");
     ASSERT_EQ(transport.last.query.size(), 1);
     EXPECT_EQ(transport.last.query[0].second, "false");
@@ -35,10 +35,21 @@ UTEST(ClientContract, CreatedConflictAndBody) {
     request.body.name = "Груз";
     request.body.tags = std::vector<std::string>{"море", "авто"};
     transport.reply = {201, "application/json; charset=utf-8", R"({"id":7})"};
-    EXPECT_EQ(std::get<api::PostItemsId::Response201>(client.PostItemsId(request)).id, 7);
+    EXPECT_EQ(client.PostItemsId(request).id, 7);
     EXPECT_TRUE(transport.last.body.has_value());
     transport.reply = {409, "application/json", R"({"id":7})"};
-    EXPECT_TRUE(std::holds_alternative<api::PostItemsId::Response409>(client.PostItemsId(request)));
+    try {
+        client.PostItemsId(request);
+        FAIL() << "Ожидалась типизированная ошибка API";
+    } catch (const api::PostItemsId::Error409& error) {
+        EXPECT_EQ(error.GetStatus(), 409);
+        EXPECT_EQ(error.response.id, 7);
+        EXPECT_STREQ(error.what(), "HTTP API error 409");
+    }
+    transport.reply.body = R"({"id":"bad"})";
+    EXPECT_THROW(client.PostItemsId(request), platform::http::ContractError);
+    transport.reply.body = R"({"id":7})";
+    EXPECT_THROW(client.PostItemsId(request), platform::http::ApiError);
     transport.reply = {201, "text/plain", R"({"id":7})"};
     EXPECT_THROW(client.PostItemsId(request), platform::http::ContractError);
     transport.reply = {201, "application/json", R"({"id":"bad"})"};
@@ -79,4 +90,25 @@ UTEST(ClientContract, BodyConstraintsAndDefaults) {
     request.body.created.reset();
     request.body.labels = {"same", "same"};
     EXPECT_THROW(api::PostValidated::Encode(request), std::invalid_argument);
+}
+
+UTEST(ClientContract, MultipleSuccessfulResponses) {
+    using Api = api::MultipleSuccesses::Response;
+    static_assert(std::variant_size_v<Api> == 2);
+    const auto response = api::MultipleSuccesses::Decode({200, "application/json", R"({"id":42})"});
+    EXPECT_EQ(std::get<api::MultipleSuccesses::Response200>(response).id, 42);
+    EXPECT_TRUE(std::holds_alternative<api::MultipleSuccesses::Response204>(
+        api::MultipleSuccesses::Decode({204, "", ""})));
+    EXPECT_THROW(api::MultipleSuccesses::Decode({409, "application/json", R"({"id":42})"}),
+                 api::MultipleSuccesses::Error409);
+}
+
+UTEST(ClientContract, OnlyErrorsAndEmptyError) {
+    static_assert(std::is_void_v<api::ErrorsOnly::Response>);
+    EXPECT_THROW(api::ErrorsOnly::Decode({409, "application/json", R"({"id":42})"}),
+                 api::ErrorsOnly::Error409);
+    EXPECT_THROW(api::ErrorsOnly::Decode({200, "application/json", R"({"id":42})"}),
+                 platform::http::ContractError);
+    EXPECT_THROW(api::EmptyError::Decode({404, "", ""}), api::EmptyError::Error404);
+    EXPECT_THROW(api::EmptyError::Decode({404, "", "unexpected"}), platform::http::ContractError);
 }

@@ -20,22 +20,15 @@ class ClientProbe final : public userver::server::handlers::HttpHandlerBase {
         try {
             if (http.GetArg("method") == "post") {
                 const auto response = deps_.broker.helloPost({.name = http.GetArg("name")});
-                result["value"] = std::get<clients::broker::helloPost::Response200>(response).body;
+                result["value"] = response.body;
                 return userver::formats::json::ToString(result.ExtractValue());
             }
             const auto response = deps_.broker.getFooBar({.name = http.GetArg("name")});
-            std::visit(
-                [&](const auto& value) {
-                    using T = std::decay_t<decltype(value)>;
-                    if constexpr (std::is_same_v<T, clients::broker::getFooBar::Response200>) {
-                        result["status"] = 200;
-                        result["value"] = value.greeting;
-                    } else {
-                        result["status"] = 404;
-                        result["value"] = value.message;
-                    }
-                },
-                response);
+            result["status"] = 200;
+            result["value"] = response.greeting;
+        } catch (const clients::broker::getFooBar::Error404& error) {
+            result["status"] = error.GetStatus();
+            result["value"] = error.response.message;
         } catch (const platform::http::TimeoutError&) {
             result["error"] = "timeout";
         } catch (const platform::http::ContractError&) {

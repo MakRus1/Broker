@@ -42,7 +42,7 @@ class ClientTest(unittest.TestCase):
         get = next(op for op in ops if op.path == '/items/{id}' and op.method == 'GET')
         code = operation_code('::example::clients::api::' + get.operation_id, get)
         self.assertIn('ReplacePath', code)
-        self.assertIn('Response204', code)
+        self.assertIn('using Response = void;', code)
         self.assertIn('unexpected body', code)
         post = next(op for op in ops if op.path == '/validated' and op.method == 'POST')
         code = operation_code('::example::clients::api::' + post.operation_id, post)
@@ -83,3 +83,19 @@ class ClientTest(unittest.TestCase):
             (service / 'docs/api/private.yaml').write_text(yaml.safe_dump(spec('/internal', 'Private')))
             self.assertEqual({op.operation_id for op in load(service)}, {'Public', 'Private'})
             self.assertEqual({op.operation_id for op in load(service, public_only=True)}, {'Public'})
+
+    def test_success_return_and_api_error_types(self):
+        from dataclasses import replace
+        ops = load(ROOT / 'tests/fixtures/contract_service')
+        post = next(op for op in ops if op.operation_id == 'PostItemsId')
+        code = operation_code('::example::clients::api::PostItemsId', post)
+        self.assertIn('using Response = Response201;', code)
+        self.assertIn('class Error409 final : public platform::http::ApiError', code)
+        self.assertIn('throw Error409{std::move(value)};', code)
+        self.assertIn('catch (const platform::http::ApiError&)', code)
+        mixed = replace(post, responses=(post.responses[0], replace(post.responses[0], status=202), post.responses[1]))
+        code = operation_code('::example::clients::api::PostItemsId', mixed)
+        self.assertIn('using Response = std::variant<Response201, Response202>;', code)
+        self.assertNotIn('Response202, Response409', code)
+        errors_only = replace(post, responses=(post.responses[1],))
+        self.assertIn('using Response = void;', operation_code('::example::clients::api::PostItemsId', errors_only))

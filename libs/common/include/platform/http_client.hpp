@@ -20,6 +20,19 @@
 
 namespace platform::http {
 
+class ApiError : public std::runtime_error {
+  public:
+    explicit ApiError(int status)
+        : std::runtime_error("HTTP API error " + std::to_string(status)), status_(status) {}
+
+    int GetStatus() const noexcept {
+        return status_;
+    }
+
+  private:
+    int status_;
+};
+
 class ContractError : public std::runtime_error {
   public:
     using std::runtime_error::runtime_error;

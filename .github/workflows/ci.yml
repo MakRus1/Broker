@@ -101,9 +101,11 @@ jobs:
           SERVICES: ${{ needs.tools.outputs.services }}
         run: |
           set -euo pipefail
-          [[ "$TOOLS_RESULT" == success ]]
+          if [[ "$TOOLS_RESULT" != success ]]; then
+            exit 1
+          fi
           if [[ -n "$SERVICES" ]]; then
-            [[ "$BUILD_RESULT" == success ]]
+            if [[ "$BUILD_RESULT" != success ]]; then exit 1; fi
           else
-            [[ "$BUILD_RESULT" == skipped ]]
+            if [[ "$BUILD_RESULT" != skipped ]]; then exit 1; fi
           fi

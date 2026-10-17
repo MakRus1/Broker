@@ -2,10 +2,21 @@
 function(broker_openapi_generate SERVICE_DIR)
     set(gen "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/generate.py")
     file(GLOB_RECURSE specs CONFIGURE_DEPENDS "${SERVICE_DIR}/docs/api/*.yaml" "${SERVICE_DIR}/docs/api/*.json" "${SERVICE_DIR}/docs/api/*.yml")
+    get_filename_component(service_name "${SERVICE_DIR}" NAME)
+    file(GLOB_RECURSE public_specs CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.yaml" "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.yml" "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.json")
+    list(APPEND specs ${public_specs})
     file(GLOB generator_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/*.py")
     file(GLOB_RECURSE views CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp" "${SERVICE_DIR}/src/deps.hpp")
     file(GLOB service_manifest CONFIGURE_DEPENDS "${SERVICE_DIR}/service.yaml")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${service_manifest} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views})
+    # Клиенты зависят от контрактов, без связей между executable-targets.
+    execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/client_dependencies.py" "${SERVICE_DIR}"
+        OUTPUT_VARIABLE client_specs RESULT_VARIABLE client_result ERROR_VARIABLE client_error OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT client_result EQUAL 0)
+        message(FATAL_ERROR "HTTP clients: ${client_error}")
+    endif()
+    string(REPLACE "\n" ";" client_specs "${client_specs}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${client_specs})
     set(out "${CMAKE_CURRENT_BINARY_DIR}/generated")
     execute_process(COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --list-outputs
         OUTPUT_VARIABLE names RESULT_VARIABLE result ERROR_VARIABLE error OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -24,7 +35,7 @@ function(broker_openapi_generate SERVICE_DIR)
     add_custom_command(OUTPUT ${generated}
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --check
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --output-dir "${out}"
-        DEPENDS ${service_manifest} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
+        DEPENDS ${service_manifest} ${client_specs} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
         VERBATIM)
     add_custom_target(${PROJECT_NAME}_codegen DEPENDS ${generated})
     file(GLOB_RECURSE view_sources CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp")

@@ -82,4 +82,4 @@ target_include_directories(broker_routing INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/
 без manifest остается карта .github/service-deps.yaml. Дублировать зависимости
 нового сервиса в этой карте вручную не нужно.
 
-Проект следующего этапа: [типизированные клиенты](client-codegen.md).
+Подключение HTTP-клиентов в секции `clients`: [типизированные клиенты](client-codegen.md).

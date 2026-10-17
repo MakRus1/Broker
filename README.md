@@ -74,3 +74,6 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 рефакторинга записаны в [docs/validation.md](docs/validation.md).
 
 Образы окружения, публикация и обновление: [docs/container-images.md](docs/container-images.md).
+
+Публичные HTTP-контракты: `schemas/services/<service>`. Подключение типизированных
+клиентов через service.yaml: [документация](docs/client-codegen.md).

@@ -11,6 +11,7 @@ paths:
       schema:
         type: integer
     get:
+      operationId: GetItemsId
       parameters:
       - name: active
         in: query
@@ -20,6 +21,7 @@ paths:
         '204':
           description: Нет тела
     post:
+      operationId: PostItemsId
       requestBody:
         required: true
         content:
@@ -63,6 +65,7 @@ paths:
                 - id
   /validated:
     get:
+      operationId: GetValidated
       parameters:
       - name: status
         in: query
@@ -119,6 +122,7 @@ paths:
                     type: string
                     enum: *id001
     post:
+      operationId: PostValidated
       requestBody:
         required: true
         content:

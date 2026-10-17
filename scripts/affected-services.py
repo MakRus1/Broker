@@ -19,6 +19,7 @@ def main():
         raise ValueError('Некорректный service-deps.yaml')
     services = {p.name for p in (ROOT / 'services').iterdir() if p.is_dir()}
     dependencies = {}
+    consumers = {name: set() for name in services}
     for name, item in config['libs'].items():
         entries = item['services']
         if not isinstance(entries, list) or not set(entries) <= services:
@@ -32,6 +33,13 @@ def main():
         spec = yaml.safe_load(manifest.read_text())
         if not isinstance(spec, dict):
             raise ValueError(f'Некорректный manifest {manifest}')
+        clients = spec.get('clients', {})
+        if not isinstance(clients, dict):
+            raise ValueError(f'Некорректные clients в {manifest}')
+        for alias, client in clients.items():
+            if not isinstance(alias, str) or not re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_]*', alias) or not isinstance(client, dict) or set(client) != {'service', 'transport'} or client['transport'] != 'http' or client['service'] not in services:
+                raise ValueError(f'Некорректный клиент {alias} в {manifest}')
+            consumers[client['service']].add(service)
         libraries = spec.get('libraries', ['common'])
         if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file() for lib in libraries):
             raise ValueError(f'Некорректные libraries в {manifest}')
@@ -58,8 +66,20 @@ def main():
                 print('all')
                 return
             affected.update(dependencies[parts[1]])
+        elif parts[:2] == ['schemas', 'services'] and len(parts) > 2 and parts[2] in services:
+            affected.add(parts[2])
+        elif parts[0] == 'schemas':
+            print('all')
+            return
         elif parts[0] == 'services' and len(parts) > 1 and parts[1] in services:
             affected.add(parts[1])
+    # Транзитивное замыкание завершается и при взаимных HTTP-вызовах.
+    pending = list(affected)
+    while pending:
+        for consumer in consumers[pending.pop()]:
+            if consumer not in affected:
+                affected.add(consumer)
+                pending.append(consumer)
     if affected:
         print(' '.join(sorted(affected)))
 

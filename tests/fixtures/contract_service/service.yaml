@@ -1,0 +1,6 @@
+version: 1
+libraries: [common]
+clients:
+  broker:
+    service: broker
+    transport: http

@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  packages: read
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -28,6 +29,7 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
       - run: make check-gen-all check-format
+      - run: python scripts/container-images.py check
       - name: Определение затронутых сервисов
         id: detect
         env:
@@ -61,22 +63,42 @@ jobs:
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: docker/setup-buildx-action@v4.4.1
-      - name: Сборка общего окружения
-        uses: docker/build-push-action@v7.4.0
-        with:
-          context: .
-          file: tools/Dockerfile
-          load: true
-          tags: broker-dev:userver-3.2
-          cache-from: type=gha,scope=dev-${{ runner.arch }}
-          cache-to: type=gha,mode=max,scope=dev-${{ runner.arch }}
+      - name: Выбор закрепленного окружения
+        id: image
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: |
+          variant=dev
+          if [[ "$PRESET" == sanitize ]]; then variant=sanitize; fi
+          echo "ref=$(python3 scripts/container-images.py ref --variant "$variant")" >> "$GITHUB_OUTPUT"
+      - name: Вход в GHCR
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Загрузка готового окружения
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: docker pull "$IMAGE"
+      - name: Проверка инструментированного framework
+        if: matrix.preset == 'sanitize'
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: |
+          docker run --rm "$IMAGE" bash -euc '
+            archive=$(find "$BROKER_USERVER_PREFIX" -name libuserver-core.a -print -quit)
+            test -n "$archive"
+            nm --undefined-only "$archive" > /tmp/userver-symbols.txt
+            grep -q __asan_ /tmp/userver-symbols.txt
+            grep -q __ubsan_ /tmp/userver-symbols.txt
+          '
       - name: Права рабочего каталога для контейнера
         run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
       - name: Чистая сборка и проверки
         env:
           SERVICES: ${{ needs.tools.outputs.services }}
           PRESET: ${{ matrix.preset }}
+          DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: |
           set -euo pipefail
           for svc in $SERVICES; do
@@ -84,7 +106,9 @@ jobs:
           done
       - name: Четыре варианта создания сервиса
         if: matrix.preset == 'debug' && runner.arch == 'X64'
-        run: docker run --rm --network=host -v "$PWD:/workspaces/broker" broker-dev:userver-3.2 python3 scripts/smoke-services.py --build
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: docker run --rm --network=host -v "$PWD:/workspaces/broker" "$IMAGE" python3 scripts/smoke-services.py --build
       - name: Исходники не изменились
         run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
 

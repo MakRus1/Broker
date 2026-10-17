@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 import yaml
-from model import identifier, parse_spec
+from model import identifier, parse_spec, validate_operations
 from render import config_block, outputs, view
 from features import prepare
 from clients import client_outputs, client_specs
@@ -59,13 +59,7 @@ def load(service, additions=None, public_only=False):
             raise ValueError(f'{path}: {exc}') from exc
     if not ops:
         raise ValueError('No HTTP operations')
-    for selector in (lambda op: op.rel, lambda op: op.handler, lambda op: (op.path, op.method), lambda op: (re.sub(r'\{[^}]+\}', '{}', op.path), op.method)):
-        values = [selector(op) for op in ops]
-        if len(values) != len(set(values)):
-            raise ValueError('Duplicate or colliding operations/paths')
-    ids = [op.operation_id for op in ops if op.operation_id]
-    if len(ids) != len(set(ids)):
-        raise ValueError("Duplicate operationId across service specifications")
+    validate_operations(ops)
     return sorted(ops, key=lambda op: op.rel)
 
 

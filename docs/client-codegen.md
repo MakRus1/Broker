@@ -54,24 +54,25 @@ client-broker-timeout-ms: 1000
 
 ## C++ API
 
-У каждой публичной операции нужен уникальный в сервисе `operationId`, допустимый
-как C++ identifier. Он сохраняется как имя метода без переименования.
-Имена Client и Component зарезервированы. Например, для operationId: getFooBar:
+Путь — единственный идентификатор операции; каждый путь имеет один HTTP-метод.
+Поле operationId запрещено. Имя метода генерируется из пути в PascalCase:
+`/foo/bar` → FooBar, `/api/v1/foo/bar` → ApiV1FooBar, `/items/{id}` → ItemsById.
+Коллизии имен и зарезервированные имена Client/Component отклоняются генератором.
 
 ```cpp
-const auto response = deps.broker.getFooBar({.name = "Груз"});
+const auto response = deps.broker.FooBar({.name = "Груз"});
 UseGreeting(response.greeting);
 ```
 
-Типы находятся в `<consumer>::clients::<alias>::<operationId>`, например
-`orders::clients::broker::getFooBar::Request` и `Response200`.
+Типы находятся в `<consumer>::clients::<alias>::<PathMethod>`, например
+`orders::clients::broker::FooBar::Request` и `Response200`.
 При единственном успешном ответе с телом метод возвращает его DTO напрямую:
 
 ```cpp
 try {
-    const auto response = deps.broker.getFooBar({.name = "Груз"});
+    const auto response = deps.broker.FooBar({.name = "Груз"});
     UseGreeting(response.greeting);
-} catch (const orders::clients::broker::getFooBar::Error404& error) {
+} catch (const orders::clients::broker::FooBar::Error404& error) {
     HandleNotFound(error.response.message);
 }
 ```
@@ -100,7 +101,7 @@ Content-Type, обязательности, типам и ограничения
 - std::invalid_argument: запрос не соответствует объявленным ограничениям до отправки.
 
 Повторы выключены, перенаправления выключены. Трассировку, дедлайн и отмену передает
-штатный клиент userver. Метрики используют operationId, а логи и spans — шаблон пути:
+штатный клиент userver. Метрики используют шаблон пути, а логи и spans — шаблон пути:
 значения query/path не используются как labels и не добавляются в URL логирования.
 Для unit-тестов внедряется platform::http::Transport с подменяемым Perform.
 
@@ -124,7 +125,18 @@ HTTP-транспортом: ошибки API, некорректные отве
 ## Динамические настройки — следующий этап
 
 Таймауты и правила повторов планируется вынести в динамические конфиги: общие настройки
-клиента с возможностью переопределения по operationId. Сейчас механизма динамических
+клиента с возможностью переопределения по шаблону пути. Сейчас механизма динамических
 настроек клиентов нет: timeout-ms читается из статической конфигурации, повторов нет.
 Перед включением повторов необходимо определить идемпотентность операций и правила
 для создания сущностей. Само изменение конфига не должно разрешать опасные повторы.
+
+## Переход с прежней структуры API
+
+POST `/hello` перенесен на `/hello/create`, POST `/hello_postgres` — на
+`/hello_postgres/create`. Их GET-пути сохранены. В контрактном тестовом сервисе
+POST `/items/{id}` и `/validated` перенесены на соответствующие пути с `/create`.
+Это изменение URL и C++ API; совместимые старые маршруты не регистрируются.
+
+При миграции своего сервиса уберите operationId, разделите совпадающие пути,
+перенесите ручные view.hpp/view.cpp, исправьте include и namespaces, затем выполните
+make gen. Генератор не переносит и не удаляет ручные реализации автоматически.

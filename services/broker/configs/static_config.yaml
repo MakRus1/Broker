@@ -7,32 +7,32 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
-        handler-foo-bar-get:
+        handler-foo-bar:
             path: /foo/bar
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-hello-get:
+        handler-hello:
             path: /hello
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-hello-post:
-            path: /hello
+        handler-hello-create:
+            path: /hello/create
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-hello_postgres-get:
+        handler-hello_postgres:
             path: /hello_postgres
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-hello_postgres-post:
-            path: /hello_postgres
+        handler-hello_postgres-create:
+            path: /hello_postgres/create
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0

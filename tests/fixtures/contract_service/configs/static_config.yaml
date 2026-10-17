@@ -42,26 +42,26 @@ components_manager:
             timeout-ms: $client-broker-timeout-ms
         # SERVICE_CONFIG_END
         # OPENAPI_HANDLERS_BEGIN
-        handler-items-by_id-get:
+        handler-items-by_id:
             path: /items/{id}
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-items-by_id-post:
-            path: /items/{id}
+        handler-items-by_id-create:
+            path: /items/{id}/create
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-validated-get:
+        handler-validated:
             path: /validated
             method: GET
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-validated-post:
-            path: /validated
+        handler-validated-create:
+            path: /validated/create
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0

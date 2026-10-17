@@ -34,7 +34,7 @@ async def test_client_timeout_does_not_retry(service_client, mockserver):
 
 
 async def test_client_post(service_client, mockserver):
-    @mockserver.handler('/hello')
+    @mockserver.handler('/hello/create')
     def hello(request):
         assert request.method == 'POST'
         assert request.query['name'] == 'Клиент'

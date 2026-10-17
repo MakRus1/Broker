@@ -66,11 +66,11 @@ def json_read(response, finish):
 
 
 def operation_code(scope, op):
-    text = f'namespace {op.operation_id} {{\n'
+    text = f'namespace {op.name} {{\n'
     types = enum_types(op)
     error_names = {f'Error{r.status}' for r in op.responses if r.status >= 300}
     if any(t.enum_name in error_names for t in types):
-        raise ValueError(f'{op.operation_id}: enum name collides with generated API error')
+        raise ValueError(f'{op.name}: enum name collides with generated API error')
     text += ''.join(enums(t) for t in types)
     if op.body:
         text += dto('RequestBody', op.body.fields, scope)
@@ -99,7 +99,7 @@ Response{response.status} response;
         result = 'std::variant<' + ', '.join(f'Response{r.status}' for r in successes) + '>'
     text += f'using Response = {result};\n'
     text += 'inline platform::http::Request Encode(const Request& request) {\nplatform::http::Request raw;\n'
-    text += f'raw.method = {quoted(op.method)}; raw.path = {quoted(op.path)}; raw.operation = {quoted(op.operation_id)}; raw.url_template = {quoted(op.path)};\n'
+    text += f'raw.method = {quoted(op.method)}; raw.path = {quoted(op.path)}; raw.path_template = {quoted(op.path)};\n'
     for f in op.params:
         value = f'*request.{f.name}' if f.optional else f'request.{f.name}'
         line = f'Validate_Request_{f.name}({value});\n'
@@ -133,18 +133,13 @@ Response{response.status} response;
 } catch (const std::exception&) { throw platform::http::ContractError("Invalid HTTP response contract"); }
 }
 '''
-    return text + f'}}  // namespace {op.operation_id}\n'
+    return text + f'}}  // namespace {op.name}\n'
 
 
 def client_outputs(service, loader, load):
     result = {}
     for alias, provider in client_specs(service, loader):
         ops = load(provider, public_only=True)
-        if any(op.operation_id in {'Client', 'Component', 'transport_'} for op in ops):
-            raise ValueError('operationId Client/Component/transport_ зарезервированы клиентским API')
-        missing = [f'{op.method} {op.path}' for op in ops if not op.operation_id]
-        if missing:
-            raise ValueError(f'Клиент {alias}: требуется operationId: ' + ', '.join(missing))
         result[f'include/clients/{alias}/client.hpp'] = render_client(service.name, alias, ops)
     return result
 
@@ -163,10 +158,10 @@ def render_client(service, alias, ops):
 '''
     code += f'namespace {ns} {{\n'
     for op in ops:
-        code += operation_code('::' + ns + '::' + op.operation_id, op)
+        code += operation_code('::' + ns + '::' + op.name, op)
     code += 'class Client {\npublic:\nexplicit Client(platform::http::Transport& transport) : transport_(&transport) {}\n'
     for op in ops:
-        name = op.operation_id
+        name = op.name
         code += f'{name}::Response {name}(const {name}::Request& request) const {{ return {name}::Decode(transport_->Perform({name}::Encode(request))); }}\n'
     code += 'private:\nplatform::http::Transport* transport_;\n};\n'
     code += f'''class Component final : public userver::components::ComponentBase {{

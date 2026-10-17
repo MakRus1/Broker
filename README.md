@@ -50,7 +50,8 @@ make new-service NAME=orders POSTGRES=1 GRPC=1
 make test-debug SERVICE=orders
 ```
 
-Каждая пара HTTP-метод + путь имеет собственный каталог `src/views/<path>/<method>/`.
+Каждый путь имеет ровно один HTTP-метод и каталог `src/views/<path>/`.
+Namespace и имя клиентского метода выводятся из пути; operationId запрещен.
 Ручной код не перезаписывается. Генерируемые DTO и обработчики находятся в каталоге сборки.
 Проверка `check-gen-all` не исправляет файлы: устаревший контракт требует явного `make gen`.
 `make gen` также работает из каталога сервиса без SERVICE.

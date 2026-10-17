@@ -19,14 +19,14 @@ class ClientProbe final : public userver::server::handlers::HttpHandlerBase {
         userver::formats::json::ValueBuilder result;
         try {
             if (http.GetArg("method") == "post") {
-                const auto response = deps_.broker.helloPost({.name = http.GetArg("name")});
+                const auto response = deps_.broker.HelloCreate({.name = http.GetArg("name")});
                 result["value"] = response.body;
                 return userver::formats::json::ToString(result.ExtractValue());
             }
-            const auto response = deps_.broker.getFooBar({.name = http.GetArg("name")});
+            const auto response = deps_.broker.FooBar({.name = http.GetArg("name")});
             result["status"] = 200;
             result["value"] = response.greeting;
-        } catch (const clients::broker::getFooBar::Error404& error) {
+        } catch (const clients::broker::FooBar::Error404& error) {
             result["status"] = error.GetStatus();
             result["value"] = error.response.message;
         } catch (const platform::http::TimeoutError&) {

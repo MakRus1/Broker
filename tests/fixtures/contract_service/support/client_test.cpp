@@ -18,53 +18,54 @@ class MockTransport final : public platform::http::Transport {
 UTEST(ClientContract, PathQueryAndEmptyResponse) {
     MockTransport transport;
     api::Client client(transport);
-    static_assert(std::is_void_v<api::GetItemsId::Response>);
-    client.GetItemsId({.id = 42, .active = false});
+    static_assert(std::is_void_v<api::ItemsById::Response>);
+    client.ItemsById({.id = 42, .active = false});
     EXPECT_EQ(transport.last.path, "/items/42");
+    EXPECT_EQ(transport.last.path_template, "/items/{id}");
     ASSERT_EQ(transport.last.query.size(), 1);
     EXPECT_EQ(transport.last.query[0].second, "false");
     transport.reply.body = "unexpected";
-    EXPECT_THROW(client.GetItemsId({.id = 1}), platform::http::ContractError);
+    EXPECT_THROW(client.ItemsById({.id = 1}), platform::http::ContractError);
 }
 
 UTEST(ClientContract, CreatedConflictAndBody) {
     MockTransport transport;
     api::Client client(transport);
-    api::PostItemsId::Request request;
+    api::ItemsByIdCreate::Request request;
     request.id = 7;
     request.body.name = "Груз";
     request.body.tags = std::vector<std::string>{"море", "авто"};
     transport.reply = {201, "application/json; charset=utf-8", R"({"id":7})"};
-    EXPECT_EQ(client.PostItemsId(request).id, 7);
+    EXPECT_EQ(client.ItemsByIdCreate(request).id, 7);
     EXPECT_TRUE(transport.last.body.has_value());
     transport.reply = {409, "application/json", R"({"id":7})"};
     try {
-        client.PostItemsId(request);
+        client.ItemsByIdCreate(request);
         FAIL() << "Ожидалась типизированная ошибка API";
-    } catch (const api::PostItemsId::Error409& error) {
+    } catch (const api::ItemsByIdCreate::Error409& error) {
         EXPECT_EQ(error.GetStatus(), 409);
         EXPECT_EQ(error.response.id, 7);
         EXPECT_STREQ(error.what(), "HTTP API error 409");
     }
     transport.reply.body = R"({"id":"bad"})";
-    EXPECT_THROW(client.PostItemsId(request), platform::http::ContractError);
+    EXPECT_THROW(client.ItemsByIdCreate(request), platform::http::ContractError);
     transport.reply.body = R"({"id":7})";
-    EXPECT_THROW(client.PostItemsId(request), platform::http::ApiError);
+    EXPECT_THROW(client.ItemsByIdCreate(request), platform::http::ApiError);
     transport.reply = {201, "text/plain", R"({"id":7})"};
-    EXPECT_THROW(client.PostItemsId(request), platform::http::ContractError);
+    EXPECT_THROW(client.ItemsByIdCreate(request), platform::http::ContractError);
     transport.reply = {201, "application/json", R"({"id":"bad"})"};
-    EXPECT_THROW(client.PostItemsId(request), platform::http::ContractError);
+    EXPECT_THROW(client.ItemsByIdCreate(request), platform::http::ContractError);
 }
 
 UTEST(ClientContract, DefaultAndEnum) {
-    api::GetValidated::Request request;
+    api::Validated::Request request;
     EXPECT_EQ(request.limit, 10);
-    EXPECT_EQ(request.status, api::GetValidated::status::New);
+    EXPECT_EQ(request.status, api::Validated::status::New);
     request.limit = 20;
-    const auto encoded = api::GetValidated::Encode(request);
+    const auto encoded = api::Validated::Encode(request);
     EXPECT_EQ(encoded.query.size(), 2);
     request.limit = 0;
-    EXPECT_THROW(api::GetValidated::Encode(request), std::invalid_argument);
+    EXPECT_THROW(api::Validated::Encode(request), std::invalid_argument);
 }
 
 UTEST(ClientContract, PathEscaping) {
@@ -77,19 +78,19 @@ UTEST(ClientContract, PathEscaping) {
 }
 
 UTEST(ClientContract, BodyConstraintsAndDefaults) {
-    api::PostValidated::Request request;
-    request.body.status = api::PostValidated::status::New;
+    api::ValidatedCreate::Request request;
+    request.body.status = api::ValidatedCreate::status::New;
     EXPECT_EQ(request.body.count, 3);
     EXPECT_EQ(request.body.labels, (std::vector<std::string>{"a"}));
-    auto encoded = api::PostValidated::Encode(request);
+    auto encoded = api::ValidatedCreate::Encode(request);
     const auto json = userver::formats::json::FromString(*encoded.body);
     EXPECT_EQ(json["status"].As<std::string>(), "new");
     EXPECT_EQ(json["count"].As<int>(), 3);
     request.body.created = "2025-02-29T12:00:00Z";
-    EXPECT_THROW(api::PostValidated::Encode(request), std::invalid_argument);
+    EXPECT_THROW(api::ValidatedCreate::Encode(request), std::invalid_argument);
     request.body.created.reset();
     request.body.labels = {"same", "same"};
-    EXPECT_THROW(api::PostValidated::Encode(request), std::invalid_argument);
+    EXPECT_THROW(api::ValidatedCreate::Encode(request), std::invalid_argument);
 }
 
 UTEST(ClientContract, MultipleSuccessfulResponses) {

@@ -49,8 +49,7 @@ struct Request {
     std::vector<std::pair<std::string, std::string>> query;
     std::optional<std::string> body;
     std::string content_type;
-    std::string operation;
-    std::string url_template;
+    std::string path_template;
 };
 
 struct Response {
@@ -133,9 +132,9 @@ class HttpTransport final : public Transport {
             .timeout(timeout_)
             .retry(1, false)
             .follow_redirects(false)
-            .SetLoggedUrl(input.url_template)
-            .SetUrlTemplate(input.url_template)
-            .SetDestinationMetricName(destination_ + "." + input.operation);
+            .SetLoggedUrl(input.path_template)
+            .SetUrlTemplate(input.path_template)
+            .SetDestinationMetricName(destination_ + "." + input.path_template);
         if (input.body) {
             request.data(*input.body).headers({{"Content-Type", input.content_type}});
             if (input.method == "GET") {

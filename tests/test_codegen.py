@@ -15,34 +15,38 @@ from render import outputs
 
 
 def spec():
-    return {'openapi': '3.0.3', 'info': {'title': 'Тест', 'version': '1'}, 'paths': {
+    data = {'openapi': '3.0.3', 'info': {'title': 'Тест', 'version': '1'}, 'paths': {
         '/items/{id}': {'parameters': [{'name': 'id', 'in': 'path', 'required': True, 'schema': {'type': 'integer'}}],
             'get': {'parameters': [{'name': 'active', 'in': 'query', 'schema': {'type': 'boolean'}}], 'responses': {'204': {'description': 'Нет тела'}}},
             'post': {'requestBody': {'required': True, 'content': {'application/json': {'schema': {'type': 'object', 'additionalProperties': False, 'required': ['name'], 'properties': {'name': {'type': 'string'}, 'count': {'type': 'integer'}, 'tags': {'type': 'array', 'items': {'type': 'string'}}}}}}},
                 'responses': {'201': {'description': 'Создан', 'content': {'application/json': {'schema': {'type': 'object', 'properties': {'id': {'type': 'integer'}}, 'required': ['id']}}}},
                               '409': {'description': 'Конфликт', 'content': {'application/json': {'schema': {'type': 'object', 'properties': {'id': {'type': 'integer'}}, 'required': ['id']}}}}}}}}}
 
+    item = data['paths']['/items/{id}']
+    data['paths']['/items/{id}/create'] = {'parameters': deepcopy(item['parameters']), 'post': item.pop('post')}
+    return data
+
 
 class CodegenTest(unittest.TestCase):
-    def test_operations_independent_and_statuses_distinct(self):
+    def test_distinct_paths_and_response_statuses(self):
         ops = parse_spec(spec())
         self.assertEqual([o.method for o in ops], ['GET', 'POST'])
         result = outputs('example', ops, set())
-        self.assertIn('struct Response201', result['include/views/items/by_id/post/responses.hpp'])
-        self.assertIn('struct Response409', result['include/views/items/by_id/post/responses.hpp'])
-        cpp = result['src/views/items/by_id/post/handler.cpp']
+        self.assertIn('struct Response201', result['include/views/items/by_id/create/responses.hpp'])
+        self.assertIn('struct Response409', result['include/views/items/by_id/create/responses.hpp'])
+        cpp = result['src/views/items/by_id/create/handler.cpp']
         self.assertIn('RequestBody()', cpp)
         self.assertIn('ParseJson<std::string>', cpp)
         self.assertIn('HttpStatus>(201)', cpp)
-        self.assertIn('HttpStatus>(204)', result['src/views/items/by_id/get/handler.cpp'])
-        self.assertIn('std::optional<bool>', result['include/views/items/by_id/get/requests.hpp'])
-        self.assertNotIn('RequestBody', result['include/views/items/by_id/get/requests.hpp'])
+        self.assertIn('HttpStatus>(204)', result['src/views/items/by_id/handler.cpp'])
+        self.assertIn('std::optional<bool>', result['include/views/items/by_id/requests.hpp'])
+        self.assertNotIn('RequestBody', result['include/views/items/by_id/requests.hpp'])
 
     def test_explicit_rejection_of_unsupported_contracts(self):
         for key, value in [('nullable', True), ('enum', []), ('format', 'unknown'), ('minimum', 0), ('default', 3)]:
             with self.subTest(key=key):
                 data = spec()
-                data['paths']['/items/{id}']['post']['requestBody']['content']['application/json']['schema']['properties']['name'][key] = value
+                data['paths']['/items/{id}/create']['post']['requestBody']['content']['application/json']['schema']['properties']['name'][key] = value
                 with self.assertRaises(ValueError):
                     parse_spec(data)
         for mutation in [lambda d: d.update(openapi='3.1.0'),
@@ -91,7 +95,7 @@ class CodegenTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'допустимое'):
             enum_labels(parse_type({'type': 'string', 'enum': ['123']}, 'status'))
         operation = parse_spec(yaml.safe_load((ROOT / 'tests/fixtures/contract_service/docs/api/contract.yaml').read_text()))
-        post = next(op for op in operation if op.path == '/validated' and op.method == 'POST')
+        post = next(op for op in operation if op.path == '/validated/create' and op.method == 'POST')
         status = next(typ for typ in enum_types(post) if typ.enum_name == 'status')
         self.assertIn('success', status.schema['enum'])
         self.assertIn('new', status.schema['enum'])
@@ -108,7 +112,7 @@ class CodegenTest(unittest.TestCase):
                 run(service, check=True)
             self.assertEqual(before, self.snapshot(service))
             run(service)
-            hand = service / 'src/views/items/by_id/get/view.cpp'
+            hand = service / 'src/views/items/by_id/view.cpp'
             hand.write_text('// Ручная реализация\n')
             run(service)
             self.assertEqual(hand.read_text(), '// Ручная реализация\n')
@@ -138,12 +142,55 @@ class CodegenTest(unittest.TestCase):
         item = data['paths']['/items/{id}']
         item['delete'] = item.pop('get')
         ops = parse_spec(data)
-        self.assertTrue(any(op.rel.endswith('/delete_') for op in ops))
+        self.assertEqual(ops[0].rel, 'items/by_id')
+        self.assertEqual(ops[0].name, 'ItemsById')
 
     def test_path_collisions_and_traversal(self):
         for path in ['/../../outside', '/a//b', '/class', '/{id}/{id}']:
             data = spec(); data['paths'] = {path: data['paths']['/items/{id}']}
             with self.assertRaises(ValueError): parse_spec(data)
+
+    def test_paths_are_the_only_operation_identity(self):
+        data = {'openapi': '3.0.3', 'paths': {
+            '/api/v1/foo/bar': {'get': {'responses': {'204': {'description': 'Нет тела'}}}}}}
+        op, = parse_spec(data)
+        self.assertEqual(op.rel, 'api/v1/foo/bar')
+        self.assertEqual(op.ns, 'api::v1::foo::bar')
+        self.assertEqual(op.name, 'ApiV1FooBar')
+        data['paths']['/api/v1/foo/bar']['get']['operationId'] = 'OtherName'
+        with self.assertRaisesRegex(ValueError, 'operationId'):
+            parse_spec(data)
+
+    def test_multiple_methods_and_ambiguous_names_are_rejected(self):
+        operation = {'get': {'responses': {'204': {'description': 'Нет тела'}}}}
+        for paths in [
+            {'/foo': {**operation, 'post': operation['get']}},
+            {'/foo/': operation},
+            {'/foo-bar': operation, '/foo_bar': operation},
+            {'/foo_bar': operation, '/foo/bar': operation},
+            {'/foo': operation, '/foo/Request': operation},
+            {'/component': operation},
+            {'/': operation, '/root': operation},
+        ]:
+            with self.subTest(paths=paths), self.assertRaises(ValueError):
+                parse_spec({'openapi': '3.0.3', 'paths': paths})
+
+    def test_duplicate_path_across_public_and_internal_specs_does_not_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = root / 'services/example'
+            public = root / 'schemas/services/example'
+            (service / 'docs/api').mkdir(parents=True)
+            (service / 'configs').mkdir()
+            public.mkdir(parents=True)
+            for path, method in [(public / 'external.yaml', 'get'), (service / 'docs/api/internal.yaml', 'post')]:
+                path.write_text(yaml.safe_dump({'openapi': '3.0.3', 'paths': {
+                    '/foo': {method: {'responses': {'204': {'description': 'Нет тела'}}}}}}))
+            (service / 'configs/static_config.yaml').write_text('# OPENAPI_HANDLERS_BEGIN\n# OPENAPI_HANDLERS_END\n')
+            before = self.snapshot(root)
+            with self.assertRaisesRegex(ValueError, 'Colliding path'):
+                run(service)
+            self.assertEqual(before, self.snapshot(root))
 
     @staticmethod
     def snapshot(directory):

@@ -29,10 +29,8 @@ std::string Admin::HandleRequestThrow(const Http& http,
     response.SetHeader(std::string_view{"Cache-Control"}, "no-store");
     response.SetHeader(std::string_view{"X-Content-Type-Options"}, "nosniff");
     response.SetHeader(std::string_view{"Referrer-Policy"}, "no-referrer");
-    response.SetHeader(
-        std::string_view{"Content-Security-Policy"},
-        "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src "
-        "'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    response.SetHeader(std::string_view{"Content-Security-Policy"},
+                       detail::ContentSecurityPolicy());
     const auto path = http.GetRequestPath();
     const bool get = http.GetMethodStr() == "GET";
     try {

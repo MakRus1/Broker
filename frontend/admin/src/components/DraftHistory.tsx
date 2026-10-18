@@ -30,9 +30,22 @@ export function DraftHistory({
           </thead>
           <tbody>
             {drafts.map((item) => (
-              <tr key={item.id}>
+              <tr
+                key={item.id}
+                className="history-row"
+                aria-disabled={busy || editor}
+                onClick={() => {
+                  if (!busy && !editor) onSelect(item);
+                }}
+              >
                 <td>
-                  <button disabled={busy || editor} onClick={() => onSelect(item)}>
+                  <button
+                    disabled={busy || editor}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelect(item);
+                    }}
+                  >
                     #{item.id}
                   </button>
                 </td>

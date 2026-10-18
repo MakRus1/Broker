@@ -1,5 +1,10 @@
+import { lazy, Suspense } from 'react';
 import type { Workspace } from '../hooks/useWorkspace';
 import { ValueDiff } from './ValueDiff';
+
+const JsonEditor = lazy(() =>
+  import('./JsonEditor').then((module) => ({ default: module.JsonEditor })),
+);
 
 export function ConfigEditor({ workspace }: { workspace: Workspace }) {
   const {
@@ -23,16 +28,9 @@ export function ConfigEditor({ workspace }: { workspace: Workspace }) {
       }}
     >
       <label htmlFor="value">Значение · JSON</label>
-      <textarea
-        id="value"
-        spellCheck={false}
-        rows={12}
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        disabled={busy}
-        aria-invalid={!!editing.error}
-        aria-describedby="value-help"
-      />
+      <Suspense fallback={<p>Загружаем редактор…</p>}>
+        <JsonEditor value={text} onChange={setText} disabled={busy} invalid={!!editing.error} />
+      </Suspense>
       <p id="value-help" className={editing.error ? 'field-error' : 'muted'}>
         {editing.error ||
           (!editing.changed

@@ -27,9 +27,19 @@ export function Catalog({ workspace }: { workspace: Workspace }) {
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.config_name}>
+            <tr
+              key={item.config_name}
+              className="catalog-row"
+              onClick={() => setSelected(item.config_name)}
+            >
               <td>
-                <button className="config-link" onClick={() => setSelected(item.config_name)}>
+                <button
+                  className="config-link"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelected(item.config_name);
+                  }}
+                >
                   {item.config_name}
                 </button>
               </td>

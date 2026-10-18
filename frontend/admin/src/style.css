@@ -540,3 +540,69 @@ body:has(dialog[open]) .workspace > .notifications {
     font-size: 40px;
   }
 }
+
+.history-row:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+.history-row:not([aria-disabled='true']):hover,
+.history-row:focus-within {
+  background: #edf3e9;
+}
+
+.catalog-row {
+  cursor: pointer;
+}
+.catalog-row:hover,
+.catalog-row:focus-within {
+  background: #edf3e9;
+}
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.json-editor {
+  border: 1px solid #d8e1d3;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.json-editor .cm-editor {
+  background: #fcfdfa;
+  font-size: 12px;
+}
+.json-editor .cm-scroller {
+  min-height: 260px;
+  max-height: 500px;
+  overflow: auto;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  line-height: 1.75;
+}
+.json-editor .cm-gutters {
+  background: #edf1eb;
+  border-color: #d8e1d3;
+}
+.json-editor .cm-foldGutter {
+  cursor: pointer;
+}
+.json-editor .cm-foldPlaceholder {
+  background: #e3edde;
+  border: 1px solid #b7cbb0;
+  color: #285641;
+}
+.json-editor .cm-editor.cm-focused {
+  outline: 2px solid #84a27a;
+  outline-offset: -2px;
+}
+.diff-gap {
+  text-align: center;
+  background: #edf1eb;
+  border-block: 1px solid #dfe5db;
+}
+.diff-gap button {
+  background: transparent;
+  border: 0;
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+}

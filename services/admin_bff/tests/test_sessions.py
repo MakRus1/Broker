@@ -131,3 +131,22 @@ async def test_login_secrets_are_not_logged(service_client, login, oidc):
     assert oidc['codes'][-1] not in serialized
     assert callback.cookies['broker_admin'].value not in serialized
     assert 'server-only-refresh' not in serialized
+
+
+async def test_editor_style_nonce_is_unique_and_bound_to_html(service_client):
+    import re
+    nonces = []
+    for path in ['/', '/index.html']:
+        response = await service_client.get(path)
+        assert response.status == 200
+        nonce = re.search(r'name="csp-nonce" content="([A-Za-z0-9_-]+)"', response.text).group(1)
+        assert len(nonce) >= 32
+        assert '__BROKER_CSP_NONCE__' not in response.text
+        policy = response.headers['Content-Security-Policy']
+        assert f"style-src 'self' 'nonce-{nonce}'" in policy
+        assert "script-src 'self';" in policy
+        assert 'unsafe-inline' not in policy
+        assert 'unsafe-eval' not in policy
+        assert response.headers['Cache-Control'] == 'no-store'
+        nonces.append(nonce)
+    assert nonces[0] != nonces[1]

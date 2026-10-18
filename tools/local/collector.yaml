@@ -1,0 +1,76 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+  filelog/broker:
+    include: [/logs/broker.jsonl*]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: json_parser
+        parse_to: attributes
+        on_error: send
+      - type: add
+        field: resource["service.name"]
+        value: broker
+  filelog/configs:
+    include: [/logs/configs.jsonl*]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: json_parser
+        parse_to: attributes
+        on_error: send
+      - type: add
+        field: resource["service.name"]
+        value: configs
+  filelog/diagnostics:
+    include: [/logs/diagnostics.jsonl*]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: json_parser
+        parse_to: attributes
+        on_error: send
+      - type: add
+        field: resource["service.name"]
+        value: diagnostics
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 192
+    spike_limit_mib: 32
+  resource/local:
+    attributes:
+      - key: deployment.environment.name
+        value: local
+        action: upsert
+      - key: service.version
+        value: 0.1.0
+        action: insert
+  batch:
+    timeout: 1s
+exporters:
+  otlp_grpc/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:
+    directory: /state
+service:
+  extensions: [health_check, file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_grpc/tempo]
+    logs:
+      receivers: [filelog/broker, filelog/configs, filelog/diagnostics]
+      processors: [memory_limiter, resource/local, batch]
+      exporters: [otlp_http/loki]

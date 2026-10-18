@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 5s
+scrape_configs:
+- job_name: services
+  metrics_path: /metrics
+  honor_labels: true
+  static_configs:
+  - targets:
+    - broker:8082
+    labels:
+      service: broker
+  - targets:
+    - configs:8092
+    labels:
+      service: configs
+  - targets:
+    - diagnostics:8085
+    labels:
+      service: diagnostics
+- job_name: prometheus
+  static_configs:
+  - targets:
+    - localhost:9090
+- job_name: readiness
+  honor_labels: true
+  static_configs:
+  - targets:
+    - readiness:9100

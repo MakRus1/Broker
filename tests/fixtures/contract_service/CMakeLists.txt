@@ -8,7 +8,7 @@ target_link_libraries(contract_service_objs PUBLIC userver::core broker_common)
 add_executable(contract_service main.cpp ${OPENAPI_VIEW_SRCS})
 target_link_libraries(contract_service PRIVATE contract_service_objs)
 broker_openapi_apply(contract_service)
-target_link_libraries(contract_service PRIVATE userver::core broker_common)
+target_link_libraries(contract_service PRIVATE userver::core userver::grpc userver::otlp broker_proto broker_common)
 userver_testsuite_add_simple()
 
 # SERVICE_CMAKE_BEGIN

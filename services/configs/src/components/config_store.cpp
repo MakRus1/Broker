@@ -9,6 +9,7 @@
 
 namespace {
 namespace pg = userver::storages::postgres;
+
 configs::Revision WithDefaults(const pg::ResultSet& rows) {
     auto defaults = configs::Defaults();
     if (rows.IsEmpty())
@@ -48,7 +49,7 @@ ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& 
 }
 
 Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision& current,
-                                    const platform::configs::Json& values) const {
+    const platform::configs::Json& values) const {
     // Откат и подтверждение тоже проверяются по текущим схемам.
     Validate(values);
     const auto revision =

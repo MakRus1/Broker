@@ -14,30 +14,34 @@ class CapacityExceeded final : public std::runtime_error {
   public:
     CapacityExceeded() : std::runtime_error("Session capacity exceeded") {}
 };
+
 using Clock = std::chrono::steady_clock;
+
 struct Session {
     userver::engine::Mutex Mutex;
     std::string Access, Refresh, Csrf;
     platform::auth::Principal User;
     Clock::time_point TokenExpires, Expires;
 };
+
 struct Pending {
     std::string Verifier, Nonce;
     Clock::time_point Expires;
 };
+
 class Sessions final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "admin-sessions";
-    Sessions(const userver::components::ComponentConfig&,
-             const userver::components::ComponentContext&);
+    Sessions(
+        const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     std::pair<std::string, std::string> Begin();
     std::string Complete(const std::string& state, const std::string& code);
     std::shared_ptr<Session> Get(const std::string& id);
     void EnsureFresh(Session& session);
     void Logout(const std::string& id);
-    userver::server::http::Cookie Cookie(const std::string& name, const std::string& value,
-                                         int seconds) const;
+    userver::server::http::Cookie Cookie(
+        const std::string& name, const std::string& value, int seconds) const;
     std::string LogoutUrl() const;
     std::string CookieName(const std::string& name) const;
     const std::string Origin;

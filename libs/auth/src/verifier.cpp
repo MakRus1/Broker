@@ -31,6 +31,7 @@ struct Verifier::Impl {
     using Check = decltype(jwt::verify());
     std::map<std::string, Check> Keys;
 };
+
 Verifier::Verifier(Settings settings, const std::string& jwks) : impl_(std::make_unique<Impl>()) {
     if (settings.Issuer.empty() || settings.Audience.empty() || settings.RolesClient.empty())
         throw std::invalid_argument("Issuer, audience and roles client are required");
@@ -63,10 +64,13 @@ Verifier::Verifier(Settings settings, const std::string& jwks) : impl_(std::make
     if (impl_->Keys.empty())
         throw std::invalid_argument("No supported signing keys");
 }
+
 Verifier::~Verifier() = default;
+
 Principal Verifier::Verify(const std::string& token) const {
     return VerifyKind(token, "Bearer");
 }
+
 Principal Verifier::VerifyKind(const std::string& token, std::string_view kind) const {
     if (token.empty() || token.size() > 16384)
         throw std::invalid_argument("Invalid token size");
@@ -98,8 +102,9 @@ Principal Verifier::VerifyKind(const std::string& token, std::string_view kind) 
         principal.Permissions = roles.As<std::set<std::string>>();
     return principal;
 }
+
 Principal Verifier::VerifyLogin(const std::string& access, const std::string& identity,
-                                const std::string& client, const std::string& nonce) const {
+    const std::string& client, const std::string& nonce) const {
     const auto principal = Verify(access);
     const Verifier verifier{{impl_->Config.Issuer, client, impl_->Config.RolesClient}, impl_->Jwks};
     const auto identified = verifier.VerifyKind(identity, "ID");

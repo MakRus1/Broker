@@ -15,8 +15,9 @@ namespace contract_service {
 class LocalScenario final : public userver::server::handlers::HttpHandlerBase {
   public:
     static constexpr std::string_view kName = "local-scenario";
+
     LocalScenario(const userver::components::ComponentConfig& config,
-                  const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : HttpHandlerBase(config, context), deps_(ResolveDeps(context)),
           factory_(context
                        .FindComponent<userver::ugrpc::client::ClientFactoryComponent>(
@@ -24,7 +25,7 @@ class LocalScenario final : public userver::server::handlers::HttpHandlerBase {
                        .GetFactory()) {}
 
     std::string HandleRequestThrow(const userver::server::http::HttpRequest&,
-                                   userver::server::request::RequestContext&) const override {
+        userver::server::request::RequestContext&) const override {
         const auto postgres = deps_.broker.HelloPostgres({.name = "local-scenario"});
         auto client =
             factory_.MakeClient<handlers::api::HelloServiceClient>("local-scenario", "broker:8081");

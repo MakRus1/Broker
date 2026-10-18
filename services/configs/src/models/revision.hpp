@@ -8,6 +8,7 @@ struct Revision {
     std::int64_t Id;
     Json Values;
 };
+
 struct RevisionInfo {
     std::int64_t Id;
     std::string CreatedAt;

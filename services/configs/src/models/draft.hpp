@@ -6,6 +6,7 @@
 
 namespace configs {
 enum class DraftStatus { Draft, Published, Cancelled };
+
 struct Draft {
     std::int64_t Id;
     std::string ConfigName;
@@ -22,6 +23,7 @@ struct Draft {
     std::optional<std::string> AuthorName;
     std::optional<std::string> ApprovedByName;
 };
+
 struct CreateDraftRequest {
     std::string Actor;
     std::string ConfigName;
@@ -31,6 +33,7 @@ struct CreateDraftRequest {
     std::optional<std::int64_t> SourceRevision;
     std::optional<std::string> ActorName = std::nullopt;
 };
+
 struct EditDraftRequest {
     std::string Actor;
     std::int64_t Id;
@@ -38,12 +41,14 @@ struct EditDraftRequest {
     std::optional<Json> Value;
     std::optional<std::string> Description;
 };
+
 struct DraftActionRequest {
     std::string Actor;
     std::int64_t Id;
     std::int64_t ExpectedVersion;
     std::optional<std::string> ActorName = std::nullopt;
 };
+
 struct DraftFilter {
     std::optional<std::string> ConfigName;
     std::optional<std::int64_t> BeforeId;

@@ -16,37 +16,40 @@ inline models::DraftStatus ToApiStatus(DraftStatus status) {
     }
     throw std::logic_error("Invalid draft status");
 }
+
 inline models::ConfigDraft ToApiDraft(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
-            .approved_by_name = draft.ApprovedByName,
-            .author = draft.Author,
-            .author_name = draft.AuthorName,
-            .base_value = draft.BaseValue,
-            .base_version = draft.BaseVersion,
-            .config_name = draft.ConfigName,
-            .description = draft.Description,
-            .id = draft.Id,
-            .published_revision = draft.PublishedRevision,
-            .source_revision = draft.SourceRevision,
-            .status = ToApiStatus(draft.Status),
-            .value = draft.Value,
-            .version = draft.Version};
+        .approved_by_name = draft.ApprovedByName,
+        .author = draft.Author,
+        .author_name = draft.AuthorName,
+        .base_value = draft.BaseValue,
+        .base_version = draft.BaseVersion,
+        .config_name = draft.ConfigName,
+        .description = draft.Description,
+        .id = draft.Id,
+        .published_revision = draft.PublishedRevision,
+        .source_revision = draft.SourceRevision,
+        .status = ToApiStatus(draft.Status),
+        .value = draft.Value,
+        .version = draft.Version};
 }
+
 inline models::DraftSnapshot ToApiSnapshot(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
-            .approved_by_name = draft.ApprovedByName,
-            .author = draft.Author,
-            .author_name = draft.AuthorName,
-            .base_value = draft.BaseValue,
-            .base_version = draft.BaseVersion,
-            .config_name = draft.ConfigName,
-            .description = draft.Description,
-            .published_revision = draft.PublishedRevision,
-            .source_revision = draft.SourceRevision,
-            .status = ToApiStatus(draft.Status),
-            .value = draft.Value,
-            .version = draft.Version};
+        .approved_by_name = draft.ApprovedByName,
+        .author = draft.Author,
+        .author_name = draft.AuthorName,
+        .base_value = draft.BaseValue,
+        .base_version = draft.BaseVersion,
+        .config_name = draft.ConfigName,
+        .description = draft.Description,
+        .published_revision = draft.PublishedRevision,
+        .source_revision = draft.SourceRevision,
+        .status = ToApiStatus(draft.Status),
+        .value = draft.Value,
+        .version = draft.Version};
 }
+
 inline std::vector<models::ConfigDraft> ToApiDrafts(const std::vector<Draft>& drafts) {
     std::vector<models::ConfigDraft> items;
     for (const auto& draft : drafts)

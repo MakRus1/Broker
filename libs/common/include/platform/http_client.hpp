@@ -88,8 +88,8 @@ template <typename T> std::string Scalar(const T& value) {
     }
 }
 
-inline void ReplacePath(std::string& path, const std::string& placeholder,
-                        const std::string& value) {
+inline void ReplacePath(
+    std::string& path, const std::string& placeholder, const std::string& value) {
     // Каждое значение кодируется как один сегмент, включая слеш и знак вопроса.
     auto encoded = userver::http::UrlEncode(value);
     if (value == ".")
@@ -115,13 +115,13 @@ struct ClientSettings {
     int Timeout;
     int MaxRetries;
 };
+
 using SettingsProvider = std::function<ClientSettings(const std::string&)>;
 
 class HttpTransport final : public Transport {
   public:
     HttpTransport(const userver::components::ComponentConfig& config,
-                  const userver::components::ComponentContext& context,
-                  SettingsProvider settings = {})
+        const userver::components::ComponentContext& context, SettingsProvider settings = {})
         : client_(context.FindComponent<userver::components::HttpClient>().GetHttpClient()),
           base_url_(config["base-url"].As<std::string>()),
           timeout_(config["timeout-ms"].As<int>(1000)), destination_(config.Name()),
@@ -175,8 +175,8 @@ class HttpTransport final : public Transport {
         const auto& response_headers = response->headers();
         const auto content_type = response_headers.find(std::string_view{"Content-Type"});
         return {static_cast<int>(response->status_code()),
-                content_type == response_headers.end() ? std::string{} : content_type->second,
-                response->body()};
+            content_type == response_headers.end() ? std::string{} : content_type->second,
+            response->body()};
     }
 
   private:

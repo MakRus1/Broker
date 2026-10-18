@@ -8,29 +8,33 @@
 
 namespace {
 using Http = userver::server::http::HttpRequest;
-void CheckCsrf(const Http& http, const admin_bff::Sessions& sessions,
-               const admin_bff::Session& session) {
+
+void CheckCsrf(
+    const Http& http, const admin_bff::Sessions& sessions, const admin_bff::Session& session) {
     if (http.GetHeader("Origin") != sessions.Origin ||
         http.GetHeader("X-CSRF-Token") != session.Csrf)
         throw platform::auth::Forbidden{};
 }
 }  // namespace
+
 namespace admin_bff {
 using detail::JsonError;
+
 Admin::Admin(const userver::components::ComponentConfig& config,
-             const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), sessions_(context.FindComponent<Sessions>()),
       assets_(context.FindComponent<userver::components::FsCache>("admin-assets").GetClient()),
       deps_(ResolveDeps(context)) {}
-std::string Admin::HandleRequestThrow(const Http& http,
-                                      userver::server::request::RequestContext&) const {
+
+std::string Admin::HandleRequestThrow(
+    const Http& http, userver::server::request::RequestContext&) const {
     auto& response = http.GetHttpResponse();
     response.SetHeader(std::string_view{"Content-Type"}, "application/json");
     response.SetHeader(std::string_view{"Cache-Control"}, "no-store");
     response.SetHeader(std::string_view{"X-Content-Type-Options"}, "nosniff");
     response.SetHeader(std::string_view{"Referrer-Policy"}, "no-referrer");
-    response.SetHeader(std::string_view{"Content-Security-Policy"},
-                       detail::ContentSecurityPolicy());
+    response.SetHeader(
+        std::string_view{"Content-Security-Policy"}, detail::ContentSecurityPolicy());
     const auto path = http.GetRequestPath();
     const bool get = http.GetMethodStr() == "GET";
     try {
@@ -81,8 +85,8 @@ std::string Admin::HandleRequestThrow(const Http& http,
         response.SetCookie(sessions_.Cookie("broker_admin", "", 0));
         return JsonError(http, 401, "unauthorized", "Войдите в систему");
     } catch (const CapacityExceeded&) {
-        return JsonError(http, 429, "too_many_sessions",
-                         "Слишком много попыток входа. Повторите позже.");
+        return JsonError(
+            http, 429, "too_many_sessions", "Слишком много попыток входа. Повторите позже.");
     } catch (const platform::auth::Unavailable&) {
         return JsonError(http, 503, "auth_unavailable", "Сервис входа временно недоступен");
     } catch (const platform::http::TransportError&) {

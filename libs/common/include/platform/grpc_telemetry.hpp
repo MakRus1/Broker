@@ -23,15 +23,15 @@ class GrpcTelemetryFactory final : public userver::ugrpc::server::MiddlewareFact
     static constexpr std::string_view kName = "platform-grpc-telemetry";
 
     GrpcTelemetryFactory(const userver::components::ComponentConfig& config,
-                         const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : MiddlewareFactoryComponentBase(config, context,
-                                         userver::middlewares::MiddlewareDependencyBuilder()
-                                             .InGroup<userver::middlewares::groups::PreCore>()),
+              userver::middlewares::MiddlewareDependencyBuilder()
+                  .InGroup<userver::middlewares::groups::PreCore>()),
           metadata_(context.FindComponent<HttpTelemetryFactory>().GetMetadata()) {}
 
-    std::shared_ptr<const userver::ugrpc::server::MiddlewareBase>
-    CreateMiddleware(const userver::ugrpc::server::ServiceInfo&,
-                     const userver::yaml_config::YamlConfig&) const override {
+    std::shared_ptr<const userver::ugrpc::server::MiddlewareBase> CreateMiddleware(
+        const userver::ugrpc::server::ServiceInfo&,
+        const userver::yaml_config::YamlConfig&) const override {
         return std::make_shared<GrpcTelemetry>(metadata_);
     }
 

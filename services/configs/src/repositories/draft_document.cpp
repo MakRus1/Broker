@@ -7,6 +7,7 @@ std::optional<T> Optional(const configs::Json& document, std::string_view key) {
         return std::nullopt;
     return document[key].As<T>();
 }
+
 configs::DraftStatus ReadStatus(const std::string& value) {
     if (value == "draft")
         return configs::DraftStatus::Draft;
@@ -30,22 +31,24 @@ std::string_view StatusName(DraftStatus status) {
     }
     throw std::runtime_error("Invalid draft status");
 }
+
 Draft ReadDraft(std::int64_t id, const Json& document) {
     return {.Id = id,
-            .ConfigName = document["config_name"].As<std::string>(),
-            .Author = document["author"].As<std::string>(),
-            .Description = document["description"].As<std::string>(),
-            .Version = document["version"].As<std::int64_t>(),
-            .Status = ReadStatus(document["status"].As<std::string>()),
-            .ApprovedBy = Optional<std::string>(document, "approved_by"),
-            .BaseVersion = document["base_version"].As<std::int64_t>(),
-            .BaseValue = document["base_value"],
-            .Value = document["value"],
-            .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
-            .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
-            .AuthorName = Optional<std::string>(document, "author_name"),
-            .ApprovedByName = Optional<std::string>(document, "approved_by_name")};
+        .ConfigName = document["config_name"].As<std::string>(),
+        .Author = document["author"].As<std::string>(),
+        .Description = document["description"].As<std::string>(),
+        .Version = document["version"].As<std::int64_t>(),
+        .Status = ReadStatus(document["status"].As<std::string>()),
+        .ApprovedBy = Optional<std::string>(document, "approved_by"),
+        .BaseVersion = document["base_version"].As<std::int64_t>(),
+        .BaseValue = document["base_value"],
+        .Value = document["value"],
+        .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
+        .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
+        .AuthorName = Optional<std::string>(document, "author_name"),
+        .ApprovedByName = Optional<std::string>(document, "approved_by_name")};
 }
+
 Json WriteDraft(const Draft& draft) {
     userver::formats::json::ValueBuilder document;
     document["config_name"] = draft.ConfigName;

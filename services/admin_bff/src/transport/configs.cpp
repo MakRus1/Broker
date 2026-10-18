@@ -1,11 +1,13 @@
 #include <transport/admin.hpp>
 #include <transport/responses.hpp>
 #include <userver/server/http/http_response.hpp>
+
 namespace admin_bff {
 using Http = userver::server::http::HttpRequest;
 using detail::JsonError;
+
 std::string Admin::Forward(const std::string& path, const userver::formats::json::Value& body,
-                           const std::string& token, const Http& http) const {
+    const std::string& token, const Http& http) const {
     namespace api = clients::config_admin;
     if (path == "/api/configs/current" && http.GetMethodStr() == "POST") {
         const auto result = deps_.config_admin.AdminConfigsCurrent(

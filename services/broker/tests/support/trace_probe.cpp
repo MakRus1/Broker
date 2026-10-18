@@ -5,17 +5,19 @@
 #include <userver/tracing/span.hpp>
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/server/server_component.hpp>
+
 namespace broker {
 TraceProbe::TraceProbe(const userver::components::ComponentConfig& config,
-                       const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context),
       factory_(
           context
               .FindComponent<userver::ugrpc::client::ClientFactoryComponent>("grpc-probe-factory")
               .GetFactory()),
       grpc_(context.FindComponent<userver::ugrpc::server::ServerComponent>().GetServer()) {}
-std::string TraceProbe::HandleRequestThrow(const userver::server::http::HttpRequest&,
-                                           userver::server::request::RequestContext&) const {
+
+std::string TraceProbe::HandleRequestThrow(
+    const userver::server::http::HttpRequest&, userver::server::request::RequestContext&) const {
     auto client = factory_.MakeClient<handlers::api::HelloServiceClient>(
         "trace-probe", "localhost:" + std::to_string(grpc_.GetPort()));
     handlers::api::HelloRequest request;

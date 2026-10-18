@@ -7,7 +7,7 @@
 namespace contract_service::views::items::by_id {
 class View {
   public:
-    static Response Handle(Request&& request, userver::server::request::RequestContext& context,
-                           Deps);
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps);
 };
 }  // namespace contract_service::views::items::by_id

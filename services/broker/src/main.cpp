@@ -34,6 +34,7 @@
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/component.hpp>
+
 // SERVICE_INCLUDES_END
 
 int main(int argc, char* argv[]) {

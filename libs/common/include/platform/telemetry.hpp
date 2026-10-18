@@ -34,7 +34,7 @@ class HttpTelemetry final : public userver::server::middlewares::HttpMiddlewareB
 
   private:
     void HandleRequest(userver::server::http::HttpRequest& request,
-                       userver::server::request::RequestContext& context) const override {
+        userver::server::request::RequestContext& context) const override {
         metadata_.Apply(userver::tracing::Span::CurrentSpan());
         Next(request, context);
     }
@@ -47,10 +47,10 @@ class HttpTelemetryFactory final : public userver::server::middlewares::HttpMidd
     static constexpr std::string_view kName = "platform-http-telemetry";
 
     HttpTelemetryFactory(const userver::components::ComponentConfig& config,
-                         const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : HttpMiddlewareFactoryBase(config, context),
-          metadata_{config["service-name"].As<std::string>(),
-                    config["environment"].As<std::string>()} {}
+          metadata_{
+              config["service-name"].As<std::string>(), config["environment"].As<std::string>()} {}
 
     const ServiceMetadata& GetMetadata() const {
         return metadata_;
@@ -72,9 +72,9 @@ properties:
     }
 
   private:
-    std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase>
-    Create(const userver::server::handlers::HttpHandlerBase&,
-           userver::yaml_config::YamlConfig) const override {
+    std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Create(
+        const userver::server::handlers::HttpHandlerBase&,
+        userver::yaml_config::YamlConfig) const override {
         return std::make_unique<HttpTelemetry>(metadata_);
     }
 
@@ -84,29 +84,31 @@ properties:
 class HttpTelemetryPipeline final : public userver::server::middlewares::PipelineBuilder {
   public:
     static constexpr std::string_view kName = "platform-http-pipeline";
+
     HttpTelemetryPipeline(const userver::components::ComponentConfig& config,
-                          const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : PipelineBuilder(config, context),
           readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr),
           extra_(config["extra-middlewares"].As<std::vector<std::string>>({})) {}
 
-    userver::server::middlewares::MiddlewaresList
-    BuildPipeline(userver::server::middlewares::MiddlewaresList pipeline) const override {
+    userver::server::middlewares::MiddlewaresList BuildPipeline(
+        userver::server::middlewares::MiddlewaresList pipeline) const override {
         pipeline = PipelineBuilder::BuildPipeline(std::move(pipeline));
-        const auto tracing = std::find(pipeline.begin(), pipeline.end(),
-                                       userver::server::middlewares::builtin::kTracing);
+        const auto tracing = std::find(
+            pipeline.begin(), pipeline.end(), userver::server::middlewares::builtin::kTracing);
         // Контекст уже создан, а аутентификация и обработчик еще не запущены.
         if (tracing == pipeline.end())
             throw std::logic_error("HTTP tracing middleware is required");
         const auto position = std::distance(pipeline.begin(), tracing) + 1;
         pipeline.insert(pipeline.begin() + position, std::string(HttpTelemetryFactory::kName));
         if (readiness_enabled_)
-            pipeline.insert(pipeline.begin() + position + 1,
-                            std::string(HttpReadinessFactory::kName));
+            pipeline.insert(
+                pipeline.begin() + position + 1, std::string(HttpReadinessFactory::kName));
         pipeline.insert(pipeline.begin() + position + 1 + (readiness_enabled_ ? 1 : 0),
-                        extra_.begin(), extra_.end());
+            extra_.begin(), extra_.end());
         return pipeline;
     }
+
     static userver::yaml_config::Schema GetStaticConfigSchema() {
         return userver::yaml_config::MergeSchemas<PipelineBuilder>(R"(
 type: object

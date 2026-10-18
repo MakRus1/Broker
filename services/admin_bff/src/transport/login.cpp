@@ -1,10 +1,12 @@
 #include <transport/admin.hpp>
 #include <transport/responses.hpp>
 #include <userver/server/http/http_response.hpp>
+
 namespace admin_bff {
 using Http = userver::server::http::HttpRequest;
 using detail::JsonError;
 using detail::Redirect;
+
 std::string Admin::HandleLogin(const Http& http) const {
     auto& response = http.GetHttpResponse();
     const auto path = http.GetRequestPath();

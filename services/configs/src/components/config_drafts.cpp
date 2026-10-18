@@ -12,16 +12,18 @@ using configs::Json;
 using Builder = userver::formats::json::ValueBuilder;
 
 void ValidateText(const std::string& value, std::size_t maximum) {
-    const auto length = std::count_if(value.begin(), value.end(),
-                                      [](unsigned char byte) { return (byte & 0xc0) != 0x80; });
+    const auto length = std::count_if(
+        value.begin(), value.end(), [](unsigned char byte) { return (byte & 0xc0) != 0x80; });
     if (value.empty() || static_cast<std::size_t>(length) > maximum ||
         value.find_first_not_of(" \t\r\n") == std::string::npos)
         throw configs::InvalidRequest("Invalid text field");
 }
+
 void ValidateId(std::int64_t id) {
     if (id <= 0)
         throw configs::InvalidRequest("Invalid draft id");
 }
+
 void ValidateConfig(const std::string& name, const Json& value) {
     Builder patch{userver::formats::json::Type::kObject};
     patch[name] = value;
@@ -40,11 +42,13 @@ namespace configs {
 std::vector<CatalogEntry> ConfigStore::Catalog() const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
+
     struct Row {
         std::string Name;
         std::int64_t Version;
         std::int64_t DraftId;
     };
+
     const auto rows = transaction.Execute(sql::kCatalog, Defaults());
     std::vector<CatalogEntry> result;
     for (const auto& row : rows.AsSetOf<Row>(pg::kRowTag))
@@ -81,10 +85,12 @@ std::vector<Draft> ConfigStore::ListDrafts(const DraftFilter& filter) const {
     const auto before = filter.BeforeId.value_or(0);
     if (before < 0 || (!name.empty() && !Defaults().HasMember(name)))
         throw InvalidRequest("Invalid list filter");
+
     struct Row {
         std::int64_t Id;
         Json Document;
     };
+
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListDrafts, name, before);
     std::vector<Draft> result;
@@ -93,8 +99,8 @@ std::vector<Draft> ConfigStore::ListDrafts(const DraftFilter& filter) const {
     return result;
 }
 
-Draft ConfigStore::LoadActiveDraft(pg::Transaction& transaction, std::int64_t id,
-                                   std::int64_t expected_version) const {
+Draft ConfigStore::LoadActiveDraft(
+    pg::Transaction& transaction, std::int64_t id, std::int64_t expected_version) const {
     ValidateId(id);
     const auto rows = transaction.Execute(sql::kFindDraft, id);
     if (rows.IsEmpty())
@@ -108,7 +114,7 @@ Draft ConfigStore::LoadActiveDraft(pg::Transaction& transaction, std::int64_t id
 }
 
 void ConfigStore::SaveDraft(pg::Transaction& transaction, const Draft& draft,
-                            const std::string& actor, std::string_view action) const {
+    const std::string& actor, std::string_view action) const {
     const auto document = storage::WriteDraft(draft);
     transaction.Execute(sql::kUpdateDraft, draft.Id, document);
     Builder event;
@@ -157,19 +163,19 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
     if (value == current.Values[request.ConfigName])
         throw InvalidRequest("Config value has no changes");
     Draft draft{.Id = 0,
-                .ConfigName = request.ConfigName,
-                .Author = request.Actor,
-                .Description = request.Description,
-                .Version = 1,
-                .Status = DraftStatus::Draft,
-                .ApprovedBy = std::nullopt,
-                .BaseVersion = version,
-                .BaseValue = current.Values[request.ConfigName],
-                .Value = value,
-                .SourceRevision = request.SourceRevision,
-                .PublishedRevision = std::nullopt,
-                .AuthorName = request.ActorName,
-                .ApprovedByName = std::nullopt};
+        .ConfigName = request.ConfigName,
+        .Author = request.Actor,
+        .Description = request.Description,
+        .Version = 1,
+        .Status = DraftStatus::Draft,
+        .ApprovedBy = std::nullopt,
+        .BaseVersion = version,
+        .BaseValue = current.Values[request.ConfigName],
+        .Value = value,
+        .SourceRevision = request.SourceRevision,
+        .PublishedRevision = std::nullopt,
+        .AuthorName = request.ActorName,
+        .ApprovedByName = std::nullopt};
     draft.Id = transaction.Execute(sql::kInsertDraft, storage::WriteDraft(draft))
                    .AsSingleRow<std::int64_t>();
     SaveDraft(transaction, draft, request.Actor, "create");
@@ -248,16 +254,18 @@ std::vector<DraftEvent> ConfigStore::DraftEvents(std::int64_t id) const {
     ValidateId(id);
     if (cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindDraft, id).IsEmpty())
         throw RevisionNotFound("Draft not found");
+
     struct Row {
         Json Event;
         std::string Created;
     };
+
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kDraftEvents, id);
     std::vector<DraftEvent> result;
     for (const auto& row : rows.AsSetOf<Row>(pg::kRowTag))
-        result.push_back({row.Event["action"].As<std::string>(),
-                          row.Event["actor"].As<std::string>(),
-                          storage::ReadDraft(id, row.Event["snapshot"]), row.Created});
+        result.push_back(
+            {row.Event["action"].As<std::string>(), row.Event["actor"].As<std::string>(),
+                storage::ReadDraft(id, row.Event["snapshot"]), row.Created});
     return result;
 }
 }  // namespace configs

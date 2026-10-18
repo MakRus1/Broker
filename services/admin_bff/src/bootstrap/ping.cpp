@@ -1,19 +1,22 @@
 #include <bootstrap/ping.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/server/http/http_response.hpp>
+
 // SERVICE_PING_INCLUDES_BEGIN
 
 // SERVICE_PING_INCLUDES_END
 namespace admin_bff {
-std::string Ping::HandleRequestThrow(const userver::server::http::HttpRequest&,
-                                     userver::server::request::RequestContext&) const {
+std::string Ping::HandleRequestThrow(
+    const userver::server::http::HttpRequest&, userver::server::request::RequestContext&) const {
     return "alive\n";
 }
+
 PingReady::PingReady(const userver::components::ComponentConfig& config,
-                     const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), state_(context), deps_(ResolveDeps(context)) {}
+
 std::string PingReady::HandleRequestThrow(const userver::server::http::HttpRequest& request,
-                                          userver::server::request::RequestContext&) const {
+    userver::server::request::RequestContext&) const {
     if (state_.GetServiceLifetimeStage() != userver::components::ServiceLifetimeStage::kRunning ||
         state_.IsAnyComponentInFatalState()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);

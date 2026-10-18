@@ -7,7 +7,7 @@
 namespace contract_service::views::validated::create {
 class View {
   public:
-    static Response Handle(Request&& request, userver::server::request::RequestContext& context,
-                           Deps);
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps);
 };
 }  // namespace contract_service::views::validated::create

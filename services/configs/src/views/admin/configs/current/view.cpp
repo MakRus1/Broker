@@ -7,9 +7,9 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
     try {
         const auto config = store.GetConfig(request.body.config_name);
         return Response200{.active_draft_id = config.ActiveDraftId,
-                           .config_name = config.Name,
-                           .value = config.Value,
-                           .version = config.Version};
+            .config_name = config.Name,
+            .value = config.Value,
+            .version = config.Version};
     } catch (const ::configs::InvalidRequest& error) {
         return Response400{.error = "invalid_request", .message = error.what()};
     }

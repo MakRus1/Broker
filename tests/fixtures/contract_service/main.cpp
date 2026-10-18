@@ -20,6 +20,7 @@
 #include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
+
 // SERVICE_INCLUDES_END
 int main(int argc, char* argv[]) {
     auto component_list = userver::components::MinimalServerComponentList()

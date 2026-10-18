@@ -14,12 +14,15 @@
 
 namespace {
 using userver::http::UrlEncode;
+using HttpClient = userver::components::HttpClient;
+
 std::string Random() {
     std::string bytes(32, '\0');
     if (RAND_bytes(reinterpret_cast<unsigned char*>(bytes.data()), bytes.size()) != 1)
         throw std::runtime_error("Random generation failed");
     return userver::crypto::base64::Base64UrlEncode(bytes, userver::crypto::base64::Pad::kWithout);
 }
+
 std::string Challenge(const std::string& verifier) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     SHA256(reinterpret_cast<const unsigned char*>(verifier.data()), verifier.size(), digest);
@@ -28,13 +31,13 @@ std::string Challenge(const std::string& verifier) {
         userver::crypto::base64::Pad::kWithout);
 }
 }  // namespace
+
 namespace admin_bff {
 Sessions::Sessions(const userver::components::ComponentConfig& config,
-                   const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : ComponentBase(config, context), Origin(config["origin"].As<std::string>()),
       auth_(context.FindComponent<platform::auth::Component>()),
-      http_(context.FindComponent<userver::components::HttpClient>("auth-http-client")
-                .GetHttpClient()),
+      http_(context.FindComponent<HttpClient>("auth-http-client").GetHttpClient()),
       issuer_(config["issuer"].As<std::string>()),
       token_url_(config["token-url"].As<std::string>()),
       revoke_url_(config["revoke-url"].As<std::string>()),
@@ -42,16 +45,18 @@ Sessions::Sessions(const userver::components::ComponentConfig& config,
       secure_(config["secure-cookie"].As<bool>(true)) {
     if (Origin.empty() || Origin.back() == '/' || client_.empty() ||
         (secure_ &&
-         (!Origin.starts_with("https://") || !issuer_.starts_with("https://") ||
-          !token_url_.starts_with("https://") || !revoke_url_.starts_with("https://"))) ||
+            (!Origin.starts_with("https://") || !issuer_.starts_with("https://") ||
+                !token_url_.starts_with("https://") || !revoke_url_.starts_with("https://"))) ||
         (!secure_ && !Origin.starts_with("http://localhost:")))
         throw std::invalid_argument("Invalid admin origin or TLS configuration");
 }
+
 void Sessions::Cleanup() {
     const auto now = Clock::now();
     std::erase_if(pending_, [now](const auto& pair) { return pair.second.Expires <= now; });
     std::erase_if(sessions_, [now](const auto& pair) { return pair.second->Expires <= now; });
 }
+
 std::pair<std::string, std::string> Sessions::Begin() {
     const auto state = Random();
     const Pending pending{Random(), Random(), Clock::now() + std::chrono::minutes{5}};
@@ -62,23 +67,23 @@ std::pair<std::string, std::string> Sessions::Begin() {
             throw CapacityExceeded{};
         pending_.emplace(state, pending);
     }
-    return {
-        state,
-        issuer_ +
-            "/protocol/openid-connect/auth?response_type=code&scope=openid%20profile&client_id=" +
-            UrlEncode(client_) + "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") +
-            "&state=" + UrlEncode(state) + "&nonce=" + UrlEncode(pending.Nonce) +
-            "&code_challenge_method=S256&code_challenge=" + UrlEncode(Challenge(pending.Verifier))};
+    const auto url = issuer_ +
+        "/protocol/openid-connect/auth?response_type=code&scope=openid%20profile&client_id=" +
+        UrlEncode(client_) + "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") +
+        "&state=" + UrlEncode(state) + "&nonce=" + UrlEncode(pending.Nonce) +
+        "&code_challenge_method=S256&code_challenge=" + UrlEncode(Challenge(pending.Verifier));
+    return {state, url};
 }
+
 userver::formats::json::Value Sessions::Exchange(const std::string& form) const {
-    const auto response = http_.CreateRequest()
-                              .post(token_url_, form)
-                              .headers({{"Content-Type", "application/x-www-form-urlencoded"}})
-                              .timeout(std::chrono::seconds{5})
-                              .retry(1)
-                              .follow_redirects(false)
-                              .SetLoggedUrl("oidc-token")
-                              .perform();
+    auto request = http_.CreateRequest();
+    request.post(token_url_, form)
+        .headers({{"Content-Type", "application/x-www-form-urlencoded"}})
+        .timeout(std::chrono::seconds{5})
+        .retry(1)
+        .follow_redirects(false)
+        .SetLoggedUrl("oidc-token");
+    const auto response = request.perform();
     // Не включаем тело ответа провайдера в исключения и логи.
     if (response->status_code() >= 500)
         throw platform::auth::Unavailable{};
@@ -86,6 +91,7 @@ userver::formats::json::Value Sessions::Exchange(const std::string& form) const 
         throw userver::server::handlers::Unauthorized{};
     return userver::formats::json::FromString(response->body());
 }
+
 void Sessions::Tokens(Session& session, const userver::formats::json::Value& tokens) {
     const auto expires = tokens["expires_in"].As<int>();
     const auto access = tokens["access_token"].As<std::string>();
@@ -96,6 +102,7 @@ void Sessions::Tokens(Session& session, const userver::formats::json::Value& tok
     session.Refresh = refresh;
     session.TokenExpires = Clock::now() + std::chrono::seconds{expires};
 }
+
 std::string Sessions::Complete(const std::string& state, const std::string& code) {
     Pending pending;
     {
@@ -107,15 +114,13 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
         pending = found->second;
         pending_.erase(found);  // Authorization code и state используются только один раз.
     }
-    const auto tokens =
-        Exchange("grant_type=authorization_code&client_id=" + UrlEncode(client_) +
-                 "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") +
-                 "&code=" + UrlEncode(code) + "&code_verifier=" + UrlEncode(pending.Verifier));
+    const auto tokens = Exchange("grant_type=authorization_code&client_id=" + UrlEncode(client_) +
+        "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") + "&code=" + UrlEncode(code) +
+        "&code_verifier=" + UrlEncode(pending.Verifier));
     auto session = std::make_shared<Session>();
     try {
-        session->User =
-            auth_.VerifyLogin(tokens["access_token"].As<std::string>(),
-                              tokens["id_token"].As<std::string>(), client_, pending.Nonce);
+        session->User = auth_.VerifyLogin(tokens["access_token"].As<std::string>(),
+            tokens["id_token"].As<std::string>(), client_, pending.Nonce);
     } catch (const platform::auth::Unavailable&) {
         throw;
     } catch (const std::bad_alloc&) {
@@ -134,6 +139,7 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     sessions_.emplace(id, std::move(session));
     return id;
 }
+
 std::shared_ptr<Session> Sessions::Get(const std::string& id) {
     std::lock_guard lock(mutex_);
     const auto found = sessions_.find(id);
@@ -145,12 +151,13 @@ std::shared_ptr<Session> Sessions::Get(const std::string& id) {
     }
     return found->second;
 }
+
 void Sessions::EnsureFresh(Session& session) {
     if (session.Expires <= Clock::now())
         throw userver::server::handlers::Unauthorized{};
     if (session.TokenExpires <= Clock::now() + std::chrono::seconds{30}) {
         const auto tokens = Exchange("grant_type=refresh_token&client_id=" + UrlEncode(client_) +
-                                     "&refresh_token=" + UrlEncode(session.Refresh));
+            "&refresh_token=" + UrlEncode(session.Refresh));
         platform::auth::Principal principal;
         try {
             principal = auth_.VerifyAccess(tokens["access_token"].As<std::string>());
@@ -167,6 +174,7 @@ void Sessions::EnsureFresh(Session& session) {
         session.User = principal;
     }
 }
+
 void Sessions::Logout(const std::string& id) {
     auto session = Get(id);
     {
@@ -175,33 +183,38 @@ void Sessions::Logout(const std::string& id) {
     }
     std::lock_guard lock(session->Mutex);
     try {
-        (void)http_.CreateRequest()
-            .post(revoke_url_, "client_id=" + UrlEncode(client_) + "&token=" +
-                                   UrlEncode(session->Refresh) + "&token_type_hint=refresh_token")
+        const auto form = "client_id=" + UrlEncode(client_) +
+            "&token=" + UrlEncode(session->Refresh) + "&token_type_hint=refresh_token";
+        auto request = http_.CreateRequest();
+        request.post(revoke_url_, form)
             .headers({{"Content-Type", "application/x-www-form-urlencoded"}})
             .timeout(std::chrono::seconds{2})
             .retry(1)
             .follow_redirects(false)
-            .SetLoggedUrl("oidc-revoke")
-            .perform();
+            .SetLoggedUrl("oidc-revoke");
+        (void)request.perform();
     } catch (const std::exception&) { /* Локальная сессия уже уничтожена; токен не логируем. */
     }
 }
-userver::server::http::Cookie Sessions::Cookie(const std::string& name, const std::string& value,
-                                               int seconds) const {
+
+userver::server::http::Cookie Sessions::Cookie(
+    const std::string& name, const std::string& value, int seconds) const {
     userver::server::http::Cookie cookie{CookieName(name), value};
     cookie.SetPath("/").SetHttpOnly().SetSameSite("Lax").SetMaxAge(std::chrono::seconds{seconds});
     if (secure_)
         cookie.SetSecure();
     return cookie;
 }
+
 std::string Sessions::CookieName(const std::string& name) const {
     return (secure_ ? "__Host-" : "") + name;
 }
+
 std::string Sessions::LogoutUrl() const {
     return issuer_ + "/protocol/openid-connect/logout?client_id=" + UrlEncode(client_) +
-           "&post_logout_redirect_uri=" + UrlEncode(Origin + "/");
+        "&post_logout_redirect_uri=" + UrlEncode(Origin + "/");
 }
+
 userver::yaml_config::Schema Sessions::GetStaticConfigSchema() {
     return userver::yaml_config::MergeSchemas<ComponentBase>(R"(
 type: object

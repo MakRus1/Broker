@@ -10,8 +10,8 @@ namespace broker::views::hello_postgres {
 
 class View {
   public:
-    static Response Handle(Request&& request, userver::server::request::RequestContext& context,
-                           Deps deps);
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps deps);
 };
 
 }  // namespace broker::views::hello_postgres

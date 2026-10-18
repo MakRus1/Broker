@@ -8,19 +8,19 @@ namespace admin_bff {
 class Admin final : public userver::server::handlers::HttpHandlerBase {
   public:
     static constexpr std::string_view kName = "admin-transport";
-    Admin(const userver::components::ComponentConfig&,
-          const userver::components::ComponentContext&);
+    Admin(
+        const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     std::string HandleRequestThrow(const userver::server::http::HttpRequest&,
-                                   userver::server::request::RequestContext&) const override;
+        userver::server::request::RequestContext&) const override;
+
     std::string GetUrlForLogging(const userver::server::http::HttpRequest& request,
-                                 userver::server::request::RequestContext&) const override {
+        userver::server::request::RequestContext&) const override {
         return request.GetRequestPath();
     }
 
   private:
     std::string Forward(const std::string& path, const userver::formats::json::Value& body,
-                        const std::string& token,
-                        const userver::server::http::HttpRequest& http) const;
+        const std::string& token, const userver::server::http::HttpRequest& http) const;
     std::string HandleLogin(const userver::server::http::HttpRequest&) const;
     std::string ServeAssets(const userver::server::http::HttpRequest&) const;
     Sessions& sessions_;

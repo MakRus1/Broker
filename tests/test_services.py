@@ -47,6 +47,9 @@ class ServicesTest(unittest.TestCase):
             self.assertTrue(config['handler-ping']['monitor-handler'])
             self.assertEqual('postgres-main' in config, pg)
             self.assertEqual('grpc-server' in config, grpc)
+            self.assertEqual('platform-grpc-readiness' in config, grpc)
+            if grpc:
+                self.assertTrue(config['grpc-server-middlewares-pipeline']['middlewares']['platform-grpc-readiness']['enabled'])
             main = (directory / 'src/main.cpp').read_text()
             self.assertIn(f'.Append<{name}::Ping>()', main)
             self.assertEqual(f'.Append<{name}::HelloGrpc>()' in main, grpc)

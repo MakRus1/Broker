@@ -27,6 +27,7 @@
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
+#include <platform/grpc_readiness.hpp>
 #include <platform/grpc_telemetry.hpp>
 #include <platform/readiness.hpp>
 #include <transport/grpc/hello_grpc.hpp>
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     const auto* trace_tests = std::getenv("BROKER_TRACE_TESTS");
     if (trace_tests && std::string_view{trace_tests} == "1") {
         component_list.Append<broker::TraceProbe>()
+            .Append<broker::ReadinessControl>()
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-probe-factory");
     }
 #endif
@@ -69,7 +71,8 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-broker");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()
-        .Append<platform::GrpcTelemetryFactory>();
+        .Append<platform::GrpcTelemetryFactory>()
+        .Append<platform::GrpcReadinessFactory>();
     // SERVICE_REGISTRATION_END
 
     component_list = broker::openapi::AppendGeneratedHandlers(component_list);

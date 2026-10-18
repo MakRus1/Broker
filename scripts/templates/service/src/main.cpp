@@ -19,6 +19,7 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <platform/grpc_readiness.hpp>
 #include <platform/grpc_telemetry.hpp>
 #include <platform/readiness.hpp>
 #include <transport/grpc/hello_grpc.hpp>
@@ -47,7 +48,8 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-main");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()
-        .Append<platform::GrpcTelemetryFactory>();
+        .Append<platform::GrpcTelemetryFactory>()
+        .Append<platform::GrpcReadinessFactory>();
     // SERVICE_REGISTRATION_END
 
     component_list = broker::openapi::AppendGeneratedHandlers(component_list);

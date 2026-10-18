@@ -35,6 +35,13 @@ def userver_config_trace_probe():
     def patch(config, config_vars):
         components = config['components_manager']['components']
         components['grpc-probe-factory'] = {'load-enabled': '$is-testing'}
+        components['handler-readiness-control'] = {
+            'load-enabled': '$is-testing',
+            'monitor-handler': True,
+            'path': '/internal/readiness-control',
+            'method': 'GET',
+            'task_processor': 'main-task-processor',
+        }
         components['handler-trace-probe'] = {
             'load-enabled': '$is-testing',
             'path': '/internal/trace-probe',

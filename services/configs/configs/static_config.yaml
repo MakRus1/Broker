@@ -47,6 +47,12 @@ components_manager:
             response_data_size_log_limit: 0
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        platform-readiness: {}
+        platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
         postgres-configs:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -75,7 +81,9 @@ components_manager:
             load-enabled: $config-updates-enabled
             config-settings: false
             first-update-fail-ok: true
-            full-update-interval: 1m
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
             update-interval: 1s
         # SERVICE_CONFIG_END
         platform-http-telemetry:

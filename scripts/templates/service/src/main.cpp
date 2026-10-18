@@ -20,6 +20,7 @@
 
 // SERVICE_INCLUDES_BEGIN
 #include <platform/grpc_telemetry.hpp>
+#include <platform/readiness.hpp>
 #include <transport/grpc/hello_grpc.hpp>
 #include <userver/storages/postgres/component.hpp>
 // SERVICE_INCLUDES_END
@@ -42,6 +43,7 @@ int main(int argc, char* argv[]) {
             .Append<userver::otlp::LoggerComponent>();
 
     // SERVICE_REGISTRATION_BEGIN
+    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.Append<userver::components::Postgres>("postgres-main");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()

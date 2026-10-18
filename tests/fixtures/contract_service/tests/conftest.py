@@ -25,3 +25,9 @@ def _client_timeouts(userver_config_http_client):
 def http_dynamic_settings(dynamic_config):
     dynamic_config.set_values({'BROKER_HTTP_CLIENT_CONFIG': {
         '**default**': {'timeout': 100, 'max_retries': 0}}})
+
+
+@pytest.fixture(scope='session')
+async def service_http_ping_url(monitor_baseurl):
+    # Testsuite ожидает живость: готовность может намеренно отсутствовать в тесте.
+    return monitor_baseurl.rstrip('/') + '/ping'

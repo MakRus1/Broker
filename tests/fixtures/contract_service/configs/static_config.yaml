@@ -14,6 +14,10 @@ components_manager:
             middleware-pipeline-builder: platform-http-pipeline
             listener:
                 port: 8084
+            listener-monitor:
+                address: 127.0.0.1
+                port: 8085
+                task_processor: main-task-processor
         logging:
             fs-task-processor: fs-task-processor
             loggers:
@@ -36,9 +40,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-ping:
+            path: /ping
+            method: GET
+            monitor-handler: true
+            task_processor: main-task-processor
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            monitor-handler: true
+            task_processor: main-task-processor
         # SERVICE_CONFIG_BEGIN
         client-broker:
             base-url: $client-broker-base-url
+        platform-readiness: {}
+        platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules:
+            -   name: BROKER_HTTP_CLIENT_CONFIG
+                schema-hash: 0928419b1f0ce594caac412be58f6eefdffeaf2ff79f3911d01333df781eb2e4
+                allow-builtin: false
+                allow-cache: true
+                max-age-seconds: 5
         dynamic-config:
             updates-enabled: $config-updates-enabled
             fs-cache-path: $config-cache-path
@@ -55,7 +80,9 @@ components_manager:
             load-enabled: $config-updates-enabled
             config-settings: false
             first-update-fail-ok: true
-            full-update-interval: 1m
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
             update-interval: 1s
         # SERVICE_CONFIG_END
         # OPENAPI_HANDLERS_BEGIN

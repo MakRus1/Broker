@@ -6,7 +6,7 @@ import yaml
 from model import identifier
 from render import format_cpp
 from clients import client_specs
-from configs import selected
+from configs import selected, readiness_rules
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -25,8 +25,8 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies')
     libraries = spec.get('libraries', ['common'])
     if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) for lib in libraries) or len(set(libraries)) != len(libraries):
         raise ValueError('service.yaml: libraries — список уникальных имен каталогов libs/<name>')
@@ -60,11 +60,12 @@ def prepare(service, loader):
     clients = client_specs(service, loader)
     _, _, config_entries = selected(service, loader)
     config_enabled = bool(config_entries)
+    policies = readiness_rules(service, spec, loader)
     if spec.get('configs') and 'configs' not in libraries:
         raise ValueError('service.yaml: explicit configs require libraries: [common, configs]')
     if config_enabled and 'configs' not in libraries:
         libraries = [*libraries, 'configs']
-    config_includes = '#include <configs/keys.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n#include <userver/dynamic_config/updater/component_list.hpp>\n' if config_enabled else ''
+    config_includes = '#include <platform/configs/components.hpp>\n#include <configs/keys.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n#include <userver/dynamic_config/updater/component_list.hpp>\n' if config_enabled else ''
     client_includes = ''.join(f'#include <clients/{alias}/client.hpp>\n' for alias, _ in clients)
     pg, grpc = enabled['postgresql'], enabled['grpc']
     files = {}
@@ -76,18 +77,18 @@ def prepare(service, loader):
         files[path] = format_cpp(text) if path.suffix in {'.cpp', '.hpp'} else text
     main_path = 'src/main.cpp' if (service / 'src/main.cpp').exists() else 'main.cpp'
     edit(main_path, {
-        'INCLUDES': config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <transport/grpc/hello_grpc.hpp>\n#include <platform/grpc_telemetry.hpp>\n' if grpc else ''),
-        'REGISTRATION': ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<{name}::HelloGrpc>().Append<platform::GrpcTelemetryFactory>();\n' if grpc else ''),
+        'INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <transport/grpc/hello_grpc.hpp>\n#include <platform/grpc_telemetry.hpp>\n' if grpc else ''),
+        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<{name}::HelloGrpc>().Append<platform::GrpcTelemetryFactory>();\n' if grpc else ''),
     })
     edit('src/deps.hpp', {
-        'DEPS_INCLUDES': config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
-        'DEPS_FIELDS': ('    platform::configs::Source configs;\n' if config_enabled else '') + ''.join(f'    clients::{alias}::Client {alias};\n' for alias, _ in clients) + ('    userver::storages::postgres::ClusterPtr pg_cluster;\n' if pg else ''),
-        'DEPS_INIT': ('        .configs = platform::configs::Source{component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},\n' if config_enabled else '') + ''.join(f'        .{alias} = component_context.FindComponent<clients::{alias}::Component>().GetClient(),\n' for alias, _ in clients) + (f'        .pg_cluster = component_context.FindComponent<userver::components::Postgres>("{pg_component}").GetCluster(),\n' if pg else ''),
+        'DEPS_INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
+        'DEPS_FIELDS': '    platform::Readiness* readiness;\n' + ('    platform::configs::Source configs;\n' if config_enabled else '') + ''.join(f'    clients::{alias}::Client {alias};\n' for alias, _ in clients) + ('    userver::storages::postgres::ClusterPtr pg_cluster;\n' if pg else ''),
+        'DEPS_INIT': '        .readiness = &component_context.FindComponent<platform::Readiness>(),\n' + ('        .configs = platform::configs::Source{component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},\n' if config_enabled else '') + ''.join(f'        .{alias} = component_context.FindComponent<clients::{alias}::Component>().GetClient(),\n' for alias, _ in clients) + (f'        .pg_cluster = component_context.FindComponent<userver::components::Postgres>("{pg_component}").GetCluster(),\n' if pg else ''),
     })
     if (service / 'src/bootstrap/ping.cpp').exists():
         edit('src/bootstrap/ping.cpp', {
             'PING_INCLUDES': '#include <userver/storages/postgres/cluster.hpp>\n' if pg else '',
-            'PING_CHECK': '        deps_.pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");\n' if pg else '',
+            'PING_CHECK': '        const auto readiness = deps_.readiness->GetStatus();\n        if (!readiness.Ready) { request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable); return readiness.Reason + "\\n"; }\n' + ('        deps_.pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");\n' if pg else ''),
         })
     cmake = 'foreach(service_library IN ITEMS ' + ' '.join('broker_' + lib for lib in libraries) + ')\n'
     cmake += '    if(NOT TARGET ${service_library})\n        message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")\n    endif()\nendforeach()\n'
@@ -146,6 +147,11 @@ def grpc_service(grpc_channel, service_client):
     tests += f'pytest_plugins = {plugins!r}\n'
     edit('tests/conftest.py', {'TESTS': tests}, '#')
     components = {f'client-{alias}': {'base-url': f'$client-{alias}-base-url'} for alias, _ in clients}
+    components['platform-readiness'] = {}
+    components['platform-http-readiness'] = {}
+    if config_enabled:
+        components['platform-config-delivery'] = {'load-enabled': '$config-updates-enabled'}
+        components['platform-config-readiness'] = {'rules': policies}
     if pg:
         components[pg_component] = {'dbconnection': '$pg-connection', 'dbconnection#env': 'DB_CONNECTION', 'blocking_task_processor': 'fs-task-processor', 'dns_resolver': 'async', 'sync-start': True, 'connlimit_mode': 'manual'}
     if grpc:
@@ -156,7 +162,7 @@ def grpc_service(grpc_channel, service_client):
         existing = yaml.load(static_source, Loader=loader)['components_manager']['components'].get('dynamic-config', {}) or {}
         components['dynamic-config'] = {**existing, 'updates-enabled': '$config-updates-enabled', 'fs-cache-path': '$config-cache-path', 'fs-task-processor': 'fs-task-processor'}
         components['dynamic-config-client'] = {'load-enabled': '$config-updates-enabled', 'config-url': '$config-server-url', 'http-client': 'dynamic-config-http-client', 'service-name': name, 'get-configs-overrides-for-service': False, 'http-timeout': '1s', 'http-retries': 1}
-        components['dynamic-config-client-updater'] = {'load-enabled': '$config-updates-enabled', 'config-settings': False, 'first-update-fail-ok': True, 'full-update-interval': '1m', 'update-interval': '1s'}
+        components['dynamic-config-client-updater'] = {'load-enabled': '$config-updates-enabled', 'config-settings': False, 'first-update-fail-ok': True, 'updates-sink': 'platform-config-delivery', 'update-types': 'only-full', 'deduplicate-update-types': 'none', 'update-interval': '1s'}
         static_source = re.sub(r'(?m)^        dynamic-config:\n(?: {12}.*\n| *\n)*', '', static_source)
     body = yaml.safe_dump(components, sort_keys=False, indent=4) if components else ''
     text = replace_block(static_source, 'CONFIG', body, '#')

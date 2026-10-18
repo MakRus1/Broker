@@ -606,3 +606,19 @@ body:has(dialog[open]) .workspace > .notifications {
   padding: 8px;
   font-size: 12px;
 }
+
+.discard-confirmation {
+  width: min(460px, calc(100vw - 32px));
+  border: 1px solid #d8e1d3;
+  border-radius: 10px;
+  padding: 24px;
+  background: #fff;
+  color: inherit;
+  box-shadow: 0 12px 60px #20332f40;
+}
+.discard-confirmation::backdrop {
+  background: #13251d66;
+}
+.discard-confirmation .actions {
+  margin-bottom: 0;
+}

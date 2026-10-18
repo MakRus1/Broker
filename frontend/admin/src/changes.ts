@@ -52,3 +52,17 @@ export function editorState(text: string, initial: unknown, published: unknown) 
     };
   }
 }
+
+export function hasUnsavedChanges(
+  text: string,
+  initial: unknown,
+  description: string,
+  initialDescription: string,
+) {
+  if (description !== initialDescription) return true;
+  try {
+    return changes(initial, parseValue(text)).length > 0;
+  } catch {
+    return true;
+  }
+}

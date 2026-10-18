@@ -4,12 +4,25 @@ import { CurrentValue } from './CurrentValue';
 import { DraftDetails } from './DraftDetails';
 import { Notifications } from './Notifications';
 import { DraftHistory } from './DraftHistory';
+import { DiscardConfirmation } from './DiscardConfirmation';
 
 export function ConfigDrawer({ workspace }: { workspace: Workspace }) {
-  const { selected, current, draft, drafts, editor, busy, setSelected, setDraft, run, reload } =
-    workspace;
+  const {
+    selected,
+    current,
+    draft,
+    drafts,
+    editor,
+    busy,
+    setSelected,
+    setDraft,
+    run,
+    reload,
+    discardChanges,
+  } = workspace;
   const dialog = useRef<HTMLDialogElement>(null);
   const content = useRef<HTMLDivElement>(null);
+  const pressedOutside = useRef(false);
   const [historyDetail, setHistoryDetail] = useState(false);
   const [tab, setTab] = useState<'value' | 'history'>('value');
   useEffect(() => {
@@ -29,22 +42,42 @@ export function ConfigDrawer({ workspace }: { workspace: Workspace }) {
     content.current?.scrollTo({ top: 0 });
   }, [historyDetail, tab, editor]);
   function close() {
-    if (
-      !busy &&
-      (!editor || window.confirm('Закрыть редактор и потерять несохранённые изменения?'))
-    )
-      setSelected('');
+    if (!busy) discardChanges(() => setSelected(''));
+  }
+  function outsidePanel(event: {
+    currentTarget: HTMLDialogElement;
+    target: EventTarget | null;
+    clientX: number;
+    clientY: number;
+  }) {
+    if (event.target !== event.currentTarget) return false;
+    const rect = event.currentTarget.getBoundingClientRect();
+    return (
+      event.clientX < rect.left ||
+      event.clientX >= rect.right ||
+      event.clientY < rect.top ||
+      event.clientY >= rect.bottom
+    );
   }
   return (
     <dialog
       ref={dialog}
       className="drawer"
       aria-labelledby="config-title"
+      onPointerDown={(event) => {
+        pressedOutside.current = event.button === 0 && outsidePanel(event);
+      }}
+      onClick={(event) => {
+        const shouldClose = pressedOutside.current && outsidePanel(event);
+        pressedOutside.current = false;
+        if (shouldClose) close();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         close();
       }}
     >
+      <DiscardConfirmation workspace={workspace} />
       <Notifications workspace={workspace} />
       <div className="drawer-heading">
         <div>

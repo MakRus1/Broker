@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { editorState } from '../changes';
+import { editorState, hasUnsavedChanges } from '../changes';
 import {
   ApiError,
   canApprove,
@@ -28,6 +28,7 @@ export function useWorkspace() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [discardAction, setDiscardAction] = useState<(() => void) | null>(null);
   const write = session?.permissions.includes('configs.write');
   const owner = draft?.author === session?.actor && draft?.status === 'draft';
 
@@ -142,6 +143,20 @@ export function useWorkspace() {
   const initial = owner && draft ? draft.value : current?.value;
   const editing = editorState(text, initial, current?.value);
   const saveDisabled = busy || !description.trim() || !editing.changed;
+  const unsaved =
+    editor &&
+    hasUnsavedChanges(text, initial, description, owner && draft ? draft.description : '');
+  function discardChanges(action: () => void) {
+    if (unsaved) setDiscardAction(() => action);
+    else action();
+  }
+  function keepEditing() {
+    setDiscardAction(null);
+  }
+  function confirmDiscard() {
+    setDiscardAction(null);
+    discardAction?.();
+  }
   async function save() {
     if (!session || !current) return;
     if (editing.error) throw new Error(editing.error);
@@ -202,6 +217,10 @@ export function useWorkspace() {
   }
   return {
     editing,
+    confirmDiscard,
+    discardChanges,
+    discardPending: discardAction !== null,
+    keepEditing,
     saveDisabled,
     restore,
     setError,

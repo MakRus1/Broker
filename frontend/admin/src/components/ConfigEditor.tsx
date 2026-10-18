@@ -16,6 +16,7 @@ export function ConfigEditor({ workspace }: { workspace: Workspace }) {
     run,
     save,
     setEditor,
+    discardChanges,
     editing,
     saveDisabled,
     current,
@@ -59,7 +60,13 @@ export function ConfigEditor({ workspace }: { workspace: Workspace }) {
         <button type="submit" className="primary" disabled={saveDisabled}>
           {busy ? 'Сохраняем…' : 'Готово'}
         </button>
-        <button type="button" disabled={busy} onClick={() => setEditor(false)}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            discardChanges(() => setEditor(false));
+          }}
+        >
           Отменить редактирование
         </button>
       </div>

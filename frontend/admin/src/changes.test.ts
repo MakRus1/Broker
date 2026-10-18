@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changes, editorState } from './changes';
+import { changes, editorState, hasUnsavedChanges } from './changes';
 
 describe('сравнение значений', () => {
   it('не считает порядок ключей и пробелы изменением', () => {
@@ -27,5 +27,21 @@ describe('сравнение значений', () => {
   });
   it.each(['{', '[]', 'null', '3'])('объясняет невалидное значение %s', (text) => {
     expect(editorState(text, {}, {}).error).not.toBe('');
+  });
+});
+
+describe('защита несохранённых изменений', () => {
+  it('не предупреждает из-за форматирования или порядка ключей', () => {
+    expect(hasUnsavedChanges('{ "b": 2, "a": 1 }', { a: 1, b: 2 }, '', '')).toBe(false);
+  });
+  it.each(['{"a": 2}', '{', 'null'])('защищает изменённое или невалидное значение %s', (text) => {
+    expect(hasUnsavedChanges(text, { a: 1 }, '', '')).toBe(true);
+  });
+  it('защищает отдельно изменённую причину', () => {
+    expect(hasUnsavedChanges('{"a": 1}', { a: 1 }, 'Новая причина', 'Старая причина')).toBe(true);
+    expect(hasUnsavedChanges('{"a": 1}', { a: 1 }, 'Старая причина', 'Старая причина')).toBe(false);
+  });
+  it('защищает возврат редактируемого драфта к опубликованному значению', () => {
+    expect(hasUnsavedChanges('{"a": 1}', { a: 2 }, '', '')).toBe(true);
   });
 });

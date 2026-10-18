@@ -1,0 +1,166 @@
+{
+  "uid": "broker-local",
+  "title": "Broker: локальный стенд",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Готовность сервисов",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "broker_service_ready",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP запросов / с",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(service) (rate(http_handler_rps[1m]))",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP 5xx / с",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(service) (rate(http_handler_reply_codes{http_code=~\"5..\"}[1m]))",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HTTP p95, мс",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by(service,http_path) (http_handler_timings{percentile=\"p95\"})",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "PostgreSQL: соединения",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(service) (postgresql_connections_active)",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "PostgreSQL: занятые соединения",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(service) (postgresql_connections_busy)",
+          "legendFormat": "{{service}} {{http_path}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Логи сервисов (trace_id → Tempo)",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=~\"broker|configs|diagnostics\"}"
+        }
+      ]
+    }
+  ]
+}

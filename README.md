@@ -23,6 +23,13 @@ CI и Dev Container используют опубликованный образ
 `DOCKER_IMAGE=broker-dev:userver-3.2`. Открытие в VS Code: **Dev Containers: Reopen in Container**.
 Внутри контейнера команды выполняются без префикса `docker-`.
 
+## Полный локальный стенд
+
+`make local-up` запускает приложения, отдельные PostgreSQL, миграции, начальные конфиги,
+Collector, Prometheus, Grafana, Loki и Tempo без Kafka. `make local-check` проверяет
+сквозную трассу, логи, метрики и обновление конфига без перезапуска.
+[Команды, адреса и хранение данных](docs/local-environment.md).
+
 ## Нативная сборка macOS
 
 Command Line Tools предоставляют Clang и SDK; IDE Xcode устанавливать не требуется.

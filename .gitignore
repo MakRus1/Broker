@@ -21,3 +21,5 @@ CMakeUserPresets.json
 
 .service-create.lock
 work-local.yaml
+
+.local/

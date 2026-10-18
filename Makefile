@@ -74,3 +74,7 @@ testsuite-clean:
 	@echo 'Testsuite очищает свои процессы при завершении; локальные БД не затрагиваются.'
 dist-clean:
 	rm -rf build-debug build-release build-sanitize
+
+.PHONY: local-up local-down local-status local-logs local-check local-migrate
+local-up local-down local-status local-logs local-check local-migrate:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/local-env.py $(patsubst local-%,%,$@)

@@ -25,8 +25,10 @@
 
 // SERVICE_INCLUDES_BEGIN
 #include <configs/keys.hpp>
+#include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
 #include <platform/grpc_telemetry.hpp>
+#include <platform/readiness.hpp>
 #include <transport/grpc/hello_grpc.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
@@ -60,7 +62,10 @@ int main(int argc, char* argv[]) {
 #endif
 
     // SERVICE_REGISTRATION_BEGIN
+    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
+    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
+    component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<userver::components::Postgres>("postgres-broker");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()

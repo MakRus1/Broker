@@ -1,13 +1,17 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <optional>
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <userver/utils/datetime.hpp>
 #include <utility>
 #include <vector>
 
@@ -130,11 +134,46 @@ Conditional<Value, Context> ParseConditional(const Json& json, Parser parser, Va
     return result;
 }
 
+enum class Origin { Builtin, Cache, Remote, Incompatible };
+
+inline const std::string& ProcessToken() {
+    static const auto token =
+        std::to_string(std::random_device{}()) + ":" +
+        std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+    return token;
+}
+
+inline Json ParseDeliveryMetadata(const Json& json) {
+    ObjectKeys(json, {"process", "received_at_ms", "schemas"});
+    if (json.GetSize() == 0)
+        return json;
+    if (json["process"].As<std::string>().empty() || !json["schemas"].IsObject())
+        throw std::invalid_argument("Invalid config delivery metadata");
+    const auto time = json["received_at_ms"].As<std::int64_t>();
+    if (time < 0 || time > 9223372036854LL)
+        throw std::invalid_argument("Invalid config delivery timestamp");
+    for (auto it = json["schemas"].begin(); it != json["schemas"].end(); ++it)
+        if (it->As<std::string>().size() != 64)
+            throw std::invalid_argument("Invalid config schema hash");
+    return json;
+}
+
+inline const userver::dynamic_config::Key<Json> kDeliveryMetadata{
+    "BROKER_CONFIG_DELIVERY_META", ParseDeliveryMetadata,
+    userver::dynamic_config::DefaultAsJsonString{"{}"}};
+
+struct Metadata {
+    Origin Source;
+    std::optional<std::chrono::system_clock::time_point> LastSuccessfulUpdate;
+};
+
 template <typename Value> struct PlainKey {
     userver::dynamic_config::Key<Value> Native;
+    std::string_view SchemaHash;
 };
 template <typename Value, typename Context> struct ConditionalKey {
     userver::dynamic_config::Key<Conditional<Value, Context>> Native;
+    std::string_view SchemaHash;
 };
 
 class Snapshot {
@@ -147,6 +186,22 @@ class Snapshot {
     template <typename Value, typename Context>
     Value Get(const ConditionalKey<Value, Context>& key, const Context& context) const {
         return snapshot_[key.Native].Resolve(context);
+    }
+
+    Metadata GetMetadata(std::string_view name, std::string_view schema_hash) const {
+        const auto& metadata = snapshot_[kDeliveryMetadata];
+        if (!metadata.HasMember("schemas") || !metadata["schemas"].HasMember(name))
+            return {Origin::Builtin, {}};
+        const auto time = std::chrono::system_clock::time_point{
+            std::chrono::milliseconds{metadata["received_at_ms"].As<std::int64_t>()}};
+        if (metadata["schemas"][name].As<std::string>() != schema_hash)
+            return {Origin::Incompatible, time};
+        return {metadata["process"].As<std::string>() == ProcessToken() ? Origin::Remote
+                                                                        : Origin::Cache,
+                time};
+    }
+    template <typename Key> Metadata GetMetadata(const Key& key) const {
+        return GetMetadata(key.Native.GetName(), key.SchemaHash);
     }
 
   private:

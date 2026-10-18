@@ -80,6 +80,24 @@ class ConfigSchemasTest(unittest.TestCase):
             with self.subTest(references=references), self.assertRaises(ValueError):
                 configs.selected(service, UniqueLoader)
 
+    def test_critical_policies_are_explicit_and_validated(self):
+        service = self.root / 'services/broker'
+        manifest = yaml.safe_load((service / 'service.yaml').read_text())
+        valid = {'max_age_seconds': 60, 'allow_cache': True, 'allow_builtin': False}
+        manifest['critical_dependencies'] = {'configs': {'SHIPMENT_TERMS_CONFIG': valid}}
+        rules = configs.readiness_rules(service, manifest, UniqueLoader)
+        self.assertEqual(rules[0]['max-age-seconds'], 60)
+        self.assertFalse(rules[0]['allow-builtin'])
+        self.assertEqual(len(rules[0]['schema-hash']), 64)
+        for name, policy in [('UNKNOWN', valid), ('SHIPMENT_TERMS_CONFIG', {}),
+                             ('SHIPMENT_TERMS_CONFIG', {'max_age_seconds': True}),
+                             ('SHIPMENT_TERMS_CONFIG', {'max_age_seconds': 0}),
+                             ('SHIPMENT_TERMS_CONFIG', {'max_age_seconds': 60, 'allow_cache': 'yes'}),
+                             ('SHIPMENT_TERMS_CONFIG', {'max_age_seconds': 60, 'typo': False})]:
+            manifest['critical_dependencies'] = {'configs': {name: policy}}
+            with self.subTest(name=name, policy=policy), self.assertRaises(ValueError):
+                configs.readiness_rules(service, manifest, UniqueLoader)
+
     def test_migration_names_and_duplicate_versions(self):
         spec = importlib.util.spec_from_file_location('migration_check', ROOT / 'scripts/check-migrations.py')
         module = importlib.util.module_from_spec(spec);spec.loader.exec_module(module)

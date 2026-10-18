@@ -43,4 +43,31 @@ class ClientProbe final : public userver::server::handlers::HttpHandlerBase {
     Deps deps_;
 };
 
+// Только тестовый сервис: служебные ручки работают и при закрытом gate.
+class ReadinessProbe final : public userver::server::handlers::HttpHandlerBase {
+  public:
+    static constexpr std::string_view kName = "handler-ping";
+    ReadinessProbe(const userver::components::ComponentConfig& config,
+                   const userver::components::ComponentContext& context)
+        : HttpHandlerBase(config, context),
+          readiness_(context.FindComponent<platform::Readiness>()), state_(context) {}
+    std::string HandleRequestThrow(const userver::server::http::HttpRequest& request,
+                                   userver::server::request::RequestContext&) const override {
+        if (HandlerName() == "handler-ping") {
+            if (state_.GetServiceLifetimeStage() !=
+                userver::components::ServiceLifetimeStage::kRunning)
+                request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
+            return "alive\n";
+        }
+        const auto status = readiness_.GetStatus();
+        if (!status.Ready)
+            request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
+        return status.Ready ? "ready\n" : status.Reason + "\n";
+    }
+
+  private:
+    const platform::Readiness& readiness_;
+    userver::components::State state_;
+};
+
 }  // namespace contract_service

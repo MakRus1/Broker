@@ -4,3 +4,9 @@ clients:
   broker:
     service: broker
     transport: http
+critical_dependencies:
+  configs:
+    BROKER_HTTP_CLIENT_CONFIG:
+      allow_builtin: false
+      allow_cache: true
+      max_age_seconds: 5

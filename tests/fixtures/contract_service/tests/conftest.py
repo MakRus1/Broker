@@ -21,7 +21,14 @@ def _client_timeouts(userver_config_http_client):
     return patch
 
 
-@pytest.fixture(autouse=True)
-def http_dynamic_settings(dynamic_config):
-    dynamic_config.set_values({'BROKER_HTTP_CLIENT_CONFIG': {
-        '**default**': {'timeout': 100, 'max_retries': 0}}})
+@pytest.fixture(scope='session')
+def config_service_defaults(config_service_defaults):
+    # Общие значения задаются до штатных маркеров config, а не поверх них.
+    return {**config_service_defaults, 'BROKER_HTTP_CLIENT_CONFIG': {
+        '**default**': {'timeout': 100, 'max_retries': 0}}}
+
+
+@pytest.fixture(scope='session')
+async def service_http_ping_url(monitor_baseurl):
+    # Testsuite ожидает живость: готовность может намеренно отсутствовать в тесте.
+    return monitor_baseurl.rstrip('/') + '/ping'

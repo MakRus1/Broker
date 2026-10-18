@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <platform/readiness.hpp>
 #include <stdexcept>
 #include <string>
 
@@ -82,7 +83,10 @@ properties:
 class HttpTelemetryPipeline final : public userver::server::middlewares::PipelineBuilder {
   public:
     static constexpr std::string_view kName = "platform-http-pipeline";
-    using PipelineBuilder::PipelineBuilder;
+    HttpTelemetryPipeline(const userver::components::ComponentConfig& config,
+                          const userver::components::ComponentContext& context)
+        : PipelineBuilder(config, context),
+          readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr) {}
 
     userver::server::middlewares::MiddlewaresList
     BuildPipeline(userver::server::middlewares::MiddlewaresList pipeline) const override {
@@ -92,9 +96,16 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
         // Контекст уже создан, а аутентификация и обработчик еще не запущены.
         if (tracing == pipeline.end())
             throw std::logic_error("HTTP tracing middleware is required");
-        pipeline.insert(std::next(tracing), std::string(HttpTelemetryFactory::kName));
+        const auto position = std::distance(pipeline.begin(), tracing) + 1;
+        pipeline.insert(pipeline.begin() + position, std::string(HttpTelemetryFactory::kName));
+        if (readiness_enabled_)
+            pipeline.insert(pipeline.begin() + position + 1,
+                            std::string(HttpReadinessFactory::kName));
         return pipeline;
     }
+
+  private:
+    const bool readiness_enabled_;
 };
 
 }  // namespace platform

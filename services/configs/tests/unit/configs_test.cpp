@@ -1,4 +1,5 @@
 #include <configs/keys.hpp>
+#include <platform/configs/components.hpp>
 #include <userver/dynamic_config/storage_mock.hpp>
 #include <userver/utest/utest.hpp>
 
@@ -69,4 +70,44 @@ UTEST(DynamicConfigs, IntegerComparisonKeepsPrecision) {
     EXPECT_TRUE(platform::configs::Match(predicate, context));
     EXPECT_TRUE(platform::configs::Match({"absent", "exists", JsonValue("false")}, context));
     EXPECT_FALSE(platform::configs::Match({"absent", "eq", JsonValue("false")}, context));
+}
+
+UTEST(DynamicConfigs, CriticalPolicySourcesAndFreshness) {
+    using namespace platform::configs;
+    const auto now = std::chrono::system_clock::time_point{std::chrono::seconds{1000}};
+    const Policy strict{false, true, std::chrono::seconds{30}};
+    EXPECT_FALSE(strict.Evaluate({Origin::Builtin, {}}, now).Ready);
+    EXPECT_TRUE(
+        (Policy{true, false, std::chrono::seconds{30}}).Evaluate({Origin::Builtin, {}}, now).Ready);
+    for (const auto origin : {Origin::Remote, Origin::Cache}) {
+        EXPECT_TRUE(strict.Evaluate({origin, now}, now).Ready);
+        EXPECT_FALSE(strict.Evaluate({origin, now - std::chrono::seconds{31}}, now).Ready);
+        EXPECT_FALSE(strict.Evaluate({origin, now + std::chrono::seconds{1}}, now).Ready);
+    }
+    EXPECT_FALSE(
+        (Policy{false, false, std::chrono::seconds{30}}).Evaluate({Origin::Cache, now}, now).Ready);
+    EXPECT_FALSE(strict.Evaluate({Origin::Incompatible, now}, now).Ready);
+}
+
+UTEST(DynamicConfigs, MetadataIsPartOfImmutableSnapshot) {
+    using namespace platform::configs;
+    userver::formats::json::ValueBuilder metadata;
+    metadata["process"] = ProcessToken();
+    metadata["received_at_ms"] = std::int64_t{1000};
+    metadata["schemas"]["SHIPMENT_TERMS_CONFIG"] =
+        std::string(configs::SHIPMENT_TERMS_CONFIG.SchemaHash);
+    userver::dynamic_config::StorageMock storage{{kDeliveryMetadata, metadata.ExtractValue()}};
+    const Source source{storage.GetSource()};
+    const auto old = source.GetSnapshot();
+    EXPECT_EQ(old.GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source, Origin::Remote);
+    const auto native = storage.GetSource().GetSnapshot();
+    auto changed = userver::formats::json::ValueBuilder{native[kDeliveryMetadata]};
+    changed["process"] = "previous-process";
+    storage.Extend({{kDeliveryMetadata, changed.ExtractValue()}});
+    EXPECT_EQ(source.GetSnapshot().GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source,
+              Origin::Cache);
+    EXPECT_EQ(old.GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source, Origin::Remote);
+    EXPECT_EQ(source.GetSnapshot().GetMetadata("SHIPMENT_TERMS_CONFIG", "changed-schema").Source,
+              Origin::Incompatible);
+    EXPECT_EQ(source.GetSnapshot().GetMetadata("MISSING", "").Source, Origin::Builtin);
 }

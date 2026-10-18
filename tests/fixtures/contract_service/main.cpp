@@ -10,7 +10,9 @@
 // SERVICE_INCLUDES_BEGIN
 #include <clients/broker/client.hpp>
 #include <configs/keys.hpp>
+#include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
+#include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 // SERVICE_INCLUDES_END
@@ -23,8 +25,13 @@ int main(int argc, char* argv[]) {
                               .Append<userver::components::TestsuiteSupport>()
                               .Append<userver::server::handlers::TestsControl>();
     component_list.Append<contract_service::ClientProbe>();
+    component_list.Append<contract_service::ReadinessProbe>();
+    component_list.Append<contract_service::ReadinessProbe>("handler-ping-ready");
     // SERVICE_REGISTRATION_BEGIN
+    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
+    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
+    component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<contract_service::clients::broker::Component>();
     // SERVICE_REGISTRATION_END
     component_list = contract_service::openapi::AppendGeneratedHandlers(component_list);

@@ -21,6 +21,11 @@ std::string PingReady::HandleRequestThrow(const userver::server::http::HttpReque
     }
     try {
         // SERVICE_PING_CHECK_BEGIN
+        const auto readiness = deps_.readiness->GetStatus();
+        if (!readiness.Ready) {
+            request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
+            return readiness.Reason + "\n";
+        }
         deps_.pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster,
                                   "SELECT 1");
         // SERVICE_PING_CHECK_END

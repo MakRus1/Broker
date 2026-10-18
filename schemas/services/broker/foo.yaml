@@ -2,16 +2,15 @@ openapi: 3.0.3
 info:
   title: broker API
   version: '1.0'
-
 paths:
   /foo/bar:
     get:
       parameters:
-        - name: name
-          in: query
-          required: true
-          schema:
-            type: string
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: OK
@@ -24,15 +23,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error' 
-
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     FooBarResponse:
       type: object
       additionalProperties: false
       required:
-        - greeting
+      - greeting
       properties:
         greeting:
           type: string
@@ -40,7 +38,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        - message
+      - message
       properties:
         message:
           type: string

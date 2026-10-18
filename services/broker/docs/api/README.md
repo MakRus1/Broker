@@ -1,6 +1,8 @@
 # HTTP API и кодогенерация
 
-Публичные контракты OpenAPI 3.0.3 находятся в `schemas/services/<service>`
+Серверные контракты OpenAPI 3.0.3 находятся в `services/<service>/docs/api`.
+Клиентские копии экспортируются в `schemas/services/<service>` командой
+`make export-client-specs`; правила URL заданы в `client-api.yaml`
 в корне репозитория. В этом каталоге остаются внутренние API и codegen.lock.
 Сервер использует оба набора; HTTP-клиенты получают весь публичный контракт.
 Из каталога сервиса выполните `make gen`; из корня — `make gen SERVICE=broker`.

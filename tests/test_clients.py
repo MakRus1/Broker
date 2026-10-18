@@ -67,6 +67,7 @@ class ClientTest(unittest.TestCase):
                 return {'openapi': '3.0.3', 'info': {'title': 'Тест', 'version': '1'},
                         'paths': {path: {'get': {'responses': {'204': {'description': 'Нет тела'}}}}}}
             (public / 'openapi.yaml').write_text(yaml.safe_dump(spec('/external', 'Public')))
+            (service / 'docs/api/openapi.yaml').write_text(yaml.safe_dump(spec('/external', 'Public')))
             (service / 'docs/api/private.yaml').write_text(yaml.safe_dump(spec('/internal', 'Private')))
             self.assertEqual({op.name for op in load(service)}, {'External', 'Internal'})
             self.assertEqual({op.name for op in load(service, public_only=True)}, {'External'})

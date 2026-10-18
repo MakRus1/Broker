@@ -80,6 +80,8 @@ def validate_schema(schema):
 
 def validate_value(value, schema):
     kind = schema['type']
+    if kind == 'object' and not isinstance(value, dict):
+        raise ValueError('Expected object value')
     if kind == 'string':
         if not isinstance(value, str):
             raise ValueError('Expected string value')

@@ -17,10 +17,12 @@ help:
 	@echo 'make doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-pull | docker-image | docker-test-debug | lock-images'
 
 gen:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py --service-dir "services/$(SERVICE)"
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)"
 check-gen:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)" --check
 check-gen-all:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py --check
 	@set -e; for svc in services/*; do $(MAKE) check-gen SERVICE=$$(basename "$$svc"); done
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-migrations.py && "$$PYTHON" scripts/check-config.py && "$$PYTHON" scripts/openapi_gen/generate.py --service-dir tests/fixtures/contract_service --check
 
@@ -78,3 +80,7 @@ dist-clean:
 .PHONY: local-up local-down local-status local-logs local-check local-migrate
 local-up local-down local-status local-logs local-check local-migrate:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/local-env.py $(patsubst local-%,%,$@)
+
+.PHONY: export-client-specs check-client-specs
+export-client-specs check-client-specs:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py $(if $(filter command line,$(origin SERVICE)),--service-dir "services/$(SERVICE)",) $(if $(filter check-client-specs,$@),--check,)

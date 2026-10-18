@@ -1,0 +1,135 @@
+openapi: 3.0.3
+info:
+  title: Получить драфт
+  version: '1'
+paths:
+  /admin/configs/drafts/get:
+    post:
+      summary: Получить драфт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - id
+              properties:
+                id:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - id
+                - config_name
+                - author
+                - description
+                - version
+                - status
+                - base_version
+                - base_value
+                - value
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                  config_name:
+                    type: string
+                  author:
+                    type: string
+                  description:
+                    type: string
+                  version:
+                    type: integer
+                    minimum: 1
+                  status:
+                    type: string
+                    enum:
+                    - draft
+                    - published
+                    - cancelled
+                  base_version:
+                    type: integer
+                    minimum: 0
+                  base_value:
+                    type: object
+                    additionalProperties: true
+                  value:
+                    type: object
+                    additionalProperties: true
+                  approved_by:
+                    type: string
+                  source_revision:
+                    type: integer
+                    minimum: 0
+                  published_revision:
+                    type: integer
+                    minimum: 0
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '403':
+          description: Операция запрещена
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string

@@ -1,21 +1,19 @@
 #include <components/config_store.hpp>
+#include <iomanip>
+#include <sstream>
 
 #include <configs/keys.hpp>
 #include <configs/sql_queries.hpp>
-#include <deps.hpp>
-#include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
-namespace configs {
-namespace pg = userver::storages::postgres;
-
 namespace {
-Revision WithDefaults(const pg::ResultSet& rows) {
-    auto defaults = Defaults();
+namespace pg = userver::storages::postgres;
+configs::Revision WithDefaults(const pg::ResultSet& rows) {
+    auto defaults = configs::Defaults();
     if (rows.IsEmpty())
         return {0, defaults};
-    auto revision = rows.AsSingleRow<Revision>(pg::kRowTag);
+    auto revision = rows.AsSingleRow<configs::Revision>(pg::kRowTag);
     userver::formats::json::ValueBuilder merged{defaults};
     for (auto it = revision.Values.begin(); it != revision.Values.end(); ++it)
         merged[it.GetName()] = *it;
@@ -24,58 +22,50 @@ Revision WithDefaults(const pg::ResultSet& rows) {
 }
 }  // namespace
 
-ConfigStore::ConfigStore(const userver::components::ComponentConfig& config,
-                         const userver::components::ComponentContext& context)
-    : ComponentBase(config, context), cluster_(ResolveDeps(context).pg_cluster) {}
+namespace configs {
 
 Revision ConfigStore::Current() const {
     return WithDefaults(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision));
 }
 
-Revision ConfigStore::Publish(std::int64_t expected, const platform::configs::Json& patch,
-                              std::optional<std::int64_t> rollback) const {
-    if (expected < 0)
-        throw std::invalid_argument("Invalid expected revision");
-    Validate(patch);
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    // Единый lock защищает проверку ревизии и публикацию от гонок между экземплярами сервиса.
-    transaction.Execute(sql::kLockRevision);
-    const auto current = WithDefaults(transaction.Execute(sql::kLastRevision));
-    if (current.Id != expected)
-        throw RevisionConflict("Config revision changed");
-    userver::formats::json::ValueBuilder merged{current.Values};
-    if (rollback) {
-        const auto rows = transaction.Execute(sql::kFindRevision, *rollback);
-        if (rows.IsEmpty())
-            throw RevisionNotFound("Config revision not found");
-        merged = userver::formats::json::ValueBuilder{WithDefaults(rows).Values};
+Revision ConfigStore::Current(pg::Transaction& transaction) const {
+    return WithDefaults(transaction.Execute(sql::kLastRevision));
+}
+
+ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {
+    const auto current = Current();
+    userver::formats::json::ValueBuilder values{userver::formats::json::Type::kObject};
+    if (ids) {
+        for (const auto& id : *ids)
+            if (current.Values.HasMember(id))
+                values[id] = current.Values[id];
     } else {
-        for (auto it = patch.begin(); it != patch.end(); ++it)
-            merged[it.GetName()] = *it;
+        values = userver::formats::json::ValueBuilder{current.Values};
     }
-    const auto values = merged.ExtractValue();
-    // Откат тоже проверяется по текущим схемам: история не обходит валидацию.
+    std::ostringstream version;
+    version << std::setw(20) << std::setfill('0') << current.Id;
+    return {values.ExtractValue(), current.Id, version.str()};
+}
+
+Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision& current,
+                                    const platform::configs::Json& values) const {
+    // Откат и подтверждение тоже проверяются по текущим схемам.
     Validate(values);
     const auto revision =
         transaction.Execute(sql::kInsertRevision, values).AsSingleRow<std::int64_t>();
-    transaction.Commit();
+    for (auto it = values.begin(); it != values.end(); ++it) {
+        if (!current.Values.HasMember(it.GetName()) || current.Values[it.GetName()] != *it)
+            transaction.Execute(sql::kSetConfigVersion, it.GetName(), revision);
+    }
     return {revision, values};
 }
 
-platform::configs::Json ConfigStore::History() const {
-    struct Record {
-        std::int64_t Id;
-        std::string Created;
-    };
+std::vector<RevisionInfo> ConfigStore::History() const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistory);
-    userver::formats::json::ValueBuilder result{userver::formats::json::Type::kArray};
-    for (const auto& row : rows.AsSetOf<Record>(pg::kRowTag)) {
-        userver::formats::json::ValueBuilder item;
-        item["revision"] = row.Id;
-        item["created_at"] = row.Created;
-        result.PushBack(item.ExtractValue());
-    }
-    return result.ExtractValue();
+    std::vector<RevisionInfo> result;
+    for (const auto& row : rows.AsSetOf<RevisionInfo>(pg::kRowTag))
+        result.push_back(row);
+    return result;
 }
 
 }  // namespace configs

@@ -37,7 +37,7 @@ class Type:
             return 'std::int32_t'
         if self.kind == 'number' and self.schema.get('format') == 'float':
             return 'float'
-        return {'string': 'std::string', 'integer': 'std::int64_t', 'number': 'double', 'boolean': 'bool', 'array': f'std::vector<{self.item.cpp}>' if self.item else ''}[self.kind]
+        return {'string': 'std::string', 'integer': 'std::int64_t', 'number': 'double', 'boolean': 'bool', 'object': 'userver::formats::json::Value', 'array': f'std::vector<{self.item.cpp}>' if self.item else ''}[self.kind]
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,7 @@ class Body:
     fields: tuple[Field, ...]
     required: bool = True
     strict: bool = False
+    validate_content_type: bool = True
 
 
 @dataclass(frozen=True)
@@ -132,8 +133,13 @@ def resolve(schema, schemas):
 
 
 def parse_type(schema, prefix='Value'):
-    keys(schema, SCHEMA_KEYS, 'field schema')
     kind = schema.get('type')
+    if kind == 'object':
+        keys(schema, {'type', 'additionalProperties', 'description', 'title'}, 'free-form object')
+        if schema.get('additionalProperties') is not True:
+            raise ValueError('Object fields require explicit additionalProperties: true; typed nested objects are unsupported')
+        return Type('object', schema=schema)
+    keys(schema, SCHEMA_KEYS, 'field schema')
     if kind not in {'string', 'integer', 'number', 'boolean', 'array'}:
         raise ValueError(f'Unsupported field type: {kind}')
     item = None
@@ -141,6 +147,8 @@ def parse_type(schema, prefix='Value'):
         item = parse_type(schema.get('items', {}), prefix + '_item')
         if item.kind == 'array':
             raise ValueError('Nested arrays are unsupported')
+        if item.kind == 'object' and ('default' in schema or schema.get('uniqueItems')):
+            raise ValueError('default and uniqueItems for arrays of objects are unsupported')
     elif 'items' in schema:
         raise ValueError('items is only valid for arrays')
     validate_schema(schema)
@@ -209,8 +217,8 @@ def parse_spec(spec):
                     if loc == 'path' and (not p.get('required') or name not in placeholders):
                         raise ValueError('Path parameters must be required and present in URL')
                     typ = parse_type(p['schema'], name)
-                    if typ.kind == 'array':
-                        raise ValueError('Array parameters are unsupported; arrays are supported in JSON bodies')
+                    if typ.kind in {'array', 'object'}:
+                        raise ValueError('Array/object parameters are unsupported; arrays are supported in JSON bodies')
                     if (loc, name) in seen:
                         raise ValueError('Duplicate parameter')
                     seen.add((loc, name))
@@ -222,13 +230,16 @@ def parse_spec(spec):
             body = None
             if 'requestBody' in op:
                 rb = op['requestBody']
-                keys(rb, {'required', 'content', 'description'}, 'requestBody')
+                if not isinstance(rb.get('x-validate-content-type', True), bool):
+                    raise ValueError('requestBody.x-validate-content-type must be boolean')
+                keys(rb, {'required', 'content', 'description', 'x-validate-content-type'}, 'requestBody')
                 if not isinstance(rb.get('required', False), bool):
                     raise ValueError('requestBody.required must be boolean')
                 if set(rb['content']) != {'application/json'}:
                     raise ValueError('Request body supports only application/json')
                 keys(rb['content']['application/json'], {'schema'}, 'request media')
                 body = parse_body(rb['content']['application/json']['schema'], schemas, rb.get('required', False), 'RequestBody')
+                body = replace(body, validate_content_type=rb.get('x-validate-content-type', True))
             responses = []
             for raw, response in op.get('responses', {}).items():
                 if not re.fullmatch(r'[2-5][0-9]{2}', str(raw)):

@@ -19,4 +19,4 @@ operations.extend([
     replace(get, path='/errors-only', rel='errors_only', responses=(conflict,)),
     replace(get, path='/empty-error', rel='empty_error', responses=(replace(get.responses[0], status=404),)),
 ])
-out.write_text(render_client('client_test', 'contract', operations))
+out.write_text(render_client('client_test', 'contract', operations) + '\n' + render_client('client_test', 'configs_api', load(root / 'services/configs', public_only=True)))

@@ -12,7 +12,8 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [revision]
+                required:
+                - revision
                 properties:
                   revision:
                     type: integer

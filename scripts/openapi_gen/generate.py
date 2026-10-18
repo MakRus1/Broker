@@ -39,7 +39,7 @@ def public_schema_dir(service):
 
 
 def specification_files(service, additions=None, public_only=False):
-    roots = [public_schema_dir(service)] + ([] if public_only else [service / 'docs/api'])
+    roots = [public_schema_dir(service)] if public_only else [service / 'docs/api']
     files = {p: p.read_text() for base in roots for p in base.rglob('*')
              if p.suffix in {'.yaml', '.yml', '.json'}}
     files.update({p: text for p, text in (additions or {}).items()

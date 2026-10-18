@@ -81,6 +81,8 @@ def validator(typ, name):
     raw = 'EnumValue(value)' if typ.enum_name else 'value'
     schema = typ.schema
     checks = []
+    if typ.kind == 'object':
+        checks.append('if (!value.IsObject()) throw std::invalid_argument("object");')
     if typ.enum_name:
         allowed = " && ".join(f"value != {literal(typ, value)}" for value in typ.schema["enum"])
         checks.append(f'if ({allowed}) throw std::invalid_argument("enum");')

@@ -1,0 +1,117 @@
+openapi: 3.0.3
+info:
+  title: Получить опубликованные значения конфигов
+  version: '1'
+paths:
+  /configs/values:
+    post:
+      summary: Получить опубликованные значения конфигов
+      requestBody:
+        x-validate-content-type: false
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: []
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                updated_since:
+                  type: string
+                service:
+                  type: string
+                stage_name:
+                  type: string
+                service_overrides:
+                  type: array
+                  items:
+                    type: string
+                is_prestable:
+                  type: boolean
+                circuit:
+                  type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - configs
+                - revision
+                - updated_at
+                properties:
+                  configs:
+                    type: object
+                    additionalProperties: true
+                  revision:
+                    type: integer
+                    minimum: 0
+                  updated_at:
+                    type: string
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '403':
+          description: Операция запрещена
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string

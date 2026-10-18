@@ -22,9 +22,10 @@ target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs)
 
 set(client_contract "${CMAKE_CURRENT_BINARY_DIR}/client_test/client_contract.hpp")
 file(GLOB client_generator_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/*.py")
+file(GLOB_RECURSE configs_client_specs CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/schemas/services/configs/*.yaml")
 add_custom_command(OUTPUT "${client_contract}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_test_client.py" "${client_contract}"
-    DEPENDS ${client_generator_files} "${CMAKE_CURRENT_SOURCE_DIR}/generate_test_client.py" "${CMAKE_CURRENT_SOURCE_DIR}/docs/api/contract.yaml"
+    DEPENDS ${configs_client_specs} ${client_generator_files} "${CMAKE_CURRENT_SOURCE_DIR}/generate_test_client.py" "${CMAKE_CURRENT_SOURCE_DIR}/docs/api/contract.yaml"
     VERBATIM)
 add_executable(client_contract_unittest support/client_test.cpp "${client_contract}")
 target_include_directories(client_contract_unittest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/client_test" "${OPENAPI_INCLUDE_DIR}")

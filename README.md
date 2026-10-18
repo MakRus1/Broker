@@ -92,3 +92,5 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 [сервис configs](services/configs/README.md). Миграции БД именуются
 `postgresql/schemas/<db>/V0001__migration_name.sql`; автоматического применения
 к уже существующей БД пока нет.
+
+Административный API Configs защищен OIDC/Keycloak: [настройка и локальный стенд](docs/auth.md).

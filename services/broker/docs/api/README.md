@@ -68,3 +68,8 @@ SQL находятся в `postgresql/queries/*.sql`; userver генерируе
 Поддерживаются вложенные модели и массивы моделей. Серверный namespace —
 `<service>::models`, заголовок — `<openapi/models.hpp>` в каталоге сборки.
 Ограничения, default и JSON-преобразования вложенных полей тоже генерируются.
+
+HTTP bearer JWT описывается стандартными `components.securitySchemes` и `security`.
+Клиент защищенной операции требует токен вторым аргументом; сервер требует
+проверенный Principal от `libs/auth`. Настройка middleware и разрешений:
+[авторизация](../../../../docs/auth.md). Другие security-схемы отклоняются.

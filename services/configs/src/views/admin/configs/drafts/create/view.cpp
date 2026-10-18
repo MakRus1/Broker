@@ -1,12 +1,14 @@
 #include <components/config_store.hpp>
+#include <platform/auth/principal.hpp>
 #include <views/admin/configs/drafts/create/view.hpp>
 
 namespace configs::views::admin::configs::drafts::create {
-Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
+Response View::Handle(Request&& request, userver::server::request::RequestContext& context,
+                      Deps deps) {
     const ::configs::ConfigStore store{deps.pg_cluster};
     try {
         const auto draft =
-            store.CreateDraft({.Actor = request.body.actor,
+            store.CreateDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
                                .ConfigName = request.body.config_name,
                                .Description = request.body.description,
                                .ExpectedConfigVersion = request.body.expected_config_version,

@@ -17,12 +17,12 @@ target_link_libraries(
 )
 
 # SERVICE_CMAKE_BEGIN
-foreach(service_library IN ITEMS broker_common broker_configs)
+foreach(service_library IN ITEMS broker_common broker_configs broker_auth)
     if(NOT TARGET ${service_library})
         message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")
     endif()
 endforeach()
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs broker_auth)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
 userver_add_sql_library(${PROJECT_NAME}_sql

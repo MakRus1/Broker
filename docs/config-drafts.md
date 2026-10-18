@@ -32,19 +32,19 @@
 Все ручки описаны в `services/configs/docs/api/admin/...` и реализованы отдельными
 `src/views/admin/.../view.cpp`. Они доступны на внутреннем listener (обычно `127.0.0.1:8092`).
 На публичном listener маршруты `/admin/...` отсутствуют. Экспорт клиентской спеки включает
-их для будущего BFF; права доступа будут проверяться сервисом. Публичные `/configs/values` и `/configs/status` сохранены.
+их для будущего BFF; права доступа проверяются сервисом. Публичные `/configs/values` и `/configs/status` сохранены.
 
 | Путь | Тело | Результат |
 | --- | --- | --- |
 | GET `/admin/configs/list` | — | `items`: каталог имен, версий и ID активных драфтов |
 | GET `/admin/configs/history` | — | `items`: история опубликованных ревизий |
 | POST `/admin/configs/current` | `config_name` | Рабочие `value`, `version`, `active_draft_id` |
-| POST `/admin/configs/drafts/create` | `config_name`, `expected_config_version`, `value`, `description`, `actor` | 201, валидный драфт |
+| POST `/admin/configs/drafts/create` | `config_name`, `expected_config_version`, `value`, `description` | 201, валидный драфт |
 | POST `/admin/configs/drafts/get` | `id` | Драфт с `base_value` и предложенным `value` |
 | POST `/admin/configs/drafts/list` | необязательные `config_name`, `before_id` | До 100 драфтов, новые первыми |
-| POST `/admin/configs/drafts/edit` | `id`, `expected_version`, `actor`, `value` и/или `description` | Новая версия драфта |
-| POST `/admin/configs/drafts/approve` | `id`, `expected_version`, `actor` | Подтверждение и публикация, `published_revision` |
-| POST `/admin/configs/drafts/cancel` | `id`, `expected_version`, `actor` | Отмена автором |
+| POST `/admin/configs/drafts/edit` | `id`, `expected_version`, `value` и/или `description` | Новая версия драфта |
+| POST `/admin/configs/drafts/approve` | `id`, `expected_version` | Подтверждение и публикация, `published_revision` |
+| POST `/admin/configs/drafts/cancel` | `id`, `expected_version` | Отмена автором |
 | POST `/admin/configs/drafts/events` | `id` | События с историческими снимками |
 
 Ответы списков и событий содержат массив `items`. Необязательные поля (например,
@@ -59,7 +59,8 @@
 обычное подтверждение. `source_revision: 0` означает дефолт текущей схемы; это не
 историческое значение дефолта на момент первой установки.
 
-Ошибки: 400 — невалидное тело/значение, 403 — чужая правка/отмена или самоподтверждение,
+Ошибки: 401 — отсутствует/невалиден access token; 503 — нет пригодного кеша JWKS;
+400 — невалидное тело/значение, 403 — недостаточно прав, чужая правка/отмена или самоподтверждение,
 404 — отсутствующий драфт/ревизия, 409 — активный драфт уже существует, устарела версия
 или драфт закрыт. Ответ содержит `error` и `message`; неуспешная операция не изменяет БД.
 
@@ -67,23 +68,23 @@
 
 ```sh
 curl -sS http://127.0.0.1:8092/admin/configs/current \
-  -H 'Content-Type: application/json' -d '{"config_name":"SHIPMENT_TERMS_CONFIG"}'
+  -H "Authorization: Bearer $AUTHOR_ACCESS_TOKEN" -H 'Content-Type: application/json' -d '{"config_name":"SHIPMENT_TERMS_CONFIG"}'
 
 # expected_config_version берется из предыдущего ответа.
 curl -sS http://127.0.0.1:8092/admin/configs/drafts/create \
-  -H 'Content-Type: application/json' \
-  -d '{"actor":"author","config_name":"SHIPMENT_TERMS_CONFIG","expected_config_version":0,"description":"Новые условия","value":{"clauses":[],"default":{"is_enabled":true,"max_days":60}}}'
+  -H "Authorization: Bearer $AUTHOR_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"config_name":"SHIPMENT_TERMS_CONFIG","expected_config_version":0,"description":"Новые условия","value":{"clauses":[],"default":{"is_enabled":true,"max_days":60}}}'
 
 # id и expected_version берутся из ответа создания/редактирования.
 curl -sS http://127.0.0.1:8092/admin/configs/drafts/approve \
-  -H 'Content-Type: application/json' -d '{"id":1,"expected_version":1,"actor":"reviewer"}'
+  -H "Authorization: Bearer $REVIEWER_ACCESS_TOKEN" -H 'Content-Type: application/json' -d '{"id":1,"expected_version":1}'
 ```
 
 ## Авторизация и прямые записи
 
-По текущему договоренному ограничению `actor` явно передается вызывающим кодом;
-это локальная идентификация, а не доказательство личности. Перед внешним доступом
-нужно подключить аутентификацию и роли админки. Один префикс `/admin` не заменяет
+Токен проверяется библиотекой `libs/auth`: подпись, issuer, audience, срок действия
+и разрешение операции. Автор берется из проверенных `iss`/`sub`; передавать `actor`
+в теле запрещено. Подробнее: [авторизация](auth.md). Префикс `/admin` дополняет
 проверку прав и сетевую изоляцию внутреннего listener.
 
 Прямых ручек публикации и отката нет. Начальные конфиги и локальная smoke-проверка

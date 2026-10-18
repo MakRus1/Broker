@@ -51,6 +51,7 @@ struct Request {
     std::optional<std::string> body;
     std::string content_type;
     std::string path_template;
+    std::optional<std::string> bearer_token;
 };
 
 struct Response {
@@ -150,20 +151,25 @@ class HttpTransport final : public Transport {
             .SetLoggedUrl(input.path_template)
             .SetUrlTemplate(input.path_template)
             .SetDestinationMetricName(destination_ + "." + input.path_template);
+        userver::clients::http::Headers headers;
+        if (input.bearer_token)
+            headers.emplace(std::string_view{"Authorization"}, "Bearer " + *input.bearer_token);
         if (input.body) {
-            request.data(*input.body).headers({{"Content-Type", input.content_type}});
+            request.data(*input.body);
+            headers.emplace(std::string_view{"Content-Type"}, input.content_type);
             if (input.method == "GET") {
                 // Установка тела переключает libcurl на POST; сохраняем явный GET.
                 request.set_custom_http_request_method("GET");
             }
         }
+        request.headers(headers);
         // userver передает текущий контекст трассы, дедлайн и отмену задачи.
         // Статусы API не превращаем в исключения транспорта через raise_for_status.
         const auto response = request.perform();
-        const auto& headers = response->headers();
-        const auto content_type = headers.find(std::string_view{"Content-Type"});
+        const auto& response_headers = response->headers();
+        const auto content_type = response_headers.find(std::string_view{"Content-Type"});
         return {static_cast<int>(response->status_code()),
-                content_type == headers.end() ? std::string{} : content_type->second,
+                content_type == response_headers.end() ? std::string{} : content_type->second,
                 response->body()};
     }
 

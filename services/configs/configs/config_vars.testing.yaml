@@ -16,3 +16,7 @@ environment: local
 config-updates-enabled: false
 config-server-url: http://localhost:8090
 config-cache-path: ''
+
+auth-issuer: http://localhost:18888/realms/broker
+auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
+auth-allow-http: true

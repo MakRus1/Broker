@@ -50,7 +50,7 @@ class CodegenTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parse_spec(data)
         for mutation in [lambda d: d.update(openapi='3.1.0'),
-                         lambda d: d.update(security=[]),
+                         lambda d: d.update(security={}),
                          lambda d: d['paths']['/items/{id}']['get']['responses'].update(default={'description': 'Любой'}),
                          lambda d: d['paths']['/items/{id}']['parameters'].clear()]:
             data = spec(); mutation(data)

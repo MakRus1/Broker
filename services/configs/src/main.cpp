@@ -1,4 +1,5 @@
 #include <userver/clients/dns/component.hpp>
+#include <userver/clients/http/component.hpp>
 #include <userver/clients/http/component_list.hpp>
 #include <userver/components/component.hpp>
 #include <userver/components/component_list.hpp>
@@ -10,6 +11,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <platform/auth/component.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
 #include <userver/server/handlers/server_monitor.hpp>
@@ -38,6 +40,8 @@ int main(int argc, char* argv[]) {
             .Append<userver::congestion_control::Component>()
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
+            .Append<platform::auth::Component>()
+            .Append<userver::components::HttpClient>("auth-http-client")
             .Append<configs::Ping>()
             .Append<configs::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()

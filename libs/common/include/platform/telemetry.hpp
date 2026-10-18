@@ -6,6 +6,7 @@
 #include <platform/readiness.hpp>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <userver/components/component_config.hpp>
 #include <userver/server/middlewares/builtin.hpp>
@@ -86,7 +87,8 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
     HttpTelemetryPipeline(const userver::components::ComponentConfig& config,
                           const userver::components::ComponentContext& context)
         : PipelineBuilder(config, context),
-          readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr) {}
+          readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr),
+          extra_(config["extra-middlewares"].As<std::vector<std::string>>({})) {}
 
     userver::server::middlewares::MiddlewaresList
     BuildPipeline(userver::server::middlewares::MiddlewaresList pipeline) const override {
@@ -101,11 +103,26 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
         if (readiness_enabled_)
             pipeline.insert(pipeline.begin() + position + 1,
                             std::string(HttpReadinessFactory::kName));
+        pipeline.insert(pipeline.begin() + position + 1 + (readiness_enabled_ ? 1 : 0),
+                        extra_.begin(), extra_.end());
         return pipeline;
+    }
+    static userver::yaml_config::Schema GetStaticConfigSchema() {
+        return userver::yaml_config::MergeSchemas<PipelineBuilder>(R"(
+type: object
+description: Общая HTTP-цепочка
+additionalProperties: false
+properties:
+    extra-middlewares:
+        type: array
+        description: Дополнительные проверки перед обработчиком
+        items: {type: string, description: Имя middleware}
+)");
     }
 
   private:
     const bool readiness_enabled_;
+    const std::vector<std::string> extra_;
 };
 
 }  // namespace platform

@@ -15,16 +15,11 @@ paths:
               additionalProperties: false
               required:
               - id
-              - actor
               - expected_version
               properties:
                 id:
                   type: integer
                   minimum: 1
-                actor:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
                 expected_version:
                   type: integer
                   minimum: 1
@@ -42,7 +37,7 @@ paths:
               schema:
                 $ref: ../../../components/schemas/errors.yaml#/ApiError
         '403':
-          description: Операция запрещена
+          description: Недостаточно прав
           content:
             application/json:
               schema:
@@ -59,3 +54,23 @@ paths:
             application/json:
               schema:
                 $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Требуется действительный access token
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '503':
+          description: Ключи авторизации недоступны
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+components:
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- AdminBearer: []

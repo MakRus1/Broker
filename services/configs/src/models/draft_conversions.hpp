@@ -1,9 +1,10 @@
 #pragma once
 
-#include <domain/models.hpp>
+#include <models/draft.hpp>
 #include <openapi/models.hpp>
+#include <vector>
 
-namespace configs::views {
+namespace configs {
 inline models::DraftStatus ToApiStatus(DraftStatus status) {
     switch (status) {
     case DraftStatus::Draft:
@@ -48,29 +49,4 @@ inline std::vector<models::ConfigDraft> ToApiDrafts(const std::vector<Draft>& dr
         items.push_back(ToApiDraft(draft));
     return items;
 }
-inline std::vector<models::ConfigCatalogEntry>
-ToApiCatalog(const std::vector<CatalogEntry>& entries) {
-    std::vector<models::ConfigCatalogEntry> items;
-    for (const auto& entry : entries)
-        items.push_back({.active_draft_id = entry.ActiveDraftId,
-                         .config_name = entry.Name,
-                         .version = entry.Version});
-    return items;
-}
-inline std::vector<models::ConfigRevision>
-ToApiHistory(const std::vector<RevisionInfo>& revisions) {
-    std::vector<models::ConfigRevision> items;
-    for (const auto& revision : revisions)
-        items.push_back({.created_at = revision.CreatedAt, .revision = revision.Id});
-    return items;
-}
-inline std::vector<models::DraftEvent> ToApiDraftEvents(const std::vector<DraftEvent>& events) {
-    std::vector<models::DraftEvent> items;
-    for (const auto& event : events)
-        items.push_back({.action = event.Action,
-                         .actor = event.Actor,
-                         .created_at = event.CreatedAt,
-                         .snapshot = ToApiSnapshot(event.Snapshot)});
-    return items;
-}
-}  // namespace configs::views
+}  // namespace configs

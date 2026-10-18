@@ -1,0 +1,61 @@
+openapi: 3.0.3
+info:
+  title: Подтвердить и атомарно опубликовать драфт
+  version: '1'
+paths:
+  /admin/configs/drafts/approve:
+    post:
+      summary: Подтвердить и атомарно опубликовать драфт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - id
+              - actor
+              - expected_version
+              properties:
+                id:
+                  type: integer
+                  minimum: 1
+                actor:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                expected_version:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/drafts.yaml#/ConfigDraft
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Операция запрещена
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError

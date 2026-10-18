@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
 from model import collect_models, parse_spec, validate_operations
 from render import outputs
+from generate import load
 
 
 def specification(schemas):
@@ -20,7 +21,7 @@ def specification(schemas):
 class ModelsTest(unittest.TestCase):
     def test_shared_types_and_dependency_order(self):
         path = ROOT / 'tests/fixtures/contract_service/docs/api/models.yaml'
-        operations = parse_spec(yaml.safe_load(path.read_text()))
+        operations = load(ROOT / 'tests/fixtures/contract_service')
         models = collect_models(operations)
         names = [model.name for model in models]
         self.assertLess(names.index('Address'), names.index('Profile'))

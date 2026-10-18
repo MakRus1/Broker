@@ -1,6 +1,10 @@
 #pragma once
 
-#include <domain/models.hpp>
+#include <models/config.hpp>
+#include <models/draft.hpp>
+#include <models/errors.hpp>
+#include <models/event.hpp>
+#include <models/revision.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 

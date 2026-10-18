@@ -8,6 +8,7 @@ import yaml
 from model import keys, parse_body, parse_spec, enum_types, Operation
 from cpp_types import declarations, enums, quoted, type_cpp
 from render import fields, format_cpp
+from documents import Documents, read_files
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -31,9 +32,9 @@ def automatic(root, loader):
         if not (service / 'service.yaml').is_file():
             continue
         paths = []
-        for p in sorted((root / 'schemas/services' / service.name).rglob('*')):
-            if p.suffix in {'.yaml', '.yml', '.json'}:
-                paths.extend(op.path for op in parse_spec(yaml.load(p.read_text(), Loader=loader)))
+        base = root / 'schemas/services' / service.name
+        files = read_files([base], base)
+        paths.extend(op.path for op in Documents(files, base, base / 'components', loader).operations(base))
         if paths:
             name = http_name(service.name)
             result[f'{service.name}/{name}'] = {

@@ -1,7 +1,7 @@
 # Конфигурация вычисляет имена файлов; сборка пишет только в свой каталог.
 function(broker_openapi_generate SERVICE_DIR)
     set(gen "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/generate.py")
-    file(GLOB_RECURSE specs CONFIGURE_DEPENDS "${SERVICE_DIR}/docs/api/*.yaml" "${SERVICE_DIR}/docs/api/*.json" "${SERVICE_DIR}/docs/api/*.yml")
+    file(GLOB_RECURSE specs CONFIGURE_DEPENDS "${SERVICE_DIR}/docs/api/*.yaml" "${SERVICE_DIR}/docs/api/*.json" "${SERVICE_DIR}/docs/api/*.yml" "${SERVICE_DIR}/docs/components/*.yaml" "${SERVICE_DIR}/docs/components/*.yml" "${SERVICE_DIR}/docs/components/*.json")
     get_filename_component(service_name "${SERVICE_DIR}" NAME)
     file(GLOB_RECURSE public_specs CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.yaml" "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.yml" "${CMAKE_SOURCE_DIR}/schemas/services/${service_name}/*.json")
     list(APPEND specs ${public_specs})

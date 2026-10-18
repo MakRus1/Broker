@@ -49,9 +49,12 @@ components_manager:
             sync-start: true
             connlimit_mode: manual
         platform-grpc-telemetry: {}
+        platform-grpc-readiness: {}
         grpc-server-middlewares-pipeline:
             middlewares:
                 platform-grpc-telemetry:
+                    enabled: true
+                platform-grpc-readiness:
                     enabled: true
         grpc-server-logging:
             msg-log-level: none

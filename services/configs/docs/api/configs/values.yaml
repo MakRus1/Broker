@@ -18,17 +18,22 @@ paths:
               properties:
                 ids:
                   type: array
-                  items: &id001
+                  items:
                     type: string
-                updated_since: *id001
-                service: *id001
-                stage_name: *id001
+                updated_since:
+                  type: string
+                service:
+                  type: string
+                stage_name:
+                  type: string
                 service_overrides:
                   type: array
-                  items: *id001
+                  items:
+                    type: string
                 is_prestable:
                   type: boolean
-                circuit: *id001
+                circuit:
+                  type: string
       responses:
         '200':
           description: Успех
@@ -48,32 +53,65 @@ paths:
                   revision:
                     type: integer
                     minimum: 0
-                  updated_at: *id001
+                  updated_at:
+                    type: string
         '400':
           description: Невалидный запрос или конфиг
           content:
             application/json:
-              schema: &id002
+              schema:
                 type: object
                 additionalProperties: false
                 required:
                 - error
                 - message
                 properties:
-                  error: *id001
-                  message: *id001
+                  error:
+                    type: string
+                  message:
+                    type: string
         '403':
           description: Операция запрещена
           content:
             application/json:
-              schema: *id002
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
         '404':
           description: Драфт или ревизия не найдены
           content:
             application/json:
-              schema: *id002
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
         '409':
           description: Конфликт версий или активный драфт
           content:
             application/json:
-              schema: *id002
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string

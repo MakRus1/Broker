@@ -48,6 +48,7 @@ class ExportClientsTest(unittest.TestCase):
             self.assertEqual(target.read_bytes(), before)
             export(service)
             self.assertEqual(set(yaml.safe_load(target.read_text())['paths']), {'/configs/status', '/admin/configs/list'})
+            self.assertNotRegex(target.read_text(), r'[&*]id[0-9]+')
             policy.write_text('version: 1\nexclude: [/admin/**]\n')
             export(service)
             self.assertEqual(target.read_bytes(), before)

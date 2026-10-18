@@ -10,6 +10,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 
 
+class SpecDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        # Повторяем определения явно, чтобы экспорт оставался читаемым.
+        return True
+
+
 def matches(path, pattern):
     if not isinstance(pattern, str) or not pattern.startswith('/') or '?' in pattern or '[' in pattern or '\\' in pattern:
         raise ValueError(f'Неверный glob URL: {pattern!r}')
@@ -52,7 +58,7 @@ def plan(service):
             continue
         exported = deepcopy(data)
         exported['paths'] = selected
-        result[destination / path.relative_to(source)] = yaml.safe_dump(exported, allow_unicode=True, sort_keys=False)
+        result[destination / path.relative_to(source)] = yaml.dump(exported, Dumper=SpecDumper, allow_unicode=True, sort_keys=False)
     if not result:
         raise ValueError('Правила экспорта не выбрали ни одной ручки')
     return destination, result

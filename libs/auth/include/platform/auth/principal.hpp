@@ -9,6 +9,7 @@ struct Principal {
     std::string Issuer;
     std::string Subject;
     std::set<std::string> Permissions;
+    std::string DisplayName;
     std::string ActorId() const {
         return Issuer + "#" + Subject;
     }

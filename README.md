@@ -94,3 +94,5 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 к уже существующей БД пока нет.
 
 Административный API Configs защищен OIDC/Keycloak: [настройка и локальный стенд](docs/auth.md).
+
+Админка Configs: http://localhost:13080 после `make local-up`; [запуск и разработка](docs/admin-ui.md).

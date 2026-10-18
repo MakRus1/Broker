@@ -23,3 +23,9 @@ CMakeUserPresets.json
 work-local.yaml
 
 .local/
+node_modules/
+frontend/admin/dist/
+frontend/admin/coverage/
+
+# Локальный кеш пакетного менеджера; зависимости фиксируются lock-файлом.
+.pnpm-store/

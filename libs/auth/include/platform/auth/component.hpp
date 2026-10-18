@@ -20,6 +20,9 @@ class Component final : public userver::server::middlewares::HttpMiddlewareFacto
               const userver::components::ComponentContext&);
     ~Component() override;
     static userver::yaml_config::Schema GetStaticConfigSchema();
+    Principal VerifyAccess(const std::string& token) const;
+    Principal VerifyLogin(const std::string& access, const std::string& identity,
+                          const std::string& client, const std::string& nonce) const;
     bool IsProtected(std::string_view path) const;
     Principal Authorize(const std::string& path, const std::string& authorization) const;
 

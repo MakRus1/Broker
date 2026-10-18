@@ -220,3 +220,28 @@ UTEST(ClientContract, BearerTokenIsExplicit) {
     EXPECT_THROW(api::AdminConfigsCurrent::Encode(request, "token\r\nInjected: value"),
                  std::invalid_argument);
 }
+
+UTEST(ClientContract, JsonBoundaryForBff) {
+    namespace api = client_test::clients::configs_api::AdminConfigsCurrent;
+    const auto body = api::ParseBody(
+        userver::formats::json::FromString(R"({"config_name":"SHIPMENT_TERMS_CONFIG"})"));
+    EXPECT_EQ(body.config_name, "SHIPMENT_TERMS_CONFIG");
+    EXPECT_THROW(api::ParseBody(userver::formats::json::FromString(R"({"config_name":5})")),
+                 std::exception);
+    EXPECT_THROW(
+        api::ParseBody(userver::formats::json::FromString(R"({"config_name":"A","actor":"fake"})")),
+        std::exception);
+
+    const platform::http::Response response{409, "application/json",
+                                            R"({"error":"conflict","message":"Version changed"})"};
+    try {
+        (void)api::Decode(response);
+        FAIL() << "Expected typed conflict";
+    } catch (const api::Error409& error) {
+        EXPECT_EQ(error.GetStatus(), 409);
+        EXPECT_EQ(error.response.message, "Version changed");
+        const auto json = userver::formats::json::FromString(error.GetBody());
+        EXPECT_EQ(json["error"].As<std::string>(), "conflict");
+        EXPECT_EQ(json["message"].As<std::string>(), error.response.message);
+    }
+}

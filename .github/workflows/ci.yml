@@ -42,6 +42,19 @@ jobs:
           fi
           echo "services=$affected" >> "$GITHUB_OUTPUT"
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend/admin
+      - run: pnpm check-format && pnpm test && pnpm build
+        working-directory: frontend/admin
+
   build:
     needs: tools
     if: needs.tools.outputs.services != ''
@@ -115,16 +128,18 @@ jobs:
   result:
     name: CI result
     if: ${{ always() }}
-    needs: [tools, build]
+    needs: [tools, build, frontend]
     runs-on: ubuntu-24.04
     steps:
       - name: Проверка обязательных результатов
         env:
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
           TOOLS_RESULT: ${{ needs.tools.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           SERVICES: ${{ needs.tools.outputs.services }}
         run: |
           set -euo pipefail
+          if [[ "$FRONTEND_RESULT" != success ]]; then exit 1; fi
           if [[ "$TOOLS_RESULT" != success ]]; then
             exit 1
           fi

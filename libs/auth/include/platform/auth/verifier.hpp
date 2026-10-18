@@ -18,8 +18,11 @@ class Verifier final {
     Verifier(Settings settings, const std::string& jwks);
     ~Verifier();
     Principal Verify(const std::string& token) const;
+    Principal VerifyLogin(const std::string& access, const std::string& identity,
+                          const std::string& client, const std::string& nonce) const;
 
   private:
+    Principal VerifyKind(const std::string& token, std::string_view kind) const;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

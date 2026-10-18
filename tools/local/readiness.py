@@ -10,7 +10,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         lines = ["# TYPE broker_service_ready gauge"]
-        for service, port in [("broker", 8082), ("configs", 8092), ("diagnostics", 8085)]:
+        for service, port in [("broker", 8082), ("configs", 8092), ("diagnostics", 8085), ("admin_bff", 8182)]:
             ready = 0
             try:
                 with urllib.request.urlopen(

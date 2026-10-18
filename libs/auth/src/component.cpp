@@ -154,21 +154,37 @@ Principal Component::Authorize(const std::string& path, const std::string& autho
         !std::equal(authorization.begin(), authorization.begin() + 7, "bearer ",
                     [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
         throw std::invalid_argument("Missing bearer token");
-    const auto cached = state_->Cache.load();
-    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
-        throw Unavailable{};
-    Principal principal;
-    try {
-        principal = cached->Check.Verify(authorization.substr(7));
-    } catch (const UnknownKey&) {
-        state_->RefreshUnknownKey();
-        throw;
-    }
+    const auto principal = VerifyAccess(authorization.substr(7));
     const auto permission = state_->Permissions.find(path);
     if (permission == state_->Permissions.end() ||
         !principal.Permissions.contains(permission->second))
         throw Forbidden{};
     return principal;
+}
+Principal Component::VerifyAccess(const std::string& token) const {
+    const auto cached = state_->Cache.load();
+    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
+        throw Unavailable{};
+    Principal principal;
+    try {
+        principal = cached->Check.Verify(token);
+    } catch (const UnknownKey&) {
+        state_->RefreshUnknownKey();
+        throw;
+    }
+    return principal;
+}
+Principal Component::VerifyLogin(const std::string& access, const std::string& identity,
+                                 const std::string& client, const std::string& nonce) const {
+    const auto cached = state_->Cache.load();
+    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
+        throw Unavailable{};
+    try {
+        return cached->Check.VerifyLogin(access, identity, client, nonce);
+    } catch (const UnknownKey&) {
+        state_->RefreshUnknownKey();
+        throw;
+    }
 }
 std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase>
 Component::Create(const userver::server::handlers::HttpHandlerBase&,

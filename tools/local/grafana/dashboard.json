@@ -158,7 +158,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=~\"broker|configs|diagnostics\"}"
+          "expr": "{service_name=~\"broker|configs|diagnostics|admin_bff\"}"
         }
       ]
     }

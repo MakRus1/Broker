@@ -166,6 +166,50 @@ def prepare():
         "depends_on": {"postgres-keycloak": {"condition": "service_healthy"}},
     }
     services["configs"]["depends_on"]["keycloak"] = {"condition": "service_started"}
+    volumes["admin-ui"] = {}
+    volumes["admin-node"] = {}
+    services["admin-ui-build"] = {
+        "image": images["node"], "working_dir": "/workspaces/broker",
+        "volumes": [source, "admin-node:/node-cache", "admin-ui:/admin-ui"],
+        "command": ["bash", "tools/local/build-admin.sh"],
+    }
+    services["keycloak-setup"] = {
+        "image": images["dev"], "working_dir": "/workspaces/broker", "volumes": shared,
+        "command": ["python3", "tools/local/configure_keycloak.py"],
+        "depends_on": {"keycloak": {"condition": "service_started"}},
+    }
+    variables = yaml.safe_load((ROOT / "services/admin_bff/configs/config_vars.yaml").read_text())
+    variables.update({
+        "client-config_admin-base-url": "http://configs:8092",
+        "auth-jwks-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/certs",
+        "admin-token-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/token",
+        "admin-revoke-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/revoke",
+        "admin-assets-dir": "/admin-ui",
+        "config-updates-enabled": True,
+        "config-server-url": "http://configs:8090",
+        "otlp-enabled": True,
+        "otlp-endpoint": "collector:4317",
+    })
+    config = resolve(yaml.safe_load((ROOT / "services/admin_bff/configs/static_config.yaml").read_text()), variables)
+    config["components_manager"]["components"]["server"]["listener"]["port"] = 8180
+    admin_components = config["components_manager"]["components"]
+    admin_components["server"]["listener-monitor"]["address"] = "0.0.0.0"
+    admin_components["otlp-logger"]["sinks"] = {"logs": "default", "tracing": "otlp"}
+    (STATE / "admin_bff.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
+    services["admin_bff"] = {
+        "image": images["dev"], "user": "1001:1001", "working_dir": "/workspaces/broker",
+        "volumes": [*shared, "admin-ui:/admin-ui:ro"],
+        "command": ["bash", "tools/local/run.sh", "admin_bff", "build-local/services/admin_bff/admin_bff"],
+        "ports": ["127.0.0.1:13080:8180"],
+        "depends_on": {
+            "prepare": {"condition": "service_completed_successfully"},
+            "admin-ui-build": {"condition": "service_completed_successfully"},
+            "keycloak-setup": {"condition": "service_completed_successfully"},
+            "configs": {"condition": "service_healthy"},
+        },
+        "healthcheck": {"test": ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8182/ping/ready', timeout=2)"],
+                        "interval": "3s", "timeout": "3s", "retries": 30},
+    }
     for name, port, internal, args in [
         ("loki", 13100, 3100, ["-config.file=/etc/local/loki.yaml"]),
         ("tempo", 13200, 3200, ["-config.file=/etc/local/tempo.yaml"]),
@@ -309,7 +353,7 @@ def prepare():
         service["mem_limit"] = (
             "4g"
             if name == "prepare"
-            else ("1g" if name in {"broker", "configs", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
+            else ("1g" if name in {"broker", "configs", "admin_bff", "admin-ui-build", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
         )
     (STATE / "compose.yaml").write_text(
         yaml.safe_dump(

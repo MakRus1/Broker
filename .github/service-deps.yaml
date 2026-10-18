@@ -1,6 +1,7 @@
 libs:
   common:
     services:
+    - admin_bff
     - broker
     - configs
 shared_paths:

@@ -124,20 +124,21 @@ UTEST(ClientContract, ConfigsAdminJsonObjects) {
     transport.reply = {
         200, "application/json",
         R"({"config_name":"SHIPMENT_TERMS_CONFIG","version":5,"value":{"nested":[{"enabled":true}]}})"};
-    const auto response = client.AdminConfigsCurrent(request);
+    const auto response = client.AdminConfigsCurrent(request, "test-access-token");
     EXPECT_EQ(transport.last.path, "/admin/configs/current");
     EXPECT_TRUE(response.value["nested"][0]["enabled"].As<bool>());
     transport.reply = {400, "application/json",
                        R"({"error":"invalid_request","message":"Bad config"})"};
-    EXPECT_THROW(client.AdminConfigsCurrent(request), config_api::AdminConfigsCurrent::Error400);
+    EXPECT_THROW(client.AdminConfigsCurrent(request, "test-access-token"),
+                 config_api::AdminConfigsCurrent::Error400);
     transport.reply = {
         200, "application/json",
         R"({"items":[{"active_draft_id":null,"config_name":"example","version":1}]})"};
-    const auto catalog = client.AdminConfigsList({});
+    const auto catalog = client.AdminConfigsList({}, "test-access-token");
     ASSERT_EQ(catalog.items.size(), 1);
     EXPECT_EQ(catalog.items.front().config_name, "example");
     transport.reply = {200, "application/json", R"({"items":[42]})"};
-    EXPECT_THROW(client.AdminConfigsList({}), platform::http::ContractError);
+    EXPECT_THROW(client.AdminConfigsList({}, "test-access-token"), platform::http::ContractError);
 }
 
 UTEST(ClientContract, SharedNestedModelsAndTypedErrors) {
@@ -205,4 +206,17 @@ UTEST(ServerContract, NestedResponseValidation) {
     EXPECT_NO_THROW(api::ToJson(response));
     response.profiles.front().address.city = "";
     EXPECT_THROW(api::ToJson(response), std::invalid_argument);
+}
+
+UTEST(ClientContract, BearerTokenIsExplicit) {
+    namespace api = client_test::clients::configs_api;
+    api::AdminConfigsCurrent::Request request;
+    request.body.config_name = "SHIPMENT_TERMS_CONFIG";
+    const auto encoded = api::AdminConfigsCurrent::Encode(request, "test-access-token");
+    ASSERT_TRUE(encoded.bearer_token);
+    EXPECT_EQ(*encoded.bearer_token, "test-access-token");
+    ASSERT_TRUE(encoded.body);
+    EXPECT_THROW(api::AdminConfigsCurrent::Encode(request, ""), std::invalid_argument);
+    EXPECT_THROW(api::AdminConfigsCurrent::Encode(request, "token\r\nInjected: value"),
+                 std::invalid_argument);
 }

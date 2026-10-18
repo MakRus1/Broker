@@ -119,7 +119,7 @@ void ConfigStore::SaveDraft(pg::Transaction& transaction, const Draft& draft,
 }
 
 Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
-    ValidateText(request.Actor, 128);
+    ValidateText(request.Actor, 2048);
     ValidateText(request.ConfigName, 256);
     ValidateText(request.Description, 4096);
     if (!Defaults().HasMember(request.ConfigName))
@@ -174,7 +174,7 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
 }
 
 Draft ConfigStore::EditDraft(const EditDraftRequest& request) const {
-    ValidateText(request.Actor, 128);
+    ValidateText(request.Actor, 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
@@ -197,7 +197,7 @@ Draft ConfigStore::EditDraft(const EditDraftRequest& request) const {
 }
 
 Draft ConfigStore::CancelDraft(const DraftActionRequest& request) const {
-    ValidateText(request.Actor, 128);
+    ValidateText(request.Actor, 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
@@ -211,7 +211,7 @@ Draft ConfigStore::CancelDraft(const DraftActionRequest& request) const {
 }
 
 Draft ConfigStore::ApproveDraft(const DraftActionRequest& request) const {
-    ValidateText(request.Actor, 128);
+    ValidateText(request.Actor, 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);

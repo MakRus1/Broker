@@ -1,0 +1,193 @@
+{
+  "realm": "broker",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "client": {
+      "configs-admin": [
+        {
+          "name": "configs.read"
+        },
+        {
+          "name": "configs.write"
+        },
+        {
+          "name": "configs.approve"
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "configs-admin",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "configs-admin-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": false,
+      "bearerOnly": true
+    },
+    {
+      "clientId": "broker-admin",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "configs-admin-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:13080/*"
+      ],
+      "webOrigins": [
+        "http://localhost:13080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
+    },
+    {
+      "clientId": "local-author",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "configs-admin-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${local-author-secret}"
+    },
+    {
+      "clientId": "local-reviewer",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "configs-admin-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${local-reviewer-secret}"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-local-author",
+      "enabled": true,
+      "serviceAccountClientId": "local-author",
+      "clientRoles": {
+        "configs-admin": [
+          "configs.read",
+          "configs.write"
+        ]
+      }
+    },
+    {
+      "username": "author",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "author",
+      "lastName": "Local",
+      "email": "author@localhost.test",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${author-password}",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "configs-admin": [
+          "configs.read",
+          "configs.write"
+        ]
+      }
+    },
+    {
+      "username": "service-account-local-reviewer",
+      "enabled": true,
+      "serviceAccountClientId": "local-reviewer",
+      "clientRoles": {
+        "configs-admin": [
+          "configs.read",
+          "configs.approve"
+        ]
+      }
+    },
+    {
+      "username": "reviewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "reviewer",
+      "lastName": "Local",
+      "email": "reviewer@localhost.test",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${reviewer-password}",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "configs-admin": [
+          "configs.read",
+          "configs.approve"
+        ]
+      }
+    }
+  ]
+}

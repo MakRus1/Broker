@@ -1,5 +1,5 @@
 version: 1
-libraries: [common, configs]
+libraries: [common, configs, auth]
 postgresql:
   enabled: true
   cluster: configs

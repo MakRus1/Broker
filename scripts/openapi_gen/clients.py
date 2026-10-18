@@ -100,7 +100,10 @@ Response{response.status} response;
     else:
         result = 'std::variant<' + ', '.join(f'Response{r.status}' for r in successes) + '>'
     text += f'using Response = {result};\n'
-    text += 'inline platform::http::Request Encode(const Request& request) {\nplatform::http::Request raw;\n'
+    auth_argument = ', std::string_view access_token' if op.authenticated else ''
+    text += f'inline platform::http::Request Encode(const Request& request{auth_argument}) {{\nplatform::http::Request raw;\n'
+    if op.authenticated:
+        text += 'if (access_token.empty() || access_token.find_first_of("\\r\\n") != std::string_view::npos) throw std::invalid_argument("Invalid bearer token"); raw.bearer_token = std::string(access_token);\n'
     text += f'raw.method = {quoted(op.method)}; raw.path = {quoted(op.path)}; raw.path_template = {quoted(op.path)};\n'
     for f in op.params:
         value = f'*request.{f.name}' if f.optional else f'request.{f.name}'
@@ -168,7 +171,9 @@ def render_client(service, alias, ops, provider=None):
     code += 'class Client {\npublic:\nexplicit Client(platform::http::Transport& transport) : transport_(&transport) {}\n'
     for op in ops:
         name = op.name
-        code += f'{name}::Response {name}(const {name}::Request& request) const {{ return {name}::Decode(transport_->Perform({name}::Encode(request))); }}\n'
+        argument = ', std::string_view access_token' if op.authenticated else ''
+        value = ', access_token' if op.authenticated else ''
+        code += f'{name}::Response {name}(const {name}::Request& request{argument}) const {{ return {name}::Decode(transport_->Perform({name}::Encode(request{value}))); }}\n'
     code += 'private:\nplatform::http::Transport* transport_;\n};\n'
     settings = ''
     if provider:

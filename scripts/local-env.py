@@ -2,6 +2,8 @@
 """Изолированное локальное окружение; пользовательские БД и volumes не затрагиваются."""
 import argparse
 import json
+import os
+import secrets
 from pathlib import Path
 import subprocess
 import sys
@@ -25,6 +27,19 @@ def resolve(value, variables):
 def prepare():
     STATE.mkdir(exist_ok=True)
     (ROOT / "build-local").mkdir(exist_ok=True)
+    secrets_path = STATE / "auth-secrets.json"
+    if not secrets_path.exists():
+        values = {key: secrets.token_urlsafe(24) for key in [
+            "local-author-secret", "local-reviewer-secret", "author-password", "reviewer-password",
+            "admin-password", "postgres-password"]}
+        descriptor = os.open(secrets_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w") as target:
+            json.dump(values, target)
+    auth_secrets = json.loads(secrets_path.read_text())
+    realm = (ROOT / "tools/local/keycloak/realm.template.json").read_text()
+    for key, value in auth_secrets.items():
+        realm = realm.replace("${" + key + "}", value)
+    (STATE / "broker-realm.json").write_text(realm)
     images = json.loads((ROOT / "tools/local/images.json").read_text())["images"]
     images["dev"] = json.loads((ROOT / "tools/container-images.json").read_text())["images"]["dev"]
     volumes = {
@@ -68,6 +83,7 @@ def prepare():
                 "otlp-enabled": True,
                 "otlp-endpoint": "collector:4317",
                 "config-server-url": "http://configs:8090",
+                "auth-jwks-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/certs",
             }
         )
         variables["config-updates-enabled"] = name != "configs"
@@ -126,6 +142,30 @@ def prepare():
                 f"migrate-{name}": {"condition": "service_completed_successfully"},
             },
         }
+    volumes["postgres-keycloak"] = {}
+    services["postgres-keycloak"] = {
+        "image": images["postgres"],
+        "environment": {"POSTGRES_USER": "keycloak", "POSTGRES_DB": "keycloak",
+                        "POSTGRES_PASSWORD": auth_secrets["postgres-password"]},
+        "volumes": ["postgres-keycloak:/var/lib/postgresql/data"],
+        "healthcheck": {"test": ["CMD", "pg_isready", "-U", "keycloak"],
+                        "interval": "2s", "timeout": "3s", "retries": 30},
+    }
+    services["keycloak"] = {
+        "image": images["keycloak"],
+        "command": ["start-dev", "--import-realm"],
+        "environment": {
+            "KC_DB": "postgres", "KC_DB_URL": "jdbc:postgresql://postgres-keycloak:5432/keycloak",
+            "KC_DB_USERNAME": "keycloak", "KC_DB_PASSWORD": auth_secrets["postgres-password"],
+            "KC_HOSTNAME": "http://localhost:18888", "KC_HOSTNAME_STRICT": "false",
+            "KC_BOOTSTRAP_ADMIN_USERNAME": "admin",
+            "KC_BOOTSTRAP_ADMIN_PASSWORD": auth_secrets["admin-password"],
+        },
+        "ports": ["127.0.0.1:18888:8080"],
+        "volumes": [f"{STATE}/broker-realm.json:/opt/keycloak/data/import/broker-realm.json:ro"],
+        "depends_on": {"postgres-keycloak": {"condition": "service_healthy"}},
+    }
+    services["configs"]["depends_on"]["keycloak"] = {"condition": "service_started"}
     for name, port, internal, args in [
         ("loki", 13100, 3100, ["-config.file=/etc/local/loki.yaml"]),
         ("tempo", 13200, 3200, ["-config.file=/etc/local/tempo.yaml"]),
@@ -216,6 +256,7 @@ def prepare():
         "working_dir": "/workspaces/broker",
         "volumes": shared,
         "command": ["python3", "tools/local/seed.py"],
+        "environment": {"BROKER_AUTH_TOKEN_URL": "http://keycloak:8080/realms/broker/protocol/openid-connect/token"},
         "depends_on": {"configs": {"condition": "service_healthy"}},
     }
     services["broker"]["depends_on"]["seed"] = {"condition": "service_completed_successfully"}
@@ -268,7 +309,7 @@ def prepare():
         service["mem_limit"] = (
             "4g"
             if name == "prepare"
-            else ("1g" if name in {"broker", "configs", "diagnostics", "tempo", "loki"} else "512m")
+            else ("1g" if name in {"broker", "configs", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
         )
     (STATE / "compose.yaml").write_text(
         yaml.safe_dump(
@@ -292,6 +333,7 @@ def main():
         "check": ["ps", "-a"],
     }
     if args.action == "check":
+        subprocess.run([sys.executable, str(ROOT / "tools/local/check_auth.py")], check=True)
         subprocess.run([sys.executable, str(ROOT / "tools/local/check.py")], check=True)
         subprocess.run([sys.executable, str(ROOT / "tools/local/check_migrations.py")], check=True)
     elif args.action == "migrate":

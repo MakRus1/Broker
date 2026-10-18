@@ -1,15 +1,18 @@
 #include <components/config_store.hpp>
+#include <platform/auth/principal.hpp>
 #include <views/admin/configs/drafts/edit/view.hpp>
 
 namespace configs::views::admin::configs::drafts::edit {
-Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
+Response View::Handle(Request&& request, userver::server::request::RequestContext& context,
+                      Deps deps) {
     const ::configs::ConfigStore store{deps.pg_cluster};
     try {
-        const auto draft = store.EditDraft({.Actor = request.body.actor,
-                                            .Id = request.body.id,
-                                            .ExpectedVersion = request.body.expected_version,
-                                            .Value = request.body.value,
-                                            .Description = request.body.description});
+        const auto draft =
+            store.EditDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
+                             .Id = request.body.id,
+                             .ExpectedVersion = request.body.expected_version,
+                             .Value = request.body.value,
+                             .Description = request.body.description});
         return Response200{.approved_by = draft.ApprovedBy,
                            .author = draft.Author,
                            .base_value = draft.BaseValue,

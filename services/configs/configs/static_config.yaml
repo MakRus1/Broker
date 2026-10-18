@@ -133,7 +133,29 @@ components_manager:
         platform-http-telemetry:
             service-name: configs
             environment: $environment
-        platform-http-pipeline: {}
+        platform-http-pipeline:
+            extra-middlewares: [platform-auth]
+        platform-auth:
+            issuer: $auth-issuer
+            audience: configs-admin
+            roles-client: configs-admin
+            jwks-url: $auth-jwks-url
+            protected-prefix: /admin/
+            allow-http: $auth-allow-http
+            max-key-age-seconds: 300
+            permissions:
+                /admin/configs/current: configs.read
+                /admin/configs/drafts/approve: configs.approve
+                /admin/configs/drafts/cancel: configs.write
+                /admin/configs/drafts/create: configs.write
+                /admin/configs/drafts/edit: configs.write
+                /admin/configs/drafts/events: configs.read
+                /admin/configs/drafts/get: configs.read
+                /admin/configs/drafts/list: configs.read
+                /admin/configs/history: configs.read
+                /admin/configs/list: configs.read
+        auth-http-client:
+            wait-for-dynamic-configs: false
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:

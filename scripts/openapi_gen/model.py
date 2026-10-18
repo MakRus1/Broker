@@ -86,6 +86,7 @@ class Operation:
     body: Body | None
     responses: tuple[Response, ...]
     models: tuple['NamedModel', ...] = ()
+    authenticated: bool = False
 
     @property
     def name(self):
@@ -328,10 +329,27 @@ def collect_models(operations):
 
 
 def parse_spec(spec):
-    keys(spec, {'openapi', 'info', 'paths', 'components', 'tags', 'servers'}, 'document')
+    keys(spec, {'openapi', 'info', 'paths', 'components', 'tags', 'servers', 'security'}, 'document')
     if spec.get('openapi') != '3.0.3':
         raise ValueError('Only OpenAPI 3.0.3 is supported')
-    keys(spec.get('components', {}), {'schemas'}, 'components')
+    keys(spec.get('components', {}), {'schemas', 'securitySchemes'}, 'components')
+    schemes = spec.get('components', {}).get('securitySchemes', {})
+    if not isinstance(schemes, dict):
+        raise ValueError('securitySchemes must be an object')
+    for scheme in schemes.values():
+        keys(scheme, {'type', 'scheme', 'bearerFormat', 'description'}, 'security scheme')
+        if scheme.get('type') != 'http' or scheme.get('scheme') != 'bearer' or scheme.get('bearerFormat', 'JWT') != 'JWT':
+            raise ValueError('Only HTTP bearer JWT security is supported')
+    def authenticated(value):
+        if value == []:
+            return False
+        if not isinstance(value, list) or len(value) != 1 or not isinstance(value[0], dict) or len(value[0]) != 1:
+            raise ValueError('Expected one bearer security requirement')
+        name, scopes = next(iter(value[0].items()))
+        if name not in schemes or scopes != []:
+            raise ValueError('Unknown bearer scheme or unsupported scopes')
+        return True
+    authenticated(spec.get('security', []))
     schemas = spec.get('components', {}).get('schemas', {})
     registry = SchemaRegistry(schemas)
     # Проверяем также неиспользуемые модели и строим порядок зависимостей.
@@ -358,7 +376,7 @@ def parse_spec(spec):
         for method, op in item.items():
             if method not in {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}:
                 continue
-            keys(op, {'summary', 'description', 'tags', 'parameters', 'requestBody', 'responses', 'deprecated'}, f'{method} {path}')
+            keys(op, {'summary', 'description', 'tags', 'parameters', 'requestBody', 'responses', 'deprecated', 'security'}, f'{method} {path}')
             params = {}
             for level in (item.get('parameters', []), op.get('parameters', [])):
                 seen = set()
@@ -416,7 +434,7 @@ def parse_spec(spec):
                 responses.append(Response(status, media, rb))
             if not responses:
                 raise ValueError('At least one response is required')
-            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), tuple(registry.models.values())))
+            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), tuple(registry.models.values()), authenticated(op.get('security', spec.get('security', [])))))
     normalized = []
     for operation in operations:
         canonical = {typ.enum_name: tuple(typ.schema['enum']) for typ in enum_types(operation)}

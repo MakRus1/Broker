@@ -1,13 +1,16 @@
 #include <components/config_store.hpp>
+#include <platform/auth/principal.hpp>
 #include <views/admin/configs/drafts/approve/view.hpp>
 
 namespace configs::views::admin::configs::drafts::approve {
-Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
+Response View::Handle(Request&& request, userver::server::request::RequestContext& context,
+                      Deps deps) {
     const ::configs::ConfigStore store{deps.pg_cluster};
     try {
-        const auto draft = store.ApproveDraft({.Actor = request.body.actor,
-                                               .Id = request.body.id,
-                                               .ExpectedVersion = request.body.expected_version});
+        const auto draft =
+            store.ApproveDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
+                                .Id = request.body.id,
+                                .ExpectedVersion = request.body.expected_version});
         return Response200{.approved_by = draft.ApprovedBy,
                            .author = draft.Author,
                            .base_value = draft.BaseValue,

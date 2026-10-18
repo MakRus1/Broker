@@ -5,7 +5,7 @@ import subprocess
 import sys
 from cpp_types import declarations, enums, literal, quoted, type_cpp
 from runtime_validation import CODE as VALIDATION_RUNTIME
-from model import enum_types
+from model import enum_types, collect_models
 
 
 def format_cpp(text):
@@ -43,6 +43,7 @@ def preamble(service, op, include_types=True):
     return (f'#pragma once\n#include <views/{op.rel}/types.hpp>\n' if include_types else '#pragma once\n') + f'''#include <cstdint>
 #include <limits>
 #include <openapi/runtime.hpp>
+#include <openapi/models.hpp>
 #include <optional>
 #include <string>
 #include <vector>
@@ -118,6 +119,7 @@ COMMON = r'''#pragma once
 #include <cmath>
 #include <chrono>
 #include <array>
+#include <optional>
 #include <string_view>
 #include <userver/utils/regex.hpp>
 #include <set>
@@ -165,8 +167,13 @@ template <typename T> T ParseScalar(const std::string& text) {
 }
 template <typename T> struct IsVector : std::false_type {};
 template <typename T> struct IsVector<std::vector<T>> : std::true_type {};
+template <typename T> struct IsOptional : std::false_type {};
+template <typename T> struct IsOptional<std::optional<T>> : std::true_type {};
 template <typename T> T ParseJson(const userver::formats::json::Value& value) {
-    if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
+    if constexpr (IsOptional<T>::value) {
+        if (value.IsNull()) return std::nullopt;
+        return T{ParseJson<typename T::value_type>(value)};
+    } else if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
     else if constexpr (std::is_same_v<T, userver::formats::json::Value>) {
         if (!value.IsObject()) throw std::invalid_argument("object");
         return value;
@@ -176,6 +183,8 @@ template <typename T> T ParseJson(const userver::formats::json::Value& value) {
         T result;
         for (const auto& item : value) result.push_back(ParseJson<typename T::value_type>(item));
         return result;
+    } else if constexpr (std::is_class_v<T> && !std::is_same_v<T, std::string>) {
+        return ParseModelJson(value, std::type_identity<T>{});
     } else {
         if constexpr (std::is_same_v<T, std::string>) { if (!value.IsString()) throw std::invalid_argument("string"); }
         else if constexpr (std::is_same_v<T, bool>) { if (!value.IsBool()) throw std::invalid_argument("boolean"); }
@@ -240,7 +249,8 @@ public:
         for index, f in enumerate(op.body.fields):
             if f.required:
                 parse.append(f'if (!json.HasMember({quote(f.name)})) throw std::invalid_argument("missing field");')
-            parse.append(f'if (json.HasMember({quote(f.name)})) {{ auto value = broker_codegen::ParseJson<{f.type.cpp}>(json[{quote(f.name)}]); Validate_RequestBody_{f.name}(value); body.{f.name} = std::move(value); body.MarkProvided({index}); }}')
+            assignment = f'body.{f.name}.emplace(std::move(value))' if f.optional else f'body.{f.name} = std::move(value)'
+            parse.append(f'if (json.HasMember({quote(f.name)})) {{ auto value = broker_codegen::ParseJson<{f.type.cpp}>(json[{quote(f.name)}]); Validate_RequestBody_{f.name}(value); {assignment}; body.MarkProvided({index}); }}')
         parse += [f'request.body = std::move(body); request.MarkProvided({len(op.params)});', '}']
     parse_text = '\n        '.join(parse)
     cases = []
@@ -286,10 +296,13 @@ std::string Handler::HandleRequestThrow(const userver::server::http::HttpRequest
 
 
 def outputs(service, operations, dependencies):
-    result = {'include/openapi/runtime.hpp': COMMON}
+    from models_render import render_models, bind_operation
+    result = {'include/openapi/runtime.hpp': COMMON,
+              'include/openapi/models.hpp': render_models(collect_models(operations), f'{service}::models')}
     includes = []
     appends = []
     for op in operations:
+        op = bind_operation(op, f'{service}::models')
         base = f'include/views/{op.rel}'
         result[f'{base}/types.hpp'] = preamble(service, op, include_types=False) + ''.join(enums(typ) for typ in enum_types(op)) + f'\n}}  // namespace {service}::views::{op.ns}\n'
         result[f'{base}/requests.hpp'] = requests(service, op)

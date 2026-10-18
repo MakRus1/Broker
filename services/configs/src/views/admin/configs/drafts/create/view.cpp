@@ -21,7 +21,7 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
                            .id = draft.Id,
                            .published_revision = draft.PublishedRevision,
                            .source_revision = draft.SourceRevision,
-                           .status = status::Draft,
+                           .status = ::configs::models::DraftStatus::Draft,
                            .value = draft.Value,
                            .version = draft.Version};
     } catch (const ::configs::InvalidRequest& error) {

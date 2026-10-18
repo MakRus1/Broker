@@ -1,0 +1,109 @@
+DraftStatus:
+  type: string
+  enum:
+  - draft
+  - published
+  - cancelled
+ConfigDraft:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - config_name
+  - author
+  - description
+  - version
+  - status
+  - base_version
+  - base_value
+  - value
+  properties:
+    id:
+      type: integer
+      minimum: 1
+    config_name:
+      type: string
+    author:
+      type: string
+    description:
+      type: string
+    version:
+      type: integer
+      minimum: 1
+    status:
+      $ref: '#/DraftStatus'
+    base_version:
+      type: integer
+      minimum: 0
+    base_value:
+      type: object
+      additionalProperties: true
+    value:
+      type: object
+      additionalProperties: true
+    approved_by:
+      type: string
+    source_revision:
+      type: integer
+      minimum: 0
+    published_revision:
+      type: integer
+      minimum: 0
+DraftSnapshot:
+  type: object
+  additionalProperties: false
+  required:
+  - config_name
+  - author
+  - description
+  - version
+  - status
+  - base_version
+  - base_value
+  - value
+  properties:
+    config_name:
+      type: string
+    author:
+      type: string
+    description:
+      type: string
+    version:
+      type: integer
+      minimum: 1
+    status:
+      $ref: '#/DraftStatus'
+    base_version:
+      type: integer
+      minimum: 0
+    base_value:
+      type: object
+      additionalProperties: true
+    value:
+      type: object
+      additionalProperties: true
+    approved_by:
+      type: string
+    source_revision:
+      type: integer
+      minimum: 0
+    published_revision:
+      type: integer
+      minimum: 0
+DraftEvent:
+  type: object
+  additionalProperties: false
+  required:
+  - action
+  - actor
+  - snapshot
+  - created_at
+  properties:
+    action:
+      type: string
+    actor:
+      type: string
+    snapshot:
+      $ref: '#/DraftSnapshot'
+    created_at:
+      type: string

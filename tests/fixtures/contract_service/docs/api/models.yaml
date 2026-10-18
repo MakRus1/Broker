@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: Общие модели и вложенные ссылки
+  version: '1'
+paths:
+  /models/echo:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/Payload
+      responses:
+        '200':
+          description: Проверенные вложенные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/Payload
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Та же модель ошибки с другим статусом
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+  /models/state:
+    get:
+      parameters:
+      - name: state
+        in: query
+        schema:
+          $ref: ../components/schemas/models.yaml#/State
+      responses:
+        '200':
+          description: Значение enum
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - state
+                properties:
+                  state:
+                    $ref: ../components/schemas/models.yaml#/State

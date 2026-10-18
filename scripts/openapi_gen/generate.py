@@ -7,7 +7,8 @@ from pathlib import Path
 import re
 import sys
 import yaml
-from model import identifier, parse_spec, validate_operations
+from model import identifier
+from documents import Documents, read_files, EXTENSIONS
 from render import config_block, outputs, view
 from features import prepare
 from clients import client_outputs, client_specs
@@ -39,29 +40,23 @@ def public_schema_dir(service):
 
 
 def specification_files(service, additions=None, public_only=False):
-    roots = [public_schema_dir(service)] if public_only else [service / 'docs/api']
-    files = {p: p.read_text() for base in roots for p in base.rglob('*')
-             if p.suffix in {'.yaml', '.yml', '.json'}}
+    roots = [public_schema_dir(service)] if public_only else [service / 'docs/api', service / 'docs/components']
+    boundary = public_schema_dir(service) if public_only else service / 'docs'
+    files = read_files(roots, boundary)
     files.update({p: text for p, text in (additions or {}).items()
-                  if p.is_relative_to(service / 'docs/api') and p.suffix in {'.yaml', '.yml', '.json'}})
+                  if any(p.is_relative_to(base) for base in roots) and p.suffix in EXTENSIONS})
     return files
 
 
 def load(service, additions=None, public_only=False):
     identifier(service.name)
     files = specification_files(service, additions, public_only)
-    if not files:
-        raise ValueError(f'{service}: no OpenAPI specs')
-    ops = []
-    for path, content in sorted(files.items()):
-        try:
-            ops.extend(parse_spec(yaml.load(content, Loader=UniqueLoader)))
-        except (ValueError, KeyError, TypeError, yaml.YAMLError) as exc:
-            raise ValueError(f'{path}: {exc}') from exc
+    root = public_schema_dir(service) if public_only else service / 'docs'
+    api = root if public_only else root / 'api'
+    ops = Documents(files, root, root / 'components', UniqueLoader).operations(api)
     if not ops:
-        raise ValueError('No HTTP operations')
-    validate_operations(ops)
-    return sorted(ops, key=lambda op: op.rel)
+        raise ValueError(f'{service}: no HTTP operations')
+    return ops
 
 
 def configuration(service, ops, source=None):
@@ -75,7 +70,7 @@ def configuration(service, ops, source=None):
 def digest(service, ops, additions=None):
     h = hashlib.sha256()
     for p, content in sorted(specification_files(service, additions).items()):
-        h.update((('public/' + p.relative_to(public_schema_dir(service)).as_posix()) if p.is_relative_to(public_schema_dir(service)) else ('internal/' + p.relative_to(service / 'docs/api').as_posix())).encode() + b'\0' + content.encode())
+        h.update((('public/' + p.relative_to(public_schema_dir(service)).as_posix()) if p.is_relative_to(public_schema_dir(service)) else ('internal/' + p.relative_to(service / 'docs').as_posix())).encode() + b'\0' + content.encode())
     for alias, provider in client_specs(service, UniqueLoader):
         h.update(alias.encode())
         for p, content in sorted(specification_files(provider, public_only=True).items()):

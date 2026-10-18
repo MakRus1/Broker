@@ -30,6 +30,7 @@ def matches(path, pattern):
 def plan(service):
     from generate import UniqueLoader, public_schema_dir
     from model import parse_spec, identifier
+    from documents import Documents, read_files
     identifier(service.name)
     if service.parent.name != "services":
         raise ValueError("Экспорт ожидает каталог services/<service>")
@@ -44,21 +45,34 @@ def plan(service):
         matches('/', pattern)
     destination = public_schema_dir(service)
     source = service / 'docs/api'
+    boundary = service / 'docs'
+    files = read_files([source, boundary / 'components'], boundary)
+    documents = Documents(files, boundary, boundary / 'components', UniqueLoader)
+    documents.validate_components()
+    def output_path(path):
+        path = path.resolve()
+        if path.is_relative_to((boundary / 'components').resolve()):
+            return destination / 'components' / path.relative_to((boundary / 'components').resolve())
+        if path.is_relative_to((source / 'components').resolve()):
+            raise ValueError('docs/api/components зарезервирован; используйте docs/components')
+        return destination / path.relative_to(source.resolve())
     result = {}
-    for path in sorted(source.rglob('*')):
-        if path.suffix not in {'.yaml', '.yml', '.json'}:
+    for path in sorted(files):
+        if not path.is_relative_to(source):
             continue
-        if not path.resolve().is_relative_to(source.resolve()):
-            raise ValueError('Спецификация выходит за каталог docs/api')
-        data = yaml.load(path.read_text(), Loader=UniqueLoader)
-        parse_spec(data)
+        data = documents.document(path)
+        parse_spec(documents.bundle(path))
         selected = {url: operation for url, operation in data['paths'].items()
                     if any(matches(url, pattern) for pattern in patterns) == (mode == 'include')}
         if not selected:
             continue
         exported = deepcopy(data)
         exported['paths'] = selected
-        result[destination / path.relative_to(source)] = yaml.dump(exported, Dumper=SpecDumper, allow_unicode=True, sort_keys=False)
+        copied = {path: exported}
+        copied.update({dep: documents.document(dep) for dep in documents.dependencies(exported, path)})
+        for origin, document in copied.items():
+            rewritten = documents.rewrite(document, origin, output_path)
+            result[output_path(origin)] = yaml.dump(rewritten, Dumper=SpecDumper, allow_unicode=True, sort_keys=False)
     if not result:
         raise ValueError('Правила экспорта не выбрали ни одной ручки')
     return destination, result

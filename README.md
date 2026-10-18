@@ -83,7 +83,8 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 
 Образы окружения, публикация и обновление: [docs/container-images.md](docs/container-images.md).
 
-Серверные HTTP-контракты: `services/<service>/docs/api`; клиентский экспорт:
+Серверные HTTP-контракты: `services/<service>/docs/api`, общие модели —
+`services/<service>/docs/components/schemas`; клиентский экспорт:
 `make export-client-specs` → `schemas/services/<service>`. Подключение типизированных
 клиентов через service.yaml: [документация](docs/client-codegen.md).
 

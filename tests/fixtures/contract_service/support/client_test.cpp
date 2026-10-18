@@ -1,5 +1,6 @@
 #include <client_contract.hpp>
 #include <userver/utest/utest.hpp>
+#include <views/models/echo/responses.hpp>
 
 namespace api = client_test::clients::contract;
 
@@ -129,11 +130,79 @@ UTEST(ClientContract, ConfigsAdminJsonObjects) {
     transport.reply = {400, "application/json",
                        R"({"error":"invalid_request","message":"Bad config"})"};
     EXPECT_THROW(client.AdminConfigsCurrent(request), config_api::AdminConfigsCurrent::Error400);
-    transport.reply = {200, "application/json",
-                       R"({"items":[{"config_name":"example","version":1}]})"};
+    transport.reply = {
+        200, "application/json",
+        R"({"items":[{"active_draft_id":null,"config_name":"example","version":1}]})"};
     const auto catalog = client.AdminConfigsList({});
     ASSERT_EQ(catalog.items.size(), 1);
-    EXPECT_EQ(catalog.items.front()["config_name"].As<std::string>(), "example");
+    EXPECT_EQ(catalog.items.front().config_name, "example");
     transport.reply = {200, "application/json", R"({"items":[42]})"};
     EXPECT_THROW(client.AdminConfigsList({}), platform::http::ContractError);
+}
+
+UTEST(ClientContract, SharedNestedModelsAndTypedErrors) {
+    namespace api = client_test::clients::contract;
+    MockTransport transport;
+    api::Client client(transport);
+    api::ModelsEcho::Request request;
+    request.body.profile.id = 7;
+    request.body.profile.address.city = "Москва";
+    request.body.profiles.push_back(request.body.profile);
+    request.body.note.emplace(std::nullopt);
+    transport.reply = {
+        200, "application/json",
+        R"({"profile":{"id":7,"address":{"city":"Москва"}},"profiles":[{"id":7,"address":{"city":"Москва"}}],"note":null})"};
+    const auto response = client.ModelsEcho(request);
+    EXPECT_EQ(response.profile.address.city, "Москва");
+    EXPECT_EQ(response.profile.state, api::models::State::Active);
+    EXPECT_EQ(response.profile.address.kind, api::models::Address_kind::City);
+    EXPECT_EQ(response.limit, 5);
+    ASSERT_TRUE(response.note.has_value());
+    EXPECT_FALSE(response.note->has_value());
+    const auto encoded = userver::formats::json::FromString(*transport.last.body);
+    EXPECT_TRUE(encoded["note"].IsNull());
+    EXPECT_EQ(encoded["profiles"][0]["state"].As<std::string>(), "active");
+
+    for (
+        const auto& invalid :
+        {R"({"profile":{"id":0,"address":{"city":"Москва"}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})",
+         R"({"profile":{"id":1,"address":{"city":""}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})",
+         R"({"profile":{"id":1,"address":{"city":"Москва"}},"profiles":[{}]})"}) {
+        transport.reply = {200, "application/json", invalid};
+        EXPECT_THROW(client.ModelsEcho(request), platform::http::ContractError);
+    }
+    transport.reply = {400, "application/json", R"({"error":"invalid_request","message":"Bad"})"};
+    EXPECT_THROW(client.ModelsEcho(request), api::ModelsEcho::Error400);
+    transport.reply.status = 409;
+    EXPECT_THROW(client.ModelsEcho(request), api::ModelsEcho::Error409);
+    request.body.profiles.front().address.city = "";
+    EXPECT_THROW(api::ModelsEcho::Encode(request), std::invalid_argument);
+}
+
+UTEST(ClientContract, SharedModelPresenceAndNull) {
+    namespace api = client_test::clients::contract;
+    const auto absent = broker_codegen::ParseJson<
+        api::models::Payload>(userver::formats::json::FromString(
+        R"({"profile":{"id":1,"address":{"city":"Москва"}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})"));
+    EXPECT_EQ(absent.limit, 5);
+    EXPECT_FALSE(absent.WasProvided("limit"));
+    EXPECT_FALSE(absent.note.has_value());
+    auto json = userver::formats::json::ValueBuilder{
+        userver::formats::json::ValueBuilder(absent).ExtractValue()};
+    json["note"] = nullptr;
+    const auto explicit_null = broker_codegen::ParseJson<api::models::Payload>(json.ExtractValue());
+    EXPECT_TRUE(explicit_null.WasProvided("note"));
+    ASSERT_TRUE(explicit_null.note.has_value());
+    EXPECT_FALSE(explicit_null.note->has_value());
+}
+
+UTEST(ServerContract, NestedResponseValidation) {
+    namespace api = contract_service::views::models::echo;
+    api::Response200 response;
+    response.profile.id = 1;
+    response.profile.address.city = "Москва";
+    response.profiles.push_back(response.profile);
+    EXPECT_NO_THROW(api::ToJson(response));
+    response.profiles.front().address.city = "";
+    EXPECT_THROW(api::ToJson(response), std::invalid_argument);
 }

@@ -27,6 +27,10 @@ def enum_labels(typ):
 
 
 def type_cpp(typ, scope=''):
+    if typ.nullable:
+        return 'std::optional<' + type_cpp(replace(typ, nullable=False), scope) + '>'
+    if typ.model_name:
+        return typ.cpp
     if typ.enum_name:
         return scope + '::' + typ.enum_name if scope else typ.enum_name
     if typ.item:
@@ -35,6 +39,10 @@ def type_cpp(typ, scope=''):
 
 
 def literal(typ, value, scope=''):
+    if typ.nullable:
+        if value is None:
+            return 'std::nullopt'
+        return type_cpp(typ, scope) + '{' + literal(replace(typ, nullable=False), value, scope) + '}'
     if typ.enum_name:
         return f'{type_cpp(typ, scope)}::{enum_labels(typ)[typ.schema["enum"].index(value)]}'
     if typ.kind == 'array':
@@ -77,10 +85,14 @@ return userver::formats::json::ValueBuilder(EnumValue(value)).ExtractValue();
 
 
 def validator(typ, name):
+    if typ.nullable:
+        return validator(replace(typ, nullable=False), name + '_value') + f'inline void Validate_{name}(const {typ.cpp}& value) {{ if (value) Validate_{name}_value(*value); }}\n'
     before = validator(typ.item, name + '_item') if typ.item else ''
     raw = 'EnumValue(value)' if typ.enum_name else 'value'
     schema = typ.schema
     checks = []
+    if typ.kind == 'record':
+        checks.append('ValidateModel(value);')
     if typ.kind == 'object':
         checks.append('if (!value.IsObject()) throw std::invalid_argument("object");')
     if typ.enum_name:

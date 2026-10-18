@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 import yaml
-from model import identifier, enum_types
+from model import identifier, enum_types, collect_models
 from configs import http_name
 from cpp_types import enums, declarations, quoted, type_cpp
 from render import fields, format_cpp
@@ -62,7 +62,8 @@ def json_read(response, finish):
         key = quoted(f.name)
         if f.required:
             lines.append(f'if (!json.HasMember({key})) throw std::invalid_argument("missing field");')
-        lines.append(f'if (json.HasMember({key})) {{ auto item = broker_codegen::ParseJson<{f.type.cpp}>(json[{key}]); Validate_{name}_{f.name}(item); value.{f.name} = std::move(item); }}')
+        assignment = f'value.{f.name}.emplace(std::move(item))' if f.optional else f'value.{f.name} = std::move(item)'
+        lines.append(f'if (json.HasMember({key})) {{ auto item = broker_codegen::ParseJson<{f.type.cpp}>(json[{key}]); Validate_{name}_{f.name}(item); {assignment}; }}')
     return '\n'.join(lines) + '\n' + finish
 
 
@@ -159,9 +160,11 @@ def render_client(service, alias, ops, provider=None):
 '''
     if provider:
         code += '#include <configs/keys.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n'
+    from models_render import render_models, bind_operation
+    code += render_models(collect_models(ops), ns + '::models', header=False)
     code += f'namespace {ns} {{\n'
     for op in ops:
-        code += operation_code('::' + ns + '::' + op.name, op)
+        code += operation_code('::' + ns + '::' + op.name, bind_operation(op, ns + '::models'))
     code += 'class Client {\npublic:\nexplicit Client(platform::http::Transport& transport) : transport_(&transport) {}\n'
     for op in ops:
         name = op.name

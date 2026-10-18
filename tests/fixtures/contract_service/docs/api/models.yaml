@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: Общие модели и вложенные ссылки
+  version: '1'
+paths:
+  /models/echo:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payload'
+      responses:
+        '200':
+          description: Проверенные вложенные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payload'
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Та же модель ошибки с другим статусом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /models/state:
+    get:
+      parameters:
+      - name: state
+        in: query
+        schema:
+          $ref: '#/components/schemas/State'
+      responses:
+        '200':
+          description: Значение enum
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - state
+                properties:
+                  state:
+                    $ref: '#/components/schemas/State'
+components:
+  schemas:
+    State:
+      type: string
+      enum:
+      - active
+      - disabled
+      default: active
+    Limit:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 20
+      default: 5
+    Address:
+      type: object
+      additionalProperties: false
+      required:
+      - city
+      properties:
+        city:
+          type: string
+          minLength: 1
+        kind:
+          type: string
+          enum:
+          - city
+          - rural
+          default: city
+    Profile:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - address
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        address:
+          $ref: '#/components/schemas/Address'
+        state:
+          $ref: '#/components/schemas/State'
+    ProfileAlias:
+      $ref: '#/components/schemas/Profile'
+    Payload:
+      type: object
+      additionalProperties: false
+      required:
+      - profile
+      - profiles
+      properties:
+        profile:
+          $ref: '#/components/schemas/ProfileAlias'
+        profiles:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Profile'
+        limit:
+          $ref: '#/components/schemas/Limit'
+        note:
+          type: string
+          nullable: true
+        payload_provided:
+          type: boolean
+          default: false
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string

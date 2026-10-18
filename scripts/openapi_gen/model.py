@@ -28,9 +28,15 @@ class Type:
     schema: dict = dataclass_field(default_factory=dict)
     enum_name: str | None = None
     enum_values: tuple | None = None
+    model_name: str | None = None
+    nullable: bool = False
 
     @property
     def cpp(self):
+        if self.nullable:
+            return "std::optional<" + replace(self, nullable=False).cpp + ">"
+        if self.model_name:
+            return self.model_name if self.model_name.startswith("::") else "models::" + self.model_name
         if self.enum_name:
             return self.enum_name
         if self.kind == 'integer' and self.schema.get('format') == 'int32':
@@ -79,6 +85,7 @@ class Operation:
     params: tuple[Field, ...]
     body: Body | None
     responses: tuple[Response, ...]
+    models: tuple['NamedModel', ...] = ()
 
     @property
     def name(self):
@@ -103,7 +110,7 @@ def enum_types(operation):
             fields.extend(response.body.fields)
     for field in fields:
         typ = field.type.item if field.type.item else field.type
-        if not typ.enum_name:
+        if not typ.enum_name or typ.model_name:
             continue
         if typ.enum_name in {'Request', 'RequestBody', 'Response', 'Handler', 'View'} or re.fullmatch(r'Response[0-9]+', typ.enum_name):
             raise ValueError(f'Enum type name collides with generated API: {typ.enum_name}')
@@ -115,7 +122,7 @@ def enum_types(operation):
             values.extend(value for value in typ.schema['enum'] if value not in values)
             result[typ.enum_name] = replace(previous, schema={**previous.schema, 'enum': values})
         else:
-            result[typ.enum_name] = typ
+            result[typ.enum_name] = replace(typ, nullable=False)
     return tuple(result.values())
 
 
@@ -132,7 +139,25 @@ def resolve(schema, schemas):
     return schema
 
 
-def parse_type(schema, prefix='Value'):
+def parse_type(schema, prefix='Value', registry=None):
+    if '$ref' in schema:
+        keys(schema, {'$ref'}, 'reference')
+    if 'nullable' in schema:
+        if not isinstance(schema['nullable'], bool):
+            raise ValueError('nullable must be boolean')
+        inner = {key: value for key, value in schema.items() if key != 'nullable'}
+        null_default = 'default' in inner and inner['default'] is None
+        if null_default:
+            if not schema['nullable']:
+                raise ValueError('Null default requires nullable: true')
+            inner.pop('default')
+        typ = parse_type(inner, prefix, registry)
+        return replace(typ, nullable=schema['nullable'],
+                       schema={**typ.schema, **({'default': None} if null_default else {})})
+    if '$ref' in schema:
+        if registry is None:
+            raise ValueError('References require components.schemas')
+        return registry.reference(schema)
     kind = schema.get('type')
     if kind == 'object':
         keys(schema, {'type', 'additionalProperties', 'description', 'title'}, 'free-form object')
@@ -144,18 +169,25 @@ def parse_type(schema, prefix='Value'):
         raise ValueError(f'Unsupported field type: {kind}')
     item = None
     if kind == 'array':
-        item = parse_type(schema.get('items', {}), prefix + '_item')
+        item = parse_type(schema.get('items', {}), prefix + '_item', registry)
         if item.kind == 'array':
             raise ValueError('Nested arrays are unsupported')
-        if item.kind == 'object' and ('default' in schema or schema.get('uniqueItems')):
+        if item.kind in {'object', 'record'} and ('default' in schema or schema.get('uniqueItems')):
             raise ValueError('default and uniqueItems for arrays of objects are unsupported')
     elif 'items' in schema:
         raise ValueError('items is only valid for arrays')
-    validate_schema(schema)
+    validate_schema({**schema, 'items': item.schema} if item else schema)
     return Type(kind, item, schema, prefix if 'enum' in schema else None)
 
 
-def parse_body(schema, schemas, required=True, prefix='Schema'):
+def parse_body(schema, schemas, required=True, prefix='Schema', registry=None):
+    if '$ref' in schema and registry is not None:
+        model = registry.get(registry.reference_name(schema))
+        while model.alias:
+            model = registry.get(model.alias)
+        if model.body is None:
+            raise ValueError('JSON body must reference an object with properties')
+        return replace(model.body, required=required)
     schema = resolve(schema, schemas)
     keys(schema, {'type', 'properties', 'required', 'additionalProperties', 'description', 'title'}, 'object schema')
     if schema.get('type') != 'object':
@@ -171,7 +203,128 @@ def parse_body(schema, schemas, required=True, prefix='Schema'):
     extra = schema.get('additionalProperties', True)
     if not isinstance(extra, bool):
         raise ValueError('Typed additionalProperties is unsupported')
-    return Body(tuple(Field(identifier(n), parse_type(s, n), n in req) for n, s in sorted(props.items())), required, not extra)
+    return Body(tuple(Field(identifier(n), parse_type(s, n, registry), n in req) for n, s in sorted(props.items())), required, not extra)
+
+
+@dataclass(frozen=True)
+class NamedModel:
+    name: str
+    type: Type
+    body: Body | None = None
+    alias: str | None = None
+
+
+class SchemaRegistry:
+    def __init__(self, schemas):
+        if not isinstance(schemas, dict):
+            raise ValueError('components.schemas must be an object')
+        self.schemas = schemas
+        self.models = {}
+        self.visiting = []
+
+    def reference_name(self, schema):
+        keys(schema, {'$ref'}, 'reference')
+        ref = schema['$ref']
+        prefix = '#/components/schemas/'
+        if not isinstance(ref, str) or not ref.startswith(prefix) or ref[len(prefix):] not in self.schemas:
+            raise ValueError(f'Unsupported or unresolved reference: {ref}')
+        return ref[len(prefix):]
+
+    def reference(self, schema):
+        name = self.reference_name(schema)
+        model = self.get(name)
+        return replace(model.type, model_name=name)
+
+    def name_inline_enum(self, typ, owner):
+        if typ.model_name:
+            return typ
+        if typ.item:
+            return replace(typ, item=self.name_inline_enum(typ.item, owner))
+        if not typ.enum_name:
+            return typ
+        enum_name = owner + '_' + typ.enum_name
+        if enum_name in self.schemas or enum_name in self.models:
+            raise ValueError(f'Conflicting model enum name: {enum_name}')
+        enum_type = replace(typ, enum_name=enum_name, nullable=False)
+        self.models[enum_name] = NamedModel(enum_name, enum_type)
+        return replace(enum_type, model_name=enum_name, nullable=typ.nullable)
+
+    def get(self, name):
+        identifier(name)
+        if name in {'std', 'userver', 'broker_codegen', 'models', 'ValidateModel', 'ParseModelJson', 'Serialize', 'EnumValue',
+                    'ParseEnumScalar', 'ParseEnumJson', 'detail', 'ToJson'}:
+            raise ValueError(f'Reserved model name: {name}')
+        if name in self.visiting:
+            raise ValueError('Recursive schema reference: ' + ' -> '.join([*self.visiting, name]))
+        if name in self.models:
+            return self.models[name]
+        self.visiting.append(name)
+        schema = self.schemas[name]
+        if not isinstance(schema, dict):
+            raise ValueError(f'components.schemas.{name}: expected an object')
+        if '$ref' in schema:
+            target = self.reference_name(schema)
+            source = self.get(target)
+            model = NamedModel(name, replace(source.type, model_name=name), source.body, target)
+        elif schema.get('type') == 'object' and ('properties' in schema or schema.get('additionalProperties') is False):
+            body = parse_body(schema, self.schemas, prefix=name, registry=self)
+            fields = tuple(replace(field, type=self.name_inline_enum(field.type, name))
+                           for field in body.fields)
+            body = replace(body, fields=fields)
+            model = NamedModel(name, Type('record', schema=schema, model_name=name), body)
+        else:
+            if schema.get('nullable'):
+                raise ValueError('Nullable components are unsupported; put nullable on a property schema')
+            typ = parse_type(schema, name, self)
+            model = NamedModel(name, typ)
+        self.visiting.pop()
+        self.models[name] = model
+        return model
+
+
+def collect_models(operations):
+    models = {}
+    for op in operations:
+        for model in op.models:
+            if model.name in models and models[model.name] != model:
+                raise ValueError(f'Conflicting components.schemas model: {model.name}')
+            models[model.name] = model
+    validation_names = set()
+    def validation_functions(typ, name):
+        validation_names.add('Validate_' + name)
+        if typ.nullable:
+            validation_functions(replace(typ, nullable=False), name + '_value')
+        elif typ.item:
+            validation_functions(typ.item, name + '_item')
+    for model in models.values():
+        if model.body and not model.alias:
+            for field in model.body.fields:
+                validation_functions(field.type, model.name + '_' + field.name)
+    conflicts = validation_names & models.keys()
+    if conflicts:
+        raise ValueError('Conflicting model validation name: ' + ', '.join(sorted(conflicts)))
+    # Реестр каждого файла уже отсортирован по зависимостям; объединяем DAG заново.
+    ordered = {}
+    def add(name):
+        if name in ordered:
+            return
+        model = models[name]
+        def dependencies(typ):
+            if typ.model_name and typ.model_name != name:
+                add(typ.model_name)
+            if typ.item:
+                dependencies(typ.item)
+        if model.alias:
+            add(model.alias)
+        elif model.body:
+            for field in model.body.fields:
+                dependencies(field.type)
+        else:
+            dependencies(model.type)
+        ordered[name] = model
+    for name in sorted(models):
+        add(name)
+    return tuple(ordered.values())
 
 
 def parse_spec(spec):
@@ -180,9 +333,10 @@ def parse_spec(spec):
         raise ValueError('Only OpenAPI 3.0.3 is supported')
     keys(spec.get('components', {}), {'schemas'}, 'components')
     schemas = spec.get('components', {}).get('schemas', {})
-    # Проверяем и неиспользуемые схемы, чтобы ограничения не терялись незаметно.
-    for schema in schemas.values():
-        parse_body(schema, schemas)
+    registry = SchemaRegistry(schemas)
+    # Проверяем также неиспользуемые модели и строим порядок зависимостей.
+    for name in sorted(schemas):
+        registry.get(name)
     operations = []
     for path, item in spec.get('paths', {}).items():
         if not isinstance(path, str) or not re.fullmatch(r'/(?:[a-zA-Z0-9_{}-]+/?)*', path) or '//' in path or (path != '/' and path.endswith('/')):
@@ -216,8 +370,8 @@ def parse_spec(spec):
                         raise ValueError('Only path/query parameters with boolean required are supported')
                     if loc == 'path' and (not p.get('required') or name not in placeholders):
                         raise ValueError('Path parameters must be required and present in URL')
-                    typ = parse_type(p['schema'], name)
-                    if typ.kind in {'array', 'object'}:
+                    typ = parse_type(p['schema'], name, registry)
+                    if typ.kind in {'array', 'object', 'record'} or typ.nullable:
                         raise ValueError('Array/object parameters are unsupported; arrays are supported in JSON bodies')
                     if (loc, name) in seen:
                         raise ValueError('Duplicate parameter')
@@ -238,7 +392,7 @@ def parse_spec(spec):
                 if set(rb['content']) != {'application/json'}:
                     raise ValueError('Request body supports only application/json')
                 keys(rb['content']['application/json'], {'schema'}, 'request media')
-                body = parse_body(rb['content']['application/json']['schema'], schemas, rb.get('required', False), 'RequestBody')
+                body = parse_body(rb['content']['application/json']['schema'], schemas, rb.get('required', False), 'RequestBody', registry)
                 body = replace(body, validate_content_type=rb.get('x-validate-content-type', True))
             responses = []
             for raw, response in op.get('responses', {}).items():
@@ -256,13 +410,13 @@ def parse_spec(spec):
                     keys(content[media], {'schema'}, 'response media')
                     schema = content[media]['schema']
                     if media == 'application/json':
-                        rb = parse_body(schema, schemas, prefix=f'Response{status}')
+                        rb = parse_body(schema, schemas, prefix=f'Response{status}', registry=registry)
                     elif media != 'text/plain' or schema != {'type': 'string'}:
                         raise ValueError(f'Unsupported response media/schema: {media}')
                 responses.append(Response(status, media, rb))
             if not responses:
                 raise ValueError('At least one response is required')
-            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status))))
+            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), tuple(registry.models.values())))
     normalized = []
     for operation in operations:
         canonical = {typ.enum_name: tuple(typ.schema['enum']) for typ in enum_types(operation)}
@@ -270,7 +424,7 @@ def parse_spec(spec):
         def normalize_type(typ):
             if typ.item:
                 return replace(typ, item=normalize_type(typ.item))
-            return replace(typ, enum_values=canonical[typ.enum_name]) if typ.enum_name else typ
+            return replace(typ, enum_values=canonical[typ.enum_name]) if typ.enum_name and not typ.model_name else typ
 
         def normalize_fields(fields):
             return tuple(replace(field, type=normalize_type(field.type)) for field in fields)
@@ -288,6 +442,7 @@ def parse_spec(spec):
 
 def validate_operations(operations):
     """Один путь — одна операция; имена и namespaces не должны конфликтовать."""
+    collect_models(operations)
     for label, selector in (
         ('path', lambda op: op.path),
         ('URL template', lambda op: re.sub(r'\{[^}]+\}', '{}', op.path)),
@@ -305,7 +460,7 @@ def validate_operations(operations):
         if op.name in {'Client', 'Component'}:
             raise ValueError(f'{op.path}: generated client method {op.name} is reserved')
         # Классы и enum родительской ручки не могут стать namespace дочерней.
-        reserved = {'Request', 'RequestBody', 'Response', 'Handler', 'View', 'ToJson', 'Serialize', 'EnumValue', 'ParseEnumScalar', 'ParseEnumJson'}
+        reserved = {'models', 'Request', 'RequestBody', 'Response', 'Handler', 'View', 'ToJson', 'Serialize', 'EnumValue', 'ParseEnumScalar', 'ParseEnumJson'}
         reserved.update(f'Response{response.status}' for response in op.responses)
         reserved.update(typ.enum_name for typ in enum_types(op))
         for child in operations:

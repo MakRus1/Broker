@@ -43,7 +43,7 @@ class CodegenTest(unittest.TestCase):
         self.assertNotIn('RequestBody', result['include/views/items/by_id/requests.hpp'])
 
     def test_explicit_rejection_of_unsupported_contracts(self):
-        for key, value in [('nullable', True), ('enum', []), ('format', 'unknown'), ('minimum', 0), ('default', 3)]:
+        for key, value in [('nullable', 'yes'), ('enum', []), ('format', 'unknown'), ('minimum', 0), ('default', 3)]:
             with self.subTest(key=key):
                 data = spec()
                 data['paths']['/items/{id}/create']['post']['requestBody']['content']['application/json']['schema']['properties']['name'][key] = value

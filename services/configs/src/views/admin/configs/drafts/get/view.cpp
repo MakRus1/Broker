@@ -15,10 +15,11 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
                            .id = draft.Id,
                            .published_revision = draft.PublishedRevision,
                            .source_revision = draft.SourceRevision,
-                           .status = draft.Status == ::configs::DraftStatus::Draft ? status::Draft
+                           .status = draft.Status == ::configs::DraftStatus::Draft
+                                         ? ::configs::models::DraftStatus::Draft
                                      : draft.Status == ::configs::DraftStatus::Published
-                                         ? status::Published
-                                         : status::Cancelled,
+                                         ? ::configs::models::DraftStatus::Published
+                                         : ::configs::models::DraftStatus::Cancelled,
                            .value = draft.Value,
                            .version = draft.Version};
     } catch (const ::configs::InvalidRequest& error) {

@@ -75,7 +75,7 @@ paths:
         in: query
         schema:
           type: string
-          enum: &id001
+          enum:
           - new
           - in_transit
           - closed
@@ -124,7 +124,10 @@ paths:
                     type: boolean
                   status:
                     type: string
-                    enum: *id001
+                    enum:
+                    - new
+                    - in_transit
+                    - closed
   /validated/create:
     post:
       requestBody:
@@ -139,7 +142,10 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: *id001
+                  enum:
+                  - new
+                  - in_transit
+                  - closed
                 labels:
                   type: array
                   items:
@@ -187,7 +193,8 @@ paths:
                 properties:
                   status:
                     type: string
-                    enum: [success]
+                    enum:
+                    - success
                   count:
                     type: integer
                   count_provided:

@@ -68,11 +68,8 @@ def _create(name, postgres=False, grpc=False):
         subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(stage), '--check'], check=True)
         try:
             stage.rename(destination)
-            schema_destination.mkdir(parents=True)
-            for spec in (destination / 'docs/api').glob('*'):
-                if spec.suffix in {'.yaml', '.yml', '.json'}:
-                    spec.rename(schema_destination / spec.name)
-            # После переноса меняется путь входов lock-файла, но ручной код сохраняется.
+            from export_clients import export
+            export(destination)
             subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(destination)], check=True)
             deps = yaml.safe_load(before[ROOT / '.github/service-deps.yaml'])
             deps['libs']['common']['services'] = sorted(set(deps['libs']['common']['services'] + [name]))

@@ -2,16 +2,15 @@ openapi: 3.0.3
 info:
   title: broker hello_postgres API
   version: '1.0'
-
 paths:
   /hello_postgres:
     get:
       parameters:
-        - name: name
-          in: query
-          required: false
-          schema:
-            type: string
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: OK
@@ -22,11 +21,11 @@ paths:
   /hello_postgres/create:
     post:
       parameters:
-        - name: name
-          in: query
-          required: false
-          schema:
-            type: string
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: OK

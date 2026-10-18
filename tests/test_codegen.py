@@ -175,7 +175,7 @@ class CodegenTest(unittest.TestCase):
             with self.subTest(paths=paths), self.assertRaises(ValueError):
                 parse_spec({'openapi': '3.0.3', 'paths': paths})
 
-    def test_duplicate_path_across_public_and_internal_specs_does_not_write(self):
+    def test_duplicate_path_across_server_specs_does_not_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             service = root / 'services/example'
@@ -183,7 +183,7 @@ class CodegenTest(unittest.TestCase):
             (service / 'docs/api').mkdir(parents=True)
             (service / 'configs').mkdir()
             public.mkdir(parents=True)
-            for path, method in [(public / 'external.yaml', 'get'), (service / 'docs/api/internal.yaml', 'post')]:
+            for path, method in [(service / 'docs/api/external.yaml', 'get'), (service / 'docs/api/internal.yaml', 'post')]:
                 path.write_text(yaml.safe_dump({'openapi': '3.0.3', 'paths': {
                     '/foo': {method: {'responses': {'204': {'description': 'Нет тела'}}}}}}))
             (service / 'configs/static_config.yaml').write_text('# OPENAPI_HANDLERS_BEGIN\n# OPENAPI_HANDLERS_END\n')
@@ -199,3 +199,21 @@ class CodegenTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class JsonObjectContractTest(unittest.TestCase):
+    def test_object_fields_require_explicit_free_form_schema(self):
+        from model import parse_type
+        self.assertEqual(parse_type({'type': 'object', 'additionalProperties': True}).cpp,
+                         'userver::formats::json::Value')
+        for schema in [{'type': 'object'}, {'type': 'object', 'properties': {}},
+                       {'type': 'object', 'additionalProperties': {'type': 'string'}}]:
+            with self.subTest(schema=schema), self.assertRaises(ValueError):
+                parse_type(schema)
+
+    def test_admin_listener_is_generated_from_path(self):
+        from render import config_block
+        data = {'openapi': '3.0.3', 'paths': {'/admin/configs/list': {'get': {'responses': {'204': {'description': 'Готово'}}}}}}
+        self.assertIn('monitor-handler: true', config_block(parse_spec(data)))
+        data['paths']['/configs/status'] = data['paths'].pop('/admin/configs/list')
+        self.assertNotIn('monitor-handler: true', config_block(parse_spec(data)))

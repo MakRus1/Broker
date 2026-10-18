@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Сохранить валидные правки драфта
+  version: '1'
+paths:
+  /admin/configs/drafts/edit:
+    post:
+      summary: Сохранить валидные правки драфта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - id
+              - actor
+              - expected_version
+              properties:
+                id:
+                  type: integer
+                  minimum: 1
+                actor:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                expected_version:
+                  type: integer
+                  minimum: 1
+                value:
+                  type: object
+                  additionalProperties: true
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+      description: Укажите value и/или description. Невалидное значение не сохраняется.
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - id
+                - config_name
+                - author
+                - description
+                - version
+                - status
+                - base_version
+                - base_value
+                - value
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                  config_name: &id001
+                    type: string
+                  author: *id001
+                  description: *id001
+                  version:
+                    type: integer
+                    minimum: 1
+                  status:
+                    type: string
+                    enum:
+                    - draft
+                    - published
+                    - cancelled
+                  base_version: &id003
+                    type: integer
+                    minimum: 0
+                  base_value: &id002
+                    type: object
+                    additionalProperties: true
+                  value: *id002
+                  approved_by: *id001
+                  source_revision: *id003
+                  published_revision: *id003
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema: &id005
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error: &id004
+                    type: string
+                  message: *id004
+        '403':
+          description: Операция запрещена
+          content:
+            application/json:
+              schema: *id005
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema: *id005
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema: *id005

@@ -113,3 +113,27 @@ UTEST(ClientContract, OnlyErrorsAndEmptyError) {
     EXPECT_THROW(api::EmptyError::Decode({404, "", ""}), api::EmptyError::Error404);
     EXPECT_THROW(api::EmptyError::Decode({404, "", "unexpected"}), platform::http::ContractError);
 }
+
+UTEST(ClientContract, ConfigsAdminJsonObjects) {
+    namespace config_api = client_test::clients::configs_api;
+    MockTransport transport;
+    config_api::Client client(transport);
+    config_api::AdminConfigsCurrent::Request request;
+    request.body.config_name = "SHIPMENT_TERMS_CONFIG";
+    transport.reply = {
+        200, "application/json",
+        R"({"config_name":"SHIPMENT_TERMS_CONFIG","version":5,"value":{"nested":[{"enabled":true}]}})"};
+    const auto response = client.AdminConfigsCurrent(request);
+    EXPECT_EQ(transport.last.path, "/admin/configs/current");
+    EXPECT_TRUE(response.value["nested"][0]["enabled"].As<bool>());
+    transport.reply = {400, "application/json",
+                       R"({"error":"invalid_request","message":"Bad config"})"};
+    EXPECT_THROW(client.AdminConfigsCurrent(request), config_api::AdminConfigsCurrent::Error400);
+    transport.reply = {200, "application/json",
+                       R"({"items":[{"config_name":"example","version":1}]})"};
+    const auto catalog = client.AdminConfigsList({});
+    ASSERT_EQ(catalog.items.size(), 1);
+    EXPECT_EQ(catalog.items.front()["config_name"].As<std::string>(), "example");
+    transport.reply = {200, "application/json", R"({"items":[42]})"};
+    EXPECT_THROW(client.AdminConfigsList({}), platform::http::ContractError);
+}

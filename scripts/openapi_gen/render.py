@@ -167,6 +167,10 @@ template <typename T> struct IsVector : std::false_type {};
 template <typename T> struct IsVector<std::vector<T>> : std::true_type {};
 template <typename T> T ParseJson(const userver::formats::json::Value& value) {
     if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
+    else if constexpr (std::is_same_v<T, userver::formats::json::Value>) {
+        if (!value.IsObject()) throw std::invalid_argument("object");
+        return value;
+    }
     else if constexpr (IsVector<T>::value) {
         if (!value.IsArray()) throw std::invalid_argument("array");
         T result;
@@ -227,7 +231,7 @@ public:
             parse.append('if (http.RequestBody().empty()) throw std::invalid_argument("missing body");')
         parse += ['if (!http.RequestBody().empty()) {',
                   'const auto content_type = http.GetHeader("Content-Type");',
-                  'if (content_type != "application/json" && content_type.rfind("application/json;", 0) != 0) throw std::invalid_argument("content type");',
+                  ('if (content_type != "application/json" && content_type.rfind("application/json;", 0) != 0) throw std::invalid_argument("content type");' if op.body.validate_content_type else '(void)content_type;'),
                   'const auto json = userver::formats::json::FromString(http.RequestBody());',
                   'if (!json.IsObject()) throw std::invalid_argument("object body");', 'RequestBody body;']
         if op.body.strict:
@@ -248,6 +252,10 @@ public:
             http.GetHttpResponse().SetHeader(std::string_view{{"Content-Type"}}, "{media}");
             return {ret};
         }}''')
+    parse_error = 'throw userver::server::handlers::ClientError(userver::server::handlers::ExternalBody{"Invalid request"});'
+    bad_request = next((response for response in op.responses if response.status == 400), None)
+    if bad_request and bad_request.media == 'application/json' and bad_request.body and {field.name for field in bad_request.body.fields} == {'error', 'message'} and all(field.required and field.type.schema == {'type': 'string'} for field in bad_request.body.fields):
+        parse_error = 'http.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest); http.GetHttpResponse().SetHeader(std::string_view{"Content-Type"}, "application/json"); return ToJson(Response400{.error = "invalid_request", .message = "Invalid request"});'
     source = f'''#include <views/{op.rel}/handler.hpp>
 #include <views/{op.rel}/view.hpp>
 #include <openapi/runtime.hpp>
@@ -264,7 +272,7 @@ std::string Handler::HandleRequestThrow(const userver::server::http::HttpRequest
     }} catch (const std::bad_alloc&) {{
         throw;
     }} catch (const std::exception&) {{
-        throw userver::server::handlers::ClientError(userver::server::handlers::ExternalBody{{"Invalid request"}});
+        {parse_error}
     }}
     const auto response = View::Handle(std::move(request), context{', deps_' if deps else ''});
     return std::visit([&](const auto& body) -> std::string {{
@@ -296,4 +304,4 @@ def outputs(service, operations, dependencies):
 
 
 def config_block(operations):
-    return '\n'.join(f'        {op.handler}:\n            path: {op.path}\n            method: {op.method}\n            task_processor: main-task-processor\n            request_body_size_log_limit: 0\n            response_data_size_log_limit: 0' for op in operations)
+    return '\n'.join(f'        {op.handler}:\n            path: {op.path}\n            method: {op.method}\n{('            monitor-handler: true' + chr(10)) if op.path.startswith('/admin/') else ''}            task_processor: main-task-processor\n            request_body_size_log_limit: 0\n            response_data_size_log_limit: 0' for op in operations)

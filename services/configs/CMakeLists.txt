@@ -6,6 +6,7 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/config_store.cpp
+    src/components/config_drafts.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )

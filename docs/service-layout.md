@@ -1,6 +1,6 @@
 # Структура сервиса
 
-Публичные клиентские контракты находятся в `schemas/services/<service>` в корне
+Экспортированные клиентские контракты находятся в `schemas/services/<service>` в корне
 репозитория; C++-клиенты создаются в каталоге сборки потребителя.
 Каталоги создаются по необходимости. В демонстрационном broker пока нет
 бизнес-компонентов, репозиториев и внешних клиентов.
@@ -8,10 +8,11 @@
 ```text
 services/<service>/
 ├── service.yaml                   # Инфраструктура, клиенты, конфиги и библиотеки
+├── client-api.yaml                # include либо exclude для экспорта HTTP API
 ├── CMakeLists.txt
 ├── Makefile                       # Команды из каталога сервиса
 ├── configs/                       # userver и переменные окружения
-├── docs/api/                      # Внутренние OpenAPI и codegen.lock
+├── docs/api/                      # Все серверные OpenAPI и codegen.lock
 ├── proto/                         # gRPC-контракты
 ├── postgresql/
 │   ├── schemas/db_1/              # V0001__migration_name.sql для БД

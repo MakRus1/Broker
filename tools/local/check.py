@@ -7,6 +7,7 @@ import subprocess
 import time
 import urllib.parse
 import urllib.request
+from config_api import ConfigAdmin
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -133,20 +134,13 @@ def check():
 
     wait_for("Prometheus получает метрики трех сервисов", metrics)
     before = restart_counts()
-    original = json.loads(request("http://127.0.0.1:18090/configs/values", {}))
-    modified = copy.deepcopy(original["configs"]["BROKER_HTTP_CLIENT_CONFIG"])
-    # Явное значение пути имеет приоритет перед **default**.
+    admin = ConfigAdmin("http://127.0.0.1:18092")
+    name = "BROKER_HTTP_CLIENT_CONFIG"
+    original = admin.current(name)
+    modified = copy.deepcopy(original["value"])
     desired_timeout = 2345 if modified.get("/hello_postgres", {}).get("timeout") == 1234 else 1234
     modified["/hello_postgres"] = {"timeout": desired_timeout, "max_retries": 0}
-    published = json.loads(
-        request(
-            "http://127.0.0.1:18092/configs/publish",
-            {
-                "expected_revision": original["revision"],
-                "configs": {"BROKER_HTTP_CLIENT_CONFIG": modified},
-            },
-        )
-    )
+    published = admin.publish(name, modified, original["version"], "Проверка доставки конфигов")
     try:
 
         def applied():
@@ -166,15 +160,7 @@ def check():
         wait_for("Новый timeout применяется без перезапуска", applied)
         assert before == restart_counts(), "Во время проверки сервисы перезапустились"
     finally:
-        request(
-            "http://127.0.0.1:18092/configs/publish",
-            {
-                "expected_revision": published["revision"],
-                "configs": {
-                    "BROKER_HTTP_CLIENT_CONFIG": original["configs"]["BROKER_HTTP_CLIENT_CONFIG"]
-                },
-            },
-        )
+        admin.publish(name, original["value"], published["published_revision"], "Восстановление после проверки")
     print(f"Трасса: http://localhost:13000/explore (Tempo, trace_id={trace_id})", flush=True)
 
 

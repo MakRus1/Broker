@@ -16,7 +16,6 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
-#include <components/config_handler.hpp>
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
@@ -46,11 +45,6 @@ int main(int argc, char* argv[]) {
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
             .Append<userver::otlp::LoggerComponent>();
 
-    component_list.Append<configs::ConfigStore>()
-        .Append<configs::ConfigHandler>()
-        .Append<configs::ConfigHandler>("config-publish")
-        .Append<configs::ConfigHandler>("config-history")
-        .Append<configs::ConfigHandler>("config-rollback");
     // SERVICE_REGISTRATION_BEGIN
     component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());

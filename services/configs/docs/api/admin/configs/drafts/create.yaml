@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Создать валидный драфт одного конфига
+  version: '1'
+paths:
+  /admin/configs/drafts/create:
+    post:
+      summary: Создать валидный драфт одного конфига
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - actor
+              - config_name
+              - description
+              - expected_config_version
+              properties:
+                actor:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                config_name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                expected_config_version: &id001
+                  type: integer
+                  minimum: 0
+                value:
+                  type: object
+                  additionalProperties: true
+                source_revision: *id001
+      description: Укажите ровно одно из value и source_revision. На конфиг разрешен
+        один активный драфт.
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - id
+                - config_name
+                - author
+                - description
+                - version
+                - status
+                - base_version
+                - base_value
+                - value
+                properties:
+                  id:
+                    type: integer
+                    minimum: 1
+                  config_name: &id002
+                    type: string
+                  author: *id002
+                  description: *id002
+                  version:
+                    type: integer
+                    minimum: 1
+                  status:
+                    type: string
+                    enum:
+                    - draft
+                    - published
+                    - cancelled
+                  base_version: &id004
+                    type: integer
+                    minimum: 0
+                  base_value: &id003
+                    type: object
+                    additionalProperties: true
+                  value: *id003
+                  approved_by: *id002
+                  source_revision: *id004
+                  published_revision: *id004
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema: &id006
+                type: object
+                additionalProperties: false
+                required:
+                - error
+                - message
+                properties:
+                  error: &id005
+                    type: string
+                  message: *id005
+        '403':
+          description: Операция запрещена
+          content:
+            application/json:
+              schema: *id006
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema: *id006
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema: *id006

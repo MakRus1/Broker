@@ -42,3 +42,36 @@ async def test_client_post(service_client, mockserver):
     response = await service_client.get('/client-probe', params={'method': 'post', 'name': 'Клиент'})
     assert response.json() == {'value': 'Привет'}
     assert hello.times_called == 1
+
+
+async def test_timeout_changes_without_restart(service_client, mockserver, dynamic_config):
+    @mockserver.handler('/foo/bar')
+    async def slow(request):
+        await asyncio.sleep(0.25)
+        return mockserver.make_response(status=200, json={'greeting': 'Готово'})
+    response = await service_client.get('/client-probe', params={'name': 'config'})
+    assert response.json() == {'error': 'timeout'}
+    await asyncio.sleep(0.3)
+    dynamic_config.set_values({'BROKER_HTTP_CLIENT_CONFIG': {
+        '**default**': {'timeout': 100, 'max_retries': 0}, '/foo/bar': {'timeout': 1000}}})
+    response = await service_client.get('/client-probe', params={'name': 'config'})
+    assert response.json() == {'status': 200, 'value': 'Готово'}
+
+
+async def test_get_retries_but_post_does_not(service_client, mockserver, dynamic_config):
+    dynamic_config.set_values({'BROKER_HTTP_CLIENT_CONFIG': {
+        '**default**': {'timeout': 1000, 'max_retries': 2}}})
+    @mockserver.handler('/foo/bar')
+    def transient(request):
+        if transient.times_called < 2:
+            return mockserver.make_response(status=503)
+        return mockserver.make_response(status=200, json={'greeting': 'Повтор'})
+    response = await service_client.get('/client-probe', params={'name': 'retry'})
+    assert response.json() == {'status': 200, 'value': 'Повтор'}
+    assert transient.times_called == 3
+    @mockserver.handler('/hello/create')
+    def unavailable(request):
+        return mockserver.make_response(status=503)
+    response = await service_client.get('/client-probe', params={'method': 'post', 'name': 'retry'})
+    assert response.json() == {'error': 'contract'}
+    assert unavailable.times_called == 1

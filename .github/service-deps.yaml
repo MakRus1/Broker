@@ -1,22 +1,17 @@
-# Selective CI (scripts/affected-services.sh).
-#
-# libs.common.services — при изменении libs/common тестируются эти сервисы.
-# Регистрация: make new-service NAME=orders POSTGRES=1
 libs:
   common:
     services:
-      - broker
-
-# Изменение этих путей → тесты для всех сервисов.
+    - broker
+    - configs
 shared_paths:
-  - cmake/
-  - .github/
-  - .devcontainer/
-  - tools/
-  - scripts/
-  - tests/
-  - CMakeLists.txt
-  - CMakePresets.json
-  - Makefile
-  - docker-compose.yml
-  - requirements.txt
+- cmake/
+- .github/
+- .devcontainer/
+- tools/
+- scripts/
+- tests/
+- CMakeLists.txt
+- CMakePresets.json
+- Makefile
+- docker-compose.yml
+- requirements.txt

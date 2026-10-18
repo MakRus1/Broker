@@ -1,0 +1,19 @@
+name: SHIPMENT_TERMS_CONFIG
+mode: conditional
+context: shipment/SHIPMENT_CONTEXT
+schema:
+  type: object
+  required: [is_enabled, max_days]
+  properties:
+    is_enabled:
+      type: boolean
+    max_days:
+      type: integer
+      minimum: 1
+      maximum: 365
+    description:
+      type: string
+      default: ''
+default:
+  is_enabled: false
+  max_days: 30

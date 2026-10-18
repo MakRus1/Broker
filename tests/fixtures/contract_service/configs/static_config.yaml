@@ -39,7 +39,24 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-broker:
             base-url: $client-broker-base-url
-            timeout-ms: $client-broker-timeout-ms
+        dynamic-config:
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: contract_service
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            full-update-interval: 1m
+            update-interval: 1s
         # SERVICE_CONFIG_END
         # OPENAPI_HANDLERS_BEGIN
         handler-items-by_id:

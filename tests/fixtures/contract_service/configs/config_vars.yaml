@@ -1,2 +1,4 @@
 client-broker-base-url: http://localhost:8080
-client-broker-timeout-ms: 1000
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''

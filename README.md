@@ -78,3 +78,8 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 
 Публичные HTTP-контракты: `schemas/services/<service>`. Подключение типизированных
 клиентов через service.yaml: [документация](docs/client-codegen.md).
+
+Динамические конфиги: [схемы, контексты и C++ API](docs/dynamic-configs.md),
+[сервис configs](services/configs/README.md). Миграции БД именуются
+`postgresql/schemas/<db>/V0001__migration_name.sql`; автоматического применения
+к уже существующей БД пока нет.

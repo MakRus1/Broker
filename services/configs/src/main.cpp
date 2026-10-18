@@ -1,0 +1,60 @@
+#include <userver/clients/dns/component.hpp>
+#include <userver/clients/http/component_list.hpp>
+#include <userver/components/component.hpp>
+#include <userver/components/component_list.hpp>
+#include <userver/components/minimal_server_component_list.hpp>
+#include <userver/congestion_control/component.hpp>
+#include <userver/server/handlers/tests_control.hpp>
+#include <userver/testsuite/testsuite_support.hpp>
+#include <userver/ugrpc/server/component_list.hpp>
+#include <userver/utils/daemon_run.hpp>
+
+#include <bootstrap/ping.hpp>
+#include <platform/telemetry.hpp>
+#include <userver/otlp/logs/component.hpp>
+#include <userver/server/handlers/server_monitor.hpp>
+#include <userver/ugrpc/client/client_factory_component.hpp>
+#include <userver/ugrpc/client/component_list.hpp>
+
+#include <components/config_handler.hpp>
+#include <openapi/handlers.hpp>
+
+// SERVICE_INCLUDES_BEGIN
+#include <configs/keys.hpp>
+#include <platform/configs/runtime.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
+#include <userver/dynamic_config/updater/component_list.hpp>
+#include <userver/storages/postgres/component.hpp>
+// SERVICE_INCLUDES_END
+
+int main(int argc, char* argv[]) {
+    auto component_list =
+        userver::components::MinimalServerComponentList()
+            .Append<userver::components::TestsuiteSupport>()
+            .AppendComponentList(userver::clients::http::ComponentList())
+            .Append<userver::clients::dns::Component>()
+            .Append<userver::server::handlers::TestsControl>()
+            .Append<userver::congestion_control::Component>()
+            .Append<platform::HttpTelemetryFactory>()
+            .Append<platform::HttpTelemetryPipeline>()
+            .Append<configs::Ping>()
+            .Append<configs::PingReady>()
+            .Append<userver::server::handlers::ServerMonitor>()
+            .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
+            .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
+            .Append<userver::otlp::LoggerComponent>();
+
+    component_list.Append<configs::ConfigStore>()
+        .Append<configs::ConfigHandler>()
+        .Append<configs::ConfigHandler>("config-publish")
+        .Append<configs::ConfigHandler>("config-history")
+        .Append<configs::ConfigHandler>("config-rollback");
+    // SERVICE_REGISTRATION_BEGIN
+    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
+    component_list.Append<userver::components::Postgres>("postgres-configs");
+    // SERVICE_REGISTRATION_END
+
+    component_list = configs::openapi::AppendGeneratedHandlers(component_list);
+
+    return userver::utils::DaemonMain(argc, argv, component_list);
+}

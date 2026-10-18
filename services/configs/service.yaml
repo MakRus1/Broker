@@ -1,0 +1,5 @@
+version: 1
+libraries: [common, configs]
+postgresql:
+  enabled: true
+  cluster: configs

@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 import yaml
 from model import identifier, enum_types
+from configs import http_name
 from cpp_types import enums, declarations, quoted, type_cpp
 from render import fields, format_cpp
 
@@ -140,11 +141,11 @@ def client_outputs(service, loader, load):
     result = {}
     for alias, provider in client_specs(service, loader):
         ops = load(provider, public_only=True)
-        result[f'include/clients/{alias}/client.hpp'] = render_client(service.name, alias, ops)
+        result[f'include/clients/{alias}/client.hpp'] = render_client(service.name, alias, ops, provider.name)
     return result
 
 
-def render_client(service, alias, ops):
+def render_client(service, alias, ops, provider=None):
     ns = f'{service}::clients::{alias}'
     code = '''#pragma once
 #include <openapi/runtime.hpp>
@@ -156,6 +157,8 @@ def render_client(service, alias, ops):
 #include <variant>
 #include <new>
 '''
+    if provider:
+        code += '#include <configs/keys.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n'
     code += f'namespace {ns} {{\n'
     for op in ops:
         code += operation_code('::' + ns + '::' + op.name, op)
@@ -164,11 +167,17 @@ def render_client(service, alias, ops):
         name = op.name
         code += f'{name}::Response {name}(const {name}::Request& request) const {{ return {name}::Decode(transport_->Perform({name}::Encode(request))); }}\n'
     code += 'private:\nplatform::http::Transport* transport_;\n};\n'
+    settings = ''
+    if provider:
+        settings = f''', [source = platform::configs::Source{{context.FindComponent<userver::components::DynamicConfig>().GetSource()}}](const std::string& path) {{
+            const auto config = source.GetSnapshot().Get(::configs::{http_name(provider)}).Get(path);
+            return platform::http::ClientSettings{{config.Timeout, config.MaxRetries}};
+        }}'''
     code += f'''class Component final : public userver::components::ComponentBase {{
 public:
 static constexpr std::string_view kName = "client-{alias}";
 Component(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
-: ComponentBase(config, context), transport_(config, context), client_(transport_) {{}}
+: ComponentBase(config, context), transport_(config, context{settings}), client_(transport_) {{}}
 const Client& GetClient() const {{ return client_; }}
 static userver::yaml_config::Schema GetStaticConfigSchema() {{ return platform::http::ClientConfigSchema(); }}
 private:

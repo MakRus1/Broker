@@ -39,7 +39,7 @@ components_manager:
             response_data_size_log_limit: 0
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
-        postgres-db-1:
+        postgres-broker:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
             blocking_task_processor: fs-task-processor
@@ -58,6 +58,29 @@ components_manager:
             completion-queue-count: 3
         handler-hello-grpc:
             task-processor: main-task-processor
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: broker
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            full-update-interval: 1m
+            update-interval: 1s
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: broker
@@ -134,12 +157,6 @@ components_manager:
             method: GET
             task_processor: main-task-processor
             monitor-handler: true
-        dynamic-config:
-            defaults:
-                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
-                POSTGRES_DEFAULT_COMMAND_CONTROL:
-                    network_timeout_ms: 750
-                    statement_timeout_ms: 500
         testsuite-support: {}
         congestion-control:
             fake-mode: true

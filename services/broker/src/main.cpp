@@ -24,8 +24,12 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <configs/keys.hpp>
+#include <platform/configs/runtime.hpp>
 #include <platform/grpc_telemetry.hpp>
 #include <transport/grpc/hello_grpc.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
+#include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/component.hpp>
 // SERVICE_INCLUDES_END
 
@@ -56,7 +60,8 @@ int main(int argc, char* argv[]) {
 #endif
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<userver::components::Postgres>("postgres-db-1");
+    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
+    component_list.Append<userver::components::Postgres>("postgres-broker");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
         .Append<broker::HelloGrpc>()
         .Append<platform::GrpcTelemetryFactory>();

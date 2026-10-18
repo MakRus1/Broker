@@ -22,7 +22,7 @@ check-gen:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)" --check
 check-gen-all:
 	@set -e; for svc in services/*; do $(MAKE) check-gen SERVICE=$$(basename "$$svc"); done
-	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-config.py && "$$PYTHON" scripts/openapi_gen/generate.py --service-dir tests/fixtures/contract_service --check
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-migrations.py && "$$PYTHON" scripts/check-config.py && "$$PYTHON" scripts/openapi_gen/generate.py --service-dir tests/fixtures/contract_service --check
 
 test-tools:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" -m unittest discover -s tests -v

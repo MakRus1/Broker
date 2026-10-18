@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix='broker-service-smoke-') as tmp:
     service = work / 'services/smoke_00'
     for pg, grpc in [(True, False), (True, True)]:
         (service / 'service.yaml').write_text(
-            f'version: 1\nlibraries: [common, smoke_support]\npostgresql: {{enabled: {str(pg).lower()}}}\ngrpc: {{enabled: {str(grpc).lower()}}}\n')
+            f'version: 1\nlibraries: [common, smoke_support]\npostgresql: {{enabled: {str(pg).lower()}, cluster: primary}}\ngrpc: {{enabled: {str(grpc).lower()}}}\n')
         subprocess.run([sys.executable, 'scripts/openapi_gen/generate.py', '--service-dir', str(service)], cwd=work, check=True)
         if args.build:
             subprocess.run(['make', 'test-debug', 'SERVICE=smoke_00'], cwd=work, check=True)

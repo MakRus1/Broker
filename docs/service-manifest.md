@@ -7,6 +7,7 @@ version: 1
 libraries: [common]
 postgresql:
   enabled: true
+  cluster: main
 grpc:
   enabled: true
 ```
@@ -83,3 +84,31 @@ target_include_directories(broker_routing INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/
 нового сервиса в этой карте вручную не нужно.
 
 Подключение HTTP-клиентов в секции `clients`: [типизированные клиенты](client-codegen.md).
+
+## Динамические конфиги
+
+```yaml
+libraries: [common, configs]
+configs: [SHIPMENT_TERMS_CONFIG]
+```
+
+Ссылки используют глобально уникальные имена, без путей к YAML. Генератор находит
+схему в `schemas/configs`, создает ключи и DTO в каталоге сборки, добавляет
+`deps.configs` и штатные компоненты обновления userver. Неизвестное имя запрещено.
+HTTP-клиенты автоматически подключают библиотеку и конфиг своего поставщика;
+добавлять их ключи в `configs` вручную не нужно.
+Обновления по умолчанию выключены; настройка доставки и схемы: [dynamic-configs.md](dynamic-configs.md).
+
+## Имя PostgreSQL-кластера
+
+`postgresql.cluster` задает логическое имя кластера; по умолчанию `main`.
+Например, `cluster: accounting` создает компонент `postgres-accounting`.
+Генератор согласованно обновляет регистрацию, static_config и получение `deps.pg_cluster`.
+Имя допускает строчные латинские буквы, цифры и одиночные разделители `-`/`_`.
+После изменения выполните `make gen`; ручные FindComponent с прежним именем нужно
+обновить самостоятельно. Обычным компонентам лучше передавать `deps.pg_cluster`.
+
+Имя кластера не переименовывает саму БД, каталог SQL, PostgreSQL-сервер или compose-сервис.
+Имя базы и адрес задаются в `pg-connection`/`DB_CONNECTION`; каталог `schemas/db_1`
+соответствует имени тестовой базы `<service>_db_1` и остается отдельным понятием.
+Пока manifest поддерживает один PostgreSQL-кластер на сервис.

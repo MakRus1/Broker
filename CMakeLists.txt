@@ -61,3 +61,5 @@ endif()
 if(APPLE)
     cmake_language(DEFER CALL broker_native_headers "${CMAKE_SOURCE_DIR}")
 endif()
+
+add_subdirectory(services/configs)

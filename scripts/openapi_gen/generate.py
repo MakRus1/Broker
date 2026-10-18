@@ -11,6 +11,7 @@ from model import identifier, parse_spec, validate_operations
 from render import config_block, outputs, view
 from features import prepare
 from clients import client_outputs, client_specs
+import configs
 
 class UniqueLoader(yaml.SafeLoader):
     """Повторяющиеся ключи YAML считаются ошибкой контракта."""
@@ -79,6 +80,12 @@ def digest(service, ops, additions=None):
         h.update(alias.encode())
         for p, content in sorted(specification_files(provider, public_only=True).items()):
             h.update(p.relative_to(public_schema_dir(provider)).as_posix().encode() + b"\0" + content.encode())
+    contexts, catalog, entries = configs.selected(service, UniqueLoader)
+    for entry in sorted(entries):
+        spec = catalog[entry]
+        h.update(json.dumps(spec, sort_keys=True).encode())
+        if spec['mode'] == 'conditional':
+            h.update(json.dumps(contexts[spec['context']], sort_keys=True).encode())
     base = Path(__file__).parent
     for p in sorted(base.glob('*.py')):
         h.update(p.relative_to(base).as_posix().encode() + b'\0' + p.read_bytes())
@@ -99,13 +106,15 @@ def write(path, text):
 
 def run(service, check=False, output=None):
     feature_files = prepare(service, UniqueLoader)
-    stale = [str(path.relative_to(service)) for path, content in feature_files.items()
+    feature_files.update(configs.auto_files(service, UniqueLoader))
+    stale = [str(path) for path, content in feature_files.items()
              if not path.exists() or path.read_text() != content]
     if check or output is not None:
         if stale:
             raise ValueError('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
     ops = load(service, feature_files)
     generated_clients = client_outputs(service, UniqueLoader, load)
+    generated_clients.update(configs.outputs(service, UniqueLoader))
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
@@ -151,7 +160,7 @@ def run(service, check=False, output=None):
     changed = {path: content for path, content in planned.items()
                if not path.exists() or path.read_text() != content}
     for path in changed:
-        if not path.resolve().is_relative_to(service.resolve()):
+        if not path.resolve().is_relative_to(service.resolve()) and path not in configs.auto_files(service, UniqueLoader):
             raise ValueError(f'Выход за каталог сервиса запрещен: {path}')
     before = {path: path.read_bytes() if path.exists() else None for path in changed}
     try:
@@ -183,6 +192,7 @@ def main():
             deps = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
             generated = outputs(service.name, ops, deps)
             generated.update(client_outputs(service, UniqueLoader, load))
+            generated.update(configs.outputs(service, UniqueLoader))
             print('\n'.join(sorted(generated)))
         else:
             run(service, args.check, args.output_dir)

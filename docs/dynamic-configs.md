@@ -1,0 +1,152 @@
+# Динамические конфиги
+
+`libs/configs` использует штатные Source, Snapshot, updater и файловый кеш userver.
+Сервис `configs` хранит проверенные JSON-документы и историю публикаций в PostgreSQL.
+C++-типы и ключи создаются из YAML при сборке, исходники генерации не коммитятся.
+
+## Каталоги и подключение
+
+```text
+schemas/
+├── configs/
+│   ├── shipment/SHIPMENT_TERMS_CONFIG.yaml
+│   └── broker/BROKER_HTTP_CLIENT_CONFIG.yaml  # Создается автоматически
+└── config_contexts/
+    └── shipment/SHIPMENT_CONTEXT.yaml
+```
+
+Папка обозначает владельца схемы, а не потребителя. Имя конфига глобально уникально,
+имя файла совпадает с `name` в UPPER_CASE. Контексты тоже имеют уникальные имена.
+В `service.yaml` достаточно имени, без пути:
+
+```yaml
+version: 1
+libraries: [common, configs]
+configs: [SHIPMENT_TERMS_CONFIG]
+```
+
+После изменения схем выполните `make gen` у потребителей и сервиса `configs`,
+либо `make gen SERVICE=<name>` из корня. Поставщик HTTP API также обновляет свой
+автоматический конфиг через `make gen`. `make check-gen-all` проверяет актуальность
+без записи. Неизвестное имя и повторные объявления отклоняются генератором.
+Сервис `configs` автоматически включает весь каталог для проверки публикаций.
+
+## Схема значения и контекст
+
+`schemas/configs/shipment/SHIPMENT_TERMS_CONFIG.yaml`:
+
+```yaml
+name: SHIPMENT_TERMS_CONFIG
+mode: conditional
+context: shipment/SHIPMENT_CONTEXT
+schema:
+  type: object
+  required: [is_enabled, max_days]
+  properties:
+    is_enabled: {type: boolean}
+    max_days: {type: integer, minimum: 1, maximum: 365}
+    description: {type: string, default: ''}
+default:
+  is_enabled: false
+  max_days: 30
+```
+
+`schemas/config_contexts/shipment/SHIPMENT_CONTEXT.yaml`:
+
+```yaml
+name: SHIPMENT_CONTEXT
+schema:
+  type: object
+  properties:
+    tenant_id: {type: string, minLength: 1}
+    transport_mode: {type: string, enum: [sea, road, rail]}
+```
+
+Поддерживаются скалярные типы, массивы скаляров, enum, format, default и ограничения
+текущего OpenAPI-генератора. Произвольные вложенные объекты пока не поддерживаются.
+Неизвестные поля запрещены. `required` требует явного поля в документе, даже если
+у поля есть default. Необязательное поле с default становится обычным C++ значением;
+без default — `std::optional`. Корневой `default` схемы обязателен: это встроенное
+значение для запуска, а не значение опубликованной ревизии.
+
+`mode: plain` описывает значение без клоз и не допускает `context`.
+`mode: conditional` публикуется в следующей форме:
+
+```json
+{
+  "clauses": [
+    {
+      "title": "Морские поставки клиента",
+      "value": {"is_enabled": true, "max_days": 60},
+      "predicates": [
+        {"field": "tenant_id", "type": "eq", "value": "example"},
+        {"field": "transport_mode", "type": "in", "value": ["sea"]}
+      ]
+    }
+  ],
+  "default": {"is_enabled": false, "max_days": 30}
+}
+```
+
+Выбирается первая подходящая клоза. Предикаты внутри нее соединяются AND;
+пустой список соответствует любому контексту. Если ничего не подошло, возвращается
+`default`. Значение клозы проверяется целиком и не наследует поля из fallback.
+`title` обязателен; необязательный `id`, если задан, должен быть непустым и уникальным.
+Лимиты: 1000 клоз на конфиг, 100 предикатов на клозу.
+
+Для всех полей доступны `eq`, `in` (непустой массив) и `exists` (boolean).
+Для чисел дополнительно доступны `lt`, `lte`, `gt`, `gte`. Тип и ограничения
+предиката проверяются по схеме контекста. Отсутствующее поле не соответствует
+предикату, кроме `exists: false`. Неизвестное поле или оператор запрещены.
+
+## C++ API
+
+```cpp
+#include <configs/keys.hpp>
+
+const auto snapshot = deps.configs.GetSnapshot();
+const auto terms = snapshot.Get(
+    configs::SHIPMENT_TERMS_CONFIG,
+    config_contexts::ShipmentContext{.TenantId = "example"});
+if (terms.IsEnabled) {
+    UseMaxDays(terms.MaxDays);
+}
+```
+
+Поля C++ используют PascalCase. Контекст типизирован, enum генерируются в C++.
+Для plain-конфига второй аргумент не нужен. Snapshot неизменяемый: последующее
+обновление не меняет уже полученный снимок. Берите один snapshot на логически
+связанную операцию, чтобы читать согласованные значения нескольких конфигов.
+Source можно передавать бизнес-компоненту через конструктор вместо целого Deps.
+
+## Доставка и кеш
+
+В `configs/config_vars.yaml` потребителя:
+
+```yaml
+config-updates-enabled: true
+config-server-url: http://configs:8090
+config-cache-path: /var/cache/broker/dynamic-config.json
+```
+
+По умолчанию обновления выключены, путь кеша пустой; работают встроенные значения.
+При включении native updater опрашивает `/configs/values` раз в секунду, полное
+обновление выполняется раз в минуту. Каталог файлового кеша должен существовать
+и быть доступен пользователю процесса для записи; для контейнера используйте volume.
+При проблемах обновления сохраняется последний принятый snapshot. Схемы и значения
+проверяются и при публикации, и в потребителе. Невалидные значения не заменяют
+последнее принятое состояние. Разные сервисы получают обновления независимо;
+атомарности между процессами нет. Ревизия относится ко всей публикации сервера.
+
+Сейчас первый неудачный запрос не запрещает запуск, встроенные значения разрешены.
+Нет гарантии, что snapshot получен от сервера, и нет прикладной политики максимального
+возраста. Проект критических зависимостей описан в [отдельном документе](critical-dependencies.md).
+
+Не размещайте секреты и бизнес-документы в конфигах. Значения не пишутся в штатный
+лог публикации. Изменения схем требуют согласованного развертывания сервера и клиентов:
+автоматическая проверка совместимости схем пока отсутствует. Удаленный из каталога
+ключ, оставшийся в опубликованной ревизии, нужно убрать отдельной миграцией данных
+до публикации по новой схеме. API удаления ключа пока нет.
+
+Настройки HTTP-клиентов: [client-codegen.md](client-codegen.md).
+API публикации, откат и запуск: [services/configs/README.md](../services/configs/README.md).

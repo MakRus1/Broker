@@ -1,46 +1,35 @@
 #pragma once
 
-#include <platform/configs/runtime.hpp>
+#include <domain/models.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
 namespace configs {
-
-struct Revision {
-    std::int64_t Id;
-    platform::configs::Json Values;
-};
-class RevisionConflict : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
-class DraftForbidden : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
-class RevisionNotFound : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
-
 class ConfigStore final {
   public:
     explicit ConfigStore(userver::storages::postgres::ClusterPtr cluster)
         : cluster_(std::move(cluster)) {}
     Revision Current() const;
-    platform::configs::Json Values(const std::optional<std::vector<std::string>>& ids) const;
-    platform::configs::Json Catalog() const;
-    platform::configs::Json GetConfig(const std::string& name) const;
-    platform::configs::Json History() const;
-    platform::configs::Json Draft(std::string_view action,
-                                  const platform::configs::Json& request) const;
-    platform::configs::Json DraftEvents(std::int64_t id) const;
+    ConfigValues Values(const std::optional<std::vector<std::string>>& ids) const;
+    std::vector<CatalogEntry> Catalog() const;
+    Config GetConfig(const std::string& name) const;
+    std::vector<RevisionInfo> History() const;
+    Draft CreateDraft(const CreateDraftRequest& request) const;
+    Draft EditDraft(const EditDraftRequest& request) const;
+    Draft ApproveDraft(const DraftActionRequest& request) const;
+    Draft CancelDraft(const DraftActionRequest& request) const;
+    Draft GetDraft(std::int64_t id) const;
+    std::vector<Draft> ListDrafts(const DraftFilter& filter) const;
+    std::vector<DraftEvent> DraftEvents(std::int64_t id) const;
 
   private:
+    Revision Current(userver::storages::postgres::Transaction& transaction) const;
     Revision PublishLocked(userver::storages::postgres::Transaction&, const Revision& current,
-                           const platform::configs::Json& values) const;
-
+                           const Json& values) const;
+    Draft LoadActiveDraft(userver::storages::postgres::Transaction&, std::int64_t id,
+                          std::int64_t expected_version) const;
+    void SaveDraft(userver::storages::postgres::Transaction&, const Draft& draft,
+                   const std::string& actor, std::string_view action) const;
     userver::storages::postgres::ClusterPtr cluster_;
 };
-
 }  // namespace configs

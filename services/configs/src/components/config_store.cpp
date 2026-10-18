@@ -28,23 +28,23 @@ Revision ConfigStore::Current() const {
     return WithDefaults(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision));
 }
 
-platform::configs::Json
-ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {
+Revision ConfigStore::Current(pg::Transaction& transaction) const {
+    return WithDefaults(transaction.Execute(sql::kLastRevision));
+}
+
+ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {
     const auto current = Current();
-    userver::formats::json::ValueBuilder reply;
     userver::formats::json::ValueBuilder values{userver::formats::json::Type::kObject};
     if (ids) {
         for (const auto& id : *ids)
             if (current.Values.HasMember(id))
                 values[id] = current.Values[id];
-    } else
+    } else {
         values = userver::formats::json::ValueBuilder{current.Values};
-    reply["configs"] = values.ExtractValue();
+    }
     std::ostringstream version;
     version << std::setw(20) << std::setfill('0') << current.Id;
-    reply["updated_at"] = version.str();
-    reply["revision"] = current.Id;
-    return reply.ExtractValue();
+    return {values.ExtractValue(), current.Id, version.str()};
 }
 
 Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision& current,
@@ -60,20 +60,12 @@ Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision
     return {revision, values};
 }
 
-platform::configs::Json ConfigStore::History() const {
-    struct Record {
-        std::int64_t Id;
-        std::string Created;
-    };
+std::vector<RevisionInfo> ConfigStore::History() const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistory);
-    userver::formats::json::ValueBuilder result{userver::formats::json::Type::kArray};
-    for (const auto& row : rows.AsSetOf<Record>(pg::kRowTag)) {
-        userver::formats::json::ValueBuilder item;
-        item["revision"] = row.Id;
-        item["created_at"] = row.Created;
-        result.PushBack(item.ExtractValue());
-    }
-    return result.ExtractValue();
+    std::vector<RevisionInfo> result;
+    for (const auto& row : rows.AsSetOf<RevisionInfo>(pg::kRowTag))
+        result.push_back(row);
+    return result;
 }
 
 }  // namespace configs

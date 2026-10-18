@@ -248,3 +248,10 @@ async def test_codegen_rejects_non_object_config(monitor_client, value):
 async def test_unicode_description_limits(monitor_client):
     draft = await create(monitor_client, actor='я' * 128, description='я' * 4096)
     assert draft['description'] == 'я' * 4096
+
+
+@pytest.mark.pgsql('db_1', files=['corrupt_draft.sql'])
+@pytest.mark.parametrize('operation,body', [('get', {'id': 900000}), ('list', {})])
+async def test_corrupt_stored_draft_is_server_error(monitor_client, operation, body):
+    response = await monitor_client.post(PREFIX + operation, json=body)
+    assert response.status == 500

@@ -6,7 +6,7 @@
 namespace broker {
 
 HelloGrpc::HelloGrpc(const userver::components::ComponentConfig& config,
-                     const userver::components::ComponentContext& component_context)
+    const userver::components::ComponentContext& component_context)
     : handlers::api::HelloServiceBase::Component(config, component_context) {}
 
 HelloGrpc::SayHelloResult HelloGrpc::SayHello(CallContext&, handlers::api::HelloRequest&& request) {

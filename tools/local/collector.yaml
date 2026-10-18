@@ -36,6 +36,17 @@ receivers:
       - type: add
         field: resource["service.name"]
         value: diagnostics
+  filelog/admin_bff:
+    include: [/logs/admin_bff.jsonl*]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: json_parser
+        parse_to: attributes
+        on_error: send
+      - type: add
+        field: resource["service.name"]
+        value: admin_bff
 processors:
   memory_limiter:
     check_interval: 1s
@@ -71,6 +82,6 @@ service:
       processors: [memory_limiter, batch]
       exporters: [otlp_grpc/tempo]
     logs:
-      receivers: [filelog/broker, filelog/configs, filelog/diagnostics]
+      receivers: [filelog/broker, filelog/configs, filelog/diagnostics, filelog/admin_bff]
       processors: [memory_limiter, resource/local, batch]
       exporters: [otlp_http/loki]

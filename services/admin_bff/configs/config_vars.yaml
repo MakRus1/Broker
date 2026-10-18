@@ -1,0 +1,29 @@
+worker-threads: 4
+worker-fs-threads: 2
+logger-level: info
+
+is-testing: false
+
+server-port: 8180
+grpc-server-port: 8081
+
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15433/admin_bff_db_1
+
+monitor-port: 8182
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local
+
+auth-issuer: http://localhost:18888/realms/broker
+auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
+auth-allow-http: true
+admin-origin: http://localhost:13080
+admin-token-url: http://localhost:18888/realms/broker/protocol/openid-connect/token
+admin-revoke-url: http://localhost:18888/realms/broker/protocol/openid-connect/revoke
+admin-secure-cookie: false
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''
+
+admin-assets-dir: frontend/admin/dist
+client-config_admin-base-url: http://localhost:8080

@@ -9,6 +9,7 @@ class MockTransport final : public platform::http::Transport {
   public:
     platform::http::Request last;
     platform::http::Response reply{204, "", ""};
+
     platform::http::Response Perform(const platform::http::Request& request) override {
         last = request;
         return reply;
@@ -102,15 +103,15 @@ UTEST(ClientContract, MultipleSuccessfulResponses) {
     EXPECT_TRUE(std::holds_alternative<api::MultipleSuccesses::Response204>(
         api::MultipleSuccesses::Decode({204, "", ""})));
     EXPECT_THROW(api::MultipleSuccesses::Decode({409, "application/json", R"({"id":42})"}),
-                 api::MultipleSuccesses::Error409);
+        api::MultipleSuccesses::Error409);
 }
 
 UTEST(ClientContract, OnlyErrorsAndEmptyError) {
     static_assert(std::is_void_v<api::ErrorsOnly::Response>);
     EXPECT_THROW(api::ErrorsOnly::Decode({409, "application/json", R"({"id":42})"}),
-                 api::ErrorsOnly::Error409);
+        api::ErrorsOnly::Error409);
     EXPECT_THROW(api::ErrorsOnly::Decode({200, "application/json", R"({"id":42})"}),
-                 platform::http::ContractError);
+        platform::http::ContractError);
     EXPECT_THROW(api::EmptyError::Decode({404, "", ""}), api::EmptyError::Error404);
     EXPECT_THROW(api::EmptyError::Decode({404, "", "unexpected"}), platform::http::ContractError);
 }
@@ -121,18 +122,16 @@ UTEST(ClientContract, ConfigsAdminJsonObjects) {
     config_api::Client client(transport);
     config_api::AdminConfigsCurrent::Request request;
     request.body.config_name = "SHIPMENT_TERMS_CONFIG";
-    transport.reply = {
-        200, "application/json",
+    transport.reply = {200, "application/json",
         R"({"config_name":"SHIPMENT_TERMS_CONFIG","version":5,"value":{"nested":[{"enabled":true}]}})"};
     const auto response = client.AdminConfigsCurrent(request, "test-access-token");
     EXPECT_EQ(transport.last.path, "/admin/configs/current");
     EXPECT_TRUE(response.value["nested"][0]["enabled"].As<bool>());
-    transport.reply = {400, "application/json",
-                       R"({"error":"invalid_request","message":"Bad config"})"};
-    EXPECT_THROW(client.AdminConfigsCurrent(request, "test-access-token"),
-                 config_api::AdminConfigsCurrent::Error400);
     transport.reply = {
-        200, "application/json",
+        400, "application/json", R"({"error":"invalid_request","message":"Bad config"})"};
+    EXPECT_THROW(client.AdminConfigsCurrent(request, "test-access-token"),
+        config_api::AdminConfigsCurrent::Error400);
+    transport.reply = {200, "application/json",
         R"({"items":[{"active_draft_id":null,"config_name":"example","version":1}]})"};
     const auto catalog = client.AdminConfigsList({}, "test-access-token");
     ASSERT_EQ(catalog.items.size(), 1);
@@ -150,8 +149,7 @@ UTEST(ClientContract, SharedNestedModelsAndTypedErrors) {
     request.body.profile.address.city = "Москва";
     request.body.profiles.push_back(request.body.profile);
     request.body.note.emplace(std::nullopt);
-    transport.reply = {
-        200, "application/json",
+    transport.reply = {200, "application/json",
         R"({"profile":{"id":7,"address":{"city":"Москва"}},"profiles":[{"id":7,"address":{"city":"Москва"}}],"note":null})"};
     const auto response = client.ModelsEcho(request);
     EXPECT_EQ(response.profile.address.city, "Москва");
@@ -164,11 +162,10 @@ UTEST(ClientContract, SharedNestedModelsAndTypedErrors) {
     EXPECT_TRUE(encoded["note"].IsNull());
     EXPECT_EQ(encoded["profiles"][0]["state"].As<std::string>(), "active");
 
-    for (
-        const auto& invalid :
+    for (const auto& invalid :
         {R"({"profile":{"id":0,"address":{"city":"Москва"}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})",
-         R"({"profile":{"id":1,"address":{"city":""}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})",
-         R"({"profile":{"id":1,"address":{"city":"Москва"}},"profiles":[{}]})"}) {
+            R"({"profile":{"id":1,"address":{"city":""}},"profiles":[{"id":1,"address":{"city":"Москва"}}]})",
+            R"({"profile":{"id":1,"address":{"city":"Москва"}},"profiles":[{}]})"}) {
         transport.reply = {200, "application/json", invalid};
         EXPECT_THROW(client.ModelsEcho(request), platform::http::ContractError);
     }
@@ -218,5 +215,30 @@ UTEST(ClientContract, BearerTokenIsExplicit) {
     ASSERT_TRUE(encoded.body);
     EXPECT_THROW(api::AdminConfigsCurrent::Encode(request, ""), std::invalid_argument);
     EXPECT_THROW(api::AdminConfigsCurrent::Encode(request, "token\r\nInjected: value"),
-                 std::invalid_argument);
+        std::invalid_argument);
+}
+
+UTEST(ClientContract, JsonBoundaryForBff) {
+    namespace api = client_test::clients::configs_api::AdminConfigsCurrent;
+    const auto body = api::ParseBody(
+        userver::formats::json::FromString(R"({"config_name":"SHIPMENT_TERMS_CONFIG"})"));
+    EXPECT_EQ(body.config_name, "SHIPMENT_TERMS_CONFIG");
+    EXPECT_THROW(
+        api::ParseBody(userver::formats::json::FromString(R"({"config_name":5})")), std::exception);
+    EXPECT_THROW(
+        api::ParseBody(userver::formats::json::FromString(R"({"config_name":"A","actor":"fake"})")),
+        std::exception);
+
+    const platform::http::Response response{
+        409, "application/json", R"({"error":"conflict","message":"Version changed"})"};
+    try {
+        (void)api::Decode(response);
+        FAIL() << "Expected typed conflict";
+    } catch (const api::Error409& error) {
+        EXPECT_EQ(error.GetStatus(), 409);
+        EXPECT_EQ(error.response.message, "Version changed");
+        const auto json = userver::formats::json::FromString(error.GetBody());
+        EXPECT_EQ(json["error"].As<std::string>(), "conflict");
+        EXPECT_EQ(json["message"].As<std::string>(), error.response.message);
+    }
 }

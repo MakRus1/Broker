@@ -8,6 +8,7 @@
 #include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
+
 // SERVICE_DEPS_INCLUDES_END
 namespace contract_service {
 struct Deps {
@@ -17,6 +18,7 @@ struct Deps {
     clients::broker::Client broker;
     // SERVICE_DEPS_FIELDS_END
 };
+
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
         // SERVICE_DEPS_INIT_BEGIN

@@ -55,7 +55,7 @@ inline bool Match(const Predicate& predicate, const Json& context) {
         return actual == predicate.Value;
     if (predicate.Type == "in") {
         return std::any_of(predicate.Value.begin(), predicate.Value.end(),
-                           [&](const auto& value) { return value == actual; });
+            [&](const auto& value) { return value == actual; });
     }
     if (actual.IsInt64() && predicate.Value.IsInt64()) {
         const auto left = actual.As<std::int64_t>(), right = predicate.Value.As<std::int64_t>();
@@ -87,6 +87,7 @@ template <typename Value, typename Context> struct Conditional {
         Value Result;
         std::vector<Predicate> Predicates;
     };
+
     Value Default;
     std::vector<Clause> Clauses;
 
@@ -94,7 +95,7 @@ template <typename Value, typename Context> struct Conditional {
         const auto json = ToJson(context);
         for (const auto& clause : Clauses) {
             if (std::all_of(clause.Predicates.begin(), clause.Predicates.end(),
-                            [&](const auto& predicate) { return Match(predicate, json); })) {
+                    [&](const auto& predicate) { return Match(predicate, json); })) {
                 return clause.Result;
             }
         }
@@ -114,9 +115,7 @@ Conditional<Value, Context> ParseConditional(const Json& json, Parser parser, Va
         ObjectKeys(clause, {"id", "title", "value", "predicates"});
         typename Conditional<Value, Context>::Clause item{
             clause.HasMember("id") ? clause["id"].As<std::string>() : std::string{},
-            clause["title"].As<std::string>(),
-            parser(clause["value"]),
-            {}};
+            clause["title"].As<std::string>(), parser(clause["value"]), {}};
         if (clause.HasMember("id") && (item.Id.empty() || !ids.insert(item.Id).second))
             throw std::invalid_argument("Duplicate config clause id");
         const auto predicates = clause["predicates"];
@@ -125,7 +124,7 @@ Conditional<Value, Context> ParseConditional(const Json& json, Parser parser, Va
         for (const auto& predicate : predicates) {
             ObjectKeys(predicate, {"field", "type", "value"});
             Predicate condition{predicate["field"].As<std::string>(),
-                                predicate["type"].As<std::string>(), predicate["value"]};
+                predicate["type"].As<std::string>(), predicate["value"]};
             validator(condition);
             item.Predicates.push_back(std::move(condition));
         }
@@ -137,8 +136,7 @@ Conditional<Value, Context> ParseConditional(const Json& json, Parser parser, Va
 enum class Origin { Builtin, Cache, Remote, Incompatible };
 
 inline const std::string& ProcessToken() {
-    static const auto token =
-        std::to_string(std::random_device{}()) + ":" +
+    static const auto token = std::to_string(std::random_device{}()) + ":" +
         std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
     return token;
 }
@@ -158,9 +156,8 @@ inline Json ParseDeliveryMetadata(const Json& json) {
     return json;
 }
 
-inline const userver::dynamic_config::Key<Json> kDeliveryMetadata{
-    "BROKER_CONFIG_DELIVERY_META", ParseDeliveryMetadata,
-    userver::dynamic_config::DefaultAsJsonString{"{}"}};
+inline const userver::dynamic_config::Key<Json> kDeliveryMetadata{"BROKER_CONFIG_DELIVERY_META",
+    ParseDeliveryMetadata, userver::dynamic_config::DefaultAsJsonString{"{}"}};
 
 struct Metadata {
     Origin Source;
@@ -171,6 +168,7 @@ template <typename Value> struct PlainKey {
     userver::dynamic_config::Key<Value> Native;
     std::string_view SchemaHash;
 };
+
 template <typename Value, typename Context> struct ConditionalKey {
     userver::dynamic_config::Key<Conditional<Value, Context>> Native;
     std::string_view SchemaHash;
@@ -180,9 +178,11 @@ class Snapshot {
   public:
     explicit Snapshot(userver::dynamic_config::Snapshot snapshot)
         : snapshot_(std::move(snapshot)) {}
+
     template <typename Value> Value Get(const PlainKey<Value>& key) const {
         return snapshot_[key.Native];
     }
+
     template <typename Value, typename Context>
     Value Get(const ConditionalKey<Value, Context>& key, const Context& context) const {
         return snapshot_[key.Native].Resolve(context);
@@ -198,8 +198,9 @@ class Snapshot {
             return {Origin::Incompatible, time};
         return {metadata["process"].As<std::string>() == ProcessToken() ? Origin::Remote
                                                                         : Origin::Cache,
-                time};
+            time};
     }
+
     template <typename Key> Metadata GetMetadata(const Key& key) const {
         return GetMetadata(key.Native.GetName(), key.SchemaHash);
     }
@@ -211,6 +212,7 @@ class Snapshot {
 class Source {
   public:
     explicit Source(userver::dynamic_config::Source source) : source_(std::move(source)) {}
+
     Snapshot GetSnapshot() const {
         return Snapshot{source_.GetSnapshot()};
     }
@@ -223,30 +225,31 @@ struct HttpSettings {
     int Timeout;
     int MaxRetries;
 };
+
 struct HttpClientConfig {
     HttpSettings Default;
     std::map<std::string, HttpSettings> Operations;
+
     HttpSettings Get(const std::string& path) const {
         const auto it = Operations.find(path);
         return it == Operations.end() ? Default : it->second;
     }
 };
 
-inline HttpSettings ParseHttpSettings(const Json& value,
-                                      std::optional<HttpSettings> fallback = {}) {
+inline HttpSettings ParseHttpSettings(
+    const Json& value, std::optional<HttpSettings> fallback = {}) {
     ObjectKeys(value, {"timeout", "max_retries"});
-    const auto timeout =
-        value.HasMember("timeout")
-            ? value["timeout"].As<int>()
-            : (fallback ? fallback->Timeout : throw std::invalid_argument("Missing timeout"));
+    const auto timeout = value.HasMember("timeout")
+        ? value["timeout"].As<int>()
+        : (fallback ? fallback->Timeout : throw std::invalid_argument("Missing timeout"));
     const auto retries = value.HasMember("max_retries")
-                             ? value["max_retries"].As<int>()
-                             : (fallback ? fallback->MaxRetries
-                                         : throw std::invalid_argument("Missing max_retries"));
+        ? value["max_retries"].As<int>()
+        : (fallback ? fallback->MaxRetries : throw std::invalid_argument("Missing max_retries"));
     if (timeout < 1 || timeout > 3600000 || retries < 0 || retries > 10)
         throw std::invalid_argument("Invalid HTTP client settings");
     return {timeout, retries};
 }
+
 inline HttpClientConfig ParseHttpClient(const Json& value, const std::set<std::string>& paths) {
     if (!value.IsObject())
         throw std::invalid_argument("Expected HTTP client config object");

@@ -23,7 +23,7 @@ def client_specs(service, loader):
         identifier(alias)
         if not re.fullmatch(r'[a-z][a-z0-9_]*', alias):
             raise ValueError(f'Имя клиента должно состоять из строчных букв, цифр и _: {alias}')
-        if alias in {'pg_cluster', 'ResolveDeps'}:
+        if alias in {'pg_cluster', 'configs', 'readiness', 'ResolveDeps'}:
             raise ValueError(f'Имя клиента зарезервировано: {alias}')
         if not isinstance(entry, dict) or set(entry) != {'service', 'transport'} or entry['transport'] != 'http':
             raise ValueError(f'clients.{alias}: ожидаются service и transport: http')
@@ -50,20 +50,24 @@ def json_write(name, items):
     return '\n'.join(lines) + '\nreturn userver::formats::json::ToString(json.ExtractValue());'
 
 
-def json_read(response, finish):
-    name = f'Response{response.status}'
-    lines = ['platform::http::RequireContentType(raw, "application/json");',
-             'const auto json = userver::formats::json::FromString(raw.body);',
-             'if (!json.IsObject()) throw std::invalid_argument("object expected");', f'{name} value;']
-    if response.body.strict:
-        allowed = ' && '.join(f'it.GetName() != {quoted(f.name)}' for f in response.body.fields) or 'true'
+def json_fields(name, body):
+    lines = ['if (!json.IsObject()) throw std::invalid_argument("object expected");', f'{name} value;']
+    if body.strict:
+        allowed = ' && '.join(f'it.GetName() != {quoted(f.name)}' for f in body.fields) or 'true'
         lines.append(f'for (auto it = json.begin(); it != json.end(); ++it) if ({allowed}) throw std::invalid_argument("unknown field");')
-    for f in response.body.fields:
+    for f in body.fields:
         key = quoted(f.name)
         if f.required:
             lines.append(f'if (!json.HasMember({key})) throw std::invalid_argument("missing field");')
         assignment = f'value.{f.name}.emplace(std::move(item))' if f.optional else f'value.{f.name} = std::move(item)'
         lines.append(f'if (json.HasMember({key})) {{ auto item = broker_codegen::ParseJson<{f.type.cpp}>(json[{key}]); Validate_{name}_{f.name}(item); {assignment}; }}')
+    return lines
+
+
+def json_read(response, finish):
+    lines = ['platform::http::RequireContentType(raw, "application/json");',
+             'const auto json = userver::formats::json::FromString(raw.body);']
+    lines += json_fields(f'Response{response.status}', response.body)
     return '\n'.join(lines) + '\n' + finish
 
 
@@ -77,6 +81,7 @@ def operation_code(scope, op):
     if op.body:
         text += dto('RequestBody', op.body.fields, scope)
         text += 'inline std::string ToJson(const RequestBody& value) {\n' + json_write('RequestBody', op.body.fields) + '\n}\n'
+        text += 'inline RequestBody ParseBody(const userver::formats::json::Value& json) {\n' + '\n'.join(json_fields('RequestBody', op.body)) + '\nreturn value;\n}\n'
     text += declarations('Request', op.params) + 'struct Request {\n' + fields(op.params, scope)
     if op.body:
         text += '\n' + ('RequestBody' if op.body.required else 'std::optional<RequestBody>') + ' body{};'
@@ -84,11 +89,13 @@ def operation_code(scope, op):
     for response in op.responses:
         name = f'Response{response.status}'
         text += (f'struct {name} {{ std::string body; }};\n' if response.media == 'text/plain' else dto(name, response.body.fields if response.body else (), scope))
+        if response.media == 'application/json':
+            text += f'inline std::string ToJson(const {name}& value) {{\n' + json_write(name, response.body.fields) + '\n}\n'
         if response.status >= 300:
             text += f'''class Error{response.status} final : public platform::http::ApiError {{
 public:
 explicit Error{response.status}(Response{response.status} value)
-: ApiError({response.status}), response(std::move(value)) {{}}
+: ApiError({response.status}{", ToJson(value)" if response.media == "application/json" else ""}), response(std::move(value)) {{}}
 Response{response.status} response;
 }};
 '''

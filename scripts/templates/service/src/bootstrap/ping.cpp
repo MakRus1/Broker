@@ -3,17 +3,20 @@
 #include <userver/server/http/http_response.hpp>
 // SERVICE_PING_INCLUDES_BEGIN
 #include <userver/storages/postgres/cluster.hpp>
+
 // SERVICE_PING_INCLUDES_END
 namespace broker {
-std::string Ping::HandleRequestThrow(const userver::server::http::HttpRequest&,
-                                     userver::server::request::RequestContext&) const {
+std::string Ping::HandleRequestThrow(
+    const userver::server::http::HttpRequest&, userver::server::request::RequestContext&) const {
     return "alive\n";
 }
+
 PingReady::PingReady(const userver::components::ComponentConfig& config,
-                     const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), state_(context), deps_(ResolveDeps(context)) {}
+
 std::string PingReady::HandleRequestThrow(const userver::server::http::HttpRequest& request,
-                                          userver::server::request::RequestContext&) const {
+    userver::server::request::RequestContext&) const {
     if (state_.GetServiceLifetimeStage() != userver::components::ServiceLifetimeStage::kRunning ||
         state_.IsAnyComponentInFatalState()) {
         request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
@@ -26,8 +29,8 @@ std::string PingReady::HandleRequestThrow(const userver::server::http::HttpReque
             request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
             return readiness.Reason + "\n";
         }
-        deps_.pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster,
-                                  "SELECT 1");
+        deps_.pg_cluster->Execute(
+            userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");
         // SERVICE_PING_CHECK_END
         return "ready\n";
     } catch (const std::exception&) {

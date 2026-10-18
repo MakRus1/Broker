@@ -130,9 +130,9 @@ def check():
         values = json.loads(request("http://127.0.0.1:19090/api/v1/query?" + query))["data"][
             "result"
         ]
-        return len(values) == 3 and all(item["value"][1] == "1" for item in values)
+        return len(values) == 4 and all(item["value"][1] == "1" for item in values)
 
-    wait_for("Prometheus получает метрики трех сервисов", metrics)
+    wait_for("Prometheus получает метрики четырех сервисов", metrics)
     before = restart_counts()
     admin = ConfigAdmin("http://127.0.0.1:18092")
     name = "BROKER_HTTP_CLIENT_CONFIG"

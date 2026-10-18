@@ -10,9 +10,9 @@ inline std::vector<models::DraftEvent> ToApiDraftEvents(const std::vector<DraftE
     std::vector<models::DraftEvent> items;
     for (const auto& event : events)
         items.push_back({.action = event.Action,
-                         .actor = event.Actor,
-                         .created_at = event.CreatedAt,
-                         .snapshot = ToApiSnapshot(event.Snapshot)});
+            .actor = event.Actor,
+            .created_at = event.CreatedAt,
+            .snapshot = ToApiSnapshot(event.Snapshot)});
     return items;
 }
 }  // namespace configs

@@ -25,15 +25,17 @@ class Readiness final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "platform-readiness";
     using Check = std::function<DependencyStatus()>;
+
     struct Entry {
         std::string Name;
         Check Callback;
     };
+
     // Владелец зависимости хранит регистрацию; после его удаления проверка отключается.
     using Registration = std::shared_ptr<const Entry>;
 
     Readiness(const userver::components::ComponentConfig& config,
-              const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : ComponentBase(config, context), state_(context) {}
 
     Registration Register(std::string name, Check callback) {
@@ -84,7 +86,7 @@ class HttpReadiness final : public userver::server::middlewares::HttpMiddlewareB
 
   private:
     void HandleRequest(userver::server::http::HttpRequest& request,
-                       userver::server::request::RequestContext& context) const override {
+        userver::server::request::RequestContext& context) const override {
         if (!exempt_ && !readiness_.GetStatus().Ready) {
             request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
             request.GetHttpResponse().SetData("dependency unavailable\n");
@@ -92,6 +94,7 @@ class HttpReadiness final : public userver::server::middlewares::HttpMiddlewareB
         }
         Next(request, context);
     }
+
     const Readiness& readiness_;
     const bool exempt_;
 };
@@ -99,19 +102,21 @@ class HttpReadiness final : public userver::server::middlewares::HttpMiddlewareB
 class HttpReadinessFactory final : public userver::server::middlewares::HttpMiddlewareFactoryBase {
   public:
     static constexpr std::string_view kName = "platform-http-readiness";
+
     HttpReadinessFactory(const userver::components::ComponentConfig& config,
-                         const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : HttpMiddlewareFactoryBase(config, context),
           readiness_(context.FindComponent<Readiness>()) {}
 
   private:
-    std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase>
-    Create(const userver::server::handlers::HttpHandlerBase& handler,
-           userver::yaml_config::YamlConfig) const override {
+    std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Create(
+        const userver::server::handlers::HttpHandlerBase& handler,
+        userver::yaml_config::YamlConfig) const override {
         // Служебный listener и выключаемый testsuite-control работают при закрытом gate.
         return std::make_unique<HttpReadiness>(
             readiness_, handler.IsMonitor() || handler.HandlerName() == "tests-control");
     }
+
     const Readiness& readiness_;
 };
 

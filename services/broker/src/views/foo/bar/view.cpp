@@ -4,8 +4,8 @@
 
 namespace broker::views::foo::bar {
 
-Response View::Handle(Request&& request, userver::server::request::RequestContext& /*context*/,
-                      Deps) {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& /*context*/, Deps) {
     if (request.name == "missing") {
         return Response404{.message = "user not found"};
     }

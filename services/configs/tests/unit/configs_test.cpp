@@ -5,9 +5,11 @@
 
 namespace {
 using Json = platform::configs::Json;
+
 Json JsonValue(const std::string& text) {
     return userver::formats::json::FromString(text);
 }
+
 const auto kTerms =
     R"({"clauses":[{"id":"sea","title":"Море","value":{"is_enabled":true,"max_days":60},"predicates":[{"field":"transport_mode","type":"eq","value":"sea"}]}],"default":{"is_enabled":false,"max_days":30}})";
 }  // namespace
@@ -24,14 +26,13 @@ UTEST(DynamicConfigs, SnapshotAndFirstMatchingClause) {
     auto updated = userver::formats::json::ValueBuilder{JsonValue(kTerms)};
     updated["clauses"][0]["value"]["max_days"] = 90;
     storage.Extend({{configs::SHIPMENT_TERMS_CONFIG.Native,
-                     configs::detail_SHIPMENT_TERMS_CONFIG::ParseConfig(updated.ExtractValue())}});
+        configs::detail_SHIPMENT_TERMS_CONFIG::ParseConfig(updated.ExtractValue())}});
     EXPECT_EQ(source.GetSnapshot().Get(configs::SHIPMENT_TERMS_CONFIG, context).MaxDays, 90);
     EXPECT_EQ(old.Get(configs::SHIPMENT_TERMS_CONFIG, context).MaxDays, 60);
 }
 
 UTEST(DynamicConfigs, RejectInvalidValuesAndPredicates) {
-    const std::vector<std::string> values{
-        R"({"clauses":[],"default":{"max_days":30}})",
+    const std::vector<std::string> values{R"({"clauses":[],"default":{"max_days":30}})",
         R"({"clauses":[],"default":{"is_enabled":true,"max_days":0}})",
         R"({"clauses":[{"id":"x","title":"x","value":{"is_enabled":true,"max_days":1},"predicates":[{"field":"unknown","type":"eq","value":"a"}]}],"default":{"is_enabled":false,"max_days":30}})",
         R"({"clauses":[{"id":"x","title":"x","value":{"is_enabled":true,"max_days":1},"predicates":[{"field":"transport_mode","type":"lt","value":"sea"}]}],"default":{"is_enabled":false,"max_days":30}})"};
@@ -104,10 +105,10 @@ UTEST(DynamicConfigs, MetadataIsPartOfImmutableSnapshot) {
     auto changed = userver::formats::json::ValueBuilder{native[kDeliveryMetadata]};
     changed["process"] = "previous-process";
     storage.Extend({{kDeliveryMetadata, changed.ExtractValue()}});
-    EXPECT_EQ(source.GetSnapshot().GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source,
-              Origin::Cache);
+    EXPECT_EQ(
+        source.GetSnapshot().GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source, Origin::Cache);
     EXPECT_EQ(old.GetMetadata(configs::SHIPMENT_TERMS_CONFIG).Source, Origin::Remote);
     EXPECT_EQ(source.GetSnapshot().GetMetadata("SHIPMENT_TERMS_CONFIG", "changed-schema").Source,
-              Origin::Incompatible);
+        Origin::Incompatible);
     EXPECT_EQ(source.GetSnapshot().GetMetadata("MISSING", "").Source, Origin::Builtin);
 }

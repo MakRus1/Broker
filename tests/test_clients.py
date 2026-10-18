@@ -20,6 +20,8 @@ class ClientTest(unittest.TestCase):
             service = Path(tmp)
             cases = [[], {'bad-name': {'service': 'broker', 'transport': 'http'}},
                      {'pg_cluster': {'service': 'broker', 'transport': 'http'}},
+                     {'configs': {'service': 'broker', 'transport': 'http'}},
+                     {'readiness': {'service': 'broker', 'transport': 'http'}},
                      {'api': {'service': '../broker', 'transport': 'http'}},
                      {'api': {'service': 'unknown', 'transport': 'http'}},
                      {'api': {'service': 'broker', 'transport': 'grpc'}},

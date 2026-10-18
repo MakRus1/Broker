@@ -63,3 +63,5 @@ if(APPLE)
 endif()
 
 add_subdirectory(services/configs)
+
+add_subdirectory(services/admin_bff)

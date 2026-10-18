@@ -4,8 +4,8 @@
 
 namespace broker::views::hello {
 
-Response View::Handle(Request&& request, userver::server::request::RequestContext& /*context*/,
-                      Deps) {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& /*context*/, Deps) {
     return Response200{
         .body = domain::SayHelloTo(request.name.value_or(""), domain::UserType::kFirstTime)};
 }

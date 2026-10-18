@@ -17,6 +17,10 @@ scrape_configs:
     - diagnostics:8085
     labels:
       service: diagnostics
+  - targets:
+    - admin_bff:8182
+    labels:
+      service: admin_bff
 - job_name: prometheus
   static_configs:
   - targets:

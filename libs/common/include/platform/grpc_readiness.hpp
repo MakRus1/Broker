@@ -25,16 +25,16 @@ class GrpcReadinessFactory final : public userver::ugrpc::server::MiddlewareFact
     static constexpr std::string_view kName = "platform-grpc-readiness";
 
     GrpcReadinessFactory(const userver::components::ComponentConfig& config,
-                         const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : MiddlewareFactoryComponentBase(config, context,
-                                         userver::middlewares::MiddlewareDependencyBuilder()
-                                             .InGroup<userver::middlewares::groups::PreCore>()
-                                             .After<GrpcTelemetryFactory>()),
+              userver::middlewares::MiddlewareDependencyBuilder()
+                  .InGroup<userver::middlewares::groups::PreCore>()
+                  .After<GrpcTelemetryFactory>()),
           readiness_(context.FindComponent<Readiness>()) {}
 
-    std::shared_ptr<const userver::ugrpc::server::MiddlewareBase>
-    CreateMiddleware(const userver::ugrpc::server::ServiceInfo&,
-                     const userver::yaml_config::YamlConfig&) const override {
+    std::shared_ptr<const userver::ugrpc::server::MiddlewareBase> CreateMiddleware(
+        const userver::ugrpc::server::ServiceInfo&,
+        const userver::yaml_config::YamlConfig&) const override {
         return std::make_shared<GrpcReadiness>(readiness_);
     }
 

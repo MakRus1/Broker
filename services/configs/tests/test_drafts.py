@@ -89,11 +89,11 @@ async def test_single_active_draft_and_release(admin_client):
     await action(admin_client, 'cancel', draft)
     draft = await create(admin_client)
     await action(admin_client, 'approve', draft, actor='reviewer')
-    await create(admin_client)
+    await create(admin_client, value=terms(True, 90))
 
 
 async def test_concurrent_create(admin_client):
-    body = {'config_name': NAME, 'description': 'Создание', 'value': terms(), 'expected_config_version': 0}
+    body = {'config_name': NAME, 'description': 'Создание', 'value': terms(True, 60), 'expected_config_version': 0}
     responses = await asyncio.gather(*[admin_client.post(PREFIX + 'create', json=body) for _ in range(2)])
     assert sorted(response.status for response in responses) == [201, 409]
 
@@ -256,3 +256,35 @@ async def test_unicode_description_limits(admin_client):
 async def test_corrupt_stored_draft_is_server_error(admin_client, operation, body):
     response = await admin_client.post(PREFIX + operation, json=body)
     assert response.status == 500
+
+
+async def test_no_changes_do_not_create_draft(admin_client):
+    response = await admin_client.post(PREFIX + 'create', json={
+        'config_name': NAME, 'description': 'Без изменения значения',
+        'expected_config_version': 0, 'value': terms()})
+    assert response.status == 400
+    assert (await admin_client.post(PREFIX + 'list', json={})).json()['items'] == []
+    draft = await create(admin_client)
+    await action(admin_client, 'edit', draft, value=terms(), status=400)
+    stored = await admin_client.post(PREFIX + 'get', json={'id': draft['id']})
+    assert stored.json() == draft
+
+
+async def test_display_names_are_saved_from_verified_token(admin_client):
+    draft = await create(admin_client)
+    assert draft['author_name'] == 'author'
+    published = await action(admin_client, 'approve', draft, actor='reviewer')
+    assert published['approved_by_name'] == 'reviewer'
+    stored = await admin_client.post(PREFIX + 'get', json={'id': draft['id']})
+    assert stored.json()['author_name'] == 'author'
+    assert stored.json()['approved_by_name'] == 'reviewer'
+
+
+async def test_display_name_comes_from_signed_claim(admin_client, access_token):
+    response = await admin_client.post(PREFIX + 'create', headers={
+        'Authorization': 'Bearer ' + access_token('author', claims={'preferred_username': 'Максим'})}, json={
+        'config_name': NAME, 'description': 'Проверка имени',
+        'expected_config_version': 0, 'value': terms(True, 60)})
+    assert response.status == 201
+    assert response.json()['author_name'] == 'Максим'
+    assert response.json()['author'] == 'http://broker-test-issuer#author'

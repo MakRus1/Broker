@@ -20,13 +20,14 @@
 
 namespace {
 using Clock = std::chrono::steady_clock;
+
 class Middleware final : public userver::server::middlewares::HttpMiddlewareBase {
   public:
     explicit Middleware(const platform::auth::Component& auth) : auth_(auth) {}
 
   private:
     void HandleRequest(userver::server::http::HttpRequest& request,
-                       userver::server::request::RequestContext& context) const override {
+        userver::server::request::RequestContext& context) const override {
         if (!auth_.IsProtected(request.GetRequestPath())) {
             Next(request, context);
             return;
@@ -34,8 +35,8 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
         int status = 401;
         std::string error = "unauthorized";
         try {
-            context.SetData("platform-auth", auth_.Authorize(request.GetRequestPath(),
-                                                             request.GetHeader("Authorization")));
+            context.SetData("platform-auth",
+                auth_.Authorize(request.GetRequestPath(), request.GetHeader("Authorization")));
         } catch (const platform::auth::Unavailable&) {
             status = 503;
             error = "auth_unavailable";
@@ -59,11 +60,12 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
             response.SetHeader(std::string_view{"WWW-Authenticate"}, "Bearer");
         userver::formats::json::ValueBuilder body;
         body["error"] = error;
-        body["message"] = status == 503   ? "Authentication unavailable"
-                          : status == 403 ? "Forbidden"
-                                          : "Unauthorized";
+        body["message"] = status == 503 ? "Authentication unavailable"
+            : status == 403             ? "Forbidden"
+                                        : "Unauthorized";
         response.SetData(userver::formats::json::ToString(body.ExtractValue()));
     }
+
     const platform::auth::Component& auth_;
 };
 }  // namespace
@@ -73,9 +75,11 @@ struct Component::State {
     struct Cached {
         Verifier Check;
         Clock::time_point Received;
+
         Cached(const Settings& settings, const std::string& body)
             : Check(settings, body), Received(Clock::now()) {}
     };
+
     userver::clients::http::Client& Client;
     Settings Config;
     std::string Url;
@@ -85,11 +89,12 @@ struct Component::State {
     std::atomic<std::shared_ptr<const Cached>> Cache;
     std::atomic<std::int64_t> LastForced{0};
     userver::utils::PeriodicTask RefreshTask;
-    State(userver::clients::http::Client& client,
-          const userver::components::ComponentConfig& config)
+
+    State(
+        userver::clients::http::Client& client, const userver::components::ComponentConfig& config)
         : Client(client),
           Config{config["issuer"].As<std::string>(), config["audience"].As<std::string>(),
-                 config["roles-client"].As<std::string>()},
+              config["roles-client"].As<std::string>()},
           Url(config["jwks-url"].As<std::string>()),
           Prefix(config["protected-prefix"].As<std::string>()),
           Permissions(config["permissions"].As<std::map<std::string, std::string>>()),
@@ -107,6 +112,7 @@ struct Component::State {
             if (!path.starts_with(Prefix) || permission.empty())
                 throw std::invalid_argument("Invalid permission policy");
     }
+
     void Refresh() {
         try {
             const auto response = Client.CreateRequest()
@@ -124,6 +130,7 @@ struct Component::State {
             LOG_WARNING() << "Authentication key refresh failed";
         }
     }
+
     void RefreshUnknownKey() {
         const auto now =
             std::chrono::duration_cast<std::chrono::seconds>(Clock::now().time_since_epoch())
@@ -133,8 +140,9 @@ struct Component::State {
             RefreshTask.ForceStepAsync();
     }
 };
+
 Component::Component(const userver::components::ComponentConfig& config,
-                     const userver::components::ComponentContext& context)
+    const userver::components::ComponentContext& context)
     : HttpMiddlewareFactoryBase(config, context),
       state_(std::make_unique<State>(
           context.FindComponent<userver::components::HttpClient>("auth-http-client")
@@ -143,38 +151,60 @@ Component::Component(const userver::components::ComponentConfig& config,
     state_->Refresh();
     state_->RefreshTask.Start("auth-jwks", std::chrono::seconds{15}, [this] { state_->Refresh(); });
 }
+
 Component::~Component() {
     state_->RefreshTask.Stop();
 }
+
 bool Component::IsProtected(std::string_view path) const {
     return path.starts_with(state_->Prefix);
 }
+
 Principal Component::Authorize(const std::string& path, const std::string& authorization) const {
     if (authorization.size() < 8 ||
         !std::equal(authorization.begin(), authorization.begin() + 7, "bearer ",
-                    [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
+            [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
         throw std::invalid_argument("Missing bearer token");
-    const auto cached = state_->Cache.load();
-    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
-        throw Unavailable{};
-    Principal principal;
-    try {
-        principal = cached->Check.Verify(authorization.substr(7));
-    } catch (const UnknownKey&) {
-        state_->RefreshUnknownKey();
-        throw;
-    }
+    const auto principal = VerifyAccess(authorization.substr(7));
     const auto permission = state_->Permissions.find(path);
     if (permission == state_->Permissions.end() ||
         !principal.Permissions.contains(permission->second))
         throw Forbidden{};
     return principal;
 }
-std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase>
-Component::Create(const userver::server::handlers::HttpHandlerBase&,
-                  userver::yaml_config::YamlConfig) const {
+
+Principal Component::VerifyAccess(const std::string& token) const {
+    const auto cached = state_->Cache.load();
+    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
+        throw Unavailable{};
+    Principal principal;
+    try {
+        principal = cached->Check.Verify(token);
+    } catch (const UnknownKey&) {
+        state_->RefreshUnknownKey();
+        throw;
+    }
+    return principal;
+}
+
+Principal Component::VerifyLogin(const std::string& access, const std::string& identity,
+    const std::string& client, const std::string& nonce) const {
+    const auto cached = state_->Cache.load();
+    if (!cached || Clock::now() - cached->Received > state_->MaxAge)
+        throw Unavailable{};
+    try {
+        return cached->Check.VerifyLogin(access, identity, client, nonce);
+    } catch (const UnknownKey&) {
+        state_->RefreshUnknownKey();
+        throw;
+    }
+}
+
+std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Component::Create(
+    const userver::server::handlers::HttpHandlerBase&, userver::yaml_config::YamlConfig) const {
     return std::make_unique<Middleware>(*this);
 }
+
 userver::yaml_config::Schema Component::GetStaticConfigSchema() {
     return userver::yaml_config::MergeSchemas<HttpMiddlewareFactoryBase>(R"(
 type: object

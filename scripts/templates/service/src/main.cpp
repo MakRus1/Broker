@@ -24,6 +24,7 @@
 #include <platform/readiness.hpp>
 #include <transport/grpc/hello_grpc.hpp>
 #include <userver/storages/postgres/component.hpp>
+
 // SERVICE_INCLUDES_END
 
 int main(int argc, char* argv[]) {

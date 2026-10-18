@@ -1,0 +1,6 @@
+version: 1
+libraries: [common, auth]
+clients:
+  config_admin:
+    service: configs
+    transport: http

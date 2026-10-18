@@ -7,8 +7,8 @@
 
 namespace broker::views::hello_postgres::create {
 
-Response View::Handle(Request&& request, userver::server::request::RequestContext& /*context*/,
-                      Deps deps) {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& /*context*/, Deps deps) {
     const auto name = request.name.value_or("");
     auto user_type = domain::UserType::kFirstTime;
 

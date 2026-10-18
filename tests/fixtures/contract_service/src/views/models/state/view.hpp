@@ -7,7 +7,7 @@
 namespace contract_service::views::models::state {
 class View {
   public:
-    static Response Handle(Request&& request, userver::server::request::RequestContext& context,
-                           Deps deps);
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps deps);
 };
 }  // namespace contract_service::views::models::state

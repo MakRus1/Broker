@@ -9,10 +9,13 @@ struct Principal {
     std::string Issuer;
     std::string Subject;
     std::set<std::string> Permissions;
+    std::string DisplayName;
+
     std::string ActorId() const {
         return Issuer + "#" + Subject;
     }
 };
+
 inline const Principal& GetPrincipal(const userver::server::request::RequestContext& context) {
     const auto* principal = context.GetDataOptional<Principal>("platform-auth");
     if (!principal)

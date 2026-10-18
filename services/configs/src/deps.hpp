@@ -10,6 +10,7 @@
 #include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/component.hpp>
+
 // SERVICE_DEPS_INCLUDES_END
 
 namespace configs {

@@ -17,8 +17,8 @@ struct Policy {
     bool AllowCache;
     std::chrono::seconds MaxAge;
 
-    DependencyStatus Evaluate(const Metadata& metadata,
-                              std::chrono::system_clock::time_point now) const {
+    DependencyStatus Evaluate(
+        const Metadata& metadata, std::chrono::system_clock::time_point now) const {
         if (metadata.Source == Origin::Builtin)
             return {AllowBuiltin, AllowBuiltin ? "" : "builtin value is forbidden"};
         if (metadata.Source == Origin::Incompatible)
@@ -42,7 +42,7 @@ class DeliverySink final : public userver::components::DynamicConfigUpdatesSinkB
     using Base::SetConfig;
 
     DeliverySink(const userver::components::ComponentConfig& config,
-                 const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : Base(config, context), sink_(userver::dynamic_config::FindUpdatesSink(config, context)) {
         auto& storage = context.FindComponent<userver::components::DynamicConfig>();
         // Пригодный кеш уже загружен storage. Без него запускаемся с defaults, сохраняя
@@ -63,7 +63,7 @@ class DeliverySink final : public userver::components::DynamicConfigUpdatesSinkB
         userver::formats::json::ValueBuilder metadata;
         metadata["process"] = ProcessToken();
         metadata["received_at_ms"] = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                         userver::utils::datetime::Now().time_since_epoch())
+            userver::utils::datetime::Now().time_since_epoch())
                                          .count();
         metadata["schemas"] =
             userver::formats::json::ValueBuilder(userver::formats::json::Type::kObject);
@@ -97,8 +97,9 @@ properties:
 class ConfigReadiness final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "platform-config-readiness";
+
     ConfigReadiness(const userver::components::ComponentConfig& config,
-                    const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : ComponentBase(config, context) {
         auto& readiness = context.FindComponent<platform::Readiness>();
         const Source source{
@@ -107,11 +108,11 @@ class ConfigReadiness final : public userver::components::ComponentBase {
             const auto name = rule["name"].As<std::string>();
             const auto hash = rule["schema-hash"].As<std::string>();
             const Policy policy{rule["allow-builtin"].As<bool>(), rule["allow-cache"].As<bool>(),
-                                std::chrono::seconds{rule["max-age-seconds"].As<int>()}};
+                std::chrono::seconds{rule["max-age-seconds"].As<int>()}};
             registrations_.push_back(
                 readiness.Register("config:" + name, [source, name, hash, policy] {
                     return policy.Evaluate(source.GetSnapshot().GetMetadata(name, hash),
-                                           userver::utils::datetime::Now());
+                        userver::utils::datetime::Now());
                 }));
         }
     }

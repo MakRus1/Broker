@@ -10,12 +10,13 @@ namespace contract_service {
 class ClientProbe final : public userver::server::handlers::HttpHandlerBase {
   public:
     static constexpr std::string_view kName = "client-probe";
+
     ClientProbe(const userver::components::ComponentConfig& config,
-                const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : HttpHandlerBase(config, context), deps_(ResolveDeps(context)) {}
 
     std::string HandleRequestThrow(const userver::server::http::HttpRequest& http,
-                                   userver::server::request::RequestContext&) const override {
+        userver::server::request::RequestContext&) const override {
         userver::formats::json::ValueBuilder result;
         try {
             if (http.GetArg("method") == "post") {
@@ -47,12 +48,14 @@ class ClientProbe final : public userver::server::handlers::HttpHandlerBase {
 class ReadinessProbe final : public userver::server::handlers::HttpHandlerBase {
   public:
     static constexpr std::string_view kName = "handler-ping";
+
     ReadinessProbe(const userver::components::ComponentConfig& config,
-                   const userver::components::ComponentContext& context)
+        const userver::components::ComponentContext& context)
         : HttpHandlerBase(config, context),
           readiness_(context.FindComponent<platform::Readiness>()), state_(context) {}
+
     std::string HandleRequestThrow(const userver::server::http::HttpRequest& request,
-                                   userver::server::request::RequestContext&) const override {
+        userver::server::request::RequestContext&) const override {
         if (HandlerName() == "handler-ping") {
             if (state_.GetServiceLifetimeStage() !=
                 userver::components::ServiceLifetimeStage::kRunning)

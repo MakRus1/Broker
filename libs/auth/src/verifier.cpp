@@ -27,13 +27,16 @@ std::string PublicPem(const userver::formats::json::Value& key) {
 namespace platform::auth {
 struct Verifier::Impl {
     Settings Config;
+    std::string Jwks;
     using Check = decltype(jwt::verify());
     std::map<std::string, Check> Keys;
 };
+
 Verifier::Verifier(Settings settings, const std::string& jwks) : impl_(std::make_unique<Impl>()) {
     if (settings.Issuer.empty() || settings.Audience.empty() || settings.RolesClient.empty())
         throw std::invalid_argument("Issuer, audience and roles client are required");
     impl_->Config = std::move(settings);
+    impl_->Jwks = jwks;
     if (jwks.size() > 131072)
         throw std::invalid_argument("JWKS is too large");
     const auto keys = userver::formats::json::FromString(jwks)["keys"];
@@ -61,8 +64,14 @@ Verifier::Verifier(Settings settings, const std::string& jwks) : impl_(std::make
     if (impl_->Keys.empty())
         throw std::invalid_argument("No supported signing keys");
 }
+
 Verifier::~Verifier() = default;
+
 Principal Verifier::Verify(const std::string& token) const {
+    return VerifyKind(token, "Bearer");
+}
+
+Principal Verifier::VerifyKind(const std::string& token, std::string_view kind) const {
     if (token.empty() || token.size() > 16384)
         throw std::invalid_argument("Invalid token size");
     const auto decoded = jwt::decode(token);
@@ -77,8 +86,7 @@ Principal Verifier::Verify(const std::string& token) const {
         throw std::invalid_argument("Missing required claims");
     key->second.verify(decoded);
     // Keycloak отличает access token от ID/refresh token полем typ в payload.
-    if (!decoded.has_payload_claim("typ") ||
-        decoded.get_payload_claim("typ").as_string() != "Bearer")
+    if (!decoded.has_payload_claim("typ") || decoded.get_payload_claim("typ").as_string() != kind)
         throw std::invalid_argument("Expected access token");
     const auto subject = decoded.get_subject();
     if (subject.empty() || subject.size() > 128 ||
@@ -86,11 +94,28 @@ Principal Verifier::Verify(const std::string& token) const {
         throw std::invalid_argument("Invalid subject");
     if (decoded.get_expires_at() <= decoded.get_issued_at())
         throw std::invalid_argument("Invalid lifetime");
-    Principal principal{impl_->Config.Issuer, subject, {}};
+    Principal principal{impl_->Config.Issuer, subject, {}, subject};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
+    principal.DisplayName = payload["preferred_username"].As<std::string>(subject);
     const auto roles = payload["resource_access"][impl_->Config.RolesClient]["roles"];
     if (!roles.IsMissing())
         principal.Permissions = roles.As<std::set<std::string>>();
+    return principal;
+}
+
+Principal Verifier::VerifyLogin(const std::string& access, const std::string& identity,
+    const std::string& client, const std::string& nonce) const {
+    const auto principal = Verify(access);
+    const Verifier verifier{{impl_->Config.Issuer, client, impl_->Config.RolesClient}, impl_->Jwks};
+    const auto identified = verifier.VerifyKind(identity, "ID");
+    const auto payload = userver::formats::json::FromString(jwt::decode(identity).get_payload());
+    if (nonce.empty() || payload["nonce"].As<std::string>() != nonce ||
+        payload["azp"].As<std::string>() != client || identified.Subject != principal.Subject)
+        throw std::invalid_argument("Invalid login identity");
+    const auto access_payload =
+        userver::formats::json::FromString(jwt::decode(access).get_payload());
+    if (access_payload["azp"].As<std::string>() != client)
+        throw std::invalid_argument("Invalid authorized party");
     return principal;
 }
 }  // namespace platform::auth

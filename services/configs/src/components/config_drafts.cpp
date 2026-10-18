@@ -154,6 +154,8 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
                                                      : Defaults()[request.ConfigName];
     }
     ValidateConfig(request.ConfigName, value);
+    if (value == current.Values[request.ConfigName])
+        throw InvalidRequest("Config value has no changes");
     Draft draft{.Id = 0,
                 .ConfigName = request.ConfigName,
                 .Author = request.Actor,
@@ -165,7 +167,9 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
                 .BaseValue = current.Values[request.ConfigName],
                 .Value = value,
                 .SourceRevision = request.SourceRevision,
-                .PublishedRevision = std::nullopt};
+                .PublishedRevision = std::nullopt,
+                .AuthorName = request.ActorName,
+                .ApprovedByName = std::nullopt};
     draft.Id = transaction.Execute(sql::kInsertDraft, storage::WriteDraft(draft))
                    .AsSingleRow<std::int64_t>();
     SaveDraft(transaction, draft, request.Actor, "create");
@@ -184,6 +188,8 @@ Draft ConfigStore::EditDraft(const EditDraftRequest& request) const {
         throw InvalidRequest("Empty edit");
     if (request.Value) {
         ValidateConfig(draft.ConfigName, *request.Value);
+        if (*request.Value == draft.BaseValue)
+            throw InvalidRequest("Config value has no changes");
         draft.Value = *request.Value;
     }
     if (request.Description) {
@@ -229,6 +235,7 @@ Draft ConfigStore::ApproveDraft(const DraftActionRequest& request) const {
     draft.PublishedRevision = published.Id;
     draft.Status = DraftStatus::Published;
     draft.ApprovedBy = request.Actor;
+    draft.ApprovedByName = request.ActorName;
     ++draft.Version;
     SaveDraft(transaction, draft, request.Actor, "approve");
     transaction.Commit();

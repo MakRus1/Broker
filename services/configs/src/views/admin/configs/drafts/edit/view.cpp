@@ -14,7 +14,9 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
                              .Value = request.body.value,
                              .Description = request.body.description});
         return Response200{.approved_by = draft.ApprovedBy,
+                           .approved_by_name = draft.ApprovedByName,
                            .author = draft.Author,
+                           .author_name = draft.AuthorName,
                            .base_value = draft.BaseValue,
                            .base_version = draft.BaseVersion,
                            .config_name = draft.ConfigName,

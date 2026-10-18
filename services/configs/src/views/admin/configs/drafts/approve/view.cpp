@@ -10,9 +10,12 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
         const auto draft =
             store.ApproveDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
                                 .Id = request.body.id,
-                                .ExpectedVersion = request.body.expected_version});
+                                .ExpectedVersion = request.body.expected_version,
+                                .ActorName = platform::auth::GetPrincipal(context).DisplayName});
         return Response200{.approved_by = draft.ApprovedBy,
+                           .approved_by_name = draft.ApprovedByName,
                            .author = draft.Author,
+                           .author_name = draft.AuthorName,
                            .base_value = draft.BaseValue,
                            .base_version = draft.BaseVersion,
                            .config_name = draft.ConfigName,

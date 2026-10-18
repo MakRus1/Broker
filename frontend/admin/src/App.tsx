@@ -1,68 +1,38 @@
 import { useWorkspace } from './hooks/useWorkspace';
 import { LoginScreen } from './components/LoginScreen';
-import { Sidebar } from './components/Sidebar';
-import { CurrentValue } from './components/CurrentValue';
-import { ConfigEditor } from './components/ConfigEditor';
-import { DraftDetails } from './components/DraftDetails';
-import { DraftHistory } from './components/DraftHistory';
+import { Catalog } from './components/Catalog';
+import { ConfigDrawer } from './components/ConfigDrawer';
+import { Notifications } from './components/Notifications';
 
 export function App() {
   const workspace = useWorkspace();
-  const { session, selected, current, error, notice, busy, editor, draft, run, reload } = workspace;
-
+  const { session, selected, catalog, busy, run, logout } = workspace;
   if (!session) return <LoginScreen workspace={workspace} />;
-
   return (
-    <div className="shell">
-      <Sidebar workspace={workspace} />
-      <main>
-        <header>
-          <span>Платформа / Конфиги</span>
-          <span className="badge">Согласование изменений</span>
-        </header>
-        <div className="heading">
-          <div>
-            <p className="eyebrow">ДИНАМИЧЕСКАЯ КОНФИГУРАЦИЯ</p>
-            <h1>{selected || 'Выберите конфиг'}</h1>
-            {current && (
-              <p>
-                Рабочая версия {current.version} · Изменения применяются без перезапуска сервисов
-              </p>
-            )}
-          </div>
-          {selected && (
-            <button disabled={busy || editor} onClick={() => run(reload)}>
-              Обновить
-            </button>
-          )}
+    <main className="workspace">
+      <header>
+        <div className="brand">
+          B<span>Broker</span>
         </div>
-        {error && (
-          <div role="alert" className="error">
-            {error}
-          </div>
-        )}
-        {notice && (
-          <div role="status" className="notice">
-            {notice}
-          </div>
-        )}
-        {!selected && (
-          <section className="empty">
-            <span>◈</span>
-            <h2>У каждого изменения — история</h2>
-            <p>Откройте конфиг слева, чтобы посмотреть рабочее значение или подготовить драфт.</p>
-          </section>
-        )}
-        {selected && !current && <p>Загружаем конфиг…</p>}
-        {current && (
-          <>
-            <CurrentValue workspace={workspace} />
-            {editor && <ConfigEditor workspace={workspace} />}
-            {draft && !editor && <DraftDetails workspace={workspace} />}
-            <DraftHistory workspace={workspace} />
-          </>
-        )}
-      </main>
-    </div>
+        <div className="account">
+          <span title={session.actor}>{session.display_name ?? session.subject}</span>
+          <button disabled={busy} onClick={() => run(logout)}>
+            Выйти
+          </button>
+        </div>
+      </header>
+      <div className="heading">
+        <div>
+          <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
+          <h1>
+            Конфиги <span className="count">{catalog.length}</span>
+          </h1>
+          <p>Изменения под контролем. Значения, согласование и история — в одном месте.</p>
+        </div>
+      </div>
+      <Catalog workspace={workspace} />
+      {selected && <ConfigDrawer key={selected} workspace={workspace} />}
+      <Notifications workspace={workspace} />
+    </main>
   );
 }

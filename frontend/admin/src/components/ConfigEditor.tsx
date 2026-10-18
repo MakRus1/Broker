@@ -1,43 +1,71 @@
 import type { Workspace } from '../hooks/useWorkspace';
+import { ValueDiff } from './ValueDiff';
 
 export function ConfigEditor({ workspace }: { workspace: Workspace }) {
-  const { owner, description, setDescription, text, setText, busy, run, save, setEditor } =
-    workspace;
+  const {
+    description,
+    setDescription,
+    text,
+    setText,
+    busy,
+    run,
+    save,
+    setEditor,
+    editing,
+    saveDisabled,
+    current,
+  } = workspace;
   return (
-    <section className="panel">
-      <div className="panelhead">
-        <h2>{owner ? 'Редактирование драфта' : 'Новое изменение'}</h2>
-        <span className="muted">Публикация после подтверждения</span>
-      </div>
-      <label htmlFor="description">Причина изменения</label>
-      <input
-        id="description"
-        value={description}
-        maxLength={4096}
-        onChange={(event) => setDescription(event.target.value)}
-        disabled={busy}
-        placeholder="Что меняется и зачем"
-      />
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void run(save);
+      }}
+    >
       <label htmlFor="value">Значение · JSON</label>
       <textarea
         id="value"
         spellCheck={false}
-        rows={18}
+        rows={12}
         value={text}
         onChange={(event) => setText(event.target.value)}
         disabled={busy}
+        aria-invalid={!!editing.error}
+        aria-describedby="value-help"
       />
+      <p id="value-help" className={editing.error ? 'field-error' : 'muted'}>
+        {editing.error ||
+          (!editing.changed
+            ? 'Измените значение, чтобы сохранить драфт.'
+            : 'Изменения будут отправлены на подтверждение.')}
+      </p>
+      <label htmlFor="description">
+        Что меняется и зачем <strong>· обязательно</strong>
+      </label>
+      <input
+        id="description"
+        value={description}
+        maxLength={4096}
+        required
+        aria-describedby="description-help"
+        onChange={(event) => setDescription(event.target.value)}
+        disabled={busy}
+        placeholder="Например: увеличиваем срок доставки для морских перевозок"
+      />
+      {!description.trim() && (
+        <p id="description-help" className="field-error">
+          Укажите причину изменения.
+        </p>
+      )}
       <div className="actions">
-        <button className="primary" disabled={busy} onClick={() => run(save)}>
+        <button type="submit" className="primary" disabled={saveDisabled}>
           {busy ? 'Сохраняем…' : 'Готово'}
         </button>
-        <button disabled={busy} onClick={() => setEditor(false)}>
+        <button type="button" disabled={busy} onClick={() => setEditor(false)}>
           Отменить редактирование
         </button>
       </div>
-      <p className="muted">
-        Невалидный драфт не сохранится. Окончательную проверку выполняет Configs.
-      </p>
-    </section>
+      {!editing.error && <ValueDiff before={current?.value} after={JSON.parse(text)} />}
+    </form>
   );
 }

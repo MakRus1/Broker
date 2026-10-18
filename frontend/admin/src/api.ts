@@ -21,6 +21,8 @@ export interface Draft {
   id: number;
   config_name: string;
   author: string;
+  author_name?: string;
+  approved_by_name?: string;
   description: string;
   version: number;
   status: 'draft' | 'published' | 'cancelled';
@@ -34,7 +36,7 @@ export interface DraftEvent {
   action: string;
   actor: string;
   created_at: string;
-  snapshot: unknown;
+  snapshot: Omit<Draft, 'id'>;
 }
 export class ApiError extends Error {
   constructor(

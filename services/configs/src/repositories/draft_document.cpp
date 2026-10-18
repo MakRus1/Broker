@@ -42,12 +42,18 @@ Draft ReadDraft(std::int64_t id, const Json& document) {
             .BaseValue = document["base_value"],
             .Value = document["value"],
             .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
-            .PublishedRevision = Optional<std::int64_t>(document, "published_revision")};
+            .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
+            .AuthorName = Optional<std::string>(document, "author_name"),
+            .ApprovedByName = Optional<std::string>(document, "approved_by_name")};
 }
 Json WriteDraft(const Draft& draft) {
     userver::formats::json::ValueBuilder document;
     document["config_name"] = draft.ConfigName;
     document["author"] = draft.Author;
+    if (draft.AuthorName)
+        document["author_name"] = *draft.AuthorName;
+    if (draft.ApprovedByName)
+        document["approved_by_name"] = *draft.ApprovedByName;
     document["description"] = draft.Description;
     document["version"] = draft.Version;
     document["status"] = std::string(StatusName(draft.Status));

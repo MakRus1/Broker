@@ -18,7 +18,9 @@ inline models::DraftStatus ToApiStatus(DraftStatus status) {
 }
 inline models::ConfigDraft ToApiDraft(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
+            .approved_by_name = draft.ApprovedByName,
             .author = draft.Author,
+            .author_name = draft.AuthorName,
             .base_value = draft.BaseValue,
             .base_version = draft.BaseVersion,
             .config_name = draft.ConfigName,
@@ -32,7 +34,9 @@ inline models::ConfigDraft ToApiDraft(const Draft& draft) {
 }
 inline models::DraftSnapshot ToApiSnapshot(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
+            .approved_by_name = draft.ApprovedByName,
             .author = draft.Author,
+            .author_name = draft.AuthorName,
             .base_value = draft.BaseValue,
             .base_version = draft.BaseVersion,
             .config_name = draft.ConfigName,

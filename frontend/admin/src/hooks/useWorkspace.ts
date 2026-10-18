@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { editorState } from '../changes';
 import {
   ApiError,
   canApprove,
@@ -35,7 +36,15 @@ export function useWorkspace() {
       setSession(undefined);
       setLoginRequired(true);
     }
-    setError(reason instanceof Error ? reason.message : 'Не удалось выполнить запрос');
+    setError(
+      reason instanceof ApiError && reason.status === 400
+        ? `Данные не прошли проверку Configs: ${reason.message}. Проверьте значение и обязательные поля.`
+        : reason instanceof ApiError && reason.status === 409
+          ? 'Конфиг или драфт уже изменился. Обновите данные и повторите действие.'
+          : reason instanceof Error
+            ? reason.message
+            : 'Не удалось выполнить запрос',
+    );
   }
   async function refreshCatalog() {
     const value = await request<{ items: CatalogEntry[] }>('/api/configs/list');
@@ -124,8 +133,19 @@ export function useWorkspace() {
     await refreshCatalog();
     if (draft) setDraft(history.items.find((item) => item.id === draft.id));
   }
+  function restore(value: Current['value'], label: string) {
+    setDraft(drafts.find((item) => item.id === current?.active_draft_id));
+    setText(pretty(value));
+    setDescription(label);
+    setEditor(true);
+  }
+  const initial = owner && draft ? draft.value : current?.value;
+  const editing = editorState(text, initial, current?.value);
+  const saveDisabled = busy || !description.trim() || !editing.changed;
   async function save() {
     if (!session || !current) return;
+    if (editing.error) throw new Error(editing.error);
+    if (saveDisabled) return;
     const value = parseValue(text);
     if (!description.trim()) throw new Error('Опишите, зачем меняется конфиг');
     const result =
@@ -181,6 +201,11 @@ export function useWorkspace() {
     location.assign(value.logout_url);
   }
   return {
+    editing,
+    saveDisabled,
+    restore,
+    setError,
+    setNotice,
     session,
     loginRequired,
     catalog,

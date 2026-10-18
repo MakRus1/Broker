@@ -1,12 +1,19 @@
+import type { Draft } from '../api';
 import type { Workspace } from '../hooks/useWorkspace';
 import { statusName } from '../presentation';
 
-export function DraftHistory({ workspace }: { workspace: Workspace }) {
-  const { drafts, busy, editor, setDraft } = workspace;
+export function DraftHistory({
+  workspace,
+  onSelect,
+}: {
+  workspace: Workspace;
+  onSelect: (draft: Draft) => void;
+}) {
+  const { drafts, busy, editor } = workspace;
   return (
     <section className="panel">
       <div className="panelhead">
-        <h2>История драфтов</h2>
+        <h2>История изменений</h2>
         <span className="muted">Последние 100</span>
       </div>
       {drafts.length === 0 ? (
@@ -25,7 +32,7 @@ export function DraftHistory({ workspace }: { workspace: Workspace }) {
             {drafts.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <button disabled={busy || editor} onClick={() => setDraft(item)}>
+                  <button disabled={busy || editor} onClick={() => onSelect(item)}>
                     #{item.id}
                   </button>
                 </td>

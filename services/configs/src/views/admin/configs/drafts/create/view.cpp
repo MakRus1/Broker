@@ -13,9 +13,12 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
                                .Description = request.body.description,
                                .ExpectedConfigVersion = request.body.expected_config_version,
                                .Value = request.body.value,
-                               .SourceRevision = request.body.source_revision});
+                               .SourceRevision = request.body.source_revision,
+                               .ActorName = platform::auth::GetPrincipal(context).DisplayName});
         return Response201{.approved_by = draft.ApprovedBy,
+                           .approved_by_name = draft.ApprovedByName,
                            .author = draft.Author,
+                           .author_name = draft.AuthorName,
                            .base_value = draft.BaseValue,
                            .base_version = draft.BaseVersion,
                            .config_name = draft.ConfigName,

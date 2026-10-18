@@ -150,3 +150,51 @@ config-cache-path: /var/cache/broker/dynamic-config.json
 
 Настройки HTTP-клиентов: [client-codegen.md](client-codegen.md).
 API публикации, откат и запуск: [services/configs/README.md](../services/configs/README.md).
+
+
+## Конфиги в тестах
+
+Используется штатный механизм testsuite, отдельной фикстуры Broker нет:
+
+```python
+import pytest
+
+@pytest.mark.config(
+    SHIPMENT_TERMS_CONFIG={
+        'clauses': [],
+        'default': {'is_enabled': True, 'max_days': 60},
+    },
+)
+async def test_shipment(service_client):
+    ...
+```
+
+Для короткого написания `@config(...)` можно объявить в модуле
+`config = pytest.mark.config`. Это обычный alias существующего маркера.
+Значение передается целиком и должно соответствовать схеме; несколько конфигов
+можно передать разными именованными аргументами одного маркера.
+
+Параметризация тоже штатная:
+
+```python
+@pytest.mark.parametrize('expected_days', [
+    pytest.param(30, marks=pytest.mark.config(
+        SHIPMENT_TERMS_CONFIG={
+            'clauses': [], 'default': {'is_enabled': True, 'max_days': 30},
+        })),
+    pytest.param(60, marks=pytest.mark.config(
+        SHIPMENT_TERMS_CONFIG={
+            'clauses': [], 'default': {'is_enabled': True, 'max_days': 60},
+        })),
+])
+async def test_terms(service_client, expected_days):
+    ...
+```
+
+Testsuite подает значения через mockserver и изолирует изменения между тестами.
+Если конфиг нужно поменять во время одного теста, используйте существующую
+фикстуру `dynamic_config.set_values({...})`. Перед запросом через service_client
+обновление доставляется автоматически; при обращении только через monitor_client
+сначала вызовите `await service_client.update_server_state()`.
+Общие тестовые значения задавайте в config_service_defaults, чтобы autouse-фикстура
+не перезаписывала per-test маркеры после их применения.

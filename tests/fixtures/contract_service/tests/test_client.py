@@ -75,3 +75,24 @@ async def test_get_retries_but_post_does_not(service_client, mockserver, dynamic
     response = await service_client.get('/client-probe', params={'method': 'post', 'name': 'retry'})
     assert response.json() == {'error': 'contract'}
     assert unavailable.times_called == 1
+
+
+@pytest.mark.parametrize('expected', [
+    pytest.param({'error': 'timeout'}, marks=pytest.mark.config(
+        BROKER_HTTP_CLIENT_CONFIG={'**default**': {'timeout': 30, 'max_retries': 0}}), id='short-timeout'),
+    pytest.param({'status': 200, 'value': 'Готово'}, marks=pytest.mark.config(
+        BROKER_HTTP_CLIENT_CONFIG={'**default**': {'timeout': 1000, 'max_retries': 0}}), id='long-timeout'),
+])
+async def test_config_marker_parameters(service_client, mockserver, expected):
+    @mockserver.handler('/foo/bar')
+    async def slow(request):
+        await asyncio.sleep(0.15)
+        return mockserver.make_response(status=200, json={'greeting': 'Готово'})
+    response = await service_client.get('/client-probe', params={'name': 'config-marker'})
+    assert response.json() == expected
+    await asyncio.sleep(0.2)
+
+
+async def test_config_marker_does_not_leak(dynamic_config):
+    assert dynamic_config.get('BROKER_HTTP_CLIENT_CONFIG') == {
+        '**default**': {'timeout': 100, 'max_retries': 0}}

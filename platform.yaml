@@ -1,0 +1,22 @@
+version: 1
+environments:
+  staging:
+    namespace: broker-staging
+    kubernetes_version: v1.36.5+k3s1
+    cluster_domain: cluster.local
+    storage_class: local-path
+    database_storage: 10Gi
+    admin_origin: http://localhost:13080
+    auth_origin: http://localhost:18888
+    defaults:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+    services:
+      configs: {}
+      broker: {}
+      admin_bff: {}

@@ -96,3 +96,5 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 Административный API Configs защищен OIDC/Keycloak: [настройка и локальный стенд](docs/auth.md).
 
 Админка Configs: http://localhost:13080 после `make local-up`; [запуск и разработка](docs/admin-ui.md).
+
+Личный сервер K3s на Windows/Multipass: [staging и сервисные образы](docs/staging.md).

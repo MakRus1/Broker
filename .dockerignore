@@ -5,3 +5,8 @@ build*
 third_party
 services/*/.gen
 __pycache__
+
+.local
+.staging
+frontend/admin/node_modules
+frontend/admin/dist

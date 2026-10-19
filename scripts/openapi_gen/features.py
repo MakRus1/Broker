@@ -9,6 +9,7 @@ from clients import client_specs
 from configs import selected, readiness_rules
 from dashboards import render as render_dashboard
 from http_logging import policy as logging_policy
+from deployment import validate as validate_deployment
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -27,9 +28,10 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment')
     logging_policy(spec)
+    validate_deployment(spec.get('deployment', {}))
     libraries = spec.get('libraries', ['common'])
     if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) for lib in libraries) or len(set(libraries)) != len(libraries):
         raise ValueError('service.yaml: libraries — список уникальных имен каталогов libs/<name>')

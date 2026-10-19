@@ -6,13 +6,79 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import staging_backup
 
 
 class BackupTest(unittest.TestCase):
+    def make_copy(self, root):
+        root.mkdir()
+        files = {}
+        for database in staging_backup.DATABASES:
+            path = root / f'{database}.dump'
+            path.write_bytes(b'PGDMP')
+            files[path.name] = staging_backup.checksum(path)
+        (root / 'manifest.json').write_text(json.dumps({'version': 1, 'files': files}))
+
+    def test_retention_keeps_newest_verified_and_preserves_other_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for index in range(9):
+                copy = root / f'20261019T1700{index:02d}-abcdef12'
+                self.make_copy(copy)
+                (copy / 'verified').touch()
+            unverified = root / 'unverified'
+            self.make_copy(unverified)
+            (root / 'other').mkdir()
+            staging_backup.prune(root, 7)
+            self.assertEqual(len(list(root.iterdir())), 9)
+            self.assertFalse((root / '20261019T170000-abcdef12').exists())
+            self.assertTrue((root / '20261019T170008-abcdef12').exists())
+            self.assertTrue(unverified.exists())
+            self.assertTrue((root / 'other').exists())
+
+    def test_failed_cluster_restore_removes_only_temporary_pod(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'copy'
+            self.make_copy(root)
+            commands = []
+            pod = None
+
+            def run(command, **kwargs):
+                nonlocal pod
+                commands.append(command)
+                if 'create' in command:
+                    pod = json.loads(kwargs['input'])
+                if 'pg_restore' in command:
+                    raise subprocess.CalledProcessError(1, command)
+                return Mock()
+
+            with patch('staging_backup.subprocess.run', side_effect=run):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    staging_backup.verify_cluster(root, 'ctx', 'ns', 'image')
+            name = pod['metadata']['name']
+            self.assertTrue(name.startswith('backup-check-'))
+            self.assertEqual(
+                commands[-1],
+                [
+                    'kubectl',
+                    '--context',
+                    'ctx',
+                    '-n',
+                    'ns',
+                    'delete',
+                    'pod',
+                    name,
+                    '--wait=true',
+                    '--timeout=90s',
+                ],
+            )
+            self.assertFalse(pod['spec']['automountServiceAccountToken'])
+            self.assertEqual(pod['spec']['volumes'], [{'name': 'data', 'emptyDir': {}}])
+            self.assertIn('listen_addresses=', pod['spec']['containers'][0]['args'])
+
     def test_failed_dump_does_not_publish_partial_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'copy'

@@ -2,15 +2,15 @@
 """Удалённое обновление staging после резервного копирования и проверки восстановления."""
 
 import argparse
-import base64
+import io
 from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
 import re
-import shlex
 import subprocess
 import sys
+import tarfile
 import uuid
 
 SERVICES = ('configs', 'broker', 'admin_bff')
@@ -35,6 +35,7 @@ def validate_release(release):
 def remote_main(settings):
     # Код этой функции запускается стандартным Python Ubuntu через SSH.
     import fcntl
+    from staging_backup import backup, verify_cluster, prune
 
     release = settings['release']
     validate_release(release)
@@ -75,9 +76,17 @@ def remote_main(settings):
                 for item in current['items']
             },
         }
-        print(json.dumps({'status': 'ready', 'before': before}), flush=True)
-        if sys.stdin.readline().strip() != 'APPLY':
-            raise ValueError('Бэкап не подтверждён; обновление не выполнялось')
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid.uuid4().hex[:8]
+        backup_root = Path(settings['backup_root']).expanduser().resolve()
+        output = backup_root / stamp
+        print(f'Резервная копия на сервере: {output}', flush=True)
+        backup(output, settings['context'], namespace=settings['namespace'])
+        (output / 'before.json').write_text(json.dumps(before, indent=2) + '\n')
+        (output / 'target-release.json').write_text(json.dumps(release, indent=2) + '\n')
+        image = json.loads((root / 'tools/local/images.json').read_text())['images']['postgres']
+        verify_cluster(output, settings['context'], settings['namespace'], image)
+        (output / 'verified').write_text(datetime.now(timezone.utc).isoformat() + '\n')
+        print('Восстановление на сервере проверено. Обновляю staging.', flush=True)
 
         history = state / 'releases'
         history.mkdir(mode=0o700, exist_ok=True)
@@ -88,6 +97,7 @@ def remote_main(settings):
         release_path = record / 'release.json'
         release_path.write_text(json.dumps(release, indent=2) + '\n')
         (record / 'before.json').write_text(json.dumps(before, indent=2) + '\n')
+        (record / 'backup-path').write_text(str(output) + '\n')
         try:
             run('git', 'checkout', '--detach', release['revision'])
             python = str(root / '.venv-gen/bin/python')
@@ -101,69 +111,60 @@ def remote_main(settings):
             (record / 'status').write_text('failed\n')
             raise
         (record / 'status').write_text('success\n')
-        print(json.dumps({'status': 'success', 'revision': release['revision']}), flush=True)
+        prune(backup_root, settings['keep_backups'])
+        print(f"Staging обновлён: {release['revision']}. Бэкап: {output}", flush=True)
 
 
-def deploy(release, host, context, namespace, repository, backup_root):
-    from staging_backup import backup, verify
-
+def deploy(release, host, context, namespace, repository, backup_root, keep_backups=7):
     validate_release(release)
-    settings = dict(release=release, context=context, namespace=namespace, repository=repository)
-    source = base64.b64encode(Path(__file__).read_bytes()).decode()
-    payload = base64.b64encode(json.dumps(settings).encode()).decode()
-    code = (
-        'import base64,json;'
-        f'exec(compile(base64.b64decode("{source}"),"staging_deploy.py","exec"),'
-        'globals_dict:={"__name__":"broker_remote","__file__":"staging_deploy.py"});'
-        f'globals_dict["remote_main"](json.loads(base64.b64decode("{payload}")))'
+    if keep_backups < 1:
+        raise ValueError('Нужно хранить хотя бы одну копию')
+    settings = dict(
+        release=release,
+        context=context,
+        namespace=namespace,
+        repository=repository,
+        backup_root=str(backup_root),
+        keep_backups=keep_backups,
     )
-    remote = subprocess.Popen(
-        ['ssh', '-T', '-o', 'BatchMode=yes', host, 'python3 -u -c ' + shlex.quote(code)],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        text=True,
+    # Передаём только два скрипта и описание релиза во временный каталог VM.
+    # Дампы и credentials.json не проходят через вызывающую машину.
+    bundle = io.BytesIO()
+    with tarfile.open(fileobj=bundle, mode='w') as archive:
+        for name in ('staging_deploy.py', 'staging_backup.py'):
+            archive.add(Path(__file__).with_name(name), arcname=name)
+        data = json.dumps(settings).encode()
+        item = tarfile.TarInfo('settings.json')
+        item.size = len(data)
+        item.mode = 0o600
+        archive.addfile(item, io.BytesIO(data))
+    command = '''set -eu
+temporary=$(mktemp -d)
+trap 'rm -rf "$temporary"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' HUP TERM
+tar -xf - -C "$temporary"
+python3 -u "$temporary/staging_deploy.py" --remote-settings "$temporary/settings.json"
+'''
+    subprocess.run(
+        ['ssh', '-T', '-o', 'BatchMode=yes', host, command],
+        input=bundle.getvalue(),
+        check=True,
     )
-    try:
-        line = remote.stdout.readline()
-        if not line:
-            raise ValueError('Удалённая подготовка не выполнена; смотри сообщения SSH выше')
-        ready = json.loads(line)
-        if ready.get('status') != 'ready':
-            raise ValueError('VM не подтвердила готовность к резервному копированию')
-        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid.uuid4().hex[:8]
-        output = backup_root.expanduser().resolve() / stamp
-        print(f'Резервная копия: {output}', flush=True)
-        backup(output, context, host=host, namespace=namespace)
-        verify(output)
-        (output / 'before.json').write_text(json.dumps(ready['before'], indent=2) + '\n')
-        (output / 'target-release.json').write_text(json.dumps(release, indent=2) + '\n')
-        print('Восстановление проверено. Обновляю staging.', flush=True)
-        remote.stdin.write('APPLY\n')
-        remote.stdin.flush()
-        remote.stdin.close()
-        result = remote.stdout.read()
-        if remote.wait() != 0:
-            raise ValueError(f'Деплой завершился ошибкой. Бэкап сохранён: {output}')
-        if json.loads(result).get('status') != 'success':
-            raise ValueError('Не получено подтверждение готовности сервисов')
-        print(f"Staging обновлён: {release['revision']}")
-    finally:
-        if not remote.stdin.closed:
-            remote.stdin.close()
-        # EOF снимает ожидание APPLY; при обрыве после APPLY состояние проверяется в VM.
-        if remote.poll() is None:
-            try:
-                remote.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                remote.terminate()
-                remote.wait()
-        remote.stdout.close()
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == '--remote-settings':
+        remote_main(json.loads(Path(sys.argv[2]).read_text()))
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', type=Path, required=True)
-    parser.add_argument('--backup-root', type=Path, required=True)
+    parser.add_argument(
+        '--backup-root',
+        default='~/.local/share/broker-staging/backups',
+        help='Каталог бэкапов на сервере',
+    )
+    parser.add_argument('--keep-backups', type=int, default=7)
     parser.add_argument('--host', default='broker-staging')
     parser.add_argument('--context', required=True)
     parser.add_argument('--namespace', default='broker-staging')
@@ -176,6 +177,7 @@ def main():
         args.namespace,
         args.repository,
         args.backup_root,
+        args.keep_backups,
     )
 
 

@@ -86,7 +86,8 @@ struct Component::State {
     std::string Prefix;
     std::map<std::string, std::string> Permissions;
     std::chrono::seconds MaxAge;
-    std::atomic<std::shared_ptr<const Cached>> Cache;
+    // Атомарные операции со shared_ptr поддерживаются и libc++ без atomic<shared_ptr>.
+    std::shared_ptr<const Cached> Cache;
     std::atomic<std::int64_t> LastForced{0};
     userver::utils::PeriodicTask RefreshTask;
 
@@ -123,7 +124,7 @@ struct Component::State {
                                       .SetLoggedUrl("jwks")
                                       .perform();
             response->raise_for_status();
-            Cache.store(std::make_shared<const Cached>(Config, response->body()));
+            std::atomic_store(&Cache, std::make_shared<const Cached>(Config, response->body()));
         } catch (const std::bad_alloc&) {
             throw;
         } catch (const std::exception&) {
@@ -174,7 +175,7 @@ Principal Component::Authorize(const std::string& path, const std::string& autho
 }
 
 Principal Component::VerifyAccess(const std::string& token) const {
-    const auto cached = state_->Cache.load();
+    const auto cached = std::atomic_load(&state_->Cache);
     if (!cached || Clock::now() - cached->Received > state_->MaxAge)
         throw Unavailable{};
     Principal principal;
@@ -189,7 +190,7 @@ Principal Component::VerifyAccess(const std::string& token) const {
 
 Principal Component::VerifyLogin(const std::string& access, const std::string& identity,
     const std::string& client, const std::string& nonce) const {
-    const auto cached = state_->Cache.load();
+    const auto cached = std::atomic_load(&state_->Cache);
     if (!cached || Clock::now() - cached->Received > state_->MaxAge)
         throw Unavailable{};
     try {

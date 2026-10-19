@@ -7,9 +7,13 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-SERVICES = ('configs', 'broker', 'admin_bff')
+sys.path.insert(0, str(ROOT / 'scripts'))
+from service_catalog import discover
+
+SERVICES = discover()
 
 
 def build(revision, *, push=False, platform='linux/amd64', output=ROOT / '.staging/release.json'):
@@ -17,16 +21,17 @@ def build(revision, *, push=False, platform='linux/amd64', output=ROOT / '.stagi
         raise ValueError('Нужен полный git SHA')
     dev = json.loads((ROOT / 'tools/container-images.json').read_text())['images']['dev']
     node = json.loads((ROOT / 'tools/local/images.json').read_text())['images']['node']
+    services = discover(ROOT)
     release = {'revision': revision, 'images': {}}
     with tempfile.TemporaryDirectory() as directory:
-        for index, name in enumerate(SERVICES):
+        for index, name in enumerate(services):
             image = f"ghcr.io/makrus1/broker-{name.replace('_', '-')}:{revision}"
             metadata = Path(directory) / f'{name}.json'
             cache = []
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 scope = 'broker-services-' + platform.replace('/', '-')
                 cache = ['--cache-from', f'type=gha,version=2,scope={scope}']
-                if index == len(SERVICES) - 1:
+                if index == len(services) - 1:
                     cache += ['--cache-to', f'type=gha,version=2,scope={scope},mode=max']
             subprocess.run(
                 [

@@ -18,13 +18,14 @@ COPY services/ services/
 COPY schemas/ schemas/
 COPY scripts/openapi_gen/ scripts/openapi_gen/
 COPY scripts/templates/ scripts/templates/
+COPY scripts/service_catalog.py scripts/service_catalog.py
 COPY tools/versions.env tools/python-constraints.txt tools/
 RUN cmake -S . -B /tmp/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DBUILD_TESTING=OFF \
     -DPython3_EXECUTABLE=/opt/broker/venv/bin/python && \
-    cmake --build /tmp/build -j 4 --target broker configs admin_bff
+    cmake --build /tmp/build -j 4 --target $(python3 scripts/service_catalog.py --plain)
 COPY tools/deploy/package.py /tmp/package.py
-RUN python3 /tmp/package.py /tmp/build /runtime
+RUN python3 /tmp/package.py /tmp/build /runtime $(python3 scripts/service_catalog.py --plain)
 
 FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS runtime
 ARG SERVICE

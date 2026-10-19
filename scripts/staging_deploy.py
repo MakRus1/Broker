@@ -13,7 +13,10 @@ import sys
 import tarfile
 import uuid
 
-SERVICES = ('configs', 'broker', 'admin_bff')
+from service_catalog import discover, validate_names
+
+SERVICES = discover() if (Path(__file__).resolve().parents[1] / 'services').is_dir() else ()
+DEPLOY_PROTOCOL = 3
 
 
 def validate_release(release):
@@ -24,12 +27,49 @@ def validate_release(release):
     ):
         raise ValueError('Релиз должен содержать полный git SHA')
     images = release.get('images')
-    if not isinstance(images, dict) or set(images) != set(SERVICES):
-        raise ValueError('Нужны образы трёх сервисов')
+    if not isinstance(images, dict):
+        raise ValueError('Нужен словарь образов сервисов')
+    validate_names(images)
     for name, image in images.items():
         pattern = rf"ghcr\.io/makrus1/broker-{name.replace('_', '-')}@sha256:[0-9a-f]{{64}}"
         if not isinstance(image, str) or not re.fullmatch(pattern, image):
             raise ValueError(f'Неверный образ сервиса {name}')
+
+
+def selection(services=None, infrastructure=False, available=SERVICES):
+    services = list(available) if services is None else list(services)
+    if len(set(services)) != len(services) or set(services) - set(available):
+        raise ValueError('Неверный или повторяющийся сервис')
+    if not services and not infrastructure:
+        raise ValueError('Не выбраны сервисы или инфраструктура')
+    return services
+
+
+def deployment_state(items, services=SERVICES):
+    result = {}
+    for item in items:
+        name = item['metadata']['name']
+        if name not in {service.replace('_', '-') for service in services}:
+            continue
+        template = item['spec']['template']
+        status = item.get('status', {})
+        result[name] = {
+            'image': template['spec']['containers'][0]['image'],
+            'revision': template['metadata'].get('annotations', {}).get('broker/revision'),
+            'generation': item['metadata'].get('generation'),
+            'observed_generation': status.get('observedGeneration'),
+            'ready_replicas': status.get('readyReplicas', 0),
+            'replicas': item['spec'].get('replicas', 1),
+            'volumes': template['spec'].get('volumes', []),
+        }
+    return result
+
+
+def write_json(path, value):
+    temporary = path.with_suffix('.tmp')
+    temporary.touch(mode=0o600, exist_ok=True)
+    temporary.write_text(json.dumps(value, indent=2) + '\n')
+    temporary.replace(path)
 
 
 def remote_main(settings):
@@ -39,6 +79,9 @@ def remote_main(settings):
 
     release = settings['release']
     validate_release(release)
+    services = selection(
+        settings.get('services'), settings.get('infrastructure', False), release['images']
+    )
     root = Path(settings['repository']).expanduser().resolve()
     state = root / '.staging'
     if not (state / 'credentials.json').is_file():
@@ -70,11 +113,27 @@ def remote_main(settings):
                 run('git', 'cat-file', '-e', release['revision'] + ':scripts/staging_lan.py')
             except subprocess.CalledProcessError:
                 raise ValueError('LAN включён: релиз без поддержки HTTPS запрещён') from None
+        source = run(
+            'git', 'show', release['revision'] + ':scripts/staging.py', capture=True
+        ).stdout
+        if '--infra-only' not in source or '--service' not in source:
+            raise ValueError('Релиз не поддерживает выборочный деплой')
+        tree = run(
+            'git', 'ls-tree', '-r', '--name-only', release['revision'], 'services', capture=True
+        ).stdout.splitlines()
+        expected = validate_names(
+            path.split('/')[1]
+            for path in tree
+            if re.fullmatch(r'services/[^/]+/service.yaml', path)
+        )
+        if set(expected) != set(release['images']):
+            raise ValueError('Релиз не соответствует каталогу сервисов выбранной ревизии')
         previous = run('git', 'rev-parse', 'HEAD', capture=True).stdout.strip()
         kubectl = ['kubectl', '--context', settings['context'], '-n', settings['namespace']]
         os.environ['KUBECONFIG'] = str(Path.home() / '.kube/config')
         current = json.loads(run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout)
         before = {
+            'services': deployment_state(current['items'], release['images']),
             'checkout': previous,
             'images': {
                 item['metadata']['name']: item['spec']['template']['spec']['containers'][0]['image']
@@ -103,6 +162,10 @@ def remote_main(settings):
         release_path.write_text(json.dumps(release, indent=2) + '\n')
         (record / 'before.json').write_text(json.dumps(before, indent=2) + '\n')
         (record / 'backup-path').write_text(str(output) + '\n')
+        write_json(
+            record / 'selection.json',
+            {'services': services, 'infrastructure': settings.get('infrastructure', False)},
+        )
         try:
             run('git', 'checkout', '--detach', release['revision'])
             python = str(root / '.venv-gen/bin/python')
@@ -111,21 +174,55 @@ def remote_main(settings):
             plan = json.loads((state / 'plan.json').read_text())
             if plan['namespace'] != settings['namespace']:
                 raise ValueError('Namespace релиза отличается от namespace резервной копии')
-            run(python, 'scripts/staging.py', 'apply', '--context', settings['context'])
+            arguments = ['--service', services[0]] if services else ['--infra-only']
+            for service in services[1:]:
+                arguments += ['--service', service]
+            if services and settings.get('infrastructure', False):
+                arguments += ['--infrastructure']
+            run(python, 'scripts/staging.py', 'apply', '--context', settings['context'], *arguments)
         except BaseException:
             (record / 'status').write_text('failed\n')
             raise
+        finally:
+            # Сохраняем состояние кластера даже при частично завершившемся обновлении.
+            try:
+                actual = json.loads(
+                    run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout
+                )
+                snapshot = {
+                    'services': deployment_state(actual['items'], release['images']),
+                    'record': record.name,
+                }
+                write_json(record / 'after.json', snapshot)
+                write_json(state / 'deployed.json', snapshot)
+            except Exception as exc:
+                (record / 'status').write_text('failed\n')
+                raise RuntimeError('Не удалось сохранить фактическое состояние кластера') from exc
         (record / 'status').write_text('success\n')
         prune(backup_root, settings['keep_backups'])
         print(f"Staging обновлён: {release['revision']}. Бэкап: {output}", flush=True)
 
 
-def deploy(release, host, context, namespace, repository, backup_root, keep_backups=7):
+def deploy(
+    release,
+    host,
+    context,
+    namespace,
+    repository,
+    backup_root,
+    keep_backups=7,
+    *,
+    services=None,
+    infrastructure=False,
+):
     validate_release(release)
+    services = selection(services, infrastructure, release['images'])
     if keep_backups < 1:
         raise ValueError('Нужно хранить хотя бы одну копию')
     settings = dict(
         release=release,
+        services=services,
+        infrastructure=infrastructure,
         context=context,
         namespace=namespace,
         repository=repository,
@@ -136,7 +233,7 @@ def deploy(release, host, context, namespace, repository, backup_root, keep_back
     # Дампы и credentials.json не проходят через вызывающую машину.
     bundle = io.BytesIO()
     with tarfile.open(fileobj=bundle, mode='w') as archive:
-        for name in ('staging_deploy.py', 'staging_backup.py'):
+        for name in ('staging_deploy.py', 'staging_backup.py', 'service_catalog.py'):
             archive.add(Path(__file__).with_name(name), arcname=name)
         data = json.dumps(settings).encode()
         item = tarfile.TarInfo('settings.json')
@@ -163,6 +260,12 @@ def main():
         remote_main(json.loads(Path(sys.argv[2]).read_text()))
         return
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--service',
+        action='append',
+    )
+    parser.add_argument('--infrastructure', action='store_true')
+    parser.add_argument('--infra-only', action='store_true')
     parser.add_argument('--release', type=Path, required=True)
     parser.add_argument(
         '--backup-root',
@@ -175,6 +278,8 @@ def main():
     parser.add_argument('--namespace', default='broker-staging')
     parser.add_argument('--repository', default='~/projects/Broker')
     args = parser.parse_args()
+    if args.infra_only and args.service:
+        parser.error('--infra-only несовместим с --service')
     deploy(
         json.loads(args.release.read_text()),
         args.host,
@@ -183,6 +288,8 @@ def main():
         args.repository,
         args.backup_root,
         args.keep_backups,
+        services=[] if args.infra_only else args.service,
+        infrastructure=args.infrastructure or args.infra_only,
     )
 
 

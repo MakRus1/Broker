@@ -149,6 +149,95 @@ def verify(directory):
         subprocess.run(['docker', 'rm', '-f', '-v', name], stdout=subprocess.DEVNULL, check=False)
 
 
+def verify_cluster(directory, context, namespace, image):
+    """Восстановление в отдельном pod без сервиса, PVC и TCP-listener."""
+    validate(directory)
+    name = 'backup-check-' + uuid.uuid4().hex[:12]
+    kubectl = ['kubectl', '--context', context, '-n', namespace]
+    pod = {
+        'apiVersion': 'v1',
+        'kind': 'Pod',
+        'metadata': {'name': name},
+        'spec': {
+            'restartPolicy': 'Never',
+            'automountServiceAccountToken': False,
+            'containers': [
+                {
+                    'name': 'postgres',
+                    'image': image,
+                    'args': ['postgres', '-c', 'listen_addresses='],
+                    'env': [{'name': 'POSTGRES_HOST_AUTH_METHOD', 'value': 'trust'}],
+                    'resources': {
+                        'requests': {'cpu': '50m', 'memory': '64Mi'},
+                        'limits': {'memory': '512Mi'},
+                    },
+                    'volumeMounts': [{'name': 'data', 'mountPath': '/var/lib/postgresql/data'}],
+                    'readinessProbe': {
+                        'exec': {
+                            'command': [
+                                'sh',
+                                '-c',
+                                'test "$(head -n 1 /proc/1/comm)" = postgres && pg_isready -U postgres',
+                            ]
+                        },
+                        'periodSeconds': 1,
+                    },
+                }
+            ],
+            'volumes': [{'name': 'data', 'emptyDir': {}}],
+        },
+    }
+
+    def run(*args, **kwargs):
+        return subprocess.run([*kubectl, *args], check=True, **kwargs)
+
+    created = False
+    try:
+        run('create', '-f', '-', input=json.dumps(pod), text=True)
+        created = True
+        run('wait', '--for=condition=Ready', f'pod/{name}', '--timeout=180s')
+        for database in DATABASES:
+            run('exec', name, '-c', 'postgres', '--', 'createdb', '-U', 'postgres', database)
+            with (directory / f'{database}.dump').open('rb') as source:
+                run(
+                    'exec',
+                    '-i',
+                    name,
+                    '-c',
+                    'postgres',
+                    '--',
+                    'pg_restore',
+                    '-U',
+                    'postgres',
+                    '--exit-on-error',
+                    '--no-owner',
+                    '--no-acl',
+                    '-d',
+                    database,
+                    stdin=source,
+                )
+    finally:
+        if created:
+            run('delete', 'pod', name, '--wait=true', '--timeout=90s')
+
+
+def prune(directory, keep):
+    """Удаляем только старые копии с отметкой успешной проверки и верными суммами."""
+    if keep < 1:
+        raise ValueError('Нужно хранить хотя бы одну проверенную копию')
+    copies = []
+    for child in directory.iterdir():
+        if child.is_symlink() or not child.is_dir() or not (child / 'verified').is_file():
+            continue
+        try:
+            validate(child)
+        except (ValueError, OSError):
+            continue
+        copies.append(child)
+    for child in sorted(copies, key=lambda path: path.name, reverse=True)[keep:]:
+        shutil.rmtree(child)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)

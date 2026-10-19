@@ -381,6 +381,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 }
             )
         components = static['components_manager']['components']
+        if lan:
+            # Логи читаются из stdout; OTLP используется для трасс, без двойной доставки.
+            components['otlp-logger']['sinks']['logs'] = 'default'
         components['server']['listener-monitor']['address'] = '0.0.0.0'
         config_data = {'static_config.yaml': yaml.safe_dump(static, sort_keys=False)}
         vars_data = {'config_vars.yaml': yaml.safe_dump(variables, sort_keys=False)}

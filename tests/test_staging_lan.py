@@ -46,6 +46,17 @@ class LanTest(unittest.TestCase):
             self.assertFalse(values['auth-allow-http'])
             self.assertTrue(values['admin-token-url'].startswith('https://keycloak.'))
             self.assertTrue(values['otlp-enabled'])
+            bff_config = next(
+                obj
+                for obj in phases['services']
+                if obj['kind'] == 'ConfigMap'
+                and obj['metadata']['name'].startswith('admin-bff-config-')
+            )
+            static = yaml.safe_load(bff_config['data']['static_config.yaml'])
+            self.assertEqual(
+                static['components_manager']['components']['otlp-logger']['sinks']['logs'],
+                'default',
+            )
             grafana = next(
                 obj
                 for obj in monitoring

@@ -3,7 +3,6 @@
 
 import argparse
 import base64
-from copy import deepcopy
 import json
 from pathlib import Path
 import re

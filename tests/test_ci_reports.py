@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,8 +30,10 @@ add_test(NAME testsuite-beta COMMAND "${PYTHON}" -c "print('beta passed')")
 add_test(NAME testsuite-contract_service COMMAND "${PYTHON}" -c "print('contract passed')")
 add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client passed')")
 ''')
-            cmake = ROOT / '.venv-gen/bin/cmake'
-            ctest = ROOT / '.venv-gen/bin/ctest'
+            cmake = shutil.which('cmake')
+            ctest = shutil.which('ctest')
+            self.assertIsNotNone(cmake, 'CMake должен быть установлен из requirements.txt')
+            self.assertIsNotNone(ctest, 'CTest должен быть установлен из requirements.txt')
             build = root / 'build'
             subprocess.run([str(cmake), '-S', str(source), '-B', str(build),
                             f'-DPYTHON={sys.executable}'], check=True, capture_output=True)

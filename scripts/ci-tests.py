@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""План выборочных проверок и отчеты CTest/pytest для GitHub Actions."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def service_names(values):
+    names = list(dict.fromkeys(values))
+    for name in names:
+        if not re.fullmatch(r'[a-z][a-z0-9_]*', name):
+            raise ValueError(f'Некорректное имя сервиса: {name!r}')
+    return names
+
+
+def append(path, content):
+    if path:
+        with Path(path).open('a') as stream:
+            stream.write(content)
+
+
+def plan(args):
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'scripts/affected-services.py'), args.base],
+        check=True, stdout=subprocess.PIPE, text=True,
+    ).stdout.strip()
+    available = sorted(path.name for path in (ROOT / 'services').iterdir() if path.is_dir())
+    selected = service_names(available if result == 'all' else result.split())
+    if not set(selected) <= set(available):
+        raise ValueError('Определение зависимостей вернуло неизвестные сервисы')
+    message = ', '.join(f'`{name}`' for name in selected) or 'нет — сборка и CTest пропускаются'
+    text = f'### План проверок сервисов\n\nВыбраны: {message}.\n\n'
+    if result == 'all':
+        text += 'Общие изменения или недоступная базовая ревизия: проверяются все сервисы.\n\n'
+    text += 'Окружения: Debug/Release/ASan+UBSan на amd64, Debug на arm64.\n'
+    print(text)
+    append(args.github_output, f'services={" ".join(selected)}\n')
+    append(args.summary, text)
+
+
+def counts(path):
+    cases = ET.parse(path).getroot().findall('.//testcase')
+    if not cases:
+        raise ValueError(f'В отчете нет тестов: {path}')
+    failed = sum(case.find('failure') is not None or case.find('error') is not None for case in cases)
+    skipped = sum(case.find('skipped') is not None for case in cases)
+    return {'passed': len(cases) - failed - skipped, 'failed': failed, 'skipped': skipped}
+
+
+def run(args):
+    services = service_names(args.services)
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    (output / 'results.json').write_text('[]\n')
+    inventory = json.loads(subprocess.check_output(
+        [args.ctest, '--test-dir', str(args.build_dir), '--show-only=json-v1'], text=True,
+    ))
+    names = {test['name'] for test in inventory['tests']}
+    groups = [(service, f'^({re.escape(service)}_unittest|testsuite-{re.escape(service)})$')
+              for service in services]
+    groups.append(('shared-contracts', '^(testsuite-contract_service|client_contract_unittest)$'))
+    # Общие проверки не должны скрывать отсутствие тестов выбранного сервиса.
+    for name, pattern in groups:
+        if not any(re.fullmatch(pattern, test) for test in names):
+            raise ValueError(f'Не найдены тесты группы {name}; проверка не может быть зеленой')
+    results = []
+    for name, pattern in groups:
+        for report in (output / f'{name}.xml', output / f'pytest-{name}.xml'):
+            report.unlink(missing_ok=True)
+        command = [
+            args.ctest, '--test-dir', str(args.build_dir), '--verbose', '--output-on-failure',
+            '--no-tests=error', '-R', pattern, '--output-junit', str(output / f'{name}.xml'),
+        ]
+        print(f'::group::Тесты: {name}', flush=True)
+        print(shlex.join(command), flush=True)
+        environment = os.environ.copy()
+        pytest_options = shlex.split(environment.get('PYTEST_ADDOPTS', ''))
+        pytest_options.append(f'--junitxml={output / f"pytest-{name}.xml"}')
+        environment['PYTEST_ADDOPTS'] = shlex.join(pytest_options)
+        with (output / f'{name}.log').open('w') as log:
+            with subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, text=True) as process:
+                for line in process.stdout:
+                    print(line, end='', flush=True)
+                    log.write(line)
+                code = process.wait()
+        item = {'name': name, 'status': 'passed' if code == 0 else 'failed'}
+        try:
+            item['ctest'] = counts(output / f'{name}.xml')
+            pytest_report = output / f'pytest-{name}.xml'
+            if pytest_report.exists():
+                item['pytest'] = counts(pytest_report)
+            if any(item[key]['failed'] for key in ('ctest', 'pytest') if key in item):
+                item['status'] = 'failed'
+        except (OSError, ValueError, ET.ParseError) as error:
+            item['status'] = 'failed'
+            item['error'] = str(error)
+        results.append(item)
+        (output / 'results.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n')
+        print(f'Результат {name}: {item["status"]}', flush=True)
+        print('::endgroup::', flush=True)
+    return int(any(item['status'] != 'passed' for item in results))
+
+
+def summary(args):
+    path = args.output_dir / 'results.json'
+    results = {item['name']: item for item in json.loads(path.read_text())} if path.exists() else {}
+    lines = [
+        f'### Тесты сервисов · {args.preset} · {args.arch}', '',
+        f'Сборка: **{args.build_result}**. Шаг тестов: **{args.test_result}**.', '',
+        '| Сервис / группа | Результат | CTest: успешно / ошибки / пропуски | '
+        'Pytest: успешно / ошибки / пропуски |',
+        '| --- | --- | --- | --- |',
+    ]
+    for name in [*service_names(args.services), 'shared-contracts']:
+        item = results.get(name, {})
+        def cell(key):
+            value = item.get(key)
+            return f'{value["passed"]} / {value["failed"]} / {value["skipped"]}' if value else '—'
+        status = {'passed': '✅ Пройдены', 'failed': '❌ Ошибка'}.get(item.get('status'), '⏭ Не запущены')
+        lines.append(f'| `{name}` | {status} | {cell("ctest")} | {cell("pytest")} |')
+    lines += ['', 'CTest считает наборы (unit executable / testsuite); Pytest — отдельные '
+              'функциональные тесты внутри testsuite. Эти столбцы не суммируются.', '',
+              'Подробности: шаг «Тесты затронутых сервисов», блок с именем сервиса. '
+              'Логи и JUnit: artifact `test-results-' + args.preset + '-' + args.arch + '`.', '']
+    text = '\n'.join(lines)
+    print(text)
+    append(args.summary, text)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest='command', required=True)
+    planning = commands.add_parser('plan')
+    planning.add_argument('--base', default='missing-base')
+    planning.add_argument('--github-output', default=os.environ.get('GITHUB_OUTPUT'))
+    planning.add_argument('--summary', default=os.environ.get('GITHUB_STEP_SUMMARY'))
+    running = commands.add_parser('run')
+    running.add_argument('--build-dir', type=Path, required=True)
+    running.add_argument('--ctest', default=str(ROOT / '.venv-gen/bin/ctest'))
+    for command in (running, commands.add_parser('summary')):
+        command.add_argument('--services', nargs='+', required=True)
+        command.add_argument('--output-dir', type=Path, required=True)
+    reporting = commands.choices['summary']
+    reporting.add_argument('--preset', required=True)
+    reporting.add_argument('--arch', required=True)
+    reporting.add_argument('--build-result', required=True)
+    reporting.add_argument('--test-result', required=True)
+    reporting.add_argument('--summary', default=os.environ.get('GITHUB_STEP_SUMMARY'))
+    args = parser.parse_args()
+    return {'plan': plan, 'run': run, 'summary': summary}[args.command](args)
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, KeyError, ET.ParseError, subprocess.CalledProcessError) as error:
+        sys.exit(f'Ошибка проверок CI: {error}')

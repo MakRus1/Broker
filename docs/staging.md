@@ -229,6 +229,147 @@ HTTP и незащищённая cookie допустимы здесь тольк
 
 ## Проверки и откат
 
+### Доступ с Mac по локальной сети
+
+Адреса VM `172.23.*` относятся к виртуальной сети Hyper-V и могут быть недоступны
+с другого компьютера. На Windows можно переслать один TCP-порт в SSH VM, разрешив
+вход только с IP Mac. Перед настройкой узнай IPv4 Wi-Fi Windows через `ipconfig`
+и IP Mac в настройках Wi-Fi → TCP/IP. Значения ниже — примеры, подставь фактические.
+
+В PowerShell **от администратора**:
+
+```powershell
+$windowsIp = '192.168.1.146'
+$macIp = '<MAC_IP>'
+$vmIp = '172.23.230.37'
+Test-NetConnection $vmIp -Port 22
+```
+
+Продолжай только при `TcpTestSucceeded: True` и после замены `<MAC_IP>`.
+Проверь, что порт 2222 не занят другим приложением или правилом:
+
+```powershell
+Get-NetTCPConnection -LocalPort 2222 -State Listen -ErrorAction SilentlyContinue
+netsh interface portproxy show v4tov4
+```
+
+Затем создай проброс и узкое правило брандмауэра:
+
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=$windowsIp listenport=2222 connectaddress=$vmIp connectport=22
+if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать проброс SSH' }
+New-NetFirewallRule -Name 'BrokerStagingSsh' -DisplayName 'Broker staging SSH from Mac' -Direction Inbound -Action Allow -Protocol TCP -LocalAddress $windowsIp -LocalPort 2222 -RemoteAddress $macIp -Profile Any
+```
+
+IP Helper (`iphlpsvc`) должен работать: проверь `Get-Service iphlpsvc`, при необходимости
+запусти `Start-Service iphlpsvc`. Проброс не открывает Kubernetes API, PostgreSQL или
+админку в локальной сети. С Mac проверь `nc -vz <WINDOWS_IP> 2222`.
+Для SSH нужен собственный ключ Mac: его публичную часть добавь в authorized_keys VM
+с сохранением существующих ключей по инструкции выше. Приватный ключ Windows не переносится.
+
+В `~/.ssh/config` на Mac:
+
+```sshconfig
+Host broker-staging
+    HostName <WINDOWS_IP>
+    Port 2222
+    User ubuntu
+    IdentityFile ~/.ssh/broker-staging
+    IdentitiesOnly yes
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+```
+
+Сверь отпечаток хоста VM при первом `ssh broker-staging`. При смене DHCP-адреса VM
+обнови connectaddress проброса; при смене адресов Windows/Mac обнови также listenaddress,
+правило брандмауэра и SSH-алиас. Старый проброс можно удалить:
+
+```powershell
+netsh interface portproxy delete v4tov4 listenaddress=$windowsIp listenport=2222
+Remove-NetFirewallRule -Name 'BrokerStagingSsh'
+```
+
+Windows и VM должны оставаться включёнными без сна. После настройки SSH можно
+выполнять render/apply и забирать копии прямо с Mac; kubeconfig остаётся в VM.
+
+### Позже: доступ через интернет
+
+Для доступа независимо от домашней сети установи Tailscale на Mac и прямо в Ubuntu VM.
+Windows не должен быть промежуточным SSH-сервером. Инструкции поставщика:
+[установка на Linux](https://tailscale.com/docs/install/linux),
+[SSH к Linux VM](https://tailscale.com/docs/how-to/connect-ssh-linux-vm).
+Оба устройства должны быть в одной tailnet. Достаточно обычного OpenSSH поверх
+Tailscale; включать Tailscale SSH через `--ssh` не требуется.
+
+В Ubuntu после установки:
+
+```bash
+sudo tailscale up
+tailscale ip -4
+```
+
+Открой показанную ссылку и войди в тот же аккаунт, что на Mac. Ограничь доступ
+к VM своими устройствами через политику tailnet. Публичные порты роутера открывать
+не нужно. Для работы стенда Windows и VM должны оставаться включёнными без сна.
+
+На Mac нужен собственный SSH-ключ: приватный ключ Windows переносить не нужно.
+Его публичную часть добавь в Ubuntu способом из раздела подготовки ключа, сохраняя
+ключ Multipass. Затем настрой алиас в `~/.ssh/config`, подставив Tailscale IP и путь
+к своему ключу:
+
+```sshconfig
+Host broker-staging
+    HostName <TAILSCALE_IP_VM>
+    User ubuntu
+    IdentityFile ~/.ssh/broker-staging
+    IdentitiesOnly yes
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+```
+
+При первом `ssh broker-staging` сверь отпечаток хоста с Ubuntu. После этого SSH-команды
+с Mac доступны и для диагностики, и для запуска render/apply в VM. Это ручной удалённый
+деплой; автоматический CD из GitHub пока не настроен. Kubeconfig остаётся внутри VM.
+
+### Резервная копия вне VM
+
+Из репозитория на Mac, после настройки SSH:
+
+```bash
+python3 scripts/staging_backup.py create --host broker-staging --context default \
+  --output "$HOME/Documents/BrokerBackups/$(date -u +%Y%m%dT%H%M%SZ)"
+```
+
+Для запуска внутри VM опусти `--host` и задай `KUBECONFIG`; такую копию затем нужно
+отдельно перенести за пределы VM. Команда создаёт custom-format дампы broker, configs
+и keycloak, manifest с SHA-256 и временем создания. Готовый каталог появляется только
+после успешной выгрузки всех трёх БД; существующая копия не перезаписывается.
+Файлы передаются бинарным потоком без SSH TTY и без PowerShell-перенаправления.
+
+Дампы содержат данные пользователей и Keycloak: храни их на защищённом диске,
+не добавляй в Git. Пароли ролей PostgreSQL и credentials.json не входят в копию:
+отдельная резервная копия credentials.json по-прежнему нужна. Каждая БД выгружается
+из своего согласованного снимка; общего снимка сразу трёх БД нет. Расписание,
+ротация, шифрование архива и отправка в объектное хранилище пока не автоматизированы.
+
+Проверь восстановление на Mac с запущенным Docker, указав фактический каталог:
+
+```bash
+python3 scripts/staging_backup.py verify "$HOME/Documents/BrokerBackups/<TIMESTAMP>"
+```
+
+Команда проверяет контрольные суммы и восстанавливает все три БД через pg_restore
+с `--exit-on-error` в отдельный временный PostgreSQL из закреплённого образа.
+У него нет внешних портов и сети; данные находятся в tmpfs и удаляются вместе
+с контейнером при завершении. Владельцы и ACL при этой проверке не восстанавливаются.
+Проверка подтверждает читаемость и восстановимость дампов, но не заменяет проверку
+запуска приложений после полного аварийного восстановления. Рабочий кластер команда
+verify не использует. При росте БД для проверки потребуется достаточно RAM в Docker.
+
+Сначала сделай копию и проверь восстановление, затем обновляй сервисы.
+
+### Диагностика и откат сервисов
+
 ```bash
 kubectl -n broker-staging get pods,pvc
 kubectl -n broker-staging top pods

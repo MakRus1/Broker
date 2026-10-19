@@ -32,3 +32,6 @@ frontend/admin/coverage/
 
 # Логи и отчеты локального запуска CI.
 ci-results/
+
+# Секреты и сгенерированные манифесты личного staging.
+.staging/

@@ -1,0 +1,84 @@
+name: Service images
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/services.yml
+      - tools/deploy/**
+      - scripts/staging*.py
+      - platform.yaml
+      - tests/test_deployment.py
+      - tools/container-images.json
+      - tools/local/images.json
+      - tools/versions.env
+      - tools/python-constraints.txt
+      - CMakeLists.txt
+      - cmake/**
+      - services/**
+      - libs/**
+      - schemas/**
+      - scripts/openapi_gen/**
+      - frontend/admin/**
+      - requirements.txt
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: read
+concurrency:
+  group: service-images-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Публикация разрешена только из main вручную
+        if: github.event_name == 'workflow_dispatch'
+        run: test "$GITHUB_REF" = refs/heads/main
+      - name: Вход в GHCR
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Окружение Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - name: Доступ Buildx к кэшу GitHub Actions
+        uses: actions/github-script@v9.0.0
+        with:
+          script: |
+            for (const name of ['ACTIONS_RUNTIME_TOKEN', 'ACTIONS_RESULTS_URL']) {
+              const value = process.env[name];
+              if (!value) throw new Error(`Missing ${name}`);
+              if (name === 'ACTIONS_RUNTIME_TOKEN') core.setSecret(value);
+              core.exportVariable(name, value);
+            }
+      - name: Собрать сервисные образы
+        env:
+          PUBLISH: ${{ github.event_name == 'workflow_dispatch' && '--push' || '' }}
+        run: python tools/deploy/build.py --revision "$GITHUB_SHA" $PUBLISH
+      - name: Проверить запуск runtime без компилятора
+        if: github.event_name == 'pull_request'
+        run: |
+          for service in configs broker admin-bff; do
+            docker run --rm --entrypoint /app/service "ghcr.io/makrus1/broker-$service:$GITHUB_SHA" --help
+          done
+      - name: Проверить подготовку манифестов
+        run: python scripts/staging.py render --release .staging/release.json
+      - name: Серверная проверка манифестов на K3s
+        run: python tools/deploy/check.py ${{ github.event_name == 'pull_request' && '--runtime' || '' }}
+      - name: Опубликовать описание релиза без секретов
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: staging-release-${{ github.sha }}
+          path: .staging/release.json
+          if-no-files-found: error
+          include-hidden-files: true

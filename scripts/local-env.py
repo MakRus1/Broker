@@ -9,6 +9,9 @@ import subprocess
 import sys
 import yaml
 from migrations import discover, render
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'openapi_gen'))
+from generate import UniqueLoader
+from dashboards import provision as provision_dashboards
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local"
@@ -26,6 +29,7 @@ def resolve(value, variables):
 
 def prepare():
     STATE.mkdir(exist_ok=True)
+    provision_dashboards(ROOT, STATE / "grafana-dashboards", UniqueLoader)
     (ROOT / "build-local").mkdir(exist_ok=True)
     secrets_path = STATE / "auth-secrets.json"
     if not secrets_path.exists():
@@ -341,7 +345,7 @@ def prepare():
             f"{ROOT}/tools/local/grafana/datasources:/etc/grafana/provisioning/datasources:ro",
             f"{ROOT}/tools/local/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro",
             "grafana:/var/lib/grafana",
-            f"{ROOT}/tools/local/grafana/dashboard.json:/var/lib/grafana/dashboards/local.json:ro",
+            f"{STATE}/grafana-dashboards:/var/lib/grafana/dashboards:ro",
         ],
         "ports": ["127.0.0.1:13000:3000"],
     }

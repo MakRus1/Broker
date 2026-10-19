@@ -4,3 +4,6 @@ clients:
   config_admin:
     service: configs
     transport: http
+dashboard:
+  title: Broker · Административный BFF
+  tags: [admin]

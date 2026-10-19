@@ -94,6 +94,19 @@
           "value": "$__all"
         },
         "sort": 1
+      },
+      {
+        "name": "level",
+        "label": "Уровень",
+        "type": "custom",
+        "query": "TRACE,DEBUG,INFO,WARNING,ERROR,CRITICAL",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
       }
     ]
   },
@@ -662,7 +675,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=\"$service\",deployment_environment_name=~\"$environment\"}"
+          "expr": "{service_name=\"$service\",deployment_environment_name=~\"$environment\"} | level=~\"$level\""
         }
       ],
       "options": {

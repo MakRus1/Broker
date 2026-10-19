@@ -9,8 +9,19 @@ receivers:
     storage: file_storage
     operators:
       - type: json_parser
+        if: 'body matches "^ *[{]"'
         parse_to: attributes
         on_error: send
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999999Z07:00'
+        severity:
+          parse_from: attributes.level
+          overwrite_text: true
+          mapping:
+            warn: [WARNING]
+            fatal: [CRITICAL]
       - type: add
         field: resource["service.name"]
         value: broker
@@ -20,8 +31,19 @@ receivers:
     storage: file_storage
     operators:
       - type: json_parser
+        if: 'body matches "^ *[{]"'
         parse_to: attributes
         on_error: send
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999999Z07:00'
+        severity:
+          parse_from: attributes.level
+          overwrite_text: true
+          mapping:
+            warn: [WARNING]
+            fatal: [CRITICAL]
       - type: add
         field: resource["service.name"]
         value: configs
@@ -31,8 +53,19 @@ receivers:
     storage: file_storage
     operators:
       - type: json_parser
+        if: 'body matches "^ *[{]"'
         parse_to: attributes
         on_error: send
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999999Z07:00'
+        severity:
+          parse_from: attributes.level
+          overwrite_text: true
+          mapping:
+            warn: [WARNING]
+            fatal: [CRITICAL]
       - type: add
         field: resource["service.name"]
         value: diagnostics
@@ -42,8 +75,19 @@ receivers:
     storage: file_storage
     operators:
       - type: json_parser
+        if: 'body matches "^ *[{]"'
         parse_to: attributes
         on_error: send
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999999Z07:00'
+        severity:
+          parse_from: attributes.level
+          overwrite_text: true
+          mapping:
+            warn: [WARNING]
+            fatal: [CRITICAL]
       - type: add
         field: resource["service.name"]
         value: admin_bff

@@ -292,6 +292,19 @@ def variables(service, logs):
                 'current': {'text': 'Loki', 'value': 'loki'},
             },
         )
+    if logs:
+        result.append(
+            {
+                'name': 'level',
+                'label': 'Уровень',
+                'type': 'custom',
+                'query': 'TRACE,DEBUG,INFO,WARNING,ERROR,CRITICAL',
+                'multi': True,
+                'includeAll': True,
+                'allValue': '.*',
+                'current': {'text': 'All', 'value': '$__all'},
+            }
+        )
     return result
 
 
@@ -353,7 +366,7 @@ def render(service, spec):
                     'targets': [
                         {
                             'refId': 'A',
-                            'expr': '{service_name="$service",deployment_environment_name=~"$environment"}',
+                            'expr': '{service_name="$service",deployment_environment_name=~"$environment"} | level=~"$level"',
                         }
                     ],
                     'options': {

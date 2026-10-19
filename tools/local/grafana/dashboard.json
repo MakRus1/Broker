@@ -158,9 +158,26 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{service_name=~\"broker|configs|diagnostics|admin_bff\"}"
+          "expr": "{service_name=~\"broker|configs|diagnostics|admin_bff\"} | level=~\"$level\""
         }
       ]
     }
-  ]
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "level",
+        "label": "Уровень",
+        "type": "custom",
+        "query": "TRACE,DEBUG,INFO,WARNING,ERROR,CRITICAL",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
 }

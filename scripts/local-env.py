@@ -96,7 +96,7 @@ def prepare():
         config = resolve(config, variables)
         components = config["components_manager"]["components"]
         components["server"]["listener-monitor"]["address"] = "0.0.0.0"
-        components["otlp-logger"]["sinks"] = {"logs": "default", "tracing": "otlp"}
+        components["otlp-logger"]["sinks"] = {"logs": "default", "tracing": "both"}
         (STATE / f"{name}.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
         (STATE / f"{name}.sql").write_text(
             render(discover(ROOT / f"services/{name}/postgresql/schemas/db_1"))
@@ -199,7 +199,7 @@ def prepare():
     config["components_manager"]["components"]["server"]["listener"]["port"] = 8180
     admin_components = config["components_manager"]["components"]
     admin_components["server"]["listener-monitor"]["address"] = "0.0.0.0"
-    admin_components["otlp-logger"]["sinks"] = {"logs": "default", "tracing": "otlp"}
+    admin_components["otlp-logger"]["sinks"] = {"logs": "default", "tracing": "both"}
     (STATE / "admin_bff.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
     services["admin_bff"] = {
         "image": images["dev"], "user": "1001:1001", "working_dir": "/workspaces/broker",

@@ -6,3 +6,7 @@ postgresql:
 dashboard:
   title: Broker · Конфиги
   tags: [infrastructure]
+http_logging:
+  paths: [/admin/configs/**]
+  request_body_limit: 32768
+  response_body_limit: 32768

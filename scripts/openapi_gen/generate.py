@@ -13,6 +13,7 @@ from render import config_block, outputs, view
 from features import prepare
 from clients import client_outputs, client_specs
 import configs
+from http_logging import policy as logging_policy
 
 class UniqueLoader(yaml.SafeLoader):
     """Повторяющиеся ключи YAML считаются ошибкой контракта."""
@@ -64,7 +65,9 @@ def configuration(service, ops, source=None):
     text = path.read_text() if source is None else source
     if text.count(BEGIN) != 1 or text.count(END) != 1 or text.index(BEGIN) > text.index(END):
         raise ValueError('Exactly one ordered pair of OpenAPI handler markers is required')
-    return re.sub(r'(?m)^ *' + BEGIN + r'.*?^ *' + END, '        ' + BEGIN + '\n' + config_block(ops) + '\n        ' + END, text, flags=re.S)
+    manifest = service / 'service.yaml'
+    spec = yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}
+    return re.sub(r'(?m)^ *' + BEGIN + r'.*?^ *' + END, '        ' + BEGIN + '\n' + config_block(ops, logging_policy(spec)) + '\n        ' + END, text, flags=re.S)
 
 
 def digest(service, ops, additions=None):

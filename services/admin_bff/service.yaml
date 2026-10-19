@@ -7,3 +7,7 @@ clients:
 dashboard:
   title: Broker · Административный BFF
   tags: [admin]
+http_logging:
+  paths: [/api/configs/**]
+  request_body_limit: 32768
+  response_body_limit: 32768

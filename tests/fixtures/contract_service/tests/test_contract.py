@@ -56,6 +56,7 @@ async def test_automatic_metadata(service_client, method, payload, status):
         response = await service_client.request(method, '/items/42' + ('/create' if method == 'post' else ''), json=payload,
             headers={'traceparent': f'00-{trace_id}-1234567890abcdef-01'})
         assert response.status == status
+    assert response.headers['X-Trace-Id'] == trace_id
     records = capture.select(trace_id=trace_id)
     assert any(record.get('service.name') == 'contract_service'
                and record.get('service.version') == '0.1.0'

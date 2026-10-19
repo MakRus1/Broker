@@ -134,3 +134,9 @@ critical_dependencies:
 При включении gRPC автоматически регистрируется platform-grpc-readiness. Он использует
 тот же реестр критических зависимостей и возвращает UNAVAILABLE новым RPC при неготовности.
 Отдельные правила для gRPC в manifest не требуются. Открытые вызовы/потоки не прерываются.
+
+## Grafana
+
+`make gen` автоматически создает `monitoring/grafana.json` для сервиса. Состав
+учитывает PostgreSQL/gRPC. Необязательная секция `dashboard` задает название, теги,
+разделы и дополнительные PromQL-панели: [настройка](service-dashboards.md).

@@ -7,6 +7,7 @@ from model import identifier
 from render import format_cpp
 from clients import client_specs
 from configs import selected, readiness_rules
+from dashboards import render as render_dashboard
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -25,8 +26,8 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard')
     libraries = spec.get('libraries', ['common'])
     if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) for lib in libraries) or len(set(libraries)) != len(libraries):
         raise ValueError('service.yaml: libraries — список уникальных имен каталогов libs/<name>')
@@ -68,7 +69,7 @@ def prepare(service, loader):
     config_includes = '#include <platform/configs/components.hpp>\n#include <configs/keys.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n#include <userver/dynamic_config/updater/component_list.hpp>\n' if config_enabled else ''
     client_includes = ''.join(f'#include <clients/{alias}/client.hpp>\n' for alias, _ in clients)
     pg, grpc = enabled['postgresql'], enabled['grpc']
-    files = {}
+    files = {service / 'monitoring/grafana.json': render_dashboard(name, spec)}
     def edit(relative, blocks, prefix='//'):
         path = service / relative
         text = path.read_text()

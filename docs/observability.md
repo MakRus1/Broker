@@ -73,3 +73,6 @@ Endpoint OTLP задается через `OTEL_EXPORTER_OTLP_ENDPOINT`; пер�
 Полный локальный стенд с хранением телеметрии и готовым дашбордом запускается через
 `make local-up`: [инструкция](local-environment.md). Центральное production-развертывание
 и alerting остаются отдельным этапом.
+
+Сервисные Grafana-дашборды генерируются из `service.yaml` вместе с остальной
+обвязкой: [состав, фильтры и кастомизация](service-dashboards.md).

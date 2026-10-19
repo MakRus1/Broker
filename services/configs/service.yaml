@@ -3,3 +3,6 @@ libraries: [common, configs, auth]
 postgresql:
   enabled: true
   cluster: configs
+dashboard:
+  title: Broker · Конфиги
+  tags: [infrastructure]

@@ -3,5 +3,7 @@ providers:
   - name: Broker local
     folder: Broker
     type: file
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
     options:
       path: /var/lib/grafana/dashboards

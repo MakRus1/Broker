@@ -1,0 +1,17 @@
+ConfigCatalogEntry:
+  type: object
+  additionalProperties: false
+  required:
+  - config_name
+  - version
+  - active_draft_id
+  properties:
+    config_name:
+      type: string
+    version:
+      type: integer
+      minimum: 0
+    active_draft_id:
+      type: integer
+      minimum: 1
+      nullable: true

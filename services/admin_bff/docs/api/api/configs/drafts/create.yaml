@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Создать валидный драфт одного конфига
+  version: '1'
+paths:
+  /api/configs/drafts/create:
+    post:
+      summary: Создать валидный драфт одного конфига
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - config_name
+              - description
+              - expected_config_version
+              properties:
+                config_name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                expected_config_version:
+                  type: integer
+                  minimum: 0
+                value:
+                  type: object
+                  additionalProperties: true
+                source_revision:
+                  type: integer
+                  minimum: 0
+      description: Укажите ровно одно из value и source_revision. На конфиг разрешен
+        один активный драфт.
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/drafts.yaml#/ConfigDraft
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Требуется действительный access token
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '503':
+          description: Ключи авторизации недоступны
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+        '502':
+          description: Нарушен контракт ответа Configs
+          content:
+            application/json:
+              schema:
+                $ref: ../../../../components/schemas/errors.yaml#/ApiError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+      description: Сессионная cookie BFF. При HTTPS имя cookie имеет префикс __Host-.
+security:
+- BrowserSession: []

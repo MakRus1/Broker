@@ -13,9 +13,15 @@ userver-сервис для React-админки Configs. Принимает с�
 - POST требует точный Origin и `X-CSRF-Token`; токен CSRF выдается через `/api/session`.
 
 `src/components/sessions.*` хранит сессии и обменивает токены.
-`src/transport/login.cpp` обслуживает вход; `configs.cpp` — явный список методов
-Configs; `assets.cpp` — статические файлы. `admin.cpp` связывает эти части и
-обрабатывает ошибки, без строкового диспетчера произвольных upstream URL.
+`src/components/browser_session.*` проверяет сессию и CSRF, создает снимок личности
+и преобразует ошибки клиента. Цепочка BFF добавляет эту middleware последней,
+в том числе после служебной middleware testsuite: ошибки upstream обрабатываются одинаково
+в тестах и обычном режиме. Mutex сессии освобождается до вызова Configs и выхода.
+
+`docs/api/api` описывает JSON API; `src/views/api` содержит отдельную реализацию
+каждой операции. `src/models/config_conversions.hpp` явно преобразует DTO Configs
+в модели браузерного контракта. `src/transport/login.cpp` обслуживает вход и callback;
+`assets.cpp` — только `/`, `/index.html` и `/assets/*`.
 
 Контракт маршрутов: [docs/api/README.md](docs/api/README.md).
 Полный запуск, интерфейс и ограничения: [docs/admin-ui.md](../../docs/admin-ui.md).

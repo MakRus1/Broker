@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Получить историю опубликованных ревизий
+  version: '1'
+paths:
+  /api/configs/history:
+    get:
+      summary: Получить историю опубликованных ревизий
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../../../components/schemas/revisions.yaml#/ConfigRevision
+        '400':
+          description: Невалидный запрос или конфиг
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '404':
+          description: Драфт или ревизия не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '409':
+          description: Конфликт версий или активный драфт
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Требуется действительный access token
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '503':
+          description: Ключи авторизации недоступны
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+        '502':
+          description: Нарушен контракт ответа Configs
+          content:
+            application/json:
+              schema:
+                $ref: ../../../components/schemas/errors.yaml#/ApiError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+      description: Сессионная cookie BFF. При HTTPS имя cookie имеет префикс __Host-.
+security:
+- BrowserSession: []

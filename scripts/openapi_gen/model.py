@@ -87,6 +87,7 @@ class Operation:
     responses: tuple[Response, ...]
     models: tuple['NamedModel', ...] = ()
     authenticated: bool = False
+    cookie_name: str | None = None
 
     @property
     def name(self):
@@ -337,19 +338,27 @@ def parse_spec(spec):
     if not isinstance(schemes, dict):
         raise ValueError('securitySchemes must be an object')
     for scheme in schemes.values():
-        keys(scheme, {'type', 'scheme', 'bearerFormat', 'description'}, 'security scheme')
-        if scheme.get('type') != 'http' or scheme.get('scheme') != 'bearer' or scheme.get('bearerFormat', 'JWT') != 'JWT':
-            raise ValueError('Only HTTP bearer JWT security is supported')
-    def authenticated(value):
+        if not isinstance(scheme, dict):
+            raise ValueError('Security scheme must be an object')
+        if scheme.get('type') == 'apiKey':
+            keys(scheme, {'type', 'in', 'name', 'description'}, 'security scheme')
+            if scheme.get('in') != 'cookie' or not isinstance(scheme.get('name'), str) or not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", scheme['name']):
+                raise ValueError('Only named cookie API keys are supported')
+        else:
+            keys(scheme, {'type', 'scheme', 'bearerFormat', 'description'}, 'security scheme')
+            if scheme.get('type') != 'http' or scheme.get('scheme') != 'bearer' or scheme.get('bearerFormat', 'JWT') != 'JWT':
+                raise ValueError('Only HTTP bearer JWT or cookie security is supported')
+    def authentication(value):
         if value == []:
-            return False
+            return False, None
         if not isinstance(value, list) or len(value) != 1 or not isinstance(value[0], dict) or len(value[0]) != 1:
-            raise ValueError('Expected one bearer security requirement')
+            raise ValueError('Expected one security requirement')
         name, scopes = next(iter(value[0].items()))
         if name not in schemes or scopes != []:
-            raise ValueError('Unknown bearer scheme or unsupported scopes')
-        return True
-    authenticated(spec.get('security', []))
+            raise ValueError('Unknown security scheme or unsupported scopes')
+        scheme = schemes[name]
+        return True, scheme.get('name') if scheme['type'] == 'apiKey' else None
+    authentication(spec.get('security', []))
     schemas = spec.get('components', {}).get('schemas', {})
     registry = SchemaRegistry(schemas)
     # Проверяем также неиспользуемые модели и строим порядок зависимостей.
@@ -434,7 +443,8 @@ def parse_spec(spec):
                 responses.append(Response(status, media, rb))
             if not responses:
                 raise ValueError('At least one response is required')
-            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), tuple(registry.models.values()), authenticated(op.get('security', spec.get('security', [])))))
+            protected, cookie_name = authentication(op.get('security', spec.get('security', [])))
+            operations.append(Operation(path, method.upper(), '/'.join(names) or 'root', tuple(params.values()), body, tuple(sorted(responses, key=lambda r: r.status)), tuple(registry.models.values()), protected, cookie_name))
     normalized = []
     for operation in operations:
         canonical = {typ.enum_name: tuple(typ.schema['enum']) for typ in enum_types(operation)}

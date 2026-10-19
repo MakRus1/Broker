@@ -1,7 +1,9 @@
 #include <openssl/rand.h>
 #include <stdexcept>
-#include <transport/admin.hpp>
+#include <transport/assets.hpp>
 #include <transport/responses.hpp>
+#include <userver/components/component_context.hpp>
+#include <userver/components/fs_cache.hpp>
 #include <userver/crypto/base64.hpp>
 #include <userver/server/http/http_response.hpp>
 
@@ -9,7 +11,13 @@ namespace admin_bff {
 using Http = userver::server::http::HttpRequest;
 using detail::JsonError;
 
-std::string Admin::ServeAssets(const Http& http) const {
+Assets::Assets(const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : HttpHandlerBase(config, context),
+      assets_(context.FindComponent<userver::components::FsCache>("admin-assets").GetClient()) {}
+
+std::string Assets::HandleRequestThrow(
+    const Http& http, userver::server::request::RequestContext&) const {
     auto& response = http.GetHttpResponse();
     const auto path = http.GetRequestPath();
     const auto file = assets_.TryGetFile(path == "/" ? "/index.html" : path);
@@ -31,6 +39,9 @@ std::string Admin::ServeAssets(const Http& http) const {
             body.replace(at, marker.size(), nonce);
         response.SetHeader(
             std::string_view{"Content-Security-Policy"}, detail::ContentSecurityPolicy(nonce));
+    } else {
+        response.SetHeader(
+            std::string_view{"Content-Security-Policy"}, detail::ContentSecurityPolicy());
     }
     return body;
 }

@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title: Завершить сессию
+  version: '1'
+paths:
+  /api/logout:
+    post:
+      summary: Завершить сессию
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - logout_url
+                properties:
+                  logout_url:
+                    type: string
+        '400':
+          description: Запрос отклонён
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Запрос отклонён
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Запрос отклонён
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '503':
+          description: Запрос отклонён
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+      description: Сессионная cookie BFF. При HTTPS имя cookie имеет префикс __Host-.
+security:
+- BrowserSession: []

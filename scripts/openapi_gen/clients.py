@@ -72,6 +72,8 @@ def json_read(response, finish):
 
 
 def operation_code(scope, op):
+    if op.cookie_name:
+        raise ValueError(f'{op.path}: cookie-authenticated browser APIs are not supported by C++ clients')
     text = f'namespace {op.name} {{\n'
     types = enum_types(op)
     error_names = {f'Error{r.status}' for r in op.responses if r.status >= 300}

@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$Instance = 'broker-staging',
+    [string]$VmAddress = '',
     [string]$IdentityFile = "$env:USERPROFILE\.ssh\broker-staging"
 )
 
@@ -25,11 +26,39 @@ $vm = $info.info.PSObject.Properties[$Instance].Value
 if (-not $vm -or $vm.state -ne 'Running') {
     throw "VM $Instance не запущена. Выполни: multipass start $Instance"
 }
-$address = @($vm.ipv4) | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } |
-    Select-Object -First 1
-if (-not $address) {
-    throw 'Multipass не вернул IPv4 VM.'
+function Find-SshAddress {
+    param(
+        [string[]]$Candidates,
+        [int]$Port = 22,
+        [int]$TimeoutMs = 1500
+    )
+
+    foreach ($candidate in ($Candidates | Select-Object -Unique)) {
+        if ($candidate -notmatch '^\d+\.\d+\.\d+\.\d+$') { continue }
+        $client = New-Object System.Net.Sockets.TcpClient
+        try {
+            $task = $client.ConnectAsync($candidate, $Port)
+            if ($task.Wait($TimeoutMs) -and $client.Connected) {
+                return $candidate
+            }
+        }
+        catch {
+            # Недоступный или устаревший адрес не мешает проверить остальные.
+        }
+        finally {
+            $client.Dispose()
+        }
+    }
+    return $null
 }
+
+$candidates = @($vm.ipv4)
+if ($VmAddress) { $candidates = @($VmAddress) }
+$address = Find-SshAddress -Candidates $candidates
+if (-not $address) {
+    throw "SSH недоступен по адресам: $($candidates -join ', '). Проверь сеть VM."
+}
+Write-Host "Подключение к ubuntu@$address"
 
 # Дочерние процессы завершаются при выходе и Ctrl+C. Завершение любого
 # port-forward закрывает весь сеанс: повторный запуск выбирает новые поды.

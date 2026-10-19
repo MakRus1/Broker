@@ -7,12 +7,38 @@ import subprocess
 import time
 import sys
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 from service_catalog import discover
+
+
+def probe_trace(url, *, timeout=60):
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with urlopen(url, timeout=5) as response:
+                trace = response.headers.get('X-Trace-Id')
+                response.read()
+            if not trace or len(trace) != 32:
+                raise ValueError('Сервис не вернул X-Trace-Id')
+            return trace
+        except HTTPError as exc:
+            # EndpointSlice и соединения могут переключиться позже завершения rollout.
+            if exc.code not in (502, 503, 504):
+                raise
+            exc.close()
+            error = exc
+        except (URLError, TimeoutError, ConnectionError) as exc:
+            error = exc
+        if time.monotonic() >= deadline:
+            raise ValueError(
+                f'Сервис не готов к проверке трассы за {timeout} секунд: {error}'
+            ) from error
+        print(f'Ожидаю доступность сервиса после rollout: {error}', flush=True)
+        time.sleep(min(2, max(0, deadline - time.monotonic())))
 
 
 def check(context, namespace):
@@ -53,13 +79,7 @@ def check(context, namespace):
         if time.monotonic() > deadline:
             raise ValueError('Не все установленные сервисы доступны Prometheus')
         time.sleep(2)
-    with urlopen(
-        f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check', timeout=5
-    ) as response:
-        trace = response.headers.get('X-Trace-Id')
-        response.read()
-    if not trace or len(trace) != 32:
-        raise ValueError('Сервис не вернул X-Trace-Id')
+    trace = probe_trace(f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check')
     deadline = time.monotonic() + 60
     while True:
         try:

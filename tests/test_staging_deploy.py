@@ -39,7 +39,13 @@ class DeployTest(unittest.TestCase):
         with tarfile.open(fileobj=io.BytesIO(run.call_args.kwargs['input'])) as archive:
             self.assertEqual(
                 set(archive.getnames()),
-                {'staging_deploy.py', 'staging_backup.py', 'service_catalog.py', 'settings.json'},
+                {
+                    'staging_deploy.py',
+                    'staging_backup.py',
+                    'service_catalog.py',
+                    'service_history.py',
+                    'settings.json',
+                },
             )
             settings = json.load(archive.extractfile('settings.json'))
         self.assertEqual(settings['backup_root'], '~/backups')

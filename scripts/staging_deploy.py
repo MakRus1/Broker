@@ -76,6 +76,7 @@ def remote_main(settings):
     # Код этой функции запускается стандартным Python Ubuntu через SSH.
     import fcntl
     from staging_backup import backup, verify_cluster, prune
+    from service_history import capture
 
     release = settings['release']
     validate_release(release)
@@ -132,6 +133,7 @@ def remote_main(settings):
         kubectl = ['kubectl', '--context', settings['context'], '-n', settings['namespace']]
         os.environ['KUBECONFIG'] = str(Path.home() / '.kube/config')
         current = json.loads(run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout)
+        before_services = capture(kubectl, release['images'])
         before = {
             'services': deployment_state(current['items'], release['images']),
             'checkout': previous,
@@ -158,6 +160,7 @@ def remote_main(settings):
             datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid.uuid4().hex[:8]
         )
         record.mkdir(mode=0o700)
+        write_json(record / 'before-services.json', before_services)
         release_path = record / 'release.json'
         release_path.write_text(json.dumps(release, indent=2) + '\n')
         (record / 'before.json').write_text(json.dumps(before, indent=2) + '\n')
@@ -193,6 +196,7 @@ def remote_main(settings):
                     'services': deployment_state(actual['items'], release['images']),
                     'record': record.name,
                 }
+                write_json(record / 'after-services.json', capture(kubectl, release['images']))
                 write_json(record / 'after.json', snapshot)
                 write_json(state / 'deployed.json', snapshot)
             except Exception as exc:
@@ -233,7 +237,12 @@ def deploy(
     # Дампы и credentials.json не проходят через вызывающую машину.
     bundle = io.BytesIO()
     with tarfile.open(fileobj=bundle, mode='w') as archive:
-        for name in ('staging_deploy.py', 'staging_backup.py', 'service_catalog.py'):
+        for name in (
+            'staging_deploy.py',
+            'staging_backup.py',
+            'service_catalog.py',
+            'service_history.py',
+        ):
             archive.add(Path(__file__).with_name(name), arcname=name)
         data = json.dumps(settings).encode()
         item = tarfile.TarInfo('settings.json')

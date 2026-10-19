@@ -341,6 +341,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     infra += [service('keycloak', namespace, [port('http', 8080), port('https', 8443)]), kc]
     migrations, apps, jobs = [], [], []
     for name in SERVICES:
+        app_start, migration_start = len(apps), len(migrations)
         static = read_yaml(root / f'services/{name}/configs/static_config.yaml')
         variables = read_yaml(root / f'services/{name}/configs/config_vars.yaml')
         variables.update(
@@ -523,6 +524,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             )
             migrations.append(job)
             jobs.append(migration_name)
+        for obj in [*apps[app_start:], *migrations[migration_start:]]:
+            obj['metadata'].setdefault('labels', {})['broker/service'] = name
     for obj in apps:
         if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'admin-bff':
             obj['spec']['strategy'] = {'type': 'Recreate'}

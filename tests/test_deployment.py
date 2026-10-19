@@ -137,6 +137,42 @@ class DeploymentTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'сессий'):
                 staging.render(RELEASE, path, root=root)
 
+    def test_selected_manifests_exclude_other_services_and_migrations(self):
+        from unittest.mock import patch
+        import yaml
+
+        for services, infrastructure in [(['admin_bff'], False), (['configs'], False), ([], True)]:
+            with self.subTest(services=services), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)
+                staging.render(RELEASE, path)
+
+                def check(directory, context, selected, include_infra, paths, jobs):
+                    self.assertEqual((selected, include_infra), (services, infrastructure))
+                    for manifest in paths.values():
+                        if manifest:
+                            objects = list(yaml.safe_load_all(manifest.read_text()))
+                            self.assertTrue(objects)
+                            self.assertTrue(
+                                all(
+                                    obj['metadata']['labels']['broker/service'] in services
+                                    for obj in objects
+                                )
+                            )
+                    self.assertEqual(bool(jobs), services == ['configs'])
+
+                with patch('staging._apply', side_effect=check) as apply:
+                    staging.apply(path, 'ctx', services, infrastructure)
+                    apply.assert_called_once()
+
+    def test_selection_rejected_before_kubectl(self):
+        from unittest.mock import patch
+
+        for services in ([], ['unknown'], ['configs', 'configs']):
+            with self.subTest(services=services), patch('staging.subprocess.run') as run:
+                with self.assertRaises(ValueError):
+                    staging.apply(Path('/missing'), 'ctx', services, False)
+                run.assert_not_called()
+
     def test_apply_requires_successful_migrations(self):
         from unittest.mock import patch
         import subprocess

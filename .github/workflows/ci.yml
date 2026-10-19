@@ -43,6 +43,7 @@ jobs:
               "$PWD/scripts/staging-connect.ps1", [ref]$tokens, [ref]$errors
           )
           if ($errors.Count) { throw ($errors | Out-String) }
+          & ./tests/staging-connect.Tests.ps1
       - name: Актуальность генерации и форматирование
         run: make check-gen-all check-format
       - run: python scripts/container-images.py check

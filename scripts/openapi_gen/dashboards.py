@@ -366,7 +366,14 @@ def render(service, spec):
                     'targets': [
                         {
                             'refId': 'A',
-                            'expr': '{service_name="$service",deployment_environment_name=~"$environment"} | level=~"$level"',
+                            'expr': (
+                                '{service_name="$service",deployment_environment_name=~"$environment"} '
+                                '| level=~"$level" '
+                                '| json log_text="text", log_body="body", log_span="stopwatch_name", log_status="meta_code", log_kind="_type" '
+                                '| line_format "{{if .log_kind}}{{.log_kind}} {{end}}{{if .log_text}}{{.log_text}}{{else}}{{.log_span}}{{end}}'
+                                '{{if .log_status}} status={{.log_status}}{{end}}'
+                                '{{if .log_body}} body={{.log_body}}{{end}} trace_id={{.trace_id}}"'
+                            ),
                         }
                     ],
                     'options': {

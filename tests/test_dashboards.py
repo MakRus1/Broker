@@ -80,6 +80,9 @@ class DashboardsTest(unittest.TestCase):
         self.assertIn('ERROR', variables['level']['query'])
         logs = next(panel for panel in enabled['panels'] if panel['type'] == 'logs')
         self.assertIn('| level=~"$level"', logs['targets'][0]['expr'])
+        self.assertIn('body={{.log_body}}', logs['targets'][0]['expr'])
+        self.assertIn('status={{.log_status}}', logs['targets'][0]['expr'])
+        self.assertIn('trace_id={{.trace_id}}', logs['targets'][0]['expr'])
         disabled = json.loads(render('example', {'dashboard': {'sections': ['http']}}))
         self.assertFalse(
             {'level', 'loki'} & {item['name'] for item in disabled['templating']['list']}

@@ -8,11 +8,13 @@ import subprocess
 import sys
 import tempfile
 import yaml
+from service_catalog import validate_names
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def _create(name, postgres=False, grpc=False):
+    validate_names([name])
     if not re.fullmatch(r'[a-z][a-z0-9_]*', name) or name in {'class', 'template', 'namespace', 'new', 'delete', 'default', 'return', 'operator'}:
         raise ValueError('Имя сервиса: строчные латинские буквы, цифры и _, начиная с буквы; ключевые слова запрещены')
     sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
@@ -74,7 +76,6 @@ def _create(name, postgres=False, grpc=False):
             deps = yaml.safe_load(before[ROOT / '.github/service-deps.yaml'])
             deps['libs']['common']['services'] = sorted(set(deps['libs']['common']['services'] + [name]))
             (ROOT / '.github/service-deps.yaml').write_text(yaml.safe_dump(deps, sort_keys=False, indent=2))
-            (ROOT / 'CMakeLists.txt').write_bytes(before[ROOT / 'CMakeLists.txt'] + f'\nadd_subdirectory(services/{name})\n'.encode())
             if registry_lock.exists():
                 from generate import digest, load
                 registry_lock.write_text(digest(registry_lock.parents[2], load(registry_lock.parents[2])))

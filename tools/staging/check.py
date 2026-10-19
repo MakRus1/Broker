@@ -5,9 +5,14 @@ import argparse
 import json
 import subprocess
 import time
+import sys
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+from service_catalog import discover
 
 
 def check(context, namespace):
@@ -26,16 +31,27 @@ def check(context, namespace):
         with urlopen(request, timeout=5) as response:
             return json.load(response)
 
+    deployments = json.loads(
+        subprocess.check_output(
+            ['kubectl', '--context', context, '-n', namespace, 'get', 'deployments', '-o', 'json'],
+            text=True,
+        )
+    )
+    installed = {item['metadata']['name'] for item in deployments['items']}
+    expected = {name for name in discover() if name.replace('_', '-') in installed}
+    if not expected:
+        raise ValueError('В кластере нет сервисов из каталога')
     deadline = time.monotonic() + 60
     while True:
         metrics = fetch(
             'prometheus', 9090, '/api/v1/query?' + urlencode({'query': 'up{job="services"}'})
         )
         series = metrics['data']['result']
-        if len(series) == 3 and all(float(item['value'][1]) == 1 for item in series):
+        up = {item['metric'].get('service'): float(item['value'][1]) for item in series}
+        if all(up.get(name) == 1 for name in expected):
             break
         if time.monotonic() > deadline:
-            raise ValueError('Не все три сервиса доступны Prometheus')
+            raise ValueError('Не все установленные сервисы доступны Prometheus')
         time.sleep(2)
     with urlopen(
         f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check', timeout=5
@@ -73,7 +89,7 @@ def check(context, namespace):
     if fetch('grafana', 3000, '/api/health')['database'] != 'ok':
         raise ValueError('Grafana не готова')
     print(
-        f'OK: три сервиса в Prometheus; trace_id={trace} найден в Tempo и Loki с label level; Grafana готова.'
+        f'OK: все установленные сервисы в Prometheus; trace_id={trace} найден в Tempo и Loki с label level; Grafana готова.'
     )
 
 

@@ -7,10 +7,10 @@ import subprocess
 import sys
 
 
-def package(build, output):
+def package(build, output, services):
     output.mkdir(parents=True, exist_ok=True)
     (output / 'bin').mkdir(exist_ok=True)
-    for service in ('broker', 'configs', 'admin_bff'):
+    for service in services:
         binary = build / 'services' / service / service
         shutil.copy2(binary, output / 'bin' / service)
         result = subprocess.run(['ldd', str(binary)], text=True, capture_output=True, check=True)
@@ -25,4 +25,4 @@ def package(build, output):
 
 
 if __name__ == '__main__':
-    package(Path(sys.argv[1]), Path(sys.argv[2]))
+    package(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3:])

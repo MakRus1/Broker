@@ -38,7 +38,8 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(command[:6], ['ssh', '-T', '-o', 'BatchMode=yes', 'vm', command[5]])
         with tarfile.open(fileobj=io.BytesIO(run.call_args.kwargs['input'])) as archive:
             self.assertEqual(
-                set(archive.getnames()), {'staging_deploy.py', 'staging_backup.py', 'settings.json'}
+                set(archive.getnames()),
+                {'staging_deploy.py', 'staging_backup.py', 'service_catalog.py', 'settings.json'},
             )
             settings = json.load(archive.extractfile('settings.json'))
         self.assertEqual(settings['backup_root'], '~/backups')
@@ -106,6 +107,8 @@ class DeployTest(unittest.TestCase):
                 text = ''
                 if command[:2] == ('git', 'show'):
                     text = '--infra-only --service'
+                elif command[:2] == ('git', 'ls-tree'):
+                    text = '\n'.join(f'services/{name}/service.yaml' for name in RELEASE['images'])
                 elif command[:3] == ('git', 'rev-parse', 'HEAD'):
                     text = 'c' * 40
                 elif command[0] == 'kubectl':

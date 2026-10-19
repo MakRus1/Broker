@@ -6,6 +6,7 @@ on:
       - .github/workflows/services.yml
       - tools/deploy/**
       - scripts/staging*.py
+      - scripts/service_catalog.py
       - platform.yaml
       - tests/test_deployment.py
       - tools/container-images.json
@@ -67,8 +68,8 @@ jobs:
       - name: Проверить запуск runtime без компилятора
         if: github.event_name == 'pull_request'
         run: |
-          for service in configs broker admin-bff; do
-            docker run --rm --entrypoint /app/service "ghcr.io/makrus1/broker-$service:$GITHUB_SHA" --help
+          for service in $(python scripts/service_catalog.py --plain); do
+            docker run --rm --entrypoint /app/service "ghcr.io/makrus1/broker-${service//_/-}:$GITHUB_SHA" --help
           done
       - name: Проверить подготовку манифестов
         run: python scripts/staging.py render --release .staging/release.json

@@ -13,8 +13,10 @@ import sys
 import tarfile
 import uuid
 
-SERVICES = ('configs', 'broker', 'admin_bff')
-DEPLOY_PROTOCOL = 2
+from service_catalog import discover, validate_names
+
+SERVICES = discover() if (Path(__file__).resolve().parents[1] / 'services').is_dir() else ()
+DEPLOY_PROTOCOL = 3
 
 
 def validate_release(release):
@@ -25,28 +27,29 @@ def validate_release(release):
     ):
         raise ValueError('Релиз должен содержать полный git SHA')
     images = release.get('images')
-    if not isinstance(images, dict) or set(images) != set(SERVICES):
-        raise ValueError('Нужны образы трёх сервисов')
+    if not isinstance(images, dict):
+        raise ValueError('Нужен словарь образов сервисов')
+    validate_names(images)
     for name, image in images.items():
         pattern = rf"ghcr\.io/makrus1/broker-{name.replace('_', '-')}@sha256:[0-9a-f]{{64}}"
         if not isinstance(image, str) or not re.fullmatch(pattern, image):
             raise ValueError(f'Неверный образ сервиса {name}')
 
 
-def selection(services=None, infrastructure=False):
-    services = list(SERVICES) if services is None else list(services)
-    if len(set(services)) != len(services) or set(services) - set(SERVICES):
+def selection(services=None, infrastructure=False, available=SERVICES):
+    services = list(available) if services is None else list(services)
+    if len(set(services)) != len(services) or set(services) - set(available):
         raise ValueError('Неверный или повторяющийся сервис')
     if not services and not infrastructure:
         raise ValueError('Не выбраны сервисы или инфраструктура')
     return services
 
 
-def deployment_state(items):
+def deployment_state(items, services=SERVICES):
     result = {}
     for item in items:
         name = item['metadata']['name']
-        if name not in {service.replace('_', '-') for service in SERVICES}:
+        if name not in {service.replace('_', '-') for service in services}:
             continue
         template = item['spec']['template']
         status = item.get('status', {})
@@ -76,7 +79,9 @@ def remote_main(settings):
 
     release = settings['release']
     validate_release(release)
-    services = selection(settings.get('services'), settings.get('infrastructure', False))
+    services = selection(
+        settings.get('services'), settings.get('infrastructure', False), release['images']
+    )
     root = Path(settings['repository']).expanduser().resolve()
     state = root / '.staging'
     if not (state / 'credentials.json').is_file():
@@ -113,12 +118,22 @@ def remote_main(settings):
         ).stdout
         if '--infra-only' not in source or '--service' not in source:
             raise ValueError('Релиз не поддерживает выборочный деплой')
+        tree = run(
+            'git', 'ls-tree', '-r', '--name-only', release['revision'], 'services', capture=True
+        ).stdout.splitlines()
+        expected = validate_names(
+            path.split('/')[1]
+            for path in tree
+            if re.fullmatch(r'services/[^/]+/service.yaml', path)
+        )
+        if set(expected) != set(release['images']):
+            raise ValueError('Релиз не соответствует каталогу сервисов выбранной ревизии')
         previous = run('git', 'rev-parse', 'HEAD', capture=True).stdout.strip()
         kubectl = ['kubectl', '--context', settings['context'], '-n', settings['namespace']]
         os.environ['KUBECONFIG'] = str(Path.home() / '.kube/config')
         current = json.loads(run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout)
         before = {
-            'services': deployment_state(current['items']),
+            'services': deployment_state(current['items'], release['images']),
             'checkout': previous,
             'images': {
                 item['metadata']['name']: item['spec']['template']['spec']['containers'][0]['image']
@@ -174,7 +189,10 @@ def remote_main(settings):
                 actual = json.loads(
                     run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout
                 )
-                snapshot = {'services': deployment_state(actual['items']), 'record': record.name}
+                snapshot = {
+                    'services': deployment_state(actual['items'], release['images']),
+                    'record': record.name,
+                }
                 write_json(record / 'after.json', snapshot)
                 write_json(state / 'deployed.json', snapshot)
             except Exception as exc:
@@ -198,7 +216,7 @@ def deploy(
     infrastructure=False,
 ):
     validate_release(release)
-    services = selection(services, infrastructure)
+    services = selection(services, infrastructure, release['images'])
     if keep_backups < 1:
         raise ValueError('Нужно хранить хотя бы одну копию')
     settings = dict(
@@ -215,7 +233,7 @@ def deploy(
     # Дампы и credentials.json не проходят через вызывающую машину.
     bundle = io.BytesIO()
     with tarfile.open(fileobj=bundle, mode='w') as archive:
-        for name in ('staging_deploy.py', 'staging_backup.py'):
+        for name in ('staging_deploy.py', 'staging_backup.py', 'service_catalog.py'):
             archive.add(Path(__file__).with_name(name), arcname=name)
         data = json.dumps(settings).encode()
         item = tarfile.TarInfo('settings.json')
@@ -242,7 +260,10 @@ def main():
         remote_main(json.loads(Path(sys.argv[2]).read_text()))
         return
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--service', action='append', choices=SERVICES)
+    parser.add_argument(
+        '--service',
+        action='append',
+    )
     parser.add_argument('--infrastructure', action='store_true')
     parser.add_argument('--infra-only', action='store_true')
     parser.add_argument('--release', type=Path, required=True)

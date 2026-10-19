@@ -20,7 +20,9 @@ from generate import UniqueLoader
 from migrations import discover, render as migration_sql
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVICES = ('configs', 'broker', 'admin_bff')
+from service_catalog import discover as discover_services
+
+SERVICES = discover_services()
 
 
 def read_yaml(path):
@@ -125,6 +127,7 @@ def port(name, number):
 
 
 def render(release, directory, *, root=ROOT, environment='staging'):
+    services = discover_services(root)
     platform = read_yaml(root / 'platform.yaml')
     if set(platform) != {'version', 'environments'} or platform['version'] != 1:
         raise ValueError('platform.yaml: ожидаются version: 1/environments')
@@ -140,7 +143,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'defaults',
         'services',
     }
-    if set(settings) - {'lan'} != allowed or set(settings['services']) != set(SERVICES):
+    if set(settings) - {'lan'} != allowed or set(settings['services']) - set(services):
         raise ValueError('platform.yaml: неверные поля окружения или состав сервисов')
     namespace = settings['namespace']
     if not re.fullmatch(r'[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?', namespace):
@@ -159,16 +162,16 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         r'[0-9a-f]{40}', release['revision']
     ):
         raise ValueError('release.json: ожидается полный git SHA и images')
-    if set(release['images']) != set(SERVICES) or any(
+    if set(release['images']) != set(services) or any(
         not re.fullmatch(r'ghcr.io/[a-z0-9_./-]+@sha256:[0-9a-f]{64}', image)
         for image in release['images'].values()
     ):
-        raise ValueError('release.json: нужны три образа GHCR с digest')
+        raise ValueError('release.json: нужны образы всех сервисов GHCR с digest')
     deployments = {}
-    for name in SERVICES:
+    for name in services:
         manifest = read_yaml(root / f'services/{name}/service.yaml')
         deployments[name] = merge(
-            settings['defaults'], manifest.get('deployment', {}), settings['services'][name]
+            settings['defaults'], manifest.get('deployment', {}), settings['services'].get(name, {})
         )
         # Сессии BFF пока хранятся в памяти одного процесса.
         if name == 'admin_bff' and deployments[name]['replicas'] != 1:
@@ -194,7 +197,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             stringData={'password': values['postgres-password']},
         )
     )
-    init_sql = 'CREATE DATABASE broker;\nCREATE DATABASE configs;\nCREATE DATABASE keycloak;\n'
+    databases = [
+        name
+        for name in services
+        if read_yaml(root / f'services/{name}/service.yaml')
+        .get('postgresql', {})
+        .get('enabled', False)
+    ]
+    init_sql = ''.join(f'CREATE DATABASE {name};\n' for name in [*databases, 'keycloak'])
     infra.append(document('ConfigMap', 'database-init', namespace, data={'init.sql': init_sql}))
     infra.append(
         document(
@@ -340,7 +350,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         )
     infra += [service('keycloak', namespace, [port('http', 8080), port('https', 8443)]), kc]
     migrations, apps, jobs = [], [], []
-    for name in SERVICES:
+    for name in services:
         app_start, migration_start = len(apps), len(migrations)
         static = read_yaml(root / f'services/{name}/configs/static_config.yaml')
         variables = read_yaml(root / f'services/{name}/configs/config_vars.yaml')
@@ -468,8 +478,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             ),
         ]
         schema = root / f'services/{name}/postgresql/schemas/db_1'
-        if schema.exists():
-            sql = migration_sql(discover(schema))
+        if name in databases:
+            sql = migration_sql(discover(schema)) if schema.exists() else ''
+            # initdb выполняется только на пустом томе; новый сервис создаёт БД перед миграцией.
+            sql = (
+                f"SELECT 'CREATE DATABASE {name}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{name}')\n"
+                "\\gexec\n"
+                f"\\connect {name}\n" + sql
+            )
             migration_name = hashed(name + '-migrate', [sql, images['postgres']])
             migrations.append(
                 document(
@@ -503,7 +519,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                                         '-U',
                                         'broker',
                                         '-d',
-                                        name,
+                                        'postgres',
+                                        '-v',
+                                        'ON_ERROR_STOP=1',
                                         '-f',
                                         '/sql/migrate.sql',
                                     ],

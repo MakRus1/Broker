@@ -22,6 +22,25 @@ class BackupTest(unittest.TestCase):
             files[path.name] = staging_backup.checksum(path)
         (root / 'manifest.json').write_text(json.dumps({'version': 1, 'files': files}))
 
+    def test_new_database_is_dumped_and_restored_without_registry_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'copy'
+
+            def dump(command, **kwargs):
+                kwargs['stdout'].write(b'PGDMP')
+
+            with patch(
+                'staging_backup.subprocess.check_output',
+                side_effect=['broker\nconfigs\nkeycloak\nnew_service\n', 'pg_dump 16\n'],
+            ), patch('staging_backup.subprocess.run', side_effect=dump):
+                staging_backup.backup(output, 'ctx')
+            self.assertTrue((output / 'new_service.dump').is_file())
+            with patch('staging_backup.subprocess.run') as run:
+                staging_backup.verify_cluster(output, 'ctx', 'ns', 'image')
+            restores = [call.args[0] for call in run.call_args_list if 'pg_restore' in call.args[0]]
+            self.assertEqual(len(restores), 4)
+            self.assertTrue(any('new_service' in command for command in restores))
+
     def test_retention_keeps_newest_verified_and_preserves_other_directories(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -83,6 +102,8 @@ class BackupTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'copy'
             with patch(
+                'staging_backup.subprocess.check_output', return_value='broker\nconfigs\nkeycloak\n'
+            ), patch(
                 'staging_backup.subprocess.run',
                 side_effect=subprocess.CalledProcessError(1, 'pg_dump'),
             ):
@@ -100,7 +121,8 @@ class BackupTest(unittest.TestCase):
                 kwargs['stdout'].write(b'PGDMP\x00\xff\r\n')
 
             with patch('staging_backup.subprocess.run', side_effect=dump), patch(
-                'staging_backup.subprocess.check_output', return_value='pg_dump 16\n'
+                'staging_backup.subprocess.check_output',
+                side_effect=['broker\nconfigs\nkeycloak\n', 'pg_dump 16\n'],
             ):
                 staging_backup.backup(output, 'default', host='broker-staging')
             staging_backup.validate(output)

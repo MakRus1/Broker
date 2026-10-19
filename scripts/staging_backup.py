@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -54,7 +55,24 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
 
     try:
         files = {}
-        for database in DATABASES:
+        databases = subprocess.check_output(
+            command(
+                'psql',
+                '-U',
+                'broker',
+                '-d',
+                'postgres',
+                '-At',
+                '-c',
+                "SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn AND datname <> 'postgres' ORDER BY datname",
+            ),
+            text=True,
+        ).splitlines()
+        if not databases or any(
+            not re.fullmatch(r'[a-z][a-z0-9_]{0,62}', name) for name in databases
+        ):
+            raise ValueError('Неверный или пустой список БД staging')
+        for database in databases:
             path = temporary / f'{database}.dump'
             with path.open('xb') as target:
                 os.chmod(path, 0o600)
@@ -68,7 +86,7 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
             files[path.name] = checksum(path)
         version = subprocess.check_output(command('pg_dump', '--version'), text=True).strip()
         metadata = {
-            'version': 1,
+            'version': 2,
             'created_at': datetime.now(timezone.utc).isoformat(),
             'context': context,
             'namespace': namespace,
@@ -87,8 +105,14 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
 
 def validate(directory):
     metadata = json.loads((directory / 'manifest.json').read_text())
-    expected = {f'{name}.dump' for name in DATABASES}
-    if metadata.get('version') != 1 or set(metadata.get('files', {})) != expected:
+    files = metadata.get('files', {})
+    if (
+        metadata.get('version') not in (1, 2)
+        or not isinstance(files, dict)
+        or not files
+        or any(not re.fullmatch(r'[a-z][a-z0-9_]{0,62}\.dump', name) for name in files)
+        or (metadata['version'] == 1 and set(files) != {f'{name}.dump' for name in DATABASES})
+    ):
         raise ValueError('Неверный manifest.json копии')
     for name, digest in metadata['files'].items():
         if checksum(directory / name) != digest:
@@ -128,7 +152,10 @@ def verify(directory):
             if time.monotonic() >= deadline:
                 raise ValueError('Проверочный PostgreSQL не запустился за 60 секунд')
             time.sleep(1)
-        for database in DATABASES:
+        for database in (
+            Path(name).stem
+            for name in json.loads((directory / 'manifest.json').read_text())['files']
+        ):
             docker('exec', name, 'createdb', '-U', 'postgres', database)
             with (directory / f'{database}.dump').open('rb') as source:
                 docker(
@@ -196,7 +223,10 @@ def verify_cluster(directory, context, namespace, image):
         run('create', '-f', '-', input=json.dumps(pod), text=True)
         created = True
         run('wait', '--for=condition=Ready', f'pod/{name}', '--timeout=180s')
-        for database in DATABASES:
+        for database in (
+            Path(name).stem
+            for name in json.loads((directory / 'manifest.json').read_text())['files']
+        ):
             run('exec', name, '-c', 'postgres', '--', 'createdb', '-U', 'postgres', database)
             with (directory / f'{database}.dump').open('rb') as source:
                 run(

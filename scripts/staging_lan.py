@@ -10,6 +10,7 @@ import secrets
 import subprocess
 
 import yaml
+from service_catalog import discover as discover_services
 
 NAMES = ('grafana', 'prometheus', 'loki', 'tempo', 'collector')
 
@@ -186,7 +187,7 @@ def render(root, ns, platform, lan):
     configs = {}
     prometheus = read_yaml(root / 'tools/local/prometheus.yaml')
     targets = []
-    for name in ('broker', 'configs', 'admin_bff'):
+    for name in discover_services(root):
         variables = read_yaml(root / f'services/{name}/configs/config_vars.yaml')
         targets.append(
             {
@@ -208,8 +209,9 @@ def render(root, ns, platform, lan):
     configs['tempo'] = {'config.yaml': (root / 'tools/local/tempo.yaml').read_text()}
     collector = read_yaml(root / 'tools/local/collector.yaml')
     collector['receivers'] = {'otlp': collector['receivers']['otlp']}
-    for name in ('broker', 'configs', 'admin_bff'):
-        receiver = read_yaml(root / 'tools/local/collector.yaml')['receivers']['filelog/' + name]
+    for name in discover_services(root):
+        receiver = read_yaml(root / 'tools/local/collector.yaml')['receivers']['filelog/broker']
+        receiver['operators'][-1]['value'] = name
         receiver['include'] = [
             f'/var/log/pods/{ns}_{name.replace("_", "-")}-*_*/{name.replace("_", "-")}/*.log*'
         ]
@@ -228,7 +230,7 @@ def render(root, ns, platform, lan):
         'storage': 'file_storage',
     }
     collector['service']['pipelines']['logs']['receivers'] = [
-        'filelog/' + name for name in ('broker', 'configs', 'admin_bff')
+        'filelog/' + name for name in discover_services(root)
     ]
     configs['collector'] = {'config.yaml': yaml.safe_dump(collector)}
     datasources = read_yaml(root / 'tools/local/grafana/datasources/local.yaml')
@@ -236,7 +238,7 @@ def render(root, ns, platform, lan):
     configs['grafana'] = {'datasources.yaml': yaml.safe_dump(datasources).replace('$$', '$')}
     dashboards = {
         f'{name}.json': (root / f'services/{name}/monitoring/grafana.json').read_text()
-        for name in ('broker', 'configs', 'admin_bff')
+        for name in discover_services(root)
     }
     provider = read_yaml(root / 'tools/local/grafana/dashboards/provider.yaml')
     provider['providers'][0]['name'] = 'Broker staging'

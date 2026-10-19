@@ -15,11 +15,26 @@ from staging_manifest import ROOT, SERVICES, render
 
 
 def apply(directory, context, services=None, infrastructure=None):
+    if services is not None and (
+        len(set(services)) != len(services)
+        or any(name not in SERVICES for name in services)
+        or (not services and not infrastructure)
+    ):
+        raise ValueError('Неверный, повторяющийся или пустой выбор сервисов')
+    services_available = (
+        tuple(json.loads((directory / 'release.json').read_text())['images'])
+        if (directory / 'release.json').exists()
+        else tuple(
+            obj['metadata']['labels']['broker/service']
+            for obj in yaml.safe_load_all((directory / 'services.yaml').read_text())
+            if obj and obj['kind'] == 'Deployment'
+        )
+    )
     if infrastructure is None:
         infrastructure = services is None
     if services is None:
-        services = list(SERVICES)
-    if len(set(services)) != len(services) or set(services) - set(SERVICES):
+        services = list(services_available)
+    if len(set(services)) != len(services) or set(services) - set(services_available):
         raise ValueError('Неверный или повторяющийся сервис')
     if not services and not infrastructure:
         raise ValueError('Не выбраны сервисы или инфраструктура')
@@ -32,7 +47,7 @@ def apply(directory, context, services=None, infrastructure=None):
                 if obj is None:
                     continue
                 owner = obj['metadata'].get('labels', {}).get('broker/service')
-                if owner not in SERVICES:
+                if owner not in services_available:
                     raise ValueError('Манифест без broker/service: повторите render новой версией')
                 if owner in services:
                     selected.append(obj)

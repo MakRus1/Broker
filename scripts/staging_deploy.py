@@ -65,6 +65,11 @@ def remote_main(settings):
             raise ValueError('В checkout VM есть локальные изменения; деплой остановлен')
         run('git', 'fetch', 'origin', 'main')
         run('git', 'merge-base', '--is-ancestor', release['revision'], 'origin/main')
+        if (state / 'lan/enabled').exists():
+            try:
+                run('git', 'cat-file', '-e', release['revision'] + ':scripts/staging_lan.py')
+            except subprocess.CalledProcessError:
+                raise ValueError('LAN включён: релиз без поддержки HTTPS запрещён') from None
         previous = run('git', 'rev-parse', 'HEAD', capture=True).stdout.strip()
         kubectl = ['kubectl', '--context', settings['context'], '-n', settings['namespace']]
         os.environ['KUBECONFIG'] = str(Path.home() / '.kube/config')

@@ -8,6 +8,12 @@ environments:
     database_storage: 10Gi
     admin_origin: http://localhost:13080
     auth_origin: http://localhost:18888
+    # LAN включается явно после подготовки сертификатов на сервере.
+    lan:
+      admin_host: admin.broker.home.arpa
+      auth_host: auth.broker.home.arpa
+      grafana_host: grafana.broker.home.arpa
+      telemetry_storage: 5Gi
     defaults:
       replicas: 1
       resources:

@@ -452,3 +452,71 @@ kubectl -n broker-staging rollout status deployment/configs --timeout=300s
 не разрушить откат; очистка появится вместе с управлением историей релизов.
 CD в кластер пока запускается явной командой; GitHub не получает kubeconfig.
 Канарейка, автоматическое продвижение релиза и наблюдаемость — следующие этапы.
+
+## Постоянный HTTPS-доступ из локальной сети
+
+В `platform.yaml` секция `lan` задаёт имена admin/auth/grafana и объём томов телеметрии.
+Режим включается явно один раз на сервере, после установки релиза с поддержкой LAN:
+
+```bash
+export KUBECONFIG="$HOME/.kube/config"
+cd ~/projects/Broker
+.venv-gen/bin/python scripts/staging_lan.py init --context default
+```
+
+Команда создаёт локальный CA и сертификат сервера, Secret TLS, доверенный CA bundle
+для приложений и отдельный пароль Grafana. Существующие ключи и пароль сохраняются.
+Приватные файлы находятся в `.staging/lan/`, не попадают в Git и образы.
+CA действует 10 лет, сертификат сервера — 397 дней; автоматического продления пока нет.
+Повторный init проверяет SAN и подпись, но не перевыпускает сертификаты.
+Файл `.staging/lan/enabled` включает профиль в последующих render/apply.
+Сохрани защищённую копию `.staging/lan` отдельно: дампы БД этих файлов не содержат.
+
+После init выполни обычный render/apply **релиза с поддержкой LAN**. Он включает:
+
+- HTTPS Ingress в Traefik для трёх имён, без публикации API Kubernetes и PostgreSQL;
+- secure-cookie BFF, HTTPS-обмен токенами с Keycloak и доверие к локальному CA;
+- обновление redirect URI существующего клиента Keycloak (импорт realm этого не делает);
+- Grafana, Prometheus, Loki, Tempo, Collector с постоянными томами;
+- автоматические сервисные дашборды, сбор JSON stdout, метрик и OTLP-трасс.
+
+Служебные API телеметрии доступны только внутри кластера. Grafana требует входа:
+пользователь `admin`, пароль в `.staging/lan/grafana-password`. Анонимный доступ и
+регистрация отключены. Логи и трейсы хранятся 24 часа, метрики — до 3 дней/4GB.
+local-path не обеспечивает жёсткие дисковые квоты: контролируй свободное место.
+Сборщик логов читает `/var/log/pods` read-only от root без Kubernetes API token.
+
+На Keenetic/AdGuard Home настрой DNS-перезаписи трёх имён на LAN-IP Windows.
+При использовании AdGuard Home на порту 53 записей `ip host` Keenetic может быть
+недостаточно — ответы должен формировать фактический DNS-сервер.
+Зафиксируй IP Windows через DHCP reservation. Устройства должны использовать этот DNS.
+
+Windows, PowerShell от администратора (подставь текущий доступный IP VM):
+
+```powershell
+$windowsIp = '192.168.1.146'
+$vmIp = '172.23.230.37'
+Test-NetConnection $vmIp -Port 443
+netsh interface portproxy add v4tov4 listenaddress=$windowsIp listenport=443 connectaddress=$vmIp connectport=443
+New-NetFirewallRule -Name 'BrokerStagingHttps' -DisplayName 'Broker staging HTTPS from LAN' -Direction Inbound -Action Allow -Protocol TCP -LocalAddress $windowsIp -LocalPort 443 -RemoteAddress 192.168.1.0/24 -Profile Any
+```
+
+Порт 443 на Windows должен быть свободен; правило не открывает доступ из интернета.
+При смене IP VM обнови connectaddress, как для SSH. На устройства за пределами
+основной подсети это правило не распространяется; изоляция гостевого Wi-Fi сохраняется.
+
+Перед первым входом установи **только публичный** `.staging/lan/ca.crt` как доверенный
+корневой сертификат на каждом устройстве. Сверь SHA-256 через `openssl x509 -in ca.crt
+-noout -fingerprint -sha256`. Приватный `ca.key` передавать на клиентские устройства нельзя.
+Установка CA — отдельное явное действие пользователя; не обходи предупреждения браузера.
+
+Адреса:
+
+- `https://admin.broker.home.arpa`
+- `https://auth.broker.home.arpa`
+- `https://grafana.broker.home.arpa`
+
+После перехода старые localhost-сеансы требуют повторного входа. Обычный деплой
+продолжает учитывать профиль LAN; возвращение к релизу до поддержки LAN запрещено
+командой удалённого обновления. Для изменения доменов сначала подготовь новый сертификат,
+DNS и настройки Keycloak; простое изменение DNS не меняет origin приложений.

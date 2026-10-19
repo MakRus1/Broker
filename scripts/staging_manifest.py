@@ -12,6 +12,7 @@ import sys
 from urllib.parse import urlsplit
 
 import yaml
+import staging_lan
 
 sys.path.insert(0, str(Path(__file__).parent / 'openapi_gen'))
 from deployment import merge
@@ -139,15 +140,20 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'defaults',
         'services',
     }
-    if set(settings) != allowed or set(settings['services']) != set(SERVICES):
+    if set(settings) - {'lan'} != allowed or set(settings['services']) != set(SERVICES):
         raise ValueError('platform.yaml: неверные поля окружения или состав сервисов')
     namespace = settings['namespace']
     if not re.fullmatch(r'[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?', namespace):
         raise ValueError('platform.yaml: неверный namespace')
-    # Эта первая конфигурация предназначена для локальных SSH-туннелей.
+    lan = staging_lan.settings(settings, directory)
+    if lan:
+        settings['admin_origin'] = 'https://' + lan['admin_host']
+        settings['auth_origin'] = 'https://' + lan['auth_host']
     for key in ('admin_origin', 'auth_origin'):
         url = urlsplit(settings[key])
-        if url.scheme != 'http' or url.hostname != 'localhost' or not url.port or url.path:
+        if not lan and (
+            url.scheme != 'http' or url.hostname != 'localhost' or not url.port or url.path
+        ):
             raise ValueError(f'platform.yaml: {key} ожидает http://localhost:<port>')
     if set(release) != {'revision', 'images'} or not re.fullmatch(
         r'[0-9a-f]{40}', release['revision']
@@ -312,6 +318,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             'failureThreshold': 60,
         },
     }
+    if lan:
+        keycloak['env'] += [
+            {'name': 'KC_PROXY_HEADERS', 'value': 'xforwarded'},
+            {'name': 'KC_HTTPS_CERTIFICATE_FILE', 'value': '/tls/tls.crt'},
+            {'name': 'KC_HTTPS_CERTIFICATE_KEY_FILE', 'value': '/tls/tls.key'},
+            {'name': 'KC_HTTP_MANAGEMENT_SCHEME', 'value': 'http'},
+        ]
+        keycloak['volumeMounts'].append({'name': 'tls', 'mountPath': '/tls', 'readOnly': True})
     kc = workload(
         'Deployment',
         'keycloak',
@@ -320,7 +334,11 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         volumes=[{'name': 'realm', 'secret': {'secretName': realm_secret}}],
     )
     kc['spec']['strategy'] = {'type': 'Recreate'}
-    infra += [service('keycloak', namespace, [port('http', 8080)]), kc]
+    if lan:
+        kc['spec']['template']['spec']['volumes'].append(
+            {'name': 'tls', 'secret': {'secretName': 'staging-lan-tls'}}
+        )
+    infra += [service('keycloak', namespace, [port('http', 8080), port('https', 8443)]), kc]
     migrations, apps, jobs = [], [], []
     for name in SERVICES:
         static = read_yaml(root / f'services/{name}/configs/static_config.yaml')
@@ -347,7 +365,25 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'pg-connection': f"postgresql://broker:{values['postgres-password']}@{addresses['postgres']}:5432/{name}",
             }
         )
+        if lan:
+            internal_auth = f"https://{addresses['keycloak']}:8443"
+            variables.update(
+                {
+                    'admin-secure-cookie': True,
+                    'auth-allow-http': False,
+                    'auth-jwks-url': internal_auth + '/realms/broker/protocol/openid-connect/certs',
+                    'admin-token-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/token',
+                    'admin-revoke-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/revoke',
+                    'otlp-enabled': True,
+                    'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}:4317',
+                }
+            )
         components = static['components_manager']['components']
+        if lan:
+            # Логи читаются из stdout; OTLP используется для трасс, без двойной доставки.
+            components['otlp-logger']['sinks']['logs'] = 'default'
         components['server']['listener-monitor']['address'] = '0.0.0.0'
         config_data = {'static_config.yaml': yaml.safe_dump(static, sort_keys=False)}
         vars_data = {'config_vars.yaml': yaml.safe_dump(variables, sort_keys=False)}
@@ -395,6 +431,17 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'failureThreshold': 3,
             },
         }
+        extra_volumes = []
+        if lan:
+            container['volumeMounts'].append(
+                {
+                    'name': 'ca',
+                    'mountPath': '/etc/ssl/certs/ca-certificates.crt',
+                    'subPath': 'ca-certificates.crt',
+                    'readOnly': True,
+                }
+            )
+            extra_volumes.append({'name': 'ca', 'configMap': {'name': 'staging-lan-ca'}})
         apps += [
             workload(
                 'Deployment',
@@ -406,6 +453,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     {'name': 'config', 'configMap': {'name': config_name}},
                     {'name': 'vars', 'secret': {'secretName': vars_name}},
                     {'name': 'tmp', 'emptyDir': {}},
+                    *extra_volumes,
                 ],
                 annotations={'broker/revision': release['revision']},
             ),
@@ -484,6 +532,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'migrations': migrations,
         'services': apps,
     }
+    if lan:
+        phases['monitoring'] = staging_lan.render(root, namespace, settings, lan)
     for phase, objects in phases.items():
         private_write(directory / f'{phase}.yaml', yaml.safe_dump_all(objects, sort_keys=False))
     private_write(
@@ -494,6 +544,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'revision': release['revision'],
                 'jobs': jobs,
                 'kubernetes_version': settings['kubernetes_version'],
+                'lan': bool(lan),
+                'admin_origin': settings['admin_origin'],
             },
             indent=2,
         )

@@ -34,6 +34,15 @@ jobs:
         run: python scripts/ci-tests.py plan --base "${BASE:-missing-base}"
       - name: Тесты генератора и инструментов
         run: python -m unittest discover -s tests -v
+      - name: Синтаксис команды подключения Windows
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile(
+              "$PWD/scripts/staging-connect.ps1", [ref]$tokens, [ref]$errors
+          )
+          if ($errors.Count) { throw ($errors | Out-String) }
       - name: Актуальность генерации и форматирование
         run: make check-gen-all check-format
       - run: python scripts/container-images.py check

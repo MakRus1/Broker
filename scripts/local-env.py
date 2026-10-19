@@ -102,6 +102,7 @@ def prepare():
             render(discover(ROOT / f"services/{name}/postgresql/schemas/db_1"))
         )
         volumes[f"postgres-{name}"] = {}
+        # Временный сервер initdb принимает Unix-сокет, но еще не готов для миграций по TCP.
         services[f"postgres-{name}"] = {
             "image": images["postgres"],
             "environment": {
@@ -111,7 +112,7 @@ def prepare():
             },
             "volumes": [f"postgres-{name}:/var/lib/postgresql/data"],
             "healthcheck": {
-                "test": ["CMD-SHELL", f"pg_isready -U testsuite -d {name}_db_1"],
+                "test": ["CMD-SHELL", f"pg_isready -h 127.0.0.1 -U testsuite -d {name}_db_1"],
                 "interval": "2s",
                 "timeout": "3s",
                 "retries": 30,
@@ -152,7 +153,7 @@ def prepare():
         "environment": {"POSTGRES_USER": "keycloak", "POSTGRES_DB": "keycloak",
                         "POSTGRES_PASSWORD": auth_secrets["postgres-password"]},
         "volumes": ["postgres-keycloak:/var/lib/postgresql/data"],
-        "healthcheck": {"test": ["CMD", "pg_isready", "-U", "keycloak"],
+        "healthcheck": {"test": ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "keycloak"],
                         "interval": "2s", "timeout": "3s", "retries": 30},
     }
     services["keycloak"] = {

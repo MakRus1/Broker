@@ -1,4 +1,4 @@
-# Подключение к личному стенду: два port-forward внутри одного SSH-сеанса.
+﻿# Подключение к личному стенду: два port-forward внутри одного SSH-сеанса.
 [CmdletBinding()]
 param(
     [string]$Instance = 'broker-staging',

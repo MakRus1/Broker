@@ -90,36 +90,36 @@ components_manager:
             path: /items/{id}
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-items-by_id-create:
             path: /items/{id}/create
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-models-echo:
             path: /models/echo
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-models-state:
             path: /models/state
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-validated:
             path: /validated
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-validated-create:
             path: /validated/create
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END

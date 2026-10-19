@@ -7,3 +7,5 @@ clients:
 dashboard:
   title: Broker · Административный BFF
   tags: [admin]
+http_logging:
+  exclude_paths: [/auth/**, /api/session, /api/logout]

@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <userver/components/component_config.hpp>
+#include <userver/server/http/http_request.hpp>
+#include <userver/server/http/http_response.hpp>
 #include <userver/server/middlewares/builtin.hpp>
 #include <userver/server/middlewares/configuration.hpp>
 #include <userver/server/middlewares/http_middleware_base.hpp>
@@ -35,7 +37,10 @@ class HttpTelemetry final : public userver::server::middlewares::HttpMiddlewareB
   private:
     void HandleRequest(userver::server::http::HttpRequest& request,
         userver::server::request::RequestContext& context) const override {
-        metadata_.Apply(userver::tracing::Span::CurrentSpan());
+        auto& span = userver::tracing::Span::CurrentSpan();
+        metadata_.Apply(span);
+        request.GetHttpResponse().SetHeader(
+            std::string_view{"X-Trace-Id"}, std::string(span.GetTraceId()));
         Next(request, context);
     }
 

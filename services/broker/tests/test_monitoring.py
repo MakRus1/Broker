@@ -21,6 +21,7 @@ async def test_http_trace_context(service_client):
     response = await service_client.get('/hello', headers={'traceparent': f'00-{trace_id}-1234567890abcdef-01'})
     assert response.status == 200
     assert response.headers['traceparent'].split('-')[1] == trace_id
+    assert response.headers['X-Trace-Id'] == trace_id
 
 
 async def test_http_to_grpc_trace(service_client):

@@ -319,5 +319,22 @@ def outputs(service, operations, dependencies):
     return {name: format_cpp(text) for name, text in result.items()}
 
 
-def config_block(operations):
-    return '\n'.join(f'        {op.handler}:\n            path: {op.path}\n            method: {op.method}\n{('            monitor-handler: true' + chr(10)) if op.path.startswith('/admin/') else ''}            task_processor: main-task-processor\n            request_body_size_log_limit: 0\n            response_data_size_log_limit: 0' for op in operations)
+def config_block(operations, logging=None):
+    from http_logging import body_limits
+    handlers = []
+    for operation in operations:
+        request_limit, response_limit = body_limits(operation.path, logging)
+        lines = [
+            f'        {operation.handler}:',
+            f'            path: {operation.path}',
+            f'            method: {operation.method}',
+        ]
+        if operation.path.startswith('/admin/'):
+            lines.append('            monitor-handler: true')
+        lines.extend([
+            '            task_processor: main-task-processor',
+            f'            request_body_size_log_limit: {request_limit}',
+            f'            response_data_size_log_limit: {response_limit}',
+        ])
+        handlers.append('\n'.join(lines))
+    return '\n'.join(handlers)

@@ -12,83 +12,83 @@ components_manager:
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-approve:
             path: /admin/configs/drafts/approve
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-cancel:
             path: /admin/configs/drafts/cancel
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-create:
             path: /admin/configs/drafts/create
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-edit:
             path: /admin/configs/drafts/edit
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-events:
             path: /admin/configs/drafts/events
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-get:
             path: /admin/configs/drafts/get
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-drafts-list:
             path: /admin/configs/drafts/list
             method: POST
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-history:
             path: /admin/configs/history
             method: GET
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-admin-configs-list:
             path: /admin/configs/list
             method: GET
             monitor-handler: true
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-configs-status:
             path: /configs/status
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-configs-values:
             path: /configs/values
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         platform-readiness: {}

@@ -11,62 +11,62 @@ components_manager:
             path: /api/configs/current
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-approve:
             path: /api/configs/drafts/approve
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-cancel:
             path: /api/configs/drafts/cancel
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-create:
             path: /api/configs/drafts/create
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-edit:
             path: /api/configs/drafts/edit
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-events:
             path: /api/configs/drafts/events
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-get:
             path: /api/configs/drafts/get
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-drafts-list:
             path: /api/configs/drafts/list
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-history:
             path: /api/configs/history
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-configs-list:
             path: /api/configs/list
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-logout:
             path: /api/logout
             method: POST
@@ -83,8 +83,8 @@ components_manager:
             path: /version
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         client-config_admin:

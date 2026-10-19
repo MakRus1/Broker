@@ -27,20 +27,16 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: python -m pip install -r requirements.txt
-      - run: python -m unittest discover -s tests -v
-      - run: make check-gen-all check-format
-      - run: python scripts/container-images.py check
       - name: Определение затронутых сервисов
         id: detect
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          set -euo pipefail
-          affected=$(./scripts/affected-services.sh "${BASE:-missing-base}")
-          if [[ "$affected" == all ]]; then
-            affected=$(find services -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | xargs)
-          fi
-          echo "services=$affected" >> "$GITHUB_OUTPUT"
+        run: python scripts/ci-tests.py plan --base "${BASE:-missing-base}"
+      - name: Тесты генератора и инструментов
+        run: python -m unittest discover -s tests -v
+      - name: Актуальность генерации и форматирование
+        run: make check-gen-all check-format
+      - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:
     runs-on: ubuntu-24.04
@@ -52,10 +48,18 @@ jobs:
       - run: npm install --global pnpm@11.25.0
       - run: pnpm install --frozen-lockfile
         working-directory: frontend/admin
-      - run: pnpm check-format && pnpm test && pnpm build
+      - name: Форматирование фронтенда
+        run: pnpm check-format
+        working-directory: frontend/admin
+      - name: Тесты фронтенда
+        run: pnpm test
+        working-directory: frontend/admin
+      - name: Сборка фронтенда
+        run: pnpm build
         working-directory: frontend/admin
 
   build:
+    name: Сборка и тесты · ${{ matrix.preset }} · ${{ matrix.runner }}
     needs: tools
     if: needs.tools.outputs.services != ''
     strategy:
@@ -107,18 +111,42 @@ jobs:
           '
       - name: Права рабочего каталога для контейнера
         run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
-      - name: Чистая сборка и проверки
+      - name: Чистая сборка
+        id: compile
+        env:
+          PRESET: ${{ matrix.preset }}
+          DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
+        run: make "docker-ci-build-$PRESET"
+      - name: Тесты затронутых сервисов
+        id: tests
+        env:
+          CI_SERVICES: ${{ needs.tools.outputs.services }}
+          CI_RESULTS_DIR: ci-results/${{ matrix.preset }}-${{ runner.arch }}
+          PRESET: ${{ matrix.preset }}
+          DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
+        run: make "docker-ci-test-$PRESET"
+      - name: Результаты тестов по сервисам
+        if: always()
         env:
           SERVICES: ${{ needs.tools.outputs.services }}
           PRESET: ${{ matrix.preset }}
-          DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
+          ARCH: ${{ runner.arch }}
+          BUILD_RESULT: ${{ steps.compile.outcome }}
+          TEST_RESULT: ${{ steps.tests.outcome }}
         run: |
-          set -euo pipefail
-          for svc in $SERVICES; do
-            make "docker-test-$PRESET" SERVICE="$svc"
-          done
+          python3 scripts/ci-tests.py summary --services $SERVICES \
+            --output-dir "ci-results/$PRESET-$ARCH" --preset "$PRESET" --arch "$ARCH" \
+            --build-result "$BUILD_RESULT" --test-result "$TEST_RESULT"
+      - name: Сохранить логи и JUnit
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: test-results-${{ matrix.preset }}-${{ runner.arch }}
+          path: ci-results/${{ matrix.preset }}-${{ runner.arch }}/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Четыре варианта создания сервиса
-        if: matrix.preset == 'debug' && runner.arch == 'X64'
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && matrix.preset == 'debug' && runner.arch == 'X64' }}
         env:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: docker run --rm --network=host -v "$PWD:/workspaces/broker" "$IMAGE" python3 scripts/smoke-services.py --build
@@ -139,6 +167,17 @@ jobs:
           SERVICES: ${{ needs.tools.outputs.services }}
         run: |
           set -euo pipefail
+          {
+            echo '### Итог CI'
+            echo
+            echo "Затронутые сервисы: ${SERVICES:-нет}."
+            echo
+            echo '| Проверка | Результат |'
+            echo '| --- | --- |'
+            echo "| Инструменты | $TOOLS_RESULT |"
+            echo "| Сборка и тесты сервисов | $BUILD_RESULT |"
+            echo "| Фронтенд | $FRONTEND_RESULT |"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [[ "$FRONTEND_RESULT" != success ]]; then exit 1; fi
           if [[ "$TOOLS_RESULT" != success ]]; then
             exit 1

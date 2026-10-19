@@ -43,6 +43,13 @@ $(addprefix build-,$(PRESETS)): build-%: cmake-%
 $(addprefix test-,$(PRESETS)): test-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
 	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)|testsuite-contract_service|client_contract_unittest)$$'
+# CI собирает один раз на окружение; тесты выбранных сервисов запускаются отдельно.
+.PHONY: $(addprefix ci-build-,$(PRESETS)) $(addprefix ci-test-,$(PRESETS))
+$(addprefix ci-build-,$(PRESETS)): ci-build-%: cmake-%
+	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
+$(addprefix ci-test-,$(PRESETS)): ci-test-%:
+	$(REPO_ROOT)/.venv-gen/bin/python scripts/ci-tests.py run --build-dir build-$* --services $(CI_SERVICES) --output-dir "$(CI_RESULTS_DIR)"
+
 $(addprefix test-only-,$(PRESETS)): test-only-%: test-%
 $(addprefix test-all-,$(PRESETS)): test-all-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
@@ -64,7 +71,7 @@ docker-pull:
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .
 docker-%:
-	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_RESULTS_DIR -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
 
 .PHONY: db-up db-down testsuite-clean dist-clean
 db-up:

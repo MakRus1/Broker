@@ -383,6 +383,7 @@ def main():
     if args.action == "check":
         subprocess.run([sys.executable, str(ROOT / "tools/local/check_auth.py")], check=True)
         subprocess.run([sys.executable, str(ROOT / "tools/local/check.py")], check=True)
+        subprocess.run([sys.executable, str(ROOT / "tools/local/check_logs.py")], check=True)
         subprocess.run([sys.executable, str(ROOT / "tools/local/check_migrations.py")], check=True)
     elif args.action == "migrate":
         for name in ("broker", "configs"):

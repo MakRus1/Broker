@@ -90,3 +90,40 @@ No data. Генератор не подменяет отсутствие мет�
 
 Поведение файлового provisioning описано в [документации Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards).
 Production provisioning, алерты и права доступа относятся к отдельному этапу инфраструктуры.
+
+## Фильтр уровня логов
+
+В сервисных дашбордах и общем обзоре есть мультивыбор **Уровень**:
+`TRACE`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. По умолчанию выбраны все.
+Для ошибок и предупреждений выберите `WARNING`, `ERROR`, `CRITICAL`.
+
+Для ручного поиска в Explore:
+
+```logql
+{service_name="broker", level="ERROR"}
+```
+
+Индексированный `level` появляется у новых записей после обновления Loki.
+Ранее загруженные записи содержат его в structured metadata; фильтр после selector
+работает с обоими вариантами (именно он используется в дашбордах):
+
+```logql
+{service_name="broker"} | level="ERROR"
+{service_name="broker"} | level=~"WARNING|ERROR|CRITICAL"
+```
+
+Значения чувствительны к регистру и сохраняют названия уровней userver.
+Collector также заполняет стандартные OpenTelemetry SeverityText/SeverityNumber:
+`WARNING` соответствует `WARN/13`, `CRITICAL` — `FATAL/21`.
+Grafana использует их для определения уровня и цвета записи.
+Время записи Loki теперь берется из JSON `timestamp`, а не из момента чтения файла.
+У уже загруженных записей время и индекс не переписываются.
+
+Loki индексирует только service/environment/level. Trace ID, span ID, прочие поля
+остаются structured metadata и доступны в деталях записи и фильтрах после `|`.
+Исходная JSON-строка сохраняется, включая переход к трассе Tempo.
+
+Настройки применяются через `make local-up`; данные volumes и позиции чтения Collector
+сохраняются. `make local-check` проверяет доставку шести диагностических записей через
+настоящую цепочку filelog → Collector → Loki, их уровни, время и фильтр `ERROR`.
+Сами записи отмечены полем `check_id` с префиксом `loki-smoke-`.

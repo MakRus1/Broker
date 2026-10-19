@@ -11,32 +11,32 @@ components_manager:
             path: /foo/bar
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-hello:
             path: /hello
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-hello-create:
             path: /hello/create
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-hello_postgres:
             path: /hello_postgres
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-hello_postgres-create:
             path: /hello_postgres/create
             method: POST
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         platform-readiness: {}

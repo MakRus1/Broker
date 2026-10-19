@@ -83,8 +83,8 @@ components_manager:
             path: /version
             method: GET
             task_processor: main-task-processor
-            request_body_size_log_limit: 0
-            response_data_size_log_limit: 0
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         client-config_admin:

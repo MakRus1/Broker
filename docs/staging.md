@@ -133,33 +133,91 @@ broker/configs/keycloak. Это staging-упрощение: один польз�
 
 ## Открыть админку из Windows
 
-В двух терминалах Ubuntu запусти:
+### Одной командой
 
-```bash
-kubectl -n broker-staging port-forward --address 127.0.0.1 service/admin-bff 13080:8180
-```
-
-```bash
-kubectl -n broker-staging port-forward --address 127.0.0.1 service/keycloak 18888:8080
-```
-
-Чтобы localhost Windows попадал в localhost VM, подготовь SSH-ключ **в PowerShell**:
+На Windows скачай или скопируй из этой ревизии репозитория
+`scripts/staging-connect.ps1`. Если репозиторий уже есть на Windows, запусти из его корня:
 
 ```powershell
-ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\broker-staging"
-Get-Content "$env:USERPROFILE\.ssh\broker-staging.pub" | multipass exec broker-staging -- bash -c 'umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys'
-multipass info broker-staging
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\staging-connect.ps1
 ```
 
-Возьми IPv4 VM из последней команды и открой SSH-туннель, заменив `<VM_IP>`:
+Bypass действует только для этого процесса. Скрипт требует Multipass и Windows OpenSSH,
+сам определяет IPv4 работающей VM и запускает два kubectl port-forward внутри одного
+SSH-сеанса. Kubeconfig и приватный ключ остаются на своих компьютерах.
+Если пробросы из предыдущей инструкции ещё работают, сначала останови их через Ctrl+C,
+а также закрой прежний SSH-туннель: порты должны быть свободны.
+
+После сообщений `Forwarding from` для обоих портов открой http://localhost:13080;
+Keycloak доступен на http://localhost:18888. Терминал оставь открытым. Ctrl+C
+завершает подключение и оба удалённых port-forward. После обновления подов или
+обрыва связи запусти команду повторно. Ошибка занятого локального или удалённого
+порта выводится в терминале; скрипт не завершает посторонние процессы.
+
+Имя VM и путь к уже установленному ключу можно переопределить:
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\broker-staging" -N -L 13080:127.0.0.1:13080 -L 18888:127.0.0.1:18888 ubuntu@<VM_IP>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\staging-connect.ps1 -Instance broker-staging -IdentityFile "$env:USERPROFILE\.ssh\broker-staging"
 ```
 
-Теперь админка — http://localhost:13080, Keycloak — http://localhost:18888.
-Туннель и оба port-forward должны работать всё время сеанса. После перезапуска
-пода соответствующий port-forward может потребоваться запустить снова.
+### Однократная подготовка SSH-ключа
+
+Если подключение с этим ключом уже работает, пропусти этот раздел.
+В PowerShell создай ключ, если его ещё нет. Не перезаписывай существующий ключ:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.ssh" | Out-Null
+if (-not (Test-Path "$env:USERPROFILE\.ssh\broker-staging")) {
+    ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\broker-staging"
+    if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать SSH-ключ' }
+}
+multipass transfer "$env:USERPROFILE\.ssh\broker-staging.pub" broker-staging:/home/ubuntu/broker-staging.pub
+```
+
+Открой `multipass shell broker-staging`. В Ubuntu выполни следующий блок.
+Он проверяет публичный ключ, сохраняет резервную копию и дописывает ключ с новой
+строки, сохраняя прежние ключи Multipass. Передавать stdin через `multipass exec`
+для этой операции не нужно.
+
+```bash
+python3 - <<'PYKEY'
+from datetime import datetime, timezone
+from pathlib import Path
+import shutil
+import subprocess
+
+source = Path.home() / 'broker-staging.pub'
+subprocess.run(['ssh-keygen', '-lf', str(source)], check=True)
+key = source.read_text().strip()
+if len(key.splitlines()) != 1 or not key.startswith('ssh-ed25519 '):
+    raise SystemExit('Ожидается один публичный ключ ED25519. Ничего не изменено.')
+
+directory = Path.home() / '.ssh'
+directory.mkdir(mode=0o700, exist_ok=True)
+target = directory / 'authorized_keys'
+if not target.is_file():
+    raise SystemExit('Нет authorized_keys Multipass. Сначала восстанови его.')
+current = target.read_bytes()
+stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+shutil.copy2(target, directory / f'authorized_keys.backup-{stamp}')
+if key.encode() not in current.splitlines():
+    with target.open('ab') as output:
+        output.write(b'\n' + key.encode() + b'\n')
+if not target.read_bytes().startswith(current):
+    raise SystemExit('Ошибка проверки сохранности прежних ключей.')
+directory.chmod(0o700)
+target.chmod(0o600)
+print('Ключ добавлен; прежние ключи сохранены.')
+PYKEY
+```
+
+Не закрывая Ubuntu-сессию, в другом PowerShell проверь `multipass info broker-staging`,
+затем запусти скрипт подключения. При первом SSH-входе сверь отпечаток ключа хоста:
+в открытой Ubuntu-сессии его показывает
+`sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`.
+Не отключай проверку ключа хоста. Если Multipass перестал входить, сохрани открытую
+Ubuntu-сессию и восстанови authorized_keys из созданной резервной копии.
+
 Пароли `author`, `reviewer` и bootstrap admin находятся в credentials.json под
 ключами `author-password`, `reviewer-password`, `admin-password`. Значения смотри
 только в своём локальном файле. Автор и подтверждающий — разные пользователи.

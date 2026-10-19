@@ -1,9 +1,16 @@
 # Браузерный API BFF
 
-Все маршруты находятся на одном origin с React-приложением. BFF использует cookie,
-поэтому его браузерные маршруты не помечены как HTTP bearer операции кодгена.
-Redirect, cookie и статические файлы обслуживаются ручными HTTP-обработчиками;
-контракт Configs читается из `schemas/services/configs`, DTO и HTTP-клиент генерируются.
+Все маршруты находятся на одном origin с React-приложением. JSON API описан в
+`api/**/*.yaml`, общие модели — в `../components/schemas`. Кодген создает обработчики,
+DTO и проверку запросов; ручные реализации находятся в `src/views/api`.
+Спецификации целиком экспортируются в `schemas/services/admin_bff`.
+
+Защищенные операции объявляют `BrowserSession` (`apiKey`, `in: cookie`).
+Общая middleware `admin-browser-session` проверяет сессию и CSRF до разбора запроса,
+кладет проверенную личность в request context и преобразует ошибки upstream.
+Без нее сгенерированный защищенный обработчик отклоняет запрос.
+C++-клиенты поддерживают bearer JWT, но явно отклоняют браузерную cookie-схему.
+Redirect, cookie входа и статические файлы обслуживаются отдельными ручными обработчиками.
 
 | Метод и путь | Назначение |
 | --- | --- |
@@ -12,8 +19,8 @@ Redirect, cookie и статические файлы обслуживаются
 | GET `/api/session` | Проверенная личность, роли и CSRF-токен; без bearer/refresh token |
 | POST `/api/logout` | Уничтожить серверную сессию, отозвать refresh token, вернуть URL выхода Keycloak |
 | GET `/api/configs/list` | Каталог конфигов |
-| GET `/api/configs/history` | История рабочих ревизий |
-| POST `/api/configs/current` | Рабочее значение и версия |
+| GET `/api/configs/history` | История опубликованных ревизий |
+| POST `/api/configs/current` | Значение и версия |
 | POST `/api/configs/drafts/create` | Создать валидный драфт |
 | POST `/api/configs/drafts/edit` | Изменить собственный драфт |
 | POST `/api/configs/drafts/approve` | Подтвердить чужой драфт и опубликовать |
@@ -25,7 +32,7 @@ Redirect, cookie и статические файлы обслуживаются
 | GET `/version` | Версия BFF, OpenAPI `version.yaml` |
 
 Тела и ответы `/api/configs/...` совпадают с `/admin/configs/...` Configs.
-Пути перечислены явно в `src/transport/configs.cpp`; произвольного прокси нет.
+Каждая view вызывает конкретный метод типизированного клиента Configs; произвольного прокси нет.
 POST принимает `Content-Type: application/json`, `Origin` из конфигурации и
 `X-CSRF-Token` из `/api/session`. Cookie HttpOnly, SameSite=Lax, Path=/, без Domain.
 Временная cookie входа живет пять минут и удаляется после callback.

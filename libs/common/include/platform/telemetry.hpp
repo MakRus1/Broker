@@ -89,7 +89,8 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
         const userver::components::ComponentContext& context)
         : PipelineBuilder(config, context),
           readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr),
-          extra_(config["extra-middlewares"].As<std::vector<std::string>>({})) {}
+          extra_(config["extra-middlewares"].As<std::vector<std::string>>({})),
+          final_(config["final-middlewares"].As<std::vector<std::string>>({})) {}
 
     userver::server::middlewares::MiddlewaresList BuildPipeline(
         userver::server::middlewares::MiddlewaresList pipeline) const override {
@@ -106,6 +107,8 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
                 pipeline.begin() + position + 1, std::string(HttpReadinessFactory::kName));
         pipeline.insert(pipeline.begin() + position + 1 + (readiness_enabled_ ? 1 : 0),
             extra_.begin(), extra_.end());
+        // После серверных расширений, включая перехват исключений testsuite.
+        pipeline.insert(pipeline.end(), final_.begin(), final_.end());
         return pipeline;
     }
 
@@ -115,6 +118,10 @@ type: object
 description: Общая HTTP-цепочка
 additionalProperties: false
 properties:
+    final-middlewares:
+        type: array
+        description: Middleware непосредственно перед обработчиком, после серверных расширений
+        items: {type: string, description: Имя middleware}
     extra-middlewares:
         type: array
         description: Дополнительные проверки перед обработчиком
@@ -125,6 +132,7 @@ properties:
   private:
     const bool readiness_enabled_;
     const std::vector<std::string> extra_;
+    const std::vector<std::string> final_;
 };
 
 }  // namespace platform

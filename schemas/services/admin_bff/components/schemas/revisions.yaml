@@ -1,0 +1,12 @@
+ConfigRevision:
+  type: object
+  additionalProperties: false
+  required:
+  - revision
+  - created_at
+  properties:
+    revision:
+      type: integer
+      minimum: 0
+    created_at:
+      type: string

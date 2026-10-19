@@ -2,6 +2,18 @@ name: ADMIN_BFF_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/configs/current
+- /api/configs/drafts/approve
+- /api/configs/drafts/cancel
+- /api/configs/drafts/create
+- /api/configs/drafts/edit
+- /api/configs/drafts/events
+- /api/configs/drafts/get
+- /api/configs/drafts/list
+- /api/configs/history
+- /api/configs/list
+- /api/logout
+- /api/session
 - /version
 default:
   '**default**':

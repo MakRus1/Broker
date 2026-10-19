@@ -6,9 +6,8 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/sessions.cpp
-    src/transport/admin.cpp
+    src/components/browser_session.cpp
     src/transport/login.cpp
-    src/transport/configs.cpp
     src/transport/assets.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}

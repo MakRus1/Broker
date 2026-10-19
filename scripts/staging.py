@@ -6,6 +6,7 @@ import base64
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import yaml
 
@@ -71,6 +72,20 @@ def apply(directory, context):
     ns = ['-n', plan['namespace']]
     run(*ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s')
     run(*ns, 'rollout', 'status', 'deployment/keycloak', '--timeout=300s')
+    if plan.get('lan'):
+        from staging_lan import NAMES, sync_keycloak
+
+        run(
+            'apply',
+            '--server-side',
+            '--field-manager=broker-staging',
+            '--force-conflicts',
+            '-f',
+            str(directory / 'monitoring.yaml'),
+        )
+        sync_keycloak(context, plan['namespace'], plan['admin_origin'])
+        for name in NAMES:
+            run(*ns, 'rollout', 'status', f'deployment/{name}', '--timeout=300s')
     run(
         'apply',
         '--server-side',
@@ -91,6 +106,18 @@ def apply(directory, context):
     )
     for name in SERVICES:
         run(*ns, 'rollout', 'status', f"deployment/{name.replace('_', '-')}", '--timeout=300s')
+    if plan.get('lan'):
+        subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve().parents[1] / 'tools/staging/check.py'),
+                '--context',
+                context,
+                '--namespace',
+                plan['namespace'],
+            ],
+            check=True,
+        )
     run(*ns, 'get', 'pods,pvc')
 
 

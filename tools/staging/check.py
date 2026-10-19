@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Проверка реальных метрик, логов и трассы в staging без паролей пользователей."""
+
+import argparse
+import json
+import subprocess
+import time
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+
+def check(context, namespace):
+    result = subprocess.check_output(
+        ['kubectl', '--context', context, '-n', namespace, 'get', 'services', '-o', 'json'],
+        text=True,
+    )
+    ips = {
+        item['metadata']['name']: item['spec']['clusterIP'] for item in json.loads(result)['items']
+    }
+
+    def fetch(name, port, path):
+        request = Request(
+            f'http://{ips[name]}:{port}{path}', headers={'Accept': 'application/json'}
+        )
+        with urlopen(request, timeout=5) as response:
+            return json.load(response)
+
+    deadline = time.monotonic() + 60
+    while True:
+        metrics = fetch(
+            'prometheus', 9090, '/api/v1/query?' + urlencode({'query': 'up{job="services"}'})
+        )
+        series = metrics['data']['result']
+        if len(series) == 3 and all(float(item['value'][1]) == 1 for item in series):
+            break
+        if time.monotonic() > deadline:
+            raise ValueError('Не все три сервиса доступны Prometheus')
+        time.sleep(2)
+    with urlopen(
+        f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check', timeout=5
+    ) as response:
+        trace = response.headers.get('X-Trace-Id')
+        response.read()
+    if not trace or len(trace) != 32:
+        raise ValueError('Сервис не вернул X-Trace-Id')
+    deadline = time.monotonic() + 60
+    while True:
+        try:
+            fetch('tempo', 3200, '/api/traces/' + trace)
+            query = '{service_name="broker",level=~".+"} |= "' + trace + '"'
+            logs = fetch(
+                'loki',
+                3100,
+                '/loki/api/v1/query_range?'
+                + urlencode(
+                    {
+                        'query': query,
+                        'start': time.time_ns() - 300_000_000_000,
+                        'end': time.time_ns(),
+                        'limit': 10,
+                    }
+                ),
+            )
+            if logs['data']['result']:
+                break
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        if time.monotonic() > deadline:
+            raise ValueError(f'Нет связанной трассы и логов для {trace}')
+        time.sleep(2)
+    if fetch('grafana', 3000, '/api/health')['database'] != 'ok':
+        raise ValueError('Grafana не готова')
+    print(
+        f'OK: три сервиса в Prometheus; trace_id={trace} найден в Tempo и Loki с label level; Grafana готова.'
+    )
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--context', required=True)
+    parser.add_argument('--namespace', default='broker-staging')
+    args = parser.parse_args()
+    check(args.context, args.namespace)

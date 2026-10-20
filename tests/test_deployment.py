@@ -67,7 +67,7 @@ class DeploymentTest(unittest.TestCase):
                 if obj['kind'] == 'Secret':
                     self.assertNotIn('Secret', obj.get('data', {}))
             apps = [obj for obj in phases['services'] if obj['kind'] == 'Deployment']
-            self.assertEqual(len(apps), 3)
+            self.assertEqual(len(apps), len(staging.SERVICES))
             bff = next(app for app in apps if app['metadata']['name'] == 'admin-bff')
             self.assertEqual(bff['spec']['strategy']['type'], 'Recreate')
             variables = next(
@@ -88,7 +88,10 @@ class DeploymentTest(unittest.TestCase):
                 self.assertEqual(container['readinessProbe']['httpGet']['path'], '/ping/ready')
                 self.assertEqual(container['livenessProbe']['httpGet']['path'], '/ping')
                 self.assertTrue(container['securityContext']['runAsNonRoot'])
-            self.assertEqual(len([obj for obj in phases['migrations'] if obj['kind'] == 'Job']), 2)
+            self.assertEqual(
+                len([obj for obj in phases['migrations'] if obj['kind'] == 'Job']),
+                sum((ROOT / 'services' / name / 'postgresql/schemas').is_dir() for name in staging.SERVICES),
+            )
             realm = next(
                 obj
                 for obj in phases['infrastructure']

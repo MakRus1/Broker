@@ -1,0 +1,12 @@
+version: 1
+libraries:
+- common
+- auth
+- configs
+postgresql:
+  enabled: true
+  cluster: shipments
+clients:
+  transportations:
+    service: transportations
+    transport: http

@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Список перевозок
+  version: '1'
+paths:
+  /api/v1/transportations/list:
+    post:
+      summary: Список перевозок
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                shipment_id:
+                  type: string
+                  format: uuid
+                item_id:
+                  type: string
+                  format: uuid
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+                after:
+                  type: string
+                  format: uuid
+              required: []
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/Transportation
+                required:
+                - items
+        '400':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

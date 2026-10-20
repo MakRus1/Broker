@@ -135,6 +135,13 @@ jobs:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make "docker-ci-test-$PRESET"
+      - name: Межсервисный сценарий · две реплики
+        if: ${{ matrix.preset == 'debug' }}
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: >-
+          docker run --rm --network=host -v "$PWD:/workspaces/broker" -w /workspaces/broker "$IMAGE"
+          build-debug/venv-userver-default/bin/python3 tests/integration/logistics_smoke.py --build-dir build-debug
       - name: Результаты тестов по сервисам
         if: always()
         env:

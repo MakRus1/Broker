@@ -4,6 +4,8 @@ libs:
     - admin_bff
     - broker
     - configs
+    - shipments
+    - transportations
 shared_paths:
 - cmake/
 - .github/

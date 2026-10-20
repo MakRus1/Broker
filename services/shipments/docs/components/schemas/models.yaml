@@ -1,0 +1,227 @@
+ApiError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+  required:
+  - error
+  - message
+Shipment:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    number:
+      type: string
+      minLength: 1
+      maxLength: 128
+    customer_id:
+      type: string
+      format: uuid
+    reference:
+      type: string
+      maxLength: 256
+  required:
+  - id
+  - revision
+  - number
+  - customer_id
+ShipmentItem:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    shipment_id:
+      type: string
+      format: uuid
+    container_type_code:
+      type: string
+      minLength: 1
+      maxLength: 16
+    container_ownership:
+      type: string
+      enum:
+      - SOC
+      - COC
+    planned_quantity:
+      type: integer
+      minimum: 1
+      maximum: 10000
+    created_quantity:
+      type: integer
+      minimum: 0
+      maximum: 10000
+    pending_quantity:
+      type: integer
+      minimum: 0
+      maximum: 10000
+    available_quantity:
+      type: integer
+      minimum: 0
+      maximum: 10000
+  required:
+  - id
+  - revision
+  - shipment_id
+  - container_type_code
+  - container_ownership
+  - planned_quantity
+  - created_quantity
+  - pending_quantity
+  - available_quantity
+CreationOperation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    item_id:
+      type: string
+      format: uuid
+    quantity:
+      type: integer
+      minimum: 1
+      maximum: 100
+    status:
+      type: string
+      enum:
+      - pending
+      - succeeded
+      - rejected
+    transportation_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    rejection_code:
+      type: string
+      maxLength: 128
+  required:
+  - id
+  - item_id
+  - quantity
+  - status
+  - transportation_ids
+TransportationLeg:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    mode:
+      type: string
+      enum:
+      - road
+      - rail
+      - sea
+    origin:
+      $ref: '#/TransportationLegOrigin'
+    destination:
+      $ref: '#/TransportationLegDestination'
+    contractor_id:
+      type: string
+      format: uuid
+    planned_departure_at:
+      type: string
+      format: date-time
+    planned_arrival_at:
+      type: string
+      format: date-time
+    actual_departure_at:
+      type: string
+      format: date-time
+    actual_arrival_at:
+      type: string
+      format: date-time
+  required:
+  - id
+  - mode
+  - origin
+  - destination
+Transportation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    shipment_id:
+      type: string
+      format: uuid
+    item_id:
+      type: string
+      format: uuid
+    operation_id:
+      type: string
+      format: uuid
+    container_type_code:
+      type: string
+      minLength: 1
+      maxLength: 16
+    container_ownership:
+      type: string
+      enum:
+      - SOC
+      - COC
+    legs:
+      type: array
+      items:
+        $ref: '#/TransportationLeg'
+  required:
+  - id
+  - revision
+  - shipment_id
+  - item_id
+  - operation_id
+  - container_type_code
+  - container_ownership
+  - legs
+TransportationLegOrigin:
+  type: object
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+  required:
+  - name
+  - country_code
+TransportationLegDestination:
+  type: object
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+  required:
+  - name
+  - country_code

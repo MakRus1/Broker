@@ -1,0 +1,221 @@
+components_manager:
+    task_processors:
+        main-task-processor:
+            worker_threads: $worker-threads
+        fs-task-processor:
+            worker_threads: $worker-fs-threads
+    default_task_processor: main-task-processor
+    components:
+        # OPENAPI_HANDLERS_BEGIN
+        handler-api-v1-shipment_items-add:
+            path: /api/v1/shipment-items/add
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipment_items-list:
+            path: /api/v1/shipment-items/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipment_items-update:
+            path: /api/v1/shipment-items/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-create:
+            path: /api/v1/shipments/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-get:
+            path: /api/v1/shipments/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-list:
+            path: /api/v1/shipments/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-update:
+            path: /api/v1/shipments/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-transportation_operations-create:
+            path: /api/v1/transportation-operations/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-transportation_operations-get:
+            path: /api/v1/transportation-operations/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        # OPENAPI_HANDLERS_END
+        # SERVICE_CONFIG_BEGIN
+        client-transportations:
+            base-url: $client-transportations-base-url
+        platform-readiness: {}
+        platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
+        postgres-shipments:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: shipments
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
+            update-interval: 1s
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: shipments
+            environment: $environment
+        platform-http-pipeline:
+            extra-middlewares: [platform-auth]
+        platform-auth:
+          issuer: $auth-issuer
+          audience: broker-logistics
+          roles-client: broker-logistics
+          jwks-url: $auth-jwks-url
+          protected-prefix: /api/
+          allow-http: $auth-allow-http
+          permissions:
+            /api/v1/shipments/create: shipments.write
+            /api/v1/shipments/get: shipments.read
+            /api/v1/shipments/list: shipments.read
+            /api/v1/shipments/update: shipments.write
+            /api/v1/shipment-items/add: shipments.write
+            /api/v1/shipment-items/list: shipments.read
+            /api/v1/shipment-items/update: shipments.write
+            /api/v1/transportation-operations/create: shipments.write
+            /api/v1/transportation-operations/get: shipments.read
+        auth-http-client:
+          wait-for-dynamic-configs: false
+        transportation-dispatcher:
+            enabled: $dispatcher-enabled
+            token-url: $dispatcher-token-url
+            client-id: $dispatcher-client-id
+            client-secret: $dispatcher-client-secret
+            client-secret#env: SHIPMENTS_DISPATCHER_CLIENT_SECRET
+            allow-http: $auth-allow-http
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: $server-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+            listener-monitor:
+                address: 127.0.0.1
+                port: $monitor-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $logger-level
+                    format: json
+                    overflow_behavior: discard
+        tracing-manager-locator:
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
+            otel-trace-sampling-enabled: true
+        grpc-client-common:
+            blocking-task-processor: fs-task-processor
+        grpc-otlp-factory:
+            load-enabled: $otlp-enabled
+            middlewares:
+                grpc-client-logging:
+                    enabled: false
+        otlp-logger:
+            load-enabled: $otlp-enabled
+            endpoint: $otlp-endpoint
+            endpoint#env: OTEL_EXPORTER_OTLP_ENDPOINT
+            client-factory-name: grpc-otlp-factory
+            service-name: shipments
+            log-level: $logger-level
+            sinks:
+                logs: both
+                tracing: both
+            extra-attributes:
+                service.version: 0.1.0
+                deployment.environment.name: $environment
+        grpc-client-logging:
+            msg-log-level: none
+        handler-server-monitor:
+            path: /metrics
+            method: GET
+            task_processor: main-task-processor
+            format: prometheus
+            common-labels:
+                service: shipments
+                environment: $environment
+        handler-ping:
+            path: /ping
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        testsuite-support: {}
+        congestion-control:
+            fake-mode: true
+        http-client: null
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        dns-client:
+            fs-task-processor: fs-task-processor
+        tests-control:
+            load-enabled: $is-testing
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor

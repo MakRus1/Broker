@@ -1,0 +1,7 @@
+version: 1
+libraries:
+- common
+- auth
+postgresql:
+  enabled: true
+  cluster: transportations

@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: Изменить плановое количество
+  version: '1'
+paths:
+  /api/v1/shipment-items/update:
+    post:
+      summary: Изменить плановое количество
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                item_id:
+                  type: string
+                  format: uuid
+                expected_revision:
+                  type: integer
+                  minimum: 1
+                  maximum: 2147483647
+                planned_quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000
+              required:
+              - item_id
+              - expected_revision
+              - planned_quantity
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - item
+                properties:
+                  item:
+                    $ref: ../components/schemas/models.yaml#/ShipmentItem
+        '400':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

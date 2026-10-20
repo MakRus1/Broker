@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Создать поставку
+  version: '1'
+paths:
+  /api/v1/shipments/create:
+    post:
+      summary: Создать поставку
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                reference:
+                  type: string
+                  maxLength: 256
+                idempotency_key:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+              required:
+              - customer_id
+              - idempotency_key
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - shipment
+                properties:
+                  shipment:
+                    $ref: components/schemas/models.yaml#/Shipment
+        '400':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса или зависимости
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

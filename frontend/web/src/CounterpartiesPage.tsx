@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
-import { Dialog } from './components';
+import { CardNavigation, Dialog } from './components';
+import { CounterpartyHistory } from './CounterpartyHistory';
 import { counterpartyRoles, type Counterparty } from './counterparties';
 import { CounterpartyForm } from './CounterpartyForm';
 
@@ -14,6 +15,8 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = route === '/counterparties/new';
   const editing = creating || route.endsWith('/edit');
+  const [tab, setTab] = useState<'details' | 'history'>('details');
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [item, setItem] = useState<Counterparty>();
   const [failure, setFailure] = useState('');
   const [items, setItems] = useState<Counterparty[]>([]);
@@ -76,6 +79,7 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
       );
       if (!signal?.aborted) {
         setItem(result.counterparty);
+        setHistoryVersion((old) => old + 1);
         setFailure('');
       }
     },
@@ -83,6 +87,7 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
   );
   useEffect(() => {
     setItem(undefined);
+    setTab('details');
     setFailure('');
     if (!id || !read) return;
     const controller = new AbortController();
@@ -165,7 +170,6 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
                   </p>
                 </div>
                 <div className="actions">
-                  <button onClick={() => void refresh().catch(onError)}>Обновить</button>
                   {write && !item.archived && (
                     <a className="primary" href={`#/counterparties/${item.id}/edit`}>
                       Редактировать
@@ -189,54 +193,74 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
                   сохранены.
                 </p>
               )}
-              <div className="counterparty-roles">
-                {item.roles.map((value) => (
-                  <span className="badge" key={value}>
-                    {counterpartyRoles[value]}
-                  </span>
-                ))}
-                {!item.roles.length && <span className="hint">Роли пока не назначены</span>}
-              </div>
-              <dl className="counterparty-details">
-                {[
-                  ['Юридическое наименование', item.legal_name],
-                  ['Страна', item.country_code],
-                  ['Налоговый номер / ИНН', item.tax_id],
-                  ['Регистрационный номер', item.registration_id],
-                  ['Юридический адрес', item.legal_address],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value || 'Не указано'}</dd>
-                  </div>
-                ))}
-              </dl>
-              <h2>Контактные лица</h2>
-              {!item.contacts.length ? (
-                <p className="hint">Контакты пока не добавлены.</p>
+              <CardNavigation onRefresh={() => refresh().catch(onError)}>
+                <button aria-pressed={tab === 'details'} onClick={() => setTab('details')}>
+                  Реквизиты
+                </button>
+                <button aria-pressed={tab === 'history'} onClick={() => setTab('history')}>
+                  История
+                </button>
+              </CardNavigation>
+              {tab === 'history' ? (
+                <CounterpartyHistory
+                  key={item.id}
+                  id={item.id}
+                  session={session}
+                  onError={onError}
+                  version={historyVersion + item.revision}
+                />
               ) : (
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Имя</th>
-                        <th>Должность</th>
-                        <th>Email</th>
-                        <th>Телефон</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {item.contacts.map((contact, index) => (
-                        <tr key={index}>
-                          <td>{contact.name}</td>
-                          <td>{contact.position || '—'}</td>
-                          <td>{contact.email || '—'}</td>
-                          <td>{contact.phone || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="counterparty-roles">
+                    {item.roles.map((value) => (
+                      <span className="badge" key={value}>
+                        {counterpartyRoles[value]}
+                      </span>
+                    ))}
+                    {!item.roles.length && <span className="hint">Роли пока не назначены</span>}
+                  </div>
+                  <dl className="counterparty-details">
+                    {[
+                      ['Юридическое наименование', item.legal_name],
+                      ['Страна', item.country_code],
+                      ['Налоговый номер / ИНН', item.tax_id],
+                      ['Регистрационный номер', item.registration_id],
+                      ['Юридический адрес', item.legal_address],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value || 'Не указано'}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <h2>Контактные лица</h2>
+                  {!item.contacts.length ? (
+                    <p className="hint">Контакты пока не добавлены.</p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Имя</th>
+                            <th>Должность</th>
+                            <th>Email</th>
+                            <th>Телефон</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.contacts.map((contact, index) => (
+                            <tr key={index}>
+                              <td>{contact.name}</td>
+                              <td>{contact.position || '—'}</td>
+                              <td>{contact.email || '—'}</td>
+                              <td>{contact.phone || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
               {archiving && (
                 <Dialog

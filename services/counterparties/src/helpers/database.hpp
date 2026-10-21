@@ -25,9 +25,13 @@ inline std::string ResolveOrganization(pg::Cluster& cluster,
 template <typename Request, typename Result>
 void WriteAudit(pg::Transaction& transaction, const std::string& organization,
     const platform::auth::Identity& identity, const std::string& action, const std::string& id,
-    const Request& request, const Result& result) {
+    const Request& request, const Result& result,
+    const std::optional<Result>& previous = std::nullopt) {
     // Снимок аудита сохраняется атомарно с изменением данных.
     userver::formats::json::ValueBuilder document;
+    document["actor_name"] = identity.DisplayName;
+    if (previous.has_value())
+        document["before"] = previous.value();
     document["request"] = request;
     document["result"] = result;
     transaction.Execute(

@@ -965,3 +965,53 @@ button.danger:hover:not(:disabled) {
   color: #697586;
   font-size: 13px;
 }
+
+.counterparty-history {
+  margin-top: 24px;
+}
+.counterparty-history > h2 {
+  margin-bottom: 18px;
+}
+.history-unchanged {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0;
+}
+.counterparty-diff {
+  table-layout: fixed;
+  width: 100%;
+}
+.counterparty-diff th:first-child {
+  width: 26%;
+}
+.counterparty-diff td {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.counterparty-diff td.before {
+  background: #fff0f0;
+}
+.counterparty-diff td.after {
+  background: #edf8ef;
+}
+
+.history-unchanged input {
+  width: auto;
+  flex: none;
+  margin: 0;
+}
+.counterparty-diff th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 800px) {
+  .counterparty-diff th:first-child {
+    width: 34%;
+  }
+  .counterparty-diff th,
+  .counterparty-diff td {
+    padding: 12px 8px;
+  }
+}

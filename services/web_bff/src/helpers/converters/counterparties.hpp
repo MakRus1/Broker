@@ -146,4 +146,47 @@ inline clients::counterparties::ApiV1CounterpartiesList::RequestBody Convert(
     }
     return result;
 }
+
+inline clients::counterparties::ApiV1CounterpartiesHistory::RequestBody Convert(
+    const models::counterparties::ListCounterpartyHistoryRequest& value) {
+    return {.before = value.before, .id = value.id, .limit = value.limit};
+}
+
+inline models::counterparties::CounterpartySnapshot Convert(
+    const clients::counterparties::models::CounterpartySnapshot& value) {
+    models::counterparties::CounterpartySnapshot result;
+    result.name = value.name;
+    result.legal_name = value.legal_name;
+    result.country_code = value.country_code;
+    result.tax_id = value.tax_id;
+    result.registration_id = value.registration_id;
+    result.legal_address = value.legal_address;
+    result.archived = value.archived;
+    if (value.roles.has_value()) {
+        result.roles.emplace();
+        for (const auto role : value.roles.value())
+            result.roles.value().push_back(Convert(role));
+    }
+    if (value.contacts.has_value()) {
+        result.contacts.emplace();
+        for (const auto& contact : value.contacts.value())
+            result.contacts.value().push_back(Convert(contact));
+    }
+    return result;
+}
+
+inline models::counterparties::CounterpartyEvent Convert(
+    const clients::counterparties::models::CounterpartyEvent& value) {
+    models::counterparties::CounterpartyEvent result;
+    result.id = value.id;
+    result.action = value.action;
+    result.actor = value.actor;
+    result.actor_name = value.actor_name;
+    result.occurred_at = value.occurred_at;
+    result.revision = value.revision;
+    result.after = Convert(value.after);
+    if (value.before.has_value())
+        result.before = Convert(value.before.value());
+    return result;
+}
 }  // namespace web_bff

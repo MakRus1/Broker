@@ -9,14 +9,12 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto tenant = ResolveTenant(transaction, principal);
-        const auto rows =
-            transaction.Execute(sql::kGetOperation, tenant, request.body.operation_id);
+        const auto tenant = ResolveTenant(*deps.pg_cluster, principal);
+        const auto rows = deps.pg_cluster->Execute(
+            pg::ClusterHostType::kMaster, sql::kGetOperation, tenant, request.body.operation_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Операция не найдена"};
         const auto result = Convert(rows.AsSingleRow<pgtypes::CreationOperationV1>());
-        transaction.Commit();
         return Response200{.operation = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

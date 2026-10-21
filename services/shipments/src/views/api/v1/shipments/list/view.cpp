@@ -9,15 +9,10 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto tenant = ResolveTenant(transaction, principal);
-        const auto rows = transaction.Execute(
+        const auto tenant = ResolveTenant(*deps.pg_cluster, principal);
+        const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
             sql::kListShipments, tenant, request.body.after, request.body.limit);
-        std::vector<models::Shipment> result;
-        for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV1>())
-            result.push_back(Convert(row));
-        transaction.Commit();
-        return Response200{.items = result};
+        return Response200{.items = Convert(rows)};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

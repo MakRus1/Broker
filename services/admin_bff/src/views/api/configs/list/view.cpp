@@ -7,10 +7,7 @@ Response View::Handle(Request&&, userver::server::request::RequestContext& conte
     const auto& session = platform::browser::GetBrowserSession(context);
     const auto result = deps.config_admin.AdminConfigsList({}, session.Access);
     Response200 response;
-    for (const auto& item : result.items)
-        response.items.push_back({.active_draft_id = item.active_draft_id,
-            .config_name = item.config_name,
-            .version = item.version});
+    response.items = ConvertCatalog<decltype(response.items)::value_type>(result.items);
     return response;
 }
 }  // namespace admin_bff::views::api::configs::list

@@ -11,8 +11,7 @@ Response View::Handle(
              .config_name = std::move(request.body.config_name)}},
         session.Access);
     Response200 response;
-    for (const auto& item : result.items)
-        response.items.push_back(ToBrowserDraft<models::ConfigDraft>(item));
+    response.items = ConvertDrafts<decltype(response.items)::value_type>(result.items);
     return response;
 }
 }  // namespace admin_bff::views::api::configs::drafts::list

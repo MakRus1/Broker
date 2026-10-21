@@ -24,6 +24,14 @@ inline std::string ResolveTenant(pg::Transaction& transaction,
     return rows.AsSingleRow<std::string>();
 }
 
+inline std::string ResolveTenant(pg::Cluster& cluster, const platform::auth::Principal& principal) {
+    const auto rows = cluster.Execute(pg::ClusterHostType::kMaster, sql::kResolveTenant,
+        principal.Issuer, principal.Subject, std::optional<std::string>{});
+    if (rows.Size() != 1)
+        throw ApiError{403, "tenant_access_denied", "Не определен доступ к клиенту"};
+    return rows.AsSingleRow<std::string>();
+}
+
 template <typename Request, typename Result>
 void WriteAudit(pg::Transaction& transaction, const std::string& tenant,
     const platform::auth::Principal& principal, const std::string& action, const std::string& id,

@@ -62,11 +62,8 @@ Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision
 }
 
 std::vector<RevisionInfo> ConfigStore::History() const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistory);
-    std::vector<RevisionInfo> result;
-    for (const auto& row : rows.AsSetOf<RevisionInfo>(pg::kRowTag))
-        result.push_back(row);
-    return result;
+    return cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistory)
+        .AsContainer<std::vector<RevisionInfo>>(pg::kRowTag);
 }
 
 }  // namespace configs

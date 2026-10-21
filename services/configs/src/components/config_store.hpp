@@ -35,6 +35,8 @@ class ConfigStore final {
         std::int64_t expected_version) const;
     void SaveDraft(userver::storages::postgres::Transaction&, const Draft& draft,
         const std::string& actor, std::string_view action) const;
+    void WriteDraftEvent(userver::storages::postgres::Transaction&, const Draft& draft,
+        const std::string& actor, std::string_view action) const;
     userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace configs

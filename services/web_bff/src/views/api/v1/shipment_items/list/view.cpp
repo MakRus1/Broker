@@ -11,9 +11,6 @@ Response View::Handle(
         api::ParseBody(userver::formats::json::ValueBuilder(request.body).ExtractValue());
     const auto result =
         deps.shipments.ApiV1ShipmentItemsList(api::Request{.body = body}, session.Access);
-    Response200 response;
-    for (const auto& item : result.items)
-        response.items.push_back(Convert<models::ShipmentItem>(item));
-    return response;
+    return Response200{.items = Convert<models::ShipmentItem>(result.items)};
 }
 }  // namespace web_bff::views::api::v1::shipment_items::list

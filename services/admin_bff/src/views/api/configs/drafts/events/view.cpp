@@ -9,11 +9,7 @@ Response View::Handle(
     const auto result = deps.config_admin.AdminConfigsDraftsEvents(
         {.body = {.id = std::move(request.body.id)}}, session.Access);
     Response200 response;
-    for (const auto& item : result.items)
-        response.items.push_back({.action = item.action,
-            .actor = item.actor,
-            .created_at = item.created_at,
-            .snapshot = ToBrowserSnapshot(item.snapshot)});
+    response.items = ConvertEvents<decltype(response.items)::value_type>(result.items);
     return response;
 }
 }  // namespace admin_bff::views::api::configs::drafts::events

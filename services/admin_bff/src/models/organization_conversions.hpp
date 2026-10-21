@@ -13,10 +13,22 @@ inline models::Member Convert(const clients::organizations::models::Member& valu
         .email = value.email,
         .enabled = value.enabled,
         .revision = value.revision,
-        .role = models::ParseEnumScalar(
-            clients::organizations::models::EnumValue(value.role), models::Member_role{}),
+        .role = value.role,
         .subject = value.subject,
         .username = value.username};
+}
+
+inline models::OrganizationRole Convert(
+    const clients::organizations::models::OrganizationRole& value) {
+    return {.description = value.description,
+        .id = value.id,
+        .name = value.name,
+        .permissions = value.permissions,
+        .revision = value.revision};
+}
+
+inline models::Permission Convert(const clients::organizations::models::Permission& value) {
+    return {.group = value.group, .id = value.id, .name = value.name};
 }
 
 template <typename Value> auto ConvertOrganizations(const std::vector<Value>& values) {
@@ -46,18 +58,15 @@ inline clients::organizations::ApiAdminOrganizationsMembersCreate::RequestBody C
         .email = value.email,
         .organization_id = value.organization_id,
         .request_id = value.request_id,
-        .role = clients::organizations::models::ParseEnumScalar(models::EnumValue(value.role),
-            clients::organizations::models::CreateMemberRequest_role{}),
+        .role = value.role,
         .temporary_password = value.temporary_password,
         .username = value.username};
 }
 
 inline clients::organizations::ApiAdminOrganizationsMembersAdd::RequestBody Convert(
     const models::AddMemberRequest& value) {
-    return {.organization_id = value.organization_id,
-        .role = clients::organizations::models::ParseEnumScalar(
-            models::EnumValue(value.role), clients::organizations::models::AddMemberRequest_role{}),
-        .username = value.username};
+    return {
+        .organization_id = value.organization_id, .role = value.role, .username = value.username};
 }
 
 inline clients::organizations::ApiAdminOrganizationsMembersUpdate::RequestBody Convert(
@@ -65,8 +74,7 @@ inline clients::organizations::ApiAdminOrganizationsMembersUpdate::RequestBody C
     return {.enabled = value.enabled,
         .expected_revision = value.expected_revision,
         .organization_id = value.organization_id,
-        .role = clients::organizations::models::ParseEnumScalar(models::EnumValue(value.role),
-            clients::organizations::models::UpdateMemberRequest_role{}),
+        .role = value.role,
         .subject = value.subject};
 }
 }  // namespace admin_bff

@@ -20,6 +20,7 @@ Response View::Handle(
         const auto organization =
             Convert(transaction.Execute(sql::kCreateOrganization, request.body.id, name)
                         .AsSingleRow<pgtypes::OrganizationV1>());
+        transaction.Execute(sql::kCreateDefaultRoles, organization.id);
         WriteAudit(transaction, organization.id, identity, "organization.created", organization);
         transaction.Commit();
         return Response201{.organization = organization};

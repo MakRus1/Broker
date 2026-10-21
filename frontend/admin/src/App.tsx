@@ -55,12 +55,14 @@ export function App() {
             Конфиги
           </button>
         )}
-        <button
-          aria-current={section === 'organizations' ? 'page' : undefined}
-          onClick={() => setSection('organizations')}
-        >
-          Организации и сотрудники
-        </button>
+        {access && (access.platform_admin || access.managed_organization_ids.length > 0) && (
+          <button
+            aria-current={section === 'organizations' ? 'page' : undefined}
+            onClick={() => setSection('organizations')}
+          >
+            {access.platform_admin ? 'Организации' : 'Сотрудники и роли'}
+          </button>
+        )}
       </nav>
       {section === 'organizations' ? (
         access ? (

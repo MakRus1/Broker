@@ -54,6 +54,24 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-create:
+            path: /api/admin/organizations/roles/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-list:
+            path: /api/admin/organizations/roles/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-update:
+            path: /api/admin/organizations/roles/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-admin-organizations-update:
             path: /api/admin/organizations/update
             method: POST
@@ -100,6 +118,9 @@ components_manager:
                 /api/admin/organizations/members/create: authenticated
                 /api/admin/organizations/members/list: authenticated
                 /api/admin/organizations/members/update: authenticated
+                /api/admin/organizations/roles/create: authenticated
+                /api/admin/organizations/roles/list: authenticated
+                /api/admin/organizations/roles/update: authenticated
                 /api/admin/organizations/update: authenticated
                 /api/organizations/access: authenticated
                 /api/organizations/me: authenticated

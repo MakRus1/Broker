@@ -17,9 +17,17 @@ inline models::Member Convert(const pgtypes::MemberV1& row) {
         .email = row.Email,
         .enabled = row.Enabled,
         .revision = row.Revision,
-        .role = models::ParseEnumScalar(row.Role, models::Member_role{}),
+        .role = row.Role,
         .subject = row.Subject,
         .username = row.Username};
+}
+
+inline models::OrganizationRole Convert(const pgtypes::OrganizationRoleV1& row) {
+    return {.description = row.Description,
+        .id = row.Id,
+        .name = row.Name,
+        .permissions = row.Permissions,
+        .revision = row.Revision};
 }
 
 inline pgtypes::MemberV1 Convert(const User& user, const std::string& role) {

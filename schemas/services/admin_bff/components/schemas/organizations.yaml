@@ -41,10 +41,9 @@ Member:
       type: string
     role:
       type: string
-      enum:
-      - administrator
-      - operator
-      - viewer
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
     enabled:
       type: boolean
     revision:
@@ -147,10 +146,9 @@ CreateMemberRequest:
       maxLength: 256
     role:
       type: string
-      enum:
-      - administrator
-      - operator
-      - viewer
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
 AddMemberRequest:
   type: object
   additionalProperties: false
@@ -168,10 +166,9 @@ AddMemberRequest:
       maxLength: 100
     role:
       type: string
-      enum:
-      - administrator
-      - operator
-      - viewer
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
 UpdateMemberRequest:
   type: object
   additionalProperties: false
@@ -191,12 +188,58 @@ UpdateMemberRequest:
       maxLength: 128
     role:
       type: string
-      enum:
-      - administrator
-      - operator
-      - viewer
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
     enabled:
       type: boolean
     expected_revision:
       type: integer
       minimum: 1
+OrganizationRole:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - description
+  - permissions
+  - revision
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    description:
+      type: string
+      maxLength: 500
+    permissions:
+      type: array
+      items:
+        type: string
+        minLength: 1
+        maxLength: 100
+      maxItems: 100
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+Permission:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - group
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    group:
+      type: string

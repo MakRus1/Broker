@@ -563,6 +563,255 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/roles/list:
+    post:
+      summary: Получить роли организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - organization_id
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - permissions
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/organizations.yaml#/OrganizationRole
+                  permissions:
+                    type: array
+                    items:
+                      $ref: components/schemas/organizations.yaml#/Permission
+        '400':
+          description: Неверные параметры или разрешения
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет прав управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или роль не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Роль изменена или организация останется без администратора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимость временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/roles/create:
+    post:
+      summary: Создать роль организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - organization_id
+              - id
+              - name
+              - description
+              - permissions
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: ^[a-z][a-z0-9_-]*$
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 100
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - role
+                properties:
+                  role:
+                    $ref: components/schemas/organizations.yaml#/OrganizationRole
+        '400':
+          description: Неверные параметры или разрешения
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет прав управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или роль не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Роль изменена или организация останется без администратора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимость временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/roles/update:
+    post:
+      summary: Изменить роль организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - organization_id
+              - id
+              - name
+              - description
+              - permissions
+              - expected_revision
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: ^[a-z][a-z0-9_-]*$
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 100
+                expected_revision:
+                  type: integer
+                  format: int64
+                  minimum: 1
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - role
+                properties:
+                  role:
+                    $ref: components/schemas/organizations.yaml#/OrganizationRole
+        '400':
+          description: Неверные параметры или разрешения
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет прав управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или роль не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Роль изменена или организация останется без администратора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимость временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
 components:
   securitySchemes:
     BearerAuth:

@@ -1,4 +1,4 @@
-SELECT organization_id::TEXT
-FROM memberships
-WHERE issuer = $1 AND subject = $2 AND enabled AND role = 'administrator'
-ORDER BY organization_id;
+SELECT m.organization_id::TEXT FROM memberships m
+JOIN organization_roles r ON r.organization_id = m.organization_id AND r.id = m.role
+WHERE m.issuer = $1 AND m.subject = $2 AND m.enabled AND r.permissions @> ARRAY['organizations.manage']
+ORDER BY m.organization_id;

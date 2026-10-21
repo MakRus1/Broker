@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import secrets
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -50,6 +51,19 @@ def prepare():
     for key, value in auth_secrets.items():
         realm = realm.replace("${" + key + "}", value)
     (STATE / "broker-realm.json").write_text(realm)
+    # Bind-mount указывает на стабильный каталог вне checkout: rebase заменяет inode исходников.
+    theme_source = ROOT / 'tools/keycloak/themes/broker'
+    theme_target = STATE / 'keycloak-theme'
+    theme_target.mkdir(exist_ok=True)
+    for source_path in theme_source.rglob('*'):
+        if source_path.is_file():
+            destination = theme_target / source_path.relative_to(theme_source)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_path, destination)
+    for existing in theme_target.rglob('*'):
+        if existing.is_file() and not (theme_source / existing.relative_to(theme_target)).is_file():
+            existing.unlink()
+
     images = json.loads((ROOT / "tools/local/images.json").read_text())["images"]
     images["dev"] = json.loads((ROOT / "tools/container-images.json").read_text())["images"]["dev"]
     volumes = {
@@ -186,7 +200,7 @@ def prepare():
             "KC_BOOTSTRAP_ADMIN_PASSWORD": auth_secrets["admin-password"],
         },
         "ports": ["127.0.0.1:18888:8080"],
-        "volumes": [f"{STATE}/broker-realm.json:/opt/keycloak/data/import/broker-realm.json:ro", f"{ROOT}/tools/keycloak/themes/broker:/opt/keycloak/themes/broker:ro"],
+        "volumes": [f"{STATE}/broker-realm.json:/opt/keycloak/data/import/broker-realm.json:ro", f"{STATE}/keycloak-theme:/opt/keycloak/themes/broker:ro"],
         "depends_on": {"postgres-keycloak": {"condition": "service_healthy"}},
     }
     services["configs"]["depends_on"]["keycloak"] = {"condition": "service_started"}

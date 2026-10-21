@@ -15,8 +15,8 @@ Response View::Handle(
             sql::kResolveAccess, identity.Issuer, identity.Subject, request.body.organization_id);
         if (rows.Size() != 1)
             throw ApiError{403, "organization_access_denied", "Выберите доступную организацию"};
-        const auto [organization, role] = rows.AsSingleRow<AccessRow>(pg::kRowTag);
-        const auto permissions = Permissions(role);
+        const auto [organization, granted] = rows.AsSingleRow<AccessRow>(pg::kRowTag);
+        const std::set<std::string> permissions(granted.begin(), granted.end());
         if (!permissions.contains(request.body.permission))
             throw ApiError{403, "permission_denied", "Недостаточно прав в организации"};
         return Response200{.organization_id = organization,

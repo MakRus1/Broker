@@ -18,6 +18,9 @@ auth:
     /api/admin/organizations/members/create: authenticated
     /api/admin/organizations/members/add: authenticated
     /api/admin/organizations/members/update: authenticated
+    /api/admin/organizations/roles/list: authenticated
+    /api/admin/organizations/roles/create: authenticated
+    /api/admin/organizations/roles/update: authenticated
 http_logging:
   exclude_paths:
   - /api/admin/organizations/members/create

@@ -633,77 +633,146 @@ body:has(dialog[open]) .workspace > .notifications {
   border-color: #8ba8f2;
   color: #2051b6;
 }
-.organization-columns {
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-.organization-list,
-.organization-members {
-  padding: 24px;
-  background: white;
-  border: 1px solid #dfe5ee;
-  border-radius: 16px;
-  min-width: 0;
-}
-.organization-list h2,
-.organization-members h2 {
-  margin: 0 0 20px;
-}
-.organization-form {
-  display: grid;
-  gap: 16px;
-  margin: 20px 0;
-}
-.organization-form label {
-  display: grid;
-  gap: 8px;
-  font-weight: 600;
-}
-.organization-form input,
-.organization-form select,
-.members-table select {
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid #cdd7e6;
-  border-radius: 8px;
-  background: white;
-  font: inherit;
-}
-.organization-choice {
-  display: block;
-  text-align: left;
-  width: 100%;
-  margin-top: 10px;
-}
-.organization-choice.selected {
-  border-color: #3564df;
-  background: #edf2ff;
-}
-.organization-choice small,
-.members-table small {
-  display: block;
-  margin-top: 6px;
-  font-size: 13px;
-  color: #64748b;
-  overflow-wrap: anywhere;
-}
-.organization-title {
+.organization-heading-actions,
+.organization-content-heading {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
 }
-.organization-title button {
-  flex-shrink: 0;
+.organization-heading-actions {
+  flex-wrap: wrap;
+}
+.organization-registry,
+.organization-content {
+  background: #fff;
+  padding: 28px;
+  border: 1px solid #dfe5ee;
+  border-radius: 16px;
+}
+.organization-registry table,
+.members-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.organization-registry th,
+.organization-registry td,
+.members-table th,
+.members-table td {
+  padding: 18px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e5eaf1;
+  vertical-align: middle;
+}
+.organization-registry th,
+.members-table th {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+.organization-registry td:last-child,
+.members-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+.organization-open {
+  border: 0;
+  background: transparent;
+  color: #243247;
+  padding: 4px 0;
+  font-size: inherit;
+  font-weight: 650;
+  text-align: left;
+}
+.organization-open:hover {
+  color: #2859ce;
+  text-decoration: underline;
+}
+.members-table {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+.members-table small {
+  display: block;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 13px;
+}
+.organization-status {
+  display: inline-block;
+  padding: 5px 10px;
+  color: #64748b;
+  background: #f0f2f5;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.organization-status.active {
+  color: #326346;
+  background: #edf5ee;
+}
+.organization-back {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+  margin-bottom: 22px;
+  color: #64748b;
+}
+.organization-section-tabs {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #dfe5ee;
+}
+.organization-section-tabs button {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  padding: 15px 0;
+  background: transparent;
+  color: #64748b;
+}
+.organization-section-tabs button[aria-selected='true'] {
+  color: #2859ce;
+  border-bottom-color: #3564df;
+}
+.organization-content-heading h2 {
+  margin: 0;
+}
+.organization-empty {
+  padding: 36px 0;
+  color: #64748b;
+}
+.organization-role-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin-top: 26px;
+}
+.organization-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 14px;
+  text-align: left;
+  padding: 24px;
+  background: #fff;
+}
+.organization-role-card strong {
+  font-size: 17px;
+}
+.organization-role-card span {
+  line-height: 1.5;
+  color: #64748b;
+}
+.organization-role-card small {
+  color: #2859ce;
 }
 .organization-error,
 .organization-notice {
   padding: 16px;
-  margin-bottom: 20px;
+  margin: 0 0 20px;
   border-radius: 10px;
+  line-height: 1.5;
 }
 .organization-error {
   background: #fff0f0;
@@ -713,55 +782,396 @@ body:has(dialog[open]) .workspace > .notifications {
   background: #edf8ef;
   color: #24643a;
 }
-.members-table {
-  overflow-x: auto;
-  margin: 24px 0;
+.organization-editor {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(600px, 100vw);
+  height: 100dvh;
+  max-width: 100vw;
+  max-height: 100dvh;
+  box-sizing: border-box;
+  border: 0;
+  border-left: 1px solid #dfe5ee;
+  padding: 32px;
+  background: #fff;
+  color: #243247;
+  box-shadow: -16px 0 60px #24324718;
+  overflow-y: auto;
 }
-.members-table table {
+.organization-editor::backdrop {
+  background: #24324733;
+}
+.organization-editor-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.organization-editor-heading h2 {
+  margin: 0 0 26px;
+  font-size: 25px;
+}
+.organization-editor-heading button {
+  flex-shrink: 0;
+}
+.organization-form {
+  display: grid;
+  gap: 24px;
+  margin: 0;
+}
+.organization-form > label {
+  display: grid;
+  gap: 9px;
+  font-weight: 600;
+}
+.organization-form input:not([type='checkbox']):not([type='radio']),
+.organization-form select,
+.organization-form textarea {
   width: 100%;
-  border-collapse: collapse;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #cdd7e6;
+  border-radius: 8px;
+  background: #fff;
+  color: #243247;
+  font: inherit;
+  margin: 0;
 }
-.members-table th,
-.members-table td {
-  padding: 14px 12px;
-  text-align: left;
-  vertical-align: middle;
-  border-bottom: 1px solid #e1e7ef;
-}
-.members-table th {
+.organization-form small {
   color: #64748b;
-  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
 }
-.membership-status {
+.organization-form .member-access,
+.role-permissions label,
+.organization-mode-select label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+  gap: 10px;
+  font-weight: 400;
 }
-.membership-status input {
+.organization-form input[type='checkbox'],
+.organization-form input[type='radio'] {
   width: auto;
+  margin: 0;
+  flex-shrink: 0;
 }
-.organization-modes {
+.organization-mode-select {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.organization-mode-select legend {
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.organization-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 14px;
+}
+.member-summary {
+  margin: 0;
+  display: grid;
+  gap: 18px;
+}
+.member-summary dt {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.member-summary dd {
+  margin: 0;
+}
+.role-preview {
+  border-radius: 10px;
+  padding: 18px;
+  background: #f5f7fb;
+}
+.role-preview p {
+  color: #64748b;
+  line-height: 1.5;
+  margin: 9px 0 0;
+}
+.role-permissions {
+  display: grid;
+  gap: 20px;
+}
+.role-permissions h3 {
+  margin: 0;
+}
+.role-permissions fieldset {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #dfe5ee;
+  border-radius: 10px;
+}
+.role-permissions legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+.organization-discard {
+  background: #fff8e8;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 22px;
+}
+.organization-discard p {
+  margin: 0 0 14px;
+}
+.organization-discard .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
-.organization-modes button[aria-pressed='true'] {
-  border-color: #3564df;
-  color: #2051b6;
-}
-.member-form {
-  max-width: 520px;
-}
-.organization-help {
-  color: #64748b;
-  line-height: 1.6;
-}
-@media (max-width: 900px) {
-  .organization-columns {
-    grid-template-columns: 1fr;
-  }
-  .organization-title {
+@media (max-width: 800px) {
+  .organization-content-heading {
+    align-items: start;
     flex-direction: column;
   }
+  .organization-registry,
+  .organization-content {
+    padding: 18px;
+  }
+  .organization-editor {
+    padding: 24px;
+  }
+  .organization-registry {
+    overflow-x: auto;
+  }
+}
+
+/* Общая композиция раздела организаций и форм редактирования. */
+.organizations-workspace {
+  color: #243247;
+}
+.organizations-workspace .heading {
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.organizations-workspace .heading h1 {
+  margin-bottom: 12px;
+}
+.organizations-workspace .heading p:last-child {
+  margin-bottom: 0;
+}
+.organizations-workspace .primary,
+.organization-editor .primary {
+  background: #3564df;
+  border-color: #3564df;
+  color: white;
+}
+.organizations-workspace .primary:hover:not(:disabled),
+.organization-editor .primary:hover:not(:disabled) {
+  background: #2854c6;
+}
+.organization-heading-actions button {
+  white-space: nowrap;
+}
+.organization-content-heading .actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.organization-registry tbody tr:hover,
+.members-table tbody tr:hover {
+  background: #f7f9fc;
+}
+.organization-registry thead,
+.members-table thead {
+  background: #f7f9fc;
+}
+.organization-registry th:first-child,
+.members-table th:first-child {
+  width: 48%;
+}
+.organization-registry td,
+.members-table td {
+  height: 80px;
+}
+.organization-role-card {
+  min-height: 180px;
+  border: 1px solid #dfe5ee;
+  border-radius: 12px;
+  color: #243247;
+}
+.organization-role-card:hover:not(:disabled) {
+  background: #f7f9ff;
+  border-color: #a4b9ec;
+}
+.organization-role-card small {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  margin-top: auto;
+  font-weight: 400;
+}
+.organization-role-card small span {
+  color: #2859ce;
+  font-size: inherit;
+}
+.organization-editor-heading {
+  padding-bottom: 24px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid #e5eaf1;
+}
+.organization-editor-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.4;
+}
+.organization-editor-heading button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  color: #64748b;
+  background: #f3f5fa;
+}
+.organization-form input:focus-visible,
+.organization-form select:focus-visible,
+.organization-form textarea:focus-visible {
+  outline: 3px solid #d5e1ff;
+  border-color: #7096ec;
+}
+.organization-form input[type='checkbox'],
+.organization-form input[type='radio'] {
+  accent-color: #3564df;
+  width: 17px;
+  height: 17px;
+}
+.role-permissions fieldset {
+  margin: 0;
+  background: #fafbfe;
+}
+.role-permissions label {
+  line-height: 1.5;
+}
+.organization-editor-actions {
+  border-top: 1px solid #e5eaf1;
+  margin-top: 4px;
+  padding-top: 24px;
+}
+@media (max-width: 800px) {
+  .organizations-workspace .heading {
+    align-items: start;
+  }
+  .organization-role-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.organizations-workspace .organization-section-tabs button[role='tab'] {
+  background: transparent;
+  color: #64748b;
+  padding: 15px 0;
+}
+.organizations-workspace .organization-section-tabs button[aria-selected='true'] {
+  color: #2859ce;
+}
+.members-table table {
+  min-width: 650px;
+  table-layout: fixed;
+  font-size: 14px;
+}
+.members-table th:first-child {
+  width: 36%;
+}
+.members-table th:nth-child(2) {
+  width: 28%;
+}
+.members-table th:nth-child(3) {
+  width: 16%;
+}
+.members-table th:last-child {
+  width: 20%;
+}
+.members-table td {
+  overflow-wrap: normal;
+}
+.members-table small {
+  overflow-wrap: anywhere;
+}
+
+.organization-row {
+  cursor: pointer;
+}
+.organization-row:focus-within {
+  background: #f0f4ff;
+  outline: 2px solid #a4b9ec;
+  outline-offset: -2px;
+}
+.organization-row-arrow {
+  color: #64748b;
+  font-size: 20px;
+}
+
+.permission-group {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  color: #243247;
+  border: 1px solid #dfe5ee;
+  border-radius: 10px;
+  background: #fafbfe;
+}
+.permission-group summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+.permission-group summary::-webkit-details-marker {
+  display: none;
+}
+.permission-group summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+}
+.permission-group[open] summary::before {
+  transform: rotate(45deg);
+}
+.permission-group summary small {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.permission-group summary:focus-visible {
+  outline: 2px solid #7096ec;
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.role-permissions .permission-group fieldset {
+  border: 0;
+  border-top: 1px solid #e5eaf1;
+  border-radius: 0;
+  background: transparent;
+  padding: 18px;
+}
+.permission-group-legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0 !important;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

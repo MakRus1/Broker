@@ -1,85 +1,22 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { request, type Session } from '../api';
+import { EditorPanel } from './organizations/EditorPanel';
+import { MemberEditor } from './organizations/MemberEditor';
+import { RoleEditor } from './organizations/RoleEditor';
+import type {
+  Member,
+  MemberInput,
+  Organization,
+  OrganizationAccess,
+  OrganizationRole,
+  Permission,
+} from './organizations/types';
+export type { OrganizationAccess } from './organizations/types';
 
-export type Organization = { id: string; name: string; enabled: boolean; revision: number };
-export type MemberRole = 'administrator' | 'operator' | 'viewer';
-export type Member = {
-  subject: string;
-  username: string;
-  display_name: string;
-  email: string;
-  role: MemberRole;
-  enabled: boolean;
-  revision: number;
-};
-export type OrganizationAccess = {
-  platform_admin: boolean;
-  organizations: Organization[];
-  managed_organization_ids: string[];
-};
-const roles: Record<MemberRole, string> = {
-  administrator: 'Администратор организации',
-  operator: 'Сотрудник — чтение и изменение',
-  viewer: 'Сотрудник — только чтение',
-};
-
-function RoleOptions() {
-  return Object.entries(roles).map(([value, title]) => (
-    <option key={value} value={value}>
-      {title}
-    </option>
-  ));
-}
-
-function MemberRow({
-  member,
-  save,
-  busy,
-}: {
-  member: Member;
-  save: (member: Member, role: MemberRole, enabled: boolean) => Promise<void>;
-  busy: boolean;
-}) {
-  const [role, setRole] = useState(member.role);
-  const [enabled, setEnabled] = useState(member.enabled);
-  const changed = role !== member.role || enabled !== member.enabled;
-  return (
-    <tr>
-      <td>
-        <strong>{member.display_name}</strong>
-        <small>
-          {member.username} · {member.email}
-        </small>
-      </td>
-      <td>
-        <select
-          aria-label={`Роль: ${member.username}`}
-          value={role}
-          disabled={busy}
-          onChange={(event) => setRole(event.target.value as MemberRole)}
-        >
-          <RoleOptions />
-        </select>
-      </td>
-      <td>
-        <label className="membership-status">
-          <input
-            type="checkbox"
-            checked={enabled}
-            disabled={busy}
-            onChange={(event) => setEnabled(event.target.checked)}
-          />
-          Доступ разрешён
-        </label>
-      </td>
-      <td>
-        <button disabled={busy || !changed} onClick={() => void save(member, role, enabled)}>
-          Сохранить
-        </button>
-      </td>
-    </tr>
-  );
-}
+type Editor =
+  | { kind: 'member'; member?: Member }
+  | { kind: 'role'; role?: OrganizationRole }
+  | { kind: 'organization'; organization?: Organization };
 
 export function Organizations({
   session,
@@ -88,18 +25,55 @@ export function Organizations({
   session: Session;
   access: OrganizationAccess;
 }) {
-  const [organizations, setOrganizations] = useState(access.organizations);
-  const [selectedId, setSelectedId] = useState('');
-  const selected = organizations.find((item) => item.id === selectedId);
+  const ownOrganizations = access.organizations.filter((item) =>
+    access.managed_organization_ids.includes(item.id),
+  );
+  const [organizations, setOrganizations] = useState(access.platform_admin ? [] : ownOrganizations);
+  const [selected, setSelected] = useState<Organization | undefined>(
+    access.platform_admin ? undefined : ownOrganizations[0],
+  );
+  const [tab, setTab] = useState<'members' | 'roles'>('members');
   const [members, setMembers] = useState<Member[]>([]);
+  const [roles, setRoles] = useState<OrganizationRole[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [editor, setEditor] = useState<Editor>();
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [organizationName, setOrganizationName] = useState('');
-  const [mode, setMode] = useState<'create' | 'existing'>('create');
+  const [hasMore, setHasMore] = useState(false);
+  const [moreMembers, setMoreMembers] = useState(false);
+  const newRoleId = useRef('');
   const pendingCreate = useRef<{ key: string; id: string } | null>(null);
-  const [canLoadOrganizations, setCanLoadOrganizations] = useState(false);
-  const [canLoadMembers, setCanLoadMembers] = useState(false);
+
+  function openOrganization(organization: Organization | undefined) {
+    const hash = organization ? '#/organizations/' + organization.id : '';
+    if (window.location.hash !== hash) window.location.hash = hash;
+    setSelected(organization);
+    setTab('members');
+    setError('');
+  }
+  useEffect(() => {
+    function restoreOrganization() {
+      const prefix = '#/organizations/';
+      const id = window.location.hash.startsWith(prefix)
+        ? window.location.hash.slice(prefix.length)
+        : undefined;
+      const available = access.platform_admin ? organizations : ownOrganizations;
+      setSelected(
+        id
+          ? available.find((item) => item.id === id)
+          : access.platform_admin
+            ? undefined
+            : available[0],
+      );
+      setTab('members');
+      setError('');
+    }
+    restoreOrganization();
+    window.addEventListener('hashchange', restoreOrganization);
+    return () => window.removeEventListener('hashchange', restoreOrganization);
+  }, [organizations, access]);
 
   async function run(action: () => Promise<void>) {
     if (busy) return;
@@ -115,160 +89,240 @@ export function Organizations({
     }
   }
   async function loadOrganizations(append = false) {
-    const result = await request<{ items: Organization[] }>(
+    const value = await request<{ items: Organization[] }>(
       '/api/admin/organizations/list',
       session,
       { limit: 50, ...(append && organizations.length ? { after: organizations.at(-1)?.id } : {}) },
     );
-    setOrganizations((current) => (append ? [...current, ...result.items] : result.items));
-    setCanLoadOrganizations(result.items.length === 50);
+    setOrganizations((current) => (append ? [...current, ...value.items] : value.items));
+    setHasMore(value.items.length === 50);
   }
-  async function loadMembers(organizationId: string, append = false) {
-    const result = await request<{ items: Member[] }>(
+  async function loadMembers(organization: Organization, append = false) {
+    const value = await request<{ items: Member[] }>(
       '/api/admin/organizations/members/list',
       session,
       {
-        organization_id: organizationId,
+        organization_id: organization.id,
         limit: 50,
         ...(append && members.length ? { after: members.at(-1)?.subject } : {}),
       },
     );
-    setMembers((current) => (append ? [...current, ...result.items] : result.items));
-    setCanLoadMembers(result.items.length === 50);
+    setMembers((current) => (append ? [...current, ...value.items] : value.items));
+    setMoreMembers(value.items.length === 50);
+  }
+  async function loadRoles(organization: Organization) {
+    const value = await request<{ items: OrganizationRole[]; permissions: Permission[] }>(
+      '/api/admin/organizations/roles/list',
+      session,
+      { organization_id: organization.id },
+    );
+    setRoles(value.items);
+    setPermissions(value.permissions);
   }
   useEffect(() => {
+    if (!access.platform_admin) return;
     let active = true;
-    if (access.platform_admin) {
-      request<{ items: Organization[] }>('/api/admin/organizations/list', session, { limit: 50 })
-        .then((value) => {
-          if (active) {
-            setOrganizations(value.items);
-            setCanLoadOrganizations(value.items.length === 50);
-          }
-        })
-        .catch((reason: unknown) => {
-          if (active)
-            setError(reason instanceof Error ? reason.message : 'Не удалось загрузить организации');
-        });
-    }
+    request<{ items: Organization[] }>('/api/admin/organizations/list', session, { limit: 50 })
+      .then((value) => {
+        if (active) {
+          setOrganizations(value.items);
+          setHasMore(value.items.length === 50);
+        }
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          setError(reason instanceof Error ? reason.message : 'Не удалось загрузить организации');
+      });
     return () => {
       active = false;
     };
   }, [session, access.platform_admin]);
   useEffect(() => {
-    setMembers([]);
-    setError('');
-    setNotice('');
-    if (!selectedId) return;
+    if (!selected) return;
     let active = true;
-    request<{ items: Member[] }>('/api/admin/organizations/members/list', session, {
-      organization_id: selectedId,
-      limit: 50,
-    })
-      .then((value) => {
-        if (active) {
-          setMembers(value.items);
-          setCanLoadMembers(value.items.length === 50);
-        }
+    setLoading(true);
+    setMembers([]);
+    setRoles([]);
+    setError('');
+    Promise.all([
+      request<{ items: Member[] }>('/api/admin/organizations/members/list', session, {
+        organization_id: selected.id,
+        limit: 50,
+      }),
+      request<{ items: OrganizationRole[]; permissions: Permission[] }>(
+        '/api/admin/organizations/roles/list',
+        session,
+        { organization_id: selected.id },
+      ),
+    ])
+      .then(([people, roleData]) => {
+        if (!active) return;
+        setMembers(people.items);
+        setMoreMembers(people.items.length === 50);
+        setRoles(roleData.items);
+        setPermissions(roleData.permissions);
       })
       .catch((reason: unknown) => {
         if (active)
-          setError(reason instanceof Error ? reason.message : 'Не удалось загрузить сотрудников');
+          setError(reason instanceof Error ? reason.message : 'Не удалось загрузить организацию');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [session, selectedId]);
+  }, [session, selected?.id]);
 
-  function createOrganization(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void run(async () => {
-      const { organization } = await request<{ organization: Organization }>(
-        '/api/admin/organizations/create',
-        session,
-        { id: crypto.randomUUID(), name: organizationName.trim() },
-      );
-      setOrganizationName('');
-      await loadOrganizations();
-      setOrganizations((current) =>
-        current.some((item) => item.id === organization.id) ? current : [...current, organization],
-      );
-      setSelectedId(organization.id);
-      setNotice('Организация создана. Добавьте первого администратора.');
-    });
+  function openEditor(value: Editor) {
+    setError('');
+    setNotice('');
+    pendingCreate.current = null;
+    if (value.kind === 'role' && !value.role)
+      newRoleId.current = 'role_' + crypto.randomUUID().replaceAll('-', '');
+    setEditor(value);
   }
-  function createMember(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    void run(async () => {
-      const common = {
-        organization_id: selectedId,
-        username: String(data.get('username')).trim(),
-        role: data.get('role'),
-      };
-      const body =
-        mode === 'existing'
-          ? common
-          : {
-              ...common,
-              request_id: '',
-              email: String(data.get('email')).trim(),
-              display_name: String(data.get('display_name')).trim(),
-              temporary_password: String(data.get('temporary_password')),
-            };
-      if ('request_id' in body) {
-        const key = JSON.stringify({
-          ...body,
-          request_id: undefined,
-          temporary_password: undefined,
-        });
-        if (pendingCreate.current?.key !== key)
-          pendingCreate.current = { key, id: crypto.randomUUID() };
-        body.request_id = pendingCreate.current.id;
-      }
-      await request(
-        `/api/admin/organizations/members/${mode === 'existing' ? 'add' : 'create'}`,
-        session,
-        body,
-      );
-      form.reset();
-      pendingCreate.current = null;
-      await loadMembers(selectedId);
-      setNotice(
-        mode === 'create'
-          ? 'Сотрудник создан. При первом входе он должен сменить временный пароль.'
-          : 'Пользователь добавлен в организацию.',
-      );
-    });
+  function closeEditor() {
+    setEditor(undefined);
+    setError('');
+    pendingCreate.current = null;
   }
-  async function saveMember(member: Member, role: MemberRole, enabled: boolean) {
+  async function saveMember(value: MemberInput) {
+    if (!selected || editor?.kind !== 'member') return;
+    const organization = selected;
+    const member = editor.member;
     await run(async () => {
-      await request('/api/admin/organizations/members/update', session, {
-        organization_id: selectedId,
-        subject: member.subject,
-        expected_revision: member.revision,
-        role,
-        enabled,
-      });
-      await loadMembers(selectedId);
-      setNotice('Доступ сотрудника обновлён.');
+      if (value.mode === 'edit' && member) {
+        await request('/api/admin/organizations/members/update', session, {
+          organization_id: organization.id,
+          subject: member.subject,
+          expected_revision: member.revision,
+          role: value.role,
+          enabled: value.enabled,
+        });
+      } else {
+        const common = {
+          organization_id: organization.id,
+          username: value.username.trim(),
+          role: value.role,
+        };
+        if (value.mode === 'existing')
+          await request('/api/admin/organizations/members/add', session, common);
+        else {
+          const profile = {
+            ...common,
+            display_name: value.display_name.trim(),
+            email: value.email.trim(),
+          };
+          const key = JSON.stringify(profile);
+          if (pendingCreate.current?.key !== key)
+            pendingCreate.current = { key, id: crypto.randomUUID() };
+          await request('/api/admin/organizations/members/create', session, {
+            ...profile,
+            request_id: pendingCreate.current.id,
+            temporary_password: value.temporary_password,
+          });
+        }
+      }
+      closeEditor();
+      await loadMembers(organization);
+      setNotice(member ? 'Изменения сохранены.' : 'Сотрудник добавлен.');
     });
   }
+  async function saveRole(value: Pick<OrganizationRole, 'name' | 'description' | 'permissions'>) {
+    if (!selected || editor?.kind !== 'role') return;
+    const organization = selected;
+    const role = editor.role;
+    await run(async () => {
+      const id = role?.id ?? newRoleId.current;
+      await request('/api/admin/organizations/roles/' + (role ? 'update' : 'create'), session, {
+        organization_id: organization.id,
+        id,
+        ...value,
+        ...(role ? { expected_revision: role.revision } : {}),
+      });
+      closeEditor();
+      await loadRoles(organization);
+      setNotice(role ? 'Роль обновлена.' : 'Роль создана.');
+    });
+  }
+  async function saveOrganization(name: string, enabled: boolean) {
+    if (editor?.kind !== 'organization') return;
+    const previous = editor.organization;
+    await run(async () => {
+      const { organization } = await request<{ organization: Organization }>(
+        '/api/admin/organizations/' + (previous ? 'update' : 'create'),
+        session,
+        previous
+          ? { id: previous.id, name, enabled, expected_revision: previous.revision }
+          : { id: crypto.randomUUID(), name },
+      );
+      closeEditor();
+      await loadOrganizations();
+      setSelected(organization);
+      setNotice(
+        previous
+          ? 'Организация обновлена.'
+          : 'Организация создана. Добавьте первого администратора.',
+      );
+    });
+  }
+  const roleName = (id: string) => roles.find((role) => role.id === id)?.name ?? id;
   return (
     <section className="organizations-workspace">
       <div className="heading">
         <div>
-          <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
-          <h1>Организации и сотрудники</h1>
-          <p>
-            {access.platform_admin
-              ? 'Управление всеми организациями платформы.'
-              : 'Управление сотрудниками ваших организаций.'}
-          </p>
+          {selected && access.platform_admin && (
+            <button
+              className="organization-back"
+              onClick={() => {
+                openOrganization(undefined);
+              }}
+            >
+              ← Все организации
+            </button>
+          )}
+          <p className="eyebrow">{selected ? 'ОРГАНИЗАЦИЯ' : 'АДМИНИСТРИРОВАНИЕ'}</p>
+          <h1>{selected?.name ?? 'Организации'}</h1>
+          {selected ? (
+            <span className={`organization-status ${selected.enabled ? 'active' : ''}`}>
+              {selected.enabled ? 'Активна' : 'Отключена'}
+            </span>
+          ) : (
+            <p>Организации платформы и управление доступом.</p>
+          )}
+        </div>
+        <div className="organization-heading-actions">
+          {!selected && access.platform_admin && (
+            <button className="primary" onClick={() => openEditor({ kind: 'organization' })}>
+              Создать организацию
+            </button>
+          )}
+          {selected && access.platform_admin && (
+            <button onClick={() => openEditor({ kind: 'organization', organization: selected })}>
+              Изменить организацию
+            </button>
+          )}
+          {!access.platform_admin && ownOrganizations.length > 1 && (
+            <label>
+              Рабочая организация
+              <select
+                value={selected?.id ?? ''}
+                onChange={(event) =>
+                  openOrganization(ownOrganizations.find((item) => item.id === event.target.value))
+                }
+              >
+                {ownOrganizations.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
-      {error && (
+      {!editor && error && (
         <div role="alert" className="organization-error">
           {error}
         </div>
@@ -278,181 +332,260 @@ export function Organizations({
           {notice}
         </div>
       )}
-      <div className="organization-columns">
-        <aside className="organization-list">
-          <h2>Организации</h2>
-          {access.platform_admin && (
-            <form onSubmit={createOrganization} className="organization-form">
-              <label>
-                Название новой организации
-                <input
-                  value={organizationName}
-                  maxLength={200}
-                  required
-                  onChange={(event) => setOrganizationName(event.target.value)}
-                />
-              </label>
-              <button disabled={busy || !organizationName.trim()}>Создать организацию</button>
-            </form>
-          )}
-          {organizations
-            .filter(
-              (item) => access.platform_admin || access.managed_organization_ids.includes(item.id),
-            )
-            .map((organization) => (
-              <button
-                key={organization.id}
-                className={`organization-choice ${selectedId === organization.id ? 'selected' : ''}`}
-                disabled={busy}
-                onClick={() => setSelectedId(organization.id)}
-              >
-                {organization.name}
-                <small>{organization.enabled ? 'Активна' : 'Отключена'}</small>
+      {!selected ? (
+        access.platform_admin ? (
+          <div className="organization-registry">
+            <table>
+              <thead>
+                <tr>
+                  <th>Организация</th>
+                  <th>Статус</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {organizations.map((organization) => (
+                  <tr
+                    key={organization.id}
+                    className="organization-row"
+                    onClick={() => {
+                      openOrganization(organization);
+                    }}
+                  >
+                    <td>
+                      <button className="organization-open">{organization.name}</button>
+                    </td>
+                    <td>
+                      <span
+                        className={`organization-status ${organization.enabled ? 'active' : ''}`}
+                      >
+                        {organization.enabled ? 'Активна' : 'Отключена'}
+                      </span>
+                    </td>
+                    <td aria-hidden="true" className="organization-row-arrow">
+                      →
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!organizations.length && <p>Организаций пока нет.</p>}
+            {hasMore && (
+              <button disabled={busy} onClick={() => void run(() => loadOrganizations(true))}>
+                Показать ещё
               </button>
-            ))}
-          {canLoadOrganizations && (
-            <button disabled={busy} onClick={() => void run(() => loadOrganizations(true))}>
-              Показать ещё
+            )}
+          </div>
+        ) : (
+          <p>Нет организаций, в которых вам разрешено управлять сотрудниками.</p>
+        )
+      ) : (
+        <>
+          <div className="organization-section-tabs" role="tablist" aria-label="Организация">
+            <button role="tab" aria-selected={tab === 'members'} onClick={() => setTab('members')}>
+              Сотрудники
             </button>
-          )}
-        </aside>
-        <section className="organization-members">
-          {!selected ? (
-            <p>Выберите организацию, чтобы управлять сотрудниками.</p>
-          ) : (
-            <>
-              <div className="organization-title">
-                <h2>{selected.name}</h2>
-                <button disabled={busy} onClick={() => void run(() => loadMembers(selectedId))}>
-                  Обновить сотрудников
-                </button>
-              </div>
-              {access.platform_admin && (
+            <button role="tab" aria-selected={tab === 'roles'} onClick={() => setTab('roles')}>
+              Роли и доступы
+            </button>
+          </div>
+          <section className="organization-content" role="tabpanel">
+            <div className="organization-content-heading">
+              <h2>{tab === 'members' ? 'Сотрудники' : 'Роли и доступы'}</h2>
+              <div className="actions">
                 <button
-                  disabled={busy}
+                  disabled={busy || loading}
                   onClick={() =>
-                    void run(async () => {
-                      await request('/api/admin/organizations/update', session, {
-                        id: selected.id,
-                        name: selected.name,
-                        enabled: !selected.enabled,
-                        expected_revision: selected.revision,
-                      });
-                      await loadOrganizations();
-                    })
+                    void run(() =>
+                      tab === 'members' ? loadMembers(selected) : loadRoles(selected),
+                    )
                   }
                 >
-                  {selected.enabled ? 'Отключить доступ к организации' : 'Включить организацию'}
+                  Обновить
                 </button>
-              )}
-              <div className="members-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Сотрудник</th>
-                      <th>Роль</th>
-                      <th>Статус</th>
-                      <th>Действие</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {members.map((member) => (
-                      <MemberRow
-                        key={`${selectedId}:${member.subject}:${member.revision}`}
-                        member={member}
-                        busy={busy}
-                        save={saveMember}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {!members.length && (
-                <p>Сотрудников пока нет. Начните с администратора организации.</p>
-              )}
-              {canLoadMembers && (
                 <button
-                  disabled={busy}
-                  onClick={() => void run(() => loadMembers(selectedId, true))}
+                  className="primary"
+                  disabled={busy || loading}
+                  onClick={() => openEditor({ kind: tab === 'members' ? 'member' : 'role' })}
                 >
-                  Показать ещё сотрудников
-                </button>
-              )}
-              <h3>Добавить сотрудника</h3>
-              <div className="organization-modes">
-                <button
-                  aria-pressed={mode === 'create'}
-                  onClick={() => {
-                    setMode('create');
-                    pendingCreate.current = null;
-                  }}
-                >
-                  Новая учётная запись
-                </button>
-                <button aria-pressed={mode === 'existing'} onClick={() => setMode('existing')}>
-                  Существующий пользователь
+                  {tab === 'members' ? 'Добавить сотрудника' : 'Создать роль'}
                 </button>
               </div>
-              <form
-                key={`${mode}:${selectedId}`}
-                className="organization-form member-form"
-                onSubmit={createMember}
-              >
-                <label>
-                  Логин
-                  <input name="username" required maxLength={100} autoComplete="off" />
-                </label>
-                {mode === 'create' && (
-                  <>
-                    <label>
-                      Имя сотрудника
-                      <input name="display_name" required maxLength={200} />
-                    </label>
-                    <label>
-                      Email
-                      <input
-                        name="email"
-                        type="email"
-                        required
-                        maxLength={254}
-                        autoComplete="off"
-                      />
-                    </label>
-                    <label>
-                      Временный пароль · минимум 12 символов
-                      <input
-                        name="temporary_password"
-                        type="password"
-                        required
-                        minLength={12}
-                        maxLength={256}
-                        autoComplete="new-password"
-                      />
-                    </label>
-                  </>
+            </div>
+            {loading ? (
+              <p role="status">Загрузка…</p>
+            ) : tab === 'members' ? (
+              <>
+                <div className="members-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Сотрудник</th>
+                        <th>Роль</th>
+                        <th>Доступ</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {members.map((member) => (
+                        <tr
+                          key={member.subject}
+                          className="organization-row"
+                          onClick={() => openEditor({ kind: 'member', member })}
+                        >
+                          <td>
+                            <button className="organization-open">{member.display_name}</button>
+                            <small>
+                              {member.username} · {member.email}
+                            </small>
+                          </td>
+                          <td>{roleName(member.role)}</td>
+                          <td>
+                            <span
+                              className={`organization-status ${member.enabled ? 'active' : ''}`}
+                            >
+                              {member.enabled ? 'Разрешён' : 'Отключён'}
+                            </span>
+                          </td>
+                          <td>
+                            <button>Изменить</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!members.length && (
+                  <div className="organization-empty">
+                    <h3>Добавьте первого сотрудника</h3>
+                    <p>Начните с администратора, который будет управлять командой.</p>
+                  </div>
                 )}
-                <label>
-                  Роль
-                  <select name="role" defaultValue="operator">
-                    <RoleOptions />
-                  </select>
-                </label>
-                <button disabled={busy}>
-                  {busy
-                    ? 'Сохраняем…'
-                    : mode === 'create'
-                      ? 'Создать сотрудника'
-                      : 'Добавить в организацию'}
-                </button>
-              </form>
-              <p className="organization-help">
-                Отключение сотрудника запрещает доступ только к этой организации. Учётная запись и
-                доступ к другим организациям сохраняются.
-              </p>
-            </>
-          )}
-        </section>
-      </div>
+                {moreMembers && (
+                  <button
+                    disabled={busy}
+                    onClick={() => void run(() => loadMembers(selected, true))}
+                  >
+                    Показать ещё
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="organization-role-list">
+                {roles.map((role) => (
+                  <button
+                    key={role.id}
+                    className="organization-role-card"
+                    onClick={() => openEditor({ kind: 'role', role })}
+                  >
+                    <strong>{role.name}</strong>
+                    <span>{role.description || 'Без описания'}</span>
+                    <small>
+                      Разрешений: {role.permissions.length}
+                      <span aria-hidden="true">Изменить →</span>
+                    </small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+      {editor?.kind === 'member' && (
+        <MemberEditor
+          key={editor.member?.subject ?? 'new-member'}
+          member={editor.member}
+          roles={roles}
+          busy={busy}
+          error={error}
+          save={saveMember}
+          close={closeEditor}
+        />
+      )}
+      {editor?.kind === 'role' && (
+        <RoleEditor
+          key={editor.role?.id ?? 'new-role'}
+          role={editor.role}
+          permissions={permissions}
+          busy={busy}
+          error={error}
+          save={saveRole}
+          close={closeEditor}
+        />
+      )}
+      {editor?.kind === 'organization' && (
+        <OrganizationEditor
+          organization={editor.organization}
+          busy={busy}
+          error={error}
+          save={saveOrganization}
+          close={closeEditor}
+        />
+      )}
     </section>
+  );
+}
+
+function OrganizationEditor({
+  organization,
+  busy,
+  error,
+  save,
+  close,
+}: {
+  organization?: Organization;
+  busy: boolean;
+  error: string;
+  save: (name: string, enabled: boolean) => Promise<void>;
+  close: () => void;
+}) {
+  const [name, setName] = useState(organization?.name ?? '');
+  const [enabled, setEnabled] = useState(organization?.enabled ?? true);
+  const dirty = name !== (organization?.name ?? '') || enabled !== (organization?.enabled ?? true);
+  return (
+    <EditorPanel
+      title={organization ? 'Изменить организацию' : 'Новая организация'}
+      dirty={dirty}
+      busy={busy}
+      close={close}
+    >
+      <form
+        className="organization-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save(name.trim(), enabled);
+        }}
+      >
+        {error && (
+          <div role="alert" className="organization-error">
+            {error}
+          </div>
+        )}
+        <label>
+          Название организации
+          <input
+            value={name}
+            required
+            maxLength={200}
+            disabled={busy}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+        {organization && (
+          <label className="member-access">
+            <input
+              type="checkbox"
+              checked={enabled}
+              disabled={busy}
+              onChange={(event) => setEnabled(event.target.checked)}
+            />
+            Организация активна
+          </label>
+        )}
+        <button className="primary" disabled={busy || !name.trim() || !dirty}>
+          {busy ? 'Сохраняем…' : organization ? 'Сохранить изменения' : 'Создать организацию'}
+        </button>
+      </form>
+    </EditorPanel>
   );
 }

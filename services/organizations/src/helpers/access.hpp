@@ -1,5 +1,6 @@
 #pragma once
 #include <helpers/errors.hpp>
+#include <helpers/permissions.hpp>
 #include <optional>
 #include <organizations/sql_queries.hpp>
 #include <platform/auth/identity.hpp>
@@ -14,7 +15,7 @@ namespace pg = userver::storages::postgres;
 
 struct AccessRow {
     std::string Organization;
-    std::string Role;
+    std::vector<std::string> Permissions;
 };
 
 struct ProvisioningRow {
@@ -40,24 +41,20 @@ inline void RequireAdministrator(pg::Transaction& transaction, const std::string
         throw ApiError{404, "organization_not_found", "Организация не найдена"};
     if (IsPlatformAdmin(identity))
         return;
-    const auto membership =
-        transaction.Execute(sql::kGetMembership, organization, identity.Issuer, identity.Subject);
-    if (membership.IsEmpty())
-        throw ApiError{403, "organization_access_denied", "Нет доступа к организации"};
-    const auto member = membership.AsSingleRow<pgtypes::MemberV1>();
-    if (!member.Enabled || member.Role != "administrator")
-        throw ApiError{
-            403, "organization_admin_required", "Нужны права администратора организации"};
+    const auto membership = transaction.Execute(
+        sql::kGetAdministratorPermissions, organization, identity.Issuer, identity.Subject);
+    if (membership.IsEmpty() ||
+        !ManagesOrganization(membership.AsSingleRow<std::vector<std::string>>()))
+        throw ApiError{403, "organization_admin_required",
+            "Нужны права управления сотрудниками и ролями организации"};
 }
 
-inline std::set<std::string> Permissions(const std::string& role) {
-    std::set<std::string> result{"shipments.read", "transportations.read", "counterparties.read"};
-    if (role == "operator" || role == "administrator")
-        result.insert({"shipments.write", "transportations.write", "counterparties.write"});
-    if (role == "administrator")
-        result.insert("organizations.manage");
-    if (role != "operator" && role != "administrator" && role != "viewer")
-        throw ApiError{403, "invalid_role", "Неизвестная роль сотрудника"};
-    return result;
+inline pgtypes::OrganizationRoleV1 RequireRole(
+    pg::Transaction& transaction, const std::string& organization, const std::string& role) {
+    const auto rows = transaction.Execute(sql::kGetRole, organization, role);
+    if (rows.IsEmpty())
+        throw ApiError{400, "invalid_role", "Выберите существующую роль организации"};
+    return rows.AsSingleRow<pgtypes::OrganizationRoleV1>();
 }
+
 }  // namespace organizations::helpers

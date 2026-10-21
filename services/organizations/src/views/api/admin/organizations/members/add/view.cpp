@@ -15,6 +15,7 @@ Response View::Handle(
             auto transaction =
                 deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
             RequireAdministrator(transaction, request.body.organization_id, identity);
+            RequireRole(transaction, request.body.organization_id, request.body.role);
             transaction.Commit();
         }
         // Сетевое обращение выполняется без открытой транзакции и блокировок БД.
@@ -22,11 +23,10 @@ Response View::Handle(
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.body.organization_id, identity);
-        const auto member =
-            Convert(transaction
-                        .Execute(sql::kAddMember, request.body.organization_id, identity.Issuer,
-                            Convert(user, models::EnumValue(request.body.role)))
-                        .AsSingleRow<pgtypes::MemberV1>());
+        const auto member = Convert(transaction
+                                        .Execute(sql::kAddMember, request.body.organization_id,
+                                            identity.Issuer, Convert(user, request.body.role))
+                                        .AsSingleRow<pgtypes::MemberV1>());
         WriteAudit(transaction, request.body.organization_id, identity, "member.added", member);
         transaction.Commit();
         return Response201{.member = member};

@@ -21,9 +21,12 @@ Response View::Handle(
         const auto previous = rows.AsSingleRow<pgtypes::MemberV1>();
         if (previous.Revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict", "Доступ сотрудника уже изменён"};
-        const auto role = models::EnumValue(request.body.role);
-        if (previous.Enabled && previous.Role == "administrator" &&
-            (!request.body.enabled || role != "administrator") &&
+        const auto role = request.body.role;
+        const auto previous_role =
+            RequireRole(transaction, request.body.organization_id, previous.Role);
+        const auto next_role = RequireRole(transaction, request.body.organization_id, role);
+        if (previous.Enabled && ManagesOrganization(previous_role.Permissions) &&
+            (!request.body.enabled || !ManagesOrganization(next_role.Permissions)) &&
             transaction.Execute(sql::kCountAdministrators, request.body.organization_id)
                     .AsSingleRow<std::int64_t>() <= 1)
             throw ApiError{409, "last_administrator",

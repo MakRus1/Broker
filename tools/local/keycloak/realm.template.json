@@ -269,10 +269,6 @@
         }
       ],
       "clientRoles": {
-        "configs-admin": [
-          "configs.read",
-          "configs.write"
-        ],
         "broker-logistics": [
           "shipments.read",
           "transportations.read",

@@ -8,6 +8,9 @@ paths:
 - /api/admin/organizations/members/create
 - /api/admin/organizations/members/list
 - /api/admin/organizations/members/update
+- /api/admin/organizations/roles/create
+- /api/admin/organizations/roles/list
+- /api/admin/organizations/roles/update
 - /api/admin/organizations/update
 - /api/organizations/access
 - /api/organizations/me

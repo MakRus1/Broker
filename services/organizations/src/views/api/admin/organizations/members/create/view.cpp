@@ -14,7 +14,7 @@ Response View::Handle(
         const auto display_name = userver::utils::text::Trim(request.body.display_name);
         if (display_name.empty() || request.body.email.find('@') == std::string::npos)
             throw ApiError{400, "invalid_profile", "Укажите имя и корректный email"};
-        const auto role = models::EnumValue(request.body.role);
+        const auto role = request.body.role;
         userver::formats::json::ValueBuilder intent;
         intent["username"] = request.body.username;
         intent["email"] = request.body.email;
@@ -25,6 +25,7 @@ Response View::Handle(
             auto transaction =
                 deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
             RequireAdministrator(transaction, request.body.organization_id, identity);
+            RequireRole(transaction, request.body.organization_id, request.body.role);
             transaction.Execute(sql::kSaveProvisioning, request.body.request_id,
                 request.body.organization_id, identity.ActorId(), payload);
             const auto [organization, actor, saved, subject] =

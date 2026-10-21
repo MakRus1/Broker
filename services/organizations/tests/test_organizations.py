@@ -194,3 +194,121 @@ async def test_provider_outage_can_be_retried_with_same_request(api, identity_pr
     await api.call(ADMIN + '/members/create', body, user='org-admin', expected=503)
     identity_provider['unavailable'] = False
     await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201)
+
+
+async def test_custom_role_updates_permissions_for_all_assigned_members(api, identity_provider):
+    body = {
+        'organization_id': ORGANIZATION,
+        'id': 'custom-logistician',
+        'name': 'Логист',
+        'description': 'Без изменения контрагентов',
+        'permissions': ['shipments.read', 'shipments.write', 'counterparties.read'],
+    }
+    role = (await api.call(ADMIN + '/roles/create', body, user='org-admin', expected=201))['role']
+    assert role['permissions'] == body['permissions']
+    identity_provider['users']['employee'] = {
+        'id': 'employee',
+        'username': 'employee',
+        'firstName': 'Сотрудник',
+        'email': 'employee@example.test',
+        'enabled': True,
+    }
+    await api.call(
+        ADMIN + '/members/add',
+        {'organization_id': ORGANIZATION, 'username': 'employee', 'role': 'custom-logistician'},
+        user='org-admin',
+        expected=201,
+    )
+    await api.call('/api/organizations/access', {'permission': 'shipments.write'}, user='employee')
+    await api.call(
+        '/api/organizations/access',
+        {'permission': 'counterparties.write'},
+        user='employee',
+        expected=403,
+    )
+    await api.call(
+        ADMIN + '/roles/update',
+        {**body, 'permissions': ['shipments.read'], 'expected_revision': role['revision']},
+        user='org-admin',
+    )
+    await api.call(
+        '/api/organizations/access',
+        {'permission': 'shipments.write'},
+        user='employee',
+        expected=403,
+    )
+    await api.call('/api/organizations/access', {'permission': 'shipments.read'}, user='employee')
+
+
+@pytest.mark.parametrize(
+    'permission',
+    [
+        'configs.read',
+        'configs.write',
+        'configs.approve',
+        'platform.admin',
+        'transportations.create',
+    ],
+)
+async def test_organization_roles_cannot_grant_platform_permissions(api, permission):
+    await api.call(
+        ADMIN + '/roles/create',
+        {
+            'organization_id': ORGANIZATION,
+            'id': 'escalation',
+            'name': 'Запрещено',
+            'description': '',
+            'permissions': [permission],
+        },
+        user='org-admin',
+        expected=400,
+    )
+
+
+async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
+    await api.call(
+        ADMIN + '/roles/list',
+        {'organization_id': OTHER_ORGANIZATION},
+        user='org-admin',
+        expected=403,
+    )
+    await api.call(
+        ADMIN + '/roles/create',
+        {
+            'organization_id': OTHER_ORGANIZATION,
+            'id': 'foreign',
+            'name': 'Чужая роль',
+            'description': '',
+            'permissions': ['shipments.read'],
+        },
+        user='org-admin',
+        expected=403,
+    )
+    await api.call(
+        ADMIN + '/roles/update',
+        {
+            'organization_id': ORGANIZATION,
+            'id': 'administrator',
+            'name': 'Без управления',
+            'description': '',
+            'permissions': ['shipments.read'],
+            'expected_revision': 1,
+        },
+        user='org-admin',
+        expected=409,
+    )
+
+
+async def test_write_permission_requires_read(api):
+    await api.call(
+        ADMIN + '/roles/create',
+        {
+            'organization_id': ORGANIZATION,
+            'id': 'missing-read',
+            'name': 'Без чтения',
+            'description': '',
+            'permissions': ['shipments.write'],
+        },
+        user='org-admin',
+        expected=400,
+    )

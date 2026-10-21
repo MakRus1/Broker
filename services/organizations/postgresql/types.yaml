@@ -26,3 +26,15 @@ types:
       type: boolean
     - name: revision
       type: bigint
+  public.organization_role_v1:
+    fields:
+    - name: id
+      type: text
+    - name: name
+      type: text
+    - name: description
+      type: text
+    - name: permissions
+      type: text[]
+    - name: revision
+      type: bigint

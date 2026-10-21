@@ -88,6 +88,9 @@ def memberships(pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('INSERT INTO organizations (id, name) VALUES (%s,%s),(%s,%s)',
                        (ORGANIZATION, 'Первая организация', OTHER_ORGANIZATION, 'Другая организация'))
+        default_roles = (Path(__file__).resolve().parents[1] / 'postgresql/queries/create_default_roles.sql').read_text().replace('$1::UUID', '%s::UUID')
+        for organization in [ORGANIZATION, OTHER_ORGANIZATION]:
+            cursor.execute(default_roles, (organization, organization, organization))
         for organization, subject, role in [
             (ORGANIZATION, 'org-admin', 'administrator'),
             (ORGANIZATION, 'viewer', 'viewer'),

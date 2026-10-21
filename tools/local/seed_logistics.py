@@ -6,6 +6,9 @@ from pathlib import Path
 import subprocess
 import uuid
 
+default_roles = (Path('/workspaces/broker/services/organizations/postgresql/queries/create_default_roles.sql')
+                 .read_text().replace('$1::UUID', "'11111111-1111-4111-8111-111111111111'::UUID").rstrip().removesuffix(';') + ' ON CONFLICT DO NOTHING;')
+
 users = json.loads(Path('/cache/logistics-users.json').read_text())
 for index, subject in enumerate(users[:2]):
     uuid.UUID(subject)
@@ -19,6 +22,7 @@ for index, subject in enumerate(users[:2]):
         input="""INSERT INTO organizations (id, name)
             VALUES ('11111111-1111-4111-8111-111111111111', 'Демонстрационная организация')
             ON CONFLICT DO NOTHING;
+        """ + default_roles + """
         INSERT INTO memberships
             (organization_id, issuer, subject, username, display_name, email, role)
         VALUES ('11111111-1111-4111-8111-111111111111',

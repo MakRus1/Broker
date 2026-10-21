@@ -12,7 +12,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         // Позиции и счётчики резервов читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         if (transaction.Execute(sql::kGetShipment, organization, request.body.shipment_id)
                 .IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};

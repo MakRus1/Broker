@@ -9,14 +9,14 @@ export function LoginScreen({ workspace }: { workspace: Workspace }) {
       </div>
       <p className="eyebrow">УПРАВЛЕНИЕ ПЛАТФОРМОЙ</p>
       <h1>
-        Конфигурация
+        Платформа
         <br />
         под контролем.
       </h1>
-      <p>Редактируйте значения, проверяйте изменения и публикуйте их после согласования.</p>
+      <p>Управляйте организациями, сотрудниками и конфигурацией Broker.</p>
       {loginRequired ? (
         <a className="primary link" href="/auth/login">
-          Войти через Keycloak →
+          Войти →
         </a>
       ) : (
         <p>Подключаемся…</p>

@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import { request } from './api';
+import { Organizations, type OrganizationAccess } from './components/Organizations';
 import { useWorkspace } from './hooks/useWorkspace';
 import { LoginScreen } from './components/LoginScreen';
 import { Catalog } from './components/Catalog';
@@ -6,6 +9,28 @@ import { Notifications } from './components/Notifications';
 
 export function App() {
   const workspace = useWorkspace();
+  const [section, setSection] = useState<'configs' | 'organizations'>('configs');
+  const [access, setAccess] = useState<OrganizationAccess>();
+  const [accessError, setAccessError] = useState('');
+  useEffect(() => {
+    if (!workspace.session) return;
+    let active = true;
+    request<OrganizationAccess>('/api/organizations/me')
+      .then((value) => {
+        if (!active) return;
+        setAccess(value);
+        if (!workspace.session?.permissions.includes('configs.read')) setSection('organizations');
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          setAccessError(
+            reason instanceof Error ? reason.message : 'Не удалось загрузить права управления',
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspace.session]);
   const { session, selected, catalog, busy, run, logout } = workspace;
   if (!session) return <LoginScreen workspace={workspace} />;
   return (
@@ -21,17 +46,43 @@ export function App() {
           </button>
         </div>
       </header>
-      <div className="heading">
-        <div>
-          <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
-          <h1>
-            Конфиги <span className="count">{catalog.length}</span>
-          </h1>
-          <p>Изменения под контролем. Значения, согласование и история — в одном месте.</p>
-        </div>
-      </div>
-      <Catalog workspace={workspace} />
-      {selected && <ConfigDrawer key={selected} workspace={workspace} />}
+      <nav className="admin-navigation" aria-label="Разделы администрирования">
+        {session.permissions.includes('configs.read') && (
+          <button
+            aria-current={section === 'configs' ? 'page' : undefined}
+            onClick={() => setSection('configs')}
+          >
+            Конфиги
+          </button>
+        )}
+        <button
+          aria-current={section === 'organizations' ? 'page' : undefined}
+          onClick={() => setSection('organizations')}
+        >
+          Организации и сотрудники
+        </button>
+      </nav>
+      {section === 'organizations' ? (
+        access ? (
+          <Organizations session={session} access={access} />
+        ) : (
+          <p role={accessError ? 'alert' : 'status'}>{accessError || 'Загрузка прав…'}</p>
+        )
+      ) : (
+        <>
+          <div className="heading">
+            <div>
+              <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
+              <h1>
+                Конфиги <span className="count">{catalog.length}</span>
+              </h1>
+              <p>Изменения под контролем. Значения, согласование и история — в одном месте.</p>
+            </div>
+          </div>
+          <Catalog workspace={workspace} />
+          {selected && <ConfigDrawer key={selected} workspace={workspace} />}
+        </>
+      )}
       <Notifications workspace={workspace} />
     </main>
   );

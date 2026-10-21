@@ -15,7 +15,7 @@ models::CreationOperation RequestTransportations(
     using namespace ::shipments::helpers;
 
     auto transaction = cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = ResolveOrganization(transaction, identity);
+    const auto organization = platform::auth::GetOrganization(identity);
     const auto replay = FindReplay<models::CreationOperation>(
         transaction, organization, "create_operation", request);
     if (replay.has_value()) {

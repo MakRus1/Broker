@@ -96,6 +96,7 @@ Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) c
         throw std::invalid_argument("Invalid lifetime");
     Identity identity{impl_->Config.Issuer, subject, {}, subject};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
+    identity.ClientId = payload["azp"].As<std::string>("");
     identity.DisplayName = payload["preferred_username"].As<std::string>(subject);
     const auto roles = payload["resource_access"][impl_->Config.RolesClient]["roles"];
     if (!roles.IsMissing())

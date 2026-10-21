@@ -10,11 +10,6 @@ class Unavailable final : public std::runtime_error {
     Unavailable() : std::runtime_error("Authentication keys unavailable") {}
 };
 
-class Forbidden final : public std::runtime_error {
-  public:
-    Forbidden() : std::runtime_error("Permission denied") {}
-};
-
 class Component final : public userver::server::middlewares::HttpMiddlewareFactoryBase {
   public:
     static constexpr std::string_view kName = "platform-auth";
@@ -26,7 +21,8 @@ class Component final : public userver::server::middlewares::HttpMiddlewareFacto
     Identity VerifyLogin(const std::string& access, const std::string& id_token,
         const std::string& client, const std::string& nonce) const;
     bool IsProtected(std::string_view path) const;
-    Identity Authorize(const std::string& path, const std::string& authorization) const;
+    Identity Authorize(const std::string& path, const std::string& authorization,
+        const std::string& organization = {}) const;
 
   private:
     std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Create(

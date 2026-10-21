@@ -1,0 +1,573 @@
+openapi: 3.0.3
+info:
+  title: Организации и сотрудники
+  version: '1'
+paths:
+  /api/organizations/access:
+    post:
+      summary: Проверить доступ к организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - permission
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                permission:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/OrganizationAccess
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/organizations/me:
+    get:
+      summary: Доступные организации и права управления
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - platform_admin
+                - organizations
+                - managed_organization_ids
+                properties:
+                  platform_admin:
+                    type: boolean
+                  organizations:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/organizations.yaml#/Organization
+                  managed_organization_ids:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/list:
+    post:
+      summary: Получить организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: []
+              properties:
+                after:
+                  type: string
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/organizations.yaml#/Organization
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/create:
+    post:
+      summary: Создать организацию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/organizations.yaml#/CreateOrganizationRequest
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - organization
+                properties:
+                  organization:
+                    $ref: ../components/schemas/organizations.yaml#/Organization
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/update:
+    post:
+      summary: Изменить организацию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/organizations.yaml#/UpdateOrganizationRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - organization
+                properties:
+                  organization:
+                    $ref: ../components/schemas/organizations.yaml#/Organization
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/members/list:
+    post:
+      summary: Получить сотрудников организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - organization_id
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                after:
+                  type: string
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/organizations.yaml#/Member
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/members/create:
+    post:
+      summary: Создать учётную запись и добавить сотрудника
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/organizations.yaml#/CreateMemberRequest
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - member
+                properties:
+                  member:
+                    $ref: ../components/schemas/organizations.yaml#/Member
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/members/add:
+    post:
+      summary: Добавить существующего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/organizations.yaml#/AddMemberRequest
+      responses:
+        '201':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - member
+                properties:
+                  member:
+                    $ref: ../components/schemas/organizations.yaml#/Member
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/members/update:
+    post:
+      summary: Изменить доступ сотрудника в организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/organizations.yaml#/UpdateMemberRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - member
+                properties:
+                  member:
+                    $ref: ../components/schemas/organizations.yaml#/Member
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

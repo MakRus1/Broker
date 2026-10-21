@@ -12,7 +12,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto current =
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (current.IsEmpty())

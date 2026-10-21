@@ -118,6 +118,9 @@ class ServiceAuthPolicyTest(unittest.TestCase):
             None,
             {},
             {**valid, 'enabled': True},
+            {**valid, 'organization-access': 'yes'},
+            {**valid, 'service-clients': {'unknown': 'worker'}},
+            {**valid, 'service-clients': {'example.read': ''}},
             {**valid, 'audience': ''},
             {**valid, 'roles-client': 10},
             {**valid, 'protected-prefix': '/api'},
@@ -129,6 +132,13 @@ class ServiceAuthPolicyTest(unittest.TestCase):
         for value in invalid:
             with self.subTest(value=value), self.assertRaises(ValueError):
                 policy({'auth': value})
+
+    def test_central_access_and_service_identity_are_declared_in_manifest(self):
+        from auth import policy
+        service = yaml.safe_load((ROOT / 'services/transportations/service.yaml').read_text())
+        result = policy(service)
+        self.assertTrue(result['organization-access'])
+        self.assertEqual(result['service-clients'], {'transportations.create': 'shipments-dispatcher'})
 
     def test_existing_bearer_services_are_managed(self):
         from auth import validate

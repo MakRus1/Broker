@@ -149,6 +149,8 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-organizations:
+            base-url: $client-organizations-base-url
         client-shipments:
             base-url: $client-shipments-base-url
         client-transportations:

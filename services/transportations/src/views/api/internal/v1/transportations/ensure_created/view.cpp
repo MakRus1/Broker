@@ -10,8 +10,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization =
-            ResolveOrganization(transaction, identity, request.body.organization_id);
+        const auto organization = request.body.organization_id;
         transaction.Execute(sql::kLockCommand, organization, request.body.operation_id);
         const auto rows =
             transaction.Execute(sql::kFindCommand, organization, request.body.operation_id);

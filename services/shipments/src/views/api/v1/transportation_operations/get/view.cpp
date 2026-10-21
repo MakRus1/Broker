@@ -9,7 +9,7 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
-        const auto organization = ResolveOrganization(*deps.pg_cluster, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetOperation,
             organization, request.body.operation_id);
         if (rows.IsEmpty())

@@ -622,3 +622,146 @@ body:has(dialog[open]) .workspace > .notifications {
 .discard-confirmation .actions {
   margin-bottom: 0;
 }
+
+.admin-navigation {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+}
+.admin-navigation button[aria-current='page'] {
+  background: #eaf0ff;
+  border-color: #8ba8f2;
+  color: #2051b6;
+}
+.organization-columns {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.organization-list,
+.organization-members {
+  padding: 24px;
+  background: white;
+  border: 1px solid #dfe5ee;
+  border-radius: 16px;
+  min-width: 0;
+}
+.organization-list h2,
+.organization-members h2 {
+  margin: 0 0 20px;
+}
+.organization-form {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+.organization-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+.organization-form input,
+.organization-form select,
+.members-table select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #cdd7e6;
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+}
+.organization-choice {
+  display: block;
+  text-align: left;
+  width: 100%;
+  margin-top: 10px;
+}
+.organization-choice.selected {
+  border-color: #3564df;
+  background: #edf2ff;
+}
+.organization-choice small,
+.members-table small {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+.organization-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.organization-title button {
+  flex-shrink: 0;
+}
+.organization-error,
+.organization-notice {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+}
+.organization-error {
+  background: #fff0f0;
+  color: #9c2020;
+}
+.organization-notice {
+  background: #edf8ef;
+  color: #24643a;
+}
+.members-table {
+  overflow-x: auto;
+  margin: 24px 0;
+}
+.members-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.members-table th,
+.members-table td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #e1e7ef;
+}
+.members-table th {
+  color: #64748b;
+  font-size: 13px;
+}
+.membership-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.membership-status input {
+  width: auto;
+}
+.organization-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.organization-modes button[aria-pressed='true'] {
+  border-color: #3564df;
+  color: #2051b6;
+}
+.member-form {
+  max-width: 520px;
+}
+.organization-help {
+  color: #64748b;
+  line-height: 1.6;
+}
+@media (max-width: 900px) {
+  .organization-columns {
+    grid-template-columns: 1fr;
+  }
+  .organization-title {
+    flex-direction: column;
+  }
+}

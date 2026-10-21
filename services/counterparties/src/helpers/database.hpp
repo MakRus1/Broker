@@ -12,16 +12,6 @@ namespace counterparties {
 namespace helpers {
 namespace pg = userver::storages::postgres;
 
-inline std::string ResolveOrganization(pg::Cluster& cluster,
-    const platform::auth::Identity& identity,
-    const std::optional<std::string>& requested_organization = std::nullopt) {
-    const auto rows = cluster.Execute(pg::ClusterHostType::kMaster, sql::kResolveOrganization,
-        identity.Issuer, identity.Subject, requested_organization);
-    if (rows.Size() != 1)
-        throw ApiError{403, "organization_access_denied", "Не определен доступ к клиенту"};
-    return rows.AsSingleRow<std::string>();
-}
-
 template <typename Request, typename Result>
 void WriteAudit(pg::Transaction& transaction, const std::string& organization,
     const platform::auth::Identity& identity, const std::string& action, const std::string& id,

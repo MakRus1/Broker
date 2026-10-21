@@ -12,7 +12,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         auto result =
             ReadTransportation(transaction, organization, request.body.transportation_id, true);
         CheckRevision(result.revision, request.body.expected_revision);

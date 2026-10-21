@@ -71,6 +71,7 @@ components_manager:
                 /api/v1/counterparties/list: counterparties.read
                 /api/v1/counterparties/set-archived: counterparties.write
                 /api/v1/counterparties/update: counterparties.write
+            organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
         # SERVICE_CONFIG_END

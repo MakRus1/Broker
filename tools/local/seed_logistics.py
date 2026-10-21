@@ -7,31 +7,25 @@ import subprocess
 import uuid
 
 users = json.loads(Path('/cache/logistics-users.json').read_text())
-for name in ('shipments', 'transportations', 'counterparties'):
-    for subject in users:
-        uuid.UUID(subject)
-        subprocess.run(
-            [
-                'psql',
-                '-h',
-                'postgres-' + name,
-                '-U',
-                'testsuite',
-                '-d',
-                name + '_db_1',
-                '-v',
-                'ON_ERROR_STOP=1',
-                '-v',
-                'subject=' + subject,
-            ],
-            env={**os.environ, 'PGPASSWORD': 'testsuite'},
-            text=True,
-            check=True,
-            input="""INSERT INTO organization_memberships (issuer, subject, organization_id)
-                 VALUES ('http://localhost:18888/realms/broker', :'subject',
-                         '11111111-1111-4111-8111-111111111111') ON CONFLICT DO NOTHING;""",
-        )
-print('Доступ локальных сотрудников к демонстрационному organization готов')
+for index, subject in enumerate(users[:2]):
+    uuid.UUID(subject)
+    username = ('author', 'reviewer')[index]
+    role = ('administrator', 'viewer')[index]
+    subprocess.run(
+        ['psql', '-h', 'postgres-organizations', '-U', 'testsuite', '-d', 'organizations_db_1',
+         '-v', 'ON_ERROR_STOP=1', '-v', 'subject=' + subject,
+         '-v', 'username=' + username, '-v', 'role=' + role],
+        env={**os.environ, 'PGPASSWORD': 'testsuite'}, text=True, check=True,
+        input="""INSERT INTO organizations (id, name)
+            VALUES ('11111111-1111-4111-8111-111111111111', 'Демонстрационная организация')
+            ON CONFLICT DO NOTHING;
+        INSERT INTO memberships
+            (organization_id, issuer, subject, username, display_name, email, role)
+        VALUES ('11111111-1111-4111-8111-111111111111',
+            'http://localhost:18888/realms/broker', :'subject', :'username', :'username',
+            :'username' || '@localhost.test', :'role') ON CONFLICT DO NOTHING;""",
+    )
+print('Локальные сотрудники привязаны к демонстрационной организации')
 
 # Демонстрационный клиент для ранее созданных локальных поставок.
 subprocess.run(

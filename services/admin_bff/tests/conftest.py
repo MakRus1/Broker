@@ -30,6 +30,7 @@ def configure_admin(mockserver_info, service_source_dir):
         config_vars['admin-token-url'] = mockserver_info.url('/auth/token')
         config_vars['admin-revoke-url'] = mockserver_info.url('/auth/revoke')
         config_vars['admin-assets-dir'] = str(service_source_dir / 'tests/static')
+        config_vars['client-organizations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-config_admin-base-url'] = mockserver_info.base_url.rstrip('/')
     return patch
 

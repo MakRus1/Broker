@@ -10,7 +10,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto rows =
             transaction
                 .Execute(sql::kListTransportations, organization, request.body.after,

@@ -55,7 +55,7 @@ export function useWorkspace() {
     request<Session>('/api/session')
       .then(async (value) => {
         setSession(value);
-        await refreshCatalog();
+        if (value.permissions.includes('configs.read')) await refreshCatalog();
       })
       .catch(fail);
   }, []);

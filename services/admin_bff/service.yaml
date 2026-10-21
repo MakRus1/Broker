@@ -1,11 +1,22 @@
 version: 1
-libraries: [common, auth, browser]
+libraries:
+- common
+- auth
+- browser
 clients:
   config_admin:
     service: configs
     transport: http
+  organizations:
+    service: organizations
+    transport: http
 dashboard:
   title: Broker · Административный BFF
-  tags: [admin]
+  tags:
+  - admin
 http_logging:
-  exclude_paths: [/auth/**, /api/session, /api/logout]
+  exclude_paths:
+  - /auth/**
+  - /api/session
+  - /api/logout
+  - /api/admin/organizations/members/create

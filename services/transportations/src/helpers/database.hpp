@@ -14,16 +14,6 @@ namespace pg = userver::storages::postgres;
 inline constexpr pg::TransactionOptions kReadSnapshot{
     pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
-inline std::string ResolveOrganization(pg::Transaction& transaction,
-    const platform::auth::Identity& identity,
-    const std::optional<std::string>& requested_organization = std::nullopt) {
-    const auto rows = transaction.Execute(
-        sql::kResolveOrganization, identity.Issuer, identity.Subject, requested_organization);
-    if (rows.Size() != 1)
-        throw ApiError{403, "organization_access_denied", "Не определен доступ к клиенту"};
-    return rows.AsSingleRow<std::string>();
-}
-
 template <typename Request, typename Result>
 void WriteAudit(pg::Transaction& transaction, const std::string& organization,
     const platform::auth::Identity& identity, const std::string& action, const std::string& id,

@@ -8,7 +8,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
-        const auto organization = ResolveOrganization(*deps.pg_cluster, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto rows =

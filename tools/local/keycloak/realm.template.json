@@ -38,6 +38,9 @@
         },
         {
           "name": "counterparties.write"
+        },
+        {
+          "name": "platform.admin"
         }
       ]
     }
@@ -81,6 +84,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
@@ -306,5 +320,13 @@
         ]
       }
     }
-  ]
+  ],
+  "displayName": "Broker",
+  "loginTheme": "broker",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "ru",
+    "en"
+  ],
+  "defaultLocale": "ru"
 }

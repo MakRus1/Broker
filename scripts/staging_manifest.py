@@ -406,7 +406,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     'admin-revoke-url': internal_auth
                     + '/realms/broker/protocol/openid-connect/revoke',
                     'otlp-enabled': True,
-                    'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}:4317',
+                    'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}.:4317',
                 }
             )
         components = static['components_manager']['components']

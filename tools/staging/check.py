@@ -41,6 +41,45 @@ def probe_trace(url, *, timeout=60):
         time.sleep(min(2, max(0, deadline - time.monotonic())))
 
 
+def wait_for_telemetry(fetch, trace, *, timeout=60):
+    deadline = time.monotonic() + timeout
+    trace_found, logs_found = False, False
+    while True:
+        try:
+            fetch('tempo', 3200, '/api/traces/' + trace)
+            trace_found = True
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+            exc.close()
+        query = '{service_name="broker",level=~".+"} |= "' + trace + '"'
+        logs = fetch(
+            'loki',
+            3100,
+            '/loki/api/v1/query_range?'
+            + urlencode(
+                {
+                    'query': query,
+                    'start': time.time_ns() - 300_000_000_000,
+                    'end': time.time_ns(),
+                    'limit': 10,
+                }
+            ),
+        )
+        logs_found = bool(logs['data']['result'])
+        if trace_found and logs_found:
+            break
+        if time.monotonic() > deadline:
+            missing = ', '.join(
+                name for name, found in [('Tempo', trace_found), ('Loki', logs_found)] if not found
+            )
+            raise ValueError(
+                f'Проверочный trace_id={trace} не найден в {missing}. '
+                'Проверьте ошибки OTLP/DNS в логах сервиса и Collector.'
+            )
+        time.sleep(2)
+
+
 def check(context, namespace):
     result = subprocess.check_output(
         ['kubectl', '--context', context, '-n', namespace, 'get', 'services', '-o', 'json'],
@@ -80,32 +119,7 @@ def check(context, namespace):
             raise ValueError('Не все установленные сервисы доступны Prometheus')
         time.sleep(2)
     trace = probe_trace(f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check')
-    deadline = time.monotonic() + 60
-    while True:
-        try:
-            fetch('tempo', 3200, '/api/traces/' + trace)
-            query = '{service_name="broker",level=~".+"} |= "' + trace + '"'
-            logs = fetch(
-                'loki',
-                3100,
-                '/loki/api/v1/query_range?'
-                + urlencode(
-                    {
-                        'query': query,
-                        'start': time.time_ns() - 300_000_000_000,
-                        'end': time.time_ns(),
-                        'limit': 10,
-                    }
-                ),
-            )
-            if logs['data']['result']:
-                break
-        except HTTPError as exc:
-            if exc.code != 404:
-                raise
-        if time.monotonic() > deadline:
-            raise ValueError(f'Нет связанной трассы и логов для {trace}')
-        time.sleep(2)
+    wait_for_telemetry(fetch, trace)
     if fetch('grafana', 3000, '/api/health')['database'] != 'ok':
         raise ValueError('Grafana не готова')
     print(

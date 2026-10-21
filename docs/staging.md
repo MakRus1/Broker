@@ -666,3 +666,20 @@ INTERNAL-IP узла или адрес Kubernetes API, перезапусти `s
 Иначе Traefik может сохранить устаревшие endpoints и отдавать 502; во время потери
 доступа к API после перезапуска Traefik может временно показывать стандартный
 сертификат. Это не повод менять доверенный CA или обходить предупреждение браузера.
+
+После смены подсети Hyper-V также перезапустите CoreDNS:
+
+```bash
+export KUBECONFIG="$HOME/.kube/config"
+kubectl -n kube-system rollout restart deployment/coredns
+kubectl -n kube-system rollout status deployment/coredns --timeout=90s
+```
+
+Его pod мог сохранить прежний DNS-шлюз в `/etc/resolv.conf`. Внутренние имена
+с точкой на конце разрешаются без внешних search-суффиксов; OTLP endpoint теперь
+использует эту форму. Проверка мониторинга отдельно сообщает, отсутствует ли
+трасса в Tempo или запись в Loki.
+
+Появление нового LAN-домена требует Deploy infrastructure (или Deploy all с
+включённой инфраструктурой): обновление только сервисов не создаёт ingress и
+не дополняет сертификат. Корневой CA при этом сохраняется.

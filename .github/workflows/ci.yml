@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       services: ${{ steps.detect.outputs.services }}
+      build_services: ${{ steps.detect.outputs.build_services }}
+      frontends: ${{ steps.detect.outputs.frontends }}
+      scaffolds: ${{ steps.detect.outputs.scaffolds }}
+      smoke: ${{ steps.detect.outputs.smoke }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -51,9 +55,11 @@ jobs:
       - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:
+    needs: tools
+    if: needs.tools.outputs.frontends != '[]'
     strategy:
       matrix:
-        app: [admin, web]
+        app: ${{ fromJSON(needs.tools.outputs.frontends) }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
@@ -76,7 +82,7 @@ jobs:
   build:
     name: Сборка и тесты · ${{ matrix.preset }} · ${{ matrix.runner }}
     needs: tools
-    if: needs.tools.outputs.services != ''
+    if: needs.tools.outputs.build_services != ''
     strategy:
       fail-fast: false
       matrix:
@@ -131,6 +137,7 @@ jobs:
         env:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
+          CI_BUILD_SERVICES: ${{ needs.tools.outputs.build_services }}
         run: make "docker-ci-build-$PRESET"
       - name: Тесты затронутых сервисов
         id: tests
@@ -141,7 +148,7 @@ jobs:
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make "docker-ci-test-$PRESET"
       - name: Межсервисный сценарий · две реплики
-        if: ${{ matrix.preset == 'debug' }}
+        if: ${{ matrix.preset == 'debug' && needs.tools.outputs.smoke == 'true' }}
         env:
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make docker-ci-smoke-debug
@@ -166,7 +173,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Четыре варианта создания сервиса
-        if: ${{ !cancelled() && steps.compile.outcome == 'success' && matrix.preset == 'debug' && runner.arch == 'X64' }}
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && needs.tools.outputs.scaffolds == 'true' && matrix.preset == 'debug' && runner.arch == 'X64' }}
         env:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: docker run --rm --network=host -v "$PWD:/workspaces/broker" "$IMAGE" python3 scripts/smoke-services.py --build
@@ -182,6 +189,7 @@ jobs:
       - name: Проверка обязательных результатов
         env:
           FRONTEND_RESULT: ${{ needs.frontend.result }}
+          FRONTENDS: ${{ needs.tools.outputs.frontends }}
           TOOLS_RESULT: ${{ needs.tools.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           SERVICES: ${{ needs.tools.outputs.services }}
@@ -198,7 +206,11 @@ jobs:
             echo "| Сборка и тесты сервисов | $BUILD_RESULT |"
             echo "| Фронтенд | $FRONTEND_RESULT |"
           } >> "$GITHUB_STEP_SUMMARY"
-          if [[ "$FRONTEND_RESULT" != success ]]; then exit 1; fi
+          if [[ "$FRONTENDS" == '[]' ]]; then
+            if [[ "$FRONTEND_RESULT" != skipped ]]; then exit 1; fi
+          else
+            if [[ "$FRONTEND_RESULT" != success ]]; then exit 1; fi
+          fi
           if [[ "$TOOLS_RESULT" != success ]]; then
             exit 1
           fi

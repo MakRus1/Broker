@@ -1,4 +1,5 @@
 """Проверки отчетов CI на настоящем CTest: падение не скрывает остальные сервисы."""
+
 import importlib.util
 import json
 from pathlib import Path
@@ -35,12 +36,26 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
             self.assertIsNotNone(cmake, 'CMake должен быть установлен из requirements.txt')
             self.assertIsNotNone(ctest, 'CTest должен быть установлен из requirements.txt')
             build = root / 'build'
-            subprocess.run([str(cmake), '-S', str(source), '-B', str(build),
-                            f'-DPYTHON={sys.executable}'], check=True, capture_output=True)
+            subprocess.run(
+                [str(cmake), '-S', str(source), '-B', str(build), f'-DPYTHON={sys.executable}'],
+                check=True,
+                capture_output=True,
+            )
             output = root / 'results'
-            command = [sys.executable, str(ROOT / 'scripts/ci-tests.py'), 'run',
-                       '--build-dir', str(build), '--ctest', str(ctest),
-                       '--output-dir', str(output), '--services', 'alpha', 'beta']
+            command = [
+                sys.executable,
+                str(ROOT / 'scripts/ci-tests.py'),
+                'run',
+                '--build-dir',
+                str(build),
+                '--ctest',
+                str(ctest),
+                '--output-dir',
+                str(output),
+                '--services',
+                'alpha',
+                'beta',
+            ]
             process = subprocess.run(command, text=True, capture_output=True)
             self.assertEqual(process.returncode, 1, process.stderr)
             results = json.loads((output / 'results.json').read_text())
@@ -51,12 +66,30 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
             self.assertIn('beta passed', (output / 'beta.log').read_text())
             self.assertTrue((output / 'alpha.xml').is_file())
             summary = root / 'complete.md'
-            subprocess.run([
-                sys.executable, str(ROOT / 'scripts/ci-tests.py'), 'summary',
-                '--output-dir', str(output), '--services', 'alpha', 'beta',
-                '--preset', 'debug', '--arch', 'X64', '--build-result', 'success',
-                '--test-result', 'failure', '--summary', str(summary),
-            ], check=True, capture_output=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / 'scripts/ci-tests.py'),
+                    'summary',
+                    '--output-dir',
+                    str(output),
+                    '--services',
+                    'alpha',
+                    'beta',
+                    '--preset',
+                    'debug',
+                    '--arch',
+                    'X64',
+                    '--build-result',
+                    'success',
+                    '--test-result',
+                    'failure',
+                    '--summary',
+                    str(summary),
+                ],
+                check=True,
+                capture_output=True,
+            )
             self.assertIn('| `alpha` | ❌ Ошибка | 0 / 1 / 0 |', summary.read_text())
             self.assertIn('| `beta` | ✅ Пройдены | 1 / 0 / 0 |', summary.read_text())
             # Отчет из прошлого запуска не может сделать отсутствие тестов зеленым.
@@ -65,12 +98,29 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
             self.assertIn('Не найдены тесты', missing.stderr)
             self.assertEqual(json.loads((output / 'results.json').read_text()), [])
             report = root / 'summary.md'
-            subprocess.run([
-                sys.executable, str(ROOT / 'scripts/ci-tests.py'), 'summary',
-                '--output-dir', str(output), '--services', 'missing',
-                '--preset', 'debug', '--arch', 'X64', '--build-result', 'success',
-                '--test-result', 'failure', '--summary', str(report),
-            ], check=True, capture_output=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / 'scripts/ci-tests.py'),
+                    'summary',
+                    '--output-dir',
+                    str(output),
+                    '--services',
+                    'missing',
+                    '--preset',
+                    'debug',
+                    '--arch',
+                    'X64',
+                    '--build-result',
+                    'success',
+                    '--test-result',
+                    'failure',
+                    '--summary',
+                    str(report),
+                ],
+                check=True,
+                capture_output=True,
+            )
             self.assertIn('Не запущены', report.read_text())
             self.assertIn('failure', report.read_text())
 
@@ -88,7 +138,9 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
 
     def test_plan_does_not_hide_detection_errors(self):
         args = type('Args', (), {'base': 'base', 'summary': None, 'github_output': None})()
-        with mock.patch.object(ci.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'git')):
+        with mock.patch.object(
+            ci.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'git')
+        ):
             with self.assertRaises(subprocess.CalledProcessError):
                 ci.plan(args)
 
@@ -97,13 +149,25 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
             root = Path(directory)
             (root / 'services/alpha').mkdir(parents=True)
             (root / 'services/beta').mkdir()
-            args = type('Args', (), {
-                'base': 'missing', 'summary': root / 'summary.md',
-                'github_output': root / 'output',
-            })()
+            args = type(
+                'Args',
+                (),
+                {
+                    'base': 'missing',
+                    'summary': root / 'summary.md',
+                    'github_output': root / 'output',
+                },
+            )()
             for value, expected in [('all', 'alpha beta'), ('', '')]:
-                with self.subTest(value=value), mock.patch.object(ci, 'ROOT', root), \
-                     mock.patch.object(ci.subprocess, 'run', return_value=mock.Mock(stdout=value)):
+                with self.subTest(value=value), mock.patch.object(
+                    ci, 'ROOT', root
+                ), mock.patch.object(
+                    ci, 'changed_paths', return_value=['README.md']
+                ), mock.patch.object(
+                    ci.subprocess, 'run', return_value=mock.Mock(stdout=value)
+                ):
                     ci.plan(args)
-                    self.assertTrue(args.github_output.read_text().endswith(f'services={expected}\n'))
+                    self.assertTrue(
+                        args.github_output.read_text().endswith(f'services={expected}\n')
+                    )
             self.assertIn('пропускаются', args.summary.read_text())

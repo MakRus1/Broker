@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/string_generator.hpp>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
@@ -29,6 +30,20 @@ inline std::vector<std::string> Convert(const std::vector<models::CounterpartyRo
     for (const auto role : roles)
         result.push_back(models::EnumValue(role));
     return result;
+}
+
+inline pgtypes::CounterpartyV3 Convert(const models::Counterparty& value) {
+    return {.Id = boost::uuids::string_generator{}(value.id),
+        .Name = value.name,
+        .Revision = value.revision,
+        .Archived = value.archived,
+        .LegalName = value.legal_name,
+        .CountryCode = value.country_code,
+        .TaxId = value.tax_id,
+        .RegistrationId = value.registration_id,
+        .LegalAddress = value.legal_address,
+        .Roles = Convert(value.roles),
+        .Contacts = userver::formats::json::ValueBuilder(value.contacts).ExtractValue()};
 }
 
 inline std::vector<models::Counterparty> Convert(

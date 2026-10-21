@@ -12,10 +12,10 @@ Response View::Handle(
         const auto value = Prepare(request.body);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        transaction.Execute(sql::kLockCounterpartyIdentity, organization, value.id);
         CheckDuplicate(transaction, organization, value);
-        const auto inserted = transaction.Execute(sql::kCreateCounterparty, organization, value.id,
-            value.name, value.legal_name, value.country_code, value.tax_id, value.registration_id,
-            value.legal_address, Convert(value.roles), Document(value.contacts));
+        const auto inserted =
+            transaction.Execute(sql::kCreateCounterparty, organization, Convert(value));
         // UUID делает безопасным повтор создания после потери ответа.
         const auto rows = inserted.IsEmpty()
             ? transaction.Execute(sql::kGetCounterparty, organization, value.id)

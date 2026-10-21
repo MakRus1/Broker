@@ -1,9 +1,16 @@
-UPDATE counterparties
-SET name = $3, legal_name = $4, country_code = $5, tax_id = $6,
-    registration_id = $7, legal_address = $8, roles = $9::TEXT[],
-    contacts = $10::JSONB, revision = revision + 1
-WHERE organization_id = $1::UUID AND id = $2::UUID
+UPDATE counterparties AS stored
+SET name = value.name,
+    legal_name = value.legal_name,
+    country_code = value.country_code,
+    tax_id = value.tax_id,
+    registration_id = value.registration_id,
+    legal_address = value.legal_address,
+    roles = value.roles,
+    contacts = value.contacts,
+    revision = stored.revision + 1
+FROM (SELECT ($2::public.counterparty_v3).*) AS value
+WHERE stored.organization_id = $1::UUID AND stored.id = value.id
 RETURNING ROW(
-    id, name, revision, archived, legal_name, country_code,
-    tax_id, registration_id, legal_address, roles, contacts
+    stored.id, stored.name, stored.revision, stored.archived, stored.legal_name, stored.country_code,
+    stored.tax_id, stored.registration_id, stored.legal_address, stored.roles, stored.contacts
 )::public.counterparty_v3;

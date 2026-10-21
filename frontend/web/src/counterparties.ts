@@ -58,23 +58,25 @@ export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
     })),
   };
 }
+// Форма отвечает только за представление пустого поля; правила реквизитов — на сервере.
+function nullableField(value: string): string | null {
+  return value.trim() === '' ? null : value;
+}
 export function counterpartyPayload(
   value: CounterpartyDetails,
 ): Omit<Counterparty, 'id' | 'revision' | 'archived'> {
   return {
     ...value,
-    name: value.name.trim(),
-    legal_name: value.legal_name.trim() || null,
-    country_code: value.country_code.trim().toUpperCase() || null,
-    tax_id: value.tax_id.replace(/[\s-]/g, '').toUpperCase() || null,
-    registration_id: value.registration_id.trim() || null,
-    legal_address: value.legal_address.trim() || null,
-    roles: [...value.roles].sort(),
+    legal_name: nullableField(value.legal_name),
+    country_code: nullableField(value.country_code),
+    tax_id: nullableField(value.tax_id),
+    registration_id: nullableField(value.registration_id),
+    legal_address: nullableField(value.legal_address),
     contacts: value.contacts.map((contact) => ({
-      name: contact.name.trim(),
-      position: contact.position.trim() || null,
-      email: contact.email.trim() || null,
-      phone: contact.phone.trim() || null,
+      name: contact.name,
+      position: nullableField(contact.position),
+      email: nullableField(contact.email),
+      phone: nullableField(contact.phone),
     })),
   };
 }

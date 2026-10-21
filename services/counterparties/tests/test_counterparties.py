@@ -83,7 +83,7 @@ async def test_card_edit_archive_and_links(api, pgsql):
         'counterparty'
     ]
     identifier = created['id']
-    assert created['tax_id'] == '7701234567'
+    assert created['tax_id'] == '7701-234567'
     assert created['country_code'] == 'RU'
     assert created['contacts'][0]['name'] == 'Анна'
     fetched = await api.post('/api/v1/counterparties/get', {'id': identifier})
@@ -132,12 +132,12 @@ async def test_card_edit_archive_and_links(api, pgsql):
         ]
 
 
-async def test_requisites_duplicates_are_normalized_and_scoped(api):
+async def test_requisites_duplicates_are_scoped_to_organization_and_country(api):
     first = (await api.post('/api/v1/counterparties/create', details(), expected=201))[
         'counterparty'
     ]
     error = await api.post(
-        '/api/v1/counterparties/create', details(tax_id='7701234567'), expected=409
+        '/api/v1/counterparties/create', details(tax_id='7701-234567'), expected=409
     )
     assert error['error'] == 'duplicate_requisites'
     await api.post('/api/v1/counterparties/create', details(), user='other', expected=201)
@@ -243,7 +243,10 @@ async def test_nullable_requisites_and_partial_update(api, pgsql):
     ]
     base = {'id': created['id'], 'name': created['name'], 'expected_revision': 1}
     kept = (await api.post('/api/v1/counterparties/update', base))['counterparty']
-    assert {**kept, 'revision': 1} == created
+    assert kept['revision'] == 2
+    for field, expected in created.items():
+        if field != 'revision':
+            assert kept[field] == expected, field
     cleared = (
         await api.post(
             '/api/v1/counterparties/update',
@@ -308,3 +311,38 @@ async def test_absent_requisites_are_null(api, pgsql, empty):
             'SELECT legal_name, tax_id, contacts FROM counterparties WHERE id=%s', (created['id'],)
         )
         assert cursor.fetchone() == (None, None, created['contacts'])
+
+
+async def test_tax_identifier_keeps_internal_separators(api):
+    created = (
+        await api.post('/api/v1/counterparties/create', details(tax_id=' ab-12 34 '), expected=201)
+    )['counterparty']
+    assert created['tax_id'] == 'ab-12 34'
+
+
+async def test_concurrent_updates_have_one_winner(api):
+    created = (await api.post('/api/v1/counterparties/create', details(), expected=201))[
+        'counterparty'
+    ]
+
+    async def update(name):
+        return await api.post(
+            '/api/v1/counterparties/update',
+            {
+                'id': created['id'],
+                'name': name,
+                'expected_revision': 1,
+            },
+            expected=(200, 409),
+        )
+
+    results = await asyncio.gather(update('Первое имя'), update('Второе имя'))
+    successes = [value['counterparty'] for value in results if 'counterparty' in value]
+    conflicts = [value for value in results if value.get('error') == 'revision_conflict']
+    assert len(successes) == 1
+    assert len(conflicts) == 1
+    assert successes[0]['revision'] == 2
+    persisted = (await api.post('/api/v1/counterparties/get', {'id': created['id']}))[
+        'counterparty'
+    ]
+    assert persisted == successes[0]

@@ -49,10 +49,23 @@ describe('Пустые реквизиты', () => {
       legal_name: '  ',
       contacts: [{ name: ' Анна ', email: '', position: ' ', phone: '' }],
     });
-    expect(payload.name).toBe('Клиент');
+    expect(payload.name).toBe(' Клиент ');
     expect(payload.legal_name).toBeNull();
     expect(payload.tax_id).toBeNull();
     expect(payload.roles).toEqual([]);
-    expect(payload.contacts).toEqual([{ name: 'Анна', email: null, position: null, phone: null }]);
+    expect(payload.contacts).toEqual([
+      { name: ' Анна ', email: null, position: null, phone: null },
+    ]);
   });
+});
+
+it('передаёт содержимое реквизитов серверу без собственной нормализации', () => {
+  const payload = counterpartyPayload({
+    ...counterpartyDetails(),
+    name: ' Клиент ',
+    country_code: ' ru ',
+    tax_id: ' ab-12 34 ',
+  });
+  expect(payload.country_code).toBe(' ru ');
+  expect(payload.tax_id).toBe(' ab-12 34 ');
 });

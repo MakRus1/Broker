@@ -28,13 +28,6 @@ inline models::Counterparty Normalize(models::Counterparty value) {
             [](unsigned char c) { return std::toupper(c); });
     }
     value.tax_id = Normalize(value.tax_id);
-    if (value.tax_id.has_value()) {
-        std::string tax;
-        for (unsigned char c : value.tax_id.value())
-            if (!std::isspace(c) && c != '-')
-                tax += static_cast<char>(std::toupper(c));
-        value.tax_id = Normalize(std::move(tax));
-    }
     value.registration_id = Normalize(value.registration_id);
     value.legal_address = Normalize(value.legal_address);
     std::sort(value.roles.begin(), value.roles.end());
@@ -44,12 +37,13 @@ inline models::Counterparty Normalize(models::Counterparty value) {
         throw ApiError{400, "country_required", "Укажите страну для налогового номера"};
     for (auto& contact : value.contacts) {
         contact.name = userver::utils::text::Trim(contact.name);
-        contact.position = Normalize(contact.position);
-        contact.email = Normalize(contact.email);
-        contact.phone = Normalize(contact.phone);
+        contact.position.emplace(Normalize(contact.position.value_or(std::nullopt)));
+        const auto email = Normalize(contact.email.value_or(std::nullopt));
+        contact.email.emplace(email);
+        contact.phone.emplace(Normalize(contact.phone.value_or(std::nullopt)));
         if (contact.name.empty())
             throw ApiError{400, "empty_contact", "Укажите имя контактного лица"};
-        if (contact.email.has_value() && contact.email.value().find('@') == std::string::npos)
+        if (email.has_value() && email.value().find('@') == std::string::npos)
             throw ApiError{400, "invalid_email", "Проверьте email контактного лица"};
     }
     return value;

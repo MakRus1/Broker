@@ -18,17 +18,14 @@ CounterpartyContact:
       type: string
       maxLength: 256
       nullable: true
-      default: null
     email:
       type: string
       maxLength: 256
       nullable: true
-      default: null
     phone:
       type: string
       maxLength: 64
       nullable: true
-      default: null
   required:
   - name
 Counterparty:

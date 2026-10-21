@@ -30,6 +30,7 @@ void WriteAudit(pg::Transaction& transaction, const std::string& tenant,
     const Request& request, const Result& result) {
     // Снимок аудита сохраняется атомарно с изменением данных.
     userver::formats::json::ValueBuilder document;
+    document["actor_name"] = principal.DisplayName;
     document["request"] = request;
     document["result"] = result;
     transaction.Execute(

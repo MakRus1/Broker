@@ -187,3 +187,78 @@ async def test_filtered_pagination_loads_all_legs(api):
     assert selected['legs'][0]['mode'] == 'sea'
     last = listed['items'][-1]['id']
     assert (await api.post('/api/v1/transportations/list', {'after': last}))['items'] == []
+
+
+async def test_history_snapshots_pagination_and_access(api):
+    created = await api.post(PATH, command())
+    identifier = created['operation']['transportation_ids'][0]
+    history_request = {'transportation_id': identifier}
+    # UUID операции и перевозки принадлежат разным пространствам сущностей аудита.
+    await api.post(PATH, {**command(), 'operation_id': identifier})
+    assert (await api.post('/api/v1/transportations/history', history_request))['items'] == []
+    route = leg('sea')
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {'transportation_id': identifier, 'expected_revision': 1, 'legs': [route]},
+    )
+    actual = {
+        'transportation_id': identifier,
+        'leg_id': route['id'],
+        'expected_revision': 2,
+        'event_kind': 'departure',
+        'occurred_at': '2026-10-21T10:00:00Z',
+    }
+    await api.post('/api/v1/transportation-actuals/record', actual)
+    await api.post(
+        '/api/v1/transportation-actuals/correct',
+        {
+            **actual,
+            'expected_revision': 3,
+            'occurred_at': '2026-10-21T11:00:00Z',
+            'reason': 'Уточнено по данным терминала',
+        },
+    )
+    latest = (await api.post('/api/v1/transportations/history', {**history_request, 'limit': 2}))[
+        'items'
+    ]
+    assert [item['action'] for item in latest] == ['correct_actual', 'record_actual']
+    assert [item['revision'] for item in latest] == [4, 3]
+    assert latest[0]['actor_name'] == 'author'
+    assert latest[0]['reason'] == 'Уточнено по данным терминала'
+    assert latest[0]['event_kind'] == 'departure'
+    assert latest[0]['legs'][0]['actual_departure_at'] == '2026-10-21T11:00:00Z'
+    assert latest[1]['legs'][0]['actual_departure_at'] == '2026-10-21T10:00:00Z'
+    earlier = (
+        await api.post(
+            '/api/v1/transportations/history', {**history_request, 'before': latest[-1]['id']}
+        )
+    )['items']
+    assert len(earlier) == 1
+    assert earlier[0]['action'] == 'set_route'
+    await api.post('/api/v1/transportations/history', history_request, user='other', expected=404)
+    await api.post(
+        '/api/v1/transportations/history',
+        history_request,
+        roles=['transportations.write'],
+        expected=403,
+    )
+    await api.post(
+        '/api/v1/transportations/history', {'transportation_id': str(uuid4())}, expected=404
+    )
+
+
+async def test_history_read_permission_does_not_grant_writes(api):
+    created = await api.post(PATH, command())
+    identifier = created['operation']['transportation_ids'][0]
+    result = await api.post(
+        '/api/v1/transportations/history',
+        {'transportation_id': identifier},
+        roles=['transportations.read'],
+    )
+    assert result['items'] == []
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {'transportation_id': identifier, 'expected_revision': 1, 'legs': [leg()]},
+        roles=['transportations.read'],
+        expected=403,
+    )

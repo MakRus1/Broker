@@ -43,9 +43,26 @@ export interface Transportation {
   legs: {
     id: string;
     mode: 'sea' | 'road' | 'rail';
+    contractor_id?: string;
+    planned_departure_at?: string;
+    planned_arrival_at?: string;
+    actual_departure_at?: string;
+    actual_arrival_at?: string;
     origin: { name: string; country_code: string };
     destination: { name: string; country_code: string };
   }[];
+}
+export interface TransportationEvent {
+  id: number;
+  action: string;
+  actor: string;
+  actor_name?: string;
+  occurred_at: string;
+  reason?: string;
+  leg_id?: string;
+  event_kind?: 'departure' | 'arrival';
+  revision: number;
+  legs: Transportation['legs'];
 }
 export class ApiError extends Error {
   constructor(

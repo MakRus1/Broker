@@ -46,4 +46,37 @@ inline std::vector<models::Transportation> Convert(
                 leg.Document, std::type_identity<models::TransportationLeg>{}));
     return result;
 }
+
+inline models::TransportationEvent Convert(const pgtypes::TransportationEventV1& row) {
+    models::TransportationEvent result;
+    result.id = row.Id;
+    result.actor = row.Actor;
+    result.action = row.Action;
+    result.occurred_at = row.OccurredAt;
+    const auto& document = row.Document;
+    if (document.HasMember("actor_name"))
+        result.actor_name = document["actor_name"].As<std::string>();
+    const auto& request = document["request"];
+    if (request.HasMember("reason"))
+        result.reason = request["reason"].As<std::string>();
+    if (request.HasMember("leg_id"))
+        result.leg_id = request["leg_id"].As<std::string>();
+    if (request.HasMember("event_kind"))
+        result.event_kind =
+            models::ParseEnumScalar(request["event_kind"].As<std::string>(), models::EventKind{});
+    result.revision = document["result"]["revision"].As<std::int64_t>();
+    for (const auto& leg : document["result"]["legs"])
+        result.legs.push_back(
+            models::ParseModelJson(leg, std::type_identity<models::TransportationLeg>{}));
+    return result;
+}
+
+inline std::vector<models::TransportationEvent> Convert(
+    const std::vector<pgtypes::TransportationEventV1>& rows) {
+    std::vector<models::TransportationEvent> result;
+    result.reserve(rows.size());
+    for (const auto& row : rows)
+        result.push_back(Convert(row));
+    return result;
+}
 }  // namespace transportations::helpers

@@ -82,9 +82,21 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.id}>
+            <tr
+              key={item.id}
+              className="clickable"
+              onClick={() => {
+                location.hash = `/transportations/${item.id}`;
+              }}
+            >
               <td>
-                <strong>{item.number}</strong>
+                <a
+                  className="link"
+                  href={`#/transportations/${item.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {item.number}
+                </a>
               </td>
               <td>{item.container_type_code}</td>
               <td>{ownership[item.container_ownership]}</td>

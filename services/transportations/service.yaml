@@ -15,3 +15,4 @@ auth:
     /api/v1/transportation-routes/set: transportations.write
     /api/v1/transportation-actuals/record: transportations.write
     /api/v1/transportation-actuals/correct: transportations.write
+    /api/v1/transportations/history: transportations.read

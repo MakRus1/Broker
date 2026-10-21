@@ -362,3 +362,60 @@ CorrectActualRequest:
   - event_kind
   - occurred_at
   - reason
+ListHistoryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    transportation_id:
+      type: string
+      format: uuid
+    before:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+  required:
+  - transportation_id
+TransportationEvent:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    action:
+      type: string
+    actor:
+      type: string
+    actor_name:
+      type: string
+    occurred_at:
+      type: string
+      format: date-time
+    reason:
+      type: string
+    leg_id:
+      type: string
+      format: uuid
+    event_kind:
+      $ref: '#/EventKind'
+    revision:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    legs:
+      type: array
+      items:
+        $ref: '#/TransportationLeg'
+  required:
+  - id
+  - action
+  - actor
+  - occurred_at
+  - revision
+  - legs

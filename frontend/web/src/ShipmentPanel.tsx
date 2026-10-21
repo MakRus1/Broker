@@ -32,6 +32,9 @@ export function ShipmentPanel({
   onUpdate,
 }: Props) {
   const [shipment, setShipment] = useState(initial);
+  useEffect(() => {
+    document.title = `${shipment.number} · Broker`;
+  }, [shipment.number]);
   const [items, setItems] = useState<Item[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
   const [tab, setTab] = useState<'items' | 'transportations'>('items');

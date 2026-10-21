@@ -1,7 +1,5 @@
-#include <helpers/converters.hpp>
-#include <helpers/database.hpp>
+#include <helpers/details.hpp>
 #include <platform/auth/identity.hpp>
-#include <userver/utils/text_light.hpp>
 #include <views/api/v1/counterparties/create/view.hpp>
 
 namespace counterparties::views::api::v1::counterparties::create {
@@ -11,29 +9,38 @@ Response View::Handle(
     try {
         const auto& identity = platform::auth::GetIdentity(context);
         const auto organization = ResolveOrganization(*deps.pg_cluster, identity);
+        const auto value = Prepare(request.body);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto name = userver::utils::text::Trim(request.body.name);
-        if (name.empty())
-            return Response400{.error = "empty_name", .message = "Укажите название контрагента"};
-        const auto inserted =
-            transaction.Execute(sql::kCreateCounterparty, organization, request.body.id, name);
-        // Чтение нужно только для повтора команды с уже существующим UUID.
-        const auto row = inserted.IsEmpty()
-            ? transaction.Execute(sql::kGetCounterparty, organization, request.body.id)
-                  .AsSingleRow<pgtypes::CounterpartyV1>()
-            : inserted.AsSingleRow<pgtypes::CounterpartyV1>();
-        if (row.Name != name)
-            return Response409{
-                .error = "id_conflict", .message = "Идентификатор занят другим контрагентом"};
-        const auto result = Convert(row);
+        CheckDuplicate(transaction, organization, value);
+        const auto inserted = transaction.Execute(sql::kCreateCounterparty, organization, value.id,
+            value.name, value.legal_name, value.country_code, value.tax_id, value.registration_id,
+            value.legal_address, Convert(value.roles), Document(value.contacts));
+        // UUID делает безопасным повтор создания после потери ответа.
+        const auto rows = inserted.IsEmpty()
+            ? transaction.Execute(sql::kGetCounterparty, organization, value.id)
+            : inserted;
+        const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV2>());
+        if (Document(result) != Document(value))
+            throw ApiError{409, "id_conflict", "Идентификатор занят другим контрагентом"};
         if (!inserted.IsEmpty())
             WriteAudit(transaction, organization, identity, "create_counterparty", result.id,
                 request.body, result);
         transaction.Commit();
         return Response201{.counterparty = result};
     } catch (const ::counterparties::ApiError& error) {
-        return Response403{.error = error.Code, .message = error.what()};
+        switch (error.Status) {
+        case 400:
+            return Response400{.error = error.Code, .message = error.what()};
+        case 403:
+            return Response403{.error = error.Code, .message = error.what()};
+        case 404:
+            return Response404{.error = error.Code, .message = error.what()};
+        case 409:
+            return Response409{.error = error.Code, .message = error.what()};
+        default:
+            throw;
+        }
     }
 }
 }  // namespace counterparties::views::api::v1::counterparties::create

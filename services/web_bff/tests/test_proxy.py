@@ -30,6 +30,20 @@ TRANSPORTATION = {
     'route_segments': [],
 }
 
+COUNTERPARTY = {
+    'id': ID,
+    'name': 'Клиент',
+    'revision': 1,
+    'archived': False,
+    'country_code': '',
+    'tax_id': '',
+    'registration_id': '',
+    'legal_name': '',
+    'legal_address': '',
+    'roles': [],
+    'contacts': [],
+}
+
 
 @pytest.mark.parametrize(
     'path,body,result,status',
@@ -37,10 +51,29 @@ TRANSPORTATION = {
         (
             'counterparties/create',
             {'id': ID, 'name': 'Клиент'},
-            {'counterparty': {'id': ID, 'name': 'Клиент'}},
+            {'counterparty': COUNTERPARTY},
             201,
         ),
-        ('counterparties/list', {}, {'items': [{'id': ID, 'name': 'Клиент'}]}, 200),
+        ('counterparties/list', {}, {'items': [COUNTERPARTY]}, 200),
+        ('counterparties/get', {'id': ID}, {'counterparty': COUNTERPARTY}, 200),
+        (
+            'counterparties/update',
+            {
+                'id': ID,
+                'expected_revision': 1,
+                'name': 'Клиент',
+                'roles': ['agent'],
+                'contacts': [{'name': 'Анна', 'position': '', 'email': '', 'phone': ''}],
+            },
+            {'counterparty': COUNTERPARTY},
+            200,
+        ),
+        (
+            'counterparties/set-archived',
+            {'id': ID, 'expected_revision': 1, 'archived': True},
+            {'counterparty': {**COUNTERPARTY, 'revision': 2, 'archived': True}},
+            200,
+        ),
         (
             'shipments/create',
             {'customer_id': CUSTOMER, 'idempotency_key': ID},
@@ -138,7 +171,11 @@ async def test_converted_request_defaults(browser, mockserver, path, limit):
 
     @mockserver.json_handler('/api/v1/' + path + '/list')
     def upstream(request):
-        assert request.json == {'limit': limit}
+        assert request.json == (
+            {'limit': limit, 'query': '', 'status': 'active'}
+            if path == 'counterparties'
+            else {'limit': limit}
+        )
         return {'items': []}
 
     response = await browser.post('/api/v1/' + path + '/list', {})

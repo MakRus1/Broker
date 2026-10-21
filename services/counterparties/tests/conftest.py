@@ -16,6 +16,7 @@ async def service_http_ping_url(monitor_baseurl):
     # Готовность проверяется на внутреннем listener до первого запроса testsuite.
     return monitor_baseurl.rstrip('/') + '/ping/ready'
 
+
 import sys
 from pathlib import Path
 
@@ -64,11 +65,7 @@ def memberships(pgsql):
 def api(service_client, auth_key):
     class Client:
         async def post(self, path, body, *, user='author', roles=None, expected=200):
-            roles = (
-                roles
-                if roles is not None
-                else ['counterparties.read', 'counterparties.write']
-            )
+            roles = roles if roles is not None else ['counterparties.read', 'counterparties.write']
             token = auth_key.token(
                 user,
                 roles=roles,
@@ -80,7 +77,9 @@ def api(service_client, auth_key):
             response = await service_client.post(
                 path, json=body, headers={'Authorization': 'Bearer ' + token}
             )
-            assert response.status == expected, response.text
+            assert response.status in (
+                expected if isinstance(expected, tuple) else (expected,)
+            ), response.text
             return response.json()
 
     return Client()

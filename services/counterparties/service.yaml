@@ -11,3 +11,6 @@ auth:
   permissions:
     /api/v1/counterparties/create: counterparties.write
     /api/v1/counterparties/list: counterparties.read
+    /api/v1/counterparties/get: counterparties.read
+    /api/v1/counterparties/update: counterparties.write
+    /api/v1/counterparties/set-archived: counterparties.write

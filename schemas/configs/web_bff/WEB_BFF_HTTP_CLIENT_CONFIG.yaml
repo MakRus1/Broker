@@ -5,7 +5,10 @@ paths:
 - /api/logout
 - /api/session
 - /api/v1/counterparties/create
+- /api/v1/counterparties/get
 - /api/v1/counterparties/list
+- /api/v1/counterparties/set-archived
+- /api/v1/counterparties/update
 - /api/v1/shipment-items/add
 - /api/v1/shipment-items/list
 - /api/v1/shipment-items/update

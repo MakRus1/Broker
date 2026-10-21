@@ -1,17 +1,96 @@
+CounterpartyRole:
+  type: string
+  enum:
+  - customer
+  - carrier
+  - agent
+  - supplier
+  - partner
+CounterpartyContact:
+  type: object
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+      maxLength: 256
+      minLength: 1
+    position:
+      type: string
+      maxLength: 256
+      default: ''
+    email:
+      type: string
+      maxLength: 256
+      default: ''
+    phone:
+      type: string
+      maxLength: 64
+      default: ''
+  required:
+  - name
 Counterparty:
   type: object
   additionalProperties: false
   properties:
     id:
       type: string
+      maxLength: 256
       format: uuid
     name:
       type: string
-      minLength: 1
       maxLength: 256
+      minLength: 1
+    legal_name:
+      type: string
+      maxLength: 512
+      default: ''
+    country_code:
+      type: string
+      maxLength: 2
+      pattern: ^(|[A-Za-z]{2})$
+      default: ''
+    tax_id:
+      type: string
+      maxLength: 64
+      pattern: ^[A-Za-z0-9 -]*$
+      default: ''
+    registration_id:
+      type: string
+      maxLength: 64
+      default: ''
+    legal_address:
+      type: string
+      maxLength: 1024
+      default: ''
+    roles:
+      type: array
+      items:
+        $ref: '#/CounterpartyRole'
+      uniqueItems: true
+      maxItems: 5
+      default: []
+    contacts:
+      type: array
+      items:
+        $ref: '#/CounterpartyContact'
+      maxItems: 32
+    revision:
+      type: integer
+      minimum: 1
+    archived:
+      type: boolean
   required:
   - id
   - name
+  - legal_name
+  - country_code
+  - tax_id
+  - registration_id
+  - legal_address
+  - roles
+  - contacts
+  - revision
+  - archived
 CounterpartyError:
   type: object
   additionalProperties: false
@@ -29,24 +108,153 @@ CreateCounterpartyRequest:
   properties:
     id:
       type: string
+      maxLength: 256
       format: uuid
     name:
       type: string
-      minLength: 1
       maxLength: 256
+      minLength: 1
+    legal_name:
+      type: string
+      maxLength: 512
+      default: ''
+    country_code:
+      type: string
+      maxLength: 2
+      pattern: ^(|[A-Za-z]{2})$
+      default: ''
+    tax_id:
+      type: string
+      maxLength: 64
+      pattern: ^[A-Za-z0-9 -]*$
+      default: ''
+    registration_id:
+      type: string
+      maxLength: 64
+      default: ''
+    legal_address:
+      type: string
+      maxLength: 1024
+      default: ''
+    roles:
+      type: array
+      items:
+        $ref: '#/CounterpartyRole'
+      uniqueItems: true
+      maxItems: 5
+      default: []
+    contacts:
+      type: array
+      items:
+        $ref: '#/CounterpartyContact'
+      maxItems: 32
   required:
   - id
   - name
+UpdateCounterpartyRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      maxLength: 256
+      format: uuid
+    expected_revision:
+      type: integer
+      minimum: 1
+    name:
+      type: string
+      maxLength: 256
+      minLength: 1
+    legal_name:
+      type: string
+      maxLength: 512
+      default: ''
+    country_code:
+      type: string
+      maxLength: 2
+      pattern: ^(|[A-Za-z]{2})$
+      default: ''
+    tax_id:
+      type: string
+      maxLength: 64
+      pattern: ^[A-Za-z0-9 -]*$
+      default: ''
+    registration_id:
+      type: string
+      maxLength: 64
+      default: ''
+    legal_address:
+      type: string
+      maxLength: 1024
+      default: ''
+    roles:
+      type: array
+      items:
+        $ref: '#/CounterpartyRole'
+      uniqueItems: true
+      maxItems: 5
+      default: []
+    contacts:
+      type: array
+      items:
+        $ref: '#/CounterpartyContact'
+      maxItems: 32
+  required:
+  - id
+  - expected_revision
+  - name
+GetCounterpartyRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      maxLength: 256
+      format: uuid
+  required:
+  - id
+SetArchivedCounterpartyRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      maxLength: 256
+      format: uuid
+    expected_revision:
+      type: integer
+      minimum: 1
+    archived:
+      type: boolean
+  required:
+  - id
+  - expected_revision
+  - archived
 ListCounterpartiesRequest:
   type: object
   additionalProperties: false
   properties:
     after:
       type: string
+      maxLength: 256
       format: uuid
     limit:
       type: integer
       minimum: 1
       maximum: 100
       default: 100
+    query:
+      type: string
+      maxLength: 256
+      default: ''
+    role:
+      $ref: '#/CounterpartyRole'
+    status:
+      type: string
+      enum:
+      - active
+      - archived
+      - all
+      default: active
   required: []

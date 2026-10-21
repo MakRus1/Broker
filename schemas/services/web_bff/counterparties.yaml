@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Контрагенты
+  title: Справочник контрагентов
   version: '1'
 paths:
   /api/v1/counterparties/create:
@@ -14,7 +14,7 @@ paths:
               $ref: components/schemas/counterparties/models.yaml#/CreateCounterpartyRequest
       responses:
         '201':
-          description: Контрагент сохранён
+          description: Результат операции
           content:
             application/json:
               schema:
@@ -26,7 +26,7 @@ paths:
                 required:
                 - counterparty
         '400':
-          description: Некорректное имя или параметры
+          description: Некорректные реквизиты или параметры
           content:
             application/json:
               schema:
@@ -43,8 +43,14 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '409':
-          description: Идентификатор уже занят другим контрагентом
+          description: Конфликт редакции, реквизитов или состояния
           content:
             application/json:
               schema:
@@ -57,7 +63,7 @@ paths:
                 $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
   /api/v1/counterparties/list:
     post:
-      summary: Список контрагентов
+      summary: Поиск контрагентов
       requestBody:
         required: true
         content:
@@ -66,7 +72,7 @@ paths:
               $ref: components/schemas/counterparties/models.yaml#/ListCounterpartiesRequest
       responses:
         '200':
-          description: Список контрагентов
+          description: Результат операции
           content:
             application/json:
               schema:
@@ -80,7 +86,7 @@ paths:
                 required:
                 - items
         '400':
-          description: Некорректное имя или параметры
+          description: Некорректные реквизиты или параметры
           content:
             application/json:
               schema:
@@ -97,8 +103,188 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '409':
-          description: Идентификатор уже занят другим контрагентом
+          description: Конфликт редакции, реквизитов или состояния
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+  /api/v1/counterparties/get:
+    post:
+      summary: Карточка контрагента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/counterparties/models.yaml#/GetCounterpartyRequest
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  counterparty:
+                    $ref: components/schemas/counterparties/models.yaml#/Counterparty
+                required:
+                - counterparty
+        '400':
+          description: Некорректные реквизиты или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '409':
+          description: Конфликт редакции, реквизитов или состояния
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+  /api/v1/counterparties/update:
+    post:
+      summary: Изменить контрагента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/counterparties/models.yaml#/UpdateCounterpartyRequest
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  counterparty:
+                    $ref: components/schemas/counterparties/models.yaml#/Counterparty
+                required:
+                - counterparty
+        '400':
+          description: Некорректные реквизиты или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '409':
+          description: Конфликт редакции, реквизитов или состояния
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+  /api/v1/counterparties/set-archived:
+    post:
+      summary: Архивировать или восстановить контрагента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/counterparties/models.yaml#/SetArchivedCounterpartyRequest
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  counterparty:
+                    $ref: components/schemas/counterparties/models.yaml#/Counterparty
+                required:
+                - counterparty
+        '400':
+          description: Некорректные реквизиты или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+        '409':
+          description: Конфликт редакции, реквизитов или состояния
           content:
             application/json:
               schema:

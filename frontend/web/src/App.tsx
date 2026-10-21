@@ -7,6 +7,7 @@ import {
   type Shipment,
   type Transportation,
 } from './api';
+import { CounterpartiesPage } from './CounterpartiesPage';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import { TransportationPage } from './TransportationPage';
 import { ShipmentPanel } from './ShipmentPanel';
@@ -14,7 +15,7 @@ import { TransportationTable } from './components';
 
 export function App() {
   const [session, setSession] = useState<Session | null>();
-  const [tab, setTab] = useState<'shipments' | 'transportations'>('shipments');
+  const [tab, setTab] = useState<'shipments' | 'transportations' | 'counterparties'>('shipments');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
@@ -31,7 +32,9 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations)(?:\/(?:new|[0-9a-f-]{36})(?:\/route)?)?$/i.test(pending)
+            /^\/(shipments|transportations|counterparties)(?:\/(?:new|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+              pending,
+            )
           ) {
             location.replace('#' + pending);
             return;
@@ -43,6 +46,7 @@ export function App() {
       const next = location.hash.slice(1) || '/shipments';
       setRoute(next);
       if (next.startsWith('/transportations')) setTab('transportations');
+      else if (next.startsWith('/counterparties')) setTab('counterparties');
       else setTab('shipments');
     }
     changed();
@@ -54,7 +58,7 @@ export function App() {
       ? 'Новая поставка · Broker'
       : shipmentId || transportationId
         ? 'Broker'
-        : `${tab === 'shipments' ? 'Поставки' : 'Перевозки'} · Broker`;
+        : `${tab === 'shipments' ? 'Поставки' : tab === 'counterparties' ? 'Контрагенты' : 'Перевозки'} · Broker`;
   }, [creating, shipmentId, transportationId, tab]);
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
@@ -90,7 +94,8 @@ export function App() {
   }, [error]);
   const load = useCallback(
     async (append = false) => {
-      if (!session || !session.permissions.includes(tab + '.read')) return;
+      if (!session || tab === 'counterparties' || !session.permissions.includes(tab + '.read'))
+        return;
       const currentRequest = ++requestNumber.current;
       setLoading(true);
       try {
@@ -151,16 +156,13 @@ export function App() {
     const controller = new AbortController();
     async function loadCustomers() {
       const items: Counterparty[] = [];
-      while (!controller.signal.aborted) {
-        const page = await request<{ items: Counterparty[] }>(
-          '/api/v1/counterparties/list',
-          session!,
-          { limit: 100, ...(items.length ? { after: items.at(-1)!.id } : {}) },
-          controller.signal,
-        );
-        items.push(...page.items);
-        if (page.items.length < 100) break;
-      }
+      const page = await request<{ items: Counterparty[] }>(
+        '/api/v1/counterparties/list',
+        session!,
+        { status: 'all', limit: 100 },
+        controller.signal,
+      );
+      items.push(...page.items);
       if (!controller.signal.aborted)
         setCustomers(items.sort((a, b) => a.name.localeCompare(b.name, 'ru')));
     }
@@ -169,6 +171,39 @@ export function App() {
     });
     return () => controller.abort();
   }, [session, error]);
+  useEffect(() => {
+    if (!session?.permissions.includes('counterparties.read')) return;
+    const ids = [
+      ...new Set([
+        ...shipments.map((item) => item.customer_id),
+        ...(selected ? [selected.customer_id] : []),
+      ]),
+    ].filter((id) => !customers.some((item) => item.id === id));
+    if (!ids.length) return;
+    const controller = new AbortController();
+    void Promise.allSettled(
+      ids.map((id) =>
+        request<{ counterparty: Counterparty }>(
+          '/api/v1/counterparties/get',
+          session,
+          { id },
+          controller.signal,
+        ),
+      ),
+    ).then((results) => {
+      if (!controller.signal.aborted) {
+        const found = results.flatMap((result) =>
+          result.status === 'fulfilled' ? [result.value.counterparty] : [],
+        );
+        if (found.length)
+          setCustomers((old) => [
+            ...old,
+            ...found.filter((item) => !old.some((value) => value.id === item.id)),
+          ]);
+      }
+    });
+    return () => controller.abort();
+  }, [session, shipments, selected, customers]);
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || 'Клиент недоступен';
   const write = session?.permissions.includes('shipments.write') ?? false;
@@ -231,6 +266,14 @@ export function App() {
           >
             ⇄ <span>Перевозки</span>
           </button>
+          <button
+            aria-current={tab === 'counterparties' ? 'page' : undefined}
+            onClick={() => {
+              location.hash = '/counterparties';
+            }}
+          >
+            ▤ <span>Контрагенты</span>
+          </button>
         </nav>
         <div className="profile">
           <span className="avatar">
@@ -247,7 +290,11 @@ export function App() {
           <span>Операционный учёт</span>
           <span className="environment">Broker / Рабочее пространство</span>
         </header>
-        <div hidden={creating || Boolean(shipmentId) || Boolean(transportationId)}>
+        <div
+          hidden={
+            tab === 'counterparties' || creating || Boolean(shipmentId) || Boolean(transportationId)
+          }
+        >
           <div className="page-heading">
             <div>
               <p className="eyebrow">ЛОГИСТИКА</p>
@@ -346,6 +393,16 @@ export function App() {
             )}
           </section>
         </div>
+        {tab === 'counterparties' && (
+          <CounterpartiesPage
+            route={route}
+            session={session}
+            onError={error}
+            onChanged={(value) =>
+              setCustomers((old) => [...old.filter((item) => item.id !== value.id), value])
+            }
+          />
+        )}
         {shipmentId && selected?.id !== shipmentId && (
           <p className="page-heading">Открываем поставку…</p>
         )}

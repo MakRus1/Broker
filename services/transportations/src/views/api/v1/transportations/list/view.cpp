@@ -1,5 +1,5 @@
 #include <helpers/transportations.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/transportations/list/view.hpp>
 
 namespace transportations::views::api::v1::transportations::list {
@@ -7,13 +7,13 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
-        const auto& principal = platform::auth::GetPrincipal(context);
+        const auto& identity = platform::auth::GetIdentity(context);
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto tenant = ResolveTenant(transaction, principal);
+        const auto organization = ResolveOrganization(transaction, identity);
         const auto rows =
             transaction
-                .Execute(sql::kListTransportations, tenant, request.body.after,
+                .Execute(sql::kListTransportations, organization, request.body.after,
                     request.body.shipment_id, request.body.item_id, request.body.limit)
                 .AsContainer<std::vector<pgtypes::TransportationV2>>();
         std::vector<std::string> ids;
@@ -21,11 +21,11 @@ Response View::Handle(
         for (const auto& row : rows)
             ids.push_back(boost::uuids::to_string(row.Id));
         // Все плечи страницы читаются одним запросом, без N+1.
-        const auto legs = ids.empty()
-            ? std::vector<pgtypes::TransportationLegV1>{}
-            : transaction.Execute(sql::kListLegs, tenant, ids)
-                  .AsContainer<std::vector<pgtypes::TransportationLegV1>>();
-        const auto result = Convert(rows, legs);
+        const auto route_segments = ids.empty()
+            ? std::vector<pgtypes::RouteSegmentV1>{}
+            : transaction.Execute(sql::kListRouteSegments, organization, ids)
+                  .AsContainer<std::vector<pgtypes::RouteSegmentV1>>();
+        const auto result = Convert(rows, route_segments);
         transaction.Commit();
         return Response200{.items = result};
     } catch (const ::transportations::ApiError& error) {

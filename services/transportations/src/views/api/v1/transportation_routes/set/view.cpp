@@ -1,7 +1,7 @@
 #include <domain/route.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/transportation_routes/set/view.hpp>
 
 namespace transportations::views::api::v1::transportation_routes::set {
@@ -9,29 +9,32 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
-        const auto& principal = platform::auth::GetPrincipal(context);
+        const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto tenant = ResolveTenant(transaction, principal);
-        auto result = ReadTransportation(transaction, tenant, request.body.transportation_id, true);
+        const auto organization = ResolveOrganization(transaction, identity);
+        auto result =
+            ReadTransportation(transaction, organization, request.body.transportation_id, true);
         CheckRevision(result.revision, request.body.expected_revision);
-        for (const auto& leg : result.legs) {
-            if (leg.actual_departure_at.has_value() || leg.actual_arrival_at.has_value())
+        for (const auto& route_segment : result.route_segments) {
+            if (route_segment.actual_departure_at.has_value() ||
+                route_segment.actual_arrival_at.has_value())
                 throw ApiError{409, "route_has_actuals", "Маршрут с фактами не заменяется"};
         }
         domain::ValidateRoute(request.body);
-        transaction.Execute(sql::kDeleteLegs, tenant, result.id);
-        result.legs.clear();
+        transaction.Execute(sql::kDeleteRouteSegments, organization, result.id);
+        result.route_segments.clear();
         std::int64_t position = 0;
-        for (const auto& input : request.body.legs) {
-            auto leg = domain::MakeLeg(input);
-            transaction.Execute(
-                sql::kInsertLeg, tenant, result.id, leg.id, position++, Document(leg));
-            result.legs.push_back(std::move(leg));
+        for (const auto& input : request.body.route_segments) {
+            auto route_segment = domain::MakeRouteSegment(input);
+            transaction.Execute(sql::kInsertRouteSegment, organization, result.id, route_segment.id,
+                position++, Document(route_segment));
+            result.route_segments.push_back(std::move(route_segment));
         }
-        transaction.Execute(sql::kBumpTransportationRevision, tenant, result.id);
+        transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
         ++result.revision;
-        WriteAudit(transaction, tenant, principal, "set_route", result.id, request.body, result);
+        WriteAudit(
+            transaction, organization, identity, "set_route", result.id, request.body, result);
         transaction.Commit();
         return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {

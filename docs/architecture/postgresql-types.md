@@ -25,7 +25,7 @@ types:
 ```sql
 SELECT ROW(id, reference)::public.example_v1
 FROM examples
-WHERE tenant_id = $1::UUID AND id = $2::UUID;
+WHERE organization_id = $1::UUID AND id = $2::UUID;
 ```
 
 ```cpp

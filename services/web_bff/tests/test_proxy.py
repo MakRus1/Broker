@@ -27,7 +27,7 @@ TRANSPORTATION = {
     'operation_id': ID,
     'container_type_code': '40HC',
     'container_ownership': 'COC',
-    'legs': [],
+    'route_segments': [],
 }
 
 
@@ -153,7 +153,7 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
     transportation = {
         **TRANSPORTATION,
         'container_ownership': ownership,
-        'legs': [
+        'route_segments': [
             {
                 'id': str(uuid4()),
                 'mode': mode,
@@ -175,3 +175,84 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
     response = await browser.post('/api/v1/transportations/get', {'transportation_id': ID})
     assert response.status == 200, response.text
     assert response.json() == {'transportation': transportation}
+
+
+@pytest.mark.parametrize(
+    'path,body,result',
+    [
+        (
+            'transportation-routes/set',
+            {
+                'transportation_id': ID,
+                'expected_revision': 1,
+                'route_segments': [
+                    {
+                        'id': ID,
+                        'mode': 'sea',
+                        'origin': {'name': 'Шанхай', 'country_code': 'CN'},
+                        'destination': {'name': 'Владивосток', 'country_code': 'RU'},
+                        'contractor_id': CUSTOMER,
+                        'planned_departure_at': '2026-10-21T10:00:00Z',
+                        'planned_arrival_at': '2026-10-23T10:00:00Z',
+                    }
+                ],
+            },
+            {'transportation': TRANSPORTATION},
+        ),
+        (
+            'transportation-actuals/record',
+            {
+                'transportation_id': ID,
+                'expected_revision': 2,
+                'route_segment_id': ID,
+                'event_kind': 'arrival',
+                'occurred_at': '2026-10-23T10:00:00Z',
+            },
+            {'transportation': TRANSPORTATION},
+        ),
+        (
+            'transportation-actuals/correct',
+            {
+                'transportation_id': ID,
+                'expected_revision': 3,
+                'route_segment_id': ID,
+                'event_kind': 'departure',
+                'occurred_at': '2026-10-21T11:00:00Z',
+                'reason': 'Уточнение',
+            },
+            {'transportation': TRANSPORTATION},
+        ),
+        (
+            'transportations/history',
+            {'transportation_id': ID, 'before': 10, 'limit': 5},
+            {
+                'items': [
+                    {
+                        'id': 9,
+                        'action': 'correct_actual',
+                        'actor': 'issuer#subject',
+                        'actor_name': 'Логист',
+                        'occurred_at': '2026-10-21T11:00:00Z',
+                        'reason': 'Уточнение',
+                        'event_kind': 'departure',
+                        'route_segment_id': ID,
+                        'revision': 4,
+                        'route_segments': TRANSPORTATION['route_segments'],
+                    }
+                ]
+            },
+        ),
+    ],
+)
+async def test_transportation_commands_and_history(browser, mockserver, path, body, result):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/' + path)
+    def upstream(request):
+        assert request.json == body
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return result
+
+    response = await browser.post('/api/v1/' + path, body)
+    assert response.status == 200, response.text
+    assert response.json() == result

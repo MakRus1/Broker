@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 
-async def test_create_replay_and_tenant_isolation(api, pgsql):
+async def test_create_replay_and_organization_isolation(api, pgsql):
     identifier = str(uuid4())
     body = {'id': identifier, 'name': '  ООО Тестовый клиент  '}
     created = await api.post('/api/v1/counterparties/create', body, expected=201)

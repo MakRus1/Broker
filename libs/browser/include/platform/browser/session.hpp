@@ -7,7 +7,7 @@
 
 namespace platform::browser {
 struct BrowserSession {
-    platform::auth::Principal User;
+    platform::auth::Identity User;
     std::string Access, Csrf, Id;
     const userver::server::http::HttpRequest* Request;
 };

@@ -7,5 +7,5 @@ SELECT ROW(
     planned_quantity::BIGINT
 )::public.shipment_item_v1
 FROM shipment_items
-WHERE tenant_id = $1::UUID AND id = $2::UUID
+WHERE organization_id = $1::UUID AND id = $2::UUID
 FOR UPDATE;

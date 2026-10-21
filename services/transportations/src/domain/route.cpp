@@ -33,19 +33,19 @@ void CheckInterval(
 namespace transportations::domain {
 void ValidateRoute(const models::SetRouteRequest& request) {
     std::set<boost::uuids::uuid> ids;
-    for (const auto& leg : request.legs) {
-        if (!ids.insert(boost::uuids::string_generator{}(leg.id)).second)
+    for (const auto& route_segment : request.route_segments) {
+        if (!ids.insert(boost::uuids::string_generator{}(route_segment.id)).second)
             throw ApiError{400, "invalid_request", "ID плеч должны отличаться"};
-        CheckInterval(leg.planned_departure_at, leg.planned_arrival_at);
+        CheckInterval(route_segment.planned_departure_at, route_segment.planned_arrival_at);
     }
 }
 
-void ValidateActualTimes(const models::TransportationLeg& leg) {
-    CheckInterval(leg.actual_departure_at, leg.actual_arrival_at);
+void ValidateActualTimes(const models::RouteSegment& route_segment) {
+    CheckInterval(route_segment.actual_departure_at, route_segment.actual_arrival_at);
 }
 
-models::TransportationLeg MakeLeg(const models::SetRouteLegsItem& source) {
-    models::TransportationLeg result;
+models::RouteSegment MakeRouteSegment(const models::SetRouteSegmentsItem& source) {
+    models::RouteSegment result;
     result.id = source.id;
     result.mode = source.mode;
     result.origin.name = source.origin.name;

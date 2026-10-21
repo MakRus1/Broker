@@ -52,7 +52,7 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
         } catch (const std::exception&) {
             // Ни токен, ни диагностические детали его разбора не попадают в ответ и логи.
         }
-        if (context.GetDataOptional<platform::auth::Principal>("platform-auth")) {
+        if (context.GetDataOptional<platform::auth::Identity>("platform-auth")) {
             Next(request, context);
             return;
         }
@@ -166,40 +166,40 @@ bool Component::IsProtected(std::string_view path) const {
     return path.starts_with(state_->Prefix);
 }
 
-Principal Component::Authorize(const std::string& path, const std::string& authorization) const {
+Identity Component::Authorize(const std::string& path, const std::string& authorization) const {
     if (authorization.size() < 8 ||
         !std::equal(authorization.begin(), authorization.begin() + 7, "bearer ",
             [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
         throw std::invalid_argument("Missing bearer token");
-    const auto principal = VerifyAccess(authorization.substr(7));
+    const auto identity = VerifyAccess(authorization.substr(7));
     const auto permission = state_->Permissions.find(path);
     if (permission == state_->Permissions.end() ||
-        !principal.Permissions.contains(permission->second))
+        !identity.Permissions.contains(permission->second))
         throw Forbidden{};
-    return principal;
+    return identity;
 }
 
-Principal Component::VerifyAccess(const std::string& token) const {
+Identity Component::VerifyAccess(const std::string& token) const {
     const auto cached = std::atomic_load(&state_->Cache);
     if (!cached || Clock::now() - cached->Received > state_->MaxAge)
         throw Unavailable{};
-    Principal principal;
+    Identity identity;
     try {
-        principal = cached->Check.Verify(token);
+        identity = cached->Check.Verify(token);
     } catch (const UnknownKey&) {
         state_->RefreshUnknownKey();
         throw;
     }
-    return principal;
+    return identity;
 }
 
-Principal Component::VerifyLogin(const std::string& access, const std::string& identity,
+Identity Component::VerifyLogin(const std::string& access, const std::string& id_token,
     const std::string& client, const std::string& nonce) const {
     const auto cached = std::atomic_load(&state_->Cache);
     if (!cached || Clock::now() - cached->Received > state_->MaxAge)
         throw Unavailable{};
     try {
-        return cached->Check.VerifyLogin(access, identity, client, nonce);
+        return cached->Check.VerifyLogin(access, id_token, client, nonce);
     } catch (const UnknownKey&) {
         state_->RefreshUnknownKey();
         throw;

@@ -1,4 +1,4 @@
-INSERT INTO shipments (tenant_id, customer_id, reference)
+INSERT INTO shipments (organization_id, customer_id, reference)
 VALUES ($1::UUID, $2::UUID, $3)
 RETURNING ROW(
     id,

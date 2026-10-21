@@ -8,6 +8,7 @@ import {
   type Transportation,
 } from './api';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
+import { TransportationPage } from './TransportationPage';
 import { ShipmentPanel } from './ShipmentPanel';
 import { TransportationTable } from './components';
 
@@ -20,18 +21,41 @@ export function App() {
   const [selected, setSelected] = useState<Shipment | null>(null);
   const [route, setRoute] = useState(() => location.hash.slice(1) || '/shipments');
   const creating = route === '/shipments/new';
+  const transportationId = /^\/transportations\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
   const shipmentId = /^\/shipments\/([0-9a-f-]{36})$/i.exec(route)?.[1];
   useEffect(() => {
     function changed() {
+      if (!location.hash) {
+        try {
+          const pending = sessionStorage.getItem('broker:login-return');
+          sessionStorage.removeItem('broker:login-return');
+          if (
+            pending &&
+            /^\/(shipments|transportations)(?:\/(?:new|[0-9a-f-]{36})(?:\/route)?)?$/i.test(pending)
+          ) {
+            location.replace('#' + pending);
+            return;
+          }
+        } catch {
+          /* При недоступном хранилище вход открывает реестр. */
+        }
+      }
       const next = location.hash.slice(1) || '/shipments';
       setRoute(next);
-      if (next === '/transportations') setTab('transportations');
+      if (next.startsWith('/transportations')) setTab('transportations');
       else setTab('shipments');
     }
     changed();
     window.addEventListener('hashchange', changed);
     return () => window.removeEventListener('hashchange', changed);
   }, []);
+  useEffect(() => {
+    document.title = creating
+      ? 'Новая поставка · Broker'
+      : shipmentId || transportationId
+        ? 'Broker'
+        : `${tab === 'shipments' ? 'Поставки' : 'Перевозки'} · Broker`;
+  }, [creating, shipmentId, transportationId, tab]);
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState('');
@@ -169,7 +193,17 @@ export function App() {
         <Brand />
         <h1>Логистика начинается здесь</h1>
         <p>Поставки, позиции и перевозки в одном рабочем пространстве.</p>
-        <a className="primary" href="/auth/login">
+        <a
+          className="primary"
+          href="/auth/login"
+          onClick={() => {
+            try {
+              sessionStorage.setItem('broker:login-return', location.hash.slice(1));
+            } catch {
+              /* Сохранение адреса не блокирует вход. */
+            }
+          }}
+        >
           Войти в Broker →
         </a>
         {notice && <p role="alert">{notice}</p>}
@@ -213,7 +247,7 @@ export function App() {
           <span>Операционный учёт</span>
           <span className="environment">Broker / Рабочее пространство</span>
         </header>
-        <div hidden={creating || Boolean(shipmentId)}>
+        <div hidden={creating || Boolean(shipmentId) || Boolean(transportationId)}>
           <div className="page-heading">
             <div>
               <p className="eyebrow">ЛОГИСТИКА</p>
@@ -312,8 +346,10 @@ export function App() {
             )}
           </section>
         </div>
-        {shipmentId && !selected && <p className="page-heading">Открываем поставку…</p>}
-        {shipmentId && selected && (
+        {shipmentId && selected?.id !== shipmentId && (
+          <p className="page-heading">Открываем поставку…</p>
+        )}
+        {shipmentId && selected?.id === shipmentId && (
           <ShipmentPanel
             key={selected.id}
             customerName={customerName(selected.customer_id)}
@@ -321,6 +357,16 @@ export function App() {
             session={session}
             onClose={closeSelected}
             onUpdate={updateShipment}
+            onError={error}
+          />
+        )}
+        {transportationId && (
+          <TransportationPage
+            key={transportationId}
+            id={transportationId}
+            editing={route.endsWith('/route')}
+            session={session}
+            customers={customers}
             onError={error}
           />
         )}

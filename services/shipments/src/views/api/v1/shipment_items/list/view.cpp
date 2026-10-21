@@ -1,7 +1,7 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
 #include <map>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/shipment_items/list/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::list {
@@ -9,14 +9,15 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::shipments::helpers;
     try {
-        const auto& principal = platform::auth::GetPrincipal(context);
+        const auto& identity = platform::auth::GetIdentity(context);
         // Позиции и счётчики резервов читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto tenant = ResolveTenant(transaction, principal);
-        if (transaction.Execute(sql::kGetShipment, tenant, request.body.shipment_id).IsEmpty())
+        const auto organization = ResolveOrganization(transaction, identity);
+        if (transaction.Execute(sql::kGetShipment, organization, request.body.shipment_id)
+                .IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         const auto rows = transaction
-                              .Execute(sql::kListItems, tenant, request.body.shipment_id,
+                              .Execute(sql::kListItems, organization, request.body.shipment_id,
                                   request.body.after, request.body.limit)
                               .AsContainer<std::vector<pgtypes::ShipmentItemV1>>();
         std::vector<std::string> ids;
@@ -24,7 +25,7 @@ Response View::Handle(
             ids.push_back(boost::uuids::to_string(row.Id));
         std::map<std::string, pgtypes::QuantityTotalsV1> totals;
         if (!ids.empty()) {
-            const auto counts = transaction.Execute(sql::kListOperationTotals, tenant, ids);
+            const auto counts = transaction.Execute(sql::kListOperationTotals, organization, ids);
             for (const auto& count : counts.AsSetOf<pgtypes::ItemTotalsV1>())
                 totals.emplace(boost::uuids::to_string(count.ItemId),
                     pgtypes::QuantityTotalsV1{count.Created, count.Pending});

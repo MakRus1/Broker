@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <stdexcept>
 
 namespace platform::auth {
@@ -19,12 +19,12 @@ class Verifier final {
   public:
     Verifier(Settings settings, const std::string& jwks);
     ~Verifier();
-    Principal Verify(const std::string& token) const;
-    Principal VerifyLogin(const std::string& access, const std::string& identity,
+    Identity Verify(const std::string& token) const;
+    Identity VerifyLogin(const std::string& access, const std::string& id_token,
         const std::string& client, const std::string& nonce) const;
 
   private:
-    Principal VerifyKind(const std::string& token, std::string_view kind) const;
+    Identity VerifyKind(const std::string& token, std::string_view kind) const;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

@@ -9,7 +9,7 @@ SELECT ROW(
     'T-' || number
 )::public.transportation_v2
 FROM transportations
-WHERE tenant_id = $1::UUID
+WHERE organization_id = $1::UUID
   AND ($2::UUID IS NULL OR id > $2::UUID)
   AND ($3::UUID IS NULL OR shipment_id = $3::UUID)
   AND ($4::UUID IS NULL OR item_id = $4::UUID)

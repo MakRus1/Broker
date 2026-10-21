@@ -2,7 +2,7 @@ name: SHIPMENT_CONTEXT
 schema:
   type: object
   properties:
-    tenant_id:
+    organization_id:
       type: string
       minLength: 1
     transport_mode:

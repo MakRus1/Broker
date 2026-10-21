@@ -1,6 +1,6 @@
 -- Захват задания атомарен; сетевые вызовы выполняются после завершения запроса.
 WITH candidate AS (
-    SELECT tenant_id, id
+    SELECT organization_id, id
     FROM creation_operations
     WHERE status = 'pending'
       AND next_attempt_at <= now()
@@ -15,9 +15,9 @@ WITH candidate AS (
         lease_token = gen_random_uuid(),
         attempts = attempts + 1
     FROM candidate
-    WHERE operation.tenant_id = candidate.tenant_id
+    WHERE operation.organization_id = candidate.organization_id
       AND operation.id = candidate.id
-    RETURNING operation.tenant_id, operation.id, operation.lease_token, operation.payload
+    RETURNING operation.organization_id, operation.id, operation.lease_token, operation.payload
 )
-SELECT ROW(tenant_id, id, lease_token, payload)::public.delivery_v1
+SELECT ROW(organization_id, id, lease_token, payload)::public.delivery_v2
 FROM claimed;

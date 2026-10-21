@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tests/support'))
 from auth_tokens import SigningKey
 
-TENANT = '11111111-1111-4111-8111-111111111111'
+ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 CUSTOMER = '33333333-3333-4333-8333-333333333333'
 
 
@@ -135,8 +135,8 @@ def run(build):
                 for migration in migrations:
                     cursor.execute(migration.read_text())
                 cursor.execute(
-                    'INSERT INTO tenant_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
-                    (issuer, 'author', TENANT, issuer, 'dispatcher', TENANT),
+                    'INSERT INTO organization_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
+                    (issuer, 'author', ORGANIZATION, issuer, 'dispatcher', ORGANIZATION),
                 )
             db.commit()
 

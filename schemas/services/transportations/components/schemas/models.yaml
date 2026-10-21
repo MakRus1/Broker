@@ -65,10 +65,10 @@ Transportation:
       maxLength: 16
     container_ownership:
       $ref: '#/ContainerOwnership'
-    legs:
+    route_segments:
       type: array
       items:
-        $ref: '#/TransportationLeg'
+        $ref: '#/RouteSegment'
     number:
       type: string
       minLength: 1
@@ -80,9 +80,9 @@ Transportation:
   - operation_id
   - container_type_code
   - container_ownership
-  - legs
+  - route_segments
   - number
-TransportationLeg:
+RouteSegment:
   type: object
   additionalProperties: false
   properties:
@@ -92,9 +92,9 @@ TransportationLeg:
     mode:
       $ref: '#/TransportMode'
     origin:
-      $ref: '#/TransportationLegOrigin'
+      $ref: '#/RouteSegmentOrigin'
     destination:
-      $ref: '#/TransportationLegDestination'
+      $ref: '#/RouteSegmentDestination'
     contractor_id:
       type: string
       format: uuid
@@ -115,7 +115,7 @@ TransportationLeg:
   - mode
   - origin
   - destination
-TransportationLegOrigin:
+RouteSegmentOrigin:
   type: object
   additionalProperties: false
   properties:
@@ -129,7 +129,7 @@ TransportationLegOrigin:
   required:
   - name
   - country_code
-TransportationLegDestination:
+RouteSegmentDestination:
   type: object
   additionalProperties: false
   properties:
@@ -143,7 +143,7 @@ TransportationLegDestination:
   required:
   - name
   - country_code
-SetRouteLegsItem:
+SetRouteSegmentsItem:
   type: object
   additionalProperties: false
   properties:
@@ -153,9 +153,9 @@ SetRouteLegsItem:
     mode:
       $ref: '#/TransportMode'
     origin:
-      $ref: '#/SetRouteLegsItemOrigin'
+      $ref: '#/SetRouteSegmentsItemOrigin'
     destination:
-      $ref: '#/SetRouteLegsItemDestination'
+      $ref: '#/SetRouteSegmentsItemDestination'
     contractor_id:
       type: string
       format: uuid
@@ -170,7 +170,7 @@ SetRouteLegsItem:
   - mode
   - origin
   - destination
-SetRouteLegsItemOrigin:
+SetRouteSegmentsItemOrigin:
   type: object
   additionalProperties: false
   properties:
@@ -184,7 +184,7 @@ SetRouteLegsItemOrigin:
   required:
   - name
   - country_code
-SetRouteLegsItemDestination:
+SetRouteSegmentsItemDestination:
   type: object
   additionalProperties: false
   properties:
@@ -261,7 +261,7 @@ EnsureCreatedRequest:
     item_id:
       type: string
       format: uuid
-    tenant_id:
+    organization_id:
       type: string
       format: uuid
     quantity:
@@ -281,7 +281,7 @@ EnsureCreatedRequest:
   - operation_id
   - shipment_id
   - item_id
-  - tenant_id
+  - organization_id
   - quantity
   - schema_version
   - container_type_code
@@ -297,16 +297,16 @@ SetRouteRequest:
       type: integer
       minimum: 1
       maximum: 2147483647
-    legs:
+    route_segments:
       type: array
       minItems: 1
       maxItems: 32
       items:
-        $ref: '#/SetRouteLegsItem'
+        $ref: '#/SetRouteSegmentsItem'
   required:
   - transportation_id
   - expected_revision
-  - legs
+  - route_segments
 RecordActualRequest:
   type: object
   additionalProperties: false
@@ -314,7 +314,7 @@ RecordActualRequest:
     transportation_id:
       type: string
       format: uuid
-    leg_id:
+    route_segment_id:
       type: string
       format: uuid
     expected_revision:
@@ -328,7 +328,7 @@ RecordActualRequest:
       format: date-time
   required:
   - transportation_id
-  - leg_id
+  - route_segment_id
   - expected_revision
   - event_kind
   - occurred_at
@@ -339,7 +339,7 @@ CorrectActualRequest:
     transportation_id:
       type: string
       format: uuid
-    leg_id:
+    route_segment_id:
       type: string
       format: uuid
     expected_revision:
@@ -357,8 +357,65 @@ CorrectActualRequest:
       maxLength: 2048
   required:
   - transportation_id
-  - leg_id
+  - route_segment_id
   - expected_revision
   - event_kind
   - occurred_at
   - reason
+ListHistoryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    transportation_id:
+      type: string
+      format: uuid
+    before:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+  required:
+  - transportation_id
+TransportationEvent:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    action:
+      type: string
+    actor:
+      type: string
+    actor_name:
+      type: string
+    occurred_at:
+      type: string
+      format: date-time
+    reason:
+      type: string
+    route_segment_id:
+      type: string
+      format: uuid
+    event_kind:
+      $ref: '#/EventKind'
+    revision:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    route_segments:
+      type: array
+      items:
+        $ref: '#/RouteSegment'
+  required:
+  - id
+  - action
+  - actor
+  - occurred_at
+  - revision
+  - route_segments

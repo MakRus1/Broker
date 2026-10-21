@@ -6,6 +6,7 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
         .note = request.body.note,
         .payload_provided = request.body.profile.WasProvided("state"),
         .profile = std::move(request.body.profile),
-        .profiles = std::move(request.body.profiles)};
+        .profiles = std::move(request.body.profiles),
+        .scoped = std::move(request.body.scoped)};
 }
 }  // namespace contract_service::views::models::echo

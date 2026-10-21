@@ -1,0 +1,16 @@
+State:
+  type: string
+  enum: [ready, done]
+  default: ready
+Address:
+  type: object
+  additionalProperties: false
+  properties:
+    state:
+      $ref: '#/State'
+    kind:
+      type: string
+      enum: [primary, secondary]
+      default: primary
+AddressAlias:
+  $ref: '#/Address'

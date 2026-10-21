@@ -29,7 +29,10 @@ def render_models(models, namespace, header=True):
 '''
     code += f'namespace {namespace} {{\n'
     for model in models:
-        name = model.name
+        *parts, name = model.name.split('::')
+        nested = '::'.join(parts)
+        if nested:
+            code += f'namespace {nested} {{\n'
         if model.alias:
             code += f'using {name} = ::{namespace}::{model.alias};\n'
         elif model.body:
@@ -70,4 +73,6 @@ userver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject)
             code += enums(replace(model.type, enum_name=name, model_name=None))
         else:
             code += f'using {name} = {bind_type(model.type, namespace).cpp};\n'
+        if nested:
+            code += f'}}  // namespace {nested}\n'
     return code + f'}}  // namespace {namespace}\n'

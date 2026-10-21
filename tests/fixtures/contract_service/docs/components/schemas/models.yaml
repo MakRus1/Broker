@@ -60,6 +60,8 @@ Payload:
     note:
       type: string
       nullable: true
+    scoped:
+      $ref: scoped/models.yaml#/AddressAlias
     payload_provided:
       type: boolean
       default: false

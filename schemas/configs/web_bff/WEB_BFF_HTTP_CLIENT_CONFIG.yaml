@@ -13,9 +13,13 @@ paths:
 - /api/v1/shipments/get
 - /api/v1/shipments/list
 - /api/v1/shipments/update
+- /api/v1/transportation-actuals/correct
+- /api/v1/transportation-actuals/record
 - /api/v1/transportation-operations/create
 - /api/v1/transportation-operations/get
+- /api/v1/transportation-routes/set
 - /api/v1/transportations/get
+- /api/v1/transportations/history
 - /api/v1/transportations/list
 default:
   '**default**':

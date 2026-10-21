@@ -5,7 +5,7 @@
 #include <userver/server/request/request_context.hpp>
 
 namespace platform::auth {
-struct Principal {
+struct Identity {
     std::string Issuer;
     std::string Subject;
     std::set<std::string> Permissions;
@@ -16,10 +16,10 @@ struct Principal {
     }
 };
 
-inline const Principal& GetPrincipal(const userver::server::request::RequestContext& context) {
-    const auto* principal = context.GetDataOptional<Principal>("platform-auth");
-    if (!principal)
+inline const Identity& GetIdentity(const userver::server::request::RequestContext& context) {
+    const auto* identity = context.GetDataOptional<Identity>("platform-auth");
+    if (!identity)
         throw userver::server::handlers::Unauthorized{};
-    return *principal;
+    return *identity;
 }
 }  // namespace platform::auth

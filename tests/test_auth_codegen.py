@@ -46,8 +46,8 @@ class AuthContractTest(unittest.TestCase):
         self.assertIn('Invalid bearer token', code)
         from render import handler
         _, source = handler('example', operation, False)
-        self.assertIn('::platform::auth::GetPrincipal(context)', source)
-        self.assertLess(source.index('GetPrincipal(context)'), source.index('View::Handle'))
+        self.assertIn('::platform::auth::GetIdentity(context)', source)
+        self.assertLess(source.index('GetIdentity(context)'), source.index('View::Handle'))
 
     def test_every_admin_operation_has_policy_and_security(self):
         service = ROOT / 'services/configs'
@@ -74,7 +74,7 @@ class CookieContractTest(unittest.TestCase):
         self.assertTrue(operation.authenticated)
         self.assertEqual(operation.cookie_name, 'broker_admin')
         _, code = handler('example', operation, False)
-        self.assertLess(code.index('GetPrincipal(context)'), code.index('Request request'))
+        self.assertLess(code.index('GetIdentity(context)'), code.index('Request request'))
         spec = self.spec()
         spec['paths']['/admin/example']['get']['security'] = []
         operation = parse_spec(spec)[0]

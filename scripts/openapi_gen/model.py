@@ -253,9 +253,10 @@ class SchemaRegistry:
         return replace(enum_type, model_name=enum_name, nullable=typ.nullable)
 
     def get(self, name):
-        identifier(name)
-        if name in {'std', 'userver', 'broker_codegen', 'models', 'ValidateModel', 'ParseModelJson', 'Serialize', 'EnumValue',
-                    'ParseEnumScalar', 'ParseEnumJson', 'detail', 'ToJson'}:
+        for part in name.split("::"):
+            identifier(part)
+        if any(part in {'std', 'userver', 'broker_codegen', 'models', 'ValidateModel', 'ParseModelJson', 'Serialize', 'EnumValue',
+                    'ParseEnumScalar', 'ParseEnumJson', 'detail', 'ToJson'} for part in name.split('::')):
             raise ValueError(f'Reserved model name: {name}')
         if name in self.visiting:
             raise ValueError('Recursive schema reference: ' + ' -> '.join([*self.visiting, name]))
@@ -292,9 +293,16 @@ def collect_models(operations):
             if model.name in models and models[model.name] != model:
                 raise ValueError(f'Conflicting components.schemas model: {model.name}')
             models[model.name] = model
+    for name in models:
+        parts = name.split('::')
+        for index in range(1, len(parts)):
+            prefix = '::'.join(parts[:index])
+            if prefix in models:
+                raise ValueError(f'Model namespace conflicts with model: {prefix}')
     validation_names = set()
     def validation_functions(typ, name):
-        validation_names.add('Validate_' + name)
+        parts = name.split('::')
+        validation_names.add('::'.join([*parts[:-1], 'Validate_' + parts[-1]]))
         if typ.nullable:
             validation_functions(replace(typ, nullable=False), name + '_value')
         elif typ.item:
@@ -302,7 +310,7 @@ def collect_models(operations):
     for model in models.values():
         if model.body and not model.alias:
             for field in model.body.fields:
-                validation_functions(field.type, model.name + '_' + field.name)
+                validation_functions(field.type, '::'.join([*model.name.split('::')[:-1], model.name.split('::')[-1] + '_' + field.name]))
     conflicts = validation_names & models.keys()
     if conflicts:
         raise ValueError('Conflicting model validation name: ' + ', '.join(sorted(conflicts)))

@@ -40,12 +40,29 @@ export interface Transportation {
   operation_id: string;
   container_type_code: string;
   container_ownership: 'SOC' | 'COC';
-  legs: {
+  route_segments: {
     id: string;
     mode: 'sea' | 'road' | 'rail';
+    contractor_id?: string;
+    planned_departure_at?: string;
+    planned_arrival_at?: string;
+    actual_departure_at?: string;
+    actual_arrival_at?: string;
     origin: { name: string; country_code: string };
     destination: { name: string; country_code: string };
   }[];
+}
+export interface TransportationEvent {
+  id: number;
+  action: string;
+  actor: string;
+  actor_name?: string;
+  occurred_at: string;
+  reason?: string;
+  route_segment_id?: string;
+  event_kind?: 'departure' | 'arrival';
+  revision: number;
+  route_segments: Transportation['route_segments'];
 }
 export class ApiError extends Error {
   constructor(

@@ -270,8 +270,8 @@ public:
     bad_request = next((response for response in op.responses if response.status == 400), None)
     if bad_request and bad_request.media == 'application/json' and bad_request.body and {field.name for field in bad_request.body.fields} == {'error', 'message'} and all(field.required and field.type.schema == {'type': 'string'} for field in bad_request.body.fields):
         parse_error = 'http.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest); http.GetHttpResponse().SetHeader(std::string_view{"Content-Type"}, "application/json"); return ToJson(Response400{.error = "invalid_request", .message = "Invalid request"});'
-    auth_include = '#include <platform/auth/principal.hpp>\n' if op.authenticated else ''
-    auth_check = '(void)::platform::auth::GetPrincipal(context);' if op.authenticated else ''
+    auth_include = '#include <platform/auth/identity.hpp>\n' if op.authenticated else ''
+    auth_check = '(void)::platform::auth::GetIdentity(context);' if op.authenticated else ''
     source = f'''{auth_include}#include <views/{op.rel}/handler.hpp>
 #include <views/{op.rel}/view.hpp>
 #include <openapi/runtime.hpp>

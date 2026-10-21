@@ -1,7 +1,7 @@
 #include <helpers/actuals.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/transportation_actuals/record/view.hpp>
 
 namespace transportations::views::api::v1::transportation_actuals::record {
@@ -9,16 +9,17 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
-        const auto& principal = platform::auth::GetPrincipal(context);
+        const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto tenant = ResolveTenant(transaction, principal);
-        auto result = ReadTransportation(transaction, tenant, request.body.transportation_id, true);
+        const auto organization = ResolveOrganization(transaction, identity);
+        auto result =
+            ReadTransportation(transaction, organization, request.body.transportation_id, true);
         CheckRevision(result.revision, request.body.expected_revision);
-        UpdateActual(transaction, tenant, result, request.body.leg_id, request.body.event_kind,
-            request.body.occurred_at, ActualChange::Record);
+        UpdateActual(transaction, organization, result, request.body.route_segment_id,
+            request.body.event_kind, request.body.occurred_at, ActualChange::Record);
         WriteAudit(
-            transaction, tenant, principal, "record_actual", result.id, request.body, result);
+            transaction, organization, identity, "record_actual", result.id, request.body, result);
         transaction.Commit();
         return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {

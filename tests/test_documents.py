@@ -42,6 +42,37 @@ class DocumentsTest(unittest.TestCase):
     def write(self, path, data):
         path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
 
+    def test_directory_namespaces_survive_export_and_cross_references(self):
+        for group in ('shipments', 'transportations'):
+            directory = self.components / group
+            directory.mkdir()
+            self.write(directory / 'models.yaml', {
+                'State': {'type': 'string', 'enum': ['ready', 'done'], 'default': 'ready'},
+                'Item': {'type': 'object', 'properties': {
+                    'state': {'$ref': '#/State'},
+                    'kind': {'type': 'string', 'enum': ['one', 'two'], 'default': 'one'},
+                }},
+                'Alias': {'$ref': '#/Item'},
+            })
+        self.data['paths']['/shipments'] = response(
+            '../../../components/schemas/shipments/models.yaml#/Alias')
+        self.data['paths']['/transportations'] = response(
+            '../../../components/schemas/transportations/models.yaml#/Item')
+        self.write(self.source, self.data)
+        operations = load(self.service)
+        from render import outputs
+        header = outputs('example', operations, set())['include/openapi/models.hpp']
+        for group in ('shipments', 'transportations'):
+            self.assertIn(f'namespace {group} {{', header)
+            self.assertIn(f'::example::models::{group}::State', header)
+        self.assertIn('using Alias = ::example::models::shipments::Item;', header)
+        self.assertIn('enum class Item_kind', header)
+        export(self.service)
+        self.assertEqual(load(self.service, public_only=True), operations)
+        public = self.root / 'schemas/services/example/components/schemas'
+        self.assertTrue((public / 'shipments/models.yaml').is_file())
+        self.assertTrue((public / 'transportations/models.yaml').is_file())
+
     def test_external_schemas_export_and_client_loading(self):
         operation, = load(self.service)
         self.assertEqual({model.name for model in operation.models}, {'Envelope', 'Child'})

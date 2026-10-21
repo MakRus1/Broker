@@ -3,7 +3,7 @@
 import asyncio
 from uuid import uuid4
 import pytest
-from conftest import TENANT, OTHER_TENANT
+from conftest import ORGANIZATION, OTHER_ORGANIZATION
 
 PATH = '/api/internal/v1/transportations/ensure-created'
 
@@ -13,7 +13,7 @@ def command():
         'operation_id': str(uuid4()),
         'shipment_id': str(uuid4()),
         'item_id': str(uuid4()),
-        'tenant_id': TENANT,
+        'organization_id': ORGANIZATION,
         'quantity': 5,
         'schema_version': 1,
         'container_type_code': '40HC',
@@ -34,7 +34,7 @@ async def test_inbox_concurrent_replay(api):
     await api.post(PATH, {**body, 'quantity': 3}, expected=409)
 
 
-async def test_tenant_and_service_role(api):
+async def test_organization_and_service_role(api):
     body = command()
     await api.post(PATH, body, user='other', expected=403)
     await api.post(PATH, body, roles=['transportations.write'], expected=403)
@@ -47,7 +47,7 @@ async def test_tenant_and_service_role(api):
     )
 
 
-def leg(mode='road'):
+def route_segment(mode='road'):
     return {
         'id': str(uuid4()),
         'mode': mode,
@@ -59,13 +59,13 @@ def leg(mode='road'):
 async def test_route_actual_and_correction(api):
     created = await api.post(PATH, command())
     tid = created['operation']['transportation_ids'][0]
-    legs = [leg(), leg('rail'), leg()]
-    body = {'transportation_id': tid, 'expected_revision': 1, 'legs': legs}
+    route_segments = [route_segment(), route_segment('rail'), route_segment()]
+    body = {'transportation_id': tid, 'expected_revision': 1, 'route_segments': route_segments}
     result = await api.post('/api/v1/transportation-routes/set', body)
-    assert len(result['transportation']['legs']) == 3
+    assert len(result['transportation']['route_segments']) == 3
     actual = {
         'transportation_id': tid,
-        'leg_id': legs[0]['id'],
+        'route_segment_id': route_segments[0]['id'],
         'expected_revision': 2,
         'event_kind': 'departure',
         'occurred_at': '2026-10-20T09:00:00Z',
@@ -97,7 +97,7 @@ async def test_unsupported_transport(api, mode):
         {
             'transportation_id': created['operation']['transportation_ids'][0],
             'expected_revision': 1,
-            'legs': [leg(mode)],
+            'route_segments': [route_segment(mode)],
         },
         expected=400,
     )
@@ -106,13 +106,13 @@ async def test_unsupported_transport(api, mode):
 async def test_duplicate_legs_and_invalid_time(api):
     created = await api.post(PATH, command())
     tid = created['operation']['transportation_ids'][0]
-    first = leg()
+    first = route_segment()
     await api.post(
         '/api/v1/transportation-routes/set',
         {
             'transportation_id': tid,
             'expected_revision': 1,
-            'legs': [first, {**first, 'id': first['id'].upper()}],
+            'route_segments': [first, {**first, 'id': first['id'].upper()}],
         },
         expected=400,
     )
@@ -121,7 +121,7 @@ async def test_duplicate_legs_and_invalid_time(api):
         {
             'transportation_id': tid,
             'expected_revision': 1,
-            'legs': [
+            'route_segments': [
                 {
                     **first,
                     'planned_departure_at': '2026-10-21T10:00:00Z',
@@ -133,7 +133,7 @@ async def test_duplicate_legs_and_invalid_time(api):
     )
     unchanged = await api.post('/api/v1/transportations/get', {'transportation_id': tid})
     assert unchanged['transportation']['revision'] == 1
-    assert unchanged['transportation']['legs'] == []
+    assert unchanged['transportation']['route_segments'] == []
 
 
 @pytest.mark.parametrize(
@@ -151,13 +151,13 @@ async def test_route_timezones_and_fractions(api, departure, arrival, status):
         {
             'transportation_id': created['operation']['transportation_ids'][0],
             'expected_revision': 1,
-            'legs': [{**leg(), 'planned_departure_at': departure, 'planned_arrival_at': arrival}],
+            'route_segments': [{**route_segment(), 'planned_departure_at': departure, 'planned_arrival_at': arrival}],
         },
         expected=status,
     )
 
 
-async def test_filtered_pagination_loads_all_legs(api):
+async def test_filtered_pagination_loads_all_route_segments(api):
     body = command()
     created = await api.post(PATH, body)
     tid = created['operation']['transportation_ids'][0]
@@ -166,7 +166,7 @@ async def test_filtered_pagination_loads_all_legs(api):
         {
             'transportation_id': tid,
             'expected_revision': 1,
-            'legs': [leg('sea')],
+            'route_segments': [route_segment('sea')],
         },
     )
     listed = await api.post(
@@ -183,7 +183,82 @@ async def test_filtered_pagination_loads_all_legs(api):
     assert all(number.startswith('T-') for number in numbers)
     selected = next(value for value in listed['items'] if value['id'] == tid)
     assert selected['revision'] == 2
-    assert len(selected['legs']) == 1
-    assert selected['legs'][0]['mode'] == 'sea'
+    assert len(selected['route_segments']) == 1
+    assert selected['route_segments'][0]['mode'] == 'sea'
     last = listed['items'][-1]['id']
     assert (await api.post('/api/v1/transportations/list', {'after': last}))['items'] == []
+
+
+async def test_history_snapshots_pagination_and_access(api):
+    created = await api.post(PATH, command())
+    identifier = created['operation']['transportation_ids'][0]
+    history_request = {'transportation_id': identifier}
+    # UUID операции и перевозки принадлежат разным пространствам сущностей аудита.
+    await api.post(PATH, {**command(), 'operation_id': identifier})
+    assert (await api.post('/api/v1/transportations/history', history_request))['items'] == []
+    route = route_segment('sea')
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {'transportation_id': identifier, 'expected_revision': 1, 'route_segments': [route]},
+    )
+    actual = {
+        'transportation_id': identifier,
+        'route_segment_id': route['id'],
+        'expected_revision': 2,
+        'event_kind': 'departure',
+        'occurred_at': '2026-10-21T10:00:00Z',
+    }
+    await api.post('/api/v1/transportation-actuals/record', actual)
+    await api.post(
+        '/api/v1/transportation-actuals/correct',
+        {
+            **actual,
+            'expected_revision': 3,
+            'occurred_at': '2026-10-21T11:00:00Z',
+            'reason': 'Уточнено по данным терминала',
+        },
+    )
+    latest = (await api.post('/api/v1/transportations/history', {**history_request, 'limit': 2}))[
+        'items'
+    ]
+    assert [item['action'] for item in latest] == ['correct_actual', 'record_actual']
+    assert [item['revision'] for item in latest] == [4, 3]
+    assert latest[0]['actor_name'] == 'author'
+    assert latest[0]['reason'] == 'Уточнено по данным терминала'
+    assert latest[0]['event_kind'] == 'departure'
+    assert latest[0]['route_segments'][0]['actual_departure_at'] == '2026-10-21T11:00:00Z'
+    assert latest[1]['route_segments'][0]['actual_departure_at'] == '2026-10-21T10:00:00Z'
+    earlier = (
+        await api.post(
+            '/api/v1/transportations/history', {**history_request, 'before': latest[-1]['id']}
+        )
+    )['items']
+    assert len(earlier) == 1
+    assert earlier[0]['action'] == 'set_route'
+    await api.post('/api/v1/transportations/history', history_request, user='other', expected=404)
+    await api.post(
+        '/api/v1/transportations/history',
+        history_request,
+        roles=['transportations.write'],
+        expected=403,
+    )
+    await api.post(
+        '/api/v1/transportations/history', {'transportation_id': str(uuid4())}, expected=404
+    )
+
+
+async def test_history_read_permission_does_not_grant_writes(api):
+    created = await api.post(PATH, command())
+    identifier = created['operation']['transportation_ids'][0]
+    result = await api.post(
+        '/api/v1/transportations/history',
+        {'transportation_id': identifier},
+        roles=['transportations.read'],
+    )
+    assert result['items'] == []
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {'transportation_id': identifier, 'expected_revision': 1, 'route_segments': [route_segment()]},
+        roles=['transportations.read'],
+        expected=403,
+    )

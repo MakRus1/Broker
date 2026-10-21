@@ -77,19 +77,27 @@ class Documents:
         data = deepcopy(self.document(path) if data is None else data)
         models, owners, imported = {}, {}, {}
 
+        def qualified_name(target, name):
+            schema_root = self.components / 'schemas'
+            parts = target.relative_to(schema_root).parent.parts if target.is_relative_to(schema_root) else ()
+            for part in parts:
+                identifier(part)
+            return '::'.join((*parts, name))
+
         def ensure(origin, ref):
             target, pointer, name, schema = self.target(origin, ref)
             # Локальный Foo: {$ref: 'file.yaml#/Foo'} не создает alias Foo -> Foo.
             aliases = set()
             while set(schema) == {'$ref'}:
                 next_target = self.target(target, schema['$ref'])
-                if next_target[2] != name:
+                if qualified_name(next_target[0], next_target[2]) != qualified_name(target, name):
                     break
                 key = (target, pointer)
                 if key in aliases:
                     raise ValueError(f'Recursive schema reference: {target}#{pointer}')
                 aliases.add(key)
                 target, pointer, name, schema = next_target
+            name = qualified_name(target, name)
             key = (target, pointer)
             if key in imported:
                 return {'$ref': '#/components/schemas/' + name}

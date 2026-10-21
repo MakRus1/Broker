@@ -58,7 +58,7 @@ name: SHIPMENT_CONTEXT
 schema:
   type: object
   properties:
-    tenant_id: {type: string, minLength: 1}
+    organization_id: {type: string, minLength: 1}
     transport_mode: {type: string, enum: [sea, road, rail]}
 ```
 
@@ -79,7 +79,7 @@ schema:
       "title": "Морские поставки клиента",
       "value": {"is_enabled": true, "max_days": 60},
       "predicates": [
-        {"field": "tenant_id", "type": "eq", "value": "example"},
+        {"field": "organization_id", "type": "eq", "value": "example"},
         {"field": "transport_mode", "type": "in", "value": ["sea"]}
       ]
     }
@@ -107,7 +107,7 @@ schema:
 const auto snapshot = deps.configs.GetSnapshot();
 const auto terms = snapshot.Get(
     configs::SHIPMENT_TERMS_CONFIG,
-    config_contexts::ShipmentContext{.TenantId = "example"});
+    config_contexts::ShipmentContext{.OrganizationId = "example"});
 if (terms.IsEnabled) {
     UseMaxDays(terms.MaxDays);
 }

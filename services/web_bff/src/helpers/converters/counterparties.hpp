@@ -100,8 +100,11 @@ inline clients::counterparties::ApiV1CounterpartiesUpdate::RequestBody Convert(
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.expected_revision = value.expected_revision;
-    for (const auto role : value.roles)
-        result.roles.push_back(Convert(role));
+    if (value.roles.has_value()) {
+        result.roles.emplace();
+        for (const auto role : value.roles.value())
+            result.roles.value().push_back(Convert(role));
+    }
     if (value.contacts.has_value()) {
         result.contacts.emplace();
         for (const auto& contact : value.contacts.value())

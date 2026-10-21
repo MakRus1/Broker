@@ -35,11 +35,11 @@ COUNTERPARTY = {
     'name': 'Клиент',
     'revision': 1,
     'archived': False,
-    'country_code': '',
-    'tax_id': '',
-    'registration_id': '',
-    'legal_name': '',
-    'legal_address': '',
+    'country_code': None,
+    'tax_id': None,
+    'registration_id': None,
+    'legal_name': None,
+    'legal_address': None,
     'roles': [],
     'contacts': [],
 }
@@ -63,7 +63,8 @@ COUNTERPARTY = {
                 'expected_revision': 1,
                 'name': 'Клиент',
                 'roles': ['agent'],
-                'contacts': [{'name': 'Анна', 'position': '', 'email': '', 'phone': ''}],
+                'contacts': [{'name': 'Анна', 'position': None, 'email': None, 'phone': None}],
+                'legal_name': None,
             },
             {'counterparty': COUNTERPARTY},
             200,
@@ -293,3 +294,18 @@ async def test_transportation_commands_and_history(browser, mockserver, path, bo
     response = await browser.post('/api/v1/' + path, body)
     assert response.status == 200, response.text
     assert response.json() == result
+
+
+@pytest.mark.parametrize('patch', [{}, {'legal_name': None}, {'legal_name': 'Новое имя'}])
+async def test_counterparty_patch_presence(browser, mockserver, patch):
+    await browser.sign_in()
+    body = {'id': ID, 'expected_revision': 1, 'name': 'Клиент', **patch}
+
+    @mockserver.json_handler('/api/v1/counterparties/update')
+    def upstream(request):
+        assert request.json == body
+        return {'counterparty': COUNTERPARTY}
+
+    response = await browser.post('/api/v1/counterparties/update', body)
+    assert response.status == 200, response.text
+    assert response.json()['counterparty']['legal_name'] is None

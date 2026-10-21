@@ -7,4 +7,4 @@ ON CONFLICT (organization_id, id) DO NOTHING
 RETURNING ROW(
     id, name, revision, archived, legal_name, country_code,
     tax_id, registration_id, legal_address, roles, contacts
-)::public.counterparty_v2;
+)::public.counterparty_v3;

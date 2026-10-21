@@ -15,7 +15,7 @@ Response View::Handle(
             transaction.Execute(sql::kLockCounterparty, organization, request.body.id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Контрагент не найден"};
-        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV2>());
+        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV3>());
         if (previous.revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict", "Контрагент изменился. Обновите карточку"};
         if (previous.archived == request.body.archived) {
@@ -25,7 +25,7 @@ Response View::Handle(
         const auto result = Convert(
             transaction
                 .Execute(sql::kSetArchived, organization, request.body.id, request.body.archived)
-                .AsSingleRow<pgtypes::CounterpartyV2>());
+                .AsSingleRow<pgtypes::CounterpartyV3>());
         WriteAudit(transaction, organization, identity,
             request.body.archived ? "archive_counterparty" : "restore_counterparty", result.id,
             request.body, result);

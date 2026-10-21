@@ -11,47 +11,92 @@ template <typename Value> auto Document(const Value& value) {
     return userver::formats::json::ValueBuilder(value).ExtractValue();
 }
 
-template <typename Request> models::Counterparty Prepare(const Request& input) {
-    models::Counterparty value;
-    value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
-    value.revision = 1;
-    value.archived = false;
-    value.name = userver::utils::text::Trim(input.name);
-    value.legal_name = userver::utils::text::Trim(input.legal_name);
-    value.country_code = input.country_code;
-    std::transform(value.country_code.begin(), value.country_code.end(), value.country_code.begin(),
-        [](unsigned char c) { return std::toupper(c); });
-    for (unsigned char c : input.tax_id)
-        if (!std::isspace(c) && c != '-')
-            value.tax_id += static_cast<char>(std::toupper(c));
-    value.registration_id = userver::utils::text::Trim(input.registration_id);
-    value.legal_address = userver::utils::text::Trim(input.legal_address);
-    value.roles = input.roles;
+inline std::optional<std::string> Normalize(std::optional<std::string> value) {
+    if (!value.has_value())
+        return std::nullopt;
+    value = userver::utils::text::Trim(value.value());
+    return value.value().empty() ? std::nullopt : value;
+}
+
+inline models::Counterparty Normalize(models::Counterparty value) {
+    value.name = userver::utils::text::Trim(value.name);
+    value.legal_name = Normalize(value.legal_name);
+    value.country_code = Normalize(value.country_code);
+    if (value.country_code.has_value()) {
+        auto& country = value.country_code.value();
+        std::transform(country.begin(), country.end(), country.begin(),
+            [](unsigned char c) { return std::toupper(c); });
+    }
+    value.tax_id = Normalize(value.tax_id);
+    if (value.tax_id.has_value()) {
+        std::string tax;
+        for (unsigned char c : value.tax_id.value())
+            if (!std::isspace(c) && c != '-')
+                tax += static_cast<char>(std::toupper(c));
+        value.tax_id = Normalize(std::move(tax));
+    }
+    value.registration_id = Normalize(value.registration_id);
+    value.legal_address = Normalize(value.legal_address);
     std::sort(value.roles.begin(), value.roles.end());
-    value.contacts = input.contacts.value_or(std::vector<models::CounterpartyContact>{});
     if (value.name.empty())
         throw ApiError{400, "empty_name", "Укажите название контрагента"};
-    if (!value.tax_id.empty() && value.country_code.empty())
+    if (value.tax_id.has_value() && !value.country_code.has_value())
         throw ApiError{400, "country_required", "Укажите страну для налогового номера"};
     for (auto& contact : value.contacts) {
         contact.name = userver::utils::text::Trim(contact.name);
-        contact.position = userver::utils::text::Trim(contact.position);
-        contact.email = userver::utils::text::Trim(contact.email);
-        contact.phone = userver::utils::text::Trim(contact.phone);
+        contact.position = Normalize(contact.position);
+        contact.email = Normalize(contact.email);
+        contact.phone = Normalize(contact.phone);
         if (contact.name.empty())
             throw ApiError{400, "empty_contact", "Укажите имя контактного лица"};
-        if (!contact.email.empty() && contact.email.find('@') == std::string::npos)
+        if (contact.email.has_value() && contact.email.value().find('@') == std::string::npos)
             throw ApiError{400, "invalid_email", "Проверьте email контактного лица"};
     }
     return value;
 }
 
+inline models::Counterparty Prepare(const models::CreateCounterpartyRequest& input) {
+    models::Counterparty value;
+    value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
+    value.revision = 1;
+    value.archived = false;
+    value.name = input.name;
+    value.legal_name = input.legal_name.value_or(std::nullopt);
+    value.country_code = input.country_code.value_or(std::nullopt);
+    value.tax_id = input.tax_id.value_or(std::nullopt);
+    value.registration_id = input.registration_id.value_or(std::nullopt);
+    value.legal_address = input.legal_address.value_or(std::nullopt);
+    value.roles = input.roles;
+    value.contacts = input.contacts.value_or(std::vector<models::CounterpartyContact>{});
+    return Normalize(std::move(value));
+}
+
+inline models::Counterparty Prepare(
+    const models::UpdateCounterpartyRequest& input, models::Counterparty value) {
+    value.name = input.name;
+    if (input.legal_name.has_value())
+        value.legal_name = input.legal_name.value();
+    if (input.country_code.has_value())
+        value.country_code = input.country_code.value();
+    if (input.tax_id.has_value())
+        value.tax_id = input.tax_id.value();
+    if (input.registration_id.has_value())
+        value.registration_id = input.registration_id.value();
+    if (input.legal_address.has_value())
+        value.legal_address = input.legal_address.value();
+    if (input.roles.has_value())
+        value.roles = input.roles.value();
+    if (input.contacts.has_value())
+        value.contacts = input.contacts.value();
+    return Normalize(std::move(value));
+}
+
 inline void CheckDuplicate(pg::Transaction& transaction, const std::string& organization,
     const models::Counterparty& value) {
-    if (value.tax_id.empty())
+    if (!value.tax_id.has_value())
         return;
-    transaction.Execute(
-        sql::kLockRequisites, organization + ":" + value.country_code + ":" + value.tax_id);
+    transaction.Execute(sql::kLockRequisites,
+        organization + ":" + value.country_code.value() + ":" + value.tax_id.value());
     const auto duplicate = transaction.Execute(
         sql::kFindDuplicate, organization, value.country_code, value.tax_id, value.id);
     if (!duplicate.IsEmpty())

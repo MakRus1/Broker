@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace counterparties::helpers {
-inline models::Counterparty Convert(const pgtypes::CounterpartyV2& row) {
+inline models::Counterparty Convert(const pgtypes::CounterpartyV3& row) {
     models::Counterparty result;
     result.id = boost::uuids::to_string(row.Id);
     result.name = row.Name;
@@ -35,7 +35,7 @@ inline std::vector<models::Counterparty> Convert(
     const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Counterparty> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV2>())
+    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV3>())
         result.push_back(Convert(row));
     return result;
 }

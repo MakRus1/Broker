@@ -195,6 +195,8 @@ async def test_search_role_status_and_cursor(api):
         {'country_code': '', 'tax_id': '123'},
         {'country_code': 'Russia'},
         {'roles': ['invalid']},
+        {'roles': None},
+        {'contacts': None},
         {'roles': ['customer', 'customer']},
         {'contacts': [{'name': '   '}]},
         {'contacts': [{'name': 'Анна', 'email': 'no-email'}]},
@@ -233,3 +235,76 @@ async def test_uuid_normalization_and_update_duplicate_rolls_back(api):
     assert (await api.post('/api/v1/counterparties/get', {'id': created['id']}))[
         'counterparty'
     ] == created
+
+
+async def test_nullable_requisites_and_partial_update(api, pgsql):
+    created = (await api.post('/api/v1/counterparties/create', details(), expected=201))[
+        'counterparty'
+    ]
+    base = {'id': created['id'], 'name': created['name'], 'expected_revision': 1}
+    kept = (await api.post('/api/v1/counterparties/update', base))['counterparty']
+    assert {**kept, 'revision': 1} == created
+    cleared = (
+        await api.post(
+            '/api/v1/counterparties/update',
+            {
+                **base,
+                'expected_revision': 2,
+                'legal_name': None,
+                'tax_id': None,
+                'country_code': None,
+                'registration_id': None,
+                'legal_address': None,
+                'roles': [],
+                'contacts': [],
+            },
+        )
+    )['counterparty']
+    for field in ['legal_name', 'tax_id', 'country_code', 'registration_id', 'legal_address']:
+        assert cleared[field] is None
+    assert cleared['roles'] == []
+    assert cleared['contacts'] == []
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            'SELECT legal_name, tax_id, country_code, registration_id, legal_address FROM counterparties WHERE id=%s',
+            (created['id'],),
+        )
+        assert cursor.fetchone() == (None, None, None, None, None)
+    listed = await api.post('/api/v1/counterparties/list', {'query': created['name']})
+    assert listed['items'] == [cleared]
+    replaced = (
+        await api.post(
+            '/api/v1/counterparties/update',
+            {
+                **base,
+                'expected_revision': 3,
+                'legal_name': ' Новое юрлицо ',
+            },
+        )
+    )['counterparty']
+    assert replaced['legal_name'] == 'Новое юрлицо'
+    assert replaced['tax_id'] is None
+
+
+@pytest.mark.parametrize('empty', [None, '', '   '])
+async def test_absent_requisites_are_null(api, pgsql, empty):
+    created = (
+        await api.post(
+            '/api/v1/counterparties/create',
+            {
+                'id': str(uuid4()),
+                'name': 'Без реквизитов',
+                'legal_name': empty,
+                'contacts': [{'name': 'Анна', 'email': empty}],
+            },
+            expected=201,
+        )
+    )['counterparty']
+    assert created['legal_name'] is None
+    assert created['tax_id'] is None
+    assert created['contacts'] == [{'name': 'Анна', 'email': None, 'phone': None, 'position': None}]
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            'SELECT legal_name, tax_id, contacts FROM counterparties WHERE id=%s', (created['id'],)
+        )
+        assert cursor.fetchone() == (None, None, created['contacts'])

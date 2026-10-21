@@ -17,15 +17,18 @@ CounterpartyContact:
     position:
       type: string
       maxLength: 256
-      default: ''
+      nullable: true
+      default: null
     email:
       type: string
       maxLength: 256
-      default: ''
+      nullable: true
+      default: null
     phone:
       type: string
       maxLength: 64
-      default: ''
+      nullable: true
+      default: null
   required:
   - name
 Counterparty:
@@ -43,25 +46,25 @@ Counterparty:
     legal_name:
       type: string
       maxLength: 512
-      default: ''
+      nullable: true
     country_code:
       type: string
       maxLength: 2
       pattern: ^(|[A-Za-z]{2})$
-      default: ''
+      nullable: true
     tax_id:
       type: string
       maxLength: 64
       pattern: ^[A-Za-z0-9 -]*$
-      default: ''
+      nullable: true
     registration_id:
       type: string
       maxLength: 64
-      default: ''
+      nullable: true
     legal_address:
       type: string
       maxLength: 1024
-      default: ''
+      nullable: true
     roles:
       type: array
       items:
@@ -117,25 +120,25 @@ CreateCounterpartyRequest:
     legal_name:
       type: string
       maxLength: 512
-      default: ''
+      nullable: true
     country_code:
       type: string
       maxLength: 2
       pattern: ^(|[A-Za-z]{2})$
-      default: ''
+      nullable: true
     tax_id:
       type: string
       maxLength: 64
       pattern: ^[A-Za-z0-9 -]*$
-      default: ''
+      nullable: true
     registration_id:
       type: string
       maxLength: 64
-      default: ''
+      nullable: true
     legal_address:
       type: string
       maxLength: 1024
-      default: ''
+      nullable: true
     roles:
       type: array
       items:
@@ -169,32 +172,31 @@ UpdateCounterpartyRequest:
     legal_name:
       type: string
       maxLength: 512
-      default: ''
+      nullable: true
     country_code:
       type: string
       maxLength: 2
       pattern: ^(|[A-Za-z]{2})$
-      default: ''
+      nullable: true
     tax_id:
       type: string
       maxLength: 64
       pattern: ^[A-Za-z0-9 -]*$
-      default: ''
+      nullable: true
     registration_id:
       type: string
       maxLength: 64
-      default: ''
+      nullable: true
     legal_address:
       type: string
       maxLength: 1024
-      default: ''
+      nullable: true
     roles:
       type: array
       items:
         $ref: '#/CounterpartyRole'
       uniqueItems: true
       maxItems: 5
-      default: []
     contacts:
       type: array
       items:

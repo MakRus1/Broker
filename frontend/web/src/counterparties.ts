@@ -8,34 +8,39 @@ export const counterpartyRoles = {
 export type CounterpartyRole = keyof typeof counterpartyRoles;
 export interface CounterpartyContact {
   name: string;
-  position: string;
-  email: string;
-  phone: string;
+  position: string | null;
+  email: string | null;
+  phone: string | null;
 }
 export interface Counterparty {
   id: string;
   name: string;
   revision: number;
   archived: boolean;
+  legal_name: string | null;
+  country_code: string | null;
+  tax_id: string | null;
+  registration_id: string | null;
+  legal_address: string | null;
+  roles: CounterpartyRole[];
+  contacts: CounterpartyContact[];
+}
+export interface CounterpartyContactDraft {
+  name: string;
+  position: string;
+  email: string;
+  phone: string;
+}
+export interface CounterpartyDetails {
+  name: string;
   legal_name: string;
   country_code: string;
   tax_id: string;
   registration_id: string;
   legal_address: string;
   roles: CounterpartyRole[];
-  contacts: CounterpartyContact[];
+  contacts: CounterpartyContactDraft[];
 }
-export type CounterpartyDetails = Pick<
-  Counterparty,
-  | 'name'
-  | 'legal_name'
-  | 'country_code'
-  | 'tax_id'
-  | 'registration_id'
-  | 'legal_address'
-  | 'roles'
-  | 'contacts'
->;
 export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
   return {
     name: value?.name ?? '',
@@ -45,24 +50,31 @@ export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
     registration_id: value?.registration_id ?? '',
     legal_address: value?.legal_address ?? '',
     roles: [...(value?.roles ?? [])],
-    contacts: (value?.contacts ?? []).map((contact) => ({ ...contact })),
+    contacts: (value?.contacts ?? []).map((contact) => ({
+      name: contact.name,
+      position: contact.position ?? '',
+      email: contact.email ?? '',
+      phone: contact.phone ?? '',
+    })),
   };
 }
-export function counterpartyPayload(value: CounterpartyDetails): CounterpartyDetails {
+export function counterpartyPayload(
+  value: CounterpartyDetails,
+): Omit<Counterparty, 'id' | 'revision' | 'archived'> {
   return {
     ...value,
     name: value.name.trim(),
-    legal_name: value.legal_name.trim(),
-    country_code: value.country_code.trim().toUpperCase(),
-    tax_id: value.tax_id.replace(/[\s-]/g, '').toUpperCase(),
-    registration_id: value.registration_id.trim(),
-    legal_address: value.legal_address.trim(),
+    legal_name: value.legal_name.trim() || null,
+    country_code: value.country_code.trim().toUpperCase() || null,
+    tax_id: value.tax_id.replace(/[\s-]/g, '').toUpperCase() || null,
+    registration_id: value.registration_id.trim() || null,
+    legal_address: value.legal_address.trim() || null,
     roles: [...value.roles].sort(),
     contacts: value.contacts.map((contact) => ({
       name: contact.name.trim(),
-      position: contact.position.trim(),
-      email: contact.email.trim(),
-      phone: contact.phone.trim(),
+      position: contact.position.trim() || null,
+      email: contact.email.trim() || null,
+      phone: contact.phone.trim() || null,
     })),
   };
 }

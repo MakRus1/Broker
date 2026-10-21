@@ -20,7 +20,7 @@ Response View::Handle(
         const auto rows = inserted.IsEmpty()
             ? transaction.Execute(sql::kGetCounterparty, organization, value.id)
             : inserted;
-        const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV2>());
+        const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV3>());
         if (Document(result) != Document(value))
             throw ApiError{409, "id_conflict", "Идентификатор занят другим контрагентом"};
         if (!inserted.IsEmpty())

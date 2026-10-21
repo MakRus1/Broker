@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { counterpartyDetails, restoreCounterpartyDraft } from './counterparties';
+import {
+  counterpartyDetails,
+  counterpartyPayload,
+  restoreCounterpartyDraft,
+} from './counterparties';
 const fallback = {
   id: '11111111-1111-4111-8111-111111111111',
   baseRevision: 2,
@@ -34,5 +38,21 @@ describe('Черновик контрагента', () => {
     JSON.stringify({ ...fallback, value: { ...counterpartyDetails(), contacts: [{}] } }),
   ])('не восстанавливает повреждённое состояние %s', (raw) => {
     expect(restoreCounterpartyDraft(raw, fallback)).toEqual(fallback);
+  });
+});
+
+describe('Пустые реквизиты', () => {
+  it('отправляет очищенные поля как null, сохраняя списки', () => {
+    const payload = counterpartyPayload({
+      ...counterpartyDetails(),
+      name: ' Клиент ',
+      legal_name: '  ',
+      contacts: [{ name: ' Анна ', email: '', position: ' ', phone: '' }],
+    });
+    expect(payload.name).toBe('Клиент');
+    expect(payload.legal_name).toBeNull();
+    expect(payload.tax_id).toBeNull();
+    expect(payload.roles).toEqual([]);
+    expect(payload.contacts).toEqual([{ name: 'Анна', email: null, position: null, phone: null }]);
   });
 });

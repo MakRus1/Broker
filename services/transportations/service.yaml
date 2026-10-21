@@ -1,7 +1,17 @@
 version: 1
 libraries:
 - common
-- auth
 postgresql:
   enabled: true
   cluster: transportations
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/internal/v1/transportations/ensure-created: transportations.create
+    /api/v1/transportations/get: transportations.read
+    /api/v1/transportations/list: transportations.read
+    /api/v1/transportation-routes/set: transportations.write
+    /api/v1/transportation-actuals/record: transportations.write
+    /api/v1/transportation-actuals/correct: transportations.write

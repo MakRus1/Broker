@@ -14,29 +14,33 @@
 #include <userver/formats/json.hpp>
 #include <userver/formats/parse/common_containers.hpp>
 #include <userver/logging/log.hpp>
+#include <userver/server/handlers/handler_config.hpp>
+#include <userver/server/handlers/http_handler_base.hpp>
 #include <userver/server/http/http_response.hpp>
 #include <userver/utils/periodic_task.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
+#include <variant>
 
 namespace {
 using Clock = std::chrono::steady_clock;
 
 class Middleware final : public userver::server::middlewares::HttpMiddlewareBase {
   public:
-    explicit Middleware(const platform::auth::Component& auth) : auth_(auth) {}
+    Middleware(const platform::auth::Component& auth, std::string path)
+        : auth_(auth), path_(std::move(path)) {}
 
   private:
     void HandleRequest(userver::server::http::HttpRequest& request,
         userver::server::request::RequestContext& context) const override {
-        if (!auth_.IsProtected(request.GetRequestPath())) {
+        if (!auth_.IsProtected(path_)) {
             Next(request, context);
             return;
         }
         int status = 401;
         std::string error = "unauthorized";
         try {
-            context.SetData("platform-auth",
-                auth_.Authorize(request.GetRequestPath(), request.GetHeader("Authorization")));
+            context.SetData(
+                "platform-auth", auth_.Authorize(path_, request.GetHeader("Authorization")));
         } catch (const platform::auth::Unavailable&) {
             status = 503;
             error = "auth_unavailable";
@@ -67,6 +71,7 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
     }
 
     const platform::auth::Component& auth_;
+    const std::string path_;
 };
 }  // namespace
 
@@ -202,8 +207,11 @@ Principal Component::VerifyLogin(const std::string& access, const std::string& i
 }
 
 std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Component::Create(
-    const userver::server::handlers::HttpHandlerBase&, userver::yaml_config::YamlConfig) const {
-    return std::make_unique<Middleware>(*this);
+    const userver::server::handlers::HttpHandlerBase& handler,
+    userver::yaml_config::YamlConfig) const {
+    // Политика относится к шаблону маршрута, а не к значениям path-параметров.
+    const auto* path = std::get_if<std::string>(&handler.GetConfig().path);
+    return std::make_unique<Middleware>(*this, path ? *path : std::string{});
 }
 
 userver::yaml_config::Schema Component::GetStaticConfigSchema() {

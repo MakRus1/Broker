@@ -78,6 +78,28 @@ components_manager:
             dns_resolver: async
             sync-start: true
             connlimit_mode: manual
+        platform-http-pipeline:
+            extra-middlewares:
+            - platform-auth
+        platform-auth:
+            issuer: $auth-issuer
+            audience: broker-logistics
+            roles-client: broker-logistics
+            jwks-url: $auth-jwks-url
+            protected-prefix: /api/
+            allow-http: $auth-allow-http
+            permissions:
+                /api/v1/shipment-items/add: shipments.write
+                /api/v1/shipment-items/list: shipments.read
+                /api/v1/shipment-items/update: shipments.write
+                /api/v1/shipments/create: shipments.write
+                /api/v1/shipments/get: shipments.read
+                /api/v1/shipments/list: shipments.read
+                /api/v1/shipments/update: shipments.write
+                /api/v1/transportation-operations/create: shipments.write
+                /api/v1/transportation-operations/get: shipments.read
+        auth-http-client:
+            wait-for-dynamic-configs: false
         dynamic-config:
             defaults:
                 HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
@@ -107,27 +129,6 @@ components_manager:
         platform-http-telemetry:
             service-name: shipments
             environment: $environment
-        platform-http-pipeline:
-            extra-middlewares: [platform-auth]
-        platform-auth:
-          issuer: $auth-issuer
-          audience: broker-logistics
-          roles-client: broker-logistics
-          jwks-url: $auth-jwks-url
-          protected-prefix: /api/
-          allow-http: $auth-allow-http
-          permissions:
-            /api/v1/shipments/create: shipments.write
-            /api/v1/shipments/get: shipments.read
-            /api/v1/shipments/list: shipments.read
-            /api/v1/shipments/update: shipments.write
-            /api/v1/shipment-items/add: shipments.write
-            /api/v1/shipment-items/list: shipments.read
-            /api/v1/shipment-items/update: shipments.write
-            /api/v1/transportation-operations/create: shipments.write
-            /api/v1/transportation-operations/get: shipments.read
-        auth-http-client:
-          wait-for-dynamic-configs: false
         transportation-dispatcher:
             load-enabled: $dispatcher-enabled
         service-token-provider:

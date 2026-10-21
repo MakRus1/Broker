@@ -18,10 +18,11 @@
 #include <userver/ugrpc/client/component_list.hpp>
 
 #include <openapi/handlers.hpp>
-#include <platform/auth/component.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <platform/auth/component.hpp>
 #include <platform/readiness.hpp>
+#include <userver/clients/http/component.hpp>
 #include <userver/storages/postgres/component.hpp>
 
 // SERVICE_INCLUDES_END
@@ -36,8 +37,6 @@ int main(int argc, char* argv[]) {
             .Append<userver::congestion_control::Component>()
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
-            .Append<platform::auth::Component>()
-            .Append<userver::components::HttpClient>("auth-http-client")
             .Append<transportations::Ping>()
             .Append<transportations::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
@@ -47,6 +46,8 @@ int main(int argc, char* argv[]) {
 
     // SERVICE_REGISTRATION_BEGIN
     component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
+    component_list.Append<platform::auth::Component>();
+    component_list.Append<userver::components::HttpClient>("auth-http-client");
     component_list.Append<userver::components::Postgres>("postgres-transportations");
     // SERVICE_REGISTRATION_END
 

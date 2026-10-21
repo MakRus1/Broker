@@ -51,6 +51,16 @@ class AffectedTest(unittest.TestCase):
             self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker other')
             (repo / 'libs/configs').mkdir(parents=True)
             (repo / 'libs/configs/CMakeLists.txt').write_text('add_library(broker_configs INTERFACE)')
+            # Секция auth подключает библиотеку неявно, CI тоже должен учитывать ее изменения.
+            (repo / 'libs/auth').mkdir(parents=True)
+            (repo / 'libs/auth/CMakeLists.txt').write_text('add_library(broker_auth INTERFACE)')
+            manifest = repo / 'services/broker/service.yaml'
+            manifest.write_text(manifest.read_text() + 'auth: {audience: api, roles-client: api, protected-prefix: /api/, permissions: {}}\n')
+            git('add', '.');git('commit', '-m', 'Авторизация из манифеста')
+            base = git('rev-parse', 'HEAD')
+            (repo / 'libs/auth/a.hpp').write_text('auth change')
+            git('add', '.');git('commit', '-m', 'Изменение библиотеки авторизации')
+            self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker')
             # Публичный контракт затрагивает поставщика и транзитивных потребителей.
             (repo / 'services/third').mkdir()
             (repo / 'services/other/service.yaml').write_text('version: 1\nlibraries: [common]\nclients: {api: {service: broker, transport: http}}\n')

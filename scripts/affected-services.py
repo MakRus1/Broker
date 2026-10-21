@@ -41,6 +41,11 @@ def main():
                 raise ValueError(f'Некорректный клиент {alias} в {manifest}')
             consumers[client['service']].add(service)
         libraries = spec.get('libraries', ['common'])
+        if 'auth' in spec:
+            if not isinstance(spec['auth'], dict):
+                raise ValueError(f'Некорректная секция auth в {manifest}')
+            if 'auth' not in libraries:
+                libraries = [*libraries, 'auth']
         if clients and 'configs' not in libraries:
             libraries = [*libraries, 'configs']
         if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file() for lib in libraries):

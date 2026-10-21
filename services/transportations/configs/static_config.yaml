@@ -54,28 +54,29 @@ components_manager:
             dns_resolver: async
             sync-start: true
             connlimit_mode: manual
+        platform-http-pipeline:
+            extra-middlewares:
+            - platform-auth
+        platform-auth:
+            issuer: $auth-issuer
+            audience: broker-logistics
+            roles-client: broker-logistics
+            jwks-url: $auth-jwks-url
+            protected-prefix: /api/
+            allow-http: $auth-allow-http
+            permissions:
+                /api/internal/v1/transportations/ensure-created: transportations.create
+                /api/v1/transportation-actuals/correct: transportations.write
+                /api/v1/transportation-actuals/record: transportations.write
+                /api/v1/transportation-routes/set: transportations.write
+                /api/v1/transportations/get: transportations.read
+                /api/v1/transportations/list: transportations.read
+        auth-http-client:
+            wait-for-dynamic-configs: false
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: transportations
             environment: $environment
-        platform-http-pipeline:
-            extra-middlewares: [platform-auth]
-        platform-auth:
-          issuer: $auth-issuer
-          audience: broker-logistics
-          roles-client: broker-logistics
-          jwks-url: $auth-jwks-url
-          protected-prefix: /api/
-          allow-http: $auth-allow-http
-          permissions:
-            /api/internal/v1/transportations/ensure-created: transportations.create
-            /api/v1/transportations/get: transportations.read
-            /api/v1/transportations/list: transportations.read
-            /api/v1/transportation-routes/set: transportations.write
-            /api/v1/transportation-actuals/record: transportations.write
-            /api/v1/transportation-actuals/correct: transportations.write
-        auth-http-client:
-          wait-for-dynamic-configs: false
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:

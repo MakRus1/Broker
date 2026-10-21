@@ -102,3 +102,41 @@ class CookieContractTest(unittest.TestCase):
                 expected = operation.path.startswith('/api/')
                 self.assertEqual(operation.authenticated, expected)
                 self.assertEqual(operation.cookie_name, 'broker_admin' if expected else None)
+
+
+class ServiceAuthPolicyTest(unittest.TestCase):
+    def test_invalid_sections(self):
+        from auth import policy
+
+        valid = {
+            'audience': 'api',
+            'roles-client': 'api',
+            'protected-prefix': '/api/',
+            'permissions': {'/api/example': 'example.read'},
+        }
+        invalid = [
+            None,
+            {},
+            {**valid, 'enabled': True},
+            {**valid, 'audience': ''},
+            {**valid, 'roles-client': 10},
+            {**valid, 'protected-prefix': '/api'},
+            {**valid, 'protected-prefix': '/'},
+            {**valid, 'permissions': {}},
+            {**valid, 'permissions': {'/outside': 'example.read'}},
+            {**valid, 'permissions': {'/api/example': ''}},
+        ]
+        for value in invalid:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                policy({'auth': value})
+
+    def test_existing_bearer_services_are_managed(self):
+        from auth import validate
+
+        for name in ('configs', 'shipments', 'transportations'):
+            service = ROOT / 'services' / name
+            spec = yaml.safe_load((service / 'service.yaml').read_text())
+            validate(spec, load(service))
+            self.assertNotIn('auth', spec['libraries'])
+            main = (service / 'src/main.cpp').read_text()
+            self.assertEqual(main.count('Append<platform::auth::Component>()'), 1)

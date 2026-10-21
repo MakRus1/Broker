@@ -1,7 +1,6 @@
 version: 1
 libraries:
 - common
-- auth
 - configs
 postgresql:
   enabled: true
@@ -10,3 +9,17 @@ clients:
   transportations:
     service: transportations
     transport: http
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/shipments/create: shipments.write
+    /api/v1/shipments/get: shipments.read
+    /api/v1/shipments/list: shipments.read
+    /api/v1/shipments/update: shipments.write
+    /api/v1/shipment-items/add: shipments.write
+    /api/v1/shipment-items/list: shipments.read
+    /api/v1/shipment-items/update: shipments.write
+    /api/v1/transportation-operations/create: shipments.write
+    /api/v1/transportation-operations/get: shipments.read

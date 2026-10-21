@@ -1,5 +1,6 @@
 """Декларативное подключение инфраструктуры без перезаписи ручного кода."""
 from pathlib import Path
+from auth import policy as auth_policy
 import json
 import re
 import yaml
@@ -28,8 +29,9 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment', 'auth'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment/auth')
+    auth = auth_policy(spec)
     logging_policy(spec)
     validate_deployment(spec.get('deployment', {}))
     libraries = spec.get('libraries', ['common'])
@@ -70,6 +72,10 @@ def prepare(service, loader):
         raise ValueError('service.yaml: explicit configs require libraries: [common, configs]')
     if config_enabled and 'configs' not in libraries:
         libraries = [*libraries, 'configs']
+    if auth and 'auth' not in libraries:
+        libraries = [*libraries, 'auth']
+    auth_includes = '#include <platform/auth/component.hpp>\n#include <userver/clients/http/component.hpp>\n' if auth else ''
+    auth_registration = '    component_list.Append<platform::auth::Component>();\n    component_list.Append<userver::components::HttpClient>("auth-http-client");\n' if auth else ''
     config_includes = '#include <platform/configs/components.hpp>\n#include <configs/keys.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n#include <userver/dynamic_config/updater/component_list.hpp>\n' if config_enabled else ''
     client_includes = ''.join(f'#include <clients/{alias}/client.hpp>\n' for alias, _ in clients)
     pg, grpc = enabled['postgresql'], enabled['grpc']
@@ -82,8 +88,8 @@ def prepare(service, loader):
         files[path] = format_cpp(text) if path.suffix in {'.cpp', '.hpp'} else text
     main_path = 'src/main.cpp' if (service / 'src/main.cpp').exists() else 'main.cpp'
     edit(main_path, {
-        'INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <transport/grpc/hello_grpc.hpp>\n#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
-        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<{name}::HelloGrpc>().Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
+        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <transport/grpc/hello_grpc.hpp>\n#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
+        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<{name}::HelloGrpc>().Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
     })
     edit('src/deps.hpp', {
         'DEPS_INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
@@ -163,6 +169,29 @@ def grpc_service(grpc_channel, service_client):
         components.update({'platform-grpc-telemetry': {}, 'platform-grpc-readiness': {}, 'grpc-server-middlewares-pipeline': {'middlewares': {'platform-grpc-telemetry': {'enabled': True}, 'platform-grpc-readiness': {'enabled': True}}}, 'grpc-server-logging': {'msg-log-level': 'none'}, 'grpc-server': {'port': '$grpc-server-port', 'completion-queue-count': 3}, 'handler-hello-grpc': {'task-processor': 'main-task-processor'}})
     path = service / 'configs/static_config.yaml'
     static_source = path.read_text()
+    managed = static_source.split('# SERVICE_CONFIG_BEGIN', 1)[1].split('# SERVICE_CONFIG_END', 1)[0]
+    if not auth and re.search(r'(?m)^        platform-auth:', managed):
+        raise ValueError('service.yaml: удаление auth требует явного удаления его сгенерированной обвязки и защищенных ручек')
+    if auth:
+        existing_components = yaml.load(static_source, Loader=loader)['components_manager']['components']
+        pipeline = dict(existing_components.get('platform-http-pipeline', {}))
+        extras = pipeline.get('extra-middlewares', [])
+        if not isinstance(extras, list) or any(not isinstance(item, str) for item in extras):
+            raise ValueError('platform-http-pipeline.extra-middlewares должен быть списком')
+        pipeline['extra-middlewares'] = [item for item in extras if item != 'platform-auth'] + ['platform-auth']
+        components['platform-http-pipeline'] = pipeline
+        components['platform-auth'] = {
+            'issuer': '$auth-issuer', 'audience': auth['audience'],
+            'roles-client': auth['roles-client'], 'jwks-url': '$auth-jwks-url',
+            'protected-prefix': auth['protected-prefix'], 'allow-http': '$auth-allow-http',
+            'permissions': dict(sorted(auth['permissions'].items())),
+        }
+        components['auth-http-client'] = {'wait-for-dynamic-configs': False}
+        # Эти компоненты принадлежат генератору; остальная ручная конфигурация сохраняется.
+        for component in ('platform-auth', 'auth-http-client', 'platform-http-pipeline'):
+            static_source = re.sub(r'(?m)^        ' + component + r':[^\n]*\n(?: {9,}.*\n| *\n)*', '', static_source)
+        if existing_components['server'].get('middleware-pipeline-builder') != 'platform-http-pipeline':
+            raise ValueError('service.yaml: auth требует server.middleware-pipeline-builder: platform-http-pipeline')
     if config_enabled:
         existing = yaml.load(static_source, Loader=loader)['components_manager']['components'].get('dynamic-config', {}) or {}
         components['dynamic-config'] = {**existing, 'updates-enabled': '$config-updates-enabled', 'fs-cache-path': '$config-cache-path', 'fs-task-processor': 'fs-task-processor'}
@@ -178,6 +207,14 @@ def grpc_service(grpc_channel, service_client):
     for path in (service / 'configs').glob('config_vars*.yaml'):
         values = yaml.load(path.read_text(), Loader=loader)
         additions = {}
+        if auth:
+            for key, value in {
+                'auth-issuer': 'http://localhost:18888/realms/broker',
+                'auth-jwks-url': 'http://localhost:18888/realms/broker/protocol/openid-connect/certs',
+                'auth-allow-http': True,
+            }.items():
+                if key not in values:
+                    additions[key] = value
         if config_enabled:
             for key, value in {'config-updates-enabled': False, 'config-server-url': 'http://localhost:8090', 'config-cache-path': ''}.items():
                 if key not in values:

@@ -46,6 +46,8 @@ jobs:
           & ./tests/staging-connect.Tests.ps1
       - name: Актуальность генерации и форматирование
         run: make check-gen-all check-format
+      - name: YAML без якорей и ссылок
+        run: python scripts/check-yaml.py
       - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:

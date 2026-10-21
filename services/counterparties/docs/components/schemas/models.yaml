@@ -2,7 +2,7 @@ Counterparty:
   type: object
   additionalProperties: false
   properties:
-    id: &id001
+    id:
       type: string
       format: uuid
     name:
@@ -27,7 +27,9 @@ CreateCounterpartyRequest:
   type: object
   additionalProperties: false
   properties:
-    id: *id001
+    id:
+      type: string
+      format: uuid
     name:
       type: string
       minLength: 1
@@ -39,7 +41,9 @@ ListCounterpartiesRequest:
   type: object
   additionalProperties: false
   properties:
-    after: *id001
+    after:
+      type: string
+      format: uuid
     limit:
       type: integer
       minimum: 1

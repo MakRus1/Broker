@@ -2,26 +2,19 @@ version: 1
 types:
   public.transportation_v1:
     fields:
-    - &id001
-      name: id
+    - name: id
       type: uuid
-    - &id002
-      name: revision
+    - name: revision
       type: bigint
-    - &id003
-      name: shipment_id
+    - name: shipment_id
       type: uuid
-    - &id004
-      name: item_id
+    - name: item_id
       type: uuid
-    - &id005
-      name: operation_id
+    - name: operation_id
       type: uuid
-    - &id006
-      name: container_type
+    - name: container_type
       type: text
-    - &id007
-      name: ownership
+    - name: ownership
       type: text
   public.saved_command_v1:
     fields:
@@ -37,12 +30,19 @@ types:
       type: jsonb
   public.transportation_v2:
     fields:
-    - *id001
-    - *id002
-    - *id003
-    - *id004
-    - *id005
-    - *id006
-    - *id007
+    - name: id
+      type: uuid
+    - name: revision
+      type: bigint
+    - name: shipment_id
+      type: uuid
+    - name: item_id
+      type: uuid
+    - name: operation_id
+      type: uuid
+    - name: container_type
+      type: text
+    - name: ownership
+      type: text
     - name: number
       type: text

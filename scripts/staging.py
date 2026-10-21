@@ -126,7 +126,12 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
     run(*ns, 'rollout', 'status', 'deployment/keycloak', '--timeout=300s')
     if infrastructure:
         from organization_identity import configure_cluster
-        configure_cluster(context, plan['namespace'], (directory / 'organizations-manager-secret').read_text().strip())
+
+        configure_cluster(
+            context,
+            plan['namespace'],
+            (directory / 'organizations-manager-secret').read_text().strip(),
+        )
     if infrastructure and plan.get('lan'):
         from staging_lan import NAMES, sync_keycloak
 

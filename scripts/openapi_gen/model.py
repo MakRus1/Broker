@@ -68,6 +68,7 @@ class Body:
     required: bool = True
     strict: bool = False
     validate_content_type: bool = True
+    model_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -189,7 +190,7 @@ def parse_body(schema, schemas, required=True, prefix='Schema', registry=None):
             model = registry.get(model.alias)
         if model.body is None:
             raise ValueError('JSON body must reference an object with properties')
-        return replace(model.body, required=required)
+        return replace(model.body, required=required, model_name=registry.reference_name(schema))
     schema = resolve(schema, schemas)
     keys(schema, {'type', 'properties', 'required', 'additionalProperties', 'description', 'title'}, 'object schema')
     if schema.get('type') != 'object':

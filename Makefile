@@ -50,6 +50,11 @@ $(addprefix ci-build-,$(PRESETS)): ci-build-%: cmake-%
 $(addprefix ci-test-,$(PRESETS)): ci-test-%:
 	$(REPO_ROOT)/.venv-gen/bin/python scripts/ci-tests.py run --build-dir build-$* --services $(CI_SERVICES) --output-dir "$(CI_RESULTS_DIR)"
 
+SMOKE_BUILD_DIR ?= build-$*
+.PHONY: $(addprefix ci-smoke-,$(PRESETS))
+$(addprefix ci-smoke-,$(PRESETS)): ci-smoke-%:
+	$(abspath $(SMOKE_BUILD_DIR))/venv-userver-default/bin/python tests/integration/logistics_smoke.py --build-dir "$(SMOKE_BUILD_DIR)"
+
 $(addprefix test-only-,$(PRESETS)): test-only-%: test-%
 $(addprefix test-all-,$(PRESETS)): test-all-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)

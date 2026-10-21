@@ -1,0 +1,30 @@
+worker-threads: 2
+worker-fs-threads: 2
+logger-level: debug
+
+is-testing: true
+
+server-port: 8080
+grpc-server-port: 8081
+
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15436/shipments_db_1
+
+monitor-port: 8082
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local
+
+auth-issuer: http://localhost:18888/realms/broker
+auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
+auth-allow-http: true
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''
+client-transportations-base-url: http://localhost:8080
+
+dispatcher-enabled: false
+dispatcher-token-url: http://localhost:18888/realms/broker/protocol/openid-connect/token
+dispatcher-client-id: shipments-dispatcher
+dispatcher-client-secret: ''
+dispatcher-token-timeout-ms: 2000
+dispatcher-token-max-retries: 0

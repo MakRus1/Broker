@@ -13,6 +13,7 @@ from render import config_block, outputs, view
 from features import prepare
 from clients import client_outputs, client_specs
 import configs
+import pg_types
 from http_logging import policy as logging_policy
 
 class UniqueLoader(yaml.SafeLoader):
@@ -72,6 +73,8 @@ def configuration(service, ops, source=None):
 
 def digest(service, ops, additions=None):
     h = hashlib.sha256()
+    for path in pg_types.inputs(service):
+        h.update(path.relative_to(service).as_posix().encode() + b'\0' + path.read_bytes())
     for p, content in sorted(specification_files(service, additions).items()):
         h.update((('public/' + p.relative_to(public_schema_dir(service)).as_posix()) if p.is_relative_to(public_schema_dir(service)) else ('internal/' + p.relative_to(service / 'docs').as_posix())).encode() + b'\0' + content.encode())
     for alias, provider in client_specs(service, UniqueLoader):
@@ -113,6 +116,7 @@ def run(service, check=False, output=None):
     ops = load(service, feature_files)
     generated_clients = client_outputs(service, UniqueLoader, load)
     generated_clients.update(configs.outputs(service, UniqueLoader))
+    generated_clients.update(pg_types.outputs(service, UniqueLoader))
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
@@ -191,6 +195,7 @@ def main():
             generated = outputs(service.name, ops, deps)
             generated.update(client_outputs(service, UniqueLoader, load))
             generated.update(configs.outputs(service, UniqueLoader))
+            generated.update(pg_types.outputs(service, UniqueLoader))
             print('\n'.join(sorted(generated)))
         else:
             run(service, args.check, args.output_dir)

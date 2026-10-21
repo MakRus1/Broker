@@ -1,0 +1,43 @@
+version: 1
+types:
+  public.shipment_v1:
+    fields:
+      - {name: id, type: uuid}
+      - {name: revision, type: bigint}
+      - {name: number, type: text}
+      - {name: customer_id, type: uuid}
+      - {name: reference, type: text}
+  public.shipment_item_v1:
+    fields:
+      - {name: id, type: uuid}
+      - {name: revision, type: bigint}
+      - {name: shipment_id, type: uuid}
+      - {name: container_type, type: text}
+      - {name: ownership, type: text}
+      - {name: planned, type: bigint}
+  public.quantity_totals_v1:
+    fields:
+      - {name: created, type: bigint}
+      - {name: pending, type: bigint}
+  public.item_totals_v1:
+    fields:
+      - {name: item_id, type: uuid}
+      - {name: created, type: bigint}
+      - {name: pending, type: bigint}
+  public.creation_operation_v1:
+    fields:
+      - {name: id, type: uuid}
+      - {name: item_id, type: uuid}
+      - {name: quantity, type: bigint}
+      - {name: status, type: text}
+      - {name: result, type: jsonb, nullable: true}
+  public.idempotent_result_v1:
+    fields:
+      - {name: request, type: jsonb}
+      - {name: result, type: jsonb}
+  public.delivery_v1:
+    fields:
+      - {name: tenant, type: uuid}
+      - {name: id, type: uuid}
+      - {name: lease, type: uuid}
+      - {name: payload, type: jsonb}

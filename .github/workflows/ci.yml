@@ -135,6 +135,11 @@ jobs:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make "docker-ci-test-$PRESET"
+      - name: Межсервисный сценарий · две реплики
+        if: ${{ matrix.preset == 'debug' }}
+        env:
+          DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
+        run: make docker-ci-smoke-debug
       - name: Результаты тестов по сервисам
         if: always()
         env:

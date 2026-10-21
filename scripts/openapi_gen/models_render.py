@@ -37,8 +37,9 @@ def render_models(models, namespace, header=True):
             code += struct(name, body.fields, input_metadata=True) + '\n'
             code += f'inline void ValidateModel(const {name}& value) {{\n'
             for f in body.fields:
-                call = f'Validate_{name}_{f.name}(' + ('*' if f.optional else '') + f'value.{f.name});'
-                code += f'if (value.{f.name}) {{ {call} }}\n' if f.optional else call + '\n'
+                access = f'value.{f.name}' + ('.value()' if f.optional else '')
+                call = f'Validate_{name}_{f.name}({access});'
+                code += f'if (value.{f.name}.has_value()) {{ {call} }}\n' if f.optional else call + '\n'
             code += '}\n'
             code += f'''inline {name} ParseModelJson(const userver::formats::json::Value& json,
     std::type_identity<{name}>) {{
@@ -61,8 +62,9 @@ ValidateModel(value);
 userver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject);
 '''
             for f in body.fields:
-                assignment = f'json[{quoted(f.name)}] = ' + ('*' if f.optional else '') + f'value.{f.name};'
-                code += f'if (value.{f.name}) {{ {assignment} }}\n' if f.optional else assignment + '\n'
+                access = f'value.{f.name}' + ('.value()' if f.optional else '')
+                assignment = f'json[{quoted(f.name)}] = {access};'
+                code += f'if (value.{f.name}.has_value()) {{ {assignment} }}\n' if f.optional else assignment + '\n'
             code += 'return json.ExtractValue();\n}\n'
         elif model.type.enum_name:
             code += enums(replace(model.type, enum_name=name, model_name=None))

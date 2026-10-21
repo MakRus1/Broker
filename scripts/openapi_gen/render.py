@@ -60,7 +60,11 @@ def requests(service, op):
     text = preamble(service, op)
     scope = f'::{service}::views::{op.ns}'
     if op.body:
-        text += struct('RequestBody', op.body.fields, input_metadata=True, scope=scope) + '\n'
+        if op.body.model_name:
+            text += declarations('RequestBody', op.body.fields)
+            text += f'using RequestBody = ::{service}::models::{op.body.model_name};\n'
+        else:
+            text += struct('RequestBody', op.body.fields, input_metadata=True, scope=scope) + '\n'
     members = fields(op.params, scope)
     if op.body:
         typ = 'RequestBody' if op.body.required else 'std::optional<RequestBody>'
@@ -81,7 +85,7 @@ def responses(service, op):
                 if not f.optional:
                     text += f'    Validate_{name}_{f.name}(value.{f.name});\n    out[{quote(f.name)}] = value.{f.name};\n'
                 else:
-                    text += f'    if (value.{f.name}) {{ Validate_{name}_{f.name}(*value.{f.name}); out[{quote(f.name)}] = *value.{f.name}; }}\n'
+                    text += f'    if (value.{f.name}.has_value()) {{ Validate_{name}_{f.name}(value.{f.name}.value()); out[{quote(f.name)}] = value.{f.name}.value(); }}\n'
             text += '    return userver::formats::json::ToString(out.ExtractValue());\n}\n'
     types = ', '.join(f'Response{r.status}' for r in op.responses)
     text += f'using Response = std::variant<{types}>;\n}}\n'

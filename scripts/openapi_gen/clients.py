@@ -44,9 +44,9 @@ def dto(name, items, scope):
 def json_write(name, items):
     lines = ['userver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject);']
     for f in items:
-        value = f'*value.{f.name}' if f.optional else f'value.{f.name}'
+        value = f'value.{f.name}.value()' if f.optional else f'value.{f.name}'
         line = f'Validate_{name}_{f.name}({value}); json[{quoted(f.name)}] = {value};'
-        lines.append(f'if (value.{f.name}) {{ {line} }}' if f.optional else line)
+        lines.append(f'if (value.{f.name}.has_value()) {{ {line} }}' if f.optional else line)
     return '\n'.join(lines) + '\nreturn userver::formats::json::ToString(json.ExtractValue());'
 
 
@@ -115,16 +115,16 @@ Response{response.status} response;
         text += 'if (access_token.empty() || access_token.find_first_of("\\r\\n") != std::string_view::npos) throw std::invalid_argument("Invalid bearer token"); raw.bearer_token = std::string(access_token);\n'
     text += f'raw.method = {quoted(op.method)}; raw.path = {quoted(op.path)}; raw.path_template = {quoted(op.path)};\n'
     for f in op.params:
-        value = f'*request.{f.name}' if f.optional else f'request.{f.name}'
+        value = f'request.{f.name}.value()' if f.optional else f'request.{f.name}'
         line = f'Validate_Request_{f.name}({value});\n'
         if f.location == 'path':
             line += f'platform::http::ReplacePath(raw.path, {quoted("{" + f.name + "}")}, platform::http::Scalar({value}));'
         else:
             line += f'raw.query.emplace_back({quoted(f.name)}, platform::http::Scalar({value}));'
-        text += f'if (request.{f.name}) {{ {line} }}\n' if f.optional else line + '\n'
+        text += f'if (request.{f.name}.has_value()) {{ {line} }}\n' if f.optional else line + '\n'
     if op.body:
-        line = 'raw.body = ToJson(' + ('*request.body' if not op.body.required else 'request.body') + '); raw.content_type = "application/json";'
-        text += (f'if (request.body) {{ {line} }}' if not op.body.required else line) + '\n'
+        line = 'raw.body = ToJson(' + ('request.body.value()' if not op.body.required else 'request.body') + '); raw.content_type = "application/json";'
+        text += (f'if (request.body.has_value()) {{ {line} }}' if not op.body.required else line) + '\n'
     text += 'return raw;\n}\ninline Response Decode(const platform::http::Response& raw) {\ntry {\nswitch (raw.status) {\n'
     for response in op.responses:
         text += f'case {response.status}: {{\n'

@@ -199,9 +199,9 @@ def body_code(spec, ns, context=False):
     if context:
         text += 'inline platform::configs::Json ToJson(const Value& value) {\nuserver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject);\n'
         for raw, f in zip(body.fields, members):
-            access = f'*value.{f.name}' if f.optional else f'value.{f.name}'
+            access = f'value.{f.name}.value()' if f.optional else f'value.{f.name}'
             line = f'Validate_Value_{f.name}({access}); json[{quoted(raw.name)}] = {access};'
-            text += f'if (value.{f.name}) {{ {line} }}\n' if f.optional else line + '\n'
+            text += f'if (value.{f.name}.has_value()) {{ {line} }}\n' if f.optional else line + '\n'
         text += 'return json.ExtractValue();\n}\n'
         text += 'inline void ValidatePredicate(platform::configs::Predicate& predicate) {\n'
         for raw, f in zip(body.fields, members):

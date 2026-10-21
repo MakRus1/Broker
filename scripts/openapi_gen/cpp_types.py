@@ -86,7 +86,7 @@ return userver::formats::json::ValueBuilder(EnumValue(value)).ExtractValue();
 
 def validator(typ, name):
     if typ.nullable:
-        return validator(replace(typ, nullable=False), name + '_value') + f'inline void Validate_{name}(const {typ.cpp}& value) {{ if (value) Validate_{name}_value(*value); }}\n'
+        return validator(replace(typ, nullable=False), name + '_value') + f'inline void Validate_{name}(const {typ.cpp}& value) {{ if (value.has_value()) Validate_{name}_value(value.value()); }}\n'
     before = validator(typ.item, name + '_item') if typ.item else ''
     raw = 'EnumValue(value)' if typ.enum_name else 'value'
     schema = typ.schema

@@ -1,0 +1,4 @@
+{
+  "postgresql": true,
+  "grpc": false
+}

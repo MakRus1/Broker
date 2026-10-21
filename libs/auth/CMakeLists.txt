@@ -6,6 +6,6 @@ FetchContent_Declare(broker_jwt_cpp
     SOURCE_SUBDIR broker-no-build)
 # Подключаем только заголовки; примеры и зависимости стороннего проекта не собираются.
 FetchContent_MakeAvailable(broker_jwt_cpp)
-add_library(broker_auth STATIC src/verifier.cpp src/component.cpp)
+add_library(broker_auth STATIC src/verifier.cpp src/component.cpp src/service_token.cpp)
 target_include_directories(broker_auth PUBLIC include PRIVATE "${broker_jwt_cpp_SOURCE_DIR}/include")
 target_link_libraries(broker_auth PUBLIC userver::core broker_common)

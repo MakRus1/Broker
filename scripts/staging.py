@@ -109,6 +109,10 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             '-f',
             str(directory / 'namespace.yaml'),
         )
+        if plan.get('lan'):
+            from staging_lan import initialize
+
+            initialize(ROOT, directory, context)
         run(
             'apply',
             '--server-side',
@@ -131,7 +135,7 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             '-f',
             str(directory / 'monitoring.yaml'),
         )
-        sync_keycloak(context, plan['namespace'], plan['admin_origin'])
+        sync_keycloak(context, plan['namespace'], plan['admin_origin'], plan['web_origin'])
         for name in NAMES:
             run(*ns, 'rollout', 'status', f'deployment/{name}', '--timeout=300s')
     if paths['migrations']:

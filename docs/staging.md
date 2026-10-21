@@ -512,7 +512,8 @@ New-NetFirewallRule -Name 'BrokerStagingHttps' -DisplayName 'Broker staging HTTP
 
 Адреса:
 
-- `https://admin.broker.home.arpa`
+- `https://admin.broker.home.arpa` — админка конфигов
+- `https://web.broker.home.arpa` — пользовательский интерфейс
 - `https://auth.broker.home.arpa`
 - `https://grafana.broker.home.arpa`
 
@@ -632,3 +633,36 @@ cd ~/projects/Broker
 # Применить показанный план, при необходимости закрепив --target из истории.
 .venv-gen/bin/python scripts/staging_rollback.py rollback --context default --service configs --apply
 ```
+
+
+### Добавление пользовательского Web в существующий staging
+
+Добавь в AdGuard Home запись `web.broker.home.arpa → 192.168.1.146`, аналогично
+admin/auth/grafana. LAN-профиль задаёт имя через `platform.yaml → environments.staging.lan.web_host`,
+а localhost-режим — через `web_origin`.
+
+При следующем деплое с инфраструктурой сертификат дополняется новым именем и
+подписывается существующим CA. Корневой ключ не меняется: повторно устанавливать
+CA на устройства не нужно. Настройки Web используют HTTPS origin и Secure cookie.
+Синхронизация Keycloak создаёт отсутствующие broker-web/broker-logistics, добавляет
+роли из шаблона для author/reviewer и обновляет точные callback/logout адреса обоих
+браузерных клиентов; пароли и пользовательские записи не пересоздаются.
+Привязки сотрудников к организации в бизнес-сервисах — отдельная доверенная операция.
+
+`Deploy all` выбирает последнюю **опубликованную** версию. Зелёная проверка Service
+images на PR собирает образы, но не публикует их. После мерджа запусти Service images
+вручную из main, дождись успеха и затем запусти Deploy all с включённой инфраструктурой.
+В журнале CD проверь выбранную ревизию и ссылку на публикацию.
+
+Если после перезагрузки Windows оба адреса дают тайм-аут, проверь актуальный IP
+Multipass и `netsh interface portproxy show all`. После смены connectaddress
+убедись, что IP Helper слушает 2222/443: `Get-NetTCPConnection -State Listen`.
+При отсутствии listener перезапусти `iphlpsvc` из PowerShell администратора.
+
+После смены IP VM обнови не только portproxy. Если K3s продолжает показывать старый
+INTERNAL-IP узла или адрес Kubernetes API, перезапусти `sudo systemctl restart k3s`.
+Дождись нового IP в `sudo k3s kubectl get nodes -o wide` и единственного актуального
+адреса в `sudo k3s kubectl -n default get endpointslices -l kubernetes.io/service-name=kubernetes -o wide`.
+Иначе Traefik может сохранить устаревшие endpoints и отдавать 502; во время потери
+доступа к API после перезапуска Traefik может временно показывать стандартный
+сертификат. Это не повод менять доверенный CA или обходить предупреждение браузера.

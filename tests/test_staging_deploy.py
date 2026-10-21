@@ -42,6 +42,7 @@ class DeployTest(unittest.TestCase):
                 {
                     'staging_deploy.py',
                     'staging_backup.py',
+                    'staging_network.py',
                     'service_catalog.py',
                     'service_history.py',
                     'settings.json',
@@ -99,7 +100,10 @@ class DeployTest(unittest.TestCase):
     def test_failed_apply_preserves_observed_state(self):
         self.check_remote(fail_restore=False, fail_apply=True)
 
-    def check_remote(self, *, fail_restore, fail_apply=False):
+    def test_stale_network_stops_before_backup(self):
+        self.check_remote(fail_restore=False, fail_network=True)
+
+    def check_remote(self, *, fail_restore, fail_apply=False, fail_network=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             (root / '.staging').mkdir()
@@ -143,6 +147,12 @@ class DeployTest(unittest.TestCase):
                 keep_backups=7,
             )
             with ExitStack() as stack:
+                stack.enter_context(
+                    patch(
+                        'staging_network.check_network',
+                        side_effect=ValueError('stale network') if fail_network else None,
+                    )
+                )
                 stack.enter_context(patch.dict(os.environ))
                 stack.enter_context(patch('staging_deploy.Path.home', return_value=root))
                 stack.enter_context(patch('staging_deploy.subprocess.run', side_effect=run))
@@ -150,7 +160,13 @@ class DeployTest(unittest.TestCase):
                 stack.enter_context(patch('staging_backup.backup', side_effect=backup))
                 stack.enter_context(patch('staging_backup.verify_cluster', side_effect=verify))
                 prune = stack.enter_context(patch('staging_backup.prune'))
-                if fail_restore:
+                if fail_network:
+                    with self.assertRaisesRegex(ValueError, 'stale network'):
+                        staging_deploy.remote_main(settings)
+                    self.assertNotIn('backup', events)
+                    self.assertNotIn(('git', 'checkout'), events)
+                    prune.assert_not_called()
+                elif fail_restore:
                     with self.assertRaisesRegex(ValueError, 'restore failed'):
                         staging_deploy.remote_main(settings)
                     self.assertNotIn(('git', 'checkout'), events)

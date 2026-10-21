@@ -64,6 +64,60 @@ class ServicesTest(unittest.TestCase):
             self.assertTrue((directory / 'tests/unit/greeting_test.cpp').is_file())
             with self.assertRaises(ValueError): create_service.create(name, pg, grpc)
 
+    def test_manifest_generates_auth_and_rejects_incomplete_policy(self):
+        directory = create_service.create('secured')
+        contract = directory / 'docs/api/hello.yaml'
+        document = yaml.safe_load(contract.read_text())
+        document['paths'] = {
+            path.replace('/hello', '/api/hello'): value for path, value in document['paths'].items()
+        }
+        document.setdefault('components', {})['securitySchemes'] = {
+            'Bearer': {'type': 'http', 'scheme': 'bearer', 'bearerFormat': 'JWT'}
+        }
+        document['security'] = [{'Bearer': []}]
+        contract.write_text(yaml.safe_dump(document, sort_keys=False))
+        manifest = directory / 'service.yaml'
+        spec = yaml.safe_load(manifest.read_text())
+        spec['auth'] = {
+            'audience': 'secured-api',
+            'roles-client': 'secured-api',
+            'protected-prefix': '/api/',
+            'permissions': {path: 'hello.read' for path in document['paths']},
+        }
+        manifest.write_text(yaml.safe_dump(spec, sort_keys=False))
+        run(directory)
+        run(directory, check=True)
+        config = yaml.safe_load((directory / 'configs/static_config.yaml').read_text())[
+            'components_manager'
+        ]['components']
+        self.assertEqual(config['platform-auth']['permissions'], spec['auth']['permissions'])
+        self.assertEqual(config['platform-http-pipeline']['extra-middlewares'], ['platform-auth'])
+        self.assertEqual(config['platform-auth']['issuer'], '$auth-issuer')
+        main = (directory / 'src/main.cpp').read_text()
+        self.assertEqual(main.count('Append<platform::auth::Component>()'), 1)
+        self.assertEqual(main.count('Append<userver::components::HttpClient>("auth-http-client")'), 1)
+        self.assertIn('broker_auth', (directory / 'CMakeLists.txt').read_text())
+        # Ручная реализация сохраняется, повторная генерация ничего не меняет.
+        before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+        run(directory)
+        self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+        for mutation in ('missing', 'unknown', 'no-auth', 'public'):
+            broken = yaml.safe_load(yaml.safe_dump(spec))
+            if mutation == 'missing':
+                broken['auth']['permissions'].pop(next(iter(document['paths'])))
+            elif mutation == 'unknown':
+                broken['auth']['permissions']['/api/unknown'] = 'hello.read'
+            elif mutation == 'no-auth':
+                del broken['auth']
+            else:
+                document['security'] = []
+                contract.write_text(yaml.safe_dump(document, sort_keys=False))
+            manifest.write_text(yaml.safe_dump(broken, sort_keys=False))
+            before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                run(directory)
+            self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+
     def test_invalid_names_leave_no_files(self):
         for name in ['', '../escape', '/tmp/escape', 'two words', 'a-b', 'class', '_reserved', 'x;echo bad']:
             with self.assertRaises(ValueError): create_service.create(name)

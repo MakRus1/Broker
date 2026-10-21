@@ -105,3 +105,30 @@ async def test_bearer_scheme_case_insensitive(monitor_client, access_token):
     response = await monitor_client.get('/admin/configs/list',
                                         headers={'Authorization': 'bEaReR ' + access_token()})
     assert response.status == 200
+
+
+@pytest.fixture(scope='session')
+def configure_parameterized_auth():
+    def patch(config, config_vars):
+        components = config['components_manager']['components']
+        original = '/admin/configs/list'
+        route = '/admin/configs/{category}/list'
+        handler = next(
+            value
+            for value in components.values()
+            if isinstance(value, dict) and value.get('path') == original
+        )
+        handler['path'] = route
+        permissions = components['platform-auth']['permissions']
+        permissions[route] = permissions.pop(original)
+
+    return patch
+
+
+@pytest.mark.uservice_oneshot(config_hooks=['configure_parameterized_auth'])
+async def test_permission_uses_route_template(monitor_client, access_token):
+    for category in ('first', 'second'):
+        path = '/admin/configs/' + category + '/list'
+        assert (await call(monitor_client, path=path)).status == 401
+        assert (await call(monitor_client, access_token(roles=[]), path=path)).status == 403
+        assert (await call(monitor_client, access_token(), path=path)).status == 200

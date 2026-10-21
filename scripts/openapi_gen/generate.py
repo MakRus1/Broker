@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Создание заготовок, проверка без записи или генерация в каталог сборки."""
+import auth
 import argparse
 import hashlib
 import json
@@ -114,6 +115,8 @@ def run(service, check=False, output=None):
         if stale:
             raise ValueError('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
     ops = load(service, feature_files)
+    manifest = service / 'service.yaml'
+    auth.validate(yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}, ops)
     generated_clients = client_outputs(service, UniqueLoader, load)
     generated_clients.update(configs.outputs(service, UniqueLoader))
     generated_clients.update(pg_types.outputs(service, UniqueLoader))

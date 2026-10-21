@@ -1,8 +1,26 @@
 version: 1
-libraries: [common, configs, auth]
+libraries:
+- common
+- configs
 postgresql:
   enabled: true
   cluster: configs
 dashboard:
   title: Broker · Конфиги
-  tags: [infrastructure]
+  tags:
+  - infrastructure
+auth:
+  audience: configs-admin
+  roles-client: configs-admin
+  protected-prefix: /admin/
+  permissions:
+    /admin/configs/current: configs.read
+    /admin/configs/drafts/approve: configs.approve
+    /admin/configs/drafts/cancel: configs.write
+    /admin/configs/drafts/create: configs.write
+    /admin/configs/drafts/edit: configs.write
+    /admin/configs/drafts/events: configs.read
+    /admin/configs/drafts/get: configs.read
+    /admin/configs/drafts/list: configs.read
+    /admin/configs/history: configs.read
+    /admin/configs/list: configs.read

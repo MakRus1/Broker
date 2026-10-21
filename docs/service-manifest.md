@@ -172,3 +172,14 @@ http_logging:
 Необязательная секция `deployment` задаёт `replicas` и Kubernetes `resources`
 (`requests`/`limits`, CPU и memory). При генерации эти поля валидируются. Настройки
 окружения и порядок переопределений описаны в [гайде staging](staging.md).
+
+
+## Авторизация Bearer API
+
+Секция `auth` задает `audience`, `roles-client`, `protected-prefix` и таблицу
+`permissions` (полный шаблон пути → право). Она подключает библиотеку `auth`,
+компонент, HTTP-клиент для JWKS и middleware автоматически. Bearer security в
+OpenAPI и политика должны совпадать; генератор отклоняет пропущенные/лишние пути
+и публичные ручки внутри защищаемого префикса. Значения issuer/JWKS зависят от
+окружения и остаются в config vars. Пример и границы ответственности:
+[Авторизация API](auth.md).

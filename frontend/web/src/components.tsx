@@ -101,10 +101,11 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
               <td>{item.container_type_code}</td>
               <td>{ownership[item.container_ownership]}</td>
               <td>
-                {item.legs.length
-                  ? item.legs
+                {item.route_segments.length
+                  ? item.route_segments
                       .map(
-                        (leg) => `${modes[leg.mode]}: ${leg.origin.name} → ${leg.destination.name}`,
+                        (route_segment) =>
+                          `${modes[route_segment.mode]}: ${route_segment.origin.name} → ${route_segment.destination.name}`,
                       )
                       .join(' · ')
                   : 'Маршрут ещё не задан'}

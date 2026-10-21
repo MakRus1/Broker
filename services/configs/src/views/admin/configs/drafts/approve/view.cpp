@@ -1,5 +1,5 @@
 #include <components/config_store.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/admin/configs/drafts/approve/view.hpp>
 
 namespace configs::views::admin::configs::drafts::approve {
@@ -8,10 +8,10 @@ Response View::Handle(
     const ::configs::ConfigStore store{deps.pg_cluster};
     try {
         const auto draft =
-            store.ApproveDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
+            store.ApproveDraft({.Actor = platform::auth::GetIdentity(context).ActorId(),
                 .Id = request.body.id,
                 .ExpectedVersion = request.body.expected_version,
-                .ActorName = platform::auth::GetPrincipal(context).DisplayName});
+                .ActorName = platform::auth::GetIdentity(context).DisplayName});
         return Response200{.approved_by = draft.ApprovedBy,
             .approved_by_name = draft.ApprovedByName,
             .author = draft.Author,

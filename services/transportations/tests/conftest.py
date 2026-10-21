@@ -24,8 +24,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
 from auth_tokens import ISSUER, SigningKey
 
-TENANT = '11111111-1111-4111-8111-111111111111'
-OTHER_TENANT = '22222222-2222-4222-8222-222222222222'
+ORGANIZATION = '11111111-1111-4111-8111-111111111111'
+OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
 USERVER_CONFIG_HOOKS = ['configure_auth']
 
 
@@ -57,8 +57,8 @@ def memberships(pgsql):
     db = pgsql['db_1']
     with db.cursor() as cursor:
         cursor.execute(
-            'INSERT INTO tenant_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
-            (ISSUER, 'author', TENANT, ISSUER, 'other', OTHER_TENANT),
+            'INSERT INTO organization_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
+            (ISSUER, 'author', ORGANIZATION, ISSUER, 'other', OTHER_ORGANIZATION),
         )
 
 

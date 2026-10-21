@@ -1,4 +1,4 @@
-"""Только локальный стенд: тестовые сотрудники привязаны к одному демонстрационному tenant."""
+"""Только локальный стенд: тестовые сотрудники привязаны к одному демонстрационному organization."""
 
 import json
 import os
@@ -27,11 +27,11 @@ for name in ('shipments', 'transportations', 'counterparties'):
             env={**os.environ, 'PGPASSWORD': 'testsuite'},
             text=True,
             check=True,
-            input="""INSERT INTO tenant_memberships (issuer, subject, tenant_id)
+            input="""INSERT INTO organization_memberships (issuer, subject, organization_id)
                  VALUES ('http://localhost:18888/realms/broker', :'subject',
                          '11111111-1111-4111-8111-111111111111') ON CONFLICT DO NOTHING;""",
         )
-print('Доступ локальных сотрудников к демонстрационному tenant готов')
+print('Доступ локальных сотрудников к демонстрационному organization готов')
 
 # Демонстрационный клиент для ранее созданных локальных поставок.
 subprocess.run(
@@ -49,7 +49,7 @@ subprocess.run(
     env={**os.environ, 'PGPASSWORD': 'testsuite'},
     text=True,
     check=True,
-    input="""INSERT INTO counterparties (tenant_id, id, name)
+    input="""INSERT INTO counterparties (organization_id, id, name)
          VALUES ('11111111-1111-4111-8111-111111111111',
                  '33333333-3333-4333-8333-333333333333', 'Демонстрационный клиент')
          ON CONFLICT DO NOTHING;""",

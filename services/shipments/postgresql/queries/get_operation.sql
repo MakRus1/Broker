@@ -6,4 +6,4 @@ SELECT ROW(
     result
 )::public.creation_operation_v1
 FROM creation_operations
-WHERE tenant_id = $1::UUID AND id = $2::UUID;
+WHERE organization_id = $1::UUID AND id = $2::UUID;

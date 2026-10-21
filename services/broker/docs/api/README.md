@@ -79,7 +79,7 @@ SQL находятся в `postgresql/queries/*.sql`; userver генерируе
 
 HTTP bearer JWT описывается стандартными `components.securitySchemes` и `security`.
 Клиент защищенной операции требует токен вторым аргументом; сервер требует
-проверенный Principal от `libs/auth`. Настройка middleware и разрешений:
+проверенный Identity от `libs/auth`. Настройка middleware и разрешений:
 [авторизация](../../../../docs/auth.md). Другие security-схемы отклоняются.
 
 ## Типы PostgreSQL

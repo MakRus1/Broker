@@ -30,7 +30,7 @@ void TransportationDispatcher::Step() {
     const auto rows = deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kClaimOperation);
     if (rows.IsEmpty())
         return;
-    const auto delivery = rows.AsSingleRow<pgtypes::DeliveryV1>();
+    const auto delivery = rows.AsSingleRow<pgtypes::DeliveryV2>();
     try {
         namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
         const auto request = api::Request{.body = api::ParseBody(delivery.Payload)};
@@ -58,13 +58,13 @@ void TransportationDispatcher::Step() {
             .Status = status,
             .Result = document};
         deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kCompleteOperation,
-            delivery.Tenant, completed, delivery.Lease);
+            delivery.Organization, completed, delivery.Lease);
     } catch (const std::exception&) {
         // Даже 4xx не является подтвержденным доменным отказом: резерв не освобождается по
         // таймауту.
         LOG_WARNING() << "Transportation delivery deferred";
         deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kRetryOperation,
-            delivery.Tenant, delivery.Id, delivery.Lease);
+            delivery.Organization, delivery.Id, delivery.Lease);
     }
 }
 

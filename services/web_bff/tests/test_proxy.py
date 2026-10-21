@@ -27,7 +27,7 @@ TRANSPORTATION = {
     'operation_id': ID,
     'container_type_code': '40HC',
     'container_ownership': 'COC',
-    'legs': [],
+    'route_segments': [],
 }
 
 
@@ -153,7 +153,7 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
     transportation = {
         **TRANSPORTATION,
         'container_ownership': ownership,
-        'legs': [
+        'route_segments': [
             {
                 'id': str(uuid4()),
                 'mode': mode,
@@ -185,7 +185,7 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
             {
                 'transportation_id': ID,
                 'expected_revision': 1,
-                'legs': [
+                'route_segments': [
                     {
                         'id': ID,
                         'mode': 'sea',
@@ -204,7 +204,7 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
             {
                 'transportation_id': ID,
                 'expected_revision': 2,
-                'leg_id': ID,
+                'route_segment_id': ID,
                 'event_kind': 'arrival',
                 'occurred_at': '2026-10-23T10:00:00Z',
             },
@@ -215,7 +215,7 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
             {
                 'transportation_id': ID,
                 'expected_revision': 3,
-                'leg_id': ID,
+                'route_segment_id': ID,
                 'event_kind': 'departure',
                 'occurred_at': '2026-10-21T11:00:00Z',
                 'reason': 'Уточнение',
@@ -235,9 +235,9 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
                         'occurred_at': '2026-10-21T11:00:00Z',
                         'reason': 'Уточнение',
                         'event_kind': 'departure',
-                        'leg_id': ID,
+                        'route_segment_id': ID,
                         'revision': 4,
-                        'legs': TRANSPORTATION['legs'],
+                        'route_segments': TRANSPORTATION['route_segments'],
                     }
                 ]
             },

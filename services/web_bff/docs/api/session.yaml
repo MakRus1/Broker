@@ -38,25 +38,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
   /api/logout:
     post:
       summary: Завершить сессию
@@ -78,25 +78,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Запрос отклонён
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
       requestBody:
         required: true
         content:

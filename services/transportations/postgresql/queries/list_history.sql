@@ -6,7 +6,7 @@ SELECT ROW(
     document
 )::public.transportation_event_v1
 FROM business_audit
-WHERE tenant_id = $1::UUID
+WHERE organization_id = $1::UUID
   AND entity_id = $2::UUID
   AND action IN ('set_route', 'record_actual', 'correct_actual')
   AND ($3::BIGINT IS NULL OR id < $3::BIGINT)

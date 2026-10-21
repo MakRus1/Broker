@@ -1,6 +1,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/transportations/history/view.hpp>
 
 namespace transportations::views::api::v1::transportations::history {
@@ -8,14 +8,15 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
-        const auto& principal = platform::auth::GetPrincipal(context);
+        const auto& identity = platform::auth::GetIdentity(context);
         // Наличие перевозки и её история проверяются в одном снимке.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto tenant = ResolveTenant(transaction, principal);
-        if (transaction.Execute(sql::kGetTransportation, tenant, request.body.transportation_id)
+        const auto organization = ResolveOrganization(transaction, identity);
+        if (transaction
+                .Execute(sql::kGetTransportation, organization, request.body.transportation_id)
                 .IsEmpty())
             return Response404{.error = "not_found", .message = "Перевозка не найдена"};
-        const auto rows = transaction.Execute(sql::kListHistory, tenant,
+        const auto rows = transaction.Execute(sql::kListHistory, organization,
             request.body.transportation_id, request.body.before, request.body.limit);
         transaction.Commit();
         return Response200{

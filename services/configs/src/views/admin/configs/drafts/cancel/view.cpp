@@ -1,5 +1,5 @@
 #include <components/config_store.hpp>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/admin/configs/drafts/cancel/view.hpp>
 
 namespace configs::views::admin::configs::drafts::cancel {
@@ -8,7 +8,7 @@ Response View::Handle(
     const ::configs::ConfigStore store{deps.pg_cluster};
     try {
         const auto draft =
-            store.CancelDraft({.Actor = platform::auth::GetPrincipal(context).ActorId(),
+            store.CancelDraft({.Actor = platform::auth::GetIdentity(context).ActorId(),
                 .Id = request.body.id,
                 .ExpectedVersion = request.body.expected_version});
         return Response200{.approved_by = draft.ApprovedBy,

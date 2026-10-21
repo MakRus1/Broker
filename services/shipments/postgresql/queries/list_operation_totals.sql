@@ -4,5 +4,5 @@ SELECT ROW(
     COALESCE(SUM(quantity) FILTER (WHERE status = 'pending'), 0)::BIGINT
 )::public.item_totals_v1
 FROM creation_operations
-WHERE tenant_id = $1::UUID AND item_id = ANY($2::UUID[])
+WHERE organization_id = $1::UUID AND item_id = ANY($2::UUID[])
 GROUP BY item_id;

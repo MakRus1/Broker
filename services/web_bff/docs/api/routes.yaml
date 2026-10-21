@@ -11,7 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/transportations.yaml#/TSetRouteRequest
+              $ref: ../components/schemas/transportations/models.yaml#/SetRouteRequest
       responses:
         '200':
           description: Успех
@@ -24,45 +24,45 @@ paths:
                 - transportation
                 properties:
                   transportation:
-                    $ref: ../components/schemas/transportations.yaml#/TTransportation
+                    $ref: ../components/schemas/transportations/models.yaml#/Transportation
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией;
             маршрут с записанными фактами пока не заменяется'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

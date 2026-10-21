@@ -56,3 +56,19 @@ async def test_shared_enum_query(service_client, query, expected):
     response = await service_client.get('/models/state', params=query)
     assert response.status == 200
     assert response.json()['state'] == expected
+
+
+@pytest.mark.parametrize('scoped,expected', [
+    ({}, {'state': 'ready', 'kind': 'primary'}),
+    ({'state': 'done', 'kind': 'secondary'}, {'state': 'done', 'kind': 'secondary'}),
+])
+async def test_namespaced_models_roundtrip(service_client, scoped, expected):
+    response = await service_client.post('/models/echo', json={**payload(), 'scoped': scoped})
+    assert response.status == 200, response.text
+    assert response.json()['scoped'] == expected
+
+
+@pytest.mark.parametrize('scoped', [{'state': 'active'}, {'kind': 'unknown'}])
+async def test_namespaced_models_validate_independently(service_client, scoped):
+    response = await service_client.post('/models/echo', json={**payload(), 'scoped': scoped})
+    assert response.status == 400

@@ -6,5 +6,5 @@ SELECT ROW(
     reference
 )::public.shipment_v1
 FROM shipments
-WHERE tenant_id = $1::UUID AND id = $2::UUID
+WHERE organization_id = $1::UUID AND id = $2::UUID
 FOR UPDATE;

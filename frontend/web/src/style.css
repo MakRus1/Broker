@@ -702,20 +702,20 @@ textarea {
   display: grid;
   gap: 18px;
 }
-.route-leg {
+.route-segment {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 18px;
 }
-.leg-dates,
+.route-segment-dates,
 .route-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
-.leg-dates > div {
+.route-segment-dates > div {
   display: grid;
   gap: 10px;
   justify-items: start;
@@ -761,14 +761,14 @@ textarea {
   padding: 20px;
 }
 @media (max-width: 800px) {
-  .leg-dates,
+  .route-segment-dates,
   .route-fields {
     grid-template-columns: 1fr;
   }
   .section-heading {
     flex-wrap: wrap;
   }
-  .route-leg {
+  .route-segment {
     padding: 16px;
   }
 }

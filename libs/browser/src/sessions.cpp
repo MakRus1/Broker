@@ -161,9 +161,9 @@ void Sessions::EnsureFresh(Session& session) {
     if (session.TokenExpires <= Clock::now() + std::chrono::seconds{30}) {
         const auto tokens = Exchange("grant_type=refresh_token&client_id=" + UrlEncode(client_) +
             "&refresh_token=" + UrlEncode(session.Refresh));
-        platform::auth::Principal principal;
+        platform::auth::Identity identity;
         try {
-            principal = auth_.VerifyAccess(tokens["access_token"].As<std::string>());
+            identity = auth_.VerifyAccess(tokens["access_token"].As<std::string>());
         } catch (const platform::auth::Unavailable&) {
             throw;
         } catch (const std::bad_alloc&) {
@@ -171,10 +171,10 @@ void Sessions::EnsureFresh(Session& session) {
         } catch (const std::exception&) {
             throw userver::server::handlers::Unauthorized{};
         }
-        if (principal.ActorId() != session.User.ActorId())
+        if (identity.ActorId() != session.User.ActorId())
             throw userver::server::handlers::Unauthorized{};
         Tokens(session, tokens);
-        session.User = principal;
+        session.User = identity;
     }
 }
 

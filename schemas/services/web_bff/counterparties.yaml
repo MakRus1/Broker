@@ -11,7 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: components/schemas/counterparties.yaml#/CreateCounterpartyRequest
+              $ref: components/schemas/counterparties/models.yaml#/CreateCounterpartyRequest
       responses:
         '201':
           description: Контрагент сохранён
@@ -22,7 +22,7 @@ paths:
                 additionalProperties: false
                 properties:
                   counterparty:
-                    $ref: components/schemas/counterparties.yaml#/Counterparty
+                    $ref: components/schemas/counterparties/models.yaml#/Counterparty
                 required:
                 - counterparty
         '400':
@@ -30,31 +30,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '401':
           description: Требуется вход
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '403':
           description: Нет права или доступа к организации
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '409':
           description: Идентификатор уже занят другим контрагентом
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '503':
           description: Недоступна проверка доступа
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
   /api/v1/counterparties/list:
     post:
       summary: Список контрагентов
@@ -63,7 +63,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: components/schemas/counterparties.yaml#/ListCounterpartiesRequest
+              $ref: components/schemas/counterparties/models.yaml#/ListCounterpartiesRequest
       responses:
         '200':
           description: Список контрагентов
@@ -76,7 +76,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: components/schemas/counterparties.yaml#/Counterparty
+                      $ref: components/schemas/counterparties/models.yaml#/Counterparty
                 required:
                 - items
         '400':
@@ -84,31 +84,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '401':
           description: Требуется вход
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '403':
           description: Нет права или доступа к организации
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '409':
           description: Идентификатор уже занят другим контрагентом
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
         '503':
           description: Недоступна проверка доступа
           content:
             application/json:
               schema:
-                $ref: components/schemas/counterparties.yaml#/CounterpartyError
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
 components:
   securitySchemes:
     BrowserSession:

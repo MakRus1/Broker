@@ -1,7 +1,7 @@
 import type { Transportation } from './api';
 
-export type Leg = Transportation['legs'][number];
-export type RouteLeg = Omit<Leg, 'actual_departure_at' | 'actual_arrival_at'>;
+export type RouteSegment = Transportation['route_segments'][number];
+export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'actual_arrival_at'>;
 
 export function localDateTime(value?: string): string {
   if (!value) return '';
@@ -20,7 +20,7 @@ export function formatDate(value?: string): string {
     ? new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
     : '—';
 }
-export function routeLeg(value: Leg): RouteLeg {
+export function routeSegment(value: RouteSegment): PlannedRouteSegment {
   return {
     id: value.id,
     mode: value.mode,
@@ -31,30 +31,32 @@ export function routeLeg(value: Leg): RouteLeg {
     ...(value.planned_arrival_at ? { planned_arrival_at: value.planned_arrival_at } : {}),
   };
 }
-export function routeRequest(id: string, revision: number, legs: RouteLeg[]) {
-  if (!legs.length || legs.length > 32)
+export function routeRequest(id: string, revision: number, route_segments: PlannedRouteSegment[]) {
+  if (!route_segments.length || route_segments.length > 32)
     throw new Error('Маршрут должен содержать от 1 до 32 участков');
-  if (new Set(legs.map((leg) => leg.id)).size !== legs.length)
+  if (
+    new Set(route_segments.map((route_segment) => route_segment.id)).size !== route_segments.length
+  )
     throw new Error('Участки маршрута должны отличаться');
   return {
     transportation_id: id,
     expected_revision: revision,
-    legs: legs.map((leg) => {
-      const result = routeLeg(leg);
+    route_segments: route_segments.map((route_segment) => {
+      const result = routeSegment(route_segment);
       for (const point of [result.origin, result.destination]) {
         point.name = point.name.trim();
         point.country_code = point.country_code.trim().toUpperCase();
         if (!point.name || !/^[A-Z]{2}$/.test(point.country_code))
           throw new Error('Укажите пункт и двухбуквенный код страны');
       }
-      for (const value of [leg.planned_departure_at, leg.planned_arrival_at]) {
+      for (const value of [route_segment.planned_departure_at, route_segment.planned_arrival_at]) {
         if (value && !Number.isFinite(new Date(value).getTime()))
           throw new Error('Некорректная плановая дата');
       }
       if (
-        leg.planned_departure_at &&
-        leg.planned_arrival_at &&
-        new Date(leg.planned_departure_at) > new Date(leg.planned_arrival_at)
+        route_segment.planned_departure_at &&
+        route_segment.planned_arrival_at &&
+        new Date(route_segment.planned_departure_at) > new Date(route_segment.planned_arrival_at)
       )
         throw new Error('Плановое отправление не может быть позже прибытия');
       return result;

@@ -20,19 +20,19 @@ inline models::Transportation Convert(const pgtypes::TransportationV2& row) {
     return result;
 }
 
-inline std::vector<models::TransportationLeg> Convert(
+inline std::vector<models::RouteSegment> Convert(
     const std::vector<userver::formats::json::Value>& documents) {
-    std::vector<models::TransportationLeg> result;
+    std::vector<models::RouteSegment> result;
     result.reserve(documents.size());
     for (const auto& document : documents)
         result.push_back(
-            models::ParseModelJson(document, std::type_identity<models::TransportationLeg>{}));
+            models::ParseModelJson(document, std::type_identity<models::RouteSegment>{}));
     return result;
 }
 
 inline std::vector<models::Transportation> Convert(
     const std::vector<pgtypes::TransportationV2>& rows,
-    const std::vector<pgtypes::TransportationLegV1>& legs) {
+    const std::vector<pgtypes::RouteSegmentV1>& route_segments) {
     std::vector<models::Transportation> result;
     result.reserve(rows.size());
     std::map<boost::uuids::uuid, std::size_t> indexes;
@@ -40,10 +40,10 @@ inline std::vector<models::Transportation> Convert(
         indexes.emplace(row.Id, result.size());
         result.push_back(Convert(row));
     }
-    for (const auto& leg : legs)
-        result.at(indexes.at(leg.TransportationId))
-            .legs.push_back(models::ParseModelJson(
-                leg.Document, std::type_identity<models::TransportationLeg>{}));
+    for (const auto& route_segment : route_segments)
+        result.at(indexes.at(route_segment.TransportationId))
+            .route_segments.push_back(models::ParseModelJson(
+                route_segment.Document, std::type_identity<models::RouteSegment>{}));
     return result;
 }
 
@@ -59,15 +59,15 @@ inline models::TransportationEvent Convert(const pgtypes::TransportationEventV1&
     const auto& request = document["request"];
     if (request.HasMember("reason"))
         result.reason = request["reason"].As<std::string>();
-    if (request.HasMember("leg_id"))
-        result.leg_id = request["leg_id"].As<std::string>();
+    if (request.HasMember("route_segment_id"))
+        result.route_segment_id = request["route_segment_id"].As<std::string>();
     if (request.HasMember("event_kind"))
         result.event_kind =
             models::ParseEnumScalar(request["event_kind"].As<std::string>(), models::EventKind{});
     result.revision = document["result"]["revision"].As<std::int64_t>();
-    for (const auto& leg : document["result"]["legs"])
-        result.legs.push_back(
-            models::ParseModelJson(leg, std::type_identity<models::TransportationLeg>{}));
+    for (const auto& route_segment : document["result"]["route_segments"])
+        result.route_segments.push_back(
+            models::ParseModelJson(route_segment, std::type_identity<models::RouteSegment>{}));
     return result;
 }
 

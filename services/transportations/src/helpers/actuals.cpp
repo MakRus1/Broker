@@ -5,13 +5,15 @@
 #include <helpers/json.hpp>
 
 namespace transportations::helpers {
-void UpdateActual(pg::Transaction& transaction, const std::string& tenant,
-    models::Transportation& transportation, const std::string& leg_id, models::EventKind event,
-    const std::string& occurred_at, ActualChange change) {
-    const auto requested = boost::uuids::string_generator{}(leg_id);
-    const auto found = std::find_if(transportation.legs.begin(), transportation.legs.end(),
-        [&](const auto& leg) { return boost::uuids::string_generator{}(leg.id) == requested; });
-    if (found == transportation.legs.end())
+void UpdateActual(pg::Transaction& transaction, const std::string& organization,
+    models::Transportation& transportation, const std::string& route_segment_id,
+    models::EventKind event, const std::string& occurred_at, ActualChange change) {
+    const auto requested = boost::uuids::string_generator{}(route_segment_id);
+    const auto found = std::find_if(transportation.route_segments.begin(),
+        transportation.route_segments.end(), [&](const auto& route_segment) {
+            return boost::uuids::string_generator{}(route_segment.id) == requested;
+        });
+    if (found == transportation.route_segments.end())
         throw ApiError{404, "not_found", "Плечо не найдено"};
     auto& value = event == models::EventKind::Departure ? found->actual_departure_at
                                                         : found->actual_arrival_at;
@@ -22,8 +24,9 @@ void UpdateActual(pg::Transaction& transaction, const std::string& tenant,
                        : "Факт уже записан; используйте команду исправления"};
     value = occurred_at;
     domain::ValidateActualTimes(*found);
-    transaction.Execute(sql::kUpdateLeg, tenant, transportation.id, leg_id, Document(*found));
-    transaction.Execute(sql::kBumpTransportationRevision, tenant, transportation.id);
+    transaction.Execute(sql::kUpdateRouteSegment, organization, transportation.id, route_segment_id,
+        Document(*found));
+    transaction.Execute(sql::kBumpTransportationRevision, organization, transportation.id);
     ++transportation.revision;
 }
 }  // namespace transportations::helpers

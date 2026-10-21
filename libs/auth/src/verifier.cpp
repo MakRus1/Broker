@@ -67,11 +67,11 @@ Verifier::Verifier(Settings settings, const std::string& jwks) : impl_(std::make
 
 Verifier::~Verifier() = default;
 
-Principal Verifier::Verify(const std::string& token) const {
+Identity Verifier::Verify(const std::string& token) const {
     return VerifyKind(token, "Bearer");
 }
 
-Principal Verifier::VerifyKind(const std::string& token, std::string_view kind) const {
+Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) const {
     if (token.empty() || token.size() > 16384)
         throw std::invalid_argument("Invalid token size");
     const auto decoded = jwt::decode(token);
@@ -94,28 +94,28 @@ Principal Verifier::VerifyKind(const std::string& token, std::string_view kind) 
         throw std::invalid_argument("Invalid subject");
     if (decoded.get_expires_at() <= decoded.get_issued_at())
         throw std::invalid_argument("Invalid lifetime");
-    Principal principal{impl_->Config.Issuer, subject, {}, subject};
+    Identity identity{impl_->Config.Issuer, subject, {}, subject};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
-    principal.DisplayName = payload["preferred_username"].As<std::string>(subject);
+    identity.DisplayName = payload["preferred_username"].As<std::string>(subject);
     const auto roles = payload["resource_access"][impl_->Config.RolesClient]["roles"];
     if (!roles.IsMissing())
-        principal.Permissions = roles.As<std::set<std::string>>();
-    return principal;
+        identity.Permissions = roles.As<std::set<std::string>>();
+    return identity;
 }
 
-Principal Verifier::VerifyLogin(const std::string& access, const std::string& identity,
+Identity Verifier::VerifyLogin(const std::string& access, const std::string& id_token,
     const std::string& client, const std::string& nonce) const {
-    const auto principal = Verify(access);
+    const auto identity = Verify(access);
     const Verifier verifier{{impl_->Config.Issuer, client, impl_->Config.RolesClient}, impl_->Jwks};
-    const auto identified = verifier.VerifyKind(identity, "ID");
-    const auto payload = userver::formats::json::FromString(jwt::decode(identity).get_payload());
+    const auto identified = verifier.VerifyKind(id_token, "ID");
+    const auto payload = userver::formats::json::FromString(jwt::decode(id_token).get_payload());
     if (nonce.empty() || payload["nonce"].As<std::string>() != nonce ||
-        payload["azp"].As<std::string>() != client || identified.Subject != principal.Subject)
-        throw std::invalid_argument("Invalid login identity");
+        payload["azp"].As<std::string>() != client || identified.Subject != identity.Subject)
+        throw std::invalid_argument("Invalid login id_token");
     const auto access_payload =
         userver::formats::json::FromString(jwt::decode(access).get_payload());
     if (access_payload["azp"].As<std::string>() != client)
         throw std::invalid_argument("Invalid authorized party");
-    return principal;
+    return identity;
 }
 }  // namespace platform::auth

@@ -4,8 +4,8 @@
 
 namespace shipments::helpers {
 inline pgtypes::QuantityTotalsV1 ReadTotals(
-    pg::Transaction& transaction, const std::string& tenant, const std::string& item) {
-    return transaction.Execute(sql::kOperationTotals, tenant, item)
+    pg::Transaction& transaction, const std::string& organization, const std::string& item) {
+    return transaction.Execute(sql::kOperationTotals, organization, item)
         .AsSingleRow<pgtypes::QuantityTotalsV1>();
 }
 

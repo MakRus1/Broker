@@ -11,7 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/shipments.yaml#/CreateShipmentRequest
+              $ref: ../components/schemas/shipments/models.yaml#/CreateShipmentRequest
       responses:
         '201':
           description: Успех
@@ -24,45 +24,45 @@ paths:
                 - shipment
                 properties:
                   shipment:
-                    $ref: ../components/schemas/shipments.yaml#/Shipment
+                    $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '409':
           description: Ключ идемпотентности уже использован с другим запросом или
             изменена редакция родительской поставки
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
   /api/v1/shipments/get:
     post:
       summary: Получить поставку
@@ -71,7 +71,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/shipments.yaml#/GetShipmentRequest
+              $ref: ../components/schemas/shipments/models.yaml#/GetShipmentRequest
       responses:
         '200':
           description: Успех
@@ -84,44 +84,44 @@ paths:
                 - shipment
                 properties:
                   shipment:
-                    $ref: ../components/schemas/shipments.yaml#/Shipment
+                    $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
   /api/v1/shipments/list:
     post:
       summary: Список поставок
@@ -130,7 +130,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/shipments.yaml#/ListShipmentsRequest
+              $ref: ../components/schemas/shipments/models.yaml#/ListShipmentsRequest
       responses:
         '200':
           description: Успех
@@ -143,7 +143,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: ../components/schemas/shipments.yaml#/Shipment
+                      $ref: ../components/schemas/shipments/models.yaml#/Shipment
                 required:
                 - items
         '400':
@@ -152,37 +152,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
   /api/v1/shipments/update:
     post:
       summary: Изменить поставку
@@ -191,7 +191,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/shipments.yaml#/UpdateShipmentRequest
+              $ref: ../components/schemas/shipments/models.yaml#/UpdateShipmentRequest
       responses:
         '200':
           description: Успех
@@ -204,44 +204,44 @@ paths:
                 - shipment
                 properties:
                   shipment:
-                    $ref: ../components/schemas/shipments.yaml#/Shipment
+                    $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/shipments.yaml#/ApiError
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

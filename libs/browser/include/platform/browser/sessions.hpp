@@ -20,7 +20,7 @@ using Clock = std::chrono::steady_clock;
 struct Session {
     userver::engine::Mutex Mutex;
     std::string Access, Refresh, Csrf;
-    platform::auth::Principal User;
+    platform::auth::Identity User;
     Clock::time_point TokenExpires, Expires;
 };
 

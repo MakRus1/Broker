@@ -11,7 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/transportations.yaml#/TGetTransportationRequest
+              $ref: ../components/schemas/transportations/models.yaml#/GetTransportationRequest
       responses:
         '200':
           description: Успех
@@ -24,44 +24,44 @@ paths:
                 - transportation
                 properties:
                   transportation:
-                    $ref: ../components/schemas/transportations.yaml#/TTransportation
+                    $ref: ../components/schemas/transportations/models.yaml#/Transportation
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
   /api/v1/transportations/list:
     post:
       summary: Список перевозок
@@ -70,7 +70,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/transportations.yaml#/TListTransportationsRequest
+              $ref: ../components/schemas/transportations/models.yaml#/ListTransportationsRequest
       responses:
         '200':
           description: Успех
@@ -83,7 +83,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: ../components/schemas/transportations.yaml#/TTransportation
+                      $ref: ../components/schemas/transportations/models.yaml#/Transportation
                 required:
                 - items
         '400':
@@ -92,37 +92,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '401':
           description: Отсутствует действительный Bearer-токен
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '404':
           description: Объект не найден в доступном клиенте
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '409':
           description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
         '503':
           description: Недоступны ключи проверки авторизации
           content:
             application/json:
               schema:
-                $ref: ../components/schemas/transportations.yaml#/TApiError
+                $ref: ../components/schemas/transportations/models.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

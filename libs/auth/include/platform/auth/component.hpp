@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include <platform/auth/principal.hpp>
+#include <platform/auth/identity.hpp>
 #include <stdexcept>
 #include <userver/server/middlewares/http_middleware_base.hpp>
 
@@ -22,11 +22,11 @@ class Component final : public userver::server::middlewares::HttpMiddlewareFacto
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     ~Component() override;
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    Principal VerifyAccess(const std::string& token) const;
-    Principal VerifyLogin(const std::string& access, const std::string& identity,
+    Identity VerifyAccess(const std::string& token) const;
+    Identity VerifyLogin(const std::string& access, const std::string& id_token,
         const std::string& client, const std::string& nonce) const;
     bool IsProtected(std::string_view path) const;
-    Principal Authorize(const std::string& path, const std::string& authorization) const;
+    Identity Authorize(const std::string& path, const std::string& authorization) const;
 
   private:
     std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Create(

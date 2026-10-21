@@ -10,7 +10,13 @@ import {
 } from './api';
 import { Dialog } from './components';
 import type { Counterparty } from './CustomerSelect';
-import { formatDate, historyActions, localDateTime, utcDateTime, type Leg } from './transportation';
+import {
+  formatDate,
+  historyActions,
+  localDateTime,
+  utcDateTime,
+  type RouteSegment,
+} from './transportation';
 import { RouteEditor } from './RouteEditor';
 
 type Props = {
@@ -28,7 +34,10 @@ export function TransportationPage({ id, editing, session, customers, onError }:
   }, [transportation?.number]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'route' | 'history'>('route');
-  const [actual, setActual] = useState<{ leg: Leg; kind: 'departure' | 'arrival' }>();
+  const [actual, setActual] = useState<{
+    route_segment: RouteSegment;
+    kind: 'departure' | 'arrival';
+  }>();
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
       const result = await request<{ transportation: Transportation }>(
@@ -71,8 +80,8 @@ export function TransportationPage({ id, editing, session, customers, onError }:
         <button onClick={() => void refresh().catch(onError)}>Повторить</button>
       </section>
     );
-  const hasActuals = transportation.legs.some(
-    (leg) => leg.actual_departure_at || leg.actual_arrival_at,
+  const hasActuals = transportation.route_segments.some(
+    (route_segment) => route_segment.actual_departure_at || route_segment.actual_arrival_at,
   );
   const customerName = customers.find((item) => item.id === shipment?.customer_id)?.name;
   return (
@@ -148,7 +157,9 @@ export function TransportationPage({ id, editing, session, customers, onError }:
                     </div>
                     {write && !hasActuals && (
                       <a className="primary" href={`#/transportations/${id}/route`}>
-                        {transportation.legs.length ? 'Редактировать маршрут' : 'Добавить маршрут'}
+                        {transportation.route_segments.length
+                          ? 'Редактировать маршрут'
+                          : 'Добавить маршрут'}
                       </a>
                     )}
                   </div>
@@ -159,9 +170,13 @@ export function TransportationPage({ id, editing, session, customers, onError }:
                     </p>
                   )}
                   <RouteView
-                    legs={transportation.legs}
+                    route_segments={transportation.route_segments}
                     customers={customers}
-                    onActual={write ? (leg, kind) => setActual({ leg, kind }) : undefined}
+                    onActual={
+                      write
+                        ? (route_segment, kind) => setActual({ route_segment, kind })
+                        : undefined
+                    }
                   />
                 </>
               )}
@@ -171,12 +186,12 @@ export function TransportationPage({ id, editing, session, customers, onError }:
       </section>
       {actual && (
         <Dialog
-          title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${actual.leg.origin.name} → ${actual.leg.destination.name}`}
+          title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${actual.route_segment.origin.name} → ${actual.route_segment.destination.name}`}
           onClose={() => setActual(undefined)}
         >
           <ActualForm
             transportation={transportation}
-            leg={actual.leg}
+            route_segment={actual.route_segment}
             kind={actual.kind}
             session={session}
             onSaved={(value) => {
@@ -192,15 +207,15 @@ export function TransportationPage({ id, editing, session, customers, onError }:
 }
 
 export function RouteView({
-  legs,
+  route_segments,
   customers,
   onActual,
 }: {
-  legs: Leg[];
+  route_segments: RouteSegment[];
   customers: Counterparty[];
-  onActual?: (leg: Leg, kind: 'departure' | 'arrival') => void;
+  onActual?: (route_segment: RouteSegment, kind: 'departure' | 'arrival') => void;
 }) {
-  if (!legs.length)
+  if (!route_segments.length)
     return (
       <div className="empty">
         <h3>Маршрут ещё не задан</h3>
@@ -209,33 +224,40 @@ export function RouteView({
     );
   return (
     <div className="route-list">
-      {legs.map((leg, index) => (
-        <article className="route-leg" key={leg.id}>
+      {route_segments.map((route_segment, index) => (
+        <article className="route-segment" key={route_segment.id}>
           <div className="section-heading">
             <h3>
-              {index + 1}. {modes[leg.mode]} · {leg.origin.name} → {leg.destination.name}
+              {index + 1}. {modes[route_segment.mode]} · {route_segment.origin.name} →{' '}
+              {route_segment.destination.name}
             </h3>
           </div>
           <p className="hint">
-            {leg.origin.country_code} → {leg.destination.country_code} · Подрядчик:{' '}
-            {customers.find((item) => item.id === leg.contractor_id)?.name ||
-              (leg.contractor_id ? 'Недоступен' : 'Не выбран')}
+            {route_segment.origin.country_code} → {route_segment.destination.country_code} ·
+            Подрядчик:{' '}
+            {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
+              (route_segment.contractor_id ? 'Недоступен' : 'Не выбран')}
           </p>
-          <div className="leg-dates">
+          <div className="route-segment-dates">
             {(['departure', 'arrival'] as const).map((kind) => {
-              const value = kind === 'departure' ? leg.actual_departure_at : leg.actual_arrival_at;
+              const value =
+                kind === 'departure'
+                  ? route_segment.actual_departure_at
+                  : route_segment.actual_arrival_at;
               return (
                 <div key={kind}>
                   <strong>{kind === 'departure' ? 'Отправление' : 'Прибытие'}</strong>
                   <span>
                     План:{' '}
                     {formatDate(
-                      kind === 'departure' ? leg.planned_departure_at : leg.planned_arrival_at,
+                      kind === 'departure'
+                        ? route_segment.planned_departure_at
+                        : route_segment.planned_arrival_at,
                     )}
                   </span>
                   <span>Факт: {formatDate(value)}</span>
                   {onActual && (
-                    <button type="button" onClick={() => onActual(leg, kind)}>
+                    <button type="button" onClick={() => onActual(route_segment, kind)}>
                       {value ? 'Исправить' : 'Записать факт'}
                     </button>
                   )}
@@ -251,20 +273,21 @@ export function RouteView({
 
 function ActualForm({
   transportation,
-  leg,
+  route_segment,
   kind,
   session,
   onSaved,
   onError,
 }: {
   transportation: Transportation;
-  leg: Leg;
+  route_segment: RouteSegment;
   kind: 'departure' | 'arrival';
   session: Session;
   onSaved: (value: Transportation) => void;
   onError: (error: unknown) => void;
 }) {
-  const previous = kind === 'departure' ? leg.actual_departure_at : leg.actual_arrival_at;
+  const previous =
+    kind === 'departure' ? route_segment.actual_departure_at : route_segment.actual_arrival_at;
   const [value, setValue] = useState(localDateTime(previous));
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -281,7 +304,7 @@ function ActualForm({
         {
           transportation_id: transportation.id,
           expected_revision: transportation.revision,
-          leg_id: leg.id,
+          route_segment_id: route_segment.id,
           event_kind: kind,
           occurred_at: utcDateTime(value),
           ...(previous ? { reason: reason.trim() } : {}),
@@ -435,7 +458,7 @@ function History({
                 </p>
               )}
               <p className="hint">Состояние после изменения</p>
-              <RouteView legs={item.legs} customers={customers} />
+              <RouteView route_segments={item.route_segments} customers={customers} />
             </div>
           )}
         </article>

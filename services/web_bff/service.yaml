@@ -1,0 +1,24 @@
+version: 1
+libraries:
+- common
+- auth
+- browser
+clients:
+  shipments:
+    service: shipments
+    transport: http
+  transportations:
+    service: transportations
+    transport: http
+  counterparties:
+    service: counterparties
+    transport: http
+dashboard:
+  title: Broker · Пользовательский BFF
+  tags:
+  - logistics
+http_logging:
+  exclude_paths:
+  - /auth/**
+  - /api/session
+  - /api/logout

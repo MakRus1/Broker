@@ -1,0 +1,48 @@
+Counterparty:
+  type: object
+  additionalProperties: false
+  properties:
+    id: &id001
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+  required:
+  - id
+  - name
+CounterpartyError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+  required:
+  - error
+  - message
+CreateCounterpartyRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id: *id001
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+  required:
+  - id
+  - name
+ListCounterpartiesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    after: *id001
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 100
+  required: []

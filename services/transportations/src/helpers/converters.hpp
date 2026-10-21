@@ -3,8 +3,9 @@
 #include <postgresql/types.hpp>
 
 namespace transportations::helpers {
-inline models::Transportation Convert(const pgtypes::TransportationV1& row) {
+inline models::Transportation Convert(const pgtypes::TransportationV2& row) {
     models::Transportation result;
+    result.number = row.Number;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.shipment_id = boost::uuids::to_string(row.ShipmentId);

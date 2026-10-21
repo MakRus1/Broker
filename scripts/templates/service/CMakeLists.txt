@@ -5,7 +5,6 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/domain/greeting.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
@@ -21,18 +20,6 @@ foreach(service_library IN ITEMS broker_common)
     endif()
 endforeach()
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common)
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
-file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
-userver_add_sql_library(${PROJECT_NAME}_sql
-    NAMESPACE ${PROJECT_NAME}
-    SOURCE_DIR postgresql/queries
-    OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_sql
-    SQL_FILES *.sql)
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
-target_sources(${PROJECT_NAME}_objs PRIVATE src/transport/grpc/hello_grpc.cpp)
-file(GLOB_RECURSE service_protos CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
-userver_add_grpc_library(${PROJECT_NAME}_proto PROTOS ${service_protos})
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::grpc ${PROJECT_NAME}_proto)
 # SERVICE_CMAKE_END
 broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")
@@ -46,14 +33,6 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(${PROJECT_NAME}_unittest tests/unit/greeting_test.cpp)
-    target_link_libraries(${PROJECT_NAME}_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
-    add_google_tests(${PROJECT_NAME}_unittest)
-
-    add_executable(${PROJECT_NAME}_benchmark tests/benchmarks/greeting_benchmark.cpp)
-    target_link_libraries(${PROJECT_NAME}_benchmark PRIVATE ${PROJECT_NAME}_objs userver::ubench)
-    add_google_benchmark_tests(${PROJECT_NAME}_benchmark)
-
     userver_testsuite_add_simple()
 endif()
 

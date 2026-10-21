@@ -24,8 +24,8 @@ work-local.yaml
 
 .local/
 node_modules/
-frontend/admin/dist/
-frontend/admin/coverage/
+frontend/*/dist/
+frontend/*/coverage/
 
 # Локальный кеш пакетного менеджера; зависимости фиксируются lock-файлом.
 .pnpm-store/

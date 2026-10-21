@@ -52,20 +52,13 @@ def _create(name, postgres=False, grpc=False):
             'version': 1, 'libraries': ['common'], 'postgresql': {'enabled': postgres}, 'grpc': {'enabled': grpc},
         }, sort_keys=False))
         (stage / '.service-features.json').unlink(missing_ok=True)
-        if not postgres:
-            for relative in ['postgresql', 'src/views/hello_postgres']:
-                shutil.rmtree(stage / relative)
-            for relative in ['docs/api/hello_postgres.yaml', 'tests/test_postgres.py']:
-                (stage / relative).unlink()
-        if not grpc:
-            for relative in ['proto', 'src/transport/grpc']:
-                shutil.rmtree(stage / relative)
-            (stage / 'tests/test_grpc.py').unlink()
         compose = yaml.safe_load(before[ROOT / 'docker-compose.yml'])
         port = max([15432] + [int(str(p).split(':')[-2]) for svc in compose['services'].values() for p in svc.get('ports', [])]) + 1
         if postgres:
             for p in (stage / 'configs').glob('config_vars*.yaml'):
-                p.write_text(p.read_text().replace(':15433/', f':{port}/'))
+                values = yaml.safe_load(p.read_text())
+                values['pg-connection'] = f'postgresql://testsuite:testsuite@127.0.0.1:{port}/{name}_db_1'
+                p.write_text(yaml.safe_dump(values, sort_keys=False))
         subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(stage)], check=True)
         subprocess.run([sys.executable, str(ROOT / 'scripts/openapi_gen/generate.py'), '--service-dir', str(stage), '--check'], check=True)
         try:

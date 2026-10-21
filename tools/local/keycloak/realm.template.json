@@ -16,6 +16,29 @@
         {
           "name": "configs.approve"
         }
+      ],
+      "broker-logistics": [
+        {
+          "name": "shipments.read"
+        },
+        {
+          "name": "shipments.write"
+        },
+        {
+          "name": "transportations.read"
+        },
+        {
+          "name": "transportations.write"
+        },
+        {
+          "name": "transportations.create"
+        },
+        {
+          "name": "counterparties.read"
+        },
+        {
+          "name": "counterparties.write"
+        }
       ]
     }
   },
@@ -123,6 +146,86 @@
       "publicClient": false,
       "serviceAccountsEnabled": true,
       "secret": "${local-reviewer-secret}"
+    },
+    {
+      "clientId": "broker-logistics",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": false,
+      "bearerOnly": true
+    },
+    {
+      "clientId": "broker-web",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:14080/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:14080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "oauth2.device.authorization.grant.enabled": "true",
+        "post.logout.redirect.uris": "http://localhost:14080/"
+      }
+    },
+    {
+      "clientId": "shipments-dispatcher",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${shipments-dispatcher-secret}",
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -155,6 +258,14 @@
         "configs-admin": [
           "configs.read",
           "configs.write"
+        ],
+        "broker-logistics": [
+          "shipments.read",
+          "transportations.read",
+          "shipments.write",
+          "transportations.write",
+          "counterparties.read",
+          "counterparties.write"
         ]
       }
     },
@@ -187,6 +298,11 @@
         "configs-admin": [
           "configs.read",
           "configs.approve"
+        ],
+        "broker-logistics": [
+          "shipments.read",
+          "transportations.read",
+          "counterparties.read"
         ]
       }
     }

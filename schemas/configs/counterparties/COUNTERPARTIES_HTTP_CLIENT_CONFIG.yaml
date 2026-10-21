@@ -1,0 +1,10 @@
+name: COUNTERPARTIES_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /api/v1/counterparties/create
+- /api/v1/counterparties/list
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

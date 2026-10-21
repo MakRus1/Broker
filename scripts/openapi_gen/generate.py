@@ -57,8 +57,6 @@ def load(service, additions=None, public_only=False):
     root = public_schema_dir(service) if public_only else service / 'docs'
     api = root if public_only else root / 'api'
     ops = Documents(files, root, root / 'components', UniqueLoader).operations(api)
-    if not ops:
-        raise ValueError(f'{service}: no HTTP operations')
     return ops
 
 

@@ -131,34 +131,36 @@ components_manager:
             allow-http: $auth-allow-http
         auth-http-client:
             wait-for-dynamic-configs: false
-        admin-sessions:
+        browser-sessions:
             origin: $admin-origin
             issuer: $auth-issuer
             token-url: $admin-token-url
             revoke-url: $admin-revoke-url
             secure-cookie: $admin-secure-cookie
             client-id: broker-admin
-        admin-assets:
+            session-cookie: broker_admin
+            login-cookie: broker_login
+        browser-assets:
             dir: $admin-assets-dir
             update-period: 10s
-        admin-browser-session: {}
-        admin-login:
+        browser-session: {}
+        browser-login:
             path: /auth/login
             method: GET
             task_processor: main-task-processor
-        admin-login-callback:
+        browser-login-callback:
             path: /auth/callback
             method: GET
             task_processor: main-task-processor
-        admin-assets-handler:
+        browser-assets-handler:
             path: /assets/*
             method: GET
             task_processor: main-task-processor
-        admin-index:
+        browser-index:
             path: /
             method: GET
             task_processor: main-task-processor
-        admin-index-html:
+        browser-index-html:
             path: /index.html
             method: GET
             task_processor: main-task-processor
@@ -166,7 +168,7 @@ components_manager:
             service-name: admin_bff
             environment: $environment
         platform-http-pipeline:
-            final-middlewares: [admin-browser-session]
+            final-middlewares: [browser-session]
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:

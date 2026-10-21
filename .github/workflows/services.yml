@@ -19,7 +19,7 @@ on:
       - libs/**
       - schemas/**
       - scripts/openapi_gen/**
-      - frontend/admin/**
+      - frontend/**
       - requirements.txt
   workflow_dispatch:
 permissions:

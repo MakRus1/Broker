@@ -1,0 +1,8 @@
+version: 1
+types:
+  public.counterparty_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: name
+      type: text

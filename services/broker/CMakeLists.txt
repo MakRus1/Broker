@@ -19,6 +19,8 @@ if(BUILD_TESTING)
     target_include_directories(${PROJECT_NAME}_objs PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tests/support")
     target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_TRACE_TESTS=1)
 endif()
+target_sources(${PROJECT_NAME}_objs PRIVATE src/transport/grpc/hello_grpc.cpp)
+
 # SERVICE_CMAKE_BEGIN
 foreach(service_library IN ITEMS broker_common broker_configs)
     if(NOT TARGET ${service_library})
@@ -28,16 +30,20 @@ endforeach()
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
+if(service_sql)
 userver_add_sql_library(${PROJECT_NAME}_sql
     NAMESPACE ${PROJECT_NAME}
     SOURCE_DIR postgresql/queries
     OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_sql
     SQL_FILES *.sql)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
-target_sources(${PROJECT_NAME}_objs PRIVATE src/transport/grpc/hello_grpc.cpp)
+endif()
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::grpc)
 file(GLOB_RECURSE service_protos CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
+if(service_protos)
 userver_add_grpc_library(${PROJECT_NAME}_proto PROTOS ${service_protos})
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::grpc ${PROJECT_NAME}_proto)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_proto)
+endif()
 # SERVICE_CMAKE_END
 broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")

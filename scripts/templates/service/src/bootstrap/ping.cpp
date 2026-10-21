@@ -1,8 +1,8 @@
 #include <bootstrap/ping.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/server/http/http_response.hpp>
+
 // SERVICE_PING_INCLUDES_BEGIN
-#include <userver/storages/postgres/cluster.hpp>
 
 // SERVICE_PING_INCLUDES_END
 namespace broker {
@@ -29,8 +29,6 @@ std::string PingReady::HandleRequestThrow(const userver::server::http::HttpReque
             request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable);
             return readiness.Reason + "\n";
         }
-        deps_.pg_cluster->Execute(
-            userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");
         // SERVICE_PING_CHECK_END
         return "ready\n";
     } catch (const std::exception&) {

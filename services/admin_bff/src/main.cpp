@@ -10,12 +10,12 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
-#include <components/browser_session.hpp>
-#include <components/sessions.hpp>
 #include <platform/auth/component.hpp>
+#include <platform/browser/assets.hpp>
+#include <platform/browser/login.hpp>
+#include <platform/browser/session.hpp>
+#include <platform/browser/sessions.hpp>
 #include <platform/telemetry.hpp>
-#include <transport/assets.hpp>
-#include <transport/login.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/components/fs_cache.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -47,15 +47,15 @@ int main(int argc, char* argv[]) {
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::auth::Component>()
             .Append<userver::components::HttpClient>("auth-http-client")
-            .Append<admin_bff::Sessions>()
-            .Append<userver::components::FsCache>("admin-assets")
-            .Append<admin_bff::BrowserSessionFactory>()
+            .Append<platform::browser::Sessions>()
+            .Append<userver::components::FsCache>("browser-assets")
+            .Append<platform::browser::BrowserSessionFactory>()
             .Append<platform::HttpTelemetryPipeline>()
-            .Append<admin_bff::Login>()
-            .Append<admin_bff::LoginCallback>()
-            .Append<admin_bff::Assets>()
-            .Append<admin_bff::Assets>("admin-index")
-            .Append<admin_bff::Assets>("admin-index-html")
+            .Append<platform::browser::Login>()
+            .Append<platform::browser::LoginCallback>()
+            .Append<platform::browser::Assets>()
+            .Append<platform::browser::Assets>("browser-index")
+            .Append<platform::browser::Assets>("browser-index-html")
             .Append<admin_bff::Ping>()
             .Append<admin_bff::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()

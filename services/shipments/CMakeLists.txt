@@ -24,12 +24,14 @@ endforeach()
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs broker_auth)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
+if(service_sql)
 userver_add_sql_library(${PROJECT_NAME}_sql
     NAMESPACE ${PROJECT_NAME}
     SOURCE_DIR postgresql/queries
     OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_sql
     SQL_FILES *.sql)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
+endif()
 # SERVICE_CMAKE_END
 broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")

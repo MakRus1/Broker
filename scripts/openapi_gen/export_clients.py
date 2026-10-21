@@ -73,7 +73,7 @@ def plan(service):
         for origin, document in copied.items():
             rewritten = documents.rewrite(document, origin, output_path)
             result[output_path(origin)] = yaml.dump(rewritten, Dumper=SpecDumper, allow_unicode=True, sort_keys=False)
-    if not result:
+    if not result and any(document.get('paths') for document in (documents.document(path) for path in files if path.is_relative_to(source))):
         raise ValueError('Правила экспорта не выбрали ни одной ручки')
     return destination, result
 

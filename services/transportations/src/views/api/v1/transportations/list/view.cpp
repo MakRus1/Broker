@@ -16,7 +16,7 @@ Response View::Handle(
         std::vector<models::Transportation> result;
         std::map<std::string, std::size_t> indexes;
         std::vector<std::string> ids;
-        for (const auto& row : rows.AsSetOf<pgtypes::TransportationV1>()) {
+        for (const auto& row : rows.AsSetOf<pgtypes::TransportationV2>()) {
             indexes.emplace(boost::uuids::to_string(row.Id), result.size());
             ids.push_back(boost::uuids::to_string(row.Id));
             result.push_back(Convert(row));

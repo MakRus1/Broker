@@ -8,5 +8,5 @@ __pycache__
 
 .local
 .staging
-frontend/admin/node_modules
-frontend/admin/dist
+frontend/*/node_modules
+frontend/*/dist

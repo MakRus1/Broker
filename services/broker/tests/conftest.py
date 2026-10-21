@@ -8,10 +8,6 @@ def initial_data_path(service_source_dir):
 def pgsql_local(service_source_dir, pgsql_local_create):
     databases = discover.find_schemas('broker', [service_source_dir / 'postgresql/schemas'])
     return pgsql_local_create(list(databases.values()))
-import handlers.hello_pb2_grpc as hello_services
-@pytest.fixture
-def grpc_service(grpc_channel, service_client):
-    return hello_services.HelloServiceStub(grpc_channel)
 pytest_plugins = ['pytest_userver.plugins.core', 'pytest_userver.plugins.postgresql', 'pytest_userver.plugins.grpc']
 # SERVICE_TESTS_END
 
@@ -49,3 +45,8 @@ def userver_config_trace_probe():
             'task_processor': 'main-task-processor',
         }
     return patch
+
+import handlers.hello_pb2_grpc as hello_services
+@pytest.fixture
+def grpc_service(grpc_channel, service_client):
+    return hello_services.HelloServiceStub(grpc_channel)

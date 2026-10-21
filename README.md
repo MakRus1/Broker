@@ -98,3 +98,5 @@ ASan/UBSan и Debug на arm64. Отдельный тестовый сервис
 Админка Configs: http://localhost:13080 после `make local-up`; [запуск и разработка](docs/admin-ui.md).
 
 Личный сервер K3s на Windows/Multipass: [staging и сервисные образы](docs/staging.md).
+
+Пользовательское рабочее место логиста: [запуск и первый сценарий](docs/web-ui.md).

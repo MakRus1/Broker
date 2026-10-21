@@ -40,6 +40,9 @@ def prepare():
         with os.fdopen(descriptor, "w") as target:
             json.dump(values, target)
     auth_secrets = json.loads(secrets_path.read_text())
+    if 'shipments-dispatcher-secret' not in auth_secrets:
+        auth_secrets['shipments-dispatcher-secret'] = secrets.token_urlsafe(32)
+        secrets_path.write_text(json.dumps(auth_secrets))
     realm = (ROOT / "tools/local/keycloak/realm.template.json").read_text()
     for key, value in auth_secrets.items():
         realm = realm.replace("${" + key + "}", value)
@@ -79,7 +82,7 @@ def prepare():
             "environment": {"PIP_CACHE_DIR": "/cache/pip"},
         }
     }
-    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082)]:
+    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122)]:
         variables = yaml.safe_load((ROOT / f"services/{name}/configs/config_vars.yaml").read_text())
         variables.update(
             {
@@ -90,6 +93,14 @@ def prepare():
                 "auth-jwks-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/certs",
             }
         )
+        variables.update({'server-port': port, 'monitor-port': monitor})
+        if name == 'shipments':
+            variables.update({
+                'client-transportations-base-url': 'http://transportations:8110',
+                'dispatcher-enabled': True,
+                'dispatcher-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
+                'dispatcher-client-secret': auth_secrets['shipments-dispatcher-secret'],
+            })
         variables["config-updates-enabled"] = name != "configs"
         config = yaml.safe_load((ROOT / f"services/{name}/configs/static_config.yaml").read_text())
 
@@ -214,6 +225,48 @@ def prepare():
         },
         "healthcheck": {"test": ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8182/ping/ready', timeout=2)"],
                         "interval": "3s", "timeout": "3s", "retries": 30},
+    }
+    volumes['web-ui'] = {}
+    volumes['web-node'] = {}
+    services['web-ui-build'] = {
+        'image': images['node'], 'working_dir': '/workspaces/broker',
+        'volumes': [source, 'web-node:/node-cache', 'web-ui:/web-ui'],
+        'command': ['bash', 'tools/local/build-admin.sh', 'web', '/web-ui'],
+    }
+    services['logistics-setup'] = {
+        'image': images['dev'], 'working_dir': '/workspaces/broker', 'volumes': shared,
+        'command': ['python3', 'tools/local/seed_logistics.py'],
+        'depends_on': {name: {'condition': 'service_completed_successfully'} for name in
+                       ('keycloak-setup', 'migrate-shipments', 'migrate-transportations', 'migrate-counterparties')},
+    }
+    variables = yaml.safe_load((ROOT / 'services/web_bff/configs/config_vars.yaml').read_text())
+    variables.update({
+        'server-port': 8280, 'monitor-port': 8282,
+        'client-counterparties-base-url': 'http://counterparties:8120',
+        'client-shipments-base-url': 'http://shipments:8100',
+        'client-transportations-base-url': 'http://transportations:8110',
+        'auth-jwks-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/certs',
+        'web-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
+        'web-revoke-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/revoke',
+        'web-assets-dir': '/web-ui', 'config-updates-enabled': True,
+        'config-server-url': 'http://configs:8090', 'otlp-enabled': True,
+        'otlp-endpoint': 'collector:4317',
+    })
+    config = resolve(yaml.safe_load((ROOT / 'services/web_bff/configs/static_config.yaml').read_text()), variables)
+    config['components_manager']['components']['server']['listener-monitor']['address'] = '0.0.0.0'
+    (STATE / 'web_bff.yaml').write_text(yaml.safe_dump(config, sort_keys=False))
+    services['web_bff'] = {
+        'image': images['dev'], 'user': '1001:1001', 'working_dir': '/workspaces/broker',
+        'volumes': [*shared, 'web-ui:/web-ui:ro'],
+        'command': ['bash', 'tools/local/run.sh', 'web_bff', 'build-local/services/web_bff/web_bff'],
+        'ports': ['127.0.0.1:14080:8280'],
+        'depends_on': {'prepare': {'condition': 'service_completed_successfully'},
+                       'web-ui-build': {'condition': 'service_completed_successfully'},
+                       'logistics-setup': {'condition': 'service_completed_successfully'},
+                       'counterparties': {'condition': 'service_started'},
+                       'shipments': {'condition': 'service_started'},
+                       'transportations': {'condition': 'service_started'},
+                       'configs': {'condition': 'service_started'}},
     }
     for name, port, internal, args in [
         ("loki", 13100, 3100, ["-config.file=/etc/local/loki.yaml"]),

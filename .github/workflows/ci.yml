@@ -49,6 +49,9 @@ jobs:
       - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:
+    strategy:
+      matrix:
+        app: [admin, web]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
@@ -57,16 +60,16 @@ jobs:
           node-version: '24'
       - run: npm install --global pnpm@11.25.0
       - run: pnpm install --frozen-lockfile
-        working-directory: frontend/admin
+        working-directory: frontend/${{ matrix.app }}
       - name: Форматирование фронтенда
         run: pnpm check-format
-        working-directory: frontend/admin
+        working-directory: frontend/${{ matrix.app }}
       - name: Тесты фронтенда
         run: pnpm test
-        working-directory: frontend/admin
+        working-directory: frontend/${{ matrix.app }}
       - name: Сборка фронтенда
         run: pnpm build
-        working-directory: frontend/admin
+        working-directory: frontend/${{ matrix.app }}
 
   build:
     name: Сборка и тесты · ${{ matrix.preset }} · ${{ matrix.runner }}

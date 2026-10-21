@@ -1,11 +1,11 @@
-#include <components/browser_session.hpp>
 #include <models/config_conversions.hpp>
+#include <platform/browser/session.hpp>
 #include <views/api/configs/drafts/create/view.hpp>
 
 namespace admin_bff::views::api::configs::drafts::create {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const auto& session = GetBrowserSession(context);
+    const auto& session = platform::browser::GetBrowserSession(context);
     const auto result = deps.config_admin.AdminConfigsDraftsCreate(
         {.body = {.config_name = std::move(request.body.config_name),
              .description = std::move(request.body.description),

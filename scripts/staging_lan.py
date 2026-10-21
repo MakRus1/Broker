@@ -19,24 +19,21 @@ def settings(platform, directory):
     if not (directory / 'lan/enabled').exists():
         return None
     value = platform.get('lan', {})
-    if set(value) != {'admin_host', 'auth_host', 'grafana_host', 'telemetry_storage'}:
+    if set(value) != {'admin_host', 'web_host', 'auth_host', 'grafana_host', 'telemetry_storage'}:
         raise ValueError('platform.yaml: неверные поля lan')
-    for key in ('admin_host', 'auth_host', 'grafana_host'):
+    for key in ('admin_host', 'web_host', 'auth_host', 'grafana_host'):
         if not re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)+', value[key]):
             raise ValueError(f'Неверное имя lan.{key}')
-    if len({value[key] for key in ('admin_host', 'auth_host', 'grafana_host')}) != 3:
+    if len({value[key] for key in ('admin_host', 'web_host', 'auth_host', 'grafana_host')}) != 4:
         raise ValueError('LAN-имена должны различаться')
     if not re.fullmatch(r'[1-9][0-9]*Gi', value['telemetry_storage']):
         raise ValueError('lan.telemetry_storage ожидает Gi')
     return value
 
 
-def initialize(root, directory, context):
-    from staging_manifest import document, private_write, read_yaml
+def ensure_tls(folder, hosts):
+    from staging_manifest import private_write
 
-    cfg = read_yaml(root / 'platform.yaml')['environments']['staging']
-    ns = cfg['namespace']
-    folder = directory / 'lan'
     folder.mkdir(parents=True, exist_ok=True, mode=0o700)
     folder.chmod(0o700)
     # Сохраняем ключи между запусками; перевыпуск CA не выполняется автоматически.
@@ -44,6 +41,8 @@ def initialize(root, directory, context):
     key = folder / 'ca.key'
     if ca.exists() != key.exists():
         raise ValueError('Неполный CA: восстановите ca.crt и ca.key из резервной копии')
+    if (folder / 'enabled').exists() and not ca.exists():
+        raise ValueError('LAN уже включён: восстановите существующий CA из резервной копии')
     if not ca.exists():
         subprocess.run(
             [
@@ -70,10 +69,20 @@ def initialize(root, directory, context):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    hosts = [cfg['lan'][name] for name in ('admin_host', 'auth_host', 'grafana_host')]
-    hosts.append(f'keycloak.{ns}.svc.{cfg["cluster_domain"]}')
     cert, leaf_key = folder / 'tls.crt', folder / 'tls.key'
-    if not cert.exists() or not leaf_key.exists():
+    # Дополнение доменов перевыпускает только конечный сертификат тем же CA.
+    renew = not cert.exists() or not leaf_key.exists()
+    if not renew:
+        renew = any(
+            subprocess.run(
+                ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            ).returncode
+            != 0
+            for host in hosts
+        )
+    if renew:
         subprocess.run(
             [
                 'openssl',
@@ -126,9 +135,21 @@ def initialize(root, directory, context):
         path.chmod(0o600)
     for host in hosts:
         subprocess.run(
-            ['openssl', 'x509', '-in', str(cert), '-noout', '-checkhost', host], check=True
+            ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)], check=True
         )
     subprocess.run(['openssl', 'verify', '-CAfile', str(ca), str(cert)], check=True)
+    return ca, cert, leaf_key
+
+
+def initialize(root, directory, context):
+    from staging_manifest import document, private_write, read_yaml
+
+    cfg = read_yaml(root / 'platform.yaml')['environments']['staging']
+    ns = cfg['namespace']
+    folder = directory / 'lan'
+    hosts = [cfg['lan'][name] for name in ('admin_host', 'web_host', 'auth_host', 'grafana_host')]
+    hosts.append(f'keycloak.{ns}.svc.{cfg["cluster_domain"]}')
+    ca, cert, leaf_key = ensure_tls(folder, hosts)
     password_path = folder / 'grafana-password'
     if not password_path.exists():
         private_write(password_path, secrets.token_urlsafe(32))
@@ -377,6 +398,7 @@ def render(root, ns, platform, lan):
         objects += [deployment, service(name, ns, service_ports)]
     for host, backend, number in (
         (lan['admin_host'], 'admin-bff', 8180),
+        (lan['web_host'], 'web-bff', 8180),
         (lan['auth_host'], 'keycloak', 8080),
         (lan['grafana_host'], 'grafana', 3000),
     ):
@@ -416,32 +438,10 @@ def render(root, ns, platform, lan):
     return objects
 
 
-def sync_keycloak(context, namespace, admin_origin):
-    # Импорт realm не обновляет уже существующий клиент: изменяем только redirect URI.
-    script = r'''set -eu
-config=$(mktemp)
-trap 'rm -f "$config"' EXIT
-kcadm=/opt/keycloak/bin/kcadm.sh
-$kcadm config credentials --server http://localhost:8080 --realm master --user admin --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config "$config" >/dev/null
-id=$($kcadm get clients -r broker -q clientId=broker-admin --fields id --format csv --noquotes --config "$config")
-$kcadm update "clients/$id" -r broker --config "$config" -s 'redirectUris=["ORIGIN/auth/callback"]' -s 'webOrigins=["ORIGIN"]' -s 'attributes."post.logout.redirect.uris"="ORIGIN/"'
-'''.replace('ORIGIN', admin_origin)
-    subprocess.run(
-        [
-            'kubectl',
-            '--context',
-            context,
-            '-n',
-            namespace,
-            'exec',
-            'deployment/keycloak',
-            '--',
-            'sh',
-            '-c',
-            script,
-        ],
-        check=True,
-    )
+def sync_keycloak(context, namespace, admin_origin, web_origin):
+    from staging_identity import sync_keycloak as sync
+
+    sync(context, namespace, admin_origin, web_origin)
 
 
 def main():

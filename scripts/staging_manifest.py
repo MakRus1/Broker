@@ -139,6 +139,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'cluster_domain',
         'database_storage',
         'admin_origin',
+        'web_origin',
         'auth_origin',
         'defaults',
         'services',
@@ -151,8 +152,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     lan = staging_lan.settings(settings, directory)
     if lan:
         settings['admin_origin'] = 'https://' + lan['admin_host']
+        settings['web_origin'] = 'https://' + lan['web_host']
         settings['auth_origin'] = 'https://' + lan['auth_host']
-    for key in ('admin_origin', 'auth_origin'):
+    for key in ('admin_origin', 'web_origin', 'auth_origin'):
         url = urlsplit(settings[key])
         if not lan and (
             url.scheme != 'http' or url.hostname != 'localhost' or not url.port or url.path
@@ -267,12 +269,16 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         if client['clientId'] in ('configs-admin', 'broker-admin', 'broker-logistics', 'broker-web')
     ]
     realm['users'] = [user for user in realm['users'] if user['username'] in ('author', 'reviewer')]
-    browser_client = next(
-        client for client in realm['clients'] if client['clientId'] == 'broker-admin'
-    )
-    browser_client['redirectUris'] = [settings['admin_origin'] + '/auth/callback']
-    browser_client['webOrigins'] = [settings['admin_origin']]
-    browser_client['attributes']['post.logout.redirect.uris'] = settings['admin_origin'] + '/'
+    for client_id, origin in (
+        ('broker-admin', settings['admin_origin']),
+        ('broker-web', settings['web_origin']),
+    ):
+        browser_client = next(
+            client for client in realm['clients'] if client['clientId'] == client_id
+        )
+        browser_client['redirectUris'] = [origin + '/auth/callback']
+        browser_client['webOrigins'] = [origin]
+        browser_client['attributes']['post.logout.redirect.uris'] = origin + '/'
 
     realm_text = json.dumps(realm)
     for key, value in values.items():
@@ -366,7 +372,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'otlp-enabled': False,
                 'admin-assets-dir': '/app/assets',
                 'web-assets-dir': '/app/web-assets',
-                'web-origin': 'http://localhost:14080',
+                'web-origin': settings['web_origin'],
                 'web-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
                 'web-revoke-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/revoke",
                 'web-secure-cookie': False,
@@ -389,8 +395,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             variables.update(
                 {
                     'admin-secure-cookie': True,
+                    'web-secure-cookie': True,
                     'web-token-url': internal_auth + '/realms/broker/protocol/openid-connect/token',
-                    'web-revoke-url': internal_auth + '/realms/broker/protocol/openid-connect/revoke',
+                    'web-revoke-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/revoke',
                     'auth-allow-http': False,
                     'auth-jwks-url': internal_auth + '/realms/broker/protocol/openid-connect/certs',
                     'admin-token-url': internal_auth
@@ -577,6 +585,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'kubernetes_version': settings['kubernetes_version'],
                 'lan': bool(lan),
                 'admin_origin': settings['admin_origin'],
+                'web_origin': settings['web_origin'],
             },
             indent=2,
         )

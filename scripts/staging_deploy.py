@@ -77,6 +77,7 @@ def remote_main(settings):
     import fcntl
     from staging_backup import backup, verify_cluster, prune
     from service_history import capture
+    from staging_network import check_network
 
     release = settings['release']
     validate_release(release)
@@ -132,6 +133,7 @@ def remote_main(settings):
         previous = run('git', 'rev-parse', 'HEAD', capture=True).stdout.strip()
         kubectl = ['kubectl', '--context', settings['context'], '-n', settings['namespace']]
         os.environ['KUBECONFIG'] = str(Path.home() / '.kube/config')
+        check_network(settings['context'])
         current = json.loads(run(*kubectl, 'get', 'deployments', '-o', 'json', capture=True).stdout)
         before_services = capture(kubectl, release['images'])
         before = {
@@ -233,13 +235,14 @@ def deploy(
         backup_root=str(backup_root),
         keep_backups=keep_backups,
     )
-    # Передаём только два скрипта и описание релиза во временный каталог VM.
+    # Передаём только служебные скрипты и описание релиза во временный каталог VM.
     # Дампы и credentials.json не проходят через вызывающую машину.
     bundle = io.BytesIO()
     with tarfile.open(fileobj=bundle, mode='w') as archive:
         for name in (
             'staging_deploy.py',
             'staging_backup.py',
+            'staging_network.py',
             'service_catalog.py',
             'service_history.py',
         ):

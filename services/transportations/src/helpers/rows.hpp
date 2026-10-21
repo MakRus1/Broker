@@ -1,7 +1,7 @@
 #pragma once
-#include <repositories/session.hpp>
+#include <helpers/session.hpp>
 
-namespace transportations::storage {
+namespace transportations::helpers {
 struct TransportationRow {
     std::string Id;
     std::int64_t Revision;
@@ -48,4 +48,4 @@ inline models::Transportation ReadTransportation(
             models::ParseModelJson(document, std::type_identity<models::TransportationLeg>{}));
     return result;
 }
-}  // namespace transportations::storage
+}  // namespace transportations::helpers

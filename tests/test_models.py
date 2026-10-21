@@ -50,9 +50,11 @@ class ModelsTest(unittest.TestCase):
         self.assertIn('using ProfileAlias = ::example::models::Profile;', header)
         self.assertIn('enum class State', header)
         request = generated['include/views/models/echo/requests.hpp']
-        self.assertIn('::example::models::ProfileAlias', request)
-        self.assertIn('std::vector<::example::models::Profile>', request)
-        self.assertIn('std::optional<std::optional<std::string>>', request)
+        self.assertIn('using RequestBody = ::example::models::Payload;', request)
+        self.assertNotIn('struct RequestBody', request)
+        self.assertIn('::example::models::ProfileAlias', header)
+        self.assertIn('std::vector<::example::models::Profile>', header)
+        self.assertIn('std::optional<std::optional<std::string>>', header)
         responses = generated['include/views/models/echo/responses.hpp']
         # Даже при одной модели тела статусы остаются разными типами variant.
         self.assertIn('struct Response400', responses)

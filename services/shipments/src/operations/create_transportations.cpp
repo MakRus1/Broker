@@ -1,15 +1,16 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <clients/transportations/client.hpp>
-#include <repositories/rows.hpp>
-#include <repositories/store.hpp>
+#include <helpers/rows.hpp>
+#include <operations/create_transportations.hpp>
 
-namespace shipments {
-using namespace storage;
+namespace shipments::operations {
+models::CreationOperation CreateTransportations(
+    const userver::storages::postgres::ClusterPtr& cluster,
+    const platform::auth::Principal& principal, const models::CreateOperationRequest& request) {
+    using namespace ::shipments::helpers;
 
-models::CreationOperation Store::CreateOperation(const platform::auth::Principal& principal,
-    const models::CreateOperationRequest& request) const {
-    Session session{cluster_, principal};
+    Session session{cluster, principal};
     const auto replay = FindReplay<models::CreationOperation>(session, "create_operation", request);
     if (replay.has_value()) {
         session.Tx.Commit();
@@ -53,15 +54,4 @@ models::CreationOperation Store::CreateOperation(const platform::auth::Principal
     session.Tx.Commit();
     return result;
 }
-
-models::CreationOperation Store::GetOperation(
-    const platform::auth::Principal& principal, const models::GetOperationRequest& request) const {
-    Session session{cluster_, principal, std::nullopt, kReadSnapshot};
-    const auto rows = session.Tx.Execute(sql::kGetOperation, session.Tenant, request.operation_id);
-    if (rows.IsEmpty())
-        throw ApiError{404, "not_found", "Операция не найдена"};
-    const auto result = ToModel(rows.AsSingleRow<OperationRow>(pg::kRowTag));
-    session.Tx.Commit();
-    return result;
-}
-}  // namespace shipments
+}  // namespace shipments::operations

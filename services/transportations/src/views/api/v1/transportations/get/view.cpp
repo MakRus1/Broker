@@ -1,16 +1,17 @@
+#include <helpers/rows.hpp>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/transportations/get/view.hpp>
 
 namespace transportations::views::api::v1::transportations::get {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::transportations::models::GetTransportationRequest command{
-        .transportation_id = request.body.transportation_id};
+    using namespace ::transportations::helpers;
     try {
-        return Response200{
-            .transportation = ::transportations::Store{deps.pg_cluster}.GetTransportation(
-                platform::auth::GetPrincipal(context), command)};
+        const auto& principal = platform::auth::GetPrincipal(context);
+        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
+        const auto result = ReadTransportation(session, request.body.transportation_id, false);
+        session.Tx.Commit();
+        return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {
         case 400:

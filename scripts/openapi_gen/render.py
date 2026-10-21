@@ -60,7 +60,11 @@ def requests(service, op):
     text = preamble(service, op)
     scope = f'::{service}::views::{op.ns}'
     if op.body:
-        text += struct('RequestBody', op.body.fields, input_metadata=True, scope=scope) + '\n'
+        if op.body.model_name:
+            text += declarations('RequestBody', op.body.fields)
+            text += f'using RequestBody = ::{service}::models::{op.body.model_name};\n'
+        else:
+            text += struct('RequestBody', op.body.fields, input_metadata=True, scope=scope) + '\n'
     members = fields(op.params, scope)
     if op.body:
         typ = 'RequestBody' if op.body.required else 'std::optional<RequestBody>'

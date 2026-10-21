@@ -1,18 +1,15 @@
+#include <models/errors.hpp>
+#include <operations/create_transportations.hpp>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/transportation_operations/create/view.hpp>
 
 namespace shipments::views::api::v1::transportation_operations::create {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::shipments::models::CreateOperationRequest command{
-        .expected_revision = request.body.expected_revision,
-        .idempotency_key = request.body.idempotency_key,
-        .item_id = request.body.item_id,
-        .quantity = request.body.quantity};
     try {
-        return Response202{.operation = ::shipments::Store{deps.pg_cluster}.CreateOperation(
-                               platform::auth::GetPrincipal(context), command)};
+        const auto result = ::shipments::operations::CreateTransportations(
+            deps.pg_cluster, platform::auth::GetPrincipal(context), request.body);
+        return Response202{.operation = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

@@ -1,19 +1,22 @@
+#include <helpers/actuals.hpp>
+#include <helpers/rows.hpp>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/transportation_actuals/record/view.hpp>
 
 namespace transportations::views::api::v1::transportation_actuals::record {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::transportations::models::RecordActualRequest command{
-        .event_kind = request.body.event_kind,
-        .expected_revision = request.body.expected_revision,
-        .leg_id = request.body.leg_id,
-        .occurred_at = request.body.occurred_at,
-        .transportation_id = request.body.transportation_id};
+    using namespace ::transportations::helpers;
     try {
-        return Response200{.transportation = ::transportations::Store{deps.pg_cluster}.RecordActual(
-                               platform::auth::GetPrincipal(context), command)};
+        const auto& principal = platform::auth::GetPrincipal(context);
+        Session session{deps.pg_cluster, principal};
+        auto result = ReadTransportation(session, request.body.transportation_id, true);
+        CheckRevision(result.revision, request.body.expected_revision);
+        UpdateActual(session, result, request.body.leg_id, request.body.event_kind,
+            request.body.occurred_at, ActualChange::Record);
+        session.Audit("record_actual", result.id, request.body, result);
+        session.Tx.Commit();
+        return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {
         case 400:

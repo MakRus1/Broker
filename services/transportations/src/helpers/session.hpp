@@ -2,14 +2,14 @@
 #include <models/errors.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/principal.hpp>
-#include <shipments/sql_queries.hpp>
 #include <stdexcept>
+#include <transportations/sql_queries.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
-namespace shipments {
-namespace storage {
+namespace transportations {
+namespace helpers {
 namespace pg = userver::storages::postgres;
 using Json = userver::formats::json::Value;
 inline constexpr pg::TransactionOptions kReadSnapshot{
@@ -53,5 +53,5 @@ inline void CheckRevision(std::int64_t actual, std::int64_t expected) {
     if (actual != expected)
         throw ApiError{409, "revision_conflict", "Объект изменен; перечитайте актуальную редакцию"};
 }
-}  // namespace storage
-}  // namespace shipments
+}  // namespace helpers
+}  // namespace transportations

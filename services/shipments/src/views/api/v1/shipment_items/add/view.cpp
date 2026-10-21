@@ -1,20 +1,37 @@
+#include <helpers/rows.hpp>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/shipment_items/add/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::add {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::shipments::models::AddItemRequest command{
-        .container_ownership = request.body.container_ownership,
-        .container_type_code = request.body.container_type_code,
-        .expected_revision = request.body.expected_revision,
-        .idempotency_key = request.body.idempotency_key,
-        .planned_quantity = request.body.planned_quantity,
-        .shipment_id = request.body.shipment_id};
+    using namespace ::shipments::helpers;
     try {
-        return Response201{.item = ::shipments::Store{deps.pg_cluster}.AddItem(
-                               platform::auth::GetPrincipal(context), command)};
+        const auto& principal = platform::auth::GetPrincipal(context);
+        Session session{deps.pg_cluster, principal};
+        const auto replay = FindReplay<models::ShipmentItem>(session, "add_item", request.body);
+        if (replay.has_value()) {
+            session.Tx.Commit();
+            return Response201{.item = replay.value()};
+        }
+        const auto shipment =
+            session.Tx.Execute(sql::kLockShipment, session.Tenant, request.body.shipment_id);
+        if (shipment.IsEmpty())
+            throw ApiError{404, "not_found", "Поставка не найдена"};
+        CheckRevision(shipment.AsSingleRow<ShipmentRow>(pg::kRowTag).Revision,
+            request.body.expected_revision);
+        const auto row = session.Tx
+                             .Execute(sql::kAddItem, session.Tenant, request.body.shipment_id,
+                                 request.body.container_type_code,
+                                 models::EnumValue(request.body.container_ownership),
+                                 request.body.planned_quantity)
+                             .AsSingleRow<ItemRow>(pg::kRowTag);
+        session.Tx.Execute(sql::kBumpShipmentRevision, session.Tenant, request.body.shipment_id);
+        const auto result = ToModel(row, Totals{0, 0});
+        SaveReplay(session, "add_item", request.body, result);
+        session.Audit("add_item", result.id, request.body, result);
+        session.Tx.Commit();
+        return Response201{.item = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

@@ -1,16 +1,38 @@
+#include <helpers/rows.hpp>
+#include <map>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/shipment_items/list/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::list {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::shipments::models::ListItemsRequest command{.after = request.body.after,
-        .limit = request.body.limit,
-        .shipment_id = request.body.shipment_id};
+    using namespace ::shipments::helpers;
     try {
-        return Response200{.items = ::shipments::Store{deps.pg_cluster}.ListItems(
-                               platform::auth::GetPrincipal(context), command)};
+        const auto& principal = platform::auth::GetPrincipal(context);
+        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
+        if (session.Tx.Execute(sql::kGetShipment, session.Tenant, request.body.shipment_id)
+                .IsEmpty())
+            throw ApiError{404, "not_found", "Поставка не найдена"};
+        const auto rows = session.Tx
+                              .Execute(sql::kListItems, session.Tenant, request.body.shipment_id,
+                                  request.body.after, request.body.limit)
+                              .AsContainer<std::vector<ItemRow>>(pg::kRowTag);
+        std::vector<std::string> ids;
+        for (const auto& row : rows)
+            ids.push_back(row.Id);
+        std::map<std::string, Totals> totals;
+        if (!ids.empty()) {
+            const auto counts = session.Tx.Execute(sql::kListOperationTotals, session.Tenant, ids);
+            for (const auto& count : counts.AsSetOf<ItemTotals>(pg::kRowTag))
+                totals.emplace(count.ItemId, Totals{count.Created, count.Pending});
+        }
+        std::vector<models::ShipmentItem> result;
+        for (const auto& row : rows) {
+            const auto found = totals.find(row.Id);
+            result.push_back(ToModel(row, found == totals.end() ? Totals{0, 0} : found->second));
+        }
+        session.Tx.Commit();
+        return Response200{.items = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

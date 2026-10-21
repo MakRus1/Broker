@@ -1,7 +1,7 @@
 #pragma once
-#include <repositories/session.hpp>
+#include <helpers/session.hpp>
 
-namespace shipments::storage {
+namespace shipments::helpers {
 struct ShipmentRow {
     std::string Id;
     std::int64_t Revision;
@@ -105,4 +105,4 @@ void SaveReplay(
     session.Tx.Execute(sql::kSaveIdempotency, session.Tenant, action, request.idempotency_key,
         Document(request), Document(result));
 }
-}  // namespace shipments::storage
+}  // namespace shipments::helpers

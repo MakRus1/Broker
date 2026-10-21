@@ -1,17 +1,28 @@
+#include <helpers/rows.hpp>
 #include <platform/auth/principal.hpp>
-#include <repositories/store.hpp>
 #include <views/api/v1/shipments/update/view.hpp>
 
 namespace shipments::views::api::v1::shipments::update {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const ::shipments::models::UpdateShipmentRequest command{
-        .expected_revision = request.body.expected_revision,
-        .reference = request.body.reference,
-        .shipment_id = request.body.shipment_id};
+    using namespace ::shipments::helpers;
     try {
-        return Response200{.shipment = ::shipments::Store{deps.pg_cluster}.UpdateShipment(
-                               platform::auth::GetPrincipal(context), command)};
+        const auto& principal = platform::auth::GetPrincipal(context);
+        Session session{deps.pg_cluster, principal};
+        const auto current =
+            session.Tx.Execute(sql::kLockShipment, session.Tenant, request.body.shipment_id);
+        if (current.IsEmpty())
+            throw ApiError{404, "not_found", "Поставка не найдена"};
+        CheckRevision(
+            current.AsSingleRow<ShipmentRow>(pg::kRowTag).Revision, request.body.expected_revision);
+        const auto result =
+            ToModel(session.Tx
+                        .Execute(sql::kUpdateShipment, session.Tenant, request.body.shipment_id,
+                            request.body.reference, request.body.expected_revision)
+                        .AsSingleRow<ShipmentRow>(pg::kRowTag));
+        session.Audit("update_shipment", result.id, request.body, result);
+        session.Tx.Commit();
+        return Response200{.shipment = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

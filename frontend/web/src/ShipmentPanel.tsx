@@ -13,7 +13,7 @@ import {
   type Shipment,
   type Transportation,
 } from './api';
-import { Dialog, TransportationTable } from './components';
+import { CardNavigation, Dialog, TransportationTable, useDiscardConfirmation } from './components';
 
 type Props = {
   initial: Shipment;
@@ -45,6 +45,7 @@ export function ShipmentPanel({
   const [moreItems, setMoreItems] = useState(false);
   const [moreTransportations, setMoreTransportations] = useState(false);
   const panel = useRef<HTMLElement>(null);
+  const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const commands = useRef(new Commands());
   const storageKey = operationStorageKey(session.actor, initial.id);
   const [ids, setIds] = useState(() => readOperationIds(storageKey));
@@ -144,12 +145,8 @@ export function ShipmentPanel({
     };
   }, [ids, session, refresh, onError]);
   function close() {
-    if (
-      panel.current?.querySelector('form[data-dirty="true"]') &&
-      !confirm('Несохранённые изменения будут потеряны. Закрыть?')
-    )
-      return;
-    onClose();
+    if (panel.current?.querySelector('form[data-busy="true"]')) return;
+    confirmDiscard(!!panel.current?.querySelector('form[data-dirty="true"]'), onClose);
   }
   async function nextPage(kind: 'items' | 'transportations') {
     setLoading(true);
@@ -234,7 +231,19 @@ export function ShipmentPanel({
             <strong>{shipment.revision}</strong>
           </div>
         </div>
-        <div className="tabs">
+        <CardNavigation
+          disabled={loading}
+          onRefresh={async () => {
+            setLoading(true);
+            try {
+              await refresh();
+            } catch (error) {
+              onError(error);
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
           <button aria-pressed={tab === 'items'} onClick={() => setTab('items')}>
             Позиции
           </button>
@@ -244,19 +253,7 @@ export function ShipmentPanel({
           >
             Перевозки
           </button>
-          <button
-            className="refresh"
-            disabled={loading}
-            onClick={() => {
-              setLoading(true);
-              void refresh()
-                .catch(onError)
-                .finally(() => setLoading(false));
-            }}
-          >
-            Обновить
-          </button>
-        </div>
+        </CardNavigation>
         <div className="panel-content" aria-busy={loading}>
           {failure && (
             <p className="error" role="alert">
@@ -381,6 +378,7 @@ export function ShipmentPanel({
           </Dialog>
         )}
       </section>
+      {confirmation}
     </div>
   );
 }
@@ -398,7 +396,7 @@ function PositionForm({
   const [quantity, setQuantity] = useState('1');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
-  const [dirty, setDirty] = useState(false);
+  const dirty = quantity !== '1' || (!item && (code !== '40HC' || owner !== 'COC'));
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -421,7 +419,7 @@ function PositionForm({
     }
   }
   return (
-    <form onSubmit={submit} data-dirty={dirty} data-busy={busy} onChange={() => setDirty(true)}>
+    <form onSubmit={submit} data-dirty={dirty} data-busy={busy}>
       {item ? (
         <p className="hint">
           {item.container_type_code} · доступно {item.available_quantity}. Одна единица создаст одну

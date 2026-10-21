@@ -8,7 +8,7 @@ import {
   type Transportation,
   type TransportationEvent,
 } from './api';
-import { Dialog } from './components';
+import { CardNavigation, Dialog } from './components';
 import type { Counterparty } from './CustomerSelect';
 import {
   formatDate,
@@ -127,15 +127,14 @@ export function TransportationPage({ id, editing, session, customers, onError }:
           />
         ) : (
           <>
-            <div className="tabs">
+            <CardNavigation onRefresh={() => refresh().catch(onError)}>
               <button aria-pressed={tab === 'route'} onClick={() => setTab('route')}>
                 Маршрут и факты
               </button>
               <button aria-pressed={tab === 'history'} onClick={() => setTab('history')}>
                 История
               </button>
-              <button onClick={() => void refresh().catch(onError)}>Обновить</button>
-            </div>
+            </CardNavigation>
             <div className="panel-content">
               {tab === 'history' ? (
                 <History
@@ -164,7 +163,7 @@ export function TransportationPage({ id, editing, session, customers, onError }:
                     )}
                   </div>
                   {hasActuals && (
-                    <p className="hint">
+                    <p className="route-notice">
                       Маршрут с фактическими датами нельзя заменить. Для изменения даты используйте
                       «Исправить».
                     </p>
@@ -232,7 +231,7 @@ export function RouteView({
               {route_segment.destination.name}
             </h3>
           </div>
-          <p className="hint">
+          <p className="route-segment-meta">
             {route_segment.origin.country_code} → {route_segment.destination.country_code} ·
             Подрядчик:{' '}
             {customers.find((item) => item.id === route_segment.contractor_id)?.name ||

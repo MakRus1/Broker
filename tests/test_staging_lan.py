@@ -48,6 +48,7 @@ class LanTest(unittest.TestCase):
             )
             values = yaml.safe_load(base64.b64decode(variables['data']['config_vars.yaml']))
             self.assertTrue(values['admin-secure-cookie'])
+            self.assertTrue(values['otlp-endpoint'].endswith('cluster.local.:4317'))
             web_variables = next(
                 obj
                 for obj in phases['services']

@@ -54,3 +54,33 @@ class MonitoringTest(unittest.TestCase):
             ValueError, 'X-Trace-Id'
         ):
             monitoring.probe_trace('http://broker/hello')
+
+    def test_missing_telemetry_identifies_the_failed_store(self):
+        for tempo, loki, missing in [
+            (False, True, 'Tempo'),
+            (True, False, 'Loki'),
+            (False, False, 'Tempo, Loki'),
+        ]:
+            with self.subTest(tempo=tempo, loki=loki):
+                calls = []
+
+                def fetch(name, port, path):
+                    calls.append(name)
+                    if name == 'tempo' and not tempo:
+                        raise HTTPError('url', 404, 'not found', {}, None)
+                    return {'data': {'result': [{}] if loki else []}}
+
+                with patch.object(monitoring.time, 'monotonic', side_effect=[0, 61]):
+                    with self.assertRaisesRegex(ValueError, 'не найден в ' + missing):
+                        monitoring.wait_for_telemetry(fetch, 'a' * 32)
+                self.assertEqual(calls, ['tempo', 'loki'])
+
+    def test_both_stores_are_required_for_success(self):
+        calls = []
+
+        def fetch(name, port, path):
+            calls.append(name)
+            return {'data': {'result': [{}]}}
+
+        monitoring.wait_for_telemetry(fetch, 'a' * 32)
+        self.assertEqual(calls, ['tempo', 'loki'])

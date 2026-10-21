@@ -19,9 +19,5 @@ WITH candidate AS (
       AND operation.id = candidate.id
     RETURNING operation.tenant_id, operation.id, operation.lease_token, operation.payload
 )
-SELECT
-    tenant_id::TEXT,
-    id::TEXT,
-    lease_token::TEXT,
-    payload
+SELECT ROW(tenant_id, id, lease_token, payload)::public.delivery_v1
 FROM claimed;

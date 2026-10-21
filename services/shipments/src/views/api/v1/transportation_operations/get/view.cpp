@@ -13,7 +13,7 @@ Response View::Handle(
             session.Tx.Execute(sql::kGetOperation, session.Tenant, request.body.operation_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Операция не найдена"};
-        const auto result = ToModel(rows.AsSingleRow<OperationRow>(pg::kRowTag));
+        const auto result = ToModel(rows.AsSingleRow<pgtypes::CreationOperationV1>());
         session.Tx.Commit();
         return Response200{.operation = result};
     } catch (const ::shipments::ApiError& error) {

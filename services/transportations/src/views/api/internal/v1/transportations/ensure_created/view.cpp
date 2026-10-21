@@ -13,7 +13,7 @@ Response View::Handle(
         const auto rows =
             session.Tx.Execute(sql::kFindCommand, session.Tenant, request.body.operation_id);
         if (!rows.IsEmpty()) {
-            const auto saved = rows.AsSingleRow<SavedCommand>(pg::kRowTag);
+            const auto saved = rows.AsSingleRow<pgtypes::SavedCommandV1>();
             if (saved.Payload != Document(request.body))
                 throw ApiError{409, "protocol_conflict", "Содержимое операции изменено"};
             const auto result = models::ParseModelJson(

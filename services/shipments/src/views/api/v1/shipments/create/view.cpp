@@ -17,7 +17,7 @@ Response View::Handle(
         const auto row = session.Tx
                              .Execute(sql::kCreateShipment, session.Tenant,
                                  request.body.customer_id, request.body.reference.value_or(""))
-                             .AsSingleRow<ShipmentRow>(pg::kRowTag);
+                             .AsSingleRow<pgtypes::ShipmentV1>();
         const auto result = ToModel(row);
         SaveReplay(session, "create_shipment", request.body, result);
         session.Audit("create_shipment", result.id, request.body, result);

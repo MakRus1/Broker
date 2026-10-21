@@ -12,7 +12,7 @@ Response View::Handle(
         const auto rows = session.Tx.Execute(
             sql::kListShipments, session.Tenant, request.body.after, request.body.limit);
         std::vector<models::Shipment> result;
-        for (const auto& row : rows.AsSetOf<ShipmentRow>(pg::kRowTag))
+        for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV1>())
             result.push_back(ToModel(row));
         session.Tx.Commit();
         return Response200{.items = result};

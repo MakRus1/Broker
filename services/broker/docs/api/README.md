@@ -79,3 +79,9 @@ HTTP bearer JWT описывается стандартными `components.secu
 Клиент защищенной операции требует токен вторым аргументом; сервер требует
 проверенный Principal от `libs/auth`. Настройка middleware и разрешений:
 [авторизация](../../../../docs/auth.md). Другие security-схемы отклоняются.
+
+## Типы PostgreSQL
+
+При наличии `postgresql/types.yaml` общий кодген также создает C++-структуры
+и userver bindings для составных типов БД. Миграции с `CREATE TYPE` пишутся вручную.
+См. `docs/architecture/postgresql-types.md` в корне репозитория.

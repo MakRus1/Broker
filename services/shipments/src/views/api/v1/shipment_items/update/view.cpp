@@ -13,14 +13,14 @@ Response View::Handle(
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Позиция не найдена"};
         CheckRevision(
-            rows.AsSingleRow<ItemRow>(pg::kRowTag).Revision, request.body.expected_revision);
+            rows.AsSingleRow<pgtypes::ShipmentItemV1>().Revision, request.body.expected_revision);
         const auto totals = ReadTotals(session, request.body.item_id);
         if (request.body.planned_quantity < totals.Created + totals.Pending)
             throw ApiError{409, "quantity_reserved", "Количество уже зарезервировано или создано"};
         const auto row = session.Tx
                              .Execute(sql::kUpdateItem, session.Tenant, request.body.item_id,
                                  request.body.planned_quantity)
-                             .AsSingleRow<ItemRow>(pg::kRowTag);
+                             .AsSingleRow<pgtypes::ShipmentItemV1>();
         const auto result = ToModel(row, totals);
         session.Audit("update_item", result.id, request.body, result);
         session.Tx.Commit();

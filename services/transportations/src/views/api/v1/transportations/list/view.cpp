@@ -15,16 +15,16 @@ Response View::Handle(
         std::vector<models::Transportation> result;
         std::map<std::string, std::size_t> indexes;
         std::vector<std::string> ids;
-        for (const auto& row : rows.AsSetOf<TransportationRow>(pg::kRowTag)) {
-            indexes.emplace(row.Id, result.size());
-            ids.push_back(row.Id);
+        for (const auto& row : rows.AsSetOf<pgtypes::TransportationV1>()) {
+            indexes.emplace(boost::uuids::to_string(row.Id), result.size());
+            ids.push_back(boost::uuids::to_string(row.Id));
             result.push_back(ToModel(row));
         }
         // Все плечи страницы читаются одним запросом, без N+1.
         if (!ids.empty()) {
             const auto legs = session.Tx.Execute(sql::kListLegs, session.Tenant, ids);
-            for (const auto& leg : legs.AsSetOf<LegRow>(pg::kRowTag))
-                result.at(indexes.at(leg.TransportationId))
+            for (const auto& leg : legs.AsSetOf<pgtypes::TransportationLegV1>())
+                result.at(indexes.at(boost::uuids::to_string(leg.TransportationId)))
                     .legs.push_back(models::ParseModelJson(
                         leg.Document, std::type_identity<models::TransportationLeg>{}));
         }

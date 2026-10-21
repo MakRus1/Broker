@@ -16,20 +16,22 @@ Response View::Handle(
         const auto rows = session.Tx
                               .Execute(sql::kListItems, session.Tenant, request.body.shipment_id,
                                   request.body.after, request.body.limit)
-                              .AsContainer<std::vector<ItemRow>>(pg::kRowTag);
+                              .AsContainer<std::vector<pgtypes::ShipmentItemV1>>();
         std::vector<std::string> ids;
         for (const auto& row : rows)
-            ids.push_back(row.Id);
-        std::map<std::string, Totals> totals;
+            ids.push_back(boost::uuids::to_string(row.Id));
+        std::map<std::string, pgtypes::QuantityTotalsV1> totals;
         if (!ids.empty()) {
             const auto counts = session.Tx.Execute(sql::kListOperationTotals, session.Tenant, ids);
-            for (const auto& count : counts.AsSetOf<ItemTotals>(pg::kRowTag))
-                totals.emplace(count.ItemId, Totals{count.Created, count.Pending});
+            for (const auto& count : counts.AsSetOf<pgtypes::ItemTotalsV1>())
+                totals.emplace(boost::uuids::to_string(count.ItemId),
+                    pgtypes::QuantityTotalsV1{count.Created, count.Pending});
         }
         std::vector<models::ShipmentItem> result;
         for (const auto& row : rows) {
-            const auto found = totals.find(row.Id);
-            result.push_back(ToModel(row, found == totals.end() ? Totals{0, 0} : found->second));
+            const auto found = totals.find(boost::uuids::to_string(row.Id));
+            result.push_back(ToModel(
+                row, found == totals.end() ? pgtypes::QuantityTotalsV1{0, 0} : found->second));
         }
         session.Tx.Commit();
         return Response200{.items = result};

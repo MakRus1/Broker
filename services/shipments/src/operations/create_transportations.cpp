@@ -20,7 +20,7 @@ models::CreationOperation CreateTransportations(
     const auto rows = session.Tx.Execute(sql::kLockItem, session.Tenant, request.item_id);
     if (rows.IsEmpty())
         throw ApiError{404, "not_found", "Позиция не найдена"};
-    const auto item = rows.AsSingleRow<ItemRow>(pg::kRowTag);
+    const auto item = rows.AsSingleRow<pgtypes::ShipmentItemV1>();
     CheckRevision(item.Revision, request.expected_revision);
     const auto totals = ReadTotals(session, request.item_id);
     if (totals.Created + totals.Pending + request.quantity > item.Planned)
@@ -28,7 +28,7 @@ models::CreationOperation CreateTransportations(
 
     models::CreationOperation result;
     result.id = boost::uuids::to_string(boost::uuids::random_generator{}());
-    result.item_id = item.Id;
+    result.item_id = boost::uuids::to_string(item.Id);
     result.quantity = request.quantity;
     result.status = models::OperationStatus::Pending;
 
@@ -36,8 +36,8 @@ models::CreationOperation CreateTransportations(
     api::RequestBody payload;
     payload.operation_id = result.id;
     payload.tenant_id = session.Tenant;
-    payload.shipment_id = item.ShipmentId;
-    payload.item_id = item.Id;
+    payload.shipment_id = boost::uuids::to_string(item.ShipmentId);
+    payload.item_id = boost::uuids::to_string(item.Id);
     payload.quantity = request.quantity;
     payload.schema_version =
         clients::transportations::models::EnsureCreatedRequest_schema_version::Value1;

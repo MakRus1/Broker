@@ -1,63 +1,24 @@
 #pragma once
 #include <helpers/session.hpp>
+#include <postgresql/types.hpp>
 
 namespace shipments::helpers {
-struct ShipmentRow {
-    std::string Id;
-    std::int64_t Revision;
-    std::string Number;
-    std::string CustomerId;
-    std::string Reference;
-};
-
-struct ItemRow {
-    std::string Id;
-    std::int64_t Revision;
-    std::string ShipmentId;
-    std::string ContainerType;
-    std::string Ownership;
-    std::int64_t Planned;
-};
-
-struct Totals {
-    std::int64_t Created;
-    std::int64_t Pending;
-};
-
-struct ItemTotals {
-    std::string ItemId;
-    std::int64_t Created;
-    std::int64_t Pending;
-};
-
-struct OperationRow {
-    std::string Id;
-    std::string ItemId;
-    std::int64_t Quantity;
-    std::string Status;
-    std::optional<Json> Result;
-};
-
-struct IdempotentRow {
-    Json Request;
-    Json Result;
-};
-
-inline models::Shipment ToModel(const ShipmentRow& row) {
+inline models::Shipment ToModel(const pgtypes::ShipmentV1& row) {
     models::Shipment result;
-    result.id = row.Id;
+    result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.number = row.Number;
-    result.customer_id = row.CustomerId;
+    result.customer_id = boost::uuids::to_string(row.CustomerId);
     result.reference = row.Reference;
     return result;
 }
 
-inline models::ShipmentItem ToModel(const ItemRow& row, const Totals& totals) {
+inline models::ShipmentItem ToModel(
+    const pgtypes::ShipmentItemV1& row, const pgtypes::QuantityTotalsV1& totals) {
     models::ShipmentItem result;
-    result.id = row.Id;
+    result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
-    result.shipment_id = row.ShipmentId;
+    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
@@ -68,18 +29,18 @@ inline models::ShipmentItem ToModel(const ItemRow& row, const Totals& totals) {
     return result;
 }
 
-inline Totals ReadTotals(Session& session, const std::string& item) {
+inline pgtypes::QuantityTotalsV1 ReadTotals(Session& session, const std::string& item) {
     return session.Tx.Execute(sql::kOperationTotals, session.Tenant, item)
-        .AsSingleRow<Totals>(pg::kRowTag);
+        .AsSingleRow<pgtypes::QuantityTotalsV1>();
 }
 
-inline models::CreationOperation ToModel(const OperationRow& row) {
+inline models::CreationOperation ToModel(const pgtypes::CreationOperationV1& row) {
     if (row.Result.has_value())
         return models::ParseModelJson(
             row.Result.value(), std::type_identity<models::CreationOperation>{});
     models::CreationOperation result;
-    result.id = row.Id;
-    result.item_id = row.ItemId;
+    result.id = boost::uuids::to_string(row.Id);
+    result.item_id = boost::uuids::to_string(row.ItemId);
     result.quantity = row.Quantity;
     result.status = models::ParseEnumScalar(row.Status, models::OperationStatus{});
     return result;
@@ -93,7 +54,7 @@ std::optional<Result> FindReplay(
         session.Tx.Execute(sql::kFindIdempotency, session.Tenant, action, request.idempotency_key);
     if (rows.IsEmpty())
         return std::nullopt;
-    const auto saved = rows.template AsSingleRow<IdempotentRow>(pg::kRowTag);
+    const auto saved = rows.template AsSingleRow<pgtypes::IdempotentResultV1>();
     if (saved.Request != Document(request))
         throw ApiError{409, "idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});

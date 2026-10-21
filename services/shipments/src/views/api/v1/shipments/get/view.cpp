@@ -13,7 +13,7 @@ Response View::Handle(
             session.Tx.Execute(sql::kGetShipment, session.Tenant, request.body.shipment_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto result = ToModel(rows.AsSingleRow<ShipmentRow>(pg::kRowTag));
+        const auto result = ToModel(rows.AsSingleRow<pgtypes::ShipmentV1>());
         session.Tx.Commit();
         return Response200{.shipment = result};
     } catch (const ::shipments::ApiError& error) {

@@ -14,12 +14,12 @@ Response View::Handle(
         if (current.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         CheckRevision(
-            current.AsSingleRow<ShipmentRow>(pg::kRowTag).Revision, request.body.expected_revision);
+            current.AsSingleRow<pgtypes::ShipmentV1>().Revision, request.body.expected_revision);
         const auto result =
             ToModel(session.Tx
                         .Execute(sql::kUpdateShipment, session.Tenant, request.body.shipment_id,
                             request.body.reference, request.body.expected_revision)
-                        .AsSingleRow<ShipmentRow>(pg::kRowTag));
+                        .AsSingleRow<pgtypes::ShipmentV1>());
         session.Audit("update_shipment", result.id, request.body, result);
         session.Tx.Commit();
         return Response200{.shipment = result};

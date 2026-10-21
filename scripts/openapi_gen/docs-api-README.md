@@ -67,3 +67,9 @@ SQL находятся в `postgresql/queries/*.sql`; userver генерируе
 
 Полное описание ограничений генератора: `docs/codegen.md` в корне репозитория.
 Структура сервиса и зависимости: `docs/service-layout.md`, `docs/service-manifest.md`.
+
+## Типы PostgreSQL
+
+При наличии `postgresql/types.yaml` общий кодген также создает C++-структуры
+и userver bindings для составных типов БД. Миграции с `CREATE TYPE` пишутся вручную.
+См. `docs/architecture/postgresql-types.md` в корне репозитория.

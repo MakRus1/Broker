@@ -89,3 +89,9 @@ SQL находятся в `postgresql/queries/*.sql`; userver генерируе
 Поддерживаются вложенные модели и массивы моделей. Серверный namespace —
 `<service>::models`, заголовок — `<openapi/models.hpp>` в каталоге сборки.
 Ограничения, default и JSON-преобразования вложенных полей тоже генерируются.
+
+## Типы PostgreSQL
+
+При наличии `postgresql/types.yaml` общий кодген также создает C++-структуры
+и userver bindings для составных типов БД. Миграции с `CREATE TYPE` пишутся вручную.
+См. `docs/architecture/postgresql-types.md` в корне репозитория.

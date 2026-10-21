@@ -1,34 +1,15 @@
 #pragma once
 #include <helpers/session.hpp>
+#include <postgresql/types.hpp>
 
 namespace transportations::helpers {
-struct TransportationRow {
-    std::string Id;
-    std::int64_t Revision;
-    std::string ShipmentId;
-    std::string ItemId;
-    std::string OperationId;
-    std::string ContainerType;
-    std::string Ownership;
-};
-
-struct SavedCommand {
-    Json Payload;
-    Json Result;
-};
-
-struct LegRow {
-    std::string TransportationId;
-    Json Document;
-};
-
-inline models::Transportation ToModel(const TransportationRow& row) {
+inline models::Transportation ToModel(const pgtypes::TransportationV1& row) {
     models::Transportation result;
-    result.id = row.Id;
+    result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
-    result.shipment_id = row.ShipmentId;
-    result.item_id = row.ItemId;
-    result.operation_id = row.OperationId;
+    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.item_id = boost::uuids::to_string(row.ItemId);
+    result.operation_id = boost::uuids::to_string(row.OperationId);
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
@@ -41,7 +22,7 @@ inline models::Transportation ReadTransportation(
         lock ? sql::kLockTransportation : sql::kGetTransportation, session.Tenant, id);
     if (rows.IsEmpty())
         throw ApiError{404, "not_found", "Перевозка не найдена"};
-    auto result = ToModel(rows.AsSingleRow<TransportationRow>(pg::kRowTag));
+    auto result = ToModel(rows.AsSingleRow<pgtypes::TransportationV1>());
     const auto legs = session.Tx.Execute(sql::kGetLegs, session.Tenant, id);
     for (const auto& document : legs.AsSetOf<Json>())
         result.legs.push_back(

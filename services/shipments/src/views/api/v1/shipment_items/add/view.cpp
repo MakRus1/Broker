@@ -18,16 +18,16 @@ Response View::Handle(
             session.Tx.Execute(sql::kLockShipment, session.Tenant, request.body.shipment_id);
         if (shipment.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        CheckRevision(shipment.AsSingleRow<ShipmentRow>(pg::kRowTag).Revision,
-            request.body.expected_revision);
+        CheckRevision(
+            shipment.AsSingleRow<pgtypes::ShipmentV1>().Revision, request.body.expected_revision);
         const auto row = session.Tx
                              .Execute(sql::kAddItem, session.Tenant, request.body.shipment_id,
                                  request.body.container_type_code,
                                  models::EnumValue(request.body.container_ownership),
                                  request.body.planned_quantity)
-                             .AsSingleRow<ItemRow>(pg::kRowTag);
+                             .AsSingleRow<pgtypes::ShipmentItemV1>();
         session.Tx.Execute(sql::kBumpShipmentRevision, session.Tenant, request.body.shipment_id);
-        const auto result = ToModel(row, Totals{0, 0});
+        const auto result = ToModel(row, pgtypes::QuantityTotalsV1{0, 0});
         SaveReplay(session, "add_item", request.body, result);
         session.Audit("add_item", result.id, request.body, result);
         session.Tx.Commit();

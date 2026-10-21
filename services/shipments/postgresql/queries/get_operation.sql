@@ -1,8 +1,9 @@
-SELECT
-    id::TEXT,
-    item_id::TEXT,
+SELECT ROW(
+    id,
+    item_id,
     quantity::BIGINT,
     status,
     result
+)::public.creation_operation_v1
 FROM creation_operations
 WHERE tenant_id = $1::UUID AND id = $2::UUID;

@@ -1,4 +1,6 @@
+#include <boost/uuid/string_generator.hpp>
 #include <components/transportation_dispatcher.hpp>
+#include <postgresql/types.hpp>
 #include <set>
 #include <shipments/sql_queries.hpp>
 #include <userver/components/component_config.hpp>
@@ -7,15 +9,6 @@
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
-
-namespace {
-struct Delivery {
-    std::string Tenant;
-    std::string Id;
-    std::string Lease;
-    userver::formats::json::Value Payload;
-};
-}  // namespace
 
 namespace shipments {
 namespace pg = userver::storages::postgres;
@@ -37,10 +30,10 @@ void TransportationDispatcher::Step() {
     const auto rows = deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kClaimOperation);
     if (rows.IsEmpty())
         return;
-    const auto delivery = rows.AsSingleRow<Delivery>(pg::kRowTag);
-    const auto& tenant = delivery.Tenant;
-    const auto& id = delivery.Id;
-    const auto& lease = delivery.Lease;
+    const auto delivery = rows.AsSingleRow<pgtypes::DeliveryV1>();
+    const auto tenant = boost::uuids::to_string(delivery.Tenant);
+    const auto id = boost::uuids::to_string(delivery.Id);
+    const auto lease = boost::uuids::to_string(delivery.Lease);
     try {
         namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
         const auto request = api::Request{.body = api::ParseBody(delivery.Payload)};
@@ -62,8 +55,14 @@ void TransportationDispatcher::Step() {
         if (unique_ids.size() != value.transportation_ids.size())
             throw std::runtime_error("Повторяющиеся ID в результате операции");
         const auto document = json::ValueBuilder(value).ExtractValue();
-        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kCompleteOperation, tenant, id,
-            lease, status, document);
+        const pgtypes::CreationOperationV1 completed{
+            .Id = boost::uuids::string_generator{}(value.id),
+            .ItemId = boost::uuids::string_generator{}(value.item_id),
+            .Quantity = value.quantity,
+            .Status = status,
+            .Result = document};
+        deps_.pg_cluster->Execute(
+            pg::ClusterHostType::kMaster, sql::kCompleteOperation, tenant, completed, lease);
     } catch (const std::exception&) {
         // Даже 4xx не является подтвержденным доменным отказом: резерв не освобождается по
         // таймауту.

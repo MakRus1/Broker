@@ -445,8 +445,8 @@ function PositionForm({
               value={owner}
               onChange={(event) => setOwner(event.target.value)}
             >
-              <option value="COC">Перевозчика (COC)</option>
-              <option value="SOC">Грузовладельца (SOC)</option>
+              <option value="COC">COC</option>
+              <option value="SOC">SOC</option>
             </select>
           </label>
         </>

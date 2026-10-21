@@ -113,7 +113,7 @@ export const statusName = {
   rejected: 'Отклонено',
 } as const;
 export const modes = { sea: 'Море', road: 'Авто', rail: 'ЖД' } as const;
-export const ownership = { COC: 'Перевозчика', SOC: 'Грузовладельца' } as const;
+export const ownership = { COC: 'COC', SOC: 'SOC' } as const;
 export function operationStorageKey(subject: string, shipment: string) {
   return `broker.operations:${subject}:${shipment}`;
 }

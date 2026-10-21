@@ -13,6 +13,7 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const startedOnBackdrop = useRef(false);
   useEffect(() => {
     const node = ref.current!;
     node.showModal();
@@ -35,8 +36,25 @@ export function Dialog({
         event.preventDefault();
         close();
       }}
+      onPointerDown={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        startedOnBackdrop.current =
+          event.target === event.currentTarget &&
+          (event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom);
+      }}
       onClick={(event) => {
-        if (event.target === ref.current) close();
+        const rect = event.currentTarget.getBoundingClientRect();
+        const outside =
+          event.clientX < rect.left ||
+          event.clientX > rect.right ||
+          event.clientY < rect.top ||
+          event.clientY > rect.bottom;
+        // Выделение текста и нативный select могут завершить клик на самом dialog.
+        if (startedOnBackdrop.current && event.target === event.currentTarget && outside) close();
+        startedOnBackdrop.current = false;
       }}
     >
       <div className="dialog-heading">

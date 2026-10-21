@@ -10,9 +10,9 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
+        const auto tenant = ResolveTenant(*deps.pg_cluster, principal);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto tenant = ResolveTenant(transaction, principal);
         const auto name = userver::utils::text::Trim(request.body.name);
         if (name.empty())
             return Response400{.error = "empty_name", .message = "Укажите название контрагента"};

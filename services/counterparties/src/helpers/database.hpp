@@ -11,14 +11,11 @@
 namespace counterparties {
 namespace helpers {
 namespace pg = userver::storages::postgres;
-inline constexpr pg::TransactionOptions kReadSnapshot{
-    pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
-inline std::string ResolveTenant(pg::Transaction& transaction,
-    const platform::auth::Principal& principal,
+inline std::string ResolveTenant(pg::Cluster& cluster, const platform::auth::Principal& principal,
     const std::optional<std::string>& requested_tenant = std::nullopt) {
-    const auto rows = transaction.Execute(
-        sql::kResolveTenant, principal.Issuer, principal.Subject, requested_tenant);
+    const auto rows = cluster.Execute(pg::ClusterHostType::kMaster, sql::kResolveTenant,
+        principal.Issuer, principal.Subject, requested_tenant);
     if (rows.Size() != 1)
         throw ApiError{403, "tenant_access_denied", "Не определен доступ к клиенту"};
     return rows.AsSingleRow<std::string>();

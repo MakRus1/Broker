@@ -1,0 +1,48 @@
+#pragma once
+
+#include <platform/browser/sessions.hpp>
+#include <userver/components/component_context.hpp>
+// SERVICE_DEPS_INCLUDES_BEGIN
+#include <clients/counterparties/client.hpp>
+#include <clients/shipments/client.hpp>
+#include <clients/transportations/client.hpp>
+#include <configs/keys.hpp>
+#include <platform/configs/components.hpp>
+#include <platform/configs/runtime.hpp>
+#include <platform/readiness.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
+#include <userver/dynamic_config/updater/component_list.hpp>
+
+// SERVICE_DEPS_INCLUDES_END
+
+namespace web_bff {
+
+struct Deps {
+    // SERVICE_DEPS_FIELDS_BEGIN
+    platform::Readiness* readiness;
+    platform::configs::Source configs;
+    clients::counterparties::Client counterparties;
+    clients::shipments::Client shipments;
+    clients::transportations::Client transportations;
+    // SERVICE_DEPS_FIELDS_END
+    platform::browser::Sessions* sessions;
+};
+
+inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
+    return Deps{
+        // SERVICE_DEPS_INIT_BEGIN
+        .readiness = &component_context.FindComponent<platform::Readiness>(),
+        .configs =
+            platform::configs::Source{
+                component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},
+        .counterparties =
+            component_context.FindComponent<clients::counterparties::Component>().GetClient(),
+        .shipments = component_context.FindComponent<clients::shipments::Component>().GetClient(),
+        .transportations =
+            component_context.FindComponent<clients::transportations::Component>().GetClient(),
+        // SERVICE_DEPS_INIT_END
+        .sessions = &component_context.FindComponent<platform::browser::Sessions>(),
+    };
+}
+
+}  // namespace web_bff

@@ -7,62 +7,11 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
-        handler-foo-bar:
-            path: /foo/bar
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
-        handler-hello:
-            path: /hello
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
-        handler-hello-create:
-            path: /hello/create
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
-        handler-hello_postgres:
-            path: /hello_postgres
-            method: GET
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
-        handler-hello_postgres-create:
-            path: /hello_postgres/create
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
+
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         platform-readiness: {}
         platform-http-readiness: {}
-        postgres-main:
-            dbconnection: $pg-connection
-            dbconnection#env: DB_CONNECTION
-            blocking_task_processor: fs-task-processor
-            dns_resolver: async
-            sync-start: true
-            connlimit_mode: manual
-        platform-grpc-telemetry: {}
-        platform-grpc-readiness: {}
-        grpc-server-middlewares-pipeline:
-            middlewares:
-                platform-grpc-telemetry:
-                    enabled: true
-                platform-grpc-readiness:
-                    enabled: true
-        grpc-server-logging:
-            msg-log-level: none
-        grpc-server:
-            port: $grpc-server-port
-            completion-queue-count: 3
-        handler-hello-grpc:
-            task-processor: main-task-processor
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: broker

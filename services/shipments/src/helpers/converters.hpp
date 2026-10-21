@@ -1,6 +1,9 @@
 #pragma once
+#include <map>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
+#include <userver/storages/postgres/result_set.hpp>
+#include <vector>
 
 namespace shipments::helpers {
 inline models::Shipment Convert(const pgtypes::ShipmentV1& row) {
@@ -41,4 +44,23 @@ inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row
     return result;
 }
 
+inline std::vector<models::Shipment> Convert(const userver::storages::postgres::ResultSet& rows) {
+    std::vector<models::Shipment> result;
+    result.reserve(rows.Size());
+    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV1>())
+        result.push_back(Convert(row));
+    return result;
+}
+
+inline std::vector<models::ShipmentItem> Convert(const std::vector<pgtypes::ShipmentItemV1>& rows,
+    const std::map<std::string, pgtypes::QuantityTotalsV1>& totals) {
+    std::vector<models::ShipmentItem> result;
+    result.reserve(rows.size());
+    for (const auto& row : rows) {
+        const auto found = totals.find(boost::uuids::to_string(row.Id));
+        result.push_back(
+            Convert(row, found == totals.end() ? pgtypes::QuantityTotalsV1{0, 0} : found->second));
+    }
+    return result;
+}
 }  // namespace shipments::helpers

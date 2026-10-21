@@ -21,7 +21,7 @@ class ServicesTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name) / 'repo'
-        shutil.copytree(ROOT, self.root, ignore=shutil.ignore_patterns('.git', '.venv*', 'build-*', '__pycache__', '.cache', '.ccache', '.new-service-*'))
+        shutil.copytree(ROOT, self.root, ignore=shutil.ignore_patterns('.git', '.venv*', 'build-*', '__pycache__', '.cache', '.ccache', '.new-service-*', 'node_modules', 'dist', 'coverage'))
         self.patch = mock.patch.object(create_service, 'ROOT', self.root)
         self.patch.start()
         self.feature_patch = mock.patch.object(features, 'ROOT', self.root)
@@ -40,7 +40,10 @@ class ServicesTest(unittest.TestCase):
             directory = create_service.create(name, pg, grpc)
             run(directory, check=True)
             self.assertFalse(list(directory.rglob('*.pyc')))
-            self.assertTrue((self.root / 'schemas/services' / name / 'hello.yaml').is_file())
+            self.assertFalse(list((directory / 'docs/api').glob('*.yaml')))
+            self.assertFalse(list((directory / 'src/views').rglob('view.cpp')))
+            self.assertFalse(list((directory / 'proto').rglob('*.proto')))
+            self.assertFalse(list((directory / 'postgresql').rglob('*.sql')))
             config = yaml.safe_load((directory / 'configs/static_config.yaml').read_text())['components_manager']['components']
             self.assertEqual(config['handler-ping']['path'], '/ping')
             self.assertEqual(config['handler-ping-ready']['path'], '/ping/ready')
@@ -52,22 +55,22 @@ class ServicesTest(unittest.TestCase):
                 self.assertTrue(config['grpc-server-middlewares-pipeline']['middlewares']['platform-grpc-readiness']['enabled'])
             main = (directory / 'src/main.cpp').read_text()
             self.assertIn(f'.Append<{name}::Ping>()', main)
-            self.assertEqual(f'.Append<{name}::HelloGrpc>()' in main, grpc)
+            self.assertNotIn('HelloGrpc', main)
             cmake = (directory / 'CMakeLists.txt').read_text()
-            self.assertEqual('src/transport/grpc/hello_grpc.cpp' in cmake, grpc)
+            self.assertNotIn('hello_grpc', cmake)
             self.assertIn('broker_common', cmake)
             self.assertIn('broker_openapi_generate', cmake)
             self.assertEqual('deps_.pg_cluster->Execute' in (directory / 'src/bootstrap/ping.cpp').read_text(), pg)
             self.assertEqual('userver/storages/postgres/' in (directory / 'src/bootstrap/ping.cpp').read_text(), pg)
             self.assertEqual('pg_cluster' in (directory / 'src/deps.hpp').read_text(), pg)
-            self.assertTrue((directory / 'src/domain/greeting.hpp').is_file())
-            self.assertTrue((directory / 'tests/unit/greeting_test.cpp').is_file())
+            self.assertFalse((directory / 'src/domain/greeting.hpp').exists())
+            self.assertFalse((directory / 'tests/unit/greeting_test.cpp').exists())
             with self.assertRaises(ValueError): create_service.create(name, pg, grpc)
 
     def test_manifest_generates_auth_and_rejects_incomplete_policy(self):
         directory = create_service.create('secured')
         contract = directory / 'docs/api/hello.yaml'
-        document = yaml.safe_load(contract.read_text())
+        document = yaml.safe_load((ROOT / 'services/broker/docs/api/hello.yaml').read_text())
         document['paths'] = {
             path.replace('/hello', '/api/hello'): value for path, value in document['paths'].items()
         }
@@ -139,6 +142,9 @@ class ServicesTest(unittest.TestCase):
 
     def test_manifest_enables_features_and_preserves_manual_code(self):
         directory = create_service.create('upgrade')
+        specification = directory / 'docs/api/hello.yaml'
+        specification.write_text((ROOT / 'services/broker/docs/api/hello.yaml').read_text())
+        run(directory)
         main = directory / 'src/main.cpp'
         main.write_text(main.read_text() + '\n// Ручной код сохраняется.\n')
         view = directory / 'src/views/hello/view.cpp'
@@ -151,15 +157,16 @@ class ServicesTest(unittest.TestCase):
             run(directory, check=True)
         self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
         run(directory)
-        self.assertTrue((directory / 'postgresql/schemas/db_1/V0001__create_hello_users.sql').exists())
+        self.assertTrue((directory / 'postgresql/schemas/db_1/.gitkeep').exists())
         manifest.write_text(manifest.read_text().replace('grpc: {enabled: false}', 'grpc: {enabled: true}'))
         run(directory)
         run(directory, check=True)
         self.assertIn('Ручной код сохраняется', main.read_text())
         self.assertEqual(view_before, view.read_bytes())
-        self.assertTrue((directory / 'proto/handlers/hello.proto').exists())
-        demo = directory / 'src/transport/grpc/hello_grpc.cpp'
-        demo.write_text(demo.read_text() + '\n// Сохраняем и измененный gRPC-код.\n')
+        self.assertTrue((directory / 'proto/.gitkeep').exists())
+        demo = directory / 'src/transport/grpc/custom.cpp'
+        demo.parent.mkdir(parents=True)
+        demo.write_text('// Ручная реализация gRPC сохраняется.\n')
         before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
         run(directory)
         self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})

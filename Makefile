@@ -46,7 +46,7 @@ $(addprefix test-,$(PRESETS)): test-%: cmake-%
 # CI собирает один раз на окружение; тесты выбранных сервисов запускаются отдельно.
 .PHONY: $(addprefix ci-build-,$(PRESETS)) $(addprefix ci-test-,$(PRESETS))
 $(addprefix ci-build-,$(PRESETS)): ci-build-%: cmake-%
-	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
+	$(REPO_ROOT)/.venv-gen/bin/python scripts/ci-tests.py build --build-dir build-$* --services $(CI_BUILD_SERVICES) --jobs $(NPROCS)
 $(addprefix ci-test-,$(PRESETS)): ci-test-%:
 	$(REPO_ROOT)/.venv-gen/bin/python scripts/ci-tests.py run --build-dir build-$* --services $(CI_SERVICES) --output-dir "$(CI_RESULTS_DIR)"
 
@@ -76,7 +76,7 @@ docker-pull:
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .
 docker-%:
-	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_RESULTS_DIR -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
 
 .PHONY: db-up db-down testsuite-clean dist-clean
 db-up:

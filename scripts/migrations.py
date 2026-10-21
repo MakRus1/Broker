@@ -17,6 +17,8 @@ class Migration:
 def discover(directory):
     migrations = []
     for path in sorted(Path(directory).iterdir()):
+        if path.name == '.gitkeep' and path.is_file():
+            continue
         match = re.fullmatch(r"V([0-9]{4})__[a-z][a-z0-9]*(?:_[a-z0-9]+)*\.sql", path.name)
         if not path.is_file() or not match or int(match[1]) == 0:
             raise ValueError(f"{path}: ожидается V0001__migration_name.sql")

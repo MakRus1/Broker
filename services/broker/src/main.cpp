@@ -22,6 +22,7 @@
 #include <userver/ugrpc/client/component_list.hpp>
 
 #include <openapi/handlers.hpp>
+#include <transport/grpc/hello_grpc.hpp>
 
 // SERVICE_INCLUDES_BEGIN
 #include <configs/keys.hpp>
@@ -30,7 +31,6 @@
 #include <platform/grpc_readiness.hpp>
 #include <platform/grpc_telemetry.hpp>
 #include <platform/readiness.hpp>
-#include <transport/grpc/hello_grpc.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -71,11 +71,11 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<userver::components::Postgres>("postgres-broker");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
-        .Append<broker::HelloGrpc>()
         .Append<platform::GrpcTelemetryFactory>()
         .Append<platform::GrpcReadinessFactory>();
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<broker::HelloGrpc>();
     component_list = broker::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

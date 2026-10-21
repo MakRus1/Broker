@@ -1,0 +1,13 @@
+version: 1
+libraries:
+- common
+postgresql:
+  enabled: true
+  cluster: counterparties
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/counterparties/create: counterparties.write
+    /api/v1/counterparties/list: counterparties.read

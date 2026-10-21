@@ -15,11 +15,12 @@ on:
       - tools/python-constraints.txt
       - CMakeLists.txt
       - cmake/**
-      - services/**
-      - libs/**
-      - schemas/**
+      - services/**/service.yaml
+      - services/**/CMakeLists.txt
+      - libs/**/CMakeLists.txt
       - scripts/openapi_gen/**
-      - frontend/admin/**
+      - frontend/**/package.json
+      - frontend/**/pnpm-lock.yaml
       - requirements.txt
   workflow_dispatch:
 permissions:

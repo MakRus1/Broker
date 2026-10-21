@@ -88,8 +88,8 @@ def prepare(service, loader):
         files[path] = format_cpp(text) if path.suffix in {'.cpp', '.hpp'} else text
     main_path = 'src/main.cpp' if (service / 'src/main.cpp').exists() else 'main.cpp'
     edit(main_path, {
-        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <transport/grpc/hello_grpc.hpp>\n#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
-        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<{name}::HelloGrpc>().Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
+        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
+        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
     })
     edit('src/deps.hpp', {
         'DEPS_INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
@@ -107,34 +107,30 @@ def prepare(service, loader):
     if pg:
         cmake += '''target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
+if(service_sql)
 userver_add_sql_library(${PROJECT_NAME}_sql
     NAMESPACE ${PROJECT_NAME}
     SOURCE_DIR postgresql/queries
     OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_sql
     SQL_FILES *.sql)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
+endif()
 '''
     if grpc:
-        cmake += '''target_sources(${PROJECT_NAME}_objs PRIVATE src/transport/grpc/hello_grpc.cpp)
+        cmake += '''target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::grpc)
 file(GLOB_RECURSE service_protos CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
+if(service_protos)
 userver_add_grpc_library(${PROJECT_NAME}_proto PROTOS ${service_protos})
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::grpc ${PROJECT_NAME}_proto)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_proto)
+endif()
 '''
     edit('CMakeLists.txt', {'CMAKE': cmake}, '#')
-    template = ROOT / 'scripts/templates/service'
-    paths = []
-    if pg and not previous.get('postgresql', False):
-        paths += ['postgresql', 'src/views/hello_postgres', 'docs/api/hello_postgres.yaml', 'tests/test_postgres.py']
-    if grpc and not previous.get('grpc', False):
-        paths += ['proto', 'src/transport/grpc', 'tests/test_grpc.py']
-    for relative in paths:
-        source = template / relative
-        for p in (source.rglob('*') if source.is_dir() else [source]):
-            if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc':
-                target = service / p.relative_to(template)
-                public_equivalent = ROOT / 'schemas/services' / name / p.name
-                if not target.exists() and not (p.is_relative_to(template / 'docs/api') and public_equivalent.exists()):
-                    files[target] = p.read_text().replace('broker', name)
+    if pg:
+        for directory in ('postgresql/schemas/db_1', 'postgresql/queries'):
+            if not any((service / directory).glob('*.sql')):
+                files[service / directory / '.gitkeep'] = ''
+    if grpc and not any((service / 'proto').rglob('*.proto')):
+        files[service / 'proto/.gitkeep'] = ''
     plugins = ['pytest_userver.plugins.core']
     tests = 'import pytest\n'
     if pg:
@@ -150,11 +146,6 @@ def pgsql_local(service_source_dir, pgsql_local_create):
 '''
     if grpc:
         plugins.append('pytest_userver.plugins.grpc')
-        tests += '''import handlers.hello_pb2_grpc as hello_services
-@pytest.fixture
-def grpc_service(grpc_channel, service_client):
-    return hello_services.HelloServiceStub(grpc_channel)
-'''
     tests += f'pytest_plugins = {plugins!r}\n'
     edit('tests/conftest.py', {'TESTS': tests}, '#')
     components = {f'client-{alias}': {'base-url': f'$client-{alias}-base-url'} for alias, _ in clients}
@@ -166,7 +157,7 @@ def grpc_service(grpc_channel, service_client):
     if pg:
         components[pg_component] = {'dbconnection': '$pg-connection', 'dbconnection#env': 'DB_CONNECTION', 'blocking_task_processor': 'fs-task-processor', 'dns_resolver': 'async', 'sync-start': True, 'connlimit_mode': 'manual'}
     if grpc:
-        components.update({'platform-grpc-telemetry': {}, 'platform-grpc-readiness': {}, 'grpc-server-middlewares-pipeline': {'middlewares': {'platform-grpc-telemetry': {'enabled': True}, 'platform-grpc-readiness': {'enabled': True}}}, 'grpc-server-logging': {'msg-log-level': 'none'}, 'grpc-server': {'port': '$grpc-server-port', 'completion-queue-count': 3}, 'handler-hello-grpc': {'task-processor': 'main-task-processor'}})
+        components.update({'platform-grpc-telemetry': {}, 'platform-grpc-readiness': {}, 'grpc-server-middlewares-pipeline': {'middlewares': {'platform-grpc-telemetry': {'enabled': True}, 'platform-grpc-readiness': {'enabled': True}}}, 'grpc-server-logging': {'msg-log-level': 'none'}, 'grpc-server': {'port': '$grpc-server-port', 'completion-queue-count': 3}})
     path = service / 'configs/static_config.yaml'
     static_source = path.read_text()
     managed = static_source.split('# SERVICE_CONFIG_BEGIN', 1)[1].split('# SERVICE_CONFIG_END', 1)[0]

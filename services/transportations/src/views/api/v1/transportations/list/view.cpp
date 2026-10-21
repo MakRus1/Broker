@@ -1,5 +1,4 @@
 #include <helpers/transportations.hpp>
-#include <map>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/transportations/list/view.hpp>
 
@@ -9,26 +8,24 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
+        // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto tenant = ResolveTenant(transaction, principal);
-        const auto rows = transaction.Execute(sql::kListTransportations, tenant, request.body.after,
-            request.body.shipment_id, request.body.item_id, request.body.limit);
-        std::vector<models::Transportation> result;
-        std::map<std::string, std::size_t> indexes;
+        const auto rows =
+            transaction
+                .Execute(sql::kListTransportations, tenant, request.body.after,
+                    request.body.shipment_id, request.body.item_id, request.body.limit)
+                .AsContainer<std::vector<pgtypes::TransportationV2>>();
         std::vector<std::string> ids;
-        for (const auto& row : rows.AsSetOf<pgtypes::TransportationV1>()) {
-            indexes.emplace(boost::uuids::to_string(row.Id), result.size());
+        ids.reserve(rows.size());
+        for (const auto& row : rows)
             ids.push_back(boost::uuids::to_string(row.Id));
-            result.push_back(Convert(row));
-        }
         // Все плечи страницы читаются одним запросом, без N+1.
-        if (!ids.empty()) {
-            const auto legs = transaction.Execute(sql::kListLegs, tenant, ids);
-            for (const auto& leg : legs.AsSetOf<pgtypes::TransportationLegV1>())
-                result.at(indexes.at(boost::uuids::to_string(leg.TransportationId)))
-                    .legs.push_back(models::ParseModelJson(
-                        leg.Document, std::type_identity<models::TransportationLeg>{}));
-        }
+        const auto legs = ids.empty()
+            ? std::vector<pgtypes::TransportationLegV1>{}
+            : transaction.Execute(sql::kListLegs, tenant, ids)
+                  .AsContainer<std::vector<pgtypes::TransportationLegV1>>();
+        const auto result = Convert(rows, legs);
         transaction.Commit();
         return Response200{.items = result};
     } catch (const ::transportations::ApiError& error) {

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """План выборочных проверок и отчеты CTest/pytest для GitHub Actions."""
+
 import argparse
 import json
 import os
@@ -27,21 +28,128 @@ def append(path, content):
             stream.write(content)
 
 
+def changed_paths(base):
+    exists = subprocess.run(
+        ['git', '-C', str(ROOT), 'rev-parse', '--verify', base + '^{commit}'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if exists.returncode:
+        return None
+    return (
+        subprocess.run(
+            ['git', '-C', str(ROOT), 'diff', '--name-only', '-z', base, 'HEAD'],
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        .stdout.strip('\0')
+        .split('\0')
+    )
+
+
+def select_checks(paths, services):
+    scaffold_paths = (
+        'scripts/templates/',
+        'scripts/openapi_gen/',
+        'scripts/create_service.py',
+        'scripts/smoke-services.py',
+        'scripts/ci-tests.py',
+        'cmake/',
+        'libs/common/',
+        'CMakeLists.txt',
+        'CMakePresets.json',
+        'Makefile',
+        'requirements.txt',
+        'tools/versions.env',
+        'tools/python-constraints.txt',
+        'tools/container-images.json',
+        'tools/Dockerfile',
+        'tools/docker/',
+        '.github/workflows/environment.yml',
+        '.devcontainer/',
+        '.github/workflows/ci.yml',
+        'tests/test_services.py',
+    )
+    scaffolds = paths is None or any(
+        path == prefix.rstrip('/')
+        or path.startswith(prefix if prefix.endswith('/') else prefix + '/')
+        for path in (paths or [])
+        for prefix in scaffold_paths
+    )
+    frontends = [
+        name
+        for name, bff in [('admin', 'admin_bff'), ('web', 'web_bff')]
+        if paths is None
+        or bff in services
+        or any(path.startswith(f'frontend/{name}/') for path in paths)
+    ]
+    smoke = (
+        paths is None
+        or bool({'shipments', 'transportations'} & set(services))
+        or any(path.startswith('tests/integration/') for path in paths)
+    )
+    build_services = sorted(set(services) | ({'shipments', 'transportations'} if smoke else set()))
+    return {
+        'scaffolds': scaffolds,
+        'smoke': smoke,
+        'frontends': frontends,
+        'build_services': build_services,
+    }
+
+
+def build(args):
+    services = service_names(args.services)
+    inventory = json.loads(
+        subprocess.check_output(
+            [args.ctest, '--test-dir', str(args.build_dir), '--show-only=json-v1'], text=True
+        )
+    )
+    tests = {test['name'] for test in inventory['tests']}
+    targets = [*services, 'contract_service']
+    targets += [name + '_unittest' for name in services if name + '_unittest' in tests]
+    if 'client_contract_unittest' in tests:
+        targets.append('client_contract_unittest')
+    command = [
+        args.cmake,
+        '--build',
+        str(args.build_dir),
+        '-j',
+        str(args.jobs),
+        '--target',
+        *targets,
+    ]
+    print('Цели сборки: ' + ', '.join(targets), flush=True)
+    subprocess.run(command, check=True)
+
+
 def plan(args):
     result = subprocess.run(
         [sys.executable, str(ROOT / 'scripts/affected-services.py'), args.base],
-        check=True, stdout=subprocess.PIPE, text=True,
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
     ).stdout.strip()
     available = sorted(path.name for path in (ROOT / 'services').iterdir() if path.is_dir())
     selected = service_names(available if result == 'all' else result.split())
     if not set(selected) <= set(available):
         raise ValueError('Определение зависимостей вернуло неизвестные сервисы')
+    checks = select_checks(changed_paths(args.base), selected)
     message = ', '.join(f'`{name}`' for name in selected) or 'нет — сборка и CTest пропускаются'
     text = f'### План проверок сервисов\n\nВыбраны: {message}.\n\n'
     if result == 'all':
         text += 'Общие изменения или недоступная базовая ревизия: проверяются все сервисы.\n\n'
     text += 'Окружения: Debug/Release/ASan+UBSan на amd64, Debug на arm64.\n'
+    text += f'\nПроверка шаблона: {"да" if checks["scaffolds"] else "нет"}. Межсервисный smoke: {"да" if checks["smoke"] else "нет"}.\n'
+    text += 'Фронтенды: ' + (', '.join(checks['frontends']) or 'нет') + '.\n'
     print(text)
+    append(
+        args.github_output,
+        f'scaffolds={str(checks["scaffolds"]).lower()}\n'
+        f'smoke={str(checks["smoke"]).lower()}\n'
+        f'frontends={json.dumps(checks["frontends"])}\n'
+        f'build_services={" ".join(checks["build_services"])}\n',
+    )
     append(args.github_output, f'services={" ".join(selected)}\n')
     append(args.summary, text)
 
@@ -50,7 +158,9 @@ def counts(path):
     cases = ET.parse(path).getroot().findall('.//testcase')
     if not cases:
         raise ValueError(f'В отчете нет тестов: {path}')
-    failed = sum(case.find('failure') is not None or case.find('error') is not None for case in cases)
+    failed = sum(
+        case.find('failure') is not None or case.find('error') is not None for case in cases
+    )
     skipped = sum(case.find('skipped') is not None for case in cases)
     return {'passed': len(cases) - failed - skipped, 'failed': failed, 'skipped': skipped}
 
@@ -60,12 +170,17 @@ def run(args):
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
     (output / 'results.json').write_text('[]\n')
-    inventory = json.loads(subprocess.check_output(
-        [args.ctest, '--test-dir', str(args.build_dir), '--show-only=json-v1'], text=True,
-    ))
+    inventory = json.loads(
+        subprocess.check_output(
+            [args.ctest, '--test-dir', str(args.build_dir), '--show-only=json-v1'],
+            text=True,
+        )
+    )
     names = {test['name'] for test in inventory['tests']}
-    groups = [(service, f'^({re.escape(service)}_unittest|testsuite-{re.escape(service)})$')
-              for service in services]
+    groups = [
+        (service, f'^({re.escape(service)}_unittest|testsuite-{re.escape(service)})$')
+        for service in services
+    ]
     groups.append(('shared-contracts', '^(testsuite-contract_service|client_contract_unittest)$'))
     # Общие проверки не должны скрывать отсутствие тестов выбранного сервиса.
     for name, pattern in groups:
@@ -76,8 +191,16 @@ def run(args):
         for report in (output / f'{name}.xml', output / f'pytest-{name}.xml'):
             report.unlink(missing_ok=True)
         command = [
-            args.ctest, '--test-dir', str(args.build_dir), '--verbose', '--output-on-failure',
-            '--no-tests=error', '-R', pattern, '--output-junit', str(output / f'{name}.xml'),
+            args.ctest,
+            '--test-dir',
+            str(args.build_dir),
+            '--verbose',
+            '--output-on-failure',
+            '--no-tests=error',
+            '-R',
+            pattern,
+            '--output-junit',
+            str(output / f'{name}.xml'),
         ]
         print(f'::group::Тесты: {name}', flush=True)
         print(shlex.join(command), flush=True)
@@ -86,8 +209,13 @@ def run(args):
         pytest_options.append(f'--junitxml={output / f"pytest-{name}.xml"}')
         environment['PYTEST_ADDOPTS'] = shlex.join(pytest_options)
         with (output / f'{name}.log').open('w') as log:
-            with subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT, text=True) as process:
+            with subprocess.Popen(
+                command,
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            ) as process:
                 for line in process.stdout:
                     print(line, end='', flush=True)
                     log.write(line)
@@ -104,7 +232,9 @@ def run(args):
             item['status'] = 'failed'
             item['error'] = str(error)
         results.append(item)
-        (output / 'results.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n')
+        (output / 'results.json').write_text(
+            json.dumps(results, ensure_ascii=False, indent=2) + '\n'
+        )
         print(f'Результат {name}: {item["status"]}', flush=True)
         print('::endgroup::', flush=True)
     return int(any(item['status'] != 'passed' for item in results))
@@ -114,23 +244,34 @@ def summary(args):
     path = args.output_dir / 'results.json'
     results = {item['name']: item for item in json.loads(path.read_text())} if path.exists() else {}
     lines = [
-        f'### Тесты сервисов · {args.preset} · {args.arch}', '',
-        f'Сборка: **{args.build_result}**. Шаг тестов: **{args.test_result}**.', '',
+        f'### Тесты сервисов · {args.preset} · {args.arch}',
+        '',
+        f'Сборка: **{args.build_result}**. Шаг тестов: **{args.test_result}**.',
+        '',
         '| Сервис / группа | Результат | CTest: успешно / ошибки / пропуски | '
         'Pytest: успешно / ошибки / пропуски |',
         '| --- | --- | --- | --- |',
     ]
     for name in [*service_names(args.services), 'shared-contracts']:
         item = results.get(name, {})
+
         def cell(key):
             value = item.get(key)
             return f'{value["passed"]} / {value["failed"]} / {value["skipped"]}' if value else '—'
-        status = {'passed': '✅ Пройдены', 'failed': '❌ Ошибка'}.get(item.get('status'), '⏭ Не запущены')
+
+        status = {'passed': '✅ Пройдены', 'failed': '❌ Ошибка'}.get(
+            item.get('status'), '⏭ Не запущены'
+        )
         lines.append(f'| `{name}` | {status} | {cell("ctest")} | {cell("pytest")} |')
-    lines += ['', 'CTest считает наборы (unit executable / testsuite); Pytest — отдельные '
-              'функциональные тесты внутри testsuite. Эти столбцы не суммируются.', '',
-              'Подробности: шаг «Тесты затронутых сервисов», блок с именем сервиса. '
-              'Логи и JUnit: artifact `test-results-' + args.preset + '-' + args.arch + '`.', '']
+    lines += [
+        '',
+        'CTest считает наборы (unit executable / testsuite); Pytest — отдельные '
+        'функциональные тесты внутри testsuite. Эти столбцы не суммируются.',
+        '',
+        'Подробности: шаг «Тесты затронутых сервисов», блок с именем сервиса. '
+        'Логи и JUnit: artifact `test-results-' + args.preset + '-' + args.arch + '`.',
+        '',
+    ]
     text = '\n'.join(lines)
     print(text)
     append(args.summary, text)
@@ -143,6 +284,12 @@ def main():
     planning.add_argument('--base', default='missing-base')
     planning.add_argument('--github-output', default=os.environ.get('GITHUB_OUTPUT'))
     planning.add_argument('--summary', default=os.environ.get('GITHUB_STEP_SUMMARY'))
+    building = commands.add_parser('build')
+    building.add_argument('--build-dir', type=Path, required=True)
+    building.add_argument('--services', nargs='+', required=True)
+    building.add_argument('--cmake', default=str(ROOT / '.venv-gen/bin/cmake'))
+    building.add_argument('--ctest', default=str(ROOT / '.venv-gen/bin/ctest'))
+    building.add_argument('--jobs', type=int, default=4)
     running = commands.add_parser('run')
     running.add_argument('--build-dir', type=Path, required=True)
     running.add_argument('--ctest', default=str(ROOT / '.venv-gen/bin/ctest'))
@@ -156,7 +303,7 @@ def main():
     reporting.add_argument('--test-result', required=True)
     reporting.add_argument('--summary', default=os.environ.get('GITHUB_STEP_SUMMARY'))
     args = parser.parse_args()
-    return {'plan': plan, 'run': run, 'summary': summary}[args.command](args)
+    return {'plan': plan, 'build': build, 'run': run, 'summary': summary}[args.command](args)
 
 
 if __name__ == '__main__':

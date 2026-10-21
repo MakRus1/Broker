@@ -50,4 +50,41 @@ inline models::DraftSnapshot ToBrowserSnapshot(
         .value = draft.value,
         .version = draft.version};
 }
+
+template <typename T, typename U> std::vector<T> ConvertHistory(const std::vector<U>& items) {
+    std::vector<T> result;
+    result.reserve(items.size());
+    for (const auto& item : items)
+        result.push_back({.created_at = item.created_at, .revision = item.revision});
+    return result;
+}
+
+template <typename T, typename U> std::vector<T> ConvertCatalog(const std::vector<U>& items) {
+    std::vector<T> result;
+    result.reserve(items.size());
+    for (const auto& item : items)
+        result.push_back({.active_draft_id = item.active_draft_id,
+            .config_name = item.config_name,
+            .version = item.version});
+    return result;
+}
+
+template <typename T, typename U> std::vector<T> ConvertDrafts(const std::vector<U>& items) {
+    std::vector<T> result;
+    result.reserve(items.size());
+    for (const auto& item : items)
+        result.push_back(ToBrowserDraft<T>(item));
+    return result;
+}
+
+template <typename T, typename U> std::vector<T> ConvertEvents(const std::vector<U>& items) {
+    std::vector<T> result;
+    result.reserve(items.size());
+    for (const auto& item : items)
+        result.push_back({.action = item.action,
+            .actor = item.actor,
+            .created_at = item.created_at,
+            .snapshot = ToBrowserSnapshot(item.snapshot)});
+    return result;
+}
 }  // namespace admin_bff

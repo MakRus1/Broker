@@ -8,8 +8,13 @@ on:
       - cmake/**
       - libs/**
       - schemas/**
-      - scripts/**
-      - services/**
+      - scripts/local-env.py
+      - scripts/migrations.py
+      - scripts/openapi_gen/**
+      - scripts/templates/**
+      - services/**/service.yaml
+      - services/**/configs/**
+      - services/**/src/bootstrap/**
       - tests/fixtures/contract_service/**
       - tools/**
       - requirements.txt

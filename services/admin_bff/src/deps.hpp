@@ -1,6 +1,6 @@
 #pragma once
 
-#include <components/sessions.hpp>
+#include <platform/browser/sessions.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/config_admin/client.hpp>
@@ -21,7 +21,7 @@ struct Deps {
     platform::configs::Source configs;
     clients::config_admin::Client config_admin;
     // SERVICE_DEPS_FIELDS_END
-    Sessions* sessions;
+    platform::browser::Sessions* sessions;
 };
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
@@ -34,7 +34,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .config_admin =
             component_context.FindComponent<clients::config_admin::Component>().GetClient(),
         // SERVICE_DEPS_INIT_END
-        .sessions = &component_context.FindComponent<Sessions>(),
+        .sessions = &component_context.FindComponent<platform::browser::Sessions>(),
     };
 }
 

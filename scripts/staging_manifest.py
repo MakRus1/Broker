@@ -174,15 +174,15 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             settings['defaults'], manifest.get('deployment', {}), settings['services'].get(name, {})
         )
         # Сессии BFF пока хранятся в памяти одного процесса.
-        if name == 'admin_bff' and deployments[name]['replicas'] != 1:
-            raise ValueError('admin_bff: несколько реплик требуют общего хранилища сессий')
+        if name in ('admin_bff', 'web_bff') and deployments[name]['replicas'] != 1:
+            raise ValueError(f'{name}: несколько реплик требуют общего хранилища сессий')
     if not re.fullmatch(r'[a-z0-9]+(?:[.-][a-z0-9]+)*', settings['cluster_domain']):
         raise ValueError('platform.yaml: неверный cluster_domain')
     if not re.fullmatch(r'[1-9][0-9]*(?:Mi|Gi)', settings['database_storage']):
         raise ValueError('platform.yaml: database_storage ожидает размер в Mi/Gi')
     addresses = {
-        name: f"{name}.{namespace}.svc.{settings['cluster_domain']}"
-        for name in ('postgres', 'configs', 'keycloak')
+        name: f"{name.replace('_', '-')}.{namespace}.svc.{settings['cluster_domain']}"
+        for name in ('postgres', 'configs', 'keycloak', *services)
     }
     values = credentials(directory)
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
@@ -264,7 +264,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     realm['clients'] = [
         client
         for client in realm['clients']
-        if client['clientId'] in ('configs-admin', 'broker-admin')
+        if client['clientId'] in ('configs-admin', 'broker-admin', 'broker-logistics', 'broker-web')
     ]
     realm['users'] = [user for user in realm['users'] if user['username'] in ('author', 'reviewer')]
     browser_client = next(
@@ -365,6 +365,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'config-cache-path': '',
                 'otlp-enabled': False,
                 'admin-assets-dir': '/app/assets',
+                'web-assets-dir': '/app/web-assets',
+                'web-origin': 'http://localhost:14080',
+                'web-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
+                'web-revoke-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/revoke",
+                'web-secure-cookie': False,
+                'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
+                'client-shipments-base-url': f"http://{addresses['shipments']}:8080",
+                'client-transportations-base-url': f"http://{addresses['transportations']}:8080",
                 'client-config_admin-base-url': f"http://{addresses['configs']}:8092",
                 'auth-issuer': settings['auth_origin'] + '/realms/broker',
                 'auth-jwks-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/certs",
@@ -381,6 +389,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             variables.update(
                 {
                     'admin-secure-cookie': True,
+                    'web-token-url': internal_auth + '/realms/broker/protocol/openid-connect/token',
+                    'web-revoke-url': internal_auth + '/realms/broker/protocol/openid-connect/revoke',
                     'auth-allow-http': False,
                     'auth-jwks-url': internal_auth + '/realms/broker/protocol/openid-connect/certs',
                     'admin-token-url': internal_auth

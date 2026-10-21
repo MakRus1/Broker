@@ -8,6 +8,7 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
+        // Перевозка и её плечи читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto tenant = ResolveTenant(transaction, principal);
         const auto result =

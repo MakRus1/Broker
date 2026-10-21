@@ -10,6 +10,7 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
+        // Позиции и счётчики резервов читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto tenant = ResolveTenant(transaction, principal);
         if (transaction.Execute(sql::kGetShipment, tenant, request.body.shipment_id).IsEmpty())
@@ -28,12 +29,7 @@ Response View::Handle(
                 totals.emplace(boost::uuids::to_string(count.ItemId),
                     pgtypes::QuantityTotalsV1{count.Created, count.Pending});
         }
-        std::vector<models::ShipmentItem> result;
-        for (const auto& row : rows) {
-            const auto found = totals.find(boost::uuids::to_string(row.Id));
-            result.push_back(Convert(
-                row, found == totals.end() ? pgtypes::QuantityTotalsV1{0, 0} : found->second));
-        }
+        const auto result = Convert(rows, totals);
         transaction.Commit();
         return Response200{.items = result};
     } catch (const ::shipments::ApiError& error) {

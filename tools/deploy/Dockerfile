@@ -8,6 +8,12 @@ RUN npm install --global pnpm@11.25.0 && pnpm install --frozen-lockfile
 COPY frontend/admin/ ./
 RUN pnpm build
 
+WORKDIR /web
+COPY frontend/web/package.json frontend/web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/web/ ./
+RUN pnpm build
+
 FROM ${DEV_IMAGE} AS build
 USER root
 WORKDIR /workspaces/broker
@@ -37,6 +43,7 @@ COPY --from=build /runtime/bin/${SERVICE} /app/service
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=frontend /frontend/dist /app/assets
+COPY --from=frontend /web/dist /app/web-assets
 USER 10001:10001
 ENV USERVER_ENABLE_STACK_USAGE_MONITOR=0 LANG=C.UTF-8
 WORKDIR /app

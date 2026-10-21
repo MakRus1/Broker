@@ -1,5 +1,5 @@
 version: 1
-libraries: [common, auth]
+libraries: [common, auth, browser]
 clients:
   config_admin:
     service: configs

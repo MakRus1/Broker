@@ -1,0 +1,121 @@
+openapi: 3.0.3
+info:
+  title: Контрагенты
+  version: '1'
+paths:
+  /api/v1/counterparties/create:
+    post:
+      summary: Создать контрагента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/CreateCounterpartyRequest
+      responses:
+        '201':
+          description: Контрагент сохранён
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  counterparty:
+                    $ref: components/schemas/models.yaml#/Counterparty
+                required:
+                - counterparty
+        '400':
+          description: Некорректное имя или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '409':
+          description: Идентификатор уже занят другим контрагентом
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+      security:
+      - bearerAuth: []
+  /api/v1/counterparties/list:
+    post:
+      summary: Список контрагентов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/ListCounterpartiesRequest
+      responses:
+        '200':
+          description: Список контрагентов
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/models.yaml#/Counterparty
+                required:
+                - items
+        '400':
+          description: Некорректное имя или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '409':
+          description: Идентификатор уже занят другим контрагентом
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -5,10 +5,6 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/components/sessions.cpp
-    src/components/browser_session.cpp
-    src/transport/login.cpp
-    src/transport/assets.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
@@ -18,12 +14,12 @@ target_link_libraries(
 )
 
 # SERVICE_CMAKE_BEGIN
-foreach(service_library IN ITEMS broker_common broker_auth broker_configs)
+foreach(service_library IN ITEMS broker_common broker_auth broker_browser broker_configs)
     if(NOT TARGET ${service_library})
         message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")
     endif()
 endforeach()
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_auth broker_configs)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_auth broker_browser broker_configs)
 # SERVICE_CMAKE_END
 broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")

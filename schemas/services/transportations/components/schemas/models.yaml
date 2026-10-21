@@ -69,6 +69,9 @@ Transportation:
       type: array
       items:
         $ref: '#/TransportationLeg'
+    number:
+      type: string
+      minLength: 1
   required:
   - id
   - revision
@@ -78,6 +81,7 @@ Transportation:
   - container_type_code
   - container_ownership
   - legs
+  - number
 TransportationLeg:
   type: object
   additionalProperties: false

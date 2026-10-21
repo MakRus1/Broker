@@ -309,3 +309,35 @@ async def test_counterparty_patch_presence(browser, mockserver, patch):
     response = await browser.post('/api/v1/counterparties/update', body)
     assert response.status == 200, response.text
     assert response.json()['counterparty']['legal_name'] is None
+
+
+@pytest.mark.parametrize('legacy', [False, True])
+async def test_counterparty_history_proxy_preserves_snapshots(browser, mockserver, legacy):
+    await browser.sign_in()
+    after = (
+        {'name': 'Старое имя'}
+        if legacy
+        else {key: value for key, value in COUNTERPARTY.items() if key not in ('id', 'revision')}
+    )
+    event = {
+        'id': 42,
+        'action': 'update_counterparty',
+        'actor': 'issuer#subject',
+        'occurred_at': '2026-10-21T12:00:00Z',
+        'after': after,
+    }
+    if not legacy:
+        event.update(actor_name='Автор', revision=2, before={**after, 'name': 'До изменения'})
+    expected = {'items': [event]}
+
+    @mockserver.json_handler('/api/v1/counterparties/history')
+    def upstream(request):
+        assert request.json == {'id': ID, 'before': 100, 'limit': 20}
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return expected
+
+    response = await browser.post(
+        '/api/v1/counterparties/history', {'id': ID, 'before': 100, 'limit': 20}
+    )
+    assert response.status == 200, response.text
+    assert response.json() == expected

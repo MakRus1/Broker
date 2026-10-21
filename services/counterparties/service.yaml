@@ -14,3 +14,4 @@ auth:
     /api/v1/counterparties/get: counterparties.read
     /api/v1/counterparties/update: counterparties.write
     /api/v1/counterparties/set-archived: counterparties.write
+    /api/v1/counterparties/history: counterparties.read

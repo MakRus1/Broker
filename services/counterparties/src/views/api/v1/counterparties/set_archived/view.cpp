@@ -28,7 +28,7 @@ Response View::Handle(
                 .AsSingleRow<pgtypes::CounterpartyV3>());
         WriteAudit(transaction, organization, identity,
             request.body.archived ? "archive_counterparty" : "restore_counterparty", result.id,
-            request.body, result);
+            request.body, result, std::optional{previous});
         transaction.Commit();
         return Response200{.counterparty = result};
     } catch (const ::counterparties::ApiError& error) {

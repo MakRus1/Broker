@@ -305,6 +305,62 @@ paths:
                 $ref: components/schemas/models.yaml#/CounterpartyError
       security:
       - bearerAuth: []
+  /api/v1/counterparties/history:
+    post:
+      summary: История изменений контрагента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/ListCounterpartyHistoryRequest
+      responses:
+        '200':
+          description: События от новых к старым со снимками сохранённых полей
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/models.yaml#/CounterpartyEvent
+                required:
+                - items
+        '400':
+          description: Некорректные реквизиты или параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '404':
+          description: Контрагент не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+        '503':
+          description: Недоступна проверка доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/CounterpartyError
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

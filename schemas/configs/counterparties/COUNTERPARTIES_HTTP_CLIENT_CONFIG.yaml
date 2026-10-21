@@ -4,6 +4,7 @@ generated: true
 paths:
 - /api/v1/counterparties/create
 - /api/v1/counterparties/get
+- /api/v1/counterparties/history
 - /api/v1/counterparties/list
 - /api/v1/counterparties/set-archived
 - /api/v1/counterparties/update

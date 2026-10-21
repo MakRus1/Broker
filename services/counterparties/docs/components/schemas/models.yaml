@@ -257,3 +257,96 @@ ListCounterpartiesRequest:
       - all
       default: active
   required: []
+CounterpartySnapshot:
+  type: object
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+      maxLength: 256
+      minLength: 1
+    legal_name:
+      type: string
+      maxLength: 512
+      nullable: true
+    country_code:
+      type: string
+      maxLength: 2
+      pattern: ^(|[A-Za-z]{2})$
+      nullable: true
+    tax_id:
+      type: string
+      maxLength: 64
+      pattern: ^[A-Za-z0-9 -]*$
+      nullable: true
+    registration_id:
+      type: string
+      maxLength: 64
+      nullable: true
+    legal_address:
+      type: string
+      maxLength: 1024
+      nullable: true
+    roles:
+      type: array
+      items:
+        $ref: '#/CounterpartyRole'
+      uniqueItems: true
+      maxItems: 5
+    contacts:
+      type: array
+      items:
+        $ref: '#/CounterpartyContact'
+      maxItems: 32
+    archived:
+      type: boolean
+  required:
+  - name
+ListCounterpartyHistoryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    before:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+  required:
+  - id
+CounterpartyEvent:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: integer
+      minimum: 1
+      maximum: 9007199254740991
+    action:
+      type: string
+    actor:
+      type: string
+    actor_name:
+      type: string
+    occurred_at:
+      type: string
+      format: date-time
+    revision:
+      type: integer
+      minimum: 1
+    before:
+      $ref: '#/CounterpartySnapshot'
+    after:
+      $ref: '#/CounterpartySnapshot'
+  required:
+  - id
+  - action
+  - actor
+  - occurred_at
+  - after

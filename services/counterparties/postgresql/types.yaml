@@ -59,3 +59,18 @@ types:
       type: text[]
     - name: contacts
       type: jsonb
+  public.counterparty_event_v1:
+    fields:
+    - name: id
+      type: bigint
+    - name: actor
+      type: text
+    - name: action
+      type: text
+    - name: occurred_at
+      type: text
+    - name: document
+      type: jsonb
+    - name: previous
+      type: jsonb
+      nullable: true

@@ -28,7 +28,7 @@ Response View::Handle(
             transaction.Execute(sql::kUpdateCounterparty, organization, Convert(value));
         const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV3>());
         WriteAudit(transaction, organization, identity, "update_counterparty", result.id,
-            request.body, result);
+            request.body, result, std::optional{previous});
         transaction.Commit();
         return Response200{.counterparty = result};
     } catch (const ::counterparties::ApiError& error) {

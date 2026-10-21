@@ -1,1 +1,2 @@
-INSERT INTO business_audit(tenant_id,actor,action,entity_id,document) VALUES($1::uuid,$2,$3,coalesce(($5::jsonb->>'id')::uuid,($4::jsonb->>'transportation_id')::uuid),jsonb_build_object('request',$4::jsonb,'result',$5::jsonb));
+INSERT INTO business_audit (tenant_id, actor, action, entity_id, document)
+VALUES ($1::UUID, $2, $3, $4::UUID, $5::JSONB);

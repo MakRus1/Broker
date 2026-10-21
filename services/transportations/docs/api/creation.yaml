@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Внутреннее создание перевозок
+  version: '1'
+paths:
+  /api/internal/v1/transportations/ensure-created:
+    post:
+      summary: Гарантировать создание перевозок по операции
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/EnsureCreatedRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - operation
+                properties:
+                  operation:
+                    $ref: ../components/schemas/models.yaml#/CreationOperation
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность дат
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Операция с таким ID уже обработана с другим содержимым
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

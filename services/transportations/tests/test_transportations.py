@@ -131,3 +131,53 @@ async def test_duplicate_legs_and_invalid_time(api):
     unchanged = await api.post('/api/v1/transportations/get', {'transportation_id': tid})
     assert unchanged['transportation']['revision'] == 1
     assert unchanged['transportation']['legs'] == []
+
+
+@pytest.mark.parametrize(
+    'departure,arrival,status',
+    [
+        ('2026-10-21T12:00:00+03:00', '2026-10-21T09:30:00Z', 200),
+        ('2026-10-21T09:00:00.500Z', '2026-10-21T09:00:00.100Z', 400),
+        ('2026-10-21t09:00:00z', '2026-10-21T09:00:00Z', 200),
+    ],
+)
+async def test_route_timezones_and_fractions(api, departure, arrival, status):
+    created = await api.post(PATH, command())
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {
+            'transportation_id': created['operation']['transportation_ids'][0],
+            'expected_revision': 1,
+            'legs': [{**leg(), 'planned_departure_at': departure, 'planned_arrival_at': arrival}],
+        },
+        expected=status,
+    )
+
+
+async def test_filtered_pagination_loads_all_legs(api):
+    body = command()
+    created = await api.post(PATH, body)
+    tid = created['operation']['transportation_ids'][0]
+    await api.post(
+        '/api/v1/transportation-routes/set',
+        {
+            'transportation_id': tid,
+            'expected_revision': 1,
+            'legs': [leg('sea')],
+        },
+    )
+    listed = await api.post(
+        '/api/v1/transportations/list',
+        {
+            'shipment_id': body['shipment_id'],
+            'item_id': body['item_id'],
+            'limit': 100,
+        },
+    )
+    assert len(listed['items']) == 5
+    selected = next(value for value in listed['items'] if value['id'] == tid)
+    assert selected['revision'] == 2
+    assert len(selected['legs']) == 1
+    assert selected['legs'][0]['mode'] == 'sea'
+    last = listed['items'][-1]['id']
+    assert (await api.post('/api/v1/transportations/list', {'after': last}))['items'] == []

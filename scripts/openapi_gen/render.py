@@ -81,7 +81,7 @@ def responses(service, op):
                 if not f.optional:
                     text += f'    Validate_{name}_{f.name}(value.{f.name});\n    out[{quote(f.name)}] = value.{f.name};\n'
                 else:
-                    text += f'    if (value.{f.name}) {{ Validate_{name}_{f.name}(*value.{f.name}); out[{quote(f.name)}] = *value.{f.name}; }}\n'
+                    text += f'    if (value.{f.name}.has_value()) {{ Validate_{name}_{f.name}(value.{f.name}.value()); out[{quote(f.name)}] = value.{f.name}.value(); }}\n'
             text += '    return userver::formats::json::ToString(out.ExtractValue());\n}\n'
     types = ', '.join(f'Response{r.status}' for r in op.responses)
     text += f'using Response = std::variant<{types}>;\n}}\n'

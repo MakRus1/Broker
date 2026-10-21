@@ -19,6 +19,24 @@ def specification(schemas):
 
 
 class ModelsTest(unittest.TestCase):
+    def test_optional_access_is_explicit(self):
+        schema = specification({'Settings': {
+            'type': 'object',
+            'additionalProperties': False,
+            'properties': {
+                'enabled': {'type': 'boolean'},
+                'count': {'type': 'integer', 'nullable': True},
+            },
+        }})
+        generated = outputs('example', parse_spec(schema), set())
+        header = generated['include/openapi/models.hpp']
+        # optional<bool>{false} имеет значение: проверка не должна путать его с отсутствием.
+        self.assertIn('value.enabled.has_value()', header)
+        self.assertIn('value.enabled.value()', header)
+        self.assertIn('value.has_value()', header)
+        self.assertIn('value.value()', header)
+        self.assertNotIn('*value.', header)
+
     def test_shared_types_and_dependency_order(self):
         path = ROOT / 'tests/fixtures/contract_service/docs/api/models.yaml'
         operations = load(ROOT / 'tests/fixtures/contract_service')

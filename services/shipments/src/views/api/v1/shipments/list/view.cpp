@@ -1,23 +1,15 @@
 #include <platform/auth/principal.hpp>
 #include <repositories/store.hpp>
-#include <userver/formats/json/value_builder.hpp>
 #include <views/api/v1/shipments/list/view.hpp>
 
 namespace shipments::views::api::v1::shipments::list {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    userver::formats::json::ValueBuilder body{userver::formats::json::Type::kObject};
-    body["limit"] = request.body.limit;
-    if (request.body.after)
-        body["after"] = *request.body.after;
+    const ::shipments::models::ListShipmentsRequest command{
+        .after = request.body.after, .limit = request.body.limit};
     try {
-        const auto result = ::shipments::Store{deps.pg_cluster}.ListShipments(
-            platform::auth::GetPrincipal(context), body.ExtractValue());
-        std::vector<::shipments::models::Shipment> items;
-        for (const auto& item : result["items"])
-            items.push_back(::shipments::models::ParseModelJson(
-                item, std::type_identity<::shipments::models::Shipment>{}));
-        return Response200{.items = std::move(items)};
+        return Response200{.items = ::shipments::Store{deps.pg_cluster}.ListShipments(
+                               platform::auth::GetPrincipal(context), command)};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

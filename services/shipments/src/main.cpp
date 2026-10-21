@@ -20,6 +20,7 @@
 #include <components/transportation_dispatcher.hpp>
 #include <openapi/handlers.hpp>
 #include <platform/auth/component.hpp>
+#include <platform/auth/service_token.hpp>
 
 // SERVICE_INCLUDES_BEGIN
 #include <clients/transportations/client.hpp>
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-shipments");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<shipments::TransportationDispatcher>();
     component_list = shipments::openapi::AppendGeneratedHandlers(component_list);
 

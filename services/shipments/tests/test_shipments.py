@@ -123,3 +123,49 @@ async def test_invalid_quantity(api, quantity):
         },
         expected=400,
     )
+
+
+async def test_list_pagination_and_counters(api):
+    shipment, item = await setup_item(api)
+    await api.post(
+        '/api/v1/transportation-operations/create',
+        {
+            'item_id': item['id'],
+            'expected_revision': 1,
+            'quantity': 2,
+            'idempotency_key': str(uuid4()),
+        },
+        expected=202,
+    )
+    items = await api.post(
+        '/api/v1/shipment-items/list', {'shipment_id': shipment['id'], 'limit': 1}
+    )
+    assert items['items'][0]['pending_quantity'] == 2
+    assert items['items'][0]['available_quantity'] == 3
+    empty = await api.post(
+        '/api/v1/shipment-items/list',
+        {
+            'shipment_id': shipment['id'],
+            'after': items['items'][0]['id'],
+            'limit': 1,
+        },
+    )
+    assert empty['items'] == []
+    await setup_item(api)
+    first = await api.post('/api/v1/shipments/list', {'limit': 1})
+    second = await api.post(
+        '/api/v1/shipments/list', {'limit': 1, 'after': first['items'][0]['id']}
+    )
+    assert len(second['items']) == 1
+    assert second['items'][0]['id'] != first['items'][0]['id']
+
+
+async def test_idempotent_replay_has_one_audit_entry(api, pgsql):
+    body = {'customer_id': str(uuid4()), 'idempotency_key': str(uuid4())}
+    first = await api.post('/api/v1/shipments/create', body, expected=201)
+    assert await api.post('/api/v1/shipments/create', body, expected=201) == first
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            'SELECT count(*) FROM business_audit WHERE entity_id = %s', (first['shipment']['id'],)
+        )
+        assert cursor.fetchone()[0] == 1

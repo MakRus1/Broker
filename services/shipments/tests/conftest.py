@@ -90,14 +90,13 @@ def api(service_client, auth_key):
 
 @pytest.fixture(scope='session')
 def configure_dispatcher(mockserver_info):
-    enabled = True
-
     def patch(config, config_vars):
         components = config['components_manager']['components']
-        components['transportation-dispatcher'].update(
+        components['transportation-dispatcher']['load-enabled'] = True
+        components['service-token-provider'].update(
             {
-                'enabled': enabled,
-                'token-url': mockserver_info.url('/service-token'),
+                'load-enabled': True,
+                'endpoint': mockserver_info.url('/service-token'),
                 'client-id': 'testsuite-dispatcher',
                 'client-secret': 'testsuite-only-secret',
                 'allow-http': True,

@@ -129,10 +129,11 @@ def run(build):
             db = psycopg2.connect(host='127.0.0.1', port=pgport, user='smoke', dbname=service)
             stack.callback(db.close)
             with db.cursor() as cursor:
-                migration = next(
-                    (ROOT / f'services/{service}/postgresql/schemas/db_1').glob('V0001__*.sql')
+                migrations = sorted(
+                    (ROOT / f'services/{service}/postgresql/schemas/db_1').glob('V*.sql')
                 )
-                cursor.execute(migration.read_text())
+                for migration in migrations:
+                    cursor.execute(migration.read_text())
                 cursor.execute(
                     'INSERT INTO tenant_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
                     (issuer, 'author', TENANT, issuer, 'dispatcher', TENANT),

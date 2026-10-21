@@ -1,5 +1,6 @@
 #pragma once
 #include <deps.hpp>
+#include <platform/auth/service_token.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/utils/periodic_task.hpp>
 
@@ -15,8 +16,7 @@ class TransportationDispatcher final : public userver::components::ComponentBase
   private:
     void Step();
     Deps deps_;
-    userver::clients::http::Client& http_;
-    std::string token_url_, client_id_, client_secret_;
+    platform::auth::ServiceTokenProvider& tokens_;
     userver::utils::PeriodicTask task_;
 };
 }  // namespace shipments

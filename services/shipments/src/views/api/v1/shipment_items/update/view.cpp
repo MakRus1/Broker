@@ -1,20 +1,17 @@
 #include <platform/auth/principal.hpp>
 #include <repositories/store.hpp>
-#include <userver/formats/json/value_builder.hpp>
 #include <views/api/v1/shipment_items/update/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::update {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    userver::formats::json::ValueBuilder body{userver::formats::json::Type::kObject};
-    body["item_id"] = request.body.item_id;
-    body["expected_revision"] = request.body.expected_revision;
-    body["planned_quantity"] = request.body.planned_quantity;
+    const ::shipments::models::UpdateItemRequest command{
+        .expected_revision = request.body.expected_revision,
+        .item_id = request.body.item_id,
+        .planned_quantity = request.body.planned_quantity};
     try {
-        const auto result = ::shipments::Store{deps.pg_cluster}.UpdateItem(
-            platform::auth::GetPrincipal(context), body.ExtractValue());
-        return Response200{.item = ::shipments::models::ParseModelJson(
-                               result, std::type_identity<::shipments::models::ShipmentItem>{})};
+        return Response200{.item = ::shipments::Store{deps.pg_cluster}.UpdateItem(
+                               platform::auth::GetPrincipal(context), command)};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

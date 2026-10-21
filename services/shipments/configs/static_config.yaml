@@ -129,11 +129,15 @@ components_manager:
         auth-http-client:
           wait-for-dynamic-configs: false
         transportation-dispatcher:
-            enabled: $dispatcher-enabled
-            token-url: $dispatcher-token-url
+            load-enabled: $dispatcher-enabled
+        service-token-provider:
+            load-enabled: $dispatcher-enabled
+            endpoint: $dispatcher-token-url
             client-id: $dispatcher-client-id
             client-secret: $dispatcher-client-secret
             client-secret#env: SHIPMENTS_DISPATCHER_CLIENT_SECRET
+            timeout-ms: $dispatcher-token-timeout-ms
+            max-retries: $dispatcher-token-max-retries
             allow-http: $auth-allow-http
         server:
             middleware-pipeline-builder: platform-http-pipeline

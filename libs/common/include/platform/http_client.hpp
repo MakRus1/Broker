@@ -158,10 +158,11 @@ class HttpTransport final : public Transport {
             .SetUrlTemplate(input.path_template)
             .SetDestinationMetricName(destination_ + "." + input.path_template);
         userver::clients::http::Headers headers;
-        if (input.bearer_token)
-            headers.emplace(std::string_view{"Authorization"}, "Bearer " + *input.bearer_token);
-        if (input.body) {
-            request.data(*input.body);
+        if (input.bearer_token.has_value())
+            headers.emplace(
+                std::string_view{"Authorization"}, "Bearer " + input.bearer_token.value());
+        if (input.body.has_value()) {
+            request.data(input.body.value());
             headers.emplace(std::string_view{"Content-Type"}, input.content_type);
             if (input.method == "GET") {
                 // Установка тела переключает libcurl на POST; сохраняем явный GET.

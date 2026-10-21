@@ -129,9 +129,9 @@ class LanTest(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('openssl'), 'Нужен OpenSSL')
     def test_adding_web_domain_renews_leaf_without_rotating_ca(self):
-        help_text = subprocess.run(['openssl', 'x509', '-help'], capture_output=True, text=True)
-        if '-checkhost' not in help_text.stdout + help_text.stderr:
-            self.skipTest('Нужен OpenSSL с -checkhost; на macOS добавьте openssl@3/bin в PATH')
+        help_text = subprocess.run(['openssl', 'verify', '-help'], capture_output=True, text=True)
+        if '-verify_hostname' not in help_text.stdout + help_text.stderr:
+            self.skipTest('Нужен OpenSSL с -verify_hostname; на macOS добавьте openssl@3/bin в PATH')
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             ca, cert, key = staging_lan.ensure_tls(folder, ['admin.broker.home.arpa'])

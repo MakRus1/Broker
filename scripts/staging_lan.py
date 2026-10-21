@@ -75,7 +75,7 @@ def ensure_tls(folder, hosts):
     if not renew:
         renew = any(
             subprocess.run(
-                ['openssl', 'x509', '-in', str(cert), '-noout', '-checkhost', host],
+                ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             ).returncode
@@ -135,7 +135,7 @@ def ensure_tls(folder, hosts):
         path.chmod(0o600)
     for host in hosts:
         subprocess.run(
-            ['openssl', 'x509', '-in', str(cert), '-noout', '-checkhost', host], check=True
+            ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)], check=True
         )
     subprocess.run(['openssl', 'verify', '-CAfile', str(ca), str(cert)], check=True)
     return ca, cert, leaf_key

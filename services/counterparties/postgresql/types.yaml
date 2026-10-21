@@ -6,3 +6,56 @@ types:
       type: uuid
     - name: name
       type: text
+  public.counterparty_v2:
+    fields:
+    - name: id
+      type: uuid
+    - name: name
+      type: text
+    - name: revision
+      type: bigint
+    - name: archived
+      type: boolean
+    - name: legal_name
+      type: text
+    - name: country_code
+      type: text
+    - name: tax_id
+      type: text
+    - name: registration_id
+      type: text
+    - name: legal_address
+      type: text
+    - name: roles
+      type: text[]
+    - name: contacts
+      type: jsonb
+  public.counterparty_v3:
+    fields:
+    - name: id
+      type: uuid
+    - name: name
+      type: text
+    - name: revision
+      type: bigint
+    - name: archived
+      type: boolean
+    - name: legal_name
+      type: text
+      nullable: true
+    - name: country_code
+      type: text
+      nullable: true
+    - name: tax_id
+      type: text
+      nullable: true
+    - name: registration_id
+      type: text
+      nullable: true
+    - name: legal_address
+      type: text
+      nullable: true
+    - name: roles
+      type: text[]
+    - name: contacts
+      type: jsonb

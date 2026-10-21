@@ -26,9 +26,50 @@ type Props = {
   customers: Counterparty[];
   onError: (error: unknown) => void;
 };
-export function TransportationPage({ id, editing, session, customers, onError }: Props) {
+export function TransportationPage({
+  id,
+  editing,
+  session,
+  customers: suppliedCustomers,
+  onError,
+}: Props) {
   const [transportation, setTransportation] = useState<Transportation>();
   const [shipment, setShipment] = useState<Shipment>();
+  const [linkedCustomers, setLinkedCustomers] = useState<Counterparty[]>([]);
+  const customers = [
+    ...suppliedCustomers,
+    ...linkedCustomers.filter((item) => !suppliedCustomers.some((value) => value.id === item.id)),
+  ];
+  useEffect(() => {
+    if (!session.permissions.includes('counterparties.read')) return;
+    const ids = [
+      ...new Set([
+        ...(shipment ? [shipment.customer_id] : []),
+        ...(transportation?.route_segments.flatMap((item) =>
+          item.contractor_id ? [item.contractor_id] : [],
+        ) ?? []),
+      ]),
+    ].filter((id) => !suppliedCustomers.some((item) => item.id === id));
+    const controller = new AbortController();
+    void Promise.allSettled(
+      ids.map((id) =>
+        request<{ counterparty: Counterparty }>(
+          '/api/v1/counterparties/get',
+          session,
+          { id },
+          controller.signal,
+        ),
+      ),
+    ).then((results) => {
+      if (!controller.signal.aborted)
+        setLinkedCustomers(
+          results.flatMap((result) =>
+            result.status === 'fulfilled' ? [result.value.counterparty] : [],
+          ),
+        );
+    });
+    return () => controller.abort();
+  }, [session, shipment, transportation, suppliedCustomers]);
   useEffect(() => {
     if (transportation) document.title = `${transportation.number} · Broker`;
   }, [transportation?.number]);

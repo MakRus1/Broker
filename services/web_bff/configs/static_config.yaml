@@ -25,8 +25,26 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-get:
+            path: /api/v1/counterparties/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparties-list:
             path: /api/v1/counterparties/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-set_archived:
+            path: /api/v1/counterparties/set-archived
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-update:
+            path: /api/v1/counterparties/update
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

@@ -17,3 +17,11 @@ make test-debug
 Инфраструктура и библиотеки описываются в service.yaml; изменения применяются через make gen.
 Структура каталогов: docs/service-layout.md в корне монорепозитория.
 Правила manifest и границы генерации: docs/service-manifest.md.
+
+
+Справочник юридических лиц изолирован по организации. API поддерживает create, get,
+list (поиск, роли, архив), update и set-archived. Все записи требуют
+counterparties.write, чтение — counterparties.read. Для update/set-archived нужна
+актуальная expected_revision. Совпадение страны и нормализованного налогового номера
+возвращает 409 duplicate_requisites; архивные записи тоже участвуют в проверке.
+Роли не ограничивают участие компании в конкретной поставке или перевозке.

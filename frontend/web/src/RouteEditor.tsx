@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, request, modes, type Session, type Transportation } from './api';
 import { useDiscardConfirmation } from './components';
-import type { Counterparty } from './CustomerSelect';
+import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import {
   localDateTime,
   routeSegment,
@@ -238,29 +238,18 @@ export function RouteEditor({
                     ))}
                   </select>
                 </label>
-                <label>
-                  Подрядчик
-                  <select
-                    value={route_segment.contractor_id || ''}
-                    onChange={(event) =>
-                      update(index, {
-                        ...route_segment,
-                        contractor_id: event.target.value || undefined,
-                      })
-                    }
-                  >
-                    <option value="">Не выбран</option>
-                    {route_segment.contractor_id &&
-                      !customers.some((item) => item.id === route_segment.contractor_id) && (
-                        <option value={route_segment.contractor_id}>Недоступный контрагент</option>
-                      )}
-                    {customers.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <CustomerSelect
+                  label="Подрядчик"
+                  items={customers}
+                  session={session}
+                  disabled={busy}
+                  value={route_segment.contractor_id ?? ''}
+                  onCreated={() => {}}
+                  onChange={(id) =>
+                    update(index, { ...route_segment, contractor_id: id || undefined })
+                  }
+                />
+
                 {(['origin', 'destination'] as const).map((point) => (
                   <div key={point} className="point-fields">
                     <label>

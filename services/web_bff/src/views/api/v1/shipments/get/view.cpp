@@ -7,10 +7,9 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::shipments::ApiV1ShipmentsGet;
-    const auto body =
-        api::ParseBody(userver::formats::json::ValueBuilder(request.body).ExtractValue());
+    const auto body = Convert(request.body);
     const auto result =
         deps.shipments.ApiV1ShipmentsGet(api::Request{.body = body}, session.Access);
-    return Response200{.shipment = Convert<models::Shipment>(result.shipment)};
+    return Response200{.shipment = Convert(result.shipment)};
 }
 }  // namespace web_bff::views::api::v1::shipments::get

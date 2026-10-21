@@ -93,7 +93,8 @@ async def test_typed_proxy(browser, mockserver, path, body, result, status):
     def upstream(request):
         assert request.headers['Authorization'].startswith('Bearer ')
         assert 'broker_web' not in request.headers.get('Cookie', '')
-        assert request.json.get('idempotency_key') == body.get('idempotency_key')
+        for key, value in body.items():
+            assert request.json[key] == value
         return mockserver.make_response(status=status, json=result)
 
     response = await browser.post('/api/v1/' + path, body)
@@ -127,3 +128,50 @@ async def test_admin_cookie_does_not_authenticate_web(service_client, browser):
         cookies={'broker_web': ''},
     )
     assert response.status == 401
+
+
+@pytest.mark.parametrize(
+    'path,limit', [('shipments', 50), ('transportations', 50), ('counterparties', 100)]
+)
+async def test_converted_request_defaults(browser, mockserver, path, limit):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/' + path + '/list')
+    def upstream(request):
+        assert request.json == {'limit': limit}
+        return {'items': []}
+
+    response = await browser.post('/api/v1/' + path + '/list', {})
+    assert response.status == 200, response.text
+    assert upstream.times_called == 1
+
+
+@pytest.mark.parametrize('mode', ['road', 'rail', 'sea'])
+@pytest.mark.parametrize('ownership', ['SOC', 'COC'])
+async def test_converted_transportation_with_route(browser, mockserver, mode, ownership):
+    await browser.sign_in()
+    transportation = {
+        **TRANSPORTATION,
+        'container_ownership': ownership,
+        'legs': [
+            {
+                'id': str(uuid4()),
+                'mode': mode,
+                'origin': {'name': 'Шанхай', 'country_code': 'CN'},
+                'destination': {'name': 'Владивосток', 'country_code': 'RU'},
+                'contractor_id': str(uuid4()),
+                'planned_departure_at': '2026-10-21T10:00:00Z',
+                'planned_arrival_at': '2026-10-23T10:00:00Z',
+                'actual_departure_at': '2026-10-21T11:00:00Z',
+            }
+        ],
+    }
+
+    @mockserver.json_handler('/api/v1/transportations/get')
+    def upstream(request):
+        assert request.json == {'transportation_id': ID}
+        return {'transportation': transportation}
+
+    response = await browser.post('/api/v1/transportations/get', {'transportation_id': ID})
+    assert response.status == 200, response.text
+    assert response.json() == {'transportation': transportation}

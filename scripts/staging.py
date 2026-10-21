@@ -124,14 +124,6 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
     ns = ['-n', plan['namespace']]
     run(*ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s')
     run(*ns, 'rollout', 'status', 'deployment/keycloak', '--timeout=300s')
-    if infrastructure:
-        from organization_identity import configure_cluster
-
-        configure_cluster(
-            context,
-            plan['namespace'],
-            (directory / 'organizations-manager-secret').read_text().strip(),
-        )
     if infrastructure and plan.get('lan'):
         from staging_lan import NAMES, sync_keycloak
 
@@ -146,6 +138,14 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         sync_keycloak(context, plan['namespace'], plan['admin_origin'], plan['web_origin'])
         for name in NAMES:
             run(*ns, 'rollout', 'status', f'deployment/{name}', '--timeout=300s')
+    if infrastructure:
+        from organization_identity import configure_cluster
+
+        configure_cluster(
+            context,
+            plan['namespace'],
+            (directory / 'organizations-manager-secret').read_text().strip(),
+        )
     if paths['migrations']:
         run(
             'apply',

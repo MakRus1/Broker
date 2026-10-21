@@ -51,29 +51,30 @@ export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
     legal_address: value?.legal_address ?? '',
     roles: [...(value?.roles ?? [])],
     contacts: (value?.contacts ?? []).map((contact) => ({
-      name: contact.name,
+      name: contact.name.trim(),
       position: contact.position ?? '',
       email: contact.email ?? '',
       phone: contact.phone ?? '',
     })),
   };
 }
-// Форма отвечает только за представление пустого поля; правила реквизитов — на сервере.
+// UI помогает вводить реквизиты; сервис независимо применяет те же правила.
 function nullableField(value: string): string | null {
-  return value.trim() === '' ? null : value;
+  return value.trim() || null;
 }
 export function counterpartyPayload(
   value: CounterpartyDetails,
 ): Omit<Counterparty, 'id' | 'revision' | 'archived'> {
   return {
     ...value,
+    name: value.name.trim(),
     legal_name: nullableField(value.legal_name),
-    country_code: nullableField(value.country_code),
+    country_code: nullableField(value.country_code)?.toUpperCase() ?? null,
     tax_id: nullableField(value.tax_id),
     registration_id: nullableField(value.registration_id),
     legal_address: nullableField(value.legal_address),
     contacts: value.contacts.map((contact) => ({
-      name: contact.name,
+      name: contact.name.trim(),
       position: nullableField(contact.position),
       email: nullableField(contact.email),
       phone: nullableField(contact.phone),

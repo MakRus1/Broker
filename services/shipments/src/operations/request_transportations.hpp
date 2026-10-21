@@ -4,6 +4,6 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace shipments::operations {
-models::CreationOperation CreateTransportations(const userver::storages::postgres::ClusterPtr&,
+models::CreationOperation RequestTransportations(const userver::storages::postgres::ClusterPtr&,
     const platform::auth::Principal&, const models::CreateOperationRequest&);
 }  // namespace shipments::operations

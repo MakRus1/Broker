@@ -1,4 +1,7 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
+#include <helpers/idempotency.hpp>
+#include <helpers/revision.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipment_items/add/view.hpp>
 
@@ -8,29 +11,32 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal};
-        const auto replay = FindReplay<models::ShipmentItem>(session, "add_item", request.body);
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        const auto tenant = ResolveTenant(transaction, principal);
+        const auto replay =
+            FindReplay<models::ShipmentItem>(transaction, tenant, "add_item", request.body);
         if (replay.has_value()) {
-            session.Tx.Commit();
+            transaction.Commit();
             return Response201{.item = replay.value()};
         }
         const auto shipment =
-            session.Tx.Execute(sql::kLockShipment, session.Tenant, request.body.shipment_id);
+            transaction.Execute(sql::kLockShipment, tenant, request.body.shipment_id);
         if (shipment.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         CheckRevision(
             shipment.AsSingleRow<pgtypes::ShipmentV1>().Revision, request.body.expected_revision);
-        const auto row = session.Tx
-                             .Execute(sql::kAddItem, session.Tenant, request.body.shipment_id,
+        const auto row = transaction
+                             .Execute(sql::kAddItem, tenant, request.body.shipment_id,
                                  request.body.container_type_code,
                                  models::EnumValue(request.body.container_ownership),
                                  request.body.planned_quantity)
                              .AsSingleRow<pgtypes::ShipmentItemV1>();
-        session.Tx.Execute(sql::kBumpShipmentRevision, session.Tenant, request.body.shipment_id);
-        const auto result = ToModel(row, pgtypes::QuantityTotalsV1{0, 0});
-        SaveReplay(session, "add_item", request.body, result);
-        session.Audit("add_item", result.id, request.body, result);
-        session.Tx.Commit();
+        transaction.Execute(sql::kBumpShipmentRevision, tenant, request.body.shipment_id);
+        const auto result = Convert(row, pgtypes::QuantityTotalsV1{0, 0});
+        SaveReplay(transaction, tenant, "add_item", request.body, result);
+        WriteAudit(transaction, tenant, principal, "add_item", result.id, request.body, result);
+        transaction.Commit();
         return Response201{.item = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

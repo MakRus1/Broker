@@ -1,4 +1,4 @@
-#include <helpers/rows.hpp>
+#include <helpers/transportations.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/transportations/get/view.hpp>
 
@@ -8,9 +8,11 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
-        const auto result = ReadTransportation(session, request.body.transportation_id, false);
-        session.Tx.Commit();
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+        const auto tenant = ResolveTenant(transaction, principal);
+        const auto result =
+            ReadTransportation(transaction, tenant, request.body.transportation_id, false);
+        transaction.Commit();
         return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {

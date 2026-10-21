@@ -169,3 +169,57 @@ async def test_idempotent_replay_has_one_audit_entry(api, pgsql):
             'SELECT count(*) FROM business_audit WHERE entity_id = %s', (first['shipment']['id'],)
         )
         assert cursor.fetchone()[0] == 1
+
+
+async def test_audit_failure_rolls_back_reservation(api, pgsql, service_client, auth_key):
+    _, item = await setup_item(api)
+    body = {
+        'item_id': item['id'],
+        'expected_revision': 1,
+        'quantity': 3,
+        'idempotency_key': str(uuid4()),
+    }
+    database = pgsql['db_1']
+    # Ошибка последнего INSERT должна откатить outbox, идемпотентность и освободить блокировки.
+    with database.cursor() as cursor:
+        cursor.execute("""
+            ALTER TABLE business_audit ADD CONSTRAINT test_reject_operation_audit
+            CHECK (action <> 'create_operation') NOT VALID
+        """)
+    try:
+        roles = ['shipments.write']
+        token = auth_key.token(
+            'author',
+            roles=roles,
+            claims={
+                'aud': 'broker-logistics',
+                'resource_access': {'broker-logistics': {'roles': roles}},
+            },
+        )
+        response = await asyncio.wait_for(
+            service_client.post(
+                '/api/v1/transportation-operations/create',
+                json=body,
+                headers={'Authorization': 'Bearer ' + token},
+            ),
+            timeout=5,
+        )
+        assert response.status == 500
+        with database.cursor() as cursor:
+            cursor.execute(
+                'SELECT count(*) FROM creation_operations WHERE item_id = %s::UUID', (item['id'],)
+            )
+            assert cursor.fetchone()[0] == 0
+            cursor.execute(
+                'SELECT count(*) FROM idempotent_results WHERE key = %s', (body['idempotency_key'],)
+            )
+            assert cursor.fetchone()[0] == 0
+    finally:
+        with database.cursor() as cursor:
+            cursor.execute('ALTER TABLE business_audit DROP CONSTRAINT test_reject_operation_audit')
+    # Тот же ключ и позиция доступны сразу после неудачной транзакции.
+    result = await asyncio.wait_for(
+        api.post('/api/v1/transportation-operations/create', body, expected=202),
+        timeout=5,
+    )
+    assert result['operation']['quantity'] == 3

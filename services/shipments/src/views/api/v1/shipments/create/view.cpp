@@ -1,4 +1,6 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
+#include <helpers/idempotency.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipments/create/view.hpp>
 
@@ -8,20 +10,24 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal};
-        const auto replay = FindReplay<models::Shipment>(session, "create_shipment", request.body);
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        const auto tenant = ResolveTenant(transaction, principal);
+        const auto replay =
+            FindReplay<models::Shipment>(transaction, tenant, "create_shipment", request.body);
         if (replay.has_value()) {
-            session.Tx.Commit();
+            transaction.Commit();
             return Response201{.shipment = replay.value()};
         }
-        const auto row = session.Tx
-                             .Execute(sql::kCreateShipment, session.Tenant,
-                                 request.body.customer_id, request.body.reference.value_or(""))
+        const auto row = transaction
+                             .Execute(sql::kCreateShipment, tenant, request.body.customer_id,
+                                 request.body.reference.value_or(""))
                              .AsSingleRow<pgtypes::ShipmentV1>();
-        const auto result = ToModel(row);
-        SaveReplay(session, "create_shipment", request.body, result);
-        session.Audit("create_shipment", result.id, request.body, result);
-        session.Tx.Commit();
+        const auto result = Convert(row);
+        SaveReplay(transaction, tenant, "create_shipment", request.body, result);
+        WriteAudit(
+            transaction, tenant, principal, "create_shipment", result.id, request.body, result);
+        transaction.Commit();
         return Response201{.shipment = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

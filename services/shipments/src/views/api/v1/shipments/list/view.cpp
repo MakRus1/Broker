@@ -1,4 +1,5 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipments/list/view.hpp>
 
@@ -8,13 +9,14 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
-        const auto rows = session.Tx.Execute(
-            sql::kListShipments, session.Tenant, request.body.after, request.body.limit);
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+        const auto tenant = ResolveTenant(transaction, principal);
+        const auto rows = transaction.Execute(
+            sql::kListShipments, tenant, request.body.after, request.body.limit);
         std::vector<models::Shipment> result;
         for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV1>())
-            result.push_back(ToModel(row));
-        session.Tx.Commit();
+            result.push_back(Convert(row));
+        transaction.Commit();
         return Response200{.items = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

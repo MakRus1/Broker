@@ -31,9 +31,6 @@ void TransportationDispatcher::Step() {
     if (rows.IsEmpty())
         return;
     const auto delivery = rows.AsSingleRow<pgtypes::DeliveryV1>();
-    const auto tenant = boost::uuids::to_string(delivery.Tenant);
-    const auto id = boost::uuids::to_string(delivery.Id);
-    const auto lease = boost::uuids::to_string(delivery.Lease);
     try {
         namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
         const auto request = api::Request{.body = api::ParseBody(delivery.Payload)};
@@ -41,8 +38,8 @@ void TransportationDispatcher::Step() {
             request, tokens_.GetAccessToken());
         const auto& value = result.operation;
         // Ответ обязан относиться к той же операции и количеству, иначе резерв сохраняется.
-        if (value.id != id || value.item_id != request.body.item_id ||
-            value.quantity != request.body.quantity)
+        if (boost::uuids::string_generator{}(value.id) != delivery.Id ||
+            value.item_id != request.body.item_id || value.quantity != request.body.quantity)
             throw std::runtime_error("Несогласованный результат операции");
         const auto status = clients::transportations::models::EnumValue(value.status);
         if (status != "succeeded" && status != "rejected")
@@ -55,20 +52,19 @@ void TransportationDispatcher::Step() {
         if (unique_ids.size() != value.transportation_ids.size())
             throw std::runtime_error("Повторяющиеся ID в результате операции");
         const auto document = json::ValueBuilder(value).ExtractValue();
-        const pgtypes::CreationOperationV1 completed{
-            .Id = boost::uuids::string_generator{}(value.id),
+        const pgtypes::CreationOperationV1 completed{.Id = delivery.Id,
             .ItemId = boost::uuids::string_generator{}(value.item_id),
             .Quantity = value.quantity,
             .Status = status,
             .Result = document};
-        deps_.pg_cluster->Execute(
-            pg::ClusterHostType::kMaster, sql::kCompleteOperation, tenant, completed, lease);
+        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kCompleteOperation,
+            delivery.Tenant, completed, delivery.Lease);
     } catch (const std::exception&) {
         // Даже 4xx не является подтвержденным доменным отказом: резерв не освобождается по
         // таймауту.
         LOG_WARNING() << "Transportation delivery deferred";
-        deps_.pg_cluster->Execute(
-            pg::ClusterHostType::kMaster, sql::kRetryOperation, tenant, id, lease);
+        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kRetryOperation,
+            delivery.Tenant, delivery.Id, delivery.Lease);
     }
 }
 

@@ -1,4 +1,5 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipments/get/view.hpp>
 
@@ -8,13 +9,13 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
-        const auto rows =
-            session.Tx.Execute(sql::kGetShipment, session.Tenant, request.body.shipment_id);
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+        const auto tenant = ResolveTenant(transaction, principal);
+        const auto rows = transaction.Execute(sql::kGetShipment, tenant, request.body.shipment_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto result = ToModel(rows.AsSingleRow<pgtypes::ShipmentV1>());
-        session.Tx.Commit();
+        const auto result = Convert(rows.AsSingleRow<pgtypes::ShipmentV1>());
+        transaction.Commit();
         return Response200{.shipment = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

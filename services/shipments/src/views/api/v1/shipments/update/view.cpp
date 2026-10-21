@@ -1,4 +1,6 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
+#include <helpers/revision.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipments/update/view.hpp>
 
@@ -8,20 +10,23 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal};
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        const auto tenant = ResolveTenant(transaction, principal);
         const auto current =
-            session.Tx.Execute(sql::kLockShipment, session.Tenant, request.body.shipment_id);
+            transaction.Execute(sql::kLockShipment, tenant, request.body.shipment_id);
         if (current.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         CheckRevision(
             current.AsSingleRow<pgtypes::ShipmentV1>().Revision, request.body.expected_revision);
         const auto result =
-            ToModel(session.Tx
-                        .Execute(sql::kUpdateShipment, session.Tenant, request.body.shipment_id,
+            Convert(transaction
+                        .Execute(sql::kUpdateShipment, tenant, request.body.shipment_id,
                             request.body.reference, request.body.expected_revision)
                         .AsSingleRow<pgtypes::ShipmentV1>());
-        session.Audit("update_shipment", result.id, request.body, result);
-        session.Tx.Commit();
+        WriteAudit(
+            transaction, tenant, principal, "update_shipment", result.id, request.body, result);
+        transaction.Commit();
         return Response200{.shipment = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

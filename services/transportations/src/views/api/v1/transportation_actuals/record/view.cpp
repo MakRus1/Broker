@@ -1,5 +1,6 @@
 #include <helpers/actuals.hpp>
-#include <helpers/rows.hpp>
+#include <helpers/revision.hpp>
+#include <helpers/transportations.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/transportation_actuals/record/view.hpp>
 
@@ -9,13 +10,16 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal};
-        auto result = ReadTransportation(session, request.body.transportation_id, true);
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        const auto tenant = ResolveTenant(transaction, principal);
+        auto result = ReadTransportation(transaction, tenant, request.body.transportation_id, true);
         CheckRevision(result.revision, request.body.expected_revision);
-        UpdateActual(session, result, request.body.leg_id, request.body.event_kind,
+        UpdateActual(transaction, tenant, result, request.body.leg_id, request.body.event_kind,
             request.body.occurred_at, ActualChange::Record);
-        session.Audit("record_actual", result.id, request.body, result);
-        session.Tx.Commit();
+        WriteAudit(
+            transaction, tenant, principal, "record_actual", result.id, request.body, result);
+        transaction.Commit();
         return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {

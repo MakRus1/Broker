@@ -2,11 +2,12 @@
 #include <boost/uuid/string_generator.hpp>
 #include <domain/route.hpp>
 #include <helpers/actuals.hpp>
+#include <helpers/json.hpp>
 
 namespace transportations::helpers {
-void UpdateActual(Session& session, models::Transportation& transportation,
-    const std::string& leg_id, models::EventKind event, const std::string& occurred_at,
-    ActualChange change) {
+void UpdateActual(pg::Transaction& transaction, const std::string& tenant,
+    models::Transportation& transportation, const std::string& leg_id, models::EventKind event,
+    const std::string& occurred_at, ActualChange change) {
     const auto requested = boost::uuids::string_generator{}(leg_id);
     const auto found = std::find_if(transportation.legs.begin(), transportation.legs.end(),
         [&](const auto& leg) { return boost::uuids::string_generator{}(leg.id) == requested; });
@@ -21,9 +22,8 @@ void UpdateActual(Session& session, models::Transportation& transportation,
                        : "Факт уже записан; используйте команду исправления"};
     value = occurred_at;
     domain::ValidateActualTimes(*found);
-    session.Tx.Execute(
-        sql::kUpdateLeg, session.Tenant, transportation.id, leg_id, Document(*found));
-    session.Tx.Execute(sql::kBumpTransportationRevision, session.Tenant, transportation.id);
+    transaction.Execute(sql::kUpdateLeg, tenant, transportation.id, leg_id, Document(*found));
+    transaction.Execute(sql::kBumpTransportationRevision, tenant, transportation.id);
     ++transportation.revision;
 }
 }  // namespace transportations::helpers

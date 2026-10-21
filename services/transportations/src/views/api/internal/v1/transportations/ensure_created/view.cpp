@@ -1,4 +1,4 @@
-#include <helpers/rows.hpp>
+#include <helpers/transportations.hpp>
 #include <platform/auth/principal.hpp>
 #include <views/api/internal/v1/transportations/ensure_created/view.hpp>
 
@@ -8,17 +8,18 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal, request.body.tenant_id};
-        session.Tx.Execute(sql::kLockCommand, session.Tenant, request.body.operation_id);
-        const auto rows =
-            session.Tx.Execute(sql::kFindCommand, session.Tenant, request.body.operation_id);
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        const auto tenant = ResolveTenant(transaction, principal, request.body.tenant_id);
+        transaction.Execute(sql::kLockCommand, tenant, request.body.operation_id);
+        const auto rows = transaction.Execute(sql::kFindCommand, tenant, request.body.operation_id);
         if (!rows.IsEmpty()) {
             const auto saved = rows.AsSingleRow<pgtypes::SavedCommandV1>();
             if (saved.Payload != Document(request.body))
                 throw ApiError{409, "protocol_conflict", "Содержимое операции изменено"};
             const auto result = models::ParseModelJson(
                 saved.Result, std::type_identity<models::CreationOperation>{});
-            session.Tx.Commit();
+            transaction.Commit();
             return Response200{.operation = result};
         }
 
@@ -27,22 +28,23 @@ Response View::Handle(
         result.item_id = request.body.item_id;
         result.quantity = request.body.quantity;
         result.status = models::OperationStatus::Pending;
-        session.Tx.Execute(sql::kInsertCommand, session.Tenant, request.body.operation_id,
+        transaction.Execute(sql::kInsertCommand, tenant, request.body.operation_id,
             Document(request.body), Document(result));
         for (std::int64_t ordinal = 1; ordinal <= request.body.quantity; ++ordinal) {
             result.transportation_ids.push_back(
-                session.Tx
-                    .Execute(sql::kCreateTransportation, session.Tenant, request.body.shipment_id,
+                transaction
+                    .Execute(sql::kCreateTransportation, tenant, request.body.shipment_id,
                         request.body.item_id, request.body.operation_id, ordinal,
                         request.body.container_type_code,
                         models::EnumValue(request.body.container_ownership))
                     .AsSingleRow<std::string>());
         }
         result.status = models::OperationStatus::Succeeded;
-        session.Tx.Execute(
-            sql::kCompleteCommand, session.Tenant, request.body.operation_id, Document(result));
-        session.Audit("ensure_created", result.id, request.body, result);
-        session.Tx.Commit();
+        transaction.Execute(
+            sql::kCompleteCommand, tenant, request.body.operation_id, Document(result));
+        WriteAudit(
+            transaction, tenant, principal, "ensure_created", result.id, request.body, result);
+        transaction.Commit();
         return Response200{.operation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {

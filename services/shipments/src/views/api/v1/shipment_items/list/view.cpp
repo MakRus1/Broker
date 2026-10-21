@@ -1,4 +1,5 @@
-#include <helpers/rows.hpp>
+#include <helpers/converters.hpp>
+#include <helpers/database.hpp>
 #include <map>
 #include <platform/auth/principal.hpp>
 #include <views/api/v1/shipment_items/list/view.hpp>
@@ -9,12 +10,12 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     try {
         const auto& principal = platform::auth::GetPrincipal(context);
-        Session session{deps.pg_cluster, principal, std::nullopt, kReadSnapshot};
-        if (session.Tx.Execute(sql::kGetShipment, session.Tenant, request.body.shipment_id)
-                .IsEmpty())
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+        const auto tenant = ResolveTenant(transaction, principal);
+        if (transaction.Execute(sql::kGetShipment, tenant, request.body.shipment_id).IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto rows = session.Tx
-                              .Execute(sql::kListItems, session.Tenant, request.body.shipment_id,
+        const auto rows = transaction
+                              .Execute(sql::kListItems, tenant, request.body.shipment_id,
                                   request.body.after, request.body.limit)
                               .AsContainer<std::vector<pgtypes::ShipmentItemV1>>();
         std::vector<std::string> ids;
@@ -22,7 +23,7 @@ Response View::Handle(
             ids.push_back(boost::uuids::to_string(row.Id));
         std::map<std::string, pgtypes::QuantityTotalsV1> totals;
         if (!ids.empty()) {
-            const auto counts = session.Tx.Execute(sql::kListOperationTotals, session.Tenant, ids);
+            const auto counts = transaction.Execute(sql::kListOperationTotals, tenant, ids);
             for (const auto& count : counts.AsSetOf<pgtypes::ItemTotalsV1>())
                 totals.emplace(boost::uuids::to_string(count.ItemId),
                     pgtypes::QuantityTotalsV1{count.Created, count.Pending});
@@ -30,10 +31,10 @@ Response View::Handle(
         std::vector<models::ShipmentItem> result;
         for (const auto& row : rows) {
             const auto found = totals.find(boost::uuids::to_string(row.Id));
-            result.push_back(ToModel(
+            result.push_back(Convert(
                 row, found == totals.end() ? pgtypes::QuantityTotalsV1{0, 0} : found->second));
         }
-        session.Tx.Commit();
+        transaction.Commit();
         return Response200{.items = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

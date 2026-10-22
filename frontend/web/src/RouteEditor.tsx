@@ -251,7 +251,6 @@ export function RouteEditor({
                     session={session}
                     disabled={busy}
                     value={route_segment.contractor_id ?? ''}
-                    onCreated={() => {}}
                     onChange={(id) =>
                       update(index, { ...route_segment, contractor_id: id || undefined })
                     }

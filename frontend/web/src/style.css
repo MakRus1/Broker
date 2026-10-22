@@ -1169,30 +1169,13 @@ button.danger:hover:not(:disabled) {
 .route-contractor-field {
   grid-column: 1 / -1;
 }
-.route-contractor-field .counterparty-picker {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 16px 20px;
-}
-.route-contractor-field .counterparty-picker > .hint,
-.route-contractor-field .counterparty-picker > .error {
-  grid-column: 1 / -1;
-}
-.route-contractor-field .counterparty-picker > button {
-  justify-self: start;
-}
+
 select {
   appearance: none;
   padding-right: 38px;
   background-image: url('/assets/icons/chevron-down.svg');
   background-repeat: no-repeat;
   background-position: right 12px center;
-}
-@media (max-width: 650px) {
-  .route-contractor-field .counterparty-picker {
-    grid-template-columns: 1fr;
-  }
 }
 
 .registry-tax-field {
@@ -1213,48 +1196,6 @@ select {
 .registry-lookup > [role='alert'] {
   margin-top: 12px;
 }
-.registry-preview {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #dce4ef;
-  border-radius: 10px;
-}
-.registry-preview dl {
-  display: grid;
-  gap: 8px;
-}
-.registry-preview dl > div {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr);
-  gap: 12px;
-  padding: 10px;
-  border-radius: 6px;
-}
-.registry-preview dt {
-  color: #64738a;
-}
-.registry-preview dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.registry-preview dd small {
-  display: block;
-  color: #64738a;
-  margin-top: 6px;
-}
-.registry-field-changed {
-  background: #edf3ff;
-}
-.registry-warning {
-  color: #76561b;
-}
-@media (max-width: 650px) {
-  .registry-preview dl > div {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-}
-
 .transport-options {
   display: inline-flex;
   justify-self: start;
@@ -1276,4 +1217,159 @@ select {
   color: #255bcc;
   border-color: #d8e0eb;
   box-shadow: 0 1px 3px #15263c10;
+}
+
+/* Элементы управления не выделяются при быстрых повторных нажатиях. */
+button,
+nav,
+.sidebar-heading,
+.nav-label,
+.environment,
+.transport-options {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.requisites-wide-field {
+  grid-column: 1 / -1;
+}
+.requisites-wide-field textarea {
+  min-height: 76px;
+  line-height: 1.5;
+}
+.registry-search-button {
+  color: #255bcc;
+  background: #edf3ff;
+  border-color: #c8d8f5;
+  font-size: 12px;
+  font-weight: 600;
+}
+.counterparty-picker {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+.counterparty-combobox {
+  position: relative;
+}
+.counterparty-combobox input {
+  padding-right: 44px;
+}
+.combobox-toggle {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  bottom: 3px;
+  width: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64738a;
+}
+.counterparty-options {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 70px;
+  z-index: 40;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #d8e0eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #15263c20;
+  padding: 5px;
+}
+.counterparty-options > button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 12px;
+}
+.counterparty-options > button:hover,
+.counterparty-options > button.active,
+.counterparty-options > button[aria-selected='true'] {
+  background: #edf3ff;
+}
+.counterparty-options small {
+  color: #64738a;
+}
+.counterparty-options p {
+  padding: 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.counterparty-selected {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 12px;
+  color: #64738a;
+}
+.counterparty-selected button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #255bcc;
+  font-size: 12px;
+}
+@media (max-width: 450px) {
+  .registry-tax-field {
+    flex-wrap: wrap;
+  }
+  .registry-tax-field label {
+    max-width: none;
+    flex-basis: 100%;
+  }
+}
+
+.creation-page form.counterparty-form {
+  max-width: none;
+}
+
+.app-select {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  text-align: left;
+  background: white;
+}
+.select-trigger svg {
+  flex-shrink: 0;
+  color: #64738a;
+}
+.combobox-toggle {
+  display: grid;
+  place-items: center;
+}
+.app-select .counterparty-options {
+  top: 100%;
+  margin-top: 5px;
+}
+
+.registry-tax-field input,
+.registry-tax-field .registry-search-button {
+  height: 42px;
+  box-sizing: border-box;
+}
+.registry-tax-field .registry-search-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

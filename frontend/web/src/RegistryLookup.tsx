@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { request, type Session } from './api';
 import type { CounterpartyDetails } from './counterparties';
-import {
-  isInn,
-  registryFields,
-  registryRequisites,
-  registryStatus,
-  type RegistryParty,
-  type RegistryRequisites,
-} from './registry';
+import { isInn, registryRequisites, type RegistryParty, type RegistryRequisites } from './registry';
 
 export function RegistryLookup({
   session,
@@ -23,7 +16,6 @@ export function RegistryLookup({
 }) {
   const taxId = draft.tax_id.trim();
   const country = draft.country_code.trim().toUpperCase();
-  const [found, setFound] = useState<RegistryParty>();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const [message, setMessage] = useState('');
@@ -32,7 +24,6 @@ export function RegistryLookup({
   useEffect(() => {
     ++requestNumber.current;
     pending.current?.abort();
-    setFound(undefined);
     setFailure('');
     setMessage('');
     setBusy(false);
@@ -53,7 +44,6 @@ export function RegistryLookup({
     setBusy(true);
     setFailure('');
     setMessage('');
-    setFound(undefined);
     try {
       const result = await request<{ items: RegistryParty[] }>(
         '/api/v1/counterparties/lookup',
@@ -62,7 +52,10 @@ export function RegistryLookup({
         controller.signal,
       );
       if (number !== requestNumber.current) return;
-      setFound(result.items[0]);
+      if (result.items[0]) {
+        onApply(registryRequisites(result.items[0]));
+        setMessage('Реквизиты подставлены из DaData. Проверьте данные перед сохранением.');
+      }
       if (!result.items.length)
         setMessage('Организация или ИП с таким ИНН не найдены. Можно заполнить реквизиты вручную.');
     } catch (error) {
@@ -72,13 +65,6 @@ export function RegistryLookup({
       if (number === requestNumber.current) setBusy(false);
     }
   }
-  const values = found ? registryRequisites(found) : undefined;
-  const changed = values
-    ? (Object.keys(registryFields) as (keyof RegistryRequisites)[]).filter(
-        (key) => (draft[key] ?? '').trim() !== values[key],
-      )
-    : [];
-  const replacing = changed.some((key) => Boolean((draft[key] ?? '').trim()));
   return (
     <section className="registry-lookup" aria-label="Поиск реквизитов по ИНН">
       {children(
@@ -89,7 +75,7 @@ export function RegistryLookup({
           disabled={busy || !taxId || (!!country && country !== 'RU')}
           onClick={() => void lookup()}
         >
-          {busy ? 'Ищем…' : 'Найти реквизиты'}
+          {busy ? 'Ищем…' : 'Заполнить по ИНН'}
         </button>,
       )}
       {!!country && country !== 'RU' && (
@@ -100,51 +86,6 @@ export function RegistryLookup({
         <p className="error" role="alert">
           {failure}
         </p>
-      )}
-      {found && values && (
-        <div className="registry-preview">
-          <div className="section-heading">
-            <h3>Найденные реквизиты</h3>
-            <span>{registryStatus(found.status)}</span>
-          </div>
-          {found.status !== 'ACTIVE' && (
-            <p className="registry-warning">
-              Проверьте статус организации перед использованием реквизитов.
-            </p>
-          )}
-          <dl>
-            {(Object.entries(registryFields) as [keyof RegistryRequisites, string][]).map(
-              ([key, label]) => (
-                <div key={key} className={changed.includes(key) ? 'registry-field-changed' : ''}>
-                  <dt>{label}</dt>
-                  <dd>
-                    {values[key] || '—'}
-                    {changed.includes(key) && Boolean((draft[key] ?? '').trim()) && (
-                      <small>Сейчас: {draft[key]}</small>
-                    )}
-                  </dd>
-                </div>
-              ),
-            )}
-          </dl>
-          {replacing && (
-            <p className="registry-warning">
-              Заполненные поля с отличиями будут заменены. Контактные лица и роли сохранятся.
-            </p>
-          )}
-          <button
-            type="button"
-            className="primary"
-            disabled={!changed.length}
-            onClick={() => {
-              onApply(values);
-              setFound(undefined);
-              setMessage('Реквизиты подставлены в форму. Проверьте их и сохраните карточку.');
-            }}
-          >
-            Подставить в форму
-          </button>
-        </div>
       )}
     </section>
   );

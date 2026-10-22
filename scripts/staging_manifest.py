@@ -509,6 +509,11 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'failureThreshold': 3,
             },
         }
+        if name == 'counterparties':
+            # Внешний ключ не попадает в release.json и генерируемые config-vars.
+            entry = secret_env('DADATA_API_KEY', 'counterparties-dadata', 'api-key')
+            entry['valueFrom']['secretKeyRef']['optional'] = True
+            container['env'] = [entry]
         extra_volumes = []
         if lan:
             container['volumeMounts'].append(

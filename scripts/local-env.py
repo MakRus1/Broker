@@ -180,6 +180,10 @@ def prepare():
                 f"migrate-{name}": {"condition": "service_completed_successfully"},
             },
         }
+    # Ключ DaData хранится отдельно от генерируемых конфигов и не обязателен.
+    services['counterparties']['env_file'] = [
+        {'path': str(STATE / 'dadata.env'), 'required': False}
+    ]
     volumes["postgres-keycloak"] = {}
     services["postgres-keycloak"] = {
         "image": images["postgres"],

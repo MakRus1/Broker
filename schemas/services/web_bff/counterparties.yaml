@@ -349,6 +349,56 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+  /api/v1/counterparties/lookup:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/counterparties/models.yaml#/LookupCounterpartyRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  items:
+                    items:
+                      $ref: components/schemas/counterparties/models.yaml#/RegistryParty
+                    type: array
+                required:
+                - items
+                type: object
+          description: Реквизиты головной организации или ИП из DaData
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+          description: Некорректный ИНН или его контрольные цифры
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+          description: Требуется вход
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+          description: Нет права изменять контрагентов или доступа к организации
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+          description: Поиск реквизитов не настроен или DaData недоступна
+      security:
+      - BrowserSession: []
+      summary: Найти реквизиты по российскому ИНН без сохранения
 components:
   securitySchemes:
     BrowserSession:

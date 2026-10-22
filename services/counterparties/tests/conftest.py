@@ -11,6 +11,7 @@ def pgsql_local(service_source_dir, pgsql_local_create):
 pytest_plugins = ['pytest_userver.plugins.core', 'pytest_userver.plugins.postgresql']
 # SERVICE_TESTS_END
 
+
 @pytest.fixture(scope='session')
 async def service_http_ping_url(monitor_baseurl):
     # Готовность проверяется на внутреннем listener до первого запроса testsuite.
@@ -25,7 +26,7 @@ from auth_tokens import ISSUER, SigningKey
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
-USERVER_CONFIG_HOOKS = ['configure_auth']
+USERVER_CONFIG_HOOKS = ['configure_auth', 'configure_registry']
 
 
 @pytest.fixture(scope='session')
@@ -55,6 +56,7 @@ def auth_jwks(mockserver, auth_key):
 @pytest.fixture(autouse=True)
 def organization_access(mockserver):
     from organization_access import install
+
     install(mockserver, {'author': ORGANIZATION, 'other': OTHER_ORGANIZATION})
 
 
@@ -80,3 +82,22 @@ def api(service_client, auth_key):
             return response.json()
 
     return Client()
+
+
+@pytest.fixture(scope='session')
+def configure_registry(mockserver_info, daemon_scoped_mark):
+    settings = (daemon_scoped_mark or {}).get('registry', {})
+
+    def patch(config, config_vars):
+        component = config['components_manager']['components']['dadata']
+        component.update(
+            {
+                'endpoint': mockserver_info.url('/dadata/party'),
+                'allow-http': True,
+                'api-key': settings.get('api_key', 'testsuite-dadata-token'),
+                'timeout-ms': settings.get('timeout_ms', 3000),
+            }
+        )
+        component.pop('api-key#env', None)
+
+    return patch

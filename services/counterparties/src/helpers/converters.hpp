@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace counterparties::helpers {
-inline models::Counterparty Convert(const pgtypes::CounterpartyV3& row) {
+inline models::Counterparty Convert(const pgtypes::CounterpartyV4& row) {
     models::Counterparty result;
     result.id = boost::uuids::to_string(row.Id);
     result.name = row.Name;
@@ -15,6 +15,7 @@ inline models::Counterparty Convert(const pgtypes::CounterpartyV3& row) {
     result.legal_name = row.LegalName;
     result.country_code = row.CountryCode;
     result.tax_id = row.TaxId;
+    result.kpp = row.Kpp;
     result.registration_id = row.RegistrationId;
     result.legal_address = row.LegalAddress;
     for (const auto& role : row.Roles)
@@ -32,7 +33,7 @@ inline std::vector<std::string> Convert(const std::vector<models::CounterpartyRo
     return result;
 }
 
-inline pgtypes::CounterpartyV3 Convert(const models::Counterparty& value) {
+inline pgtypes::CounterpartyV4 Convert(const models::Counterparty& value) {
     return {.Id = boost::uuids::string_generator{}(value.id),
         .Name = value.name,
         .Revision = value.revision,
@@ -43,14 +44,15 @@ inline pgtypes::CounterpartyV3 Convert(const models::Counterparty& value) {
         .RegistrationId = value.registration_id,
         .LegalAddress = value.legal_address,
         .Roles = Convert(value.roles),
-        .Contacts = userver::formats::json::ValueBuilder(value.contacts).ExtractValue()};
+        .Contacts = userver::formats::json::ValueBuilder(value.contacts).ExtractValue(),
+        .Kpp = value.kpp.value_or(std::nullopt)};
 }
 
 inline std::vector<models::Counterparty> Convert(
     const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Counterparty> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV3>())
+    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV4>())
         result.push_back(Convert(row));
     return result;
 }

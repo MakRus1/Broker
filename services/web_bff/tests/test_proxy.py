@@ -341,3 +341,30 @@ async def test_counterparty_history_proxy_preserves_snapshots(browser, mockserve
     )
     assert response.status == 200, response.text
     assert response.json() == expected
+
+
+async def test_registry_lookup_proxy(browser, mockserver):
+    await browser.sign_in()
+    result = {
+        'items': [
+            {
+                'name': 'Компания',
+                'legal_name': None,
+                'tax_id': '7707083893',
+                'kpp': '773601001',
+                'registration_id': None,
+                'legal_address': 'Москва',
+                'status': 'ACTIVE',
+            }
+        ]
+    }
+
+    @mockserver.json_handler('/api/v1/counterparties/lookup')
+    def upstream(request):
+        assert request.json == {'tax_id': '7707083893'}
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return result
+
+    response = await browser.post('/api/v1/counterparties/lookup', {'tax_id': '7707083893'})
+    assert response.status == 200, response.text
+    assert response.json() == result

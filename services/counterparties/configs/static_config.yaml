@@ -6,6 +6,13 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        dadata-http-client: {}
+        dadata:
+            endpoint: https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party
+            api-key#env: DADATA_API_KEY
+            api-key#fallback: ''
+            timeout-ms: 3000
+            allow-http: false
         # OPENAPI_HANDLERS_BEGIN
         handler-api-v1-counterparties-create:
             path: /api/v1/counterparties/create
@@ -27,6 +34,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-counterparties-list:
             path: /api/v1/counterparties/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-lookup:
+            path: /api/v1/counterparties/lookup
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -69,6 +82,7 @@ components_manager:
                 /api/v1/counterparties/get: counterparties.read
                 /api/v1/counterparties/history: counterparties.read
                 /api/v1/counterparties/list: counterparties.read
+                /api/v1/counterparties/lookup: counterparties.write
                 /api/v1/counterparties/set-archived: counterparties.write
                 /api/v1/counterparties/update: counterparties.write
             permission-dependencies:

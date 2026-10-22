@@ -1,0 +1,13 @@
+#pragma once
+#include <deps.hpp>
+#include <userver/server/request/request_context.hpp>
+#include <views/api/v1/counterparties/lookup/requests.hpp>
+#include <views/api/v1/counterparties/lookup/responses.hpp>
+
+namespace counterparties::views::api::v1::counterparties::lookup {
+class View {
+  public:
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps deps);
+};
+}  // namespace counterparties::views::api::v1::counterparties::lookup

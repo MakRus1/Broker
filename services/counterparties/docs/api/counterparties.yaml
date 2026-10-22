@@ -361,6 +361,56 @@ paths:
                 $ref: ../components/schemas/models.yaml#/CounterpartyError
       security:
       - bearerAuth: []
+  /api/v1/counterparties/lookup:
+    post:
+      summary: Найти реквизиты по российскому ИНН без сохранения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/LookupCounterpartyRequest
+      responses:
+        '200':
+          description: Реквизиты головной организации или ИП из DaData
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/RegistryParty
+                required:
+                - items
+        '400':
+          description: Некорректный ИНН или его контрольные цифры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/CounterpartyError
+        '403':
+          description: Нет права изменять контрагентов или доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/CounterpartyError
+        '503':
+          description: Поиск реквизитов не настроен или DaData недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/CounterpartyError
+      security:
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

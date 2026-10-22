@@ -11,6 +11,18 @@ export interface Shipment {
   number: string;
   customer_id: string;
   reference?: string;
+  shipment_date?: string;
+  recipient_id?: string | null;
+  logist?: string | null;
+  cargo_description?: string | null;
+  status?: string;
+  incoterms?: string | null;
+  carriage_terms?: string | null;
+  loading?: string | null;
+  delivery_city?: string | null;
+  delivery_country?: string | null;
+  delivery_address?: string | null;
+  route_segments?: { id: string; type: string }[];
 }
 export interface Item {
   id: string;

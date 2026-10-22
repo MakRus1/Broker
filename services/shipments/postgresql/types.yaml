@@ -2,42 +2,170 @@ version: 1
 types:
   public.shipment_v1:
     fields:
-      - {name: id, type: uuid}
-      - {name: revision, type: bigint}
-      - {name: number, type: text}
-      - {name: customer_id, type: uuid}
-      - {name: reference, type: text}
+    - name: id
+      type: uuid
+    - name: revision
+      type: bigint
+    - name: number
+      type: text
+    - name: customer_id
+      type: uuid
+    - name: reference
+      type: text
   public.shipment_item_v1:
     fields:
-      - {name: id, type: uuid}
-      - {name: revision, type: bigint}
-      - {name: shipment_id, type: uuid}
-      - {name: container_type, type: text}
-      - {name: ownership, type: text}
-      - {name: planned, type: bigint}
+    - name: id
+      type: uuid
+    - name: revision
+      type: bigint
+    - name: shipment_id
+      type: uuid
+    - name: container_type
+      type: text
+    - name: ownership
+      type: text
+    - name: planned
+      type: bigint
   public.quantity_totals_v1:
     fields:
-      - {name: created, type: bigint}
-      - {name: pending, type: bigint}
+    - name: created
+      type: bigint
+    - name: pending
+      type: bigint
   public.item_totals_v1:
     fields:
-      - {name: item_id, type: uuid}
-      - {name: created, type: bigint}
-      - {name: pending, type: bigint}
+    - name: item_id
+      type: uuid
+    - name: created
+      type: bigint
+    - name: pending
+      type: bigint
   public.creation_operation_v1:
     fields:
-      - {name: id, type: uuid}
-      - {name: item_id, type: uuid}
-      - {name: quantity, type: bigint}
-      - {name: status, type: text}
-      - {name: result, type: jsonb, nullable: true}
+    - name: id
+      type: uuid
+    - name: item_id
+      type: uuid
+    - name: quantity
+      type: bigint
+    - name: status
+      type: text
+    - name: result
+      type: jsonb
+      nullable: true
   public.idempotent_result_v1:
     fields:
-      - {name: request, type: jsonb}
-      - {name: result, type: jsonb}
+    - name: request
+      type: jsonb
+    - name: result
+      type: jsonb
   public.delivery_v2:
     fields:
-      - {name: organization, type: uuid}
-      - {name: id, type: uuid}
-      - {name: lease, type: uuid}
-      - {name: payload, type: jsonb}
+    - name: organization
+      type: uuid
+    - name: id
+      type: uuid
+    - name: lease
+      type: uuid
+    - name: payload
+      type: jsonb
+  public.shipment_v2:
+    fields:
+    - name: id
+      type: uuid
+    - name: revision
+      type: bigint
+    - name: number
+      type: text
+    - name: customer_id
+      type: uuid
+    - name: reference
+      type: text
+    - name: shipment_date
+      type: text
+    - name: recipient_id
+      type: uuid
+      nullable: true
+    - name: logist
+      type: text
+      nullable: true
+    - name: cargo_description
+      type: text
+      nullable: true
+    - name: status
+      type: text
+    - name: incoterms
+      type: text
+      nullable: true
+    - name: carriage_terms
+      type: text
+      nullable: true
+    - name: loading
+      type: text
+      nullable: true
+    - name: delivery_city
+      type: text
+      nullable: true
+    - name: delivery_country
+      type: text
+      nullable: true
+    - name: delivery_address
+      type: text
+      nullable: true
+    - name: route_segments
+      type: public.shipment_route_segment_v1[]
+  public.shipment_dictionary_value_v1:
+    fields:
+    - name: dictionary
+      type: text
+    - name: code
+      type: text
+    - name: name
+      type: text
+  public.shipment_data_v1:
+    fields:
+    - name: number
+      type: text
+    - name: customer_id
+      type: uuid
+    - name: reference
+      type: text
+    - name: shipment_date
+      type: text
+    - name: recipient_id
+      type: uuid
+      nullable: true
+    - name: logist
+      type: text
+      nullable: true
+    - name: cargo_description
+      type: text
+      nullable: true
+    - name: status
+      type: text
+    - name: incoterms
+      type: text
+      nullable: true
+    - name: carriage_terms
+      type: text
+      nullable: true
+    - name: loading
+      type: text
+      nullable: true
+    - name: delivery_city
+      type: text
+      nullable: true
+    - name: delivery_country
+      type: text
+      nullable: true
+    - name: delivery_address
+      type: text
+      nullable: true
+    - name: route_segments
+      type: public.shipment_route_segment_v1[]
+  public.shipment_route_segment_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: type
+      type: text

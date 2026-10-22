@@ -1,9 +1,55 @@
-INSERT INTO shipments (organization_id, customer_id, reference)
-VALUES ($1::UUID, $2::UUID, $3)
+INSERT INTO shipments (
+    organization_id,
+    number,
+    customer_id,
+    reference,
+    shipment_date,
+    recipient_id,
+    logist,
+    cargo_description,
+    status,
+    incoterms,
+    carriage_terms,
+    loading,
+    delivery_city,
+    delivery_country,
+    delivery_address,
+    route_segments
+)
+SELECT
+    $1::UUID,
+    card.number,
+    card.customer_id,
+    card.reference,
+    card.shipment_date::DATE,
+    card.recipient_id,
+    card.logist,
+    card.cargo_description,
+    card.status,
+    card.incoterms,
+    card.carriage_terms,
+    card.loading,
+    card.delivery_city,
+    card.delivery_country,
+    card.delivery_address,
+    card.route_segments
+FROM (SELECT ($2::public.shipment_data_v1).*) AS card
 RETURNING ROW(
     id,
     revision,
-    'S-' || number,
+    number,
     customer_id,
-    reference
-)::public.shipment_v1;
+    reference,
+    shipment_date::TEXT,
+    recipient_id,
+    logist,
+    cargo_description,
+    status,
+    incoterms,
+    carriage_terms,
+    loading,
+    delivery_city,
+    delivery_country,
+    delivery_address,
+    route_segments
+)::public.shipment_v2;

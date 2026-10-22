@@ -56,6 +56,7 @@ def auth_jwks(mockserver, auth_key):
 @pytest.fixture(autouse=True)
 def organization_access(mockserver):
     from organization_access import install
+
     install(mockserver, {'author': ORGANIZATION, 'other': OTHER_ORGANIZATION})
 
 
@@ -101,4 +102,23 @@ def configure_dispatcher(mockserver_info):
         )
         components['client-transportations']['base-url'] = mockserver_info.url('/').rstrip('/')
 
+    return patch
+
+
+@pytest.fixture(autouse=True)
+def shipment_dictionaries(pgsql, service_source_dir):
+    # Testsuite очищает таблицы между тестами; используем тот же источник справочников.
+    migration = (
+        service_source_dir / 'postgresql/schemas/db_1/V0013__create_shipment_dictionaries.sql'
+    )
+    seed = migration.read_text().split('INSERT INTO shipment_dictionary_values', 1)[1]
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('INSERT INTO shipment_dictionary_values' + seed)
+
+
+@pytest.fixture(name='userver_config_testsuite', scope='session')
+def _shipment_config_updates(userver_config_testsuite):
+    def patch(config, config_vars):
+        userver_config_testsuite(config, config_vars)
+        config_vars['config-updates-enabled'] = True
     return patch

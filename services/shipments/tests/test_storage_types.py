@@ -9,17 +9,17 @@ def test_storage_type_contract(pgsql, service_source_dir):
     assert_postgres_types(pgsql['db_1'], service_source_dir)
 
 
-async def test_v1_and_v2_coexist(api, pgsql):
+async def test_v2_and_future_projection_coexist(api, pgsql):
     database = pgsql['db_1']
     with database.cursor() as cursor:
         cursor.execute('''
-            CREATE TYPE public.shipment_v2 AS (
+            CREATE TYPE public.shipment_v3 AS (
                 id UUID, revision BIGINT, number TEXT, customer_id UUID, reference TEXT, note TEXT
             );
             ALTER TABLE shipments ADD COLUMN note TEXT NOT NULL DEFAULT 'новое поле';
         ''')
     try:
-        # Старый сервис продолжает читать и писать shipment_v1 при существующей v2.
+        # Новая проекция хранения не меняет контракт используемого shipment_v2.
         created = await api.post(
             '/api/v1/shipments/create',
             {
@@ -35,8 +35,8 @@ async def test_v1_and_v2_coexist(api, pgsql):
         with database.cursor() as cursor:
             cursor.execute(
                 '''
-                SELECT (ROW(id, revision, 'S-' || number, customer_id, reference, note)
-                    ::public.shipment_v2).note
+                SELECT (ROW(id, revision, number, customer_id, reference, note)
+                    ::public.shipment_v3).note
                 FROM shipments WHERE id = %s::UUID
             ''',
                 (shipment['id'],),
@@ -47,7 +47,7 @@ async def test_v1_and_v2_coexist(api, pgsql):
             {
                 'shipment_id': shipment['id'],
                 'expected_revision': 1,
-                'reference': 'Обновлено v1',
+                'reference': 'Обновлено v2',
             },
         )
         assert changed['shipment']['revision'] == 2
@@ -56,4 +56,4 @@ async def test_v1_and_v2_coexist(api, pgsql):
             assert cursor.fetchone()[0] == 'новое поле'
     finally:
         with database.cursor() as cursor:
-            cursor.execute('ALTER TABLE shipments DROP COLUMN note; DROP TYPE public.shipment_v2;')
+            cursor.execute('ALTER TABLE shipments DROP COLUMN note; DROP TYPE public.shipment_v3;')

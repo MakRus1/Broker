@@ -5,7 +5,16 @@ import pytest
 
 ID = str(uuid4())
 CUSTOMER = str(uuid4())
-SHIPMENT = {'id': ID, 'revision': 1, 'number': 'S-1', 'customer_id': CUSTOMER, 'reference': 'Тест'}
+SHIPMENT = {
+    'id': ID,
+    'revision': 1,
+    'number': 'S-1',
+    'customer_id': CUSTOMER,
+    'reference': 'Тест',
+    'shipment_date': '2026-10-22',
+    'status': 'Новая',
+    'route_segments': [],
+}
 ITEM = {
     'id': ID,
     'revision': 1,
@@ -102,6 +111,33 @@ COUNTERPARTY = {
             {'item': ITEM},
             201,
         ),
+        (
+            'shipments/settings',
+            {},
+            {
+                'default_logist': None,
+                'number_template': 'S-{sequence}',
+                'reset_number_yearly': False,
+                'statuses': ['Новая'],
+                'route_types': ['sea'],
+                'planned_containers': True,
+                'container_types': ['40HC'],
+            },
+            200,
+        ),
+        (
+            'shipments/dictionaries',
+            {},
+            {
+                'incoterms': [{'code': 'FOB', 'name': 'FOB'}],
+                'carriage_terms': [],
+                'loading': [],
+                'route_types': [{'code': 'sea', 'name': 'Море'}],
+            },
+            200,
+        ),
+        ('shipments/cargo-suggestions', {'query': 'груз'}, {'items': ['Груз']}, 200),
+        ('shipments/cargo-suggestions/remove', {'value': 'Груз'}, {'deleted': True}, 200),
         ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM]}, 200),
         (
             'shipment-items/update',

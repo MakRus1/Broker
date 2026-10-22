@@ -22,6 +22,8 @@ import { RouteEditor } from './RouteEditor';
 
 type Props = {
   id: string;
+  onTitle?: (title: string) => void;
+  active?: boolean;
   editing: boolean;
   session: Session;
   customers: Counterparty[];
@@ -29,12 +31,17 @@ type Props = {
 };
 export function TransportationPage({
   id,
+  onTitle,
+  active = true,
   editing,
   session,
   customers: suppliedCustomers,
   onError,
 }: Props) {
   const [transportation, setTransportation] = useState<Transportation>();
+  useEffect(() => {
+    if (transportation) onTitle?.(transportation.number);
+  }, [transportation?.number]);
   const [shipment, setShipment] = useState<Shipment>();
   const [linkedCustomers, setLinkedCustomers] = useState<Counterparty[]>([]);
   const customers = [
@@ -72,7 +79,7 @@ export function TransportationPage({
     return () => controller.abort();
   }, [session, shipment, transportation, suppliedCustomers]);
   useEffect(() => {
-    if (transportation) document.title = `${transportation.number} · Broker`;
+    if (transportation && active) document.title = `${transportation.number} · Broker`;
   }, [transportation?.number]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'route' | 'history'>('route');

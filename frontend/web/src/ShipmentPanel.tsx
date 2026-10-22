@@ -19,6 +19,9 @@ import { CardNavigation, Dialog, TransportationTable, useDiscardConfirmation } f
 
 type Props = {
   initial: Shipment;
+  containerTypes?: string[];
+  embedded?: boolean;
+  section?: 'items' | 'transportations';
   customerName: string;
   session: Session;
   onClose: () => void;
@@ -27,6 +30,9 @@ type Props = {
 };
 export function ShipmentPanel({
   customerName,
+  containerTypes = ['20DC', '40DC', '40HC'],
+  embedded = false,
+  section,
   initial,
   session,
   onClose,
@@ -35,11 +41,14 @@ export function ShipmentPanel({
 }: Props) {
   const [shipment, setShipment] = useState(initial);
   useEffect(() => {
-    document.title = `${shipment.number} · Broker`;
+    if (!embedded) document.title = `${shipment.number} · Broker`;
   }, [shipment.number]);
   const [items, setItems] = useState<Item[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
   const [tab, setTab] = useState<'items' | 'transportations'>('items');
+  useEffect(() => {
+    if (section) setTab(section);
+  }, [section]);
   const [form, setForm] = useState<'item' | Item | null>(null);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,54 +219,58 @@ export function ShipmentPanel({
     await refresh();
   }
   return (
-    <div className="shipment-page">
+    <div className={`shipment-page${embedded ? ' shipment-embedded' : ''}`}>
       <section ref={panel} aria-labelledby="shipment-title" className="shipment-card">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">ПОСТАВКА</p>
-            <h2 id="shipment-title">{shipment.number}</h2>
-          </div>
-          <button aria-label="К списку поставок" onClick={close}>
-            ← К списку
-          </button>
-        </div>
-        <div className="shipment-summary">
-          <div>
-            <span>Клиент</span>
-            <strong>{customerName}</strong>
-          </div>
-          <div>
-            <span>Примечание</span>
-            <strong>{shipment.reference || 'Не указано'}</strong>
-          </div>
-          <div>
-            <span>Редакция</span>
-            <strong>{shipment.revision}</strong>
-          </div>
-        </div>
-        <CardNavigation
-          disabled={loading}
-          onRefresh={async () => {
-            setLoading(true);
-            try {
-              await refresh();
-            } catch (error) {
-              onError(error);
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          <button aria-pressed={tab === 'items'} onClick={() => setTab('items')}>
-            Позиции
-          </button>
-          <button
-            aria-pressed={tab === 'transportations'}
-            onClick={() => setTab('transportations')}
-          >
-            Перевозки
-          </button>
-        </CardNavigation>
+        {!embedded && (
+          <>
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">ПОСТАВКА</p>
+                <h2 id="shipment-title">{shipment.number}</h2>
+              </div>
+              <button aria-label="К списку поставок" onClick={close}>
+                ← К списку
+              </button>
+            </div>
+            <div className="shipment-summary">
+              <div>
+                <span>Клиент</span>
+                <strong>{customerName}</strong>
+              </div>
+              <div>
+                <span>Примечание</span>
+                <strong>{shipment.reference || 'Не указано'}</strong>
+              </div>
+              <div>
+                <span>Редакция</span>
+                <strong>{shipment.revision}</strong>
+              </div>
+            </div>
+            <CardNavigation
+              disabled={loading}
+              onRefresh={async () => {
+                setLoading(true);
+                try {
+                  await refresh();
+                } catch (error) {
+                  onError(error);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <button aria-pressed={tab === 'items'} onClick={() => setTab('items')}>
+                Позиции
+              </button>
+              <button
+                aria-pressed={tab === 'transportations'}
+                onClick={() => setTab('transportations')}
+              >
+                Перевозки
+              </button>
+            </CardNavigation>
+          </>
+        )}
         <div className="panel-content" aria-busy={loading}>
           {failure && (
             <p className="error" role="alert">
@@ -378,6 +391,7 @@ export function ShipmentPanel({
             <PositionForm
               key={form === 'item' ? 'item' : form.id}
               item={form === 'item' ? undefined : form}
+              containerTypes={containerTypes}
               onSubmit={submit}
               onError={onError}
             />
@@ -390,19 +404,22 @@ export function ShipmentPanel({
 }
 function PositionForm({
   item,
+  containerTypes,
   onSubmit,
   onError,
 }: {
   item?: Item;
+  containerTypes: string[];
   onSubmit: (body: object) => Promise<void>;
   onError: (value: unknown) => void;
 }) {
-  const [code, setCode] = useState('40HC');
+  const defaultCode = containerTypes.includes('40HC') ? '40HC' : (containerTypes[0] ?? '');
+  const [code, setCode] = useState(defaultCode);
   const [owner, setOwner] = useState('COC');
   const [quantity, setQuantity] = useState('1');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
-  const dirty = quantity !== '1' || (!item && (code !== '40HC' || owner !== 'COC'));
+  const dirty = quantity !== '1' || (!item && (code !== defaultCode || owner !== 'COC'));
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -433,18 +450,13 @@ function PositionForm({
         </p>
       ) : (
         <>
-          <label>
-            Тип контейнера
-            <input
-              disabled={busy}
-              required
-              maxLength={16}
-              pattern="[A-Za-z0-9][A-Za-z0-9_-]*"
-              autoFocus
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-            />
-          </label>
+          <Select
+            label="Тип контейнера"
+            disabled={busy}
+            value={code}
+            onChange={setCode}
+            options={containerTypes.map((value) => ({ value, label: value }))}
+          />
           <Select
             label="Принадлежность"
             disabled={busy}

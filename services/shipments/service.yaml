@@ -23,6 +23,10 @@ auth:
     /api/v1/shipment-items/update: shipments.write
     /api/v1/transportation-operations/create: shipments.write
     /api/v1/transportation-operations/get: shipments.read
+    /api/v1/shipments/settings: shipments.read
+    /api/v1/shipments/cargo-suggestions: shipments.read
+    /api/v1/shipments/cargo-suggestions/remove: shipments.write
+    /api/v1/shipments/dictionaries: shipments.read
   organization-access: true
 service_accounts:
   dispatcher:
@@ -35,3 +39,5 @@ service_accounts:
       client_secret: dispatcher-client-secret
       token_url: dispatcher-token-url
       enabled: dispatcher-enabled
+configs:
+- SHIPMENT_SETTINGS

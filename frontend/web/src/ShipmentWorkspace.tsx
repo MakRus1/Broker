@@ -1,0 +1,750 @@
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { Commands, request, type Session, type Shipment } from './api';
+import { CustomerSelect, type Counterparty } from './CustomerSelect';
+import { Select } from './Select';
+import { useDiscardConfirmation } from './components';
+import { ShipmentPanel } from './ShipmentPanel';
+
+export interface ShipmentSettings {
+  number_template: string;
+  reset_number_yearly: boolean;
+  statuses: string[];
+  route_types: string[];
+  planned_containers: boolean;
+  container_types: string[];
+  default_logist?: string | null;
+}
+type DictionaryValue = { code: string; name: string };
+type ShipmentDictionaries = {
+  incoterms: DictionaryValue[];
+  carriage_terms: DictionaryValue[];
+  loading: DictionaryValue[];
+  route_types: DictionaryValue[];
+};
+export function localDate() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+type Props = {
+  route: string;
+  session: Session;
+  customers: Counterparty[];
+  onError: (error: unknown) => void;
+  onUpdate: (shipment: Shipment) => void;
+  onTitle: (title: string) => void;
+  onCreated: (shipment: Shipment) => void;
+};
+export function ShipmentWorkspace(props: Props) {
+  const creating = /^\/shipments\/new(?:\/|$)/.test(props.route);
+  const id = creating ? undefined : props.route.split('/')[2];
+  const [shipment, setShipment] = useState<Shipment>();
+  const [failure, setFailure] = useState('');
+  useEffect(() => {
+    if (!id) return;
+    const controller = new AbortController();
+    request<{ shipment: Shipment }>(
+      '/api/v1/shipments/get',
+      props.session,
+      { shipment_id: id },
+      controller.signal,
+    )
+      .then(({ shipment }) => {
+        setShipment(shipment);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [id, props.session]);
+  const titleCallback = useRef(props.onTitle);
+  titleCallback.current = props.onTitle;
+  useEffect(() => {
+    if (shipment) titleCallback.current(shipment.number);
+  }, [shipment?.number]);
+  const onSaved = useCallback(
+    (value: Shipment) => {
+      setShipment(value);
+      props.onUpdate(value);
+    },
+    [props.onUpdate],
+  );
+  if (failure)
+    return (
+      <p className="error" role="alert">
+        {failure}
+      </p>
+    );
+  if (!creating && !shipment) return <p role="status">Открываем поставку…</p>;
+  return <ShipmentCard key={id ?? props.route} {...props} initial={shipment} onSaved={onSaved} />;
+}
+type CardDraft = {
+  number: string;
+  shipment_date: string;
+  customer_id: string;
+  recipient_id: string;
+  logist: string;
+  cargo_description: string;
+  status: string;
+  incoterms: string;
+  carriage_terms: string;
+  loading: string;
+  delivery_city: string;
+  delivery_country: string;
+  delivery_address: string;
+  reference: string;
+  route_segments: { id: string; type: string }[];
+};
+function draftOf(initial?: Shipment): CardDraft {
+  return {
+    number: initial?.number ?? '',
+    shipment_date: initial?.shipment_date ?? localDate(),
+    customer_id: initial?.customer_id ?? '',
+    recipient_id: initial?.recipient_id ?? '',
+    logist: initial?.logist ?? '',
+    cargo_description: initial?.cargo_description ?? '',
+    status: initial?.status ?? '',
+    incoterms: initial?.incoterms ?? '',
+    carriage_terms: initial?.carriage_terms ?? '',
+    loading: initial?.loading ?? '',
+    delivery_city: initial?.delivery_city ?? '',
+    delivery_country: initial?.delivery_country ?? '',
+    delivery_address: initial?.delivery_address ?? '',
+    reference: initial?.reference ?? '',
+    route_segments: initial?.route_segments ?? [],
+  };
+}
+function ShipmentCard({
+  initial,
+  onSaved,
+  ...props
+}: Props & { initial?: Shipment; onSaved: (value: Shipment) => void }) {
+  const formId = useId();
+  const storageKey = `broker:shipment-card:${props.session.actor}:${props.route}`;
+  const [draft, setDraft] = useState<CardDraft>(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
+      if (saved?.revision === (initial?.revision ?? 0) && saved?.value)
+        return { ...draftOf(initial), ...saved.value };
+    } catch {
+      /* Повреждённый черновик не блокирует открытие карточки. */
+    }
+    return draftOf(initial);
+  });
+  const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
+  const dirty = JSON.stringify(draft) !== baseline;
+  const [tab, setTab] = useState('details');
+  const [settings, setSettings] = useState<ShipmentSettings>();
+  const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
+  useEffect(() => {
+    const controller = new AbortController();
+    request<ShipmentDictionaries>(
+      '/api/v1/shipments/dictionaries',
+      props.session,
+      {},
+      controller.signal,
+    )
+      .then(setDictionaries)
+      .catch((error) => {
+        if (!controller.signal.aborted) setFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [props.session]);
+  const [settingsFailure, setSettingsFailure] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [cargoFailure, setCargoFailure] = useState('');
+  const [cargoOpen, setCargoOpen] = useState(false);
+  const [cargoLoading, setCargoLoading] = useState(false);
+  const cargoInput = useRef<HTMLTextAreaElement>(null);
+  const cargoOptions = useRef<HTMLDivElement>(null);
+  const defaultSettingsApplied = useRef(false);
+  const [manualNumber, setManualNumber] = useState(Boolean(initial));
+  const commands = useRef(new Commands());
+  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  const baselineRevision = useRef(initial?.revision ?? 0);
+  const write = props.session.permissions.includes('shipments.write');
+  const [revision, setRevision] = useState(initial?.revision);
+  const set = <K extends keyof CardDraft>(key: K, value: CardDraft[K]) =>
+    setDraft((old) => ({ ...old, [key]: value }));
+  useEffect(() => {
+    try {
+      if (dirty)
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({ revision: baselineRevision.current, value: draft }),
+        );
+      else sessionStorage.removeItem(storageKey);
+    } catch {
+      /* Форма работает и при запрете хранилища. */
+    }
+  }, [storageKey, draft, dirty]);
+  useEffect(() => {
+    const leaving = (event: BeforeUnloadEvent) => {
+      if (dirty || busy) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', leaving);
+    return () => window.removeEventListener('beforeunload', leaving);
+  }, [dirty, busy]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setSettingsFailure('');
+    request<ShipmentSettings>(
+      '/api/v1/shipments/settings',
+      props.session,
+      draft.customer_id ? { customer_id: draft.customer_id } : {},
+      controller.signal,
+    )
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        setSettings(value);
+        if (!initial && !defaultSettingsApplied.current) {
+          defaultSettingsApplied.current = true;
+          setBaseline((previous) =>
+            JSON.stringify({
+              ...JSON.parse(previous),
+              status: value.statuses[0],
+              logist: value.default_logist ?? '',
+            }),
+          );
+        }
+        if (!initial)
+          setDraft((old) => ({
+            ...old,
+            status: old.status || value.statuses[0],
+            logist: old.logist || value.default_logist || '',
+          }));
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setSettingsFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [props.session, draft.customer_id, initial?.id]);
+  useEffect(() => {
+    if (!cargoOpen) return;
+    const controller = new AbortController();
+    setCargoLoading(true);
+    setSuggestions([]);
+    const timer = setTimeout(() => {
+      request<{ items: string[] }>(
+        '/api/v1/shipments/cargo-suggestions',
+        props.session,
+        { query: draft.cargo_description.slice(0, 200) },
+        controller.signal,
+      )
+        .then((result) => {
+          if (!controller.signal.aborted) {
+            setSuggestions(result.items);
+            setCargoFailure('');
+          }
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) setCargoFailure(error.message);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setCargoLoading(false);
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [props.session, draft.cargo_description, cargoOpen]);
+  async function removeSuggestion(value: string) {
+    try {
+      await request('/api/v1/shipments/cargo-suggestions/remove', props.session, { value });
+      setSuggestions((old) => old.filter((item) => item !== value));
+    } catch (error) {
+      setCargoFailure(error instanceof Error ? error.message : 'Не удалось удалить подсказку');
+    }
+  }
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (busy || !write || !settings || !dictionaries) return;
+    if (!draft.customer_id) {
+      setFailure('Выберите клиента');
+      setTab('details');
+      return;
+    }
+    setBusy(true);
+    setFailure('');
+    const payload = {
+      ...draft,
+      number: manualNumber ? draft.number.trim() : undefined,
+      recipient_id: draft.recipient_id || null,
+      logist: draft.logist.trim() || null,
+      cargo_description: draft.cargo_description.trim() || null,
+      incoterms: draft.incoterms || null,
+      carriage_terms: draft.carriage_terms || null,
+      loading: draft.loading || null,
+      delivery_city: draft.delivery_city.trim() || null,
+      delivery_country: draft.delivery_country || null,
+      delivery_address: draft.delivery_address.trim() || null,
+    };
+    try {
+      const result = initial
+        ? await request<{ shipment: Shipment }>('/api/v1/shipments/update', props.session, {
+            ...payload,
+            shipment_id: initial.id,
+            expected_revision: revision,
+          })
+        : await commands.current.send<{ shipment: Shipment }>(
+            '/api/v1/shipments/create',
+            props.session,
+            payload,
+          );
+      const next = draftOf(result.shipment);
+      setDraft(next);
+      setBaseline(JSON.stringify(next));
+      setRevision(result.shipment.revision);
+      baselineRevision.current = result.shipment.revision;
+      try {
+        sessionStorage.removeItem(storageKey);
+      } catch {
+        /* Успешное сохранение на сервере не зависит от браузерного хранилища. */
+      }
+      if (initial) onSaved(result.shipment);
+      else props.onCreated(result.shipment);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить поставку');
+      props.onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const updateFromItems = useCallback(
+    (value: Shipment) => {
+      if (!dirty) {
+        const next = draftOf(value);
+        setDraft(next);
+        setBaseline(JSON.stringify(next));
+        setRevision(value.revision);
+        baselineRevision.current = value.revision;
+      }
+      onSaved(value);
+    },
+    [onSaved, dirty],
+  );
+  const list = (values: DictionaryValue[]) => [
+    { value: '', label: 'Не выбрано' },
+    ...values.map((value) => ({ value: value.code, label: value.name })),
+  ];
+  const panels = [
+    ['details', 'Основное'],
+    ['route', 'Маршрут'],
+    ...(initial && settings?.planned_containers ? [['items', 'Плановые контейнеры']] : []),
+    ...(initial ? [['transportations', 'Перевозки']] : []),
+  ];
+  return (
+    <section className="shipment-editor surface">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">ПОСТАВКА</p>
+          <h1>{initial?.number ?? 'Новая поставка'}</h1>
+        </div>
+        <span className="badge">{draft.status || 'Новая'}</span>
+      </div>
+      {settingsFailure && (
+        <p className="error" role="alert">
+          Не удалось получить настройки: {settingsFailure}
+        </p>
+      )}
+      <div className="tabs shipment-tabs">
+        {panels.map(([key, label]) => (
+          <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <form
+        id={formId}
+        onSubmit={save}
+        onInvalidCapture={() => setTab('details')}
+        data-draft-key={storageKey}
+        data-dirty={dirty}
+        data-busy={busy}
+      >
+        <fieldset disabled={busy || !write || !settings || !dictionaries}>
+          <div hidden={tab !== 'details'}>
+            <div className="shipment-fields">
+              <label>
+                Номер поставки
+                <div className="shipment-number">
+                  <input
+                    required={manualNumber}
+                    readOnly={!manualNumber}
+                    maxLength={128}
+                    value={draft.number}
+                    placeholder="Присвоится при создании"
+                    onChange={(e) => set('number', e.target.value)}
+                  />
+                  {!initial && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualNumber((old) => !old);
+                        set('number', '');
+                      }}
+                    >
+                      {manualNumber ? 'Автоматически' : 'Вручную'}
+                    </button>
+                  )}
+                </div>
+                {!manualNumber && <small>Формат: {settings?.number_template}</small>}
+              </label>
+              <label>
+                Дата поставки · обязательно
+                <input
+                  type="date"
+                  min="1900-01-01"
+                  required
+                  value={draft.shipment_date}
+                  onChange={(e) => set('shipment_date', e.target.value)}
+                />
+              </label>
+            </div>
+            <section className="shipment-field-section">
+              <h2>Участники</h2>
+              <div className="shipment-fields">
+                <CustomerSelect
+                  label="Клиент · обязательно"
+                  session={props.session}
+                  items={props.customers}
+                  value={draft.customer_id}
+                  disabled={busy || !write}
+                  onChange={(value) => set('customer_id', value)}
+                />
+                <CustomerSelect
+                  label="Получатель"
+                  session={props.session}
+                  items={props.customers}
+                  value={draft.recipient_id}
+                  disabled={busy || !write}
+                  onChange={(value) => set('recipient_id', value)}
+                />
+                <label>
+                  Логист
+                  <input
+                    maxLength={200}
+                    value={draft.logist}
+                    onChange={(e) => set('logist', e.target.value)}
+                    placeholder="Фамилия и имя"
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="shipment-field-section">
+              <h2>Груз и условия</h2>
+              <div
+                className="cargo-autocomplete"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setCargoOpen(false);
+                }}
+              >
+                <label>
+                  Описание груза
+                  <textarea
+                    ref={cargoInput}
+                    maxLength={2000}
+                    rows={2}
+                    value={draft.cargo_description}
+                    onFocus={() => setCargoOpen(true)}
+                    onChange={(event) => {
+                      set('cargo_description', event.target.value);
+                      setCargoOpen(true);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        setCargoOpen(false);
+                        event.preventDefault();
+                      }
+                      if (event.key === 'ArrowDown' && cargoOpen && suggestions.length) {
+                        event.preventDefault();
+                        cargoOptions.current
+                          ?.querySelector<HTMLButtonElement>('[data-cargo-choice]')
+                          ?.focus();
+                      }
+                    }}
+                    aria-expanded={cargoOpen}
+                    aria-controls={cargoOpen ? `${formId}-cargo-options` : undefined}
+                    placeholder="Введите описание или выберите подсказку"
+                  />
+                </label>
+                {cargoOpen && (
+                  <div
+                    ref={cargoOptions}
+                    id={`${formId}-cargo-options`}
+                    className="cargo-suggestions"
+                    role="region"
+                    aria-label="Подсказки описания груза"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        cargoInput.current?.focus();
+                        setCargoOpen(false);
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    {cargoLoading ? (
+                      <p role="status">Ищем описания…</p>
+                    ) : cargoFailure ? (
+                      <p role="alert">Подсказки недоступны: {cargoFailure}</p>
+                    ) : suggestions.length === 0 ? (
+                      <p>Совпадений нет. Можно сохранить своё описание.</p>
+                    ) : (
+                      <>
+                        {suggestions.map((value) => (
+                          <div key={value} className="cargo-suggestion">
+                            <button
+                              type="button"
+                              data-cargo-choice
+                              onClick={() => {
+                                set('cargo_description', value);
+                                cargoInput.current?.focus();
+                                setCargoOpen(false);
+                              }}
+                            >
+                              {value}
+                            </button>
+                            {write && (
+                              <button
+                                type="button"
+                                className="cargo-remove"
+                                aria-label={`Удалить подсказку ${value}`}
+                                onClick={() => void removeSuggestion(value)}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {suggestions.length === 20 && (
+                          <p>Показаны первые 20 совпадений. Уточните описание.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="shipment-fields three">
+                <Select
+                  label="Incoterms"
+                  value={draft.incoterms}
+                  onChange={(v) => set('incoterms', v)}
+                  options={list(dictionaries?.incoterms ?? [])}
+                />
+                <Select
+                  label="Условия перевозки"
+                  value={draft.carriage_terms}
+                  onChange={(v) => set('carriage_terms', v)}
+                  options={list(dictionaries?.carriage_terms ?? [])}
+                />
+                <Select
+                  label="Загрузка"
+                  value={draft.loading}
+                  onChange={(v) => set('loading', v)}
+                  options={list(dictionaries?.loading ?? [])}
+                />
+              </div>
+            </section>
+            <section className="shipment-field-section">
+              <h2>Доставка</h2>
+              <div className="shipment-fields">
+                <label>
+                  Город доставки
+                  <input
+                    maxLength={200}
+                    value={draft.delivery_city}
+                    onChange={(e) => set('delivery_city', e.target.value)}
+                  />
+                </label>
+                <label>
+                  Код страны
+                  <input
+                    maxLength={2}
+                    pattern="[A-Z]{2}"
+                    placeholder="RU"
+                    value={draft.delivery_country}
+                    onChange={(e) => set('delivery_country', e.target.value.toUpperCase())}
+                  />
+                </label>
+                <label className="full">
+                  Адрес доставки
+                  <textarea
+                    maxLength={1000}
+                    rows={2}
+                    value={draft.delivery_address}
+                    onChange={(e) => set('delivery_address', e.target.value)}
+                  />
+                </label>
+              </div>
+            </section>
+            <section className="shipment-field-section">
+              <div className="shipment-fields">
+                <Select
+                  label="Статус"
+                  value={draft.status}
+                  onChange={(v) => set('status', v)}
+                  options={[...new Set([...(settings?.statuses ?? []), draft.status])]
+                    .filter(Boolean)
+                    .map((value) => ({ value, label: value }))}
+                />
+                <label>
+                  Примечание
+                  <input
+                    maxLength={256}
+                    value={draft.reference}
+                    onChange={(e) => set('reference', e.target.value)}
+                  />
+                </label>
+              </div>
+            </section>
+          </div>
+          <div hidden={tab !== 'route'}>
+            <section className="shipment-field-section">
+              <h2>Маршрут поставки</h2>
+              {draft.route_segments.map((segment, index) => (
+                <div className="shipment-route-row" key={segment.id}>
+                  <span>{index + 1}</span>
+                  <Select
+                    label={`Тип участка ${index + 1}`}
+                    value={segment.type}
+                    onChange={(value) =>
+                      set(
+                        'route_segments',
+                        draft.route_segments.map((old, i) =>
+                          i === index ? { ...old, type: value } : old,
+                        ),
+                      )
+                    }
+                    options={[...new Set([...(settings?.route_types ?? []), segment.type])].map(
+                      (value) => ({
+                        value,
+                        label:
+                          dictionaries?.route_types.find((entry) => entry.code === value)?.name ??
+                          value,
+                      }),
+                    )}
+                  />
+                  <div
+                    className="shipment-route-actions"
+                    role="group"
+                    aria-label={`Действия с участком ${index + 1}`}
+                  >
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      aria-label={`Поднять участок ${index + 1}`}
+                      onClick={() => {
+                        const values = [...draft.route_segments];
+                        [values[index - 1], values[index]] = [values[index], values[index - 1]];
+                        set('route_segments', values);
+                      }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === draft.route_segments.length - 1}
+                      aria-label={`Опустить участок ${index + 1}`}
+                      onClick={() => {
+                        const values = [...draft.route_segments];
+                        [values[index], values[index + 1]] = [values[index + 1], values[index]];
+                        set('route_segments', values);
+                      }}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Удалить участок ${index + 1}`}
+                      onClick={() =>
+                        set(
+                          'route_segments',
+                          draft.route_segments.filter((_, i) => i !== index),
+                        )
+                      }
+                    >
+                      Убрать
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                disabled={!settings?.route_types.length || draft.route_segments.length >= 30}
+                onClick={() =>
+                  set('route_segments', [
+                    ...draft.route_segments,
+                    { id: crypto.randomUUID(), type: settings!.route_types[0] },
+                  ])
+                }
+              >
+                ＋ Добавить участок
+              </button>
+            </section>
+          </div>
+        </fieldset>
+      </form>
+      {initial && (
+        <div hidden={tab !== 'items' && tab !== 'transportations'}>
+          <ShipmentPanel
+            embedded
+            containerTypes={settings?.container_types}
+            section={tab === 'items' ? 'items' : 'transportations'}
+            initial={initial}
+            session={props.session}
+            customerName={props.customers.find((c) => c.id === draft.customer_id)?.name ?? 'Клиент'}
+            onClose={() => {}}
+            onError={props.onError}
+            onUpdate={updateFromItems}
+          />
+        </div>
+      )}
+      {failure && (
+        <p role="alert" className="error">
+          {failure}
+        </p>
+      )}
+      {write && (
+        <div className="shipment-save">
+          <span>
+            {dirty
+              ? 'Есть несохранённые изменения'
+              : initial
+                ? `Редакция ${revision}`
+                : 'Обязательно: дата поставки и клиент'}
+          </span>
+          <div className="shipment-save-actions">
+            {dirty && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  confirmDiscard(true, () => {
+                    setDraft(JSON.parse(baseline) as CardDraft);
+                    setFailure('');
+                  })
+                }
+              >
+                Отмена
+              </button>
+            )}
+            <button
+              form={formId}
+              type="submit"
+              className="primary"
+              disabled={busy || !settings || Boolean(initial && !dirty)}
+            >
+              {busy ? 'Сохраняем…' : initial ? 'Сохранить изменения' : 'Создать поставку'}
+            </button>
+          </div>
+        </div>
+      )}
+      {confirmation}
+    </section>
+  );
+}

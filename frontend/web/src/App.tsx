@@ -1,18 +1,13 @@
+import { openWorkspace, workspaceId, type WorkspaceTab } from './workspace';
+import { ShipmentWorkspace } from './ShipmentWorkspace';
+import { useDiscardConfirmation } from './components';
 import { profileName } from './profile';
 import { AutoLoadMore } from './AutoLoadMore';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import {
-  ApiError,
-  Commands,
-  request,
-  type Session,
-  type Shipment,
-  type Transportation,
-} from './api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, request, type Session, type Shipment, type Transportation } from './api';
 import { CounterpartiesPage } from './CounterpartiesPage';
-import { CustomerSelect, type Counterparty } from './CustomerSelect';
+import { type Counterparty } from './CustomerSelect';
 import { TransportationPage } from './TransportationPage';
-import { ShipmentPanel } from './ShipmentPanel';
 import { TransportationTable } from './components';
 
 export function App() {
@@ -21,9 +16,49 @@ export function App() {
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
-  const [selected, setSelected] = useState<Shipment | null>(null);
+
   const [route, setRoute] = useState(() => location.hash.slice(1) || '/shipments');
-  const creating = route === '/shipments/new';
+  const creating = /^\/shipments\/new(?:\/|$)/.test(route);
+  const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
+  const activeWorkspace = workspaceId(route);
+  const workspaceNodes = useRef(new Map<string, HTMLDivElement>());
+  const workspaceScroll = useRef(new Map<string, number>());
+  const lastWorkspace = useRef(activeWorkspace);
+  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  useEffect(() => {
+    setWorkspaces((old) => openWorkspace(old, route));
+  }, [route]);
+  useEffect(() => {
+    const old = lastWorkspace.current;
+    if (old !== activeWorkspace) {
+      workspaceScroll.current.set(old, window.scrollY);
+      window.scrollTo(0, workspaceScroll.current.get(activeWorkspace) ?? 0);
+      lastWorkspace.current = activeWorkspace;
+    }
+  }, [activeWorkspace]);
+  const renameWorkspace = useCallback((id: string, title: string) => {
+    setWorkspaces((old) =>
+      old.map((tab) => (tab.id === id && tab.title !== title ? { ...tab, title } : tab)),
+    );
+  }, []);
+  function closeWorkspace(id: string) {
+    const node = workspaceNodes.current.get(id);
+    if (node?.querySelector('form[data-busy="true"]')) return;
+    confirmDiscard(Boolean(node?.querySelector('form[data-dirty="true"]')), () => {
+      node?.querySelectorAll<HTMLElement>('[data-draft-key]').forEach((form) => {
+        try {
+          sessionStorage.removeItem(form.dataset.draftKey!);
+        } catch {
+          /* Закрытие формы не зависит от хранилища. */
+        }
+      });
+      const index = workspaces.findIndex((tab) => tab.id === id);
+      const remaining = workspaces.filter((tab) => tab.id !== id);
+      setWorkspaces(remaining.length ? remaining : openWorkspace([], '/shipments'));
+      if (activeWorkspace === id)
+        location.hash = remaining[Math.max(0, index - 1)]?.route ?? '/shipments';
+    });
+  }
   const transportationId = /^\/transportations\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
   const shipmentId = /^\/shipments\/([0-9a-f-]{36})$/i.exec(route)?.[1];
   useEffect(() => {
@@ -34,7 +69,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties)(?:\/(?:new|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -56,12 +91,9 @@ export function App() {
     return () => window.removeEventListener('hashchange', changed);
   }, []);
   useEffect(() => {
-    document.title = creating
-      ? 'Новая поставка · Broker'
-      : shipmentId || transportationId
-        ? 'Broker'
-        : `${tab === 'shipments' ? 'Поставки' : tab === 'counterparties' ? 'Контрагенты' : 'Перевозки'} · Broker`;
-  }, [creating, shipmentId, transportationId, tab]);
+    const current = workspaces.find((entry) => entry.id === activeWorkspace);
+    document.title = `${current?.title ?? 'Рабочее пространство'} · Broker`;
+  }, [activeWorkspace, workspaces]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [navigationPinned, setNavigationPinned] = useState(() => {
     try {
@@ -73,11 +105,7 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState('');
-  const commands = useRef(new Commands());
   const requestNumber = useRef(0);
-  const closeSelected = useCallback(() => {
-    location.hash = '/shipments';
-  }, []);
   const updateShipment = useCallback((value: Shipment) => {
     setShipments((old) => old.map((item) => (item.id === value.id ? value : item)));
   }, []);
@@ -150,22 +178,6 @@ export function App() {
     };
   }, [session, tab]);
   useEffect(() => {
-    setSelected(null);
-    if (!session || !shipmentId) return;
-    const controller = new AbortController();
-    request<{ shipment: Shipment }>(
-      '/api/v1/shipments/get',
-      session,
-      { shipment_id: shipmentId },
-      controller.signal,
-    )
-      .then(({ shipment }) => setSelected(shipment))
-      .catch((value) => {
-        if (!controller.signal.aborted) error(value);
-      });
-    return () => controller.abort();
-  }, [session, shipmentId, error]);
-  useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
     const controller = new AbortController();
     async function loadCustomers() {
@@ -187,12 +199,9 @@ export function App() {
   }, [session, error]);
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
-    const ids = [
-      ...new Set([
-        ...shipments.map((item) => item.customer_id),
-        ...(selected ? [selected.customer_id] : []),
-      ]),
-    ].filter((id) => !customers.some((item) => item.id === id));
+    const ids = [...new Set([...shipments.map((item) => item.customer_id)])].filter(
+      (id) => !customers.some((item) => item.id === id),
+    );
     if (!ids.length) return;
     const controller = new AbortController();
     void Promise.allSettled(
@@ -217,7 +226,7 @@ export function App() {
       }
     });
     return () => controller.abort();
-  }, [session, shipments, selected, customers]);
+  }, [session, shipments, customers]);
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || 'Клиент недоступен';
   const write = session?.permissions.includes('shipments.write') ?? false;
@@ -353,169 +362,198 @@ export function App() {
           <span>Операционный учёт</span>
           <span className="environment">Broker / Рабочее пространство</span>
         </header>
-        <div
-          hidden={
-            tab === 'counterparties' || creating || Boolean(shipmentId) || Boolean(transportationId)
-          }
-        >
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">ЛОГИСТИКА</p>
-              <h1>{tab === 'shipments' ? 'Поставки' : 'Перевозки'}</h1>
-              <p>
-                {tab === 'shipments'
-                  ? 'От заявки клиента до фактических перевозок.'
-                  : 'Фактические перевозки и их маршруты.'}
-              </p>
-            </div>
-            <div className="actions">
-              <button disabled={loading} onClick={() => void load()}>
-                Обновить
+        <div className="workspace-tabs" role="tablist" aria-label="Открытые формы">
+          {workspaces.map((entry) => (
+            <div
+              className={`workspace-tab${activeWorkspace === entry.id ? ' selected' : ''}`}
+              key={entry.id}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeWorkspace === entry.id}
+                onClick={() => {
+                  location.hash = entry.route;
+                }}
+              >
+                {entry.title}
               </button>
-              {tab === 'shipments' && write && (
-                <button
-                  className="primary"
-                  onClick={() => {
-                    location.hash = '/shipments/new';
-                  }}
-                >
-                  ＋ Создать поставку
-                </button>
-              )}
+              <button
+                type="button"
+                className="workspace-close"
+                aria-label={`Закрыть вкладку ${entry.title}`}
+                onClick={() => closeWorkspace(entry.id)}
+              >
+                ×
+              </button>
             </div>
-          </div>
-          <section className="surface" aria-busy={loading}>
-            <div className="table-title">
-              <strong>{tab === 'shipments' ? 'Реестр поставок' : 'Реестр перевозок'}</strong>
-              <span>
-                {loading
-                  ? 'Загрузка…'
-                  : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
-              </span>
-            </div>
-            {tab === 'shipments' ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Поставка</th>
-                    <th>Клиент</th>
-                    <th>Примечание</th>
-                    <th>Редакция</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {shipments.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="clickable"
-                      onClick={() => {
-                        location.hash = `/shipments/${item.id}`;
-                      }}
-                    >
-                      <td>
-                        <a
-                          className="link"
-                          href={`#/shipments/${item.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {item.number}
-                        </a>
-                        <small>{item.id}</small>
-                      </td>
-                      <td>{customerName(item.customer_id)}</td>
-                      <td>{item.reference || '—'}</td>
-                      <td>
-                        <span className="badge">{item.revision}</span>
-                      </td>
-                      <td>↗</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <TransportationTable items={transportations} />
-            )}
-            {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
-              <div className="empty">
-                <span>▣</span>
-                <h2>{tab === 'shipments' ? 'Пока нет поставок' : 'Пока нет перевозок'}</h2>
+          ))}
+        </div>
+        <div className="workspace-content">
+          <div
+            hidden={
+              tab === 'counterparties' ||
+              creating ||
+              Boolean(shipmentId) ||
+              Boolean(transportationId)
+            }
+          >
+            <div className="page-heading">
+              <div>
+                <p className="eyebrow">ЛОГИСТИКА</p>
+                <h1>{tab === 'shipments' ? 'Поставки' : 'Перевозки'}</h1>
                 <p>
                   {tab === 'shipments'
-                    ? 'Создайте поставку, добавьте позиции и запустите создание перевозок.'
-                    : 'Перевозки появятся после создания из позиций поставки.'}
+                    ? 'От заявки клиента до фактических перевозок.'
+                    : 'Фактические перевозки и их маршруты.'}
                 </p>
               </div>
-            )}
-            <AutoLoadMore
-              enabled={more}
-              loading={loading}
-              failed={loadFailed}
-              onLoad={() => load(true)}
-            />
-          </section>
+              <div className="actions">
+                <button disabled={loading} onClick={() => void load()}>
+                  Обновить
+                </button>
+                {tab === 'shipments' && write && (
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      location.hash = '/shipments/new/' + crypto.randomUUID();
+                    }}
+                  >
+                    ＋ Создать поставку
+                  </button>
+                )}
+              </div>
+            </div>
+            <section className="surface" aria-busy={loading}>
+              <div className="table-title">
+                <strong>{tab === 'shipments' ? 'Реестр поставок' : 'Реестр перевозок'}</strong>
+                <span>
+                  {loading
+                    ? 'Загрузка…'
+                    : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
+                </span>
+              </div>
+              {tab === 'shipments' ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Поставка</th>
+                      <th>Клиент</th>
+                      <th>Примечание</th>
+                      <th>Редакция</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shipments.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="clickable"
+                        onClick={() => {
+                          location.hash = `/shipments/${item.id}`;
+                        }}
+                      >
+                        <td>
+                          <a
+                            className="link"
+                            href={`#/shipments/${item.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {item.number}
+                          </a>
+                          <small>{item.id}</small>
+                        </td>
+                        <td>{customerName(item.customer_id)}</td>
+                        <td>{item.reference || '—'}</td>
+                        <td>
+                          <span className="badge">{item.revision}</span>
+                        </td>
+                        <td>↗</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <TransportationTable items={transportations} />
+              )}
+              {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
+                <div className="empty">
+                  <span>▣</span>
+                  <h2>{tab === 'shipments' ? 'Пока нет поставок' : 'Пока нет перевозок'}</h2>
+                  <p>
+                    {tab === 'shipments'
+                      ? 'Создайте поставку, добавьте позиции и запустите создание перевозок.'
+                      : 'Перевозки появятся после создания из позиций поставки.'}
+                  </p>
+                </div>
+              )}
+              <AutoLoadMore
+                enabled={more}
+                loading={loading}
+                failed={loadFailed}
+                onLoad={() => load(true)}
+              />
+            </section>
+          </div>
+          {workspaces
+            .filter((entry) => entry.route !== '/shipments' && entry.route !== '/transportations')
+            .map((entry) => (
+              <div
+                key={entry.id}
+                hidden={activeWorkspace !== entry.id}
+                data-workspace={entry.id}
+                ref={(node) => {
+                  if (node) workspaceNodes.current.set(entry.id, node);
+                  else workspaceNodes.current.delete(entry.id);
+                }}
+              >
+                {entry.route.startsWith('/counterparties') ? (
+                  <CounterpartiesPage
+                    route={entry.route}
+                    active={activeWorkspace === entry.id}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    session={session}
+                    onError={error}
+                    onChanged={(value) =>
+                      setCustomers((old) => [...old.filter((item) => item.id !== value.id), value])
+                    }
+                  />
+                ) : entry.route.startsWith('/shipments') ? (
+                  <ShipmentWorkspace
+                    route={entry.route}
+                    session={session}
+                    customers={customers}
+                    onError={error}
+                    onUpdate={updateShipment}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onCreated={(value) => {
+                      const next = `/shipments/${value.id}`;
+                      setWorkspaces((old) =>
+                        old.map((tab) =>
+                          tab.id === entry.id
+                            ? { id: next, route: next, title: value.number }
+                            : tab,
+                        ),
+                      );
+                      location.hash = next;
+                      void load();
+                    }}
+                  />
+                ) : (
+                  <TransportationPage
+                    id={entry.id.split('/')[2]}
+                    active={activeWorkspace === entry.id}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    editing={entry.route.endsWith('/route')}
+                    session={session}
+                    customers={customers}
+                    onError={error}
+                  />
+                )}
+              </div>
+            ))}
         </div>
-        {tab === 'counterparties' && (
-          <CounterpartiesPage
-            route={route}
-            session={session}
-            onError={error}
-            onChanged={(value) =>
-              setCustomers((old) => [...old.filter((item) => item.id !== value.id), value])
-            }
-          />
-        )}
-        {shipmentId && selected?.id !== shipmentId && (
-          <p className="page-heading">Открываем поставку…</p>
-        )}
-        {shipmentId && selected?.id === shipmentId && (
-          <ShipmentPanel
-            key={selected.id}
-            customerName={customerName(selected.customer_id)}
-            initial={selected}
-            session={session}
-            onClose={closeSelected}
-            onUpdate={updateShipment}
-            onError={error}
-          />
-        )}
-        {transportationId && (
-          <TransportationPage
-            key={transportationId}
-            id={transportationId}
-            editing={route.endsWith('/route')}
-            session={session}
-            customers={customers}
-            onError={error}
-          />
-        )}
-        {creating && (
-          <section className="creation-page surface">
-            <a href="#/shipments">← К списку поставок</a>
-            <h1>Новая поставка</h1>
-            <ShipmentForm
-              key={session.actor}
-              actor={session.actor}
-              session={session}
-              customers={customers}
-              onSubmit={async (body) => {
-                const result = await commands.current.send<{ shipment: Shipment }>(
-                  '/api/v1/shipments/create',
-                  session,
-                  body,
-                );
-                try {
-                  sessionStorage.removeItem(`broker:shipment-draft:${session.actor}`);
-                } catch {
-                  /* Сохранение поставки не зависит от доступности хранилища браузера. */
-                }
-                location.hash = `/shipments/${result.shipment.id}`;
-                void load();
-              }}
-              onError={error}
-            />
-          </section>
-        )}
+        {confirmation}
       </main>
       {notice && (
         <div className="toast" role="alert">
@@ -536,95 +574,5 @@ export function Brand() {
         broker<span className="brand-dot">.</span>
       </span>
     </div>
-  );
-}
-function ShipmentForm({
-  actor,
-  session,
-  customers,
-  onSubmit,
-  onError,
-}: {
-  actor: string;
-  session: Session;
-  customers: Counterparty[];
-  onSubmit: (body: object) => Promise<void>;
-  onError: (value: unknown) => void;
-}) {
-  const draftKey = `broker:shipment-draft:${actor}`;
-  const [draft] = useState(() => {
-    try {
-      const value: unknown = JSON.parse(sessionStorage.getItem(draftKey) || '{}');
-      if (!value || typeof value !== 'object') return {};
-      const fields = value as Record<string, unknown>;
-      return {
-        customer: typeof fields.customer === 'string' ? fields.customer : '',
-        reference: typeof fields.reference === 'string' ? fields.reference : '',
-      };
-    } catch {
-      return {};
-    }
-  });
-  const [customer, setCustomer] = useState<string>(draft.customer || '');
-  const [reference, setReference] = useState<string>(draft.reference || '');
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(draftKey, JSON.stringify({ customer, reference }));
-    } catch {
-      /* При запрете хранилища поля сохраняются до ухода со страницы. */
-    }
-  }, [draftKey, customer, reference]);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState('');
-  useEffect(() => {
-    function leaving(event: BeforeUnloadEvent) {
-      if (!customer && !reference && !busy) return;
-      event.preventDefault();
-      event.returnValue = '';
-    }
-    window.addEventListener('beforeunload', leaving);
-    return () => window.removeEventListener('beforeunload', leaving);
-  }, [customer, reference, busy]);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setFailure('');
-    try {
-      await onSubmit({ customer_id: customer.trim(), reference: reference.trim() });
-    } catch (value) {
-      setFailure(value instanceof Error ? value.message : 'Ошибка сохранения');
-      onError(value);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form onSubmit={submit} data-dirty={Boolean(customer || reference)} data-busy={busy}>
-      <CustomerSelect
-        items={customers}
-        value={customer}
-        onChange={setCustomer}
-        session={session}
-        disabled={busy}
-      />
-      <label>
-        Примечание
-        <textarea
-          disabled={busy}
-          maxLength={256}
-          value={reference}
-          onChange={(event) => setReference(event.target.value)}
-          placeholder="Что важно знать об этой поставке"
-        />
-      </label>
-      {failure && (
-        <p className="error" role="alert">
-          {failure}
-        </p>
-      )}
-      <button disabled={busy} className="primary">
-        {busy ? 'Создаём…' : 'Создать поставку'}
-      </button>
-    </form>
   );
 }

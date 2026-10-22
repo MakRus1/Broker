@@ -165,7 +165,13 @@ export function RouteEditor({
     );
   return (
     <>
-      <form className="route-editor panel-content" onSubmit={submit}>
+      <form
+        className="route-editor panel-content"
+        onSubmit={submit}
+        data-dirty={dirty}
+        data-busy={busy}
+        data-draft-key={key}
+      >
         <div className="section-heading">
           <div>
             <h2>Редактирование маршрута</h2>

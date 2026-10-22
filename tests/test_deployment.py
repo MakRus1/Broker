@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -107,6 +108,21 @@ class DeploymentTest(unittest.TestCase):
             self.assertIn(
                 'postgres.broker-staging.svc.cluster.local',
                 base64.b64decode(variables['data']['config_vars.yaml']).decode(),
+            )
+
+            shipment_vars = next(
+                obj
+                for obj in phases['services']
+                if obj['kind'] == 'Secret' and obj['metadata']['name'].startswith('shipments-vars')
+            )
+            dispatcher = yaml.safe_load(base64.b64decode(shipment_vars['data']['config_vars.yaml']))
+            self.assertTrue(dispatcher['dispatcher-enabled'])
+            self.assertEqual(
+                dispatcher['dispatcher-client-secret'],
+                (path / 'shipments-dispatcher-secret').read_text(),
+            )
+            self.assertIn(
+                'keycloak.broker-staging.svc.cluster.local', dispatcher['dispatcher-token-url']
             )
 
             for app in apps:

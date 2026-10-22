@@ -191,6 +191,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     if not users_secret.exists():
         private_write(users_secret, secrets.token_urlsafe(32))
     manager_secret = users_secret.read_text().strip()
+    dispatcher_secret_file = directory / 'shipments-dispatcher-secret'
+    if not dispatcher_secret_file.exists():
+        private_write(dispatcher_secret_file, secrets.token_urlsafe(32))
+    dispatcher_secret = dispatcher_secret_file.read_text().strip()
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
     ns = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': namespace}}
     infra = []
@@ -418,6 +422,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'pg-connection': f"postgresql://broker:{values['postgres-password']}@{addresses['postgres']}:5432/{name}",
             }
         )
+        if name == 'shipments':
+            variables.update(
+                {
+                    'dispatcher-enabled': True,
+                    'dispatcher-client-secret': dispatcher_secret,
+                    'dispatcher-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
+                }
+            )
         if lan:
             internal_auth = f"https://{addresses['keycloak']}:8443"
             variables.update(
@@ -439,6 +451,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     'otlp-enabled': True,
                     'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}.:4317',
                 }
+            )
+        if lan and name == 'shipments':
+            variables['dispatcher-token-url'] = (
+                internal_auth + '/realms/broker/protocol/openid-connect/token'
             )
         components = static['components_manager']['components']
         if lan:
@@ -624,5 +640,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     )
     from permission_catalog import load as load_permissions
 
-    private_write(directory / 'permissions.json', json.dumps(load_permissions(root), ensure_ascii=False))
+    private_write(
+        directory / 'permissions.json', json.dumps(load_permissions(root), ensure_ascii=False)
+    )
     return phases

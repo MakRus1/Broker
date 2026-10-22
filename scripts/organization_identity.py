@@ -86,7 +86,33 @@ def configure(api, secret, *, platform_admin=None):
         api('users/' + users[0]['id'] + '/role-mappings/clients/' + resource, [role])
 
 
-def configure_cluster(context, namespace, secret, *, platform_admin=None):
+def configure_dispatcher(api, secret):
+    import json
+    from pathlib import Path
+
+    template = json.loads(
+        (
+            Path(__file__).resolve().parents[1] / 'tools/local/keycloak/realm.template.json'
+        ).read_text()
+    )
+    desired = next(
+        client for client in template['clients'] if client['clientId'] == 'shipments-dispatcher'
+    )
+    desired['secret'] = secret
+    clients = api('clients?clientId=shipments-dispatcher')
+    if clients:
+        api('clients/' + clients[0]['id'], {**clients[0], **desired}, method='PUT')
+    else:
+        api('clients', desired)
+    client = api('clients?clientId=shipments-dispatcher')[0]['id']
+    account = api('clients/' + client + '/service-account-user')
+    resource = api('clients?clientId=broker-logistics')[0]['id']
+    role = api('clients/' + resource + '/roles/transportations.create')
+    api('users/' + account['id'] + '/role-mappings/clients/' + resource, [role])
+    api('clients/' + client + '/scope-mappings/clients/' + resource, [role])
+
+
+def configure_cluster(context, namespace, secret, *, platform_admin=None, dispatcher_secret=None):
     import json
     import subprocess
     import uuid
@@ -154,6 +180,8 @@ def configure_cluster(context, namespace, secret, *, platform_admin=None):
 
     try:
         configure(api, secret, platform_admin=platform_admin)
+        if dispatcher_secret is not None:
+            configure_dispatcher(api, dispatcher_secret)
     finally:
         subprocess.run(command + ['rm -rf "$1"', 'sh', folder], check=True, capture_output=True)
 

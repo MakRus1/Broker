@@ -6,7 +6,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from organization_identity import configure
+from organization_identity import configure, configure_dispatcher
 
 
 class IdentitySetupTest(unittest.TestCase):
@@ -53,3 +53,31 @@ class IdentitySetupTest(unittest.TestCase):
         marker = updated['attributes'][-1]
         self.assertEqual(marker['permissions'], {'view': ['admin'], 'edit': ['admin']})
         self.assertFalse(any(path.startswith('users?username=') for path, _, _ in calls))
+
+    def test_dispatcher_has_only_transportation_creation_role(self):
+        calls = []
+
+        def api(path, value=None, method=None):
+            calls.append((path, value, method))
+            if value is not None:
+                return None
+            return {
+                'clients?clientId=shipments-dispatcher': [{'id': 'dispatcher'}],
+                'clients/dispatcher/service-account-user': {'id': 'worker'},
+                'clients?clientId=broker-logistics': [{'id': 'logistics'}],
+                'clients/logistics/roles/transportations.create': {
+                    'name': 'transportations.create'
+                },
+            }[path]
+
+        configure_dispatcher(api, 'test-secret')
+        desired = next(value for path, value, _ in calls if path == 'clients/dispatcher' and value)
+        self.assertEqual(desired['secret'], 'test-secret')
+        self.assertFalse(desired['directAccessGrantsEnabled'])
+        self.assertTrue(desired['serviceAccountsEnabled'])
+        grants = [
+            value
+            for path, value, _ in calls
+            if '/role-mappings/' in path or '/scope-mappings/' in path
+        ]
+        self.assertEqual(grants, [[{'name': 'transportations.create'}]] * 2)

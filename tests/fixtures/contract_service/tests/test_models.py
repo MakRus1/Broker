@@ -4,6 +4,13 @@ from copy import deepcopy
 import pytest
 
 
+@pytest.fixture(autouse=True)
+async def fresh_required_configs(service_client):
+    # Testsuite отключает периодические обновления: каждый тест начинает со свежего конфига.
+    # Проверки истечения срока сами продвигают время после этой подготовки.
+    await service_client.invalidate_caches(cache_names=['dynamic-config-client-updater'])
+
+
 def payload():
     profile = {'id': 1, 'address': {'city': 'Москва'}}
     return {'profile': profile, 'profiles': [deepcopy(profile)]}

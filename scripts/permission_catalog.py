@@ -95,9 +95,7 @@ def live_images(kubectl, service):
     )
     images = set()
     for pod in json.loads(result.stdout)['items']:
-        if pod['metadata'].get('labels', {}).get('app.kubernetes.io/name') != service.replace(
-            '_', '-'
-        ):
+        if pod['metadata'].get('labels', {}).get('app.kubernetes.io/name') != service:
             continue
         if pod.get('status', {}).get('phase') in {'Succeeded', 'Failed'}:
             continue
@@ -122,8 +120,7 @@ def finish(kubectl, owner):
         draining = [
             pod
             for pod in json.loads(result.stdout)['items']
-            if pod['metadata'].get('labels', {}).get('app.kubernetes.io/name')
-            == owner.replace('_', '-')
+            if pod['metadata'].get('labels', {}).get('app.kubernetes.io/name') == owner
             and pod['metadata'].get('deletionTimestamp')
         ]
         if not draining:

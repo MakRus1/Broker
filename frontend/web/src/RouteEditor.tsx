@@ -220,35 +220,43 @@ export function RouteEditor({
                 </div>
               </div>
               <div className="route-fields">
-                <label className="route-mode-field">
-                  Транспорт
-                  <select
-                    value={route_segment.mode}
-                    onChange={(event) =>
-                      update(index, {
-                        ...route_segment,
-                        mode: event.target.value as PlannedRouteSegment['mode'],
-                      })
-                    }
+                <div className="route-mode-field">
+                  <span id={`transport-label-${route_segment.id}`}>Транспорт</span>
+                  <div
+                    className="transport-options"
+                    role="group"
+                    aria-labelledby={`transport-label-${route_segment.id}`}
                   >
                     {Object.entries(modes).map(([value, title]) => (
-                      <option key={value} value={value}>
+                      <button
+                        type="button"
+                        key={value}
+                        aria-pressed={route_segment.mode === value}
+                        onClick={() =>
+                          update(index, {
+                            ...route_segment,
+                            mode: value as PlannedRouteSegment['mode'],
+                          })
+                        }
+                      >
                         {title}
-                      </option>
+                      </button>
                     ))}
-                  </select>
-                </label>
-                <CustomerSelect
-                  label="Подрядчик"
-                  items={customers}
-                  session={session}
-                  disabled={busy}
-                  value={route_segment.contractor_id ?? ''}
-                  onCreated={() => {}}
-                  onChange={(id) =>
-                    update(index, { ...route_segment, contractor_id: id || undefined })
-                  }
-                />
+                  </div>
+                </div>
+                <div className="route-contractor-field">
+                  <CustomerSelect
+                    label="Подрядчик"
+                    items={customers}
+                    session={session}
+                    disabled={busy}
+                    value={route_segment.contractor_id ?? ''}
+                    onCreated={() => {}}
+                    onChange={(id) =>
+                      update(index, { ...route_segment, contractor_id: id || undefined })
+                    }
+                  />
+                </div>
 
                 {(['origin', 'destination'] as const).map((point) => (
                   <div key={point} className="point-fields">

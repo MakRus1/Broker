@@ -98,6 +98,25 @@ class DeploymentTest(unittest.TestCase):
                     self.assertNotIn('Secret', obj.get('data', {}))
             apps = [obj for obj in phases['services'] if obj['kind'] == 'Deployment']
             self.assertEqual(len(apps), len(staging.SERVICES))
+            counterparties = next(
+                app for app in apps if app['metadata']['name'] == 'counterparties'
+            )
+            registry_env = counterparties['spec']['template']['spec']['containers'][0]['env']
+            self.assertEqual(
+                registry_env,
+                [
+                    {
+                        'name': 'DADATA_API_KEY',
+                        'valueFrom': {
+                            'secretKeyRef': {
+                                'name': 'counterparties-dadata',
+                                'key': 'api-key',
+                                'optional': True,
+                            }
+                        },
+                    }
+                ],
+            )
             bff = next(app for app in apps if app['metadata']['name'] == 'admin-bff')
             self.assertEqual(bff['spec']['strategy']['type'], 'Recreate')
             variables = next(

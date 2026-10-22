@@ -79,6 +79,11 @@ Counterparty:
       minimum: 1
     archived:
       type: boolean
+    kpp:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
   required:
   - id
   - name
@@ -148,6 +153,11 @@ CreateCounterpartyRequest:
       items:
         $ref: '#/CounterpartyContact'
       maxItems: 32
+    kpp:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
   required:
   - id
   - name
@@ -199,6 +209,11 @@ UpdateCounterpartyRequest:
       items:
         $ref: '#/CounterpartyContact'
       maxItems: 32
+    kpp:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
   required:
   - id
   - expected_revision
@@ -300,6 +315,11 @@ CounterpartySnapshot:
       maxItems: 32
     archived:
       type: boolean
+    kpp:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
   required:
   - name
 ListCounterpartyHistoryRequest:
@@ -350,3 +370,43 @@ CounterpartyEvent:
   - actor
   - occurred_at
   - after
+RegistryParty:
+  type: object
+  additionalProperties: false
+  properties:
+    name:
+      type: string
+    legal_name:
+      type: string
+      nullable: true
+    tax_id:
+      type: string
+    kpp:
+      type: string
+      nullable: true
+    registration_id:
+      type: string
+      nullable: true
+    legal_address:
+      type: string
+      nullable: true
+    status:
+      type: string
+      nullable: true
+  required:
+  - name
+  - legal_name
+  - tax_id
+  - kpp
+  - registration_id
+  - legal_address
+  - status
+LookupCounterpartyRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    tax_id:
+      type: string
+      pattern: ^([0-9]{10}|[0-9]{12})$
+  required:
+  - tax_id

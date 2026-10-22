@@ -29,6 +29,7 @@ inline models::Counterparty Normalize(models::Counterparty value) {
             [](unsigned char c) { return std::toupper(c); });
     }
     value.tax_id = Normalize(value.tax_id);
+    value.kpp.emplace(Normalize(value.kpp.value_or(std::nullopt)));
     value.registration_id = Normalize(value.registration_id);
     value.legal_address = Normalize(value.legal_address);
     std::sort(value.roles.begin(), value.roles.end());
@@ -62,6 +63,7 @@ inline models::Counterparty Prepare(const models::CreateCounterpartyRequest& inp
     value.legal_name = input.legal_name.value_or(std::nullopt);
     value.country_code = input.country_code.value_or(std::nullopt);
     value.tax_id = input.tax_id.value_or(std::nullopt);
+    value.kpp = input.kpp;
     value.registration_id = input.registration_id.value_or(std::nullopt);
     value.legal_address = input.legal_address.value_or(std::nullopt);
     value.roles = input.roles;
@@ -78,6 +80,8 @@ inline models::Counterparty Prepare(
         value.country_code = input.country_code.value();
     if (input.tax_id.has_value())
         value.tax_id = input.tax_id.value();
+    if (input.kpp.has_value())
+        value.kpp = input.kpp;
     if (input.registration_id.has_value())
         value.registration_id = input.registration_id.value();
     if (input.legal_address.has_value())

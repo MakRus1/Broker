@@ -4,6 +4,17 @@
 #include <stdexcept>
 
 namespace web_bff {
+inline models::counterparties::RegistryParty Convert(
+    const clients::counterparties::models::RegistryParty& value) {
+    return {.kpp = value.kpp,
+        .legal_address = value.legal_address,
+        .legal_name = value.legal_name,
+        .name = value.name,
+        .registration_id = value.registration_id,
+        .status = value.status,
+        .tax_id = value.tax_id};
+}
+
 inline models::counterparties::CounterpartyRole Convert(
     clients::counterparties::models::CounterpartyRole value) {
     switch (value) {
@@ -60,6 +71,7 @@ inline models::counterparties::Counterparty Convert(
     result.legal_name = value.legal_name;
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
+    result.kpp = value.kpp;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -77,6 +89,7 @@ inline clients::counterparties::ApiV1CounterpartiesCreate::RequestBody Convert(
     result.legal_name = value.legal_name;
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
+    result.kpp = value.kpp;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -97,6 +110,7 @@ inline clients::counterparties::ApiV1CounterpartiesUpdate::RequestBody Convert(
     result.legal_name = value.legal_name;
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
+    result.kpp = value.kpp;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.expected_revision = value.expected_revision;
@@ -159,6 +173,7 @@ inline models::counterparties::CounterpartySnapshot Convert(
     result.legal_name = value.legal_name;
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
+    result.kpp = value.kpp;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.archived = value.archived;

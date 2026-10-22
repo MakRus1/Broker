@@ -1,5 +1,6 @@
 #pragma once
 
+#include <components/dadata.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <platform/readiness.hpp>
@@ -11,6 +12,7 @@
 namespace counterparties {
 
 struct Deps {
+    DaData& dadata;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     userver::storages::postgres::ClusterPtr pg_cluster;
@@ -19,6 +21,7 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .dadata = component_context.FindComponent<DaData>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .pg_cluster = component_context

@@ -225,7 +225,8 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
                       ['Юридическое наименование', item.legal_name],
                       ['Страна', item.country_code],
                       ['Налоговый номер / ИНН', item.tax_id],
-                      ['Регистрационный номер', item.registration_id],
+                      ['КПП', item.kpp],
+                      ['Регистрационный номер / ОГРН', item.registration_id],
                       ['Юридический адрес', item.legal_address],
                     ].map(([label, value]) => (
                       <div key={label}>

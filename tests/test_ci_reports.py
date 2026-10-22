@@ -164,7 +164,19 @@ add_test(NAME client_contract_unittest COMMAND "${PYTHON}" -c "print('client pas
                 ), mock.patch.object(
                     ci, 'changed_paths', return_value=['README.md']
                 ), mock.patch.object(
-                    ci.subprocess, 'run', return_value=mock.Mock(stdout=value)
+                    ci.subprocess,
+                    'run',
+                    return_value=mock.Mock(
+                        stdout=json.dumps(
+                            {
+                                'services': ['alpha', 'beta'] if value == 'all' else [],
+                                'reasons': {
+                                    'alpha': ['Общие изменения'],
+                                    'beta': ['Общие изменения'],
+                                },
+                            }
+                        )
+                    ),
                 ):
                     ci.plan(args)
                     self.assertTrue(

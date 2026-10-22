@@ -13,7 +13,7 @@ defaults:
   run:
     shell: bash
 jobs:
-  tools:
+  plan:
     runs-on: ubuntu-24.04
     outputs:
       services: ${{ steps.detect.outputs.services }}
@@ -21,6 +21,8 @@ jobs:
       frontends: ${{ steps.detect.outputs.frontends }}
       scaffolds: ${{ steps.detect.outputs.scaffolds }}
       smoke: ${{ steps.detect.outputs.smoke }}
+      shared_contracts: ${{ steps.detect.outputs.shared_contracts }}
+      build_required: ${{ steps.detect.outputs.build_required }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -28,14 +30,23 @@ jobs:
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements.txt
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install "$(sed -n '/^PyYAML==/p' requirements.txt)"
       - name: Определение затронутых сервисов
         id: detect
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python scripts/ci-tests.py plan --base "${BASE:-missing-base}"
+
+  tools:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
       - name: Тесты генератора и инструментов
         run: python -m unittest discover -s tests -v
       - name: Синтаксис команды подключения Windows
@@ -55,11 +66,11 @@ jobs:
       - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:
-    needs: tools
-    if: needs.tools.outputs.frontends != '[]'
+    needs: plan
+    if: needs.plan.outputs.frontends != '[]'
     strategy:
       matrix:
-        app: ${{ fromJSON(needs.tools.outputs.frontends) }}
+        app: ${{ fromJSON(needs.plan.outputs.frontends) }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
@@ -81,8 +92,8 @@ jobs:
 
   build:
     name: Сборка и тесты · ${{ matrix.preset }} · ${{ matrix.runner }}
-    needs: tools
-    if: needs.tools.outputs.build_services != ''
+    needs: plan
+    if: needs.plan.outputs.build_required == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +110,7 @@ jobs:
     env:
       ASAN_OPTIONS: detect_leaks=1
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+      CI_SHARED_CONTRACTS: ${{ needs.plan.outputs.shared_contracts }}
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Выбор закрепленного окружения
@@ -137,25 +149,25 @@ jobs:
         env:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
-          CI_BUILD_SERVICES: ${{ needs.tools.outputs.build_services }}
+          CI_BUILD_SERVICES: ${{ needs.plan.outputs.build_services }}
         run: make "docker-ci-build-$PRESET"
       - name: Тесты затронутых сервисов
         id: tests
         env:
-          CI_SERVICES: ${{ needs.tools.outputs.services }}
+          CI_SERVICES: ${{ needs.plan.outputs.services }}
           CI_RESULTS_DIR: ci-results/${{ matrix.preset }}-${{ runner.arch }}
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make "docker-ci-test-$PRESET"
       - name: Межсервисный сценарий · две реплики
-        if: ${{ matrix.preset == 'debug' && needs.tools.outputs.smoke == 'true' }}
+        if: ${{ matrix.preset == 'debug' && needs.plan.outputs.smoke == 'true' }}
         env:
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
         run: make docker-ci-smoke-debug
       - name: Результаты тестов по сервисам
         if: always()
         env:
-          SERVICES: ${{ needs.tools.outputs.services }}
+          SERVICES: ${{ needs.plan.outputs.services }}
           PRESET: ${{ matrix.preset }}
           ARCH: ${{ runner.arch }}
           BUILD_RESULT: ${{ steps.compile.outcome }}
@@ -173,7 +185,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Четыре варианта создания сервиса
-        if: ${{ !cancelled() && steps.compile.outcome == 'success' && needs.tools.outputs.scaffolds == 'true' && matrix.preset == 'debug' && runner.arch == 'X64' }}
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && needs.plan.outputs.scaffolds == 'true' && matrix.preset == 'debug' && runner.arch == 'X64' }}
         env:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: docker run --rm --network=host -v "$PWD:/workspaces/broker" "$IMAGE" python3 scripts/smoke-services.py --build
@@ -183,16 +195,18 @@ jobs:
   result:
     name: CI result
     if: ${{ always() }}
-    needs: [tools, build, frontend]
+    needs: [plan, tools, build, frontend]
     runs-on: ubuntu-24.04
     steps:
       - name: Проверка обязательных результатов
         env:
           FRONTEND_RESULT: ${{ needs.frontend.result }}
-          FRONTENDS: ${{ needs.tools.outputs.frontends }}
+          FRONTENDS: ${{ needs.plan.outputs.frontends }}
           TOOLS_RESULT: ${{ needs.tools.result }}
           BUILD_RESULT: ${{ needs.build.result }}
-          SERVICES: ${{ needs.tools.outputs.services }}
+          SERVICES: ${{ needs.plan.outputs.services }}
+          BUILD_REQUIRED: ${{ needs.plan.outputs.build_required }}
+          PLAN_RESULT: ${{ needs.plan.result }}
         run: |
           set -euo pipefail
           {
@@ -211,10 +225,11 @@ jobs:
           else
             if [[ "$FRONTEND_RESULT" != success ]]; then exit 1; fi
           fi
+          if [[ "$PLAN_RESULT" != success ]]; then exit 1; fi
           if [[ "$TOOLS_RESULT" != success ]]; then
             exit 1
           fi
-          if [[ -n "$SERVICES" ]]; then
+          if [[ "$BUILD_REQUIRED" == true ]]; then
             if [[ "$BUILD_RESULT" != success ]]; then exit 1; fi
           else
             if [[ "$BUILD_RESULT" != skipped ]]; then exit 1; fi

@@ -146,10 +146,6 @@ def run(build):
                 )
                 for migration in migrations:
                     cursor.execute(migration.read_text())
-                cursor.execute(
-                    'INSERT INTO organization_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
-                    (issuer, 'author', ORGANIZATION, issuer, 'dispatcher', ORGANIZATION),
-                )
             db.commit()
 
         def start(service, index, receiver=None):

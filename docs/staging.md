@@ -683,3 +683,15 @@ kubectl -n kube-system rollout status deployment/coredns --timeout=90s
 Появление нового LAN-домена требует Deploy infrastructure (или Deploy all с
 включённой инфраструктурой): обновление только сервисов не создаёт ingress и
 не дополняет сертификат. Корневой CA при этом сохраняется.
+
+
+### Фоновое создание перевозок
+
+На staging обработчик Shipments включается автоматически. Секрет служебного клиента
+`shipments-dispatcher` хранится в `.staging/shipments-dispatcher-secret` и сохраняется
+между рендерами. Deploy infrastructure настраивает клиент в существующем Keycloak
+с правом `transportations.create`; пароли пользователей не изменяются.
+В LAN-профиле получение токена использует внутренний HTTPS Keycloak.
+
+При первом включении выполните Deploy all с инфраструктурой. Уже принятые операции
+`pending` будут обработаны автоматически; повторять создание через UI не нужно.

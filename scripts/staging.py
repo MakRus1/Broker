@@ -145,6 +145,7 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             context,
             plan['namespace'],
             (directory / 'organizations-manager-secret').read_text().strip(),
+            dispatcher_secret=(directory / 'shipments-dispatcher-secret').read_text().strip(),
         )
     if paths['migrations']:
         run(

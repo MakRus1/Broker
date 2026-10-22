@@ -9,6 +9,9 @@ clients:
   transportations:
     service: transportations
     transport: http
+  organizations:
+    service: organizations
+    transport: http
 auth:
   audience: broker-logistics
   roles-client: broker-logistics
@@ -41,3 +44,4 @@ service_accounts:
       enabled: dispatcher-enabled
 configs:
 - SHIPMENT_SETTINGS
+- CARGO_SUGGESTIONS_RETENTION

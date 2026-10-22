@@ -87,6 +87,8 @@ components_manager:
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        client-organizations:
+            base-url: $client-organizations-base-url
         client-transportations:
             base-url: $client-transportations-base-url
         platform-readiness: {}
@@ -133,6 +135,10 @@ components_manager:
                 - configs.read
                 counterparties.write:
                 - counterparties.read
+                organizations.manage:
+                - organizations.read_employees
+                shipments.read:
+                - organizations.read_employees
                 shipments.write:
                 - shipments.read
                 transportations.write:
@@ -169,6 +175,7 @@ components_manager:
         platform-http-telemetry:
             service-name: shipments
             environment: $environment
+        cargo-suggestions-cleanup: {}
         transportation-dispatcher:
             load-enabled: $dispatcher-enabled
         service-token-provider:

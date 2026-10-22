@@ -212,7 +212,12 @@ async def test_custom_role_updates_permissions_for_all_assigned_members(api, ide
         'id': 'custom-logistician',
         'name': 'Логист',
         'description': 'Без изменения контрагентов',
-        'permissions': ['shipments.read', 'shipments.write', 'counterparties.read'],
+        'permissions': [
+            'organizations.read_employees',
+            'shipments.read',
+            'shipments.write',
+            'counterparties.read',
+        ],
     }
     role = (await api.call(ADMIN + '/roles/create', body, user='org-admin', expected=201))['role']
     assert role['permissions'] == body['permissions']
@@ -238,7 +243,11 @@ async def test_custom_role_updates_permissions_for_all_assigned_members(api, ide
     )
     await api.call(
         ADMIN + '/roles/update',
-        {**body, 'permissions': ['shipments.read'], 'expected_revision': role['revision']},
+        {
+            **body,
+            'permissions': ['organizations.read_employees', 'shipments.read'],
+            'expected_revision': role['revision'],
+        },
         user='org-admin',
     )
     await api.call(
@@ -289,7 +298,7 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
             'id': 'foreign',
             'name': 'Чужая роль',
             'description': '',
-            'permissions': ['shipments.read'],
+            'permissions': ['organizations.read_employees', 'shipments.read'],
         },
         user='org-admin',
         expected=403,
@@ -301,7 +310,7 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
             'id': 'administrator',
             'name': 'Без управления',
             'description': '',
-            'permissions': ['shipments.read'],
+            'permissions': ['organizations.read_employees', 'shipments.read'],
             'expected_revision': 1,
         },
         user='org-admin',
@@ -435,3 +444,51 @@ async def test_manual_profile_update_changes_all_memberships(api, mockserver, pg
     assert cleared['display_name'] == 'Иванов Иван'
     assert cleared['middle_name'] is None
     assert 'middle_name' not in profile['attributes']
+
+
+@pytest.mark.parametrize(
+    'user,organization,expected',
+    [
+        ('viewer', ORGANIZATION, 200),
+        ('viewer', OTHER_ORGANIZATION, 403),
+        ('other-admin', ORGANIZATION, 403),
+    ],
+)
+async def test_employee_lookup_is_scoped_and_excludes_private_fields(
+    api, user, organization, expected
+):
+    response = await api.call(
+        '/api/organizations/employees/list',
+        {'organization_id': organization},
+        user=user,
+        expected=expected,
+    )
+    if expected == 200:
+        assert {item['subject'] for item in response['items']} == {'org-admin', 'viewer'}
+        assert all(set(item) == {'subject', 'display_name'} for item in response['items'])
+
+
+async def test_disabled_employee_is_not_available_for_assignment(api, pgsql):
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("UPDATE memberships SET enabled = FALSE WHERE subject = 'org-admin'")
+    result = await api.call(
+        '/api/organizations/employees/list',
+        {'organization_id': ORGANIZATION, 'subject': 'org-admin'},
+        user='viewer',
+    )
+    assert result['items'] == []
+
+
+async def test_employee_search_filters_name_subject_and_limit(api):
+    result = await api.call(
+        '/api/organizations/employees/list',
+        {'organization_id': ORGANIZATION, 'query': 'view', 'limit': 1},
+        user='viewer',
+    )
+    assert result['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+    missing = await api.call(
+        '/api/organizations/employees/list',
+        {'organization_id': ORGANIZATION, 'subject': 'other-admin'},
+        user='viewer',
+    )
+    assert missing['items'] == []

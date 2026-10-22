@@ -33,7 +33,7 @@ inline std::vector<models::Permission> PermissionCatalog(
     std::vector<models::Permission> result;
     for (const auto& row : LoadPermissions(transaction, scope))
         result.push_back(
-            {.group = row.Group, .id = row.Id, .name = row.Name, .dependencies = row.Requires});
+            {.dependencies = row.Requires, .group = row.Group, .id = row.Id, .name = row.Name});
     return result;
 }
 

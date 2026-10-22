@@ -7,12 +7,24 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-geography-cities:
+            path: /api/geography/cities
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-logout:
             path: /api/logout
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-organizations-employees-list:
+            path: /api/organizations/employees/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-session:
             path: /api/session
             method: GET
@@ -264,7 +276,8 @@ components_manager:
             service-name: web_bff
             environment: $environment
         platform-http-pipeline:
-            final-middlewares: [browser-session]
+            final-middlewares:
+            - browser-session
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:
@@ -349,3 +362,10 @@ components_manager:
             path: /tests/{action}
             method: POST
             task_processor: main-task-processor
+        geography-cities:
+            endpoint: https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address
+            api-key#env: DADATA_API_KEY
+            api-key#fallback: ''
+            timeout-ms: 3000
+            allow-http: false
+        cities-http-client: {}

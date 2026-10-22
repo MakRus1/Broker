@@ -2,7 +2,8 @@ shipments.read:
   name: Просмотр поставок
   group: Поставки
   scope: organization
-  requires: []
+  requires:
+  - organizations.read_employees
 shipments.write:
   name: Изменение поставок
   group: Поставки

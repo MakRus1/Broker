@@ -42,6 +42,8 @@ def configure_auth(mockserver_info):
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
+        config_vars['client-organizations-base-url'] = mockserver_info.base_url
+
 
     return patch
 
@@ -67,7 +69,7 @@ def api(service_client, auth_key):
             roles = (
                 roles
                 if roles is not None
-                else ['shipments.read', 'shipments.write', 'transportations.create']
+                else ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.create']
             )
             token = auth_key.token(
                 user,
@@ -122,3 +124,14 @@ def _shipment_config_updates(userver_config_testsuite):
         userver_config_testsuite(config, config_vars)
         config_vars['config-updates-enabled'] = True
     return patch
+
+
+@pytest.fixture(autouse=True)
+def employee_directory(mockserver):
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def employees(request):
+        body = request.json
+        subject = body.get('subject')
+        items = [{'subject': 'logist-author', 'display_name': 'Иванов Иван'},
+                 {'subject': 'logist-default', 'display_name': 'Петров Пётр'}]
+        return {'items': [item for item in items if not subject or item['subject'] == subject]}

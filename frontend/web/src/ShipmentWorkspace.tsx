@@ -4,6 +4,7 @@ import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import { Select } from './Select';
 import { useDiscardConfirmation } from './components';
 import { ShipmentPanel } from './ShipmentPanel';
+import { DirectoryLookup } from './DirectoryLookup';
 
 export interface ShipmentSettings {
   number_template: string;
@@ -159,6 +160,10 @@ function ShipmentCard({
   const cargoInput = useRef<HTMLTextAreaElement>(null);
   const cargoOptions = useRef<HTMLDivElement>(null);
   const defaultSettingsApplied = useRef(false);
+  const automaticLogist = useRef('');
+  const manualLogist = useRef(false);
+  const automaticStatus = useRef('');
+  const manualStatus = useRef(false);
   const [manualNumber, setManualNumber] = useState(Boolean(initial));
   const commands = useRef(new Commands());
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
@@ -192,6 +197,7 @@ function ShipmentCard({
   useEffect(() => {
     const controller = new AbortController();
     setSettingsFailure('');
+    setSettings(undefined);
     request<ShipmentSettings>(
       '/api/v1/shipments/settings',
       props.session,
@@ -211,12 +217,23 @@ function ShipmentCard({
             }),
           );
         }
-        if (!initial)
+        if (!initial) {
+          const previousAutomaticLogist = automaticLogist.current;
+          const previousAutomaticStatus = automaticStatus.current;
+          automaticStatus.current = value.statuses[0];
+          automaticLogist.current = value.default_logist ?? '';
           setDraft((old) => ({
             ...old,
-            status: old.status || value.statuses[0],
-            logist: old.logist || value.default_logist || '',
+            status:
+              !manualStatus.current && (!old.status || old.status === previousAutomaticStatus)
+                ? value.statuses[0]
+                : old.status,
+            logist:
+              !manualLogist.current && (!old.logist || old.logist === previousAutomaticLogist)
+                ? (value.default_logist ?? '')
+                : old.logist,
           }));
+        }
       })
       .catch((error) => {
         if (!controller.signal.aborted) setSettingsFailure(error.message);
@@ -288,6 +305,7 @@ function ShipmentCard({
       const result = initial
         ? await request<{ shipment: Shipment }>('/api/v1/shipments/update', props.session, {
             ...payload,
+            logist: draft.logist === (initial.logist ?? '') ? undefined : payload.logist,
             shipment_id: initial.id,
             expected_revision: revision,
           })
@@ -425,15 +443,16 @@ function ShipmentCard({
                   disabled={busy || !write}
                   onChange={(value) => set('recipient_id', value)}
                 />
-                <label>
-                  Логист
-                  <input
-                    maxLength={200}
-                    value={draft.logist}
-                    onChange={(e) => set('logist', e.target.value)}
-                    placeholder="Фамилия и имя"
-                  />
-                </label>
+                <DirectoryLookup
+                  session={props.session}
+                  kind="employees"
+                  label="Логист"
+                  value={draft.logist}
+                  onChange={(value) => {
+                    manualLogist.current = true;
+                    set('logist', value);
+                  }}
+                />
               </div>
             </section>
             <section className="shipment-field-section">
@@ -553,14 +572,19 @@ function ShipmentCard({
             <section className="shipment-field-section">
               <h2>Доставка</h2>
               <div className="shipment-fields">
-                <label>
-                  Город доставки
-                  <input
-                    maxLength={200}
-                    value={draft.delivery_city}
-                    onChange={(e) => set('delivery_city', e.target.value)}
-                  />
-                </label>
+                <DirectoryLookup
+                  session={props.session}
+                  kind="cities"
+                  label="Город доставки"
+                  value={draft.delivery_city}
+                  onChange={(value, country) => {
+                    setDraft((old) => ({
+                      ...old,
+                      delivery_city: value,
+                      ...(country ? { delivery_country: country } : {}),
+                    }));
+                  }}
+                />
                 <label>
                   Код страны
                   <input
@@ -587,7 +611,10 @@ function ShipmentCard({
                 <Select
                   label="Статус"
                   value={draft.status}
-                  onChange={(v) => set('status', v)}
+                  onChange={(v) => {
+                    manualStatus.current = true;
+                    set('status', v);
+                  }}
                   options={[...new Set([...(settings?.statuses ?? []), draft.status])]
                     .filter(Boolean)
                     .map((value) => ({ value, label: value }))}
@@ -725,6 +752,9 @@ function ShipmentCard({
                 disabled={busy}
                 onClick={() =>
                   confirmDiscard(true, () => {
+                    manualLogist.current = false;
+                    manualStatus.current = false;
+                    setManualNumber(Boolean(initial));
                     setDraft(JSON.parse(baseline) as CardDraft);
                     setFailure('');
                   })

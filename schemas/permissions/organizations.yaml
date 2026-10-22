@@ -2,4 +2,10 @@ organizations.manage:
   name: Управление сотрудниками и ролями
   group: Администрирование организации
   scope: organization
+  requires:
+  - organizations.read_employees
+organizations.read_employees:
+  name: Просмотр справочника сотрудников
+  group: Сотрудники
+  scope: organization
   requires: []

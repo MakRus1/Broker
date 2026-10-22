@@ -12,6 +12,10 @@ inline models::Organization Convert(const pgtypes::OrganizationV1& row) {
         .revision = row.Revision};
 }
 
+inline models::OrganizationEmployee Convert(const pgtypes::OrganizationEmployeeV1& row) {
+    return {.display_name = row.DisplayName, .subject = row.Subject};
+}
+
 inline models::Member Convert(const pgtypes::MemberV2& row) {
     return {.display_name = row.DisplayName,
         .email = row.Email,

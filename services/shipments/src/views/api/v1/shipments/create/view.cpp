@@ -1,5 +1,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
+#include <helpers/employees.hpp>
 #include <helpers/idempotency.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
@@ -14,16 +15,23 @@ Response View::Handle(
     try {
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+        const auto organization = platform::auth::GetOrganization(identity);
+        const auto saved =
+            FindSavedReplay<models::Shipment>(deps, organization, "create_shipment", request.body);
+        if (saved.has_value())
+            return Response201{.shipment = saved.value()};
+        const auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
+        const auto logist = request.body.logist.has_value() ? CleanText(request.body.logist.value())
+                                                            : settings.DefaultLogist;
+        ValidateLogist(deps, context, logist);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = platform::auth::GetOrganization(identity);
         const auto replay = FindReplay<models::Shipment>(
             transaction, organization, "create_shipment", request.body);
         if (replay.has_value()) {
             transaction.Commit();
             return Response201{.shipment = replay.value()};
         }
-        const auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
         pgtypes::ShipmentDataV1 card;
         card.CustomerId = boost::uuids::string_generator{}(request.body.customer_id);
         card.Reference = request.body.reference.value_or("");
@@ -59,6 +67,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         default:
             return Response409{.error = error.Code, .message = error.what()};
         }

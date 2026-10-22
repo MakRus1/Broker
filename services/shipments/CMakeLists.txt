@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/operations/request_transportations.cpp
     src/components/transportation_dispatcher.cpp
+    src/components/cargo_suggestions_cleanup.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
@@ -46,7 +47,8 @@ endif()
 
 if(BUILD_TESTING)
     userver_testsuite_add_simple()
-    add_executable(shipments_unittest tests/unit/date_validation_test.cpp)
+    add_executable(shipments_unittest tests/unit/date_validation_test.cpp tests/unit/dictionaries_test.cpp)
+    target_include_directories(shipments_unittest PRIVATE src)
     target_link_libraries(shipments_unittest PRIVATE broker_common userver::utest)
     add_google_tests(shipments_unittest)
 endif()

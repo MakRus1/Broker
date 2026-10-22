@@ -2,7 +2,9 @@ name: WEB_BFF_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/geography/cities
 - /api/logout
+- /api/organizations/employees/list
 - /api/session
 - /api/v1/counterparties/create
 - /api/v1/counterparties/get

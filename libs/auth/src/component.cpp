@@ -43,6 +43,8 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
             context.SetData("platform-auth",
                 auth_.Authorize(path_, request.GetHeader("Authorization"),
                     request.GetHeader("X-Organization-Id")));
+            context.SetData(
+                "platform-auth-access-token", request.GetHeader("Authorization").substr(7));
         } catch (const platform::auth::Unavailable&) {
             status = 503;
             error = "auth_unavailable";

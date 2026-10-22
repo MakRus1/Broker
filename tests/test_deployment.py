@@ -117,6 +117,10 @@ class DeploymentTest(unittest.TestCase):
                     }
                 ],
             )
+            web_bff = next(app for app in apps if app['metadata']['name'] == 'web-bff')
+            self.assertEqual(
+                web_bff['spec']['template']['spec']['containers'][0]['env'], registry_env
+            )
             bff = next(app for app in apps if app['metadata']['name'] == 'admin-bff')
             self.assertEqual(bff['spec']['strategy']['type'], 'Recreate')
             variables = next(

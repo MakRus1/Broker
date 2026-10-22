@@ -17,11 +17,13 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
+#include <components/cargo_suggestions_cleanup.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <openapi/handlers.hpp>
 #include <platform/auth/service_token.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <clients/organizations/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/auth/component.hpp>
@@ -59,12 +61,14 @@ int main(int argc, char* argv[]) {
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
     component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<shipments::clients::organizations::Component>();
     component_list.Append<shipments::clients::transportations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-shipments");
     // SERVICE_REGISTRATION_END
 
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<shipments::TransportationDispatcher>();
+    component_list.Append<shipments::CargoSuggestionsCleanup>();
     component_list = shipments::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

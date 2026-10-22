@@ -12,6 +12,9 @@ inline models::Member Convert(const clients::organizations::models::Member& valu
     return {.display_name = value.display_name,
         .email = value.email,
         .enabled = value.enabled,
+        .first_name = value.first_name,
+        .last_name = value.last_name,
+        .middle_name = value.middle_name,
         .revision = value.revision,
         .role = value.role,
         .subject = value.subject,
@@ -57,8 +60,10 @@ inline clients::organizations::ApiAdminOrganizationsUpdate::RequestBody Convert(
 
 inline clients::organizations::ApiAdminOrganizationsMembersCreate::RequestBody Convert(
     const models::CreateMemberRequest& value) {
-    return {.display_name = value.display_name,
-        .email = value.email,
+    return {.email = value.email,
+        .first_name = value.first_name,
+        .last_name = value.last_name,
+        .middle_name = value.middle_name,
         .organization_id = value.organization_id,
         .request_id = value.request_id,
         .role = value.role,

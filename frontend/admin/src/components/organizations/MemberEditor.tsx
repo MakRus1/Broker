@@ -22,7 +22,9 @@ export function MemberEditor({
   const initial: MemberInput = {
     mode: member ? 'edit' : 'create',
     username: member?.username ?? '',
-    display_name: member?.display_name ?? '',
+    last_name: member?.last_name ?? '',
+    first_name: member?.first_name ?? '',
+    middle_name: member?.middle_name ?? '',
     email: member?.email ?? '',
     temporary_password: '',
     role:
@@ -31,6 +33,10 @@ export function MemberEditor({
     enabled: member?.enabled ?? true,
   };
   const [value, setValue] = useState(initial);
+  const profileChanged =
+    value.last_name !== initial.last_name ||
+    value.first_name !== initial.first_name ||
+    value.middle_name !== initial.middle_name;
   const dirty = JSON.stringify(value) !== JSON.stringify(initial);
   const selectedRole = roles.find((role) => role.id === value.role);
   const change = <Key extends keyof MemberInput>(key: Key, next: MemberInput[Key]) =>
@@ -90,16 +96,32 @@ export function MemberEditor({
             </label>
             {value.mode === 'create' && (
               <>
-                <label>
-                  Имя сотрудника
-                  <input
-                    value={value.display_name}
-                    required
-                    maxLength={200}
-                    disabled={busy}
-                    onChange={(event) => change('display_name', event.target.value)}
-                  />
-                </label>
+                {(
+                  [
+                    ['last_name', 'Фамилия'],
+                    ['first_name', 'Имя'],
+                    ['middle_name', 'Отчество'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key}>
+                    {label}
+                    {key === 'middle_name' ? ' · необязательно' : ''}
+                    <input
+                      value={value[key]}
+                      required={key !== 'middle_name'}
+                      maxLength={100}
+                      autoComplete={
+                        key === 'last_name'
+                          ? 'family-name'
+                          : key === 'first_name'
+                            ? 'given-name'
+                            : 'additional-name'
+                      }
+                      disabled={busy}
+                      onChange={(event) => change(key, event.target.value)}
+                    />
+                  </label>
+                ))}
                 <label>
                   Email
                   <input
@@ -131,6 +153,18 @@ export function MemberEditor({
           </>
         ) : (
           <dl className="member-summary">
+            {(
+              [
+                ['Фамилия', member.last_name],
+                ['Имя', member.first_name],
+                ['Отчество', member.middle_name],
+              ] as const
+            ).map(([label, name]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{name || 'Не указано'}</dd>
+              </div>
+            ))}
             <div>
               <dt>Логин</dt>
               <dd>{member.username}</dd>
@@ -140,6 +174,33 @@ export function MemberEditor({
               <dd>{member.email}</dd>
             </div>
           </dl>
+        )}
+        {member && (
+          <fieldset disabled={busy}>
+            <legend>ФИО</legend>
+            {(
+              [
+                ['last_name', 'Фамилия'],
+                ['first_name', 'Имя'],
+                ['middle_name', 'Отчество'],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key}>
+                {label}
+                {key === 'middle_name' ? ' · необязательно' : ''}
+                <input
+                  value={value[key]}
+                  required={profileChanged && key !== 'middle_name'}
+                  maxLength={100}
+                  onChange={(event) => change(key, event.target.value)}
+                />
+              </label>
+            ))}
+            <small>
+              Профиль общий для всех организаций. Изменения имени при входе появятся после повторной
+              авторизации.
+            </small>
+          </fieldset>
         )}
         <label>
           Роль

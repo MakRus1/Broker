@@ -368,3 +368,25 @@ async def test_registry_lookup_proxy(browser, mockserver):
     response = await browser.post('/api/v1/counterparties/lookup', {'tax_id': '7707083893'})
     assert response.status == 200, response.text
     assert response.json() == result
+
+
+@pytest.mark.parametrize(
+    'claims,expected',
+    [
+        (
+            {
+                'family_name': 'Иванов',
+                'given_name': 'Иван',
+                'middle_name': 'Иванович',
+                'name': 'Иван Иванович Иванов',
+            },
+            'Иванов Иван Иванович',
+        ),
+        ({'name': 'Анна Петрова'}, 'Анна Петрова'),
+        ({}, 'author'),
+    ],
+)
+async def test_session_uses_profile_name(browser, oidc, claims, expected):
+    oidc['claims'].update(claims)
+    session = await browser.sign_in()
+    assert session['display_name'] == expected

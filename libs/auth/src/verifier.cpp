@@ -97,7 +97,15 @@ Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) c
     Identity identity{impl_->Config.Issuer, subject, {}, subject};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
     identity.ClientId = payload["azp"].As<std::string>("");
-    identity.DisplayName = payload["preferred_username"].As<std::string>(subject);
+    const auto family = payload["family_name"].As<std::string>("");
+    const auto given = payload["given_name"].As<std::string>("");
+    const auto middle = payload["middle_name"].As<std::string>("");
+    const auto full_name = payload["name"].As<std::string>("");
+    identity.DisplayName = !family.empty()
+        ? family + (given.empty() ? "" : " " + given) + (middle.empty() ? "" : " " + middle)
+        : !full_name.empty() ? full_name
+        : !given.empty()     ? given
+                             : payload["preferred_username"].As<std::string>(subject);
     const auto roles = payload["resource_access"][impl_->Config.RolesClient]["roles"];
     if (!roles.IsMissing())
         identity.Permissions = roles.As<std::set<std::string>>();

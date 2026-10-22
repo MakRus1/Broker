@@ -44,3 +44,28 @@ types:
       type: text[]
     - name: revision
       type: bigint
+  public.member_v2:
+    fields:
+    - name: subject
+      type: text
+    - name: username
+      type: text
+    - name: display_name
+      type: text
+    - name: email
+      type: text
+    - name: role
+      type: text
+    - name: enabled
+      type: boolean
+    - name: revision
+      type: bigint
+    - name: last_name
+      type: text
+      nullable: true
+    - name: first_name
+      type: text
+      nullable: true
+    - name: middle_name
+      type: text
+      nullable: true

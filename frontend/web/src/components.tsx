@@ -6,10 +6,12 @@ export function Dialog({
   title,
   onClose,
   children,
+  className,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -34,6 +36,7 @@ export function Dialog({
       {createPortal(
         <dialog
           ref={ref}
+          className={className}
           aria-labelledby={titleId}
           onCancel={(event) => {
             event.preventDefault();
@@ -83,13 +86,15 @@ export function useDiscardConfirmation() {
     else discard();
   }
   const confirmation = pending && (
-    <Dialog title="Отменить изменения?" onClose={() => setPending(null)}>
-      <p className="confirmation-copy">
-        Введённые данные не будут сохранены. Можно вернуться к редактированию.
-      </p>
+    <Dialog
+      className="discard-dialog"
+      title="Не сохранять изменения?"
+      onClose={() => setPending(null)}
+    >
+      <p className="confirmation-copy">При выходе изменения в этой форме будут потеряны.</p>
       <div className="confirmation-actions">
         <button type="button" data-autofocus onClick={() => setPending(null)}>
-          Продолжить редактирование
+          Остаться
         </button>
         <button
           type="button"
@@ -99,7 +104,7 @@ export function useDiscardConfirmation() {
             pending();
           }}
         >
-          Отменить изменения
+          Не сохранять
         </button>
       </div>
     </Dialog>

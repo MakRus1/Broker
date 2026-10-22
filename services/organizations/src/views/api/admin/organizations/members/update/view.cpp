@@ -18,7 +18,7 @@ Response View::Handle(
             identity.Issuer, request.body.subject);
         if (rows.IsEmpty())
             throw ApiError{404, "member_not_found", "Сотрудник не найден"};
-        const auto previous = rows.AsSingleRow<pgtypes::MemberV1>();
+        const auto previous = rows.AsSingleRow<pgtypes::MemberV2>();
         if (previous.Revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict", "Доступ сотрудника уже изменён"};
         const auto role = request.body.role;
@@ -35,7 +35,7 @@ Response View::Handle(
             Convert(transaction
                         .Execute(sql::kUpdateMember, request.body.organization_id, identity.Issuer,
                             request.body.subject, role, request.body.enabled)
-                        .AsSingleRow<pgtypes::MemberV1>());
+                        .AsSingleRow<pgtypes::MemberV2>());
         WriteAudit(transaction, request.body.organization_id, identity, "member.updated", member);
         transaction.Commit();
         return Response200{.member = member};

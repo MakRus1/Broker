@@ -1373,3 +1373,33 @@ nav,
   align-items: center;
   justify-content: center;
 }
+
+.counterparty-contacts {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #e3e7ee;
+}
+.counterparty-contacts h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.counterparty-contacts > .hint {
+  margin: 0;
+  line-height: 1.5;
+}
+.discard-dialog {
+  width: min(500px, 94vw);
+}
+.discard-dialog .confirmation-actions {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+.discard-dialog .confirmation-actions button {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 16px;
+}
+.profile strong {
+  max-width: 145px;
+  white-space: nowrap;
+}

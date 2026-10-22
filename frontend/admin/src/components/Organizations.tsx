@@ -195,13 +195,33 @@ export function Organizations({
     const member = editor.member;
     await run(async () => {
       if (value.mode === 'edit' && member) {
-        await request('/api/admin/organizations/members/update', session, {
-          organization_id: organization.id,
-          subject: member.subject,
-          expected_revision: member.revision,
-          role: value.role,
-          enabled: value.enabled,
-        });
+        let revision = member.revision;
+        const namesChanged =
+          value.last_name.trim() !== (member.last_name ?? '') ||
+          value.first_name.trim() !== (member.first_name ?? '') ||
+          value.middle_name.trim() !== (member.middle_name ?? '');
+        if (namesChanged) {
+          const updated = await request<{ member: Member }>(
+            '/api/admin/organizations/members/update-profile',
+            session,
+            {
+              organization_id: organization.id,
+              subject: member.subject,
+              last_name: value.last_name.trim(),
+              first_name: value.first_name.trim(),
+              middle_name: value.middle_name.trim() || null,
+            },
+          );
+          revision = updated.member.revision;
+        }
+        if (value.role !== member.role || value.enabled !== member.enabled)
+          await request('/api/admin/organizations/members/update', session, {
+            organization_id: organization.id,
+            subject: member.subject,
+            expected_revision: revision,
+            role: value.role,
+            enabled: value.enabled,
+          });
       } else {
         const common = {
           organization_id: organization.id,
@@ -213,7 +233,9 @@ export function Organizations({
         else {
           const profile = {
             ...common,
-            display_name: value.display_name.trim(),
+            last_name: value.last_name.trim(),
+            first_name: value.first_name.trim(),
+            middle_name: value.middle_name.trim() || null,
             email: value.email.trim(),
           };
           const key = JSON.stringify(profile);

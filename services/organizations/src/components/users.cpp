@@ -10,10 +10,32 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
+std::optional<std::string> ReadMiddleName(const userver::formats::json::Value& user) {
+    const auto attribute = user["attributes"]["middle_name"];
+    if (attribute.IsMissing() || attribute.IsNull())
+        return std::nullopt;
+    if (!attribute.IsArray() || attribute.GetSize() > 1)
+        throw std::runtime_error("Keycloak вернул некорректный атрибут middle_name");
+    if (attribute.IsEmpty())
+        return std::nullopt;
+    return attribute[0].As<std::string>();
+}
+
 organizations::User Convert(const userver::formats::json::Value& value) {
+    const auto last = value["lastName"].As<std::optional<std::string>>();
+    const auto first = value["firstName"].As<std::optional<std::string>>();
+    const auto middle = ReadMiddleName(value);
+    std::string display;
+    for (const auto& part : {last, first, middle}) {
+        if (part.has_value() && !part.value().empty()) {
+            if (!display.empty())
+                display += " ";
+            display += part.value();
+        }
+    }
     return {value["id"].As<std::string>(), value["username"].As<std::string>(),
-        value["firstName"].As<std::string>(value["username"].As<std::string>()),
-        value["email"].As<std::string>("")};
+        display.empty() ? value["username"].As<std::string>() : display,
+        value["email"].As<std::string>(""), last, first, middle};
 }
 }  // namespace
 
@@ -73,14 +95,18 @@ User Users::Find(const std::string& username) const try {
 }
 
 User Users::Create(const std::string& request_id, const std::string& username,
-    const std::string& email, const std::string& display_name,
-    const std::string& temporary_password) const try {
+    const std::string& email, const std::string& last_name, const std::string& first_name,
+    const std::optional<std::string>& middle_name, const std::string& temporary_password) const
+    try {
     // Адаптер внешнего API; пароль не сохраняется в нашей БД и не возвращается клиенту.
     userver::formats::json::ValueBuilder body;
     body["username"] = username;
     body["email"] = email;
     body["emailVerified"] = false;
-    body["firstName"] = display_name;
+    body["firstName"] = first_name;
+    body["lastName"] = last_name;
+    if (middle_name.has_value())
+        body["attributes"]["middle_name"].PushBack(middle_name.value());
     body["enabled"] = true;
     body["attributes"]["broker-provisioning-id"].PushBack(request_id);
     userver::formats::json::ValueBuilder credential;
@@ -112,6 +138,46 @@ User Users::Create(const std::string& request_id, const std::string& username,
 } catch (const std::exception&) {
     throw ApiError{503, "identity_provider_unavailable",
         "Создание пользователя не завершено. Повторите запрос"};
+}
+
+User Users::UpdateProfile(const std::string& subject, const std::string& last_name,
+    const std::string& first_name, const std::optional<std::string>& middle_name) const try {
+    const auto response = MakeRequest().get(base_url_ + "/users/" + subject).retry(0).perform();
+    if (response->status_code() == 404)
+        throw ApiError{404, "user_not_found", "Пользователь не найден"};
+    if (response->status_code() != 200)
+        throw std::runtime_error("Не удалось прочитать профиль");
+    const auto current = userver::formats::json::FromString(response->body());
+    if (!current["serviceAccountClientId"].IsMissing())
+        throw ApiError{400, "invalid_user", "Нельзя менять профиль служебной учётной записи"};
+    userver::formats::json::ValueBuilder profile(current);
+    profile["lastName"] = last_name;
+    profile["firstName"] = first_name;
+    if (middle_name.has_value()) {
+        profile["attributes"]["middle_name"] =
+            userver::formats::json::ValueBuilder(userver::formats::common::Type::kArray);
+        profile["attributes"]["middle_name"].PushBack(middle_name.value());
+    } else if (!current["attributes"].IsMissing() && !current["attributes"].IsNull()) {
+        profile["attributes"].Remove("middle_name");
+    }
+    profile.Remove("credentials");
+    const auto document = profile.ExtractValue();
+    const auto updated =
+        MakeRequest()
+            .put(base_url_ + "/users/" + subject, userver::formats::json::ToString(document))
+            .retry(0)
+            .perform();
+    if (updated->status_code() != 204)
+        throw std::runtime_error("Не удалось обновить профиль");
+    return Convert(document);
+} catch (const ApiError&) {
+
+    throw;
+} catch (const std::bad_alloc&) {
+    throw;
+} catch (const std::exception&) {
+    throw ApiError{
+        503, "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
 }
 
 userver::yaml_config::Schema Users::GetStaticConfigSchema() {

@@ -49,6 +49,18 @@ Member:
     revision:
       type: integer
       format: int64
+    last_name:
+      type: string
+      nullable: true
+      maxLength: 100
+    first_name:
+      type: string
+      nullable: true
+      maxLength: 100
+    middle_name:
+      type: string
+      nullable: true
+      maxLength: 100
 OrganizationAccess:
   type: object
   additionalProperties: false
@@ -117,9 +129,10 @@ CreateMemberRequest:
   - request_id
   - username
   - email
-  - display_name
   - temporary_password
   - role
+  - last_name
+  - first_name
   properties:
     organization_id:
       type: string
@@ -136,10 +149,6 @@ CreateMemberRequest:
       type: string
       minLength: 3
       maxLength: 254
-    display_name:
-      type: string
-      minLength: 1
-      maxLength: 200
     temporary_password:
       type: string
       minLength: 12
@@ -149,6 +158,21 @@ CreateMemberRequest:
       minLength: 1
       maxLength: 100
       pattern: ^[a-z][a-z0-9_-]*$
+    last_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: false
+    first_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: false
+    middle_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: true
 AddMemberRequest:
   type: object
   additionalProperties: false
@@ -275,3 +299,35 @@ PlatformAccessResult:
       type: array
       items:
         $ref: '#/Permission'
+UpdateMemberProfileRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    last_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: false
+    first_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: false
+    middle_name:
+      type: string
+      maxLength: 100
+      minLength: 1
+      nullable: true
+    subject:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9_-]+$'
+  required:
+  - organization_id
+  - subject
+  - last_name
+  - first_name

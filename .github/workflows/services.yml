@@ -2,26 +2,14 @@ name: Service images
 on:
   pull_request:
     branches: [main]
+    # Полная проверка runtime нужна при изменении упаковки, а не бизнес-кода.
+    # Манифесты и deploy-скрипты проверяет быстрый tools job основного CI.
     paths:
       - .github/workflows/services.yml
       - tools/deploy/**
-      - scripts/staging*.py
-      - scripts/service_catalog.py
-      - platform.yaml
-      - tests/test_deployment.py
+      - .dockerignore
       - tools/container-images.json
       - tools/local/images.json
-      - tools/versions.env
-      - tools/python-constraints.txt
-      - CMakeLists.txt
-      - cmake/**
-      - services/**/service.yaml
-      - services/**/CMakeLists.txt
-      - libs/**/CMakeLists.txt
-      - scripts/openapi_gen/**
-      - frontend/**/package.json
-      - frontend/**/pnpm-lock.yaml
-      - requirements.txt
   workflow_dispatch:
 permissions:
   contents: read

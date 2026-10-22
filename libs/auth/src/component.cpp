@@ -222,7 +222,7 @@ Identity Component::Authorize(const std::string& path, const std::string& author
             identity.Permissions = result["permissions"].As<std::set<std::string>>();
             if (state_->PlatformUrl.empty()) {
                 identity.Organization = result["organization_id"].As<std::string>();
-                if (!identity.Organization.has_value() ||
+                if (!identity.Organization.has_value() || identity.Organization.value().empty() ||
                     (!organization.empty() && identity.Organization.value() != organization))
                     throw Unavailable{};
             }

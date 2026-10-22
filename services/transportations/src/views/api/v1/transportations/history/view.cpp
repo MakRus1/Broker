@@ -1,5 +1,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/transportations/history/view.hpp>
 
@@ -9,6 +10,7 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
+        platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
         // Наличие перевозки и её история проверяются в одном снимке.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto organization = platform::auth::GetOrganization(identity);

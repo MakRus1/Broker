@@ -109,8 +109,8 @@ components_manager:
             - platform-auth
         platform-auth:
             issuer: $auth-issuer
-            audience: configs-admin
-            roles-client: configs-admin
+            audience: broker-logistics
+            roles-client: broker-logistics
             jwks-url: $auth-jwks-url
             protected-prefix: /admin/
             allow-http: $auth-allow-http
@@ -125,6 +125,18 @@ components_manager:
                 /admin/configs/drafts/list: configs.read
                 /admin/configs/history: configs.read
                 /admin/configs/list: configs.read
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
+            platform-url: $platform-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
         dynamic-config:

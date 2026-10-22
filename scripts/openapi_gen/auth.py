@@ -10,12 +10,16 @@ def policy(spec):
             raise ValueError('service.yaml: auth должен быть объектом')
         return None
     required = {'audience', 'roles-client', 'protected-prefix', 'permissions'}
-    if not isinstance(section, dict) or (set(section) - {'organization-access', 'service-clients'}) != required:
+    if not isinstance(section, dict) or (set(section) - {'organization-access', 'platform-access', 'service-clients'}) != required:
         raise ValueError(
             'service.yaml: auth требует audience, roles-client, protected-prefix, permissions'
         )
     if 'organization-access' in section and type(section['organization-access']) is not bool:
         raise ValueError('auth.organization-access должен быть boolean')
+    if 'platform-access' in section and type(section['platform-access']) is not bool:
+        raise ValueError('auth.platform-access должен быть boolean')
+    if section.get('platform-access') and section.get('organization-access'):
+        raise ValueError('Выберите platform-access или organization-access')
     for key in ('audience', 'roles-client'):
         if not isinstance(section[key], str) or not re.fullmatch(
             r'[A-Za-z0-9][A-Za-z0-9_.:-]*', section[key]

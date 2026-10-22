@@ -9,6 +9,7 @@ export function MemberEditor({
   error,
   save,
   close,
+  platformAccess,
 }: {
   member?: Member;
   roles: OrganizationRole[];
@@ -16,6 +17,7 @@ export function MemberEditor({
   error: string;
   save: (input: MemberInput) => Promise<void>;
   close: () => void;
+  platformAccess?: () => void;
 }) {
   const initial: MemberInput = {
     mode: member ? 'edit' : 'create',
@@ -170,6 +172,14 @@ export function MemberEditor({
             />
             Доступ к организации
           </label>
+        )}
+        {platformAccess && (
+          <section className="role-preview">
+            <h3>Права платформы</h3>
+            <button type="button" disabled={dirty || busy} onClick={platformAccess}>
+              Настроить доступ
+            </button>
+          </section>
         )}
         <div className="organization-editor-actions">
           <button

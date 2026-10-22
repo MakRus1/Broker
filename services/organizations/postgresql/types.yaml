@@ -38,3 +38,9 @@ types:
       type: text[]
     - name: revision
       type: bigint
+  public.platform_access_v1:
+    fields:
+    - name: permissions
+      type: text[]
+    - name: revision
+      type: bigint

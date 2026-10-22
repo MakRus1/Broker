@@ -115,3 +115,9 @@ def browser(service_client, login):
                       'X-CSRF-Token': self.session['csrf_token']}
             return await service_client.post(path, json=body, headers={**values, **(headers or {})})
     return Browser()
+
+
+@pytest.fixture(autouse=True)
+def platform_access(mockserver):
+    from platform_access import install
+    return install(mockserver)

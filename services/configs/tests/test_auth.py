@@ -185,3 +185,26 @@ async def test_organization_and_platform_roles_do_not_grant_config_access(
         '/admin/configs/drafts/create', json={}, headers={'Authorization': 'Bearer ' + token}
     )
     assert response.status == 403
+
+
+@pytest.mark.parametrize('permission,operation', [
+    ('configs.write', 'create'), ('configs.approve', 'approve'),
+])
+async def test_mutation_also_requires_read(monitor_client, access_token, permission, operation):
+    response = await monitor_client.post(
+        '/admin/configs/drafts/' + operation, json={},
+        headers={'Authorization': 'Bearer ' + access_token(roles=[permission])},
+    )
+    assert response.status == 403
+
+
+async def test_platform_assignments_override_token_roles(monitor_client, access_token, platform_access):
+    platform_access['permissions'] = []
+    assert (await call(monitor_client, access_token())).status == 403
+    platform_access['permissions'] = ['configs.read']
+    assert (await call(monitor_client, access_token(roles=[]))).status == 200
+
+
+async def test_platform_access_unavailable_fails_closed(monitor_client, access_token, platform_access):
+    platform_access['unavailable'] = True
+    assert (await call(monitor_client, access_token())).status == 503

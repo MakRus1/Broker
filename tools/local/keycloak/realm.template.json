@@ -131,6 +131,17 @@
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
+        },
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
         }
       ],
       "publicClient": false,
@@ -152,6 +163,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "configs-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "broker-logistics-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "broker-logistics",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
@@ -247,12 +269,7 @@
       "username": "service-account-local-author",
       "enabled": true,
       "serviceAccountClientId": "local-author",
-      "clientRoles": {
-        "configs-admin": [
-          "configs.read",
-          "configs.write"
-        ]
-      }
+      "clientRoles": {}
     },
     {
       "username": "author",
@@ -283,12 +300,7 @@
       "username": "service-account-local-reviewer",
       "enabled": true,
       "serviceAccountClientId": "local-reviewer",
-      "clientRoles": {
-        "configs-admin": [
-          "configs.read",
-          "configs.approve"
-        ]
-      }
+      "clientRoles": {}
     },
     {
       "username": "reviewer",
@@ -305,10 +317,6 @@
         }
       ],
       "clientRoles": {
-        "configs-admin": [
-          "configs.read",
-          "configs.approve"
-        ],
         "broker-logistics": [
           "shipments.read",
           "transportations.read",

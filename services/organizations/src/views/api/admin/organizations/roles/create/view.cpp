@@ -11,13 +11,13 @@ Response View::Handle(
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
     try {
-        ValidatePermissions(request.body.permissions);
         const auto name = userver::utils::text::Trim(request.body.name);
         if (name.empty())
             throw ApiError{400, "empty_role_name", "Укажите название роли"};
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.body.organization_id, identity);
+        ValidatePermissions(transaction, request.body.permissions);
         const pgtypes::OrganizationRoleV1 value{
             request.body.id, name, request.body.description, request.body.permissions, 1};
         const auto role =

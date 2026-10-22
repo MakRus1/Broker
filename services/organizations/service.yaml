@@ -21,6 +21,9 @@ auth:
     /api/admin/organizations/roles/list: authenticated
     /api/admin/organizations/roles/create: authenticated
     /api/admin/organizations/roles/update: authenticated
+    /api/admin/platform-access/get: authenticated
+    /api/admin/platform-access/update: authenticated
+    /api/platform/access: authenticated
 http_logging:
   exclude_paths:
   - /api/admin/organizations/members/create

@@ -2,6 +2,7 @@
 #include <helpers/database.hpp>
 #include <helpers/quantities.hpp>
 #include <helpers/revision.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/shipment_items/update/view.hpp>
 
@@ -10,6 +11,7 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::shipments::helpers;
     try {
+        platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});

@@ -28,7 +28,10 @@ inline models::OrganizationRole Convert(
 }
 
 inline models::Permission Convert(const clients::organizations::models::Permission& value) {
-    return {.group = value.group, .id = value.id, .name = value.name};
+    return {.group = value.group,
+        .id = value.id,
+        .name = value.name,
+        .dependencies = value.dependencies};
 }
 
 template <typename Value> auto ConvertOrganizations(const std::vector<Value>& values) {

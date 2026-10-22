@@ -82,3 +82,15 @@ import sys
 sys.path.insert(0, '/workspaces/broker/scripts')
 from organization_identity import configure
 configure(api, secrets['organizations-manager-secret'], platform_admin='author')
+
+# Только тестовые технические клиенты: права берутся из Organizations, не из JWT.
+platform_accounts = {}
+for client_id in ['local-author', 'local-reviewer']:
+    client = api('clients?clientId=' + client_id)[0]
+    mapper = {'name': 'broker-logistics-audience', 'protocol': 'openid-connect',
+        'protocolMapper': 'oidc-audience-mapper', 'consentRequired': False,
+        'config': {'included.client.audience': 'broker-logistics', 'access.token.claim': 'true', 'id.token.claim': 'false'}}
+    client['protocolMappers'] = [item for item in client.get('protocolMappers', []) if item['name'] != mapper['name']] + [mapper]
+    api('clients/' + client['id'], client, method='PUT')
+    platform_accounts[client_id] = api('clients/' + client['id'] + '/service-account-user')['id']
+Path('/cache/platform-users.json').write_text(json.dumps(platform_accounts))

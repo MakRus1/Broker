@@ -1,4 +1,5 @@
 #include <helpers/details.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/create/view.hpp>
 
@@ -8,6 +9,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
+        platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_WRITE);
         const auto organization = platform::auth::GetOrganization(identity);
         const auto value = Prepare(request.body);
         auto transaction =

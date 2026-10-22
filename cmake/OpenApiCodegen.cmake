@@ -7,6 +7,7 @@ function(broker_openapi_generate SERVICE_DIR)
     list(APPEND specs ${public_specs})
     file(GLOB_RECURSE config_schemas CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/schemas/configs/*.yaml" "${CMAKE_SOURCE_DIR}/schemas/config_contexts/*.yaml" "${CMAKE_SOURCE_DIR}/schemas/services/*.yaml" "${CMAKE_SOURCE_DIR}/schemas/services/*.yml" "${CMAKE_SOURCE_DIR}/schemas/services/*.json")
     list(APPEND specs ${config_schemas})
+    file(GLOB permission_schemas CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/schemas/permissions/*.yaml")
     file(GLOB generator_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/openapi_gen/*.py")
     file(GLOB postgres_types CONFIGURE_DEPENDS "${SERVICE_DIR}/postgresql/types.yaml")
     list(APPEND specs ${postgres_types})
@@ -39,7 +40,7 @@ function(broker_openapi_generate SERVICE_DIR)
     add_custom_command(OUTPUT ${generated}
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --check
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --output-dir "${out}"
-        DEPENDS ${service_manifest} ${client_specs} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
+        DEPENDS ${permission_schemas} ${service_manifest} ${client_specs} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
         VERBATIM)
     add_custom_target(${PROJECT_NAME}_codegen DEPENDS ${generated})
     file(GLOB_RECURSE view_sources CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp")

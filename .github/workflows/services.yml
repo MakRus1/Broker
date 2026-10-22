@@ -66,6 +66,8 @@ jobs:
         env:
           PUBLISH: ${{ github.event_name == 'workflow_dispatch' && '--push' || '' }}
         run: python tools/deploy/build.py --revision "$GITHUB_SHA" $PUBLISH
+      - name: Освободить ресурсы сборщика перед запуском K3s
+        run: docker buildx stop
       - name: Проверить запуск runtime без компилятора
         if: github.event_name == 'pull_request'
         run: |

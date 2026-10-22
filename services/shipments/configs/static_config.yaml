@@ -98,6 +98,17 @@ components_manager:
                 /api/v1/shipments/update: shipments.write
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

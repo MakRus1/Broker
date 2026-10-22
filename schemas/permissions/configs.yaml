@@ -1,0 +1,17 @@
+configs.read:
+  name: Просмотр конфигов
+  group: Конфиги
+  scope: platform
+  requires: []
+configs.write:
+  name: Изменение конфигов
+  group: Конфиги
+  scope: platform
+  requires:
+  - configs.read
+configs.approve:
+  name: Подтверждение конфигов
+  group: Конфиги
+  scope: platform
+  requires:
+  - configs.read

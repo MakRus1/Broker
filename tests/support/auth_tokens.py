@@ -23,8 +23,8 @@ class SigningKey:
 
     def token(self, user='author', roles=None, claims=None, header=None):
         now = int(time.time())
-        payload = {'iss': ISSUER, 'aud': 'configs-admin', 'sub': user, 'iat': now, 'exp': now + 300,
-                   'typ': 'Bearer', 'resource_access': {'configs-admin': {'roles': PERMISSIONS if roles is None else roles}}}
+        payload = {'iss': ISSUER, 'aud': 'broker-logistics', 'sub': user, 'iat': now, 'exp': now + 300,
+                   'typ': 'Bearer', 'resource_access': {'broker-logistics': {'roles': PERMISSIONS if roles is None else roles}}}
         payload.update(claims or {})
         headers = {'alg': 'RS256', 'kid': self.kid, 'typ': 'JWT', **(header or {})}
         message = '.'.join(encode(json.dumps(value, separators=(',', ':')).encode()) for value in [headers, payload])

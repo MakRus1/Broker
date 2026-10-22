@@ -109,6 +109,14 @@ def check(directory, runtime=False):
                 )
             run(*ns, 'get', 'pods,pvc')
 
+    except Exception:
+        # Сохраняем причину остановки до удаления временного кластера.
+        subprocess.run(['docker', 'stats', '--no-stream'], check=False)
+        subprocess.run(
+            ['docker', 'inspect', '--format', '{{json .State}}', name], check=False
+        )
+        subprocess.run(['docker', 'logs', '--tail', '100', name], check=False)
+        raise
     finally:
         subprocess.run(['docker', 'rm', '-f', '-v', name], check=False, capture_output=True)
 

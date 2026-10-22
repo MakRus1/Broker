@@ -1,3 +1,4 @@
+import { PermissionGroups } from './PermissionGroups';
 import { useState } from 'react';
 import { EditorPanel } from './EditorPanel';
 import type { OrganizationRole, Permission } from './types';
@@ -24,18 +25,6 @@ export function RoleEditor({
     name !== (role?.name ?? '') ||
     description !== (role?.description ?? '') ||
     [...selected].sort().join() !== [...(role?.permissions ?? [])].sort().join();
-  function toggle(id: string, enabled: boolean) {
-    const next = new Set(selected);
-    if (enabled) {
-      next.add(id);
-      if (id.endsWith('.write')) next.add(id.replace(/\.write$/, '.read'));
-    } else {
-      next.delete(id);
-      if (id.endsWith('.read')) next.delete(id.replace(/\.read$/, '.write'));
-    }
-    setSelected([...next]);
-  }
-  const groups = [...new Set(permissions.map((permission) => permission.group))];
   return (
     <EditorPanel
       title={role ? `Роль «${role.name}»` : 'Новая роль'}
@@ -75,41 +64,12 @@ export function RoleEditor({
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
-        <div className="role-permissions">
-          <h3>Права и доступы</h3>
-          {groups.map((group) => (
-            <details key={group} className="permission-group">
-              <summary>
-                <span>{group}</span>
-                <small>
-                  {
-                    permissions.filter(
-                      (permission) =>
-                        permission.group === group && selected.includes(permission.id),
-                    ).length
-                  }
-                  {' из '}
-                  {permissions.filter((permission) => permission.group === group).length}
-                </small>
-              </summary>
-              <fieldset disabled={busy}>
-                <legend className="permission-group-legend">{group}</legend>
-                {permissions
-                  .filter((permission) => permission.group === group)
-                  .map((permission) => (
-                    <label key={permission.id}>
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(permission.id)}
-                        onChange={(event) => toggle(permission.id, event.target.checked)}
-                      />
-                      {permission.name}
-                    </label>
-                  ))}
-              </fieldset>
-            </details>
-          ))}
-        </div>
+        <PermissionGroups
+          permissions={permissions}
+          selected={selected}
+          busy={busy}
+          onChange={setSelected}
+        />
         <div className="organization-editor-actions">
           <button className="primary" disabled={busy || !name.trim() || !dirty}>
             {busy ? 'Сохраняем…' : role ? 'Сохранить роль' : 'Создать роль'}

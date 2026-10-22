@@ -12,6 +12,8 @@ paths:
 - /api/admin/organizations/roles/list
 - /api/admin/organizations/roles/update
 - /api/admin/organizations/update
+- /api/admin/platform-access/get
+- /api/admin/platform-access/update
 - /api/configs/current
 - /api/configs/drafts/approve
 - /api/configs/drafts/cancel

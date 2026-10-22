@@ -1,4 +1,5 @@
 #include <helpers/details.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/list/view.hpp>
 
@@ -8,6 +9,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
+        platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_READ);
         const auto organization = platform::auth::GetOrganization(identity);
         std::optional<std::string> role;
         if (request.body.role.has_value())

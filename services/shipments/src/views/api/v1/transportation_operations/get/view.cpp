@@ -1,5 +1,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/transportation_operations/get/view.hpp>
 
@@ -8,6 +9,7 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::shipments::helpers;
     try {
+        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
         const auto& identity = platform::auth::GetIdentity(context);
         const auto organization = platform::auth::GetOrganization(identity);
         const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetOperation,

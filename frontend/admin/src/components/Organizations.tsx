@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { request, type Session } from '../api';
 import { EditorPanel } from './organizations/EditorPanel';
 import { MemberEditor } from './organizations/MemberEditor';
+import { PlatformAccessEditor } from './organizations/PlatformAccessEditor';
 import { RoleEditor } from './organizations/RoleEditor';
 import type {
   Member,
@@ -14,6 +15,7 @@ import type {
 export type { OrganizationAccess } from './organizations/types';
 
 type Editor =
+  | { kind: 'platform'; member: Member }
   | { kind: 'member'; member?: Member }
   | { kind: 'role'; role?: OrganizationRole }
   | { kind: 'organization'; organization?: Organization };
@@ -499,8 +501,18 @@ export function Organizations({
           busy={busy}
           error={error}
           save={saveMember}
+          platformAccess={
+            access.platform_admin && editor.member
+              ? () => {
+                  if (editor.member) setEditor({ kind: 'platform', member: editor.member });
+                }
+              : undefined
+          }
           close={closeEditor}
         />
+      )}
+      {editor?.kind === 'platform' && (
+        <PlatformAccessEditor member={editor.member} session={session} close={closeEditor} />
       )}
       {editor?.kind === 'role' && (
         <RoleEditor

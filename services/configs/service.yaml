@@ -10,8 +10,8 @@ dashboard:
   tags:
   - infrastructure
 auth:
-  audience: configs-admin
-  roles-client: configs-admin
+  audience: broker-logistics
+  roles-client: broker-logistics
   protected-prefix: /admin/
   permissions:
     /admin/configs/current: configs.read
@@ -24,3 +24,4 @@ auth:
     /admin/configs/drafts/list: configs.read
     /admin/configs/history: configs.read
     /admin/configs/list: configs.read
+  platform-access: true

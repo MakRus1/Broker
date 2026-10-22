@@ -1,4 +1,5 @@
 #include <helpers/transportations.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/transportations/get/view.hpp>
 
@@ -8,6 +9,7 @@ Response View::Handle(
     using namespace ::transportations::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
+        platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
         // Перевозка и её плечи читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto organization = platform::auth::GetOrganization(identity);

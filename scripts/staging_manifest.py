@@ -403,6 +403,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'client-transportations-base-url': f"http://{addresses['transportations']}:8080",
                 'client-organizations-base-url': f"http://{addresses['organizations']}:8080",
                 'organization-access-url': f"http://{addresses['organizations']}:8080/api/organizations/access",
+                'platform-access-url': f"http://{addresses['organizations']}:8080/api/platform/access",
                 'users-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
                 'users-admin-url': f"http://{addresses['keycloak']}:8080/admin/realms/broker",
                 'users-client-secret': manager_secret,
@@ -621,4 +622,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         )
         + '\n',
     )
+    from permission_catalog import load as load_permissions
+
+    private_write(directory / 'permissions.json', json.dumps(load_permissions(root), ensure_ascii=False))
     return phases

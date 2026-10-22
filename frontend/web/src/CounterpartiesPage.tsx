@@ -9,11 +9,20 @@ import { CounterpartyForm } from './CounterpartyForm';
 
 type Props = {
   route: string;
+  onTitle?: (title: string) => void;
+  active?: boolean;
   session: Session;
   onError: (error: unknown) => void;
   onChanged: (value: Counterparty) => void;
 };
-export function CounterpartiesPage({ route, session, onError, onChanged }: Props) {
+export function CounterpartiesPage({
+  route,
+  session,
+  onError,
+  onChanged,
+  onTitle,
+  active = true,
+}: Props) {
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = route === '/counterparties/new';
   const editing = creating || route.endsWith('/edit');
@@ -31,6 +40,9 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
   const [archiveFailure, setArchiveFailure] = useState('');
   const [busy, setBusy] = useState(false);
   const epoch = useRef(0);
+  useEffect(() => {
+    if (item) onTitle?.(item.name);
+  }, [item?.name]);
   const write = session.permissions.includes('counterparties.write');
   const read = session.permissions.includes('counterparties.read');
   const load = useCallback(
@@ -102,7 +114,8 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
     return () => controller.abort();
   }, [id, read, refresh, onError]);
   useEffect(() => {
-    document.title = `${creating ? 'Новый контрагент' : item?.name || 'Контрагенты'} · Broker`;
+    if (active)
+      document.title = `${creating ? 'Новый контрагент' : item?.name || 'Контрагенты'} · Broker`;
   }, [creating, item?.name]);
   async function archive() {
     if (!item) return;

@@ -79,8 +79,26 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-shipments-cargo_suggestions:
+            path: /api/v1/shipments/cargo-suggestions
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-cargo_suggestions-remove:
+            path: /api/v1/shipments/cargo-suggestions/remove
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipments-create:
             path: /api/v1/shipments/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-dictionaries:
+            path: /api/v1/shipments/dictionaries
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -93,6 +111,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-shipments-list:
             path: /api/v1/shipments/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-settings:
+            path: /api/v1/shipments/settings
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

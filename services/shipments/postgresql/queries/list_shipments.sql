@@ -1,10 +1,22 @@
 SELECT ROW(
     id,
     revision,
-    'S-' || number,
+    number,
     customer_id,
-    reference
-)::public.shipment_v1
+    reference,
+    shipment_date::TEXT,
+    recipient_id,
+    logist,
+    cargo_description,
+    status,
+    incoterms,
+    carriage_terms,
+    loading,
+    delivery_city,
+    delivery_country,
+    delivery_address,
+    route_segments
+)::public.shipment_v2
 FROM shipments
 WHERE organization_id = $1::UUID AND ($2::UUID IS NULL OR id > $2::UUID)
 ORDER BY id

@@ -26,8 +26,7 @@ paths:
                   shipment:
                     $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность
-            дат
+          description: Некорректное тело запроса, значения полей или последовательность дат
           content:
             application/json:
               schema:
@@ -51,8 +50,8 @@ paths:
               schema:
                 $ref: ../components/schemas/shipments/models.yaml#/ApiError
         '409':
-          description: Ключ идемпотентности уже использован с другим запросом или
-            изменена редакция родительской поставки
+          description: Ключ идемпотентности уже использован с другим запросом или изменена редакция родительской
+            поставки
           content:
             application/json:
               schema:
@@ -86,8 +85,7 @@ paths:
                   shipment:
                     $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность
-            дат
+          description: Некорректное тело запроса, значения полей или последовательность дат
           content:
             application/json:
               schema:
@@ -147,8 +145,7 @@ paths:
                 required:
                 - items
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность
-            дат
+          description: Некорректное тело запроса, значения полей или последовательность дат
           content:
             application/json:
               schema:
@@ -206,8 +203,233 @@ paths:
                   shipment:
                     $ref: ../components/schemas/shipments/models.yaml#/Shipment
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность
-            дат
+          description: Некорректное тело запроса, значения полей или последовательность дат
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '409':
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/shipments/settings:
+    post:
+      summary: Настройки карточки поставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/shipments/models.yaml#/GetShipmentSettingsRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ShipmentSettings
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность дат
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '409':
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/shipments/cargo-suggestions:
+    post:
+      summary: Подсказки описания груза
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/shipments/models.yaml#/CargoSuggestionsRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: string
+                      maxLength: 2000
+                required:
+                - items
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность дат
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '409':
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/shipments/cargo-suggestions/remove:
+    post:
+      summary: Удалить ошибочное описание из подсказок
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/shipments/models.yaml#/DeleteCargoSuggestionRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  deleted:
+                    type: boolean
+                required:
+                - deleted
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность дат
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '409':
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/shipments/dictionaries:
+    post:
+      summary: Справочники карточки поставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/shipments/models.yaml#/ShipmentDictionaries
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность дат
           content:
             application/json:
               schema:

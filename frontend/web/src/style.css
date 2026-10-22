@@ -1403,3 +1403,349 @@ nav,
   max-width: 145px;
   white-space: nowrap;
 }
+
+main > header {
+  border-bottom: 0;
+}
+
+.workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 -1px;
+  padding: 0;
+}
+.workspace-tab {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 240px;
+  position: relative;
+  border: 1px solid #d6deea;
+  border-radius: 7px 7px 0 0;
+  background: #eaf0f7;
+  color: #67768d;
+}
+.workspace-tab > button[role='tab'] {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  padding: 8px 6px 8px 12px;
+  text-align: left;
+  font-size: 13px;
+}
+.workspace-tab:not(.selected):hover {
+  background: #e0e8f3;
+  color: #243247;
+}
+.workspace-tab.selected {
+  z-index: 1;
+  color: #2456bb;
+  background: #fff;
+  border-color: #cdd7e6;
+  border-bottom-color: #fff;
+}
+.workspace-tab .workspace-close {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin: 0 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #8a95a6;
+  font-size: 14px;
+}
+.workspace-tab .workspace-close:hover {
+  background: #e8edf5;
+  color: #243247;
+}
+@media (max-width: 520px) {
+  .workspace-tabs {
+    gap: 4px;
+  }
+  .workspace-tab {
+    max-width: 100%;
+  }
+  .workspace-tab > button[role='tab'] {
+    max-width: 180px;
+  }
+}
+.workspace-content {
+  border: 1px solid #cdd7e6;
+  border-radius: 0 9px 9px 9px;
+  background: #fff;
+  min-width: 0;
+}
+.workspace-content > [data-workspace] > .surface,
+.workspace-content .counterparty-page > .surface {
+  border: 0;
+  border-radius: 0 9px 9px 9px;
+  box-shadow: none;
+}
+.workspace-content .creation-page {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+.workspace-content > div > .page-heading {
+  padding-inline: 28px;
+}
+.shipment-editor {
+  padding: 28px;
+  overflow: visible;
+}
+.shipment-editor > .page-heading {
+  padding: 0 0 20px;
+}
+.shipment-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.shipment-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 24px;
+  padding: 4px;
+  border: 1px solid #e4e9f1;
+  border-radius: 9px;
+  background: #f0f3f8;
+}
+.shipment-tabs button {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #68758b;
+  background: transparent;
+  box-shadow: none;
+}
+.shipment-tabs button:hover {
+  color: #243247;
+  background: #e7edf6;
+}
+.shipment-tabs button[aria-pressed='true'] {
+  color: #243247;
+  background: #fff;
+  border-color: #dbe3ee;
+  box-shadow: 0 1px 3px #2432470b;
+}
+.shipment-embedded .shipment-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.shipment-embedded .panel-content {
+  padding: 0;
+}
+.shipment-embedded .section-heading {
+  padding-top: 4px;
+}
+.shipment-embedded .item-card:last-child {
+  margin-bottom: 0;
+}
+.shipment-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+  align-items: start;
+}
+.shipment-fields.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 20px;
+}
+.shipment-fields .full {
+  grid-column: 1 / -1;
+}
+.shipment-field-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #dce3ee;
+}
+.shipment-field-section h2 {
+  font-size: 18px;
+  margin-bottom: 18px;
+}
+.shipment-number {
+  display: flex;
+  gap: 8px;
+}
+.shipment-number input {
+  min-width: 0;
+  flex: 1;
+}
+.shipment-number button {
+  white-space: nowrap;
+}
+.shipment-save {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  border-top: 1px solid #dce3ee;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: #fff;
+  padding: 14px 0;
+  margin-top: 28px;
+}
+.shipment-save-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.shipment-save span {
+  flex: 1;
+  font-size: 13px;
+  color: #76839a;
+}
+.shipment-route-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.shipment-route-row > span {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  color: #738097;
+}
+.shipment-route-row .app-select {
+  min-width: 0;
+}
+.shipment-route-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.shipment-route-actions button {
+  height: 44px;
+  white-space: nowrap;
+}
+.shipment-route-actions button[aria-label^='Поднять'],
+.shipment-route-actions button[aria-label^='Опустить'] {
+  width: 40px;
+  padding: 0;
+}
+.cargo-autocomplete {
+  position: relative;
+}
+.cargo-suggestions {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #d8e0eb;
+  border-radius: 7px;
+  box-shadow: 0 8px 24px #24324718;
+}
+.cargo-suggestions p {
+  padding: 8px 10px;
+  margin: 0;
+  font-size: 12px;
+  color: #67768d;
+}
+.cargo-suggestion {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.cargo-suggestion > button:first-child {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 4px;
+  padding: 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  background: transparent;
+}
+.cargo-suggestion > button:first-child:hover,
+.cargo-suggestion > button:first-child:focus-visible {
+  background: #edf3ff;
+}
+.cargo-suggestion .cargo-remove {
+  border: 0;
+  background: transparent;
+  color: #7a879b;
+  width: 32px;
+  flex-shrink: 0;
+  padding: 4px;
+}
+@media (max-width: 760px) {
+  .shipment-fields,
+  .shipment-fields.three {
+    grid-template-columns: 1fr;
+  }
+  .shipment-editor {
+    padding: 18px;
+  }
+  .shipment-save {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .shipment-route-row {
+    flex-wrap: wrap;
+  }
+}
+
+.shipment-editor label {
+  align-content: start;
+}
+.shipment-editor input:not([type='checkbox']),
+.shipment-editor .select-trigger {
+  height: 44px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.shipment-editor textarea {
+  font-size: 14px;
+}
+.shipment-editor .counterparty-picker {
+  min-width: 0;
+}
+.shipment-number {
+  align-items: stretch;
+}
+.shipment-number button {
+  height: 44px;
+}
+
+.shipment-editor > div > .shipment-page {
+  padding: 0;
+}
+.shipment-editor .shipment-card > .panel-content {
+  padding-inline: 0;
+}
+
+@media (max-width: 600px) {
+  .shipment-route-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .shipment-route-actions {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}

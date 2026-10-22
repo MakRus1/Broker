@@ -46,6 +46,9 @@ endif()
 
 if(BUILD_TESTING)
     userver_testsuite_add_simple()
+    add_executable(shipments_unittest tests/unit/date_validation_test.cpp)
+    target_link_libraries(shipments_unittest PRIVATE broker_common userver::utest)
+    add_google_tests(shipments_unittest)
 endif()
 
 include(GNUInstallDirs)

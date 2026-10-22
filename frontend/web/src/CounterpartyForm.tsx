@@ -115,7 +115,13 @@ export function CounterpartyForm({
   }
   return (
     <>
-      <form className="counterparty-form" data-dirty={dirty} data-busy={busy} onSubmit={submit}>
+      <form
+        className="counterparty-form"
+        data-draft-key={storageKey}
+        data-dirty={dirty}
+        data-busy={busy}
+        onSubmit={submit}
+      >
         <div className="section-heading">
           <h1>{initial ? 'Редактирование контрагента' : 'Новый контрагент'}</h1>
           <button type="button" disabled={busy} onClick={cancel}>

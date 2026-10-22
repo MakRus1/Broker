@@ -10,6 +10,19 @@ inline models::shipments::Shipment Convert(const clients::shipments::models::Shi
     result.id = value.id;
     result.number = value.number;
     result.reference = value.reference;
+    result.shipment_date = value.shipment_date;
+    result.recipient_id = value.recipient_id;
+    result.logist = value.logist;
+    result.cargo_description = value.cargo_description;
+    result.status = value.status;
+    result.incoterms = value.incoterms;
+    result.carriage_terms = value.carriage_terms;
+    result.loading = value.loading;
+    result.delivery_city = value.delivery_city;
+    result.delivery_country = value.delivery_country;
+    result.delivery_address = value.delivery_address;
+    for (const auto& segment : value.route_segments)
+        result.route_segments.push_back({.id = segment.id, .type = segment.type});
     result.revision = value.revision;
     return result;
 }
@@ -89,11 +102,34 @@ inline clients::shipments::ApiV1TransportationOperationsGet::RequestBody Convert
     return {.operation_id = value.operation_id};
 }
 
+inline std::optional<std::vector<clients::shipments::models::ShipmentRouteSegment>> ConvertSegments(
+    const std::optional<std::vector<models::shipments::ShipmentRouteSegment>>& values) {
+    if (!values.has_value())
+        return std::nullopt;
+    std::vector<clients::shipments::models::ShipmentRouteSegment> result;
+    for (const auto& value : values.value())
+        result.push_back({.id = value.id, .type = value.type});
+    return result;
+}
+
 inline clients::shipments::ApiV1ShipmentsCreate::RequestBody Convert(
     const models::shipments::CreateShipmentRequest& value) {
-    return {.customer_id = value.customer_id,
+    return {.cargo_description = value.cargo_description,
+        .carriage_terms = value.carriage_terms,
+        .customer_id = value.customer_id,
+        .delivery_address = value.delivery_address,
+        .delivery_city = value.delivery_city,
+        .delivery_country = value.delivery_country,
         .idempotency_key = value.idempotency_key,
-        .reference = value.reference};
+        .incoterms = value.incoterms,
+        .loading = value.loading,
+        .logist = value.logist,
+        .number = value.number,
+        .recipient_id = value.recipient_id,
+        .reference = value.reference,
+        .route_segments = ConvertSegments(value.route_segments),
+        .shipment_date = value.shipment_date,
+        .status = value.status};
 }
 
 inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(
@@ -108,9 +144,23 @@ inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
     const models::shipments::UpdateShipmentRequest& value) {
-    return {.expected_revision = value.expected_revision,
+    return {.cargo_description = value.cargo_description,
+        .carriage_terms = value.carriage_terms,
+        .customer_id = value.customer_id,
+        .delivery_address = value.delivery_address,
+        .delivery_city = value.delivery_city,
+        .delivery_country = value.delivery_country,
+        .expected_revision = value.expected_revision,
+        .incoterms = value.incoterms,
+        .loading = value.loading,
+        .logist = value.logist,
+        .number = value.number,
+        .recipient_id = value.recipient_id,
         .reference = value.reference,
-        .shipment_id = value.shipment_id};
+        .route_segments = ConvertSegments(value.route_segments),
+        .shipment_date = value.shipment_date,
+        .shipment_id = value.shipment_id,
+        .status = value.status};
 }
 
 inline clients::shipments::ApiV1ShipmentItemsAdd::RequestBody Convert(

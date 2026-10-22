@@ -6,13 +6,48 @@
 #include <vector>
 
 namespace shipments::helpers {
-inline models::Shipment Convert(const pgtypes::ShipmentV1& row) {
+inline pgtypes::ShipmentDataV1 ConvertData(const pgtypes::ShipmentV2& row) {
+    return {.Number = row.Number,
+        .CustomerId = row.CustomerId,
+        .Reference = row.Reference,
+        .ShipmentDate = row.ShipmentDate,
+        .RecipientId = row.RecipientId,
+        .Logist = row.Logist,
+        .CargoDescription = row.CargoDescription,
+        .Status = row.Status,
+        .Incoterms = row.Incoterms,
+        .CarriageTerms = row.CarriageTerms,
+        .Loading = row.Loading,
+        .DeliveryCity = row.DeliveryCity,
+        .DeliveryCountry = row.DeliveryCountry,
+        .DeliveryAddress = row.DeliveryAddress,
+        .RouteSegments = row.RouteSegments};
+}
+
+inline models::Shipment Convert(const pgtypes::ShipmentV2& row) {
     models::Shipment result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.number = row.Number;
     result.customer_id = boost::uuids::to_string(row.CustomerId);
     result.reference = row.Reference;
+    result.shipment_date = row.ShipmentDate;
+    result.logist.emplace(row.Logist);
+    result.cargo_description.emplace(row.CargoDescription);
+    result.status = row.Status;
+    result.incoterms.emplace(row.Incoterms);
+    result.carriage_terms.emplace(row.CarriageTerms);
+    result.loading.emplace(row.Loading);
+    result.delivery_city.emplace(row.DeliveryCity);
+    result.delivery_country.emplace(row.DeliveryCountry);
+    result.delivery_address.emplace(row.DeliveryAddress);
+    for (const auto& segment : row.RouteSegments)
+        result.route_segments.push_back(
+            {.id = boost::uuids::to_string(segment.Id), .type = segment.Type});
+    if (row.RecipientId.has_value())
+        result.recipient_id = boost::uuids::to_string(row.RecipientId.value());
+    else
+        result.recipient_id.emplace(std::nullopt);
     return result;
 }
 
@@ -47,7 +82,7 @@ inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row
 inline std::vector<models::Shipment> Convert(const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV1>())
+    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV2>())
         result.push_back(Convert(row));
     return result;
 }

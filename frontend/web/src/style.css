@@ -1015,3 +1015,151 @@ button.danger:hover:not(:disabled) {
     padding: 12px 8px;
   }
 }
+
+/* Панель раскрывается поверх страницы; закрепление оставляет место для меню. */
+.sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 35px;
+}
+.navigation-pin {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #9aacc3;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+.sidebar .navigation-pin:hover:not(:disabled),
+.sidebar .navigation-pin:focus-visible,
+.sidebar .navigation-pin[aria-pressed='true'] {
+  background: #263e5d;
+  color: #e1ebfa;
+}
+.navigation-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  flex: 0 0 20px;
+}
+.brand-name .brand-dot {
+  margin-left: 0;
+}
+@media (min-width: 651px) {
+  .sidebar {
+    width: 72px;
+    padding: 32px 12px 22px;
+    z-index: 30;
+    overflow: hidden;
+    transition:
+      width 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .sidebar .brand {
+    min-height: 35px;
+    padding-left: 6px;
+  }
+  .sidebar .brand > span:first-child {
+    flex-shrink: 0;
+  }
+  .sidebar-heading {
+    width: 201px;
+  }
+  .sidebar .brand-name,
+  .sidebar .navigation-text,
+  .sidebar .navigation-pin,
+  .sidebar .profile > div {
+    visibility: hidden;
+    opacity: 0;
+  }
+  .sidebar .brand-name {
+    white-space: nowrap;
+  }
+  .sidebar .navigation-pin {
+    margin-right: 2px;
+  }
+  .sidebar .nav-label {
+    height: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    visibility: hidden;
+  }
+  .sidebar nav button {
+    white-space: nowrap;
+    min-height: 46px;
+    width: 48px;
+    padding: 12px 13px;
+    gap: 12px;
+  }
+  .sidebar .profile {
+    min-height: 56px;
+  }
+  .app main {
+    margin-left: 72px;
+    width: calc(100% - 72px);
+  }
+  .sidebar:hover,
+  .sidebar:has(:focus-visible),
+  .navigation-pinned .sidebar {
+    width: 225px;
+    box-shadow: 8px 0 24px #15263c20;
+  }
+  .sidebar:is(:hover, :has(:focus-visible)) .brand-name,
+  .sidebar:is(:hover, :has(:focus-visible)) .navigation-text,
+  .sidebar:is(:hover, :has(:focus-visible)) .navigation-pin,
+  .sidebar:is(:hover, :has(:focus-visible)) .profile > div,
+  .navigation-pinned .sidebar .brand-name,
+  .navigation-pinned .sidebar .navigation-text,
+  .navigation-pinned .sidebar .navigation-pin,
+  .navigation-pinned .sidebar .profile > div {
+    visibility: visible;
+    opacity: 1;
+  }
+  .sidebar:is(:hover, :has(:focus-visible)) nav button,
+  .navigation-pinned .sidebar nav button {
+    width: 201px;
+  }
+  .sidebar:is(:hover, :has(:focus-visible)) .nav-label,
+  .navigation-pinned .sidebar .nav-label {
+    visibility: visible;
+  }
+  .navigation-pinned main {
+    margin-left: 225px;
+    width: calc(100% - 225px);
+  }
+}
+@media (max-width: 650px) {
+  .navigation-pin {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+.auto-load {
+  min-height: 24px;
+  padding: 12px 0;
+  text-align: center;
+  color: #64738a;
+}
+.route-fields > * {
+  min-width: 0;
+}
+.route-fields input,
+.route-fields select {
+  min-width: 0;
+}
+.route-mode-field {
+  align-content: start;
+}
+.route-mode-field select {
+  max-width: 240px;
+}

@@ -1,3 +1,4 @@
+import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ApiError,
@@ -60,6 +61,14 @@ export function App() {
         ? 'Broker'
         : `${tab === 'shipments' ? 'Поставки' : tab === 'counterparties' ? 'Контрагенты' : 'Перевозки'} · Broker`;
   }, [creating, shipmentId, transportationId, tab]);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [navigationPinned, setNavigationPinned] = useState(() => {
+    try {
+      return localStorage.getItem('broker:navigation-pinned') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState('');
@@ -98,6 +107,7 @@ export function App() {
         return;
       const currentRequest = ++requestNumber.current;
       setLoading(true);
+      setLoadFailed(false);
       try {
         if (tab === 'shipments') {
           const page = await request<{ items: Shipment[] }>('/api/v1/shipments/list', session, {
@@ -121,7 +131,10 @@ export function App() {
           setMore(page.items.length === 50);
         }
       } catch (value) {
-        if (currentRequest === requestNumber.current) error(value);
+        if (currentRequest === requestNumber.current) {
+          setLoadFailed(true);
+          error(value);
+        }
       } finally {
         if (currentRequest === requestNumber.current) setLoading(false);
       }
@@ -245,34 +258,81 @@ export function App() {
       </div>
     );
   return (
-    <div className="app">
-      <aside className="sidebar">
-        <Brand />
+    <div className={`app${navigationPinned ? ' navigation-pinned' : ''}`}>
+      <aside className="sidebar" id="workspace-navigation">
+        <div className="sidebar-heading">
+          <Brand />
+          <button
+            className="navigation-pin"
+            aria-label={navigationPinned ? 'Открепить меню' : 'Закрепить меню'}
+            aria-pressed={navigationPinned}
+            title={navigationPinned ? 'Открепить меню' : 'Закрепить меню'}
+            onClick={() => {
+              const next = !navigationPinned;
+              setNavigationPinned(next);
+              try {
+                localStorage.setItem('broker:navigation-pinned', String(next));
+              } catch {
+                /* Настройка доступна и без хранилища. */
+              }
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m16 3 5 5-4 1-3 5-4-4 5-3 1-4Z" />
+              <path d="m10 10-3 3 4 4 3-3M9 15l-6 6" />
+            </svg>
+          </button>
+        </div>
         <span className="nav-label">РАБОЧЕЕ ПРОСТРАНСТВО</span>
         <nav aria-label="Разделы">
           <button
+            aria-label="Поставки"
+            title="Поставки"
             aria-current={tab === 'shipments' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/shipments';
             }}
           >
-            ▣ <span>Поставки</span>
+            <span className="navigation-icon" aria-hidden="true">
+              ▣
+            </span>{' '}
+            <span className="navigation-text">Поставки</span>
           </button>
           <button
+            aria-label="Перевозки"
+            title="Перевозки"
             aria-current={tab === 'transportations' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/transportations';
             }}
           >
-            ⇄ <span>Перевозки</span>
+            <span className="navigation-icon" aria-hidden="true">
+              ⇄
+            </span>{' '}
+            <span className="navigation-text">Перевозки</span>
           </button>
           <button
+            aria-label="Контрагенты"
+            title="Контрагенты"
             aria-current={tab === 'counterparties' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/counterparties';
             }}
           >
-            ▤ <span>Контрагенты</span>
+            <span className="navigation-icon" aria-hidden="true">
+              ▤
+            </span>{' '}
+            <span className="navigation-text">Контрагенты</span>
           </button>
         </nav>
         <div className="profile">
@@ -384,13 +444,12 @@ export function App() {
                 </p>
               </div>
             )}
-            {more && (
-              <div className="table-footer">
-                <button disabled={loading} onClick={() => void load(true)}>
-                  Загрузить ещё
-                </button>
-              </div>
-            )}
+            <AutoLoadMore
+              enabled={more}
+              loading={loading}
+              failed={loadFailed}
+              onLoad={() => load(true)}
+            />
           </section>
         </div>
         {tab === 'counterparties' && (
@@ -470,7 +529,10 @@ export function App() {
 export function Brand() {
   return (
     <div className="brand">
-      <span>B</span>broker<span className="brand-dot">.</span>
+      <span>B</span>
+      <span className="brand-name">
+        broker<span className="brand-dot">.</span>
+      </span>
     </div>
   );
 }

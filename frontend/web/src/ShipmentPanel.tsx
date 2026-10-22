@@ -1,3 +1,4 @@
+import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ApiError,
@@ -150,6 +151,7 @@ export function ShipmentPanel({
   }
   async function nextPage(kind: 'items' | 'transportations') {
     setLoading(true);
+    setFailure('');
     try {
       if (kind === 'items') {
         const result = await request<{ items: Item[] }>('/api/v1/shipment-items/list', session, {
@@ -169,6 +171,7 @@ export function ShipmentPanel({
         setMoreTransportations(result.items.length === 50);
       }
     } catch (value) {
+      setFailure(value instanceof Error ? value.message : 'Не удалось загрузить записи');
       onError(value);
     } finally {
       setLoading(false);
@@ -317,11 +320,12 @@ export function ShipmentPanel({
                   <p>Укажите тип контейнера, принадлежность и плановое количество.</p>
                 </div>
               )}
-              {moreItems && (
-                <button disabled={loading} onClick={() => void nextPage('items')}>
-                  Ещё позиции
-                </button>
-              )}
+              <AutoLoadMore
+                enabled={moreItems}
+                loading={loading}
+                failed={Boolean(failure)}
+                onLoad={() => nextPage('items')}
+              />
               {operations.length > 0 && (
                 <section className="operations">
                   <h3>Операции создания</h3>
@@ -354,11 +358,12 @@ export function ShipmentPanel({
                       <p>Создайте их из доступного количества позиции.</p>
                     </div>
                   )}
-                  {moreTransportations && (
-                    <button disabled={loading} onClick={() => void nextPage('transportations')}>
-                      Ещё перевозки
-                    </button>
-                  )}
+                  <AutoLoadMore
+                    enabled={moreTransportations}
+                    loading={loading}
+                    failed={Boolean(failure)}
+                    onLoad={() => nextPage('transportations')}
+                  />
                 </>
               )}
             </>

@@ -1,3 +1,4 @@
+import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
 import { CardNavigation, Dialog } from './components';
@@ -409,13 +410,12 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
             <p>Измените поиск или создайте новую карточку.</p>
           </div>
         )}
-        {more && (
-          <div className="table-footer">
-            <button disabled={loading} onClick={() => void load(items.at(-1)?.id)}>
-              Загрузить ещё
-            </button>
-          </div>
-        )}
+        <AutoLoadMore
+          enabled={more}
+          loading={loading}
+          failed={Boolean(failure)}
+          onLoad={() => load(items.at(-1)?.id)}
+        />
       </section>
     </>
   );

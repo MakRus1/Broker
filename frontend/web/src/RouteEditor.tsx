@@ -220,7 +220,7 @@ export function RouteEditor({
                 </div>
               </div>
               <div className="route-fields">
-                <label>
+                <label className="route-mode-field">
                   Транспорт
                   <select
                     value={route_segment.mode}
@@ -296,12 +296,19 @@ export function RouteEditor({
                     <input
                       type="datetime-local"
                       value={localDateTime(route_segment[field])}
-                      onChange={(event) =>
-                        update(index, {
-                          ...route_segment,
-                          [field]: event.target.value ? utcDateTime(event.target.value) : undefined,
-                        })
-                      }
+                      onChange={(event) => {
+                        try {
+                          update(index, {
+                            ...route_segment,
+                            [field]: event.target.value
+                              ? utcDateTime(event.target.value)
+                              : undefined,
+                          });
+                          setFailure('');
+                        } catch (error) {
+                          setFailure(error instanceof Error ? error.message : 'Проверьте дату');
+                        }
+                      }}
                     />
                   </label>
                 ))}

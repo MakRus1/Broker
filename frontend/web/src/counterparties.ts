@@ -136,3 +136,52 @@ export function restoreCounterpartyDraft(
     return fallback;
   }
 }
+
+export function isEmail(value: string): boolean {
+  const parts = value.split('@');
+  if (parts.length !== 2 || value.length > 254) return false;
+  const [local, domain] = parts;
+  if (
+    !local ||
+    local.length > 64 ||
+    local.startsWith('.') ||
+    local.endsWith('.') ||
+    local.includes('..') ||
+    /[\s<>(),;:"\\[\]]/.test(local)
+  )
+    return false;
+  const labels = domain.split('.');
+  return (
+    labels.length >= 2 &&
+    labels.every(
+      (label) =>
+        label.length > 0 &&
+        label.length <= 63 &&
+        !label.startsWith('-') &&
+        !label.endsWith('-') &&
+        Array.from(label).every((char) => char.charCodeAt(0) >= 128 || /^[A-Za-z0-9-]$/.test(char)),
+    )
+  );
+}
+
+export function isPhone(value: string): boolean {
+  let digits = 0;
+  let opened = false;
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    if (/^[0-9]$/.test(char)) digits++;
+    else if (char === '(' && !opened) opened = true;
+    else if (char === ')' && opened) opened = false;
+    else if (!' -.'.includes(char) && !(char === '+' && index === 0)) return false;
+  }
+  return !opened && digits >= 7 && digits <= 15;
+}
+
+export function validateContacts(contacts: CounterpartyContactDraft[]) {
+  for (const [index, contact] of contacts.entries()) {
+    if (contact.email.trim() && !isEmail(contact.email.trim()))
+      throw new Error(`Контакт ${index + 1}: проверьте email`);
+    if (contact.phone.trim() && !isPhone(contact.phone.trim()))
+      throw new Error(`Контакт ${index + 1}: телефон должен содержать от 7 до 15 цифр`);
+  }
+}

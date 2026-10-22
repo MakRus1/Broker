@@ -20,6 +20,7 @@
 #include <userver/utils/periodic_task.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 #include <variant>
+#include <vector>
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -93,6 +94,7 @@ struct Component::State {
     std::string OrganizationUrl;
     std::map<std::string, std::string> ServiceClients;
     std::map<std::string, std::string> Permissions;
+    std::map<std::string, std::vector<std::string>> Dependencies;
     std::chrono::seconds MaxAge;
     // Атомарные операции со shared_ptr поддерживаются и libc++ без atomic<shared_ptr>.
     std::shared_ptr<const Cached> Cache;
@@ -109,6 +111,9 @@ struct Component::State {
           OrganizationUrl(config["organization-url"].As<std::string>("")),
           ServiceClients(config["service-clients"].As<std::map<std::string, std::string>>({})),
           Permissions(config["permissions"].As<std::map<std::string, std::string>>()),
+          Dependencies(
+              config["permission-dependencies"].As<std::map<std::string, std::vector<std::string>>>(
+                  {})),
           MaxAge(config["max-key-age-seconds"].As<int>(300)) {
         const bool insecure = config["allow-http"].As<bool>(false);
         auto valid = [insecure](const std::string& url) {
@@ -227,6 +232,23 @@ Identity Component::Authorize(const std::string& path, const std::string& author
     if (service_client != state_->ServiceClients.end() &&
         identity.ClientId != service_client->second)
         throw Forbidden{};
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto it = identity.Permissions.begin(); it != identity.Permissions.end();) {
+            const auto dependencies = state_->Dependencies.find(*it);
+            if (dependencies != state_->Dependencies.end() &&
+                std::any_of(dependencies->second.begin(), dependencies->second.end(),
+                    [&](const auto& code) { return !identity.Permissions.contains(code); })) {
+                it = identity.Permissions.erase(it);
+                changed = true;
+            } else {
+                ++it;
+            }
+        }
+    }
+    if (permission->second != "authenticated" && !identity.Permissions.contains(permission->second))
+        throw Forbidden{};
     return identity;
 }
 
@@ -281,6 +303,15 @@ properties:
         description: Требуемое разрешение для каждого пути
         properties: {}
         additionalProperties: {type: string, description: Необходимое разрешение}
+    permission-dependencies:
+        type: object
+        description: Зависимости прав из каталога модулей
+        properties: {}
+        additionalProperties:
+            type: array
+            description: Необходимые сопутствующие права
+            items: {type: string, description: Код права}
+        default: {}
     service-clients:
         type: object
         description: Доверенный OAuth клиент для служебных разрешений

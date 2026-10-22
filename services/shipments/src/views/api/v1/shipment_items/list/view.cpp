@@ -1,6 +1,7 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
 #include <map>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/shipment_items/list/view.hpp>
 
@@ -9,6 +10,7 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::shipments::helpers;
     try {
+        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
         const auto& identity = platform::auth::GetIdentity(context);
         // Позиции и счётчики резервов читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);

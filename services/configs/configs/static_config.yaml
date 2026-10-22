@@ -125,6 +125,17 @@ components_manager:
                 /admin/configs/drafts/list: configs.read
                 /admin/configs/history: configs.read
                 /admin/configs/list: configs.read
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
         auth-http-client:
             wait-for-dynamic-configs: false
         dynamic-config:

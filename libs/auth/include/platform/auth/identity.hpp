@@ -3,6 +3,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <userver/server/handlers/exceptions.hpp>
 #include <userver/server/request/request_context.hpp>
 
@@ -36,5 +37,16 @@ inline const Identity& GetIdentity(const userver::server::request::RequestContex
     if (!identity)
         throw userver::server::handlers::Unauthorized{};
     return *identity;
+}
+
+inline bool HasPermission(
+    const userver::server::request::RequestContext& context, std::string_view permission) {
+    return GetIdentity(context).Permissions.contains(std::string(permission));
+}
+
+inline void CheckPermission(
+    const userver::server::request::RequestContext& context, std::string_view permission) {
+    if (!HasPermission(context, permission))
+        throw Forbidden{};
 }
 }  // namespace platform::auth

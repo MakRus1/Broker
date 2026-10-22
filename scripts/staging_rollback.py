@@ -101,6 +101,13 @@ def execute(root, context, namespace, service, *, target='', apply=False, histor
         write_json(record / 'selection.json', {'services': [service], 'infrastructure': False})
         write_json(record / 'before-services.json', current)
         try:
+            from permission_catalog import (
+                restore as restore_permissions,
+                finish as finish_permissions,
+            )
+
+            # Каталоги сохраняются по digest образа, исходники старого релиза не нужны.
+            restore_permissions(kubectl, service, describe(snapshot)['image'])
             # В apply передаются только два объекта одного сервиса, без Job/SQL/инфраструктуры.
             run(
                 [
@@ -128,6 +135,7 @@ def execute(root, context, namespace, service, *, target='', apply=False, histor
                 ],
                 check=True,
             )
+            finish_permissions(kubectl, service)
             run(
                 [
                     str(root / '.venv-gen/bin/python'),

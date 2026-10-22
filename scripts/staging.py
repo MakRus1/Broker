@@ -157,6 +157,21 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         )
     for name in jobs:
         run(*ns, 'wait', '--for=condition=complete', f'job/{name}', '--timeout=180s')
+    from permission_catalog import prepare as prepare_permissions, finish as finish_permissions
+
+    permission_entries = json.loads((directory / 'permissions.json').read_text())
+    deployments = (
+        list(yaml.safe_load_all(paths['services'].read_text())) if paths['services'] else []
+    )
+    permission_images = {
+        obj['metadata']['name'].replace('-', '_'): obj['spec']['template']['spec']['containers'][0][
+            'image'
+        ]
+        for obj in deployments
+        if obj and obj['kind'] == 'Deployment'
+    }
+    for owner in sorted(services):
+        prepare_permissions([*kubectl, *ns], owner, permission_images[owner], permission_entries)
     if paths['services']:
         run(
             'apply',
@@ -168,6 +183,8 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         )
     for name in services:
         run(*ns, 'rollout', 'status', f"deployment/{name.replace('_', '-')}", '--timeout=300s')
+    for owner in sorted(services):
+        finish_permissions([*kubectl, *ns], owner)
     if plan.get('lan'):
         subprocess.run(
             [

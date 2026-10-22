@@ -187,7 +187,7 @@ async def test_audit_failure_rolls_back_reservation(api, pgsql, service_client, 
             CHECK (action <> 'create_operation') NOT VALID
         """)
     try:
-        roles = ['shipments.write']
+        roles = ['shipments.read', 'shipments.write']
         token = auth_key.token(
             'author',
             roles=roles,

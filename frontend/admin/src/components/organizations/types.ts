@@ -26,6 +26,7 @@ export interface OrganizationRole {
   revision: number;
 }
 export interface Permission {
+  dependencies: string[];
   id: string;
   name: string;
   group: string;

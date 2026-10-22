@@ -185,3 +185,14 @@ async def test_organization_and_platform_roles_do_not_grant_config_access(
         '/admin/configs/drafts/create', json={}, headers={'Authorization': 'Bearer ' + token}
     )
     assert response.status == 403
+
+
+@pytest.mark.parametrize('permission,operation', [
+    ('configs.write', 'create'), ('configs.approve', 'approve'),
+])
+async def test_mutation_also_requires_read(monitor_client, access_token, permission, operation):
+    response = await monitor_client.post(
+        '/admin/configs/drafts/' + operation, json={},
+        headers={'Authorization': 'Bearer ' + access_token(roles=[permission])},
+    )
+    assert response.status == 403

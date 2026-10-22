@@ -621,4 +621,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         )
         + '\n',
     )
+    from permission_catalog import load as load_permissions
+
+    private_write(directory / 'permissions.json', json.dumps(load_permissions(root), ensure_ascii=False))
     return phases

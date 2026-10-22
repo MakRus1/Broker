@@ -124,6 +124,17 @@ components_manager:
                 /api/admin/organizations/update: authenticated
                 /api/organizations/access: authenticated
                 /api/organizations/me: authenticated
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
         auth-http-client:
             wait-for-dynamic-configs: false
         # SERVICE_CONFIG_END

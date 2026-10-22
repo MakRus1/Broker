@@ -1,0 +1,5 @@
+organizations.manage:
+  name: Управление сотрудниками и ролями
+  group: Администрирование организации
+  scope: organization
+  requires: []

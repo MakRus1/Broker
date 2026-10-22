@@ -177,7 +177,7 @@ class RollbackTest(unittest.TestCase):
             lock_path.parent.mkdir(parents=True)
             with lock_path.open('a') as held, patch.dict(
                 os.environ, {'GITHUB_STEP_SUMMARY': ''}
-            ), patch('staging_rollback.Path.home', return_value=root), patch(
+            ), patch('permission_catalog.restore') as restore_permissions, patch('permission_catalog.finish') as finish_permissions, patch('staging_rollback.Path.home', return_value=root), patch(
                 'staging_rollback.subprocess.run', side_effect=run
             ), patch(
                 'sys.stdout', new_callable=io.StringIO
@@ -189,6 +189,10 @@ class RollbackTest(unittest.TestCase):
                         staging_rollback.execute(root, 'ctx', 'ns', 'broker', apply=not preview)
                 else:
                     staging_rollback.execute(root, 'ctx', 'ns', 'broker', apply=not preview)
+            if not (preview or missing_config or lock_busy):
+                restore_permissions.assert_called_once()
+                if not fail:
+                    finish_permissions.assert_called_once()
             self.assertEqual(cluster[2:], neighbor)
             self.assertFalse(
                 any(

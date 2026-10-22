@@ -15,6 +15,7 @@ shared_paths:
 - .devcontainer/
 - tools/
 - scripts/
+- schemas/permissions/
 - tests/
 - CMakeLists.txt
 - CMakePresets.json

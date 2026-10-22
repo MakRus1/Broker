@@ -27,11 +27,24 @@ export function RoleEditor({
   function toggle(id: string, enabled: boolean) {
     const next = new Set(selected);
     if (enabled) {
-      next.add(id);
-      if (id.endsWith('.write')) next.add(id.replace(/\.write$/, '.read'));
+      function include(code: string) {
+        if (next.has(code)) return;
+        next.add(code);
+        permissions.find((permission) => permission.id === code)?.dependencies.forEach(include);
+      }
+      include(id);
     } else {
       next.delete(id);
-      if (id.endsWith('.read')) next.delete(id.replace(/\.read$/, '.write'));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const permission of permissions) {
+          if (next.has(permission.id) && permission.dependencies.some((code) => !next.has(code))) {
+            next.delete(permission.id);
+            changed = true;
+          }
+        }
+      }
     }
     setSelected([...next]);
   }
@@ -77,6 +90,18 @@ export function RoleEditor({
         </label>
         <div className="role-permissions">
           <h3>Права и доступы</h3>
+          {selected.some((code) => !permissions.some((permission) => permission.id === code)) && (
+            <details className="permission-group">
+              <summary>Неактивные разрешения</summary>
+              <ul>
+                {selected
+                  .filter((code) => !permissions.some((permission) => permission.id === code))
+                  .map((code) => (
+                    <li key={code}>{code}</li>
+                  ))}
+              </ul>
+            </details>
+          )}
           {groups.map((group) => (
             <details key={group} className="permission-group">
               <summary>

@@ -78,6 +78,17 @@ components_manager:
                 /api/v1/transportations/get: transportations.read
                 /api/v1/transportations/history: transportations.read
                 /api/v1/transportations/list: transportations.read
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
             service-clients:
                 transportations.create: shipments-dispatcher
             organization-url: $organization-access-url

@@ -11,7 +11,6 @@ Response View::Handle(
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
     try {
-        ValidatePermissions(request.body.permissions);
         const auto name = userver::utils::text::Trim(request.body.name);
         if (name.empty())
             throw ApiError{400, "empty_role_name", "Укажите название роли"};
@@ -20,6 +19,7 @@ Response View::Handle(
         RequireAdministrator(transaction, request.body.organization_id, identity);
         const auto previous =
             RequireRole(transaction, request.body.organization_id, request.body.id);
+        ValidatePermissions(transaction, request.body.permissions, previous.Permissions);
         if (previous.Revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict", "Роль уже изменена"};
         if (transaction

@@ -85,7 +85,13 @@ def identity_provider(mockserver, auth_key):
 
 @pytest.fixture(autouse=True)
 def memberships(pgsql):
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
+    from permission_catalog import load, register_sql
+    catalog = load(Path(__file__).resolve().parents[3])
     with pgsql['db_1'].cursor() as cursor:
+        for owner in sorted({value['owner'] for value in catalog.values()}):
+            cursor.execute(register_sql(owner, 'test', catalog).replace('BEGIN;', '').replace('COMMIT;', ''))
         cursor.execute('INSERT INTO organizations (id, name) VALUES (%s,%s),(%s,%s)',
                        (ORGANIZATION, 'Первая организация', OTHER_ORGANIZATION, 'Другая организация'))
         default_roles = (Path(__file__).resolve().parents[1] / 'postgresql/queries/create_default_roles.sql').read_text().replace('$1::UUID', '%s::UUID')

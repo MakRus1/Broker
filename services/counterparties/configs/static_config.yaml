@@ -71,6 +71,17 @@ components_manager:
                 /api/v1/counterparties/list: counterparties.read
                 /api/v1/counterparties/set-archived: counterparties.write
                 /api/v1/counterparties/update: counterparties.write
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

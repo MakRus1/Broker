@@ -16,8 +16,9 @@ Response View::Handle(
         RequireAdministrator(transaction, request.body.organization_id, identity);
         const auto roles = ConvertRows<pgtypes::OrganizationRoleV1>(
             transaction.Execute(sql::kListRoles, request.body.organization_id));
+        const auto permissions = PermissionCatalog(transaction);
         transaction.Commit();
-        return Response200{.items = roles, .permissions = PermissionCatalog()};
+        return Response200{.items = roles, .permissions = permissions};
     } catch (const ::organizations::ApiError& error) {
         switch (error.Status) {
         case 400:

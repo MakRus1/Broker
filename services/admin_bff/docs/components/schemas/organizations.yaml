@@ -236,6 +236,7 @@ Permission:
   - id
   - name
   - group
+  - dependencies
   properties:
     id:
       type: string
@@ -243,3 +244,7 @@ Permission:
       type: string
     group:
       type: string
+    dependencies:
+      type: array
+      items:
+        type: string

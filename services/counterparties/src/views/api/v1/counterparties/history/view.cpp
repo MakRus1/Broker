@@ -1,5 +1,6 @@
 #include <helpers/database.hpp>
 #include <helpers/history.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/history/view.hpp>
 
@@ -9,6 +10,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
+        platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_READ);
         const auto organization = platform::auth::GetOrganization(identity);
         // Физического удаления карточек нет; история читается отдельным атомарным запросом.
         if (deps.pg_cluster

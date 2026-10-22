@@ -1,4 +1,5 @@
 #include <helpers/transportations.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/internal/v1/transportations/ensure_created/view.hpp>
 
@@ -7,6 +8,7 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
+        platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_CREATE);
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});

@@ -1,0 +1,11 @@
+counterparties.read:
+  name: Просмотр контрагентов
+  group: Контрагенты
+  scope: organization
+  requires: []
+counterparties.write:
+  name: Изменение контрагентов
+  group: Контрагенты
+  scope: organization
+  requires:
+  - counterparties.read

@@ -1,0 +1,16 @@
+transportations.read:
+  name: Просмотр перевозок
+  group: Перевозки
+  scope: organization
+  requires: []
+transportations.write:
+  name: Изменение перевозок
+  group: Перевозки
+  scope: organization
+  requires:
+  - transportations.read
+transportations.create:
+  name: Создание перевозок сервисом
+  group: Перевозки
+  scope: service
+  requires: []

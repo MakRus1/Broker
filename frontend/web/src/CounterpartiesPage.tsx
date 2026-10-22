@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
@@ -337,25 +338,25 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <label>
-            Роль
-            <select value={role} onChange={(event) => setRole(event.target.value)}>
-              <option value="">Все роли</option>
-              {Object.entries(counterpartyRoles).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Состояние
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="active">Действующие</option>
-              <option value="archived">Архив</option>
-              <option value="all">Все</option>
-            </select>
-          </label>
+          <Select
+            label="Роль"
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: '', label: 'Все роли' },
+              ...Object.entries(counterpartyRoles).map(([value, label]) => ({ value, label })),
+            ]}
+          />
+          <Select
+            label="Состояние"
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: 'active', label: 'Действующие' },
+              { value: 'archived', label: 'Архив' },
+              { value: 'all', label: 'Все' },
+            ]}
+          />
         </div>
         {failure && (
           <p className="error" role="alert">

@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -444,17 +445,16 @@ function PositionForm({
               onChange={(event) => setCode(event.target.value)}
             />
           </label>
-          <label>
-            Принадлежность
-            <select
-              disabled={busy}
-              value={owner}
-              onChange={(event) => setOwner(event.target.value)}
-            >
-              <option value="COC">COC</option>
-              <option value="SOC">SOC</option>
-            </select>
-          </label>
+          <Select
+            label="Принадлежность"
+            disabled={busy}
+            value={owner}
+            onChange={setOwner}
+            options={[
+              { value: 'COC', label: 'COC' },
+              { value: 'SOC', label: 'SOC' },
+            ]}
+          />
         </>
       )}
       <label>

@@ -495,7 +495,6 @@ export function App() {
               actor={session.actor}
               session={session}
               customers={customers}
-              onCustomerCreated={(item) => setCustomers((old) => [...old, item])}
               onSubmit={async (body) => {
                 const result = await commands.current.send<{ shipment: Shipment }>(
                   '/api/v1/shipments/create',
@@ -540,14 +539,12 @@ function ShipmentForm({
   actor,
   session,
   customers,
-  onCustomerCreated,
   onSubmit,
   onError,
 }: {
   actor: string;
   session: Session;
   customers: Counterparty[];
-  onCustomerCreated: (item: Counterparty) => void;
   onSubmit: (body: object) => Promise<void>;
   onError: (value: unknown) => void;
 }) {
@@ -604,7 +601,6 @@ function ShipmentForm({
         items={customers}
         value={customer}
         onChange={setCustomer}
-        onCreated={onCustomerCreated}
         session={session}
         disabled={busy}
       />

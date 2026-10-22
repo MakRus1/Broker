@@ -926,6 +926,70 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
+  /api/admin/organizations/members/update-profile:
+    post:
+      summary: Изменить ФИО сотрудника организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/organizations.yaml#/UpdateMemberProfileRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - member
+                properties:
+                  member:
+                    $ref: components/schemas/organizations.yaml#/Member
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '502':
+          description: Нарушен контракт ответа сервиса
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

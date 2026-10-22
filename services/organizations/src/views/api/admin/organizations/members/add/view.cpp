@@ -26,7 +26,7 @@ Response View::Handle(
         const auto member = Convert(transaction
                                         .Execute(sql::kAddMember, request.body.organization_id,
                                             identity.Issuer, Convert(user, request.body.role))
-                                        .AsSingleRow<pgtypes::MemberV1>());
+                                        .AsSingleRow<pgtypes::MemberV2>());
         WriteAudit(transaction, request.body.organization_id, identity, "member.added", member);
         transaction.Commit();
         return Response201{.member = member};

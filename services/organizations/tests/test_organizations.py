@@ -126,7 +126,9 @@ def new_member():
         'organization_id': ORGANIZATION,
         'request_id': str(uuid4()),
         'username': 'new-employee',
-        'display_name': 'Новый сотрудник',
+        'last_name': 'Иванов',
+        'first_name': 'Иван',
+        'middle_name': 'Иванович',
         'email': 'employee@example.test',
         'temporary_password': 'temporary-test-password',
         'role': 'operator',
@@ -140,6 +142,14 @@ async def test_create_user_and_membership_replay_keeps_password_out_of_database(
     first = await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201)
     replay = await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201)
     assert replay == first
+    assert first['member']['display_name'] == 'Иванов Иван Иванович'
+    assert first['member']['last_name'] == 'Иванов'
+    assert first['member']['first_name'] == 'Иван'
+    assert first['member']['middle_name'] == 'Иванович'
+    stored = identity_provider['users']['new-employee']
+    assert stored['lastName'] == 'Иванов'
+    assert stored['firstName'] == 'Иван'
+    assert stored['attributes']['middle_name'] == ['Иванович']
     assert identity_provider['calls'] == ['POST', 'GET']
     assert identity_provider['users']['new-employee']['credentials'][0]['temporary'] is True
     with pgsql['db_1'].cursor() as cursor:
@@ -316,4 +326,112 @@ async def test_write_permission_requires_read(api):
 
 @pytest.mark.parametrize('email', ['a@@example.test', 'a@example', 'a@.test', 'a b@example.test'])
 async def test_create_employee_rejects_invalid_email(api, email):
-    await api.call(ADMIN + '/members/create', {**new_member(), 'email': email}, user='org-admin', expected=400)
+    await api.call(
+        ADMIN + '/members/create', {**new_member(), 'email': email}, user='org-admin', expected=400
+    )
+
+
+@pytest.mark.parametrize('middle', [None, '   '])
+async def test_middle_name_is_optional(api, identity_provider, middle):
+    body = {**new_member(), 'middle_name': middle}
+    member = (await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201))[
+        'member'
+    ]
+    assert member['middle_name'] is None
+    assert member['display_name'] == 'Иванов Иван'
+
+
+@pytest.mark.parametrize('field', ['last_name', 'first_name'])
+async def test_names_cannot_be_blank(api, identity_provider, field):
+    await api.call(
+        ADMIN + '/members/create', {**new_member(), field: '  '}, user='org-admin', expected=400
+    )
+    assert identity_provider['calls'] == []
+
+
+@pytest.mark.parametrize('attribute', [['Иванович', 'Петрович'], 'Иванович', [123]])
+async def test_invalid_middle_name_from_provider_is_not_silently_discarded(
+    api, identity_provider, attribute
+):
+    identity_provider['users']['employee'] = {
+        'id': 'employee',
+        'username': 'employee',
+        'enabled': True,
+        'firstName': 'Иван',
+        'lastName': 'Иванов',
+        'email': 'employee@example.test',
+        'attributes': {'middle_name': attribute},
+    }
+    await api.call(
+        ADMIN + '/members/add',
+        {
+            'organization_id': ORGANIZATION,
+            'username': 'employee',
+            'role': 'operator',
+        },
+        user='org-admin',
+        expected=503,
+    )
+
+
+async def test_manual_profile_update_changes_all_memberships(api, mockserver, pgsql):
+    from conftest import ISSUER
+
+    calls = []
+    profile = {
+        'id': 'viewer',
+        'username': 'viewer',
+        'enabled': True,
+        'firstName': 'Старое цельное ФИО',
+        'email': 'viewer@example.test',
+        'attributes': {'keep': ['existing'], 'middle_name': ['Старое']},
+    }
+
+    @mockserver.handler('/admin/realms/broker/users/viewer')
+    def user(request):
+        calls.append(request.method)
+        if request.method == 'GET':
+            return mockserver.make_response(json=profile)
+        assert request.method == 'PUT'
+        assert 'credentials' not in request.json
+        assert request.json['attributes']['keep'] == ['existing']
+        profile.update(request.json)
+        return mockserver.make_response(status=204)
+
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            '''INSERT INTO memberships
+            (organization_id,issuer,subject,username,display_name,email,role)
+            VALUES (%s,%s,'viewer','viewer','Старое ФИО','viewer@example.test','viewer')''',
+            (OTHER_ORGANIZATION, ISSUER),
+        )
+    body = {
+        'organization_id': ORGANIZATION,
+        'subject': 'viewer',
+        'last_name': ' Иванов ',
+        'first_name': ' Иван ',
+        'middle_name': 'Иванович',
+    }
+    await api.call(
+        ADMIN + '/members/update-profile',
+        {**body, 'organization_id': OTHER_ORGANIZATION},
+        user='org-admin',
+        expected=403,
+    )
+    assert calls == []
+    member = (await api.call(ADMIN + '/members/update-profile', body, user='org-admin'))['member']
+    assert member['display_name'] == 'Иванов Иван Иванович'
+    assert profile['lastName'] == 'Иванов'
+    assert profile['firstName'] == 'Иван'
+    assert profile['attributes']['middle_name'] == ['Иванович']
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "SELECT display_name,last_name,first_name,middle_name FROM memberships WHERE subject='viewer'"
+        )
+        assert cursor.fetchall() == [('Иванов Иван Иванович', 'Иванов', 'Иван', 'Иванович')] * 2
+    cleared = (await api.call(ADMIN + '/members/update-profile', {**body, 'middle_name': None}))[
+        'member'
+    ]
+    assert cleared['display_name'] == 'Иванов Иван'
+    assert cleared['middle_name'] is None
+    assert 'middle_name' not in profile['attributes']

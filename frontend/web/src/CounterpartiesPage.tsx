@@ -236,33 +236,35 @@ export function CounterpartiesPage({ route, session, onError, onChanged }: Props
                       </div>
                     ))}
                   </dl>
-                  <h2>Контактные лица</h2>
-                  {!item.contacts.length ? (
-                    <p className="hint">Контакты пока не добавлены.</p>
-                  ) : (
-                    <div className="table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Имя</th>
-                            <th>Должность</th>
-                            <th>Email</th>
-                            <th>Телефон</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {item.contacts.map((contact, index) => (
-                            <tr key={index}>
-                              <td>{contact.name}</td>
-                              <td>{contact.position || '—'}</td>
-                              <td>{contact.email || '—'}</td>
-                              <td>{contact.phone || '—'}</td>
+                  <section className="counterparty-contacts">
+                    <h2>Контактные лица</h2>
+                    {!item.contacts.length ? (
+                      <p className="hint">Контакты пока не добавлены.</p>
+                    ) : (
+                      <div className="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Имя</th>
+                              <th>Должность</th>
+                              <th>Email</th>
+                              <th>Телефон</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                          </thead>
+                          <tbody>
+                            {item.contacts.map((contact, index) => (
+                              <tr key={index}>
+                                <td>{contact.name}</td>
+                                <td>{contact.position || '—'}</td>
+                                <td>{contact.email || '—'}</td>
+                                <td>{contact.phone || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
                 </>
               )}
               {archiving && (

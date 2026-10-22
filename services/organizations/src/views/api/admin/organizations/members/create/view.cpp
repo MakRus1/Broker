@@ -13,14 +13,23 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     try {
         const auto email = userver::utils::text::Trim(request.body.email);
-        const auto display_name = userver::utils::text::Trim(request.body.display_name);
-        if (display_name.empty() || !platform::IsEmail(email))
-            throw ApiError{400, "invalid_profile", "Укажите имя и корректный email"};
+        const auto last_name = userver::utils::text::Trim(request.body.last_name);
+        const auto first_name = userver::utils::text::Trim(request.body.first_name);
+        auto middle_name = request.body.middle_name.value_or(std::nullopt);
+        if (middle_name.has_value()) {
+            middle_name = userver::utils::text::Trim(middle_name.value());
+            if (middle_name.value().empty())
+                middle_name.reset();
+        }
+        if (last_name.empty() || first_name.empty() || !platform::IsEmail(email))
+            throw ApiError{400, "invalid_profile", "Укажите фамилию, имя и корректный email"};
         const auto role = request.body.role;
         userver::formats::json::ValueBuilder intent;
         intent["username"] = request.body.username;
         intent["email"] = email;
-        intent["display_name"] = display_name;
+        intent["last_name"] = last_name;
+        intent["first_name"] = first_name;
+        intent["middle_name"] = middle_name;
         intent["role"] = role;
         const auto payload = intent.ExtractValue();
         {
@@ -41,14 +50,14 @@ Response View::Handle(
                 const auto member = Convert(transaction
                                                 .Execute(sql::kGetMembership, organization,
                                                     identity.Issuer, subject.value())
-                                                .AsSingleRow<pgtypes::MemberV1>());
+                                                .AsSingleRow<pgtypes::MemberV2>());
                 transaction.Commit();
                 return Response201{.member = member};
             }
             transaction.Commit();
         }
         const auto user = deps.users->Create(request.body.request_id, request.body.username, email,
-            display_name, request.body.temporary_password);
+            last_name, first_name, middle_name, request.body.temporary_password);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.body.organization_id, identity);
@@ -59,13 +68,13 @@ Response View::Handle(
             const auto member = Convert(
                 transaction
                     .Execute(sql::kGetMembership, organization, identity.Issuer, subject.value())
-                    .AsSingleRow<pgtypes::MemberV1>());
+                    .AsSingleRow<pgtypes::MemberV2>());
             transaction.Commit();
             return Response201{.member = member};
         }
         const auto member = Convert(
             transaction.Execute(sql::kAddMember, organization, identity.Issuer, Convert(user, role))
-                .AsSingleRow<pgtypes::MemberV1>());
+                .AsSingleRow<pgtypes::MemberV2>());
         transaction.Execute(sql::kCompleteProvisioning, request.body.request_id, user.Subject);
         WriteAudit(transaction, organization, identity, "member.created", member);
         transaction.Commit();

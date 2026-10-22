@@ -1,3 +1,4 @@
+import { profileName } from './profile';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -340,7 +341,9 @@ export function App() {
             {(session.display_name || session.subject).slice(0, 1).toUpperCase()}
           </span>
           <div>
-            <strong>{session.display_name || session.subject}</strong>
+            <strong title={session.display_name || session.subject}>
+              {profileName(session.display_name || session.subject)}
+            </strong>
             <button onClick={() => void logout()}>Выйти</button>
           </div>
         </div>

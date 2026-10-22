@@ -22,12 +22,57 @@ def configure(api, *, platform_admin=None):
         'permissions': {'view': ['admin'], 'edit': ['admin']},
         'validations': {'length': {'max': 36}},
     }
-    found = next((item for item in attributes if item['name'] == marker['name']), None)
-    if found != marker:
-        profile['attributes'] = [item for item in attributes if item['name'] != marker['name']] + [
-            marker
-        ]
+    middle = {
+        'name': 'middle_name',
+        'displayName': 'Отчество',
+        'multivalued': False,
+        'permissions': {'view': ['admin', 'user'], 'edit': ['admin']},
+        'validations': {'length': {'max': 100}},
+    }
+    expected = [marker, middle]
+    if any(
+        next((item for item in attributes if item['name'] == entry['name']), None) != entry
+        for entry in expected
+    ):
+        profile['attributes'] = [
+            item for item in attributes if item['name'] not in {entry['name'] for entry in expected}
+        ] + expected
         api('users/profile', profile, method='PUT')
+    for client_id in ('broker-admin', 'broker-web', 'broker-logistics'):
+        found_clients = api('clients?clientId=' + client_id)
+        if not found_clients:
+            continue
+        mapper = {
+            'name': 'broker-middle-name',
+            'protocol': 'openid-connect',
+            'protocolMapper': 'oidc-usermodel-attribute-mapper',
+            'consentRequired': False,
+            'config': {
+                'user.attribute': 'middle_name',
+                'claim.name': 'middle_name',
+                'jsonType.label': 'String',
+                'id.token.claim': 'true',
+                'access.token.claim': 'true',
+                'userinfo.token.claim': 'true',
+            },
+        }
+        client = found_clients[0]
+        current = next(
+            (
+                item
+                for item in client.get('protocolMappers', [])
+                if item.get('name') == mapper['name']
+            ),
+            None,
+        )
+        if current is None:
+            api('clients/' + client['id'] + '/protocol-mappers/models', mapper)
+        elif any(current.get(key) != value for key, value in mapper.items()):
+            api(
+                'clients/' + client['id'] + '/protocol-mappers/models/' + current['id'],
+                {**mapper, 'id': current['id']},
+                method='PUT',
+            )
     browser = api('clients?clientId=broker-admin')[0]
     mappers = browser.get('protocolMappers', [])
     if not any(item.get('name') == 'broker-logistics-audience' for item in mappers):

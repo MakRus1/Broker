@@ -12,10 +12,13 @@ inline models::Organization Convert(const pgtypes::OrganizationV1& row) {
         .revision = row.Revision};
 }
 
-inline models::Member Convert(const pgtypes::MemberV1& row) {
+inline models::Member Convert(const pgtypes::MemberV2& row) {
     return {.display_name = row.DisplayName,
         .email = row.Email,
         .enabled = row.Enabled,
+        .first_name = row.FirstName,
+        .last_name = row.LastName,
+        .middle_name = row.MiddleName,
         .revision = row.Revision,
         .role = row.Role,
         .subject = row.Subject,
@@ -30,8 +33,9 @@ inline models::OrganizationRole Convert(const pgtypes::OrganizationRoleV1& row) 
         .revision = row.Revision};
 }
 
-inline pgtypes::MemberV1 Convert(const User& user, const std::string& role) {
-    return {user.Subject, user.Username, user.DisplayName, user.Email, role, true, 1};
+inline pgtypes::MemberV2 Convert(const User& user, const std::string& role) {
+    return {user.Subject, user.Username, user.DisplayName, user.Email, role, true, 1, user.LastName,
+        user.FirstName, user.MiddleName};
 }
 
 template <typename Row> auto ConvertRows(const userver::storages::postgres::ResultSet& rows) {

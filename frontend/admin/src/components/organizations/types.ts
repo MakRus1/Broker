@@ -8,6 +8,9 @@ export interface Member {
   subject: string;
   username: string;
   display_name: string;
+  last_name?: string | null;
+  first_name?: string | null;
+  middle_name?: string | null;
   email: string;
   role: string;
   enabled: boolean;
@@ -34,7 +37,9 @@ export interface Permission {
 export interface MemberInput {
   mode: 'create' | 'existing' | 'edit';
   username: string;
-  display_name: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string;
   email: string;
   temporary_password: string;
   role: string;

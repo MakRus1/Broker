@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <platform/auth/service_token.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/clients/http/request.hpp>
@@ -11,6 +12,9 @@ struct User {
     std::string Username;
     std::string DisplayName;
     std::string Email;
+    std::optional<std::string> LastName;
+    std::optional<std::string> FirstName;
+    std::optional<std::string> MiddleName;
 };
 
 class Users final : public userver::components::ComponentBase {
@@ -19,10 +23,12 @@ class Users final : public userver::components::ComponentBase {
     Users(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
+    User UpdateProfile(const std::string& subject, const std::string& last_name,
+        const std::string& first_name, const std::optional<std::string>& middle_name) const;
     User Find(const std::string& username) const;
     User Create(const std::string& request_id, const std::string& username,
-        const std::string& email, const std::string& display_name,
-        const std::string& temporary_password) const;
+        const std::string& email, const std::string& last_name, const std::string& first_name,
+        const std::optional<std::string>& middle_name, const std::string& temporary_password) const;
 
   private:
     userver::clients::http::Request MakeRequest() const;

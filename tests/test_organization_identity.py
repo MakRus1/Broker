@@ -24,6 +24,8 @@ class IdentitySetupTest(unittest.TestCase):
                 return [{'id': 'management'}]
             if path == 'clients?clientId=broker-admin':
                 return [{'id': 'browser'}]
+            if path == 'clients?clientId=broker-web':
+                return [{'id': 'web'}]
             if path == 'clients?clientId=broker-logistics':
                 return [{'id': 'logistics'}]
             if path == 'clients/manager/service-account-user':
@@ -42,6 +44,19 @@ class IdentitySetupTest(unittest.TestCase):
         configure(api)
         updated = next(value for path, value, _ in calls if path == 'users/profile' and value)
         self.assertEqual(updated['attributes'][0], profile['attributes'][0])
-        marker = updated['attributes'][-1]
+        marker = next(
+            item for item in updated['attributes'] if item['name'] == 'broker-provisioning-id'
+        )
         self.assertEqual(marker['permissions'], {'view': ['admin'], 'edit': ['admin']})
+        middle = next(item for item in updated['attributes'] if item['name'] == 'middle_name')
+        self.assertEqual(middle['permissions']['edit'], ['admin'])
+        mappers = [
+            value
+            for path, value, _ in calls
+            if path.endswith('/protocol-mappers/models')
+            and value
+            and value.get('name') == 'broker-middle-name'
+        ]
+        self.assertEqual(len(mappers), 3)
+        self.assertTrue(all(item['config']['claim.name'] == 'middle_name' for item in mappers))
         self.assertFalse(any(path.startswith('users?username=') for path, _, _ in calls))

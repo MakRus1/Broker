@@ -16,7 +16,7 @@ Response View::Handle(
         RequireAdministrator(transaction, request.body.organization_id, identity);
         const auto rows = transaction.Execute(sql::kListMembers, request.body.organization_id,
             request.body.after, request.body.limit);
-        const auto result = ConvertRows<pgtypes::MemberV1>(rows);
+        const auto result = ConvertRows<pgtypes::MemberV2>(rows);
         transaction.Commit();
         return Response200{.items = result};
     } catch (const ::organizations::ApiError& error) {

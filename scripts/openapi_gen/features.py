@@ -177,6 +177,10 @@ def pgsql_local(service_source_dir, pgsql_local_create):
             'protected-prefix': auth['protected-prefix'], 'allow-http': '$auth-allow-http',
             'permissions': dict(sorted(auth['permissions'].items())),
         }
+        if auth.get('service-clients'):
+            components['platform-auth']['service-clients'] = auth['service-clients']
+        if auth.get('organization-access'):
+            components['platform-auth']['organization-url'] = '$organization-access-url'
         components['auth-http-client'] = {'wait-for-dynamic-configs': False}
         # Эти компоненты принадлежат генератору; остальная ручная конфигурация сохраняется.
         for component in ('platform-auth', 'auth-http-client', 'platform-http-pipeline'):

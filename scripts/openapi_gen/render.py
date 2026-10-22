@@ -243,8 +243,8 @@ public:
         if op.body.required:
             parse.append('if (http.RequestBody().empty()) throw std::invalid_argument("missing body");')
         parse += ['if (!http.RequestBody().empty()) {',
-                  'const auto content_type = http.GetHeader("Content-Type");',
-                  ('if (content_type != "application/json" && content_type.rfind("application/json;", 0) != 0) throw std::invalid_argument("content type");' if op.body.validate_content_type else '(void)content_type;'),
+                  *(['const auto content_type = http.GetHeader("Content-Type");',
+                     'if (content_type != "application/json" && content_type.rfind("application/json;", 0) != 0) throw std::invalid_argument("content type");'] if op.body.validate_content_type else []),
                   'const auto json = userver::formats::json::FromString(http.RequestBody());',
                   'if (!json.IsObject()) throw std::invalid_argument("object body");', 'RequestBody body;']
         if op.body.strict:

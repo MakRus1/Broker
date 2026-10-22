@@ -13,7 +13,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto replay =
             FindReplay<models::ShipmentItem>(transaction, organization, "add_item", request.body);
         if (replay.has_value()) {

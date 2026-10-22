@@ -10,10 +10,12 @@ def policy(spec):
             raise ValueError('service.yaml: auth должен быть объектом')
         return None
     required = {'audience', 'roles-client', 'protected-prefix', 'permissions'}
-    if not isinstance(section, dict) or set(section) != required:
+    if not isinstance(section, dict) or (set(section) - {'organization-access', 'service-clients'}) != required:
         raise ValueError(
             'service.yaml: auth требует audience, roles-client, protected-prefix, permissions'
         )
+    if 'organization-access' in section and type(section['organization-access']) is not bool:
+        raise ValueError('auth.organization-access должен быть boolean')
     for key in ('audience', 'roles-client'):
         if not isinstance(section[key], str) or not re.fullmatch(
             r'[A-Za-z0-9][A-Za-z0-9_.:-]*', section[key]
@@ -38,6 +40,13 @@ def policy(spec):
             r'[A-Za-z0-9][A-Za-z0-9_.:-]*', permission
         ):
             raise ValueError(f'service.yaml: неверное право для {path}')
+    clients = section.get('service-clients', {})
+    if not isinstance(clients, dict) or any(
+        permission not in permissions.values() or not isinstance(client, str)
+        or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]*', client)
+        for permission, client in clients.items()
+    ):
+        raise ValueError('auth.service-clients: ожидается таблица разрешение: доверенный OAuth клиент')
     return section
 
 

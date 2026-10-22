@@ -11,7 +11,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         // Наличие перевозки и её история проверяются в одном снимке.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         if (transaction
                 .Execute(sql::kGetTransportation, organization, request.body.transportation_id)
                 .IsEmpty())

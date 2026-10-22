@@ -1,0 +1,17 @@
+worker-threads: 4
+worker-fs-threads: 2
+logger-level: info
+is-testing: false
+server-port: 8080
+monitor-port: 8082
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15438/organizations_db_1
+auth-issuer: http://localhost:18888/realms/broker
+auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
+auth-allow-http: true
+
+users-token-url: http://localhost:18888/realms/broker/protocol/openid-connect/token
+users-admin-url: http://localhost:18888/admin/realms/broker
+users-client-secret: local-tests-only

@@ -10,7 +10,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         // Перевозка и её плечи читаются из одного снимка.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto result =
             ReadTransportation(transaction, organization, request.body.transportation_id, false);
         transaction.Commit();

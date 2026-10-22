@@ -8,7 +8,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
-        const auto organization = ResolveOrganization(*deps.pg_cluster, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         std::optional<std::string> role;
         if (request.body.role.has_value())
             role = models::EnumValue(request.body.role.value());

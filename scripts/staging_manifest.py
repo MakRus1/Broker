@@ -187,6 +187,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         for name in ('postgres', 'configs', 'keycloak', *services)
     }
     values = credentials(directory)
+    users_secret = directory / 'organizations-manager-secret'
+    if not users_secret.exists():
+        private_write(users_secret, secrets.token_urlsafe(32))
+    manager_secret = users_secret.read_text().strip()
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
     ns = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': namespace}}
     infra = []
@@ -303,6 +307,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             stringData={'password': values['admin-password']},
         )
     )
+    theme_root = root / 'tools/keycloak/themes/broker'
+    theme_files = {
+        str(path.relative_to(theme_root)).replace('/', '__'): path.read_text()
+        for path in sorted(theme_root.rglob('*'))
+        if path.is_file()
+    }
+    theme_name = hashed('keycloak-theme', theme_files)
+    infra.append(document('ConfigMap', theme_name, namespace, data=theme_files))
     keycloak = {
         'name': 'keycloak',
         'image': images['keycloak'],
@@ -325,7 +337,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'ports': [{'containerPort': 8080}, {'containerPort': 9000}],
         'resources': {'requests': {'cpu': '250m', 'memory': '512Mi'}, 'limits': {'memory': '1Gi'}},
         'volumeMounts': [
-            {'name': 'realm', 'mountPath': '/opt/keycloak/data/import', 'readOnly': True}
+            {'name': 'realm', 'mountPath': '/opt/keycloak/data/import', 'readOnly': True},
+            {'name': 'theme', 'mountPath': '/opt/keycloak/themes/broker', 'readOnly': True},
         ],
         'readinessProbe': {'httpGet': {'path': '/health/ready', 'port': 9000}, 'periodSeconds': 5},
         'startupProbe': {
@@ -347,7 +360,16 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'keycloak',
         namespace,
         keycloak,
-        volumes=[{'name': 'realm', 'secret': {'secretName': realm_secret}}],
+        volumes=[
+            {'name': 'realm', 'secret': {'secretName': realm_secret}},
+            {
+                'name': 'theme',
+                'configMap': {
+                    'name': theme_name,
+                    'items': [{'key': key, 'path': key.replace('__', '/')} for key in theme_files],
+                },
+            },
+        ],
     )
     kc['spec']['strategy'] = {'type': 'Recreate'}
     if lan:
@@ -379,6 +401,11 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
                 'client-shipments-base-url': f"http://{addresses['shipments']}:8080",
                 'client-transportations-base-url': f"http://{addresses['transportations']}:8080",
+                'client-organizations-base-url': f"http://{addresses['organizations']}:8080",
+                'organization-access-url': f"http://{addresses['organizations']}:8080/api/organizations/access",
+                'users-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
+                'users-admin-url': f"http://{addresses['keycloak']}:8080/admin/realms/broker",
+                'users-client-secret': manager_secret,
                 'client-config_admin-base-url': f"http://{addresses['configs']}:8092",
                 'auth-issuer': settings['auth_origin'] + '/realms/broker',
                 'auth-jwks-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/certs",
@@ -394,6 +421,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             internal_auth = f"https://{addresses['keycloak']}:8443"
             variables.update(
                 {
+                    'users-token-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/token',
+                    'users-admin-url': internal_auth + '/admin/realms/broker',
                     'admin-secure-cookie': True,
                     'web-secure-cookie': True,
                     'web-token-url': internal_auth + '/realms/broker/protocol/openid-connect/token',

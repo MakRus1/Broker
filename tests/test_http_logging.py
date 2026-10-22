@@ -59,7 +59,12 @@ class HttpLoggingTest(unittest.TestCase):
                     expected = (
                         0
                         if service == 'admin_bff'
-                        and operation.path in ('/api/session', '/api/logout')
+                        and operation.path
+                        in (
+                            '/api/session',
+                            '/api/logout',
+                            '/api/admin/organizations/members/create',
+                        )
                         else 32768
                     )
                     self.assertEqual(handler['request_body_size_log_limit'], expected)

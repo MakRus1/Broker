@@ -13,7 +13,7 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = ResolveOrganization(transaction, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto rows = transaction.Execute(sql::kLockItem, organization, request.body.item_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Позиция не найдена"};

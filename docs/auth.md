@@ -2,9 +2,10 @@
 
 Keycloak отвечает за вход пользователей, MFA, сессии и выдачу OIDC access token.
 Сервисы самостоятельно проверяют подпись и разрешения через `libs/auth`.
-Собственный сервис пользователей/паролей сейчас не нужен. Доступ к компаниям,
-поставкам и другим бизнес-сущностям проверяется в бизнес-модулях; роли
-Keycloak не заменяют эти проверки.
+Сервис `organizations` хранит членство и роли сотрудников, а учётные записи
+создаёт через Keycloak Admin API. Пароли и вход остаются в Keycloak.
+Общая авторизация проверяет членство через `organizations`; бизнес-сервисы
+ограничивают данные проверенной организацией. См. [организации и сотрудники](organizations.md).
 
 ## Configs
 
@@ -141,3 +142,37 @@ OpenAPI поддерживает стандартные `components.securitySche
 Официальная документация: [OIDC endpoints Keycloak](https://www.keycloak.org/securing-apps/oidc-layers),
 [Authorization Code и PKCE](https://www.keycloak.org/securing-apps/javascript-adapter),
 [jwt-cpp v0.7.2](https://github.com/Thalhammer/jwt-cpp/releases/tag/v0.7.2).
+
+## Центральное членство в организациях
+
+Для бизнесового API добавьте `auth.organization-access: true` в `service.yaml` и
+задайте `organization-access-url` в конфигурации окружения. JWT проверяется локально;
+затем middleware запрашивает требуемое разрешение и членство в `organizations`.
+Полученный контекст доступен через `GetOrganization(GetIdentity(context))`.
+Имена сотрудников и роли из браузера не используются для принятия решения.
+Сервис организаций доступен по внутренней сети кластера, аналогично остальным
+внутренним HTTP-клиентам; проверка HTTPS issuer/JWKS Keycloak остаётся обязательной
+в LAN-профиле. Для недоверенной межузловой сети требуется TLS/service mesh.
+
+Служебные разрешения можно связать с конкретным OAuth-клиентом:
+
+```yaml
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  organization-access: true
+  service-clients:
+    transportations.create: shipments-dispatcher
+  permissions:
+    /api/internal/v1/transportations/ensure-created: transportations.create
+    /api/v1/transportations/get: transportations.read
+```
+
+Для указанного служебного разрешения проверяются одновременно роль и `azp` токена;
+центральное членство сотрудника не применяется. Поэтому это настройка доверенного
+внутреннего протокола, а не способ разрешить пользователю выбор произвольной организации.
+
+Разрешение `authenticated` означает только проверенную пользовательскую личность.
+Его использует `organizations`, где права администратора и членство проверяются
+в обработчиках по центральной БД. Оно само по себе не выдаёт доступ к организациям.

@@ -39,8 +39,9 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
         int status = 401;
         std::string error = "unauthorized";
         try {
-            context.SetData(
-                "platform-auth", auth_.Authorize(path_, request.GetHeader("Authorization")));
+            context.SetData("platform-auth",
+                auth_.Authorize(path_, request.GetHeader("Authorization"),
+                    request.GetHeader("X-Organization-Id")));
         } catch (const platform::auth::Unavailable&) {
             status = 503;
             error = "auth_unavailable";
@@ -89,6 +90,8 @@ struct Component::State {
     Settings Config;
     std::string Url;
     std::string Prefix;
+    std::string OrganizationUrl;
+    std::map<std::string, std::string> ServiceClients;
     std::map<std::string, std::string> Permissions;
     std::chrono::seconds MaxAge;
     // Атомарные операции со shared_ptr поддерживаются и libc++ без atomic<shared_ptr>.
@@ -103,13 +106,17 @@ struct Component::State {
               config["roles-client"].As<std::string>()},
           Url(config["jwks-url"].As<std::string>()),
           Prefix(config["protected-prefix"].As<std::string>()),
+          OrganizationUrl(config["organization-url"].As<std::string>("")),
+          ServiceClients(config["service-clients"].As<std::map<std::string, std::string>>({})),
           Permissions(config["permissions"].As<std::map<std::string, std::string>>()),
           MaxAge(config["max-key-age-seconds"].As<int>(300)) {
         const bool insecure = config["allow-http"].As<bool>(false);
         auto valid = [insecure](const std::string& url) {
             return url.starts_with("https://") || (insecure && url.starts_with("http://"));
         };
-        if (!valid(Config.Issuer) || !valid(Url) || Config.Issuer.find('#') != std::string::npos ||
+        if ((!OrganizationUrl.empty() && !OrganizationUrl.starts_with("http://") &&
+                !OrganizationUrl.starts_with("https://")) ||
+            !valid(Config.Issuer) || !valid(Url) || Config.Issuer.find('#') != std::string::npos ||
             Config.Issuer.size() > 1024 || Config.Audience.empty() || Config.RolesClient.empty() ||
             Prefix.empty() || Prefix.front() != '/' || Prefix.back() != '/' ||
             MaxAge < std::chrono::seconds{30} || MaxAge > std::chrono::hours{24})
@@ -166,15 +173,59 @@ bool Component::IsProtected(std::string_view path) const {
     return path.starts_with(state_->Prefix);
 }
 
-Identity Component::Authorize(const std::string& path, const std::string& authorization) const {
+Identity Component::Authorize(const std::string& path, const std::string& authorization,
+    const std::string& organization) const {
     if (authorization.size() < 8 ||
         !std::equal(authorization.begin(), authorization.begin() + 7, "bearer ",
             [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
         throw std::invalid_argument("Missing bearer token");
-    const auto identity = VerifyAccess(authorization.substr(7));
+    auto identity = VerifyAccess(authorization.substr(7));
     const auto permission = state_->Permissions.find(path);
-    if (permission == state_->Permissions.end() ||
-        !identity.Permissions.contains(permission->second))
+    if (permission == state_->Permissions.end())
+        throw Forbidden{};
+    const auto service_client = state_->ServiceClients.find(permission->second);
+    if (!state_->OrganizationUrl.empty() && service_client == state_->ServiceClients.end()) {
+        if (organization.size() > 36)
+            throw Forbidden{};
+        userver::formats::json::ValueBuilder body;
+        body["permission"] = permission->second;
+        if (!organization.empty())
+            body["organization_id"] = organization;
+        try {
+            const auto response = state_->Client.CreateRequest()
+                                      .post(state_->OrganizationUrl,
+                                          userver::formats::json::ToString(body.ExtractValue()))
+                                      .headers({{"Authorization", authorization},
+                                          {"Content-Type", "application/json"}})
+                                      .timeout(std::chrono::seconds{2})
+                                      .retry(1)
+                                      .follow_redirects(false)
+                                      .SetLoggedUrl("organizations/access")
+                                      .perform();
+            if (response->status_code() == 400 || response->status_code() == 403)
+                throw Forbidden{};
+            if (response->status_code() != 200)
+                throw Unavailable{};
+            const auto result = userver::formats::json::FromString(response->body());
+            identity.Organization = result["organization_id"].As<std::string>();
+            identity.Permissions = result["permissions"].As<std::set<std::string>>();
+            if (identity.Organization.value().empty() ||
+                (!organization.empty() && identity.Organization.value() != organization) ||
+                !identity.Permissions.contains(permission->second))
+                throw Unavailable{};
+        } catch (const Forbidden&) {
+            throw;
+        } catch (const std::bad_alloc&) {
+            throw;
+        } catch (const std::exception&) {
+            throw Unavailable{};
+        }
+    } else if (permission->second != "authenticated" &&
+        !identity.Permissions.contains(permission->second)) {
+        throw Forbidden{};
+    }
+    if (service_client != state_->ServiceClients.end() &&
+        identity.ClientId != service_client->second)
         throw Forbidden{};
     return identity;
 }
@@ -230,6 +281,13 @@ properties:
         description: Требуемое разрешение для каждого пути
         properties: {}
         additionalProperties: {type: string, description: Необходимое разрешение}
+    service-clients:
+        type: object
+        description: Доверенный OAuth клиент для служебных разрешений
+        properties: {}
+        additionalProperties: {type: string, description: Client ID}
+        default: {}
+    organization-url: {type: string, description: Центральная проверка членства и прав, default: ""}
     allow-http: {type: boolean, description: HTTP только в локальном окружении, default: false}
     max-key-age-seconds: {type: integer, description: Максимальный возраст кеша ключей, default: 300}
 )");

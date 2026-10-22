@@ -1,0 +1,222 @@
+components_manager:
+    task_processors:
+        main-task-processor:
+            worker_threads: $worker-threads
+        fs-task-processor:
+            worker_threads: $worker-fs-threads
+    default_task_processor: main-task-processor
+    components:
+        service-token-provider:
+            endpoint: $users-token-url
+            client-id: organizations-manager
+            client-secret: $users-client-secret
+            timeout-ms: 2000
+            max-retries: 0
+            allow-http: $auth-allow-http
+        keycloak-users:
+            base-url: $users-admin-url
+            timeout-ms: 3000
+            allow-http: $auth-allow-http
+        # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-organizations-create:
+            path: /api/admin/organizations/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-list:
+            path: /api/admin/organizations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-members-add:
+            path: /api/admin/organizations/members/add
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-members-create:
+            path: /api/admin/organizations/members/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-api-admin-organizations-members-list:
+            path: /api/admin/organizations/members/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-members-update:
+            path: /api/admin/organizations/members/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-create:
+            path: /api/admin/organizations/roles/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-list:
+            path: /api/admin/organizations/roles/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-roles-update:
+            path: /api/admin/organizations/roles/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-organizations-update:
+            path: /api/admin/organizations/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-organizations-access:
+            path: /api/organizations/access
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-organizations-me:
+            path: /api/organizations/me
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        # OPENAPI_HANDLERS_END
+        # SERVICE_CONFIG_BEGIN
+        platform-readiness: {}
+        platform-http-readiness: {}
+        postgres-organizations:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
+        platform-http-pipeline:
+            extra-middlewares:
+            - platform-auth
+        platform-auth:
+            issuer: $auth-issuer
+            audience: broker-logistics
+            roles-client: broker-logistics
+            jwks-url: $auth-jwks-url
+            protected-prefix: /api/
+            allow-http: $auth-allow-http
+            permissions:
+                /api/admin/organizations/create: authenticated
+                /api/admin/organizations/list: authenticated
+                /api/admin/organizations/members/add: authenticated
+                /api/admin/organizations/members/create: authenticated
+                /api/admin/organizations/members/list: authenticated
+                /api/admin/organizations/members/update: authenticated
+                /api/admin/organizations/roles/create: authenticated
+                /api/admin/organizations/roles/list: authenticated
+                /api/admin/organizations/roles/update: authenticated
+                /api/admin/organizations/update: authenticated
+                /api/organizations/access: authenticated
+                /api/organizations/me: authenticated
+        auth-http-client:
+            wait-for-dynamic-configs: false
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: organizations
+            environment: $environment
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: $server-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+            listener-monitor:
+                address: 127.0.0.1
+                port: $monitor-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $logger-level
+                    format: json
+                    overflow_behavior: discard
+        tracing-manager-locator:
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
+            otel-trace-sampling-enabled: true
+        grpc-client-common:
+            blocking-task-processor: fs-task-processor
+        grpc-otlp-factory:
+            load-enabled: $otlp-enabled
+            middlewares:
+                grpc-client-logging:
+                    enabled: false
+        otlp-logger:
+            load-enabled: $otlp-enabled
+            endpoint: $otlp-endpoint
+            endpoint#env: OTEL_EXPORTER_OTLP_ENDPOINT
+            client-factory-name: grpc-otlp-factory
+            service-name: organizations
+            log-level: $logger-level
+            sinks:
+                logs: both
+                tracing: both
+            extra-attributes:
+                service.version: 0.1.0
+                deployment.environment.name: $environment
+        grpc-client-logging:
+            msg-log-level: none
+        handler-server-monitor:
+            path: /metrics
+            method: GET
+            task_processor: main-task-processor
+            format: prometheus
+            common-labels:
+                service: organizations
+                environment: $environment
+        handler-ping:
+            path: /ping
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+        testsuite-support: {}
+        congestion-control:
+            fake-mode: true
+        http-client: null
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        dns-client:
+            fs-task-processor: fs-task-processor
+        tests-control:
+            load-enabled: $is-testing
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor

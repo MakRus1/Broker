@@ -41,6 +41,7 @@ def configure_auth(mockserver_info):
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
+        component['organization-url'] = mockserver_info.url('/organizations/access')
 
     return patch
 
@@ -53,13 +54,9 @@ def auth_jwks(mockserver, auth_key):
 
 
 @pytest.fixture(autouse=True)
-def memberships(pgsql):
-    db = pgsql['db_1']
-    with db.cursor() as cursor:
-        cursor.execute(
-            'INSERT INTO organization_memberships VALUES (%s,%s,%s),(%s,%s,%s)',
-            (ISSUER, 'author', ORGANIZATION, ISSUER, 'other', OTHER_ORGANIZATION),
-        )
+def organization_access(mockserver):
+    from organization_access import install
+    install(mockserver, {'author': ORGANIZATION, 'other': OTHER_ORGANIZATION})
 
 
 @pytest.fixture
@@ -76,6 +73,7 @@ def api(service_client, auth_key):
                 roles=roles,
                 claims={
                     'aud': 'broker-logistics',
+                    'azp': 'shipments-dispatcher' if user == 'author' else 'broker-web',
                     'resource_access': {'broker-logistics': {'roles': roles}},
                 },
             )

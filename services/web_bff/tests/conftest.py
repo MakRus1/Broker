@@ -29,6 +29,7 @@ def configure_web(mockserver_info, service_source_dir):
         config_vars['auth-jwks-url'] = mockserver_info.url('/auth/jwks')
         config_vars['web-token-url'] = mockserver_info.url('/auth/token')
         config_vars['web-revoke-url'] = mockserver_info.url('/auth/revoke')
+        config_vars['client-organizations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['web-assets-dir'] = str(service_source_dir / 'tests/static')
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url.rstrip('/')
@@ -116,3 +117,12 @@ def browser(service_client, login):
                       'X-CSRF-Token': self.session['csrf_token']}
             return await service_client.post(path, json=body, headers={**values, **(headers or {})})
     return Browser()
+
+
+@pytest.fixture(autouse=True)
+def organization_access(mockserver, oidc):
+    @mockserver.json_handler('/api/organizations/access')
+    def access(request):
+        roles = oidc['claims'].get('resource_access', {}).get('broker-logistics', {}).get('roles',
+            ['shipments.read', 'shipments.write', 'transportations.read'])
+        return {'organization_id': '11111111-1111-4111-8111-111111111111', 'permissions': roles}

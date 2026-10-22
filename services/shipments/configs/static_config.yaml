@@ -98,6 +98,7 @@ components_manager:
                 /api/v1/shipments/update: shipments.write
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read
+            organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
         dynamic-config:

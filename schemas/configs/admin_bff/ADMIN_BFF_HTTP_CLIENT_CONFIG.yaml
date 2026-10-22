@@ -2,6 +2,16 @@ name: ADMIN_BFF_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/admin/organizations/create
+- /api/admin/organizations/list
+- /api/admin/organizations/members/add
+- /api/admin/organizations/members/create
+- /api/admin/organizations/members/list
+- /api/admin/organizations/members/update
+- /api/admin/organizations/roles/create
+- /api/admin/organizations/roles/list
+- /api/admin/organizations/roles/update
+- /api/admin/organizations/update
 - /api/configs/current
 - /api/configs/drafts/approve
 - /api/configs/drafts/cancel
@@ -13,6 +23,7 @@ paths:
 - /api/configs/history
 - /api/configs/list
 - /api/logout
+- /api/organizations/me
 - /api/session
 - /version
 default:

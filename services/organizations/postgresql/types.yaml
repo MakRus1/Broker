@@ -1,0 +1,40 @@
+version: 1
+types:
+  public.organization_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: name
+      type: text
+    - name: enabled
+      type: boolean
+    - name: revision
+      type: bigint
+  public.member_v1:
+    fields:
+    - name: subject
+      type: text
+    - name: username
+      type: text
+    - name: display_name
+      type: text
+    - name: email
+      type: text
+    - name: role
+      type: text
+    - name: enabled
+      type: boolean
+    - name: revision
+      type: bigint
+  public.organization_role_v1:
+    fields:
+    - name: id
+      type: text
+    - name: name
+      type: text
+    - name: description
+      type: text
+    - name: permissions
+      type: text[]
+    - name: revision
+      type: bigint

@@ -25,6 +25,35 @@ RELEASE = {
 
 
 class DeploymentTest(unittest.TestCase):
+    def test_keycloak_theme_and_organization_backend_are_provisioned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            phases = staging.render(RELEASE, Path(directory))
+            keycloak = next(
+                obj
+                for obj in phases['infrastructure']
+                if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'keycloak'
+            )
+            pod = keycloak['spec']['template']['spec']
+            theme = next(volume for volume in pod['volumes'] if volume['name'] == 'theme')
+            theme_config = next(
+                obj
+                for obj in phases['infrastructure']
+                if obj['metadata']['name'] == theme['configMap']['name']
+            )
+            self.assertIn('login__theme.properties', theme_config['data'])
+            self.assertTrue(
+                any(
+                    item['path'] == 'login/resources/css/broker.css'
+                    for item in theme['configMap']['items']
+                )
+            )
+            self.assertTrue(
+                any(
+                    obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'organizations'
+                    for obj in phases['services']
+                )
+            )
+
     def test_layered_resources_and_invalid_values(self):
         result = merge(
             {
@@ -90,7 +119,10 @@ class DeploymentTest(unittest.TestCase):
                 self.assertTrue(container['securityContext']['runAsNonRoot'])
             self.assertEqual(
                 len([obj for obj in phases['migrations'] if obj['kind'] == 'Job']),
-                sum((ROOT / 'services' / name / 'postgresql/schemas').is_dir() for name in staging.SERVICES),
+                sum(
+                    (ROOT / 'services' / name / 'postgresql/schemas').is_dir()
+                    for name in staging.SERVICES
+                ),
             )
             realm = next(
                 obj
@@ -197,9 +229,9 @@ class DeploymentTest(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, args)
                 return subprocess.CompletedProcess(args, 0, stdout='')
 
-            with patch('staging.subprocess.run', side_effect=run), self.assertRaises(
-                subprocess.CalledProcessError
-            ):
+            with patch('organization_identity.configure_cluster'), patch(
+                'staging.subprocess.run', side_effect=run
+            ), self.assertRaises(subprocess.CalledProcessError):
                 staging.apply(path, 'staging-test')
             self.assertFalse(any('services.yaml' in str(part) for args in calls for part in args))
 

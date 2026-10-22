@@ -13,6 +13,9 @@ clients:
   counterparties:
     service: counterparties
     transport: http
+  organizations:
+    service: organizations
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

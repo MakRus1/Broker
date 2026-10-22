@@ -1,0 +1,26 @@
+version: 1
+libraries:
+- common
+postgresql:
+  enabled: true
+  cluster: organizations
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/organizations/access: authenticated
+    /api/organizations/me: authenticated
+    /api/admin/organizations/list: authenticated
+    /api/admin/organizations/create: authenticated
+    /api/admin/organizations/update: authenticated
+    /api/admin/organizations/members/list: authenticated
+    /api/admin/organizations/members/create: authenticated
+    /api/admin/organizations/members/add: authenticated
+    /api/admin/organizations/members/update: authenticated
+    /api/admin/organizations/roles/list: authenticated
+    /api/admin/organizations/roles/create: authenticated
+    /api/admin/organizations/roles/update: authenticated
+http_logging:
+  exclude_paths:
+  - /api/admin/organizations/members/create

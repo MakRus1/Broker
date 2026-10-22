@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import secrets
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -40,6 +41,9 @@ def prepare():
         with os.fdopen(descriptor, "w") as target:
             json.dump(values, target)
     auth_secrets = json.loads(secrets_path.read_text())
+    if 'organizations-manager-secret' not in auth_secrets:
+        auth_secrets['organizations-manager-secret'] = secrets.token_urlsafe(32)
+        secrets_path.write_text(json.dumps(auth_secrets))
     if 'shipments-dispatcher-secret' not in auth_secrets:
         auth_secrets['shipments-dispatcher-secret'] = secrets.token_urlsafe(32)
         secrets_path.write_text(json.dumps(auth_secrets))
@@ -47,6 +51,19 @@ def prepare():
     for key, value in auth_secrets.items():
         realm = realm.replace("${" + key + "}", value)
     (STATE / "broker-realm.json").write_text(realm)
+    # Bind-mount указывает на стабильный каталог вне checkout: rebase заменяет inode исходников.
+    theme_source = ROOT / 'tools/keycloak/themes/broker'
+    theme_target = STATE / 'keycloak-theme'
+    theme_target.mkdir(exist_ok=True)
+    for source_path in theme_source.rglob('*'):
+        if source_path.is_file():
+            destination = theme_target / source_path.relative_to(theme_source)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_path, destination)
+    for existing in theme_target.rglob('*'):
+        if existing.is_file() and not (theme_source / existing.relative_to(theme_target)).is_file():
+            existing.unlink()
+
     images = json.loads((ROOT / "tools/local/images.json").read_text())["images"]
     images["dev"] = json.loads((ROOT / "tools/container-images.json").read_text())["images"]["dev"]
     volumes = {
@@ -82,7 +99,7 @@ def prepare():
             "environment": {"PIP_CACHE_DIR": "/cache/pip"},
         }
     }
-    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122)]:
+    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132)]:
         variables = yaml.safe_load((ROOT / f"services/{name}/configs/config_vars.yaml").read_text())
         variables.update(
             {
@@ -101,6 +118,11 @@ def prepare():
                 'dispatcher-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
                 'dispatcher-client-secret': auth_secrets['shipments-dispatcher-secret'],
             })
+        if name == 'organizations':
+            variables.update({'users-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
+                'users-admin-url': 'http://keycloak:8080/admin/realms/broker',
+                'users-client-secret': auth_secrets['organizations-manager-secret']})
+        variables['organization-access-url'] = 'http://organizations:8130/api/organizations/access'
         variables["config-updates-enabled"] = name != "configs"
         config = yaml.safe_load((ROOT / f"services/{name}/configs/static_config.yaml").read_text())
 
@@ -178,7 +200,7 @@ def prepare():
             "KC_BOOTSTRAP_ADMIN_PASSWORD": auth_secrets["admin-password"],
         },
         "ports": ["127.0.0.1:18888:8080"],
-        "volumes": [f"{STATE}/broker-realm.json:/opt/keycloak/data/import/broker-realm.json:ro"],
+        "volumes": [f"{STATE}/broker-realm.json:/opt/keycloak/data/import/broker-realm.json:ro", f"{STATE}/keycloak-theme:/opt/keycloak/themes/broker:ro"],
         "depends_on": {"postgres-keycloak": {"condition": "service_healthy"}},
     }
     services["configs"]["depends_on"]["keycloak"] = {"condition": "service_started"}
@@ -197,6 +219,7 @@ def prepare():
     variables = yaml.safe_load((ROOT / "services/admin_bff/configs/config_vars.yaml").read_text())
     variables.update({
         "client-config_admin-base-url": "http://configs:8092",
+        "client-organizations-base-url": "http://organizations:8130",
         "auth-jwks-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/certs",
         "admin-token-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/token",
         "admin-revoke-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/revoke",
@@ -237,11 +260,12 @@ def prepare():
         'image': images['dev'], 'working_dir': '/workspaces/broker', 'volumes': shared,
         'command': ['python3', 'tools/local/seed_logistics.py'],
         'depends_on': {name: {'condition': 'service_completed_successfully'} for name in
-                       ('keycloak-setup', 'migrate-shipments', 'migrate-transportations', 'migrate-counterparties')},
+                       ('keycloak-setup', 'migrate-shipments', 'migrate-transportations', 'migrate-counterparties', 'migrate-organizations')},
     }
     variables = yaml.safe_load((ROOT / 'services/web_bff/configs/config_vars.yaml').read_text())
     variables.update({
         'server-port': 8280, 'monitor-port': 8282,
+        'client-organizations-base-url': 'http://organizations:8130',
         'client-counterparties-base-url': 'http://counterparties:8120',
         'client-shipments-base-url': 'http://shipments:8100',
         'client-transportations-base-url': 'http://transportations:8110',
@@ -427,7 +451,7 @@ def main():
     prepare()
     command = ["docker", "compose", "-f", str(STATE / "compose.yaml")]
     actions = {
-        "up": ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "900"],
+        "up": ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "1800"],
         "down": ["down"],
         "status": ["ps", "-a"],
         "logs": ["logs", "--tail=100"],

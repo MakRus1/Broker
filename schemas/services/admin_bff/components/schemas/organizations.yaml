@@ -1,0 +1,245 @@
+Organization:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - enabled
+  - revision
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+    enabled:
+      type: boolean
+    revision:
+      type: integer
+      format: int64
+Member:
+  type: object
+  additionalProperties: false
+  required:
+  - subject
+  - username
+  - display_name
+  - email
+  - role
+  - enabled
+  - revision
+  properties:
+    subject:
+      type: string
+    username:
+      type: string
+    display_name:
+      type: string
+    email:
+      type: string
+    role:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+    enabled:
+      type: boolean
+    revision:
+      type: integer
+      format: int64
+OrganizationAccess:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  - permissions
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    permissions:
+      type: array
+      items:
+        type: string
+ApiError:
+  type: object
+  additionalProperties: false
+  required:
+  - error
+  - message
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+CreateOrganizationRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+UpdateOrganizationRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - enabled
+  - expected_revision
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+    enabled:
+      type: boolean
+    expected_revision:
+      type: integer
+      minimum: 1
+CreateMemberRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  - request_id
+  - username
+  - email
+  - display_name
+  - temporary_password
+  - role
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    request_id:
+      type: string
+      format: uuid
+    username:
+      type: string
+      minLength: 3
+      maxLength: 100
+      pattern: ^[a-zA-Z0-9][a-zA-Z0-9._@-]*$
+    email:
+      type: string
+      minLength: 3
+      maxLength: 254
+    display_name:
+      type: string
+      minLength: 1
+      maxLength: 200
+    temporary_password:
+      type: string
+      minLength: 12
+      maxLength: 256
+    role:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+AddMemberRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  - username
+  - role
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    username:
+      type: string
+      minLength: 1
+      maxLength: 100
+    role:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+UpdateMemberRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  - subject
+  - role
+  - enabled
+  - expected_revision
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    subject:
+      type: string
+      minLength: 1
+      maxLength: 128
+    role:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+    enabled:
+      type: boolean
+    expected_revision:
+      type: integer
+      minimum: 1
+OrganizationRole:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - description
+  - permissions
+  - revision
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_-]*$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    description:
+      type: string
+      maxLength: 500
+    permissions:
+      type: array
+      items:
+        type: string
+        minLength: 1
+        maxLength: 100
+      maxItems: 100
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+Permission:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - name
+  - group
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+    group:
+      type: string

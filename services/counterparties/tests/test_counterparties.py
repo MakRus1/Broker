@@ -3,6 +3,7 @@
 import asyncio
 from uuid import uuid4
 import pytest
+from conftest import ORGANIZATION
 
 
 async def test_create_replay_and_organization_isolation(api, pgsql):
@@ -346,3 +347,31 @@ async def test_concurrent_updates_have_one_winner(api):
         'counterparty'
     ]
     assert persisted == successes[0]
+
+
+@pytest.mark.parametrize(
+    'upstream_status,payload',
+    [
+        (503, {'error': 'unavailable', 'message': 'Временно недоступно'}),
+        (200, {'organization_id': '', 'permissions': ['counterparties.write']}),
+        (200, {'organization_id': ORGANIZATION, 'permissions': []}),
+    ],
+)
+async def test_central_access_failure_never_creates_counterparty(
+    api, mockserver, pgsql, upstream_status, payload
+):
+    @mockserver.handler('/organizations/access')
+    def unavailable(request):
+        return mockserver.make_response(status=upstream_status, json=payload)
+
+    await api.post(
+        '/api/v1/counterparties/create',
+        {
+            'id': str(uuid4()),
+            'name': 'Не должен создаться',
+        },
+        expected=503,
+    )
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM counterparties')
+        assert cursor.fetchone()[0] == 0

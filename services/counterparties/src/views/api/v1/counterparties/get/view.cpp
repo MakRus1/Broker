@@ -8,7 +8,7 @@ Response View::Handle(
     using namespace ::counterparties::helpers;
     try {
         const auto& identity = platform::auth::GetIdentity(context);
-        const auto organization = ResolveOrganization(*deps.pg_cluster, identity);
+        const auto organization = platform::auth::GetOrganization(identity);
         const auto rows = deps.pg_cluster->Execute(
             pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.body.id);
         if (rows.IsEmpty())

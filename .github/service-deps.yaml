@@ -5,6 +5,7 @@ libs:
     - broker
     - configs
     - counterparties
+    - organizations
     - shipments
     - transportations
     - web_bff

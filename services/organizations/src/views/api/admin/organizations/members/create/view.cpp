@@ -1,6 +1,7 @@
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
 #include <helpers/converters.hpp>
+#include <platform/contact_validation.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
 #include <views/api/admin/organizations/members/create/view.hpp>
@@ -11,13 +12,14 @@ Response View::Handle(
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
     try {
+        const auto email = userver::utils::text::Trim(request.body.email);
         const auto display_name = userver::utils::text::Trim(request.body.display_name);
-        if (display_name.empty() || request.body.email.find('@') == std::string::npos)
+        if (display_name.empty() || !platform::IsEmail(email))
             throw ApiError{400, "invalid_profile", "Укажите имя и корректный email"};
         const auto role = request.body.role;
         userver::formats::json::ValueBuilder intent;
         intent["username"] = request.body.username;
-        intent["email"] = request.body.email;
+        intent["email"] = email;
         intent["display_name"] = display_name;
         intent["role"] = role;
         const auto payload = intent.ExtractValue();
@@ -45,8 +47,8 @@ Response View::Handle(
             }
             transaction.Commit();
         }
-        const auto user = deps.users->Create(request.body.request_id, request.body.username,
-            request.body.email, display_name, request.body.temporary_password);
+        const auto user = deps.users->Create(request.body.request_id, request.body.username, email,
+            display_name, request.body.temporary_password);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.body.organization_id, identity);

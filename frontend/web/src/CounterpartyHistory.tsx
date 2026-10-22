@@ -1,3 +1,4 @@
+import { AutoLoadMore } from './AutoLoadMore';
 import { useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
 import { formatDate } from './transportation';
@@ -177,12 +178,7 @@ export function CounterpartyHistory({
           </button>
         </article>
       ))}
-      {busy && <p role="status">Загружаем историю…</p>}
-      {more && (
-        <button disabled={busy} onClick={() => void next()}>
-          Ранее
-        </button>
-      )}
+      <AutoLoadMore enabled={more} loading={busy} failed={Boolean(failure)} onLoad={next} />
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
   ApiError,
@@ -328,7 +329,8 @@ function ActualForm({
 }) {
   const previous =
     kind === 'departure' ? route_segment.actual_departure_at : route_segment.actual_arrival_at;
-  const [value, setValue] = useState(localDateTime(previous));
+  const [initialValue] = useState(() => localDateTime(previous ?? new Date().toISOString()));
+  const [value, setValue] = useState(initialValue);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -365,7 +367,7 @@ function ActualForm({
     }
   }
   return (
-    <form onSubmit={submit} data-dirty={!unchanged || Boolean(reason)} data-busy={busy}>
+    <form onSubmit={submit} data-dirty={value !== initialValue || Boolean(reason)} data-busy={busy}>
       {previous && <p>Сейчас: {formatDate(previous)}</p>}
       <label>
         Дата и время
@@ -503,11 +505,7 @@ function History({
           )}
         </article>
       ))}
-      {more && (
-        <button disabled={busy} onClick={() => void next()}>
-          Ранее
-        </button>
-      )}
+      <AutoLoadMore enabled={more} loading={busy} failed={Boolean(failure)} onLoad={next} />
     </section>
   );
 }

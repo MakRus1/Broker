@@ -72,7 +72,7 @@ def details(**patch):
                 'name': ' Анна ',
                 'position': ' Логист ',
                 'email': ' anna@example.test ',
-                'phone': ' +7 000 ',
+                'phone': ' +7 900 000-00-00 ',
             }
         ],
         **patch,
@@ -375,3 +375,21 @@ async def test_central_access_failure_never_creates_counterparty(
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT count(*) FROM counterparties')
         assert cursor.fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('field,value', [
+    ('email', 'anna@@example.test'), ('email', 'anna@example'),
+    ('email', 'anna@.test'), ('email', 'a..b@example.test'),
+    ('phone', '123'), ('phone', 'phone number'),
+    ('phone', '1234567890123456'), ('phone', '+7 ((900)) 000-00-00'),
+])
+@pytest.mark.parametrize('operation', ['create', 'update'])
+async def test_invalid_contact_does_not_save(api, field, value, operation):
+    body = details(contacts=[{'name': 'Анна', field: value}])
+    if operation == 'update':
+        created = (await api.post('/api/v1/counterparties/create', details(), expected=201))['counterparty']
+        body.update(id=created['id'], expected_revision=created['revision'])
+    await api.post('/api/v1/counterparties/' + operation, body, expected=400)
+    if operation == 'update':
+        saved = (await api.post('/api/v1/counterparties/get', {'id': created['id']}))['counterparty']
+        assert saved == created

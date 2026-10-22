@@ -3,6 +3,7 @@ import { ApiError, request, type Session } from './api';
 import { useDiscardConfirmation } from './components';
 import {
   counterpartyDetails,
+  validateContacts,
   counterpartyPayload,
   counterpartyRoles,
   restoreCounterpartyDraft,
@@ -82,6 +83,7 @@ export function CounterpartyForm({
     setBusy(true);
     setFailure('');
     try {
+      validateContacts(draft.contacts);
       const result = await request<{ counterparty: Counterparty }>(
         `/api/v1/counterparties/${initial ? 'update' : 'create'}`,
         session,
@@ -201,7 +203,12 @@ export function CounterpartyForm({
                     }
                     <input
                       required={key === 'name'}
-                      type={key === 'email' ? 'email' : 'text'}
+                      type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
+                      title={
+                        key === 'phone'
+                          ? 'От 7 до 15 цифр; допустимы +, пробелы, скобки и дефисы'
+                          : undefined
+                      }
                       maxLength={key === 'phone' ? 64 : 256}
                       value={contact[key]}
                       onChange={(event) =>

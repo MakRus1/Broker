@@ -7,12 +7,26 @@ export function localDateTime(value?: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return '';
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 export function utcDateTime(value: string): string {
   const date = new Date(value);
-  if (!value || !Number.isFinite(date.getTime())) throw new Error('Укажите дату и время');
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (
+    !parts ||
+    Number(parts[1]) < 1 ||
+    !Number.isFinite(date.getTime()) ||
+    [
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+    ].some((part, index) => part !== Number(parts[index + 1] ?? 0))
+  )
+    throw new Error('Укажите корректную дату и время');
   return date.toISOString().replace('.000Z', 'Z');
 }
 export function formatDate(value?: string): string {

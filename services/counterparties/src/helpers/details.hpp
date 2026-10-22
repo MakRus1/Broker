@@ -4,6 +4,7 @@
 #include <cctype>
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
+#include <platform/contact_validation.hpp>
 #include <userver/utils/text_light.hpp>
 
 namespace counterparties::helpers {
@@ -40,10 +41,13 @@ inline models::Counterparty Normalize(models::Counterparty value) {
         contact.position.emplace(Normalize(contact.position.value_or(std::nullopt)));
         const auto email = Normalize(contact.email.value_or(std::nullopt));
         contact.email.emplace(email);
-        contact.phone.emplace(Normalize(contact.phone.value_or(std::nullopt)));
+        const auto phone = Normalize(contact.phone.value_or(std::nullopt));
+        contact.phone.emplace(phone);
+        if (phone.has_value() && !platform::IsPhone(phone.value()))
+            throw ApiError{400, "invalid_phone", "Телефон должен содержать от 7 до 15 цифр"};
         if (contact.name.empty())
             throw ApiError{400, "empty_contact", "Укажите имя контактного лица"};
-        if (email.has_value() && email.value().find('@') == std::string::npos)
+        if (email.has_value() && !platform::IsEmail(email.value()))
             throw ApiError{400, "invalid_email", "Проверьте email контактного лица"};
     }
     return value;

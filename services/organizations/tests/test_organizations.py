@@ -312,3 +312,8 @@ async def test_write_permission_requires_read(api):
         user='org-admin',
         expected=400,
     )
+
+
+@pytest.mark.parametrize('email', ['a@@example.test', 'a@example', 'a@.test', 'a b@example.test'])
+async def test_create_employee_rejects_invalid_email(api, email):
+    await api.call(ADMIN + '/members/create', {**new_member(), 'email': email}, user='org-admin', expected=400)

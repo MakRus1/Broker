@@ -21,6 +21,9 @@ def check(directory, runtime=False):
                 'run',
                 '-d',
                 '--privileged',
+                '--cgroupns=host',
+                '--volume',
+                '/sys/fs/cgroup:/sys/fs/cgroup:rw',
                 '--name',
                 name,
                 '--tmpfs',
@@ -45,6 +48,11 @@ def check(directory, runtime=False):
             time.sleep(2)
         else:
             raise RuntimeError('Временный K3s не запустился')
+        if runtime:
+            subprocess.run(
+                [*command, 'wait', '--for=condition=Ready', 'node', '--all', '--timeout=120s'],
+                check=True,
+            )
         plan = json.loads((directory / 'plan.json').read_text())
         version = subprocess.run(
             [*command, 'version', '-o', 'json'], check=True, text=True, capture_output=True
@@ -112,9 +120,7 @@ def check(directory, runtime=False):
     except Exception:
         # Сохраняем причину остановки до удаления временного кластера.
         subprocess.run(['docker', 'stats', '--no-stream'], check=False)
-        subprocess.run(
-            ['docker', 'inspect', '--format', '{{json .State}}', name], check=False
-        )
+        subprocess.run(['docker', 'inspect', '--format', '{{json .State}}', name], check=False)
         subprocess.run(['docker', 'logs', '--tail', '100', name], check=False)
         raise
     finally:

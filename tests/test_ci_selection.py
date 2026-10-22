@@ -18,7 +18,13 @@ class CiSelectionTest(unittest.TestCase):
     def test_documentation(self):
         self.assertEqual(
             ci.select_checks(['docs/web-ui.md'], []),
-            {'scaffolds': False, 'smoke': False, 'frontends': [], 'build_services': []},
+            {
+                'shared_contracts': False,
+                'scaffolds': False,
+                'smoke': False,
+                'frontends': [],
+                'build_services': [],
+            },
         )
 
     def test_service_change_does_not_build_scaffolds(self):
@@ -58,6 +64,7 @@ class CiSelectionTest(unittest.TestCase):
             'Args',
             (),
             {
+                'shared_contracts': True,
                 'services': ['configs'],
                 'build_dir': Path('/tmp/build'),
                 'ctest': 'ctest',
@@ -108,6 +115,7 @@ add_test(NAME client_contract_unittest COMMAND ${CMAKE_COMMAND} -E true)
                 'Args',
                 (),
                 {
+                    'shared_contracts': True,
                     'services': ['alpha'],
                     'build_dir': build,
                     'ctest': ctest,
@@ -125,3 +133,58 @@ add_test(NAME client_contract_unittest COMMAND ${CMAKE_COMMAND} -E true)
                     'client_contract_unittest.built',
                 },
             )
+            for path in build.glob('*.built'):
+                path.unlink()
+            args.shared_contracts = False
+            ci.build(args)
+            self.assertEqual(
+                {path.name for path in build.glob('*.built')},
+                {'alpha.built', 'alpha_unittest.built'},
+            )
+            args.output_dir = root / 'results'
+            self.assertEqual(ci.run(args), 0)
+            import json
+
+            results = json.loads((args.output_dir / 'results.json').read_text())
+            self.assertEqual([result['name'] for result in results], ['alpha'])
+
+    def test_deploy_tools_do_not_enable_cpp_checks(self):
+        plan = ci.select_checks(['scripts/staging.py', 'tests/test_deployment.py'], [])
+        self.assertFalse(plan['shared_contracts'])
+        self.assertFalse(plan['scaffolds'])
+        self.assertEqual(plan['build_services'], [])
+
+    def test_contract_fixture_alone_requires_its_own_build(self):
+        plan = ci.select_checks(['tests/fixtures/contract_service/tests/test_models.py'], [])
+        self.assertTrue(plan['shared_contracts'])
+        self.assertFalse(plan['scaffolds'])
+        self.assertEqual(plan['build_services'], [])
+
+    def test_service_build_excludes_shared_contract_targets(self):
+        args = type(
+            'Args',
+            (),
+            {
+                'services': ['configs'],
+                'build_dir': Path('/tmp/build'),
+                'ctest': 'ctest',
+                'cmake': 'cmake',
+                'jobs': 4,
+                'shared_contracts': False,
+            },
+        )()
+        with mock.patch.object(
+            ci.subprocess,
+            'check_output',
+            return_value='{"tests":[{"name":"configs_unittest"},{"name":"client_contract_unittest"}]}',
+        ), mock.patch.object(ci.subprocess, 'run') as run:
+            ci.build(args)
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index('--target') + 1 :], ['configs', 'configs_unittest'])
+        args.services = []
+        with mock.patch.object(
+            ci.subprocess, 'check_output', return_value='{"tests":[]}'
+        ), mock.patch.object(ci.subprocess, 'run') as run:
+            with self.assertRaises(ValueError):
+                ci.build(args)
+            run.assert_not_called()

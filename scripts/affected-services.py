@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Определение затронутых сервисов: ошибки Git и конфигурации не скрываются."""
+
 from pathlib import Path
 import subprocess
+import json
 import re
 import sys
 import yaml
@@ -20,6 +22,7 @@ def main():
     services = {p.name for p in (ROOT / 'services').iterdir() if p.is_dir()}
     dependencies = {}
     consumers = {name: set() for name in services}
+    config_consumers = {}
     for name, item in config['libs'].items():
         entries = item['services']
         if not isinstance(entries, list) or not set(entries) <= services:
@@ -37,9 +40,21 @@ def main():
         if not isinstance(clients, dict):
             raise ValueError(f'Некорректные clients в {manifest}')
         for alias, client in clients.items():
-            if not isinstance(alias, str) or not re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_]*', alias) or not isinstance(client, dict) or set(client) != {'service', 'transport'} or client['transport'] != 'http' or client['service'] not in services:
+            if (
+                not isinstance(alias, str)
+                or not re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_]*', alias)
+                or not isinstance(client, dict)
+                or set(client) != {'service', 'transport'}
+                or client['transport'] != 'http'
+                or client['service'] not in services
+            ):
                 raise ValueError(f'Некорректный клиент {alias} в {manifest}')
             consumers[client['service']].add(service)
+            config_consumers.setdefault(
+                client['service'].upper() + '_HTTP_CLIENT_CONFIG', set()
+            ).add(service)
+        for config_name in spec.get('configs', []):
+            config_consumers.setdefault(config_name, set()).add(service)
         libraries = spec.get('libraries', ['common'])
         if 'auth' in spec:
             if not isinstance(spec['auth'], dict):
@@ -48,53 +63,127 @@ def main():
                 libraries = [*libraries, 'auth']
         if clients and 'configs' not in libraries:
             libraries = [*libraries, 'configs']
-        if not isinstance(libraries, list) or any(not isinstance(lib, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', lib) or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file() for lib in libraries):
+        if not isinstance(libraries, list) or any(
+            not isinstance(lib, str)
+            or not re.fullmatch(r'[a-z][a-z0-9_]*', lib)
+            or not (ROOT / 'libs' / lib / 'CMakeLists.txt').is_file()
+            for lib in libraries
+        ):
             raise ValueError(f'Некорректные libraries в {manifest}')
         for entries in dependencies.values():
             if service in entries:
                 entries.remove(service)
         for lib in libraries:
             dependencies.setdefault(lib, []).append(service)
+    library_paths = {path.parent.name: path for path in (ROOT / 'libs').glob('*/CMakeLists.txt')}
+    library_consumers = {name: set(dependencies.get(name, [])) for name in library_paths}
+    changed_graph = True
+    while changed_graph:
+        changed_graph = False
+        for name, path in library_paths.items():
+            source = re.sub(r'#[^\n]*', '', path.read_text())
+            for dependency in set(re.findall(r'\bbroker_([a-z][a-z0-9_]*)\b', source)) - {name}:
+                if dependency in library_consumers:
+                    before = len(library_consumers[dependency])
+                    library_consumers[dependency].update(library_consumers[name])
+                    changed_graph |= len(library_consumers[dependency]) != before
+    dependencies.update(library_consumers)
     git('rev-parse', '--is-inside-work-tree')
     base = sys.argv[1] if len(sys.argv) > 1 else 'origin/main'
     if git('rev-parse', '--verify', base + '^{commit}', check=False).returncode:
-        print('all')
+        print(
+            json.dumps(
+                {
+                    'services': sorted(services),
+                    'reasons': {name: ['Базовая ревизия недоступна'] for name in sorted(services)},
+                }
+            )
+            if '--json' in sys.argv
+            else 'all'
+        )
         return
     # -z сохраняет пробелы и переводы строк в именах; удаленные сервисы не собираются.
     changed = git('diff', '--name-only', '-z', base, 'HEAD').stdout.decode().split('\0')
-    affected = set()
-    for path in filter(None, changed):
-        if any(path == prefix.rstrip('/') or path.startswith(prefix if prefix.endswith('/') else prefix + '/') for prefix in config['shared_paths']):
-            print('all')
-            return
+    schema_consumers = {}
+    for path in (ROOT / 'schemas/configs').rglob('*.yaml'):
+        spec = yaml.safe_load(path.read_text())
+        users = set(config_consumers.get(spec['name'], set())) | ({'configs'} & services)
+        schema_consumers[path.relative_to(ROOT).as_posix()] = users
+        if context := spec.get('context'):
+            context_path = 'schemas/config_contexts/' + context + '.yaml'
+            schema_consumers.setdefault(context_path, set()).update(users)
+    reasons = select(
+        changed, services, dependencies, consumers, config['shared_paths'], schema_consumers
+    )
+    if '--json' in sys.argv:
+        print(json.dumps({'services': sorted(reasons), 'reasons': reasons}, ensure_ascii=False))
+    elif reasons:
+        print(' '.join(sorted(reasons)))
+
+
+def matches(path, prefix):
+    return path == prefix.rstrip('/') or path.startswith(
+        prefix if prefix.endswith('/') else prefix + '/'
+    )
+
+
+def select(paths, services, dependencies, consumers, shared_paths, schema_consumers=None):
+    reasons = {}
+    public = set()
+
+    def add(names, reason):
+        for name in names:
+            if name in services:
+                reasons.setdefault(name, [])
+                if reason not in reasons[name]:
+                    reasons[name].append(reason)
+
+    for path in filter(None, paths):
+        if path.endswith('.md'):
+            continue
         parts = path.split('/')
-        if parts[0] == 'libs' and len(parts) > 1:
-            if parts[1] not in dependencies:
-                print('all')
-                return
-            affected.update(dependencies[parts[1]])
+        if any(matches(path, prefix) for prefix in shared_paths):
+            add(services, 'Общая платформа: ' + path)
+        elif parts[0] == 'libs' and len(parts) > 1:
+            add(dependencies.get(parts[1], services), 'Библиотека: ' + path)
         elif parts[:2] == ['schemas', 'services'] and len(parts) > 2 and parts[2] in services:
-            affected.add(parts[2])
-            if 'configs' in services:
-                affected.add('configs')
+            add([parts[2], 'configs'], 'Публичный контракт: ' + path)
+            public.add(parts[2])
+        elif schema_consumers is not None and path in schema_consumers:
+            add(schema_consumers[path], 'Схема конфигурации: ' + path)
         elif parts[0] == 'schemas':
-            print('all')
-            return
+            add(services, 'Общая схема: ' + path)
         elif parts[0] == 'services' and len(parts) > 1 and parts[1] in services:
-            affected.add(parts[1])
-    # Транзитивное замыкание завершается и при взаимных HTTP-вызовах.
-    pending = list(affected)
+            if path.endswith('/codegen.lock') or path.endswith('.md') or '/monitoring/' in path:
+                continue
+            add([parts[1]], 'Код, конфигурация или тесты: ' + path)
+            if (
+                '/docs/api/' in path
+                or '/docs/components/' in path
+                or path.endswith('/service.yaml')
+            ):
+                public.add(parts[1])
+    # Только изменение контракта распространяется по HTTP-зависимостям.
+    pending, visited = list(public), set(public)
     while pending:
-        for consumer in consumers[pending.pop()]:
-            if consumer not in affected:
-                affected.add(consumer)
+        provider = pending.pop()
+        for consumer in consumers[provider]:
+            add([consumer], 'Потребитель контракта: ' + provider)
+            if consumer not in visited:
+                visited.add(consumer)
                 pending.append(consumer)
-    if affected:
-        print(' '.join(sorted(affected)))
+    return reasons
 
 
 if __name__ == '__main__':
     try:
         main()
-    except (OSError, ValueError, KeyError, TypeError, yaml.YAMLError, subprocess.CalledProcessError) as exc:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        TypeError,
+        yaml.YAMLError,
+        subprocess.CalledProcessError,
+    ) as exc:
         sys.exit(f'Ошибка определения сервисов: {exc}')

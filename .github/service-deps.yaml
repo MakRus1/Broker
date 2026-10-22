@@ -11,14 +11,20 @@ libs:
     - web_bff
 shared_paths:
 - cmake/
-- .github/
 - .devcontainer/
-- tools/
-- scripts/
-- schemas/permissions/
-- tests/
+- scripts/openapi_gen/
+- scripts/affected-services.py
+- scripts/ci-tests.py
+- scripts/service_catalog.py
+- .github/workflows/ci.yml
+- .github/service-deps.yaml
+- tools/versions.env
+- tools/python-constraints.txt
+- tools/container-images.json
+- tools/Dockerfile
+- tools/docker/
+- tests/support/
 - CMakeLists.txt
 - CMakePresets.json
 - Makefile
-- docker-compose.yml
 - requirements.txt

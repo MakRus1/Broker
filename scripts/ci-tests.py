@@ -90,7 +90,16 @@ def select_checks(paths, services):
         or any(path.startswith('tests/integration/') for path in paths)
     )
     build_services = sorted(set(services) | ({'shipments', 'transportations'} if smoke else set()))
+    shared_contracts = (
+        scaffolds
+        or paths is None
+        or any(
+            path.startswith(('tests/fixtures/contract_service/', 'libs/common/', 'libs/configs/'))
+            for path in (paths or [])
+        )
+    )
     return {
+        'shared_contracts': shared_contracts,
         'scaffolds': scaffolds,
         'smoke': smoke,
         'frontends': frontends,
@@ -106,10 +115,14 @@ def build(args):
         )
     )
     tests = {test['name'] for test in inventory['tests']}
-    targets = [*services, 'contract_service']
+    targets = list(services)
+    if args.shared_contracts:
+        targets.append('contract_service')
     targets += [name + '_unittest' for name in services if name + '_unittest' in tests]
-    if 'client_contract_unittest' in tests:
+    if args.shared_contracts and 'client_contract_unittest' in tests:
         targets.append('client_contract_unittest')
+    if not targets:
+        raise ValueError('Пустой список целей: неявная сборка всего проекта запрещена')
     command = [
         args.cmake,
         '--build',
@@ -125,26 +138,41 @@ def build(args):
 
 def plan(args):
     result = subprocess.run(
-        [sys.executable, str(ROOT / 'scripts/affected-services.py'), args.base],
+        [sys.executable, str(ROOT / 'scripts/affected-services.py'), args.base, '--json'],
         check=True,
         stdout=subprocess.PIPE,
         text=True,
     ).stdout.strip()
+    impact = json.loads(result)
     available = sorted(path.name for path in (ROOT / 'services').iterdir() if path.is_dir())
-    selected = service_names(available if result == 'all' else result.split())
+    selected = service_names(impact['services'])
     if not set(selected) <= set(available):
         raise ValueError('Определение зависимостей вернуло неизвестные сервисы')
     checks = select_checks(changed_paths(args.base), selected)
-    message = ', '.join(f'`{name}`' for name in selected) or 'нет — сборка и CTest пропускаются'
+    build_required = (
+        bool(checks['build_services']) or checks['shared_contracts'] or checks['scaffolds']
+    )
+    message = ', '.join(f'`{name}`' for name in selected) or (
+        'нет — проверяются общие контракты'
+        if build_required
+        else 'нет — сборка и CTest пропускаются'
+    )
     text = f'### План проверок сервисов\n\nВыбраны: {message}.\n\n'
-    if result == 'all':
-        text += 'Общие изменения или недоступная базовая ревизия: проверяются все сервисы.\n\n'
-    text += 'Окружения: Debug/Release/ASan+UBSan на amd64, Debug на arm64.\n'
+    for service in selected:
+        text += f'- `{service}`: ' + '; '.join(impact['reasons'][service]) + '\n'
+    text += '\n'
+    if build_required:
+        text += 'Окружения: Debug/Release/ASan+UBSan на amd64, Debug на arm64.\n'
+    if extra := set(checks['build_services']) - set(selected):
+        text += 'Дополнительные executable для smoke: ' + ', '.join(sorted(extra)) + '.\n'
     text += f'\nПроверка шаблона: {"да" if checks["scaffolds"] else "нет"}. Межсервисный smoke: {"да" if checks["smoke"] else "нет"}.\n'
+    text += f'Общие контрактные тесты: {"да" if checks["shared_contracts"] else "нет"}.\n'
     text += 'Фронтенды: ' + (', '.join(checks['frontends']) or 'нет') + '.\n'
     print(text)
     append(
         args.github_output,
+        f'build_required={str(build_required).lower()}\n'
+        f'shared_contracts={str(checks["shared_contracts"]).lower()}\n'
         f'scaffolds={str(checks["scaffolds"]).lower()}\n'
         f'smoke={str(checks["smoke"]).lower()}\n'
         f'frontends={json.dumps(checks["frontends"])}\n'
@@ -181,7 +209,12 @@ def run(args):
         (service, f'^({re.escape(service)}_unittest|testsuite-{re.escape(service)})$')
         for service in services
     ]
-    groups.append(('shared-contracts', '^(testsuite-contract_service|client_contract_unittest)$'))
+    if args.shared_contracts:
+        groups.append(
+            ('shared-contracts', '^(testsuite-contract_service|client_contract_unittest)$')
+        )
+    if not groups:
+        raise ValueError('Пустой список тестов')
     # Общие проверки не должны скрывать отсутствие тестов выбранного сервиса.
     for name, pattern in groups:
         if not any(re.fullmatch(pattern, test) for test in names):
@@ -252,7 +285,8 @@ def summary(args):
         'Pytest: успешно / ошибки / пропуски |',
         '| --- | --- | --- | --- |',
     ]
-    for name in [*service_names(args.services), 'shared-contracts']:
+    groups = service_names(args.services) + (['shared-contracts'] if args.shared_contracts else [])
+    for name in groups:
         item = results.get(name, {})
 
         def cell(key):
@@ -286,7 +320,7 @@ def main():
     planning.add_argument('--summary', default=os.environ.get('GITHUB_STEP_SUMMARY'))
     building = commands.add_parser('build')
     building.add_argument('--build-dir', type=Path, required=True)
-    building.add_argument('--services', nargs='+', required=True)
+    building.add_argument('--services', nargs='*', default=[])
     building.add_argument('--cmake', default=str(ROOT / '.venv-gen/bin/cmake'))
     building.add_argument('--ctest', default=str(ROOT / '.venv-gen/bin/ctest'))
     building.add_argument('--jobs', type=int, default=4)
@@ -294,8 +328,14 @@ def main():
     running.add_argument('--build-dir', type=Path, required=True)
     running.add_argument('--ctest', default=str(ROOT / '.venv-gen/bin/ctest'))
     for command in (running, commands.add_parser('summary')):
-        command.add_argument('--services', nargs='+', required=True)
+        command.add_argument('--services', nargs='*', default=[])
         command.add_argument('--output-dir', type=Path, required=True)
+    for command in (building, running, commands.choices['summary']):
+        command.add_argument(
+            '--shared-contracts',
+            action=argparse.BooleanOptionalAction,
+            default=os.environ.get('CI_SHARED_CONTRACTS', 'true') != 'false',
+        )
     reporting = commands.choices['summary']
     reporting.add_argument('--preset', required=True)
     reporting.add_argument('--arch', required=True)

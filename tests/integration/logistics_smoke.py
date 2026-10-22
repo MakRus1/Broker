@@ -25,6 +25,12 @@ from auth_tokens import SigningKey
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 CUSTOMER = '33333333-3333-4333-8333-333333333333'
+USER_PERMISSIONS = [
+    'organizations.read_employees',
+    'shipments.read',
+    'shipments.write',
+    'transportations.read',
+]
 
 
 def free_port():
@@ -97,11 +103,7 @@ def run(build):
                     return self.respond(
                         {
                             'organization_id': ORGANIZATION,
-                            'permissions': [
-                                'shipments.read',
-                                'shipments.write',
-                                'transportations.read',
-                            ],
+                            'permissions': USER_PERMISSIONS,
                         }
                     )
                 self.respond({'access_token': make_token('dispatcher', ['transportations.create'])})
@@ -218,7 +220,7 @@ def run(build):
 
         receivers = [start('transportations', index) for index in range(2)]
         senders = [start('shipments', index, receivers[index]) for index in range(2)]
-        token = make_token('author', ['shipments.read', 'shipments.write', 'transportations.read'])
+        token = make_token('author', USER_PERMISSIONS)
         shipment = post(
             senders[0],
             '/api/v1/shipments/create',

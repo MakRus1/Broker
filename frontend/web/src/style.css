@@ -1099,6 +1099,7 @@ button.danger:hover:not(:disabled) {
   }
   .sidebar .profile {
     min-height: 56px;
+    padding-left: 7px;
   }
   .app main {
     margin-left: 72px;
@@ -1158,10 +1159,40 @@ button.danger:hover:not(:disabled) {
   min-width: 0;
 }
 .route-mode-field {
+  grid-column: 1 / -1;
   align-content: start;
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.route-mode-field select {
-  max-width: 240px;
+.route-contractor-field {
+  grid-column: 1 / -1;
+}
+.route-contractor-field .counterparty-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px 20px;
+}
+.route-contractor-field .counterparty-picker > .hint,
+.route-contractor-field .counterparty-picker > .error {
+  grid-column: 1 / -1;
+}
+.route-contractor-field .counterparty-picker > button {
+  justify-self: start;
+}
+select {
+  appearance: none;
+  padding-right: 38px;
+  background-image: url('/assets/icons/chevron-down.svg');
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+@media (max-width: 650px) {
+  .route-contractor-field .counterparty-picker {
+    grid-template-columns: 1fr;
+  }
 }
 
 .registry-tax-field {
@@ -1222,4 +1253,27 @@ button.danger:hover:not(:disabled) {
     grid-template-columns: 1fr;
     gap: 6px;
   }
+}
+
+.transport-options {
+  display: inline-flex;
+  justify-self: start;
+  padding: 4px;
+  gap: 4px;
+  background: #edf1f7;
+  border: 1px solid #d8e0eb;
+  border-radius: 8px;
+}
+.transport-options button {
+  min-width: 90px;
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64738a;
+}
+.transport-options button[aria-pressed='true'] {
+  background: white;
+  color: #255bcc;
+  border-color: #d8e0eb;
+  box-shadow: 0 1px 3px #15263c10;
 }

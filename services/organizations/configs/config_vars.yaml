@@ -14,4 +14,5 @@ auth-allow-http: true
 
 users-token-url: http://localhost:18888/realms/broker/protocol/openid-connect/token
 users-admin-url: http://localhost:18888/admin/realms/broker
+users-client-id: organizations-manager
 users-client-secret: local-tests-only

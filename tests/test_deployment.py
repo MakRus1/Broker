@@ -167,6 +167,7 @@ class DeploymentTest(unittest.TestCase):
                 ROOT / 'services', root / 'services', ignore=shutil.ignore_patterns('__pycache__')
             )
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
+            shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
             path = Path(directory) / 'state'
             first = staging.render(RELEASE, path, root=root)
             manifest = root / 'services/configs/service.yaml'

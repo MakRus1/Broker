@@ -31,9 +31,6 @@
           "name": "transportations.write"
         },
         {
-          "name": "transportations.create"
-        },
-        {
           "name": "counterparties.read"
         },
         {
@@ -238,30 +235,6 @@
         "oauth2.device.authorization.grant.enabled": "true",
         "post.logout.redirect.uris": "http://localhost:14080/"
       }
-    },
-    {
-      "clientId": "shipments-dispatcher",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "publicClient": false,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": true,
-      "secret": "${shipments-dispatcher-secret}",
-      "fullScopeAllowed": true,
-      "protocolMappers": [
-        {
-          "name": "broker-logistics-audience",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "consentRequired": false,
-          "config": {
-            "included.client.audience": "broker-logistics",
-            "access.token.claim": "true",
-            "id.token.claim": "false"
-          }
-        }
-      ]
     }
   ],
   "users": [

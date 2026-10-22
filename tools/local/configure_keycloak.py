@@ -46,10 +46,9 @@ def api(path, value=None, method=None):
         data = response.read()
         return json.loads(data) if data else None
 
-realm = json.loads(Path('/workspaces/broker/tools/local/keycloak/realm.template.json').read_text()
-                   .replace('${shipments-dispatcher-secret}', secrets['shipments-dispatcher-secret']))
+realm = json.loads(Path('/workspaces/broker/tools/local/keycloak/realm.template.json').read_text())
 for desired in realm['clients']:
-    if desired['clientId'] not in ('broker-logistics', 'broker-web', 'shipments-dispatcher'):
+    if desired['clientId'] not in ('broker-logistics', 'broker-web'):
         continue
     found = api('clients?clientId=' + desired['clientId'])
     if found:
@@ -70,10 +69,11 @@ for username, names in (
     user = api('users?username=' + username + '&exact=true')[0]
     api('users/' + user['id'] + '/role-mappings/clients/' + resource, [roles[name] for name in names])
     users.append(user['id'])
-dispatcher = api('clients?clientId=shipments-dispatcher')[0]['id']
-account = api('clients/' + dispatcher + '/service-account-user')
-api('users/' + account['id'] + '/role-mappings/clients/' + resource, [roles['transportations.create']])
-users.append(account['id'])
+import sys
+sys.path.insert(0, '/workspaces/broker/scripts/openapi_gen')
+from service_accounts import load, provision
+subjects = provision(api, load('/workspaces/broker'), secrets)
+users.extend(subjects.values())
 Path('/cache/logistics-users.json').write_text(json.dumps(users))
 print('Локальные роли и клиенты логистики настроены')
 
@@ -81,7 +81,7 @@ print('Локальные роли и клиенты логистики наст
 import sys
 sys.path.insert(0, '/workspaces/broker/scripts')
 from organization_identity import configure
-configure(api, secrets['organizations-manager-secret'], platform_admin='author')
+configure(api, platform_admin='author')
 
 # Только тестовые технические клиенты: права берутся из Organizations, не из JWT.
 platform_accounts = {}

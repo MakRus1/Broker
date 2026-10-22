@@ -27,3 +27,15 @@ auth:
 http_logging:
   exclude_paths:
   - /api/admin/organizations/members/create
+service_accounts:
+  users:
+    client_id: organizations-manager
+    keycloak_roles:
+      realm-management:
+      - manage-users
+      - query-users
+      - view-users
+    config:
+      client_id: users-client-id
+      client_secret: users-client-secret
+      token_url: users-token-url

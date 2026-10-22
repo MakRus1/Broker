@@ -13,6 +13,7 @@ from migrations import discover, render
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'openapi_gen'))
 from generate import UniqueLoader
 from dashboards import provision as provision_dashboards
+from service_accounts import load as load_accounts, secret_key, variables as account_variables
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local"
@@ -41,12 +42,13 @@ def prepare():
         with os.fdopen(descriptor, "w") as target:
             json.dump(values, target)
     auth_secrets = json.loads(secrets_path.read_text())
-    if 'organizations-manager-secret' not in auth_secrets:
-        auth_secrets['organizations-manager-secret'] = secrets.token_urlsafe(32)
-        secrets_path.write_text(json.dumps(auth_secrets))
-    if 'shipments-dispatcher-secret' not in auth_secrets:
-        auth_secrets['shipments-dispatcher-secret'] = secrets.token_urlsafe(32)
-        secrets_path.write_text(json.dumps(auth_secrets))
+    accounts = load_accounts(ROOT)
+    for account in accounts.values():
+        key = secret_key(account)
+        if key not in auth_secrets:
+            auth_secrets[key] = secrets.token_urlsafe(32)
+    secrets_path.write_text(json.dumps(auth_secrets))
+    secrets_path.chmod(0o600)
     realm = (ROOT / "tools/local/keycloak/realm.template.json").read_text()
     for key, value in auth_secrets.items():
         realm = realm.replace("${" + key + "}", value)
@@ -114,14 +116,11 @@ def prepare():
         if name == 'shipments':
             variables.update({
                 'client-transportations-base-url': 'http://transportations:8110',
-                'dispatcher-enabled': True,
-                'dispatcher-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
-                'dispatcher-client-secret': auth_secrets['shipments-dispatcher-secret'],
             })
         if name == 'organizations':
             variables.update({'users-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
-                'users-admin-url': 'http://keycloak:8080/admin/realms/broker',
-                'users-client-secret': auth_secrets['organizations-manager-secret']})
+                'users-admin-url': 'http://keycloak:8080/admin/realms/broker'})
+        variables.update(account_variables(accounts, name, auth_secrets, 'http://keycloak:8080/realms/broker/protocol/openid-connect/token'))
         variables['organization-access-url'] = 'http://organizations:8130/api/organizations/access'
         variables['platform-access-url'] = 'http://organizations:8130/api/platform/access'
         variables["config-updates-enabled"] = name != "configs"
@@ -230,6 +229,7 @@ def prepare():
         "otlp-enabled": True,
         "otlp-endpoint": "collector:4317",
     })
+    variables.update(account_variables(accounts, 'admin_bff', auth_secrets, 'http://keycloak:8080/realms/broker/protocol/openid-connect/token'))
     config = resolve(yaml.safe_load((ROOT / "services/admin_bff/configs/static_config.yaml").read_text()), variables)
     config["components_manager"]["components"]["server"]["listener"]["port"] = 8180
     admin_components = config["components_manager"]["components"]
@@ -428,6 +428,9 @@ def prepare():
         ],
         "ports": ["127.0.0.1:13000:3000"],
     }
+    for owner in {account['service'] for account in accounts.values()}:
+        services[owner]['depends_on']['keycloak-setup'] = {'condition': 'service_completed_successfully'}
+
     for name, service in services.items():
         service["logging"] = {
             "driver": "json-file",

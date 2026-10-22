@@ -186,15 +186,21 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         name: f"{name.replace('_', '-')}.{namespace}.svc.{settings['cluster_domain']}"
         for name in ('postgres', 'configs', 'keycloak', *services)
     }
+    from openapi_gen.service_accounts import (
+        load as load_accounts,
+        secret_key,
+        variables as account_variables,
+    )
+
+    accounts = load_accounts(root)
     values = credentials(directory)
-    users_secret = directory / 'organizations-manager-secret'
-    if not users_secret.exists():
-        private_write(users_secret, secrets.token_urlsafe(32))
-    manager_secret = users_secret.read_text().strip()
-    dispatcher_secret_file = directory / 'shipments-dispatcher-secret'
-    if not dispatcher_secret_file.exists():
-        private_write(dispatcher_secret_file, secrets.token_urlsafe(32))
-    dispatcher_secret = dispatcher_secret_file.read_text().strip()
+    account_secrets = {}
+    for account in accounts.values():
+        key = secret_key(account)
+        path = directory / key
+        if not path.exists():
+            private_write(path, secrets.token_urlsafe(32))
+        account_secrets[key] = path.read_text().strip()
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
     ns = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': namespace}}
     infra = []
@@ -410,7 +416,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'platform-access-url': f"http://{addresses['organizations']}:8080/api/platform/access",
                 'users-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
                 'users-admin-url': f"http://{addresses['keycloak']}:8080/admin/realms/broker",
-                'users-client-secret': manager_secret,
                 'client-config_admin-base-url': f"http://{addresses['configs']}:8092",
                 'auth-issuer': settings['auth_origin'] + '/realms/broker',
                 'auth-jwks-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/certs",
@@ -422,14 +427,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'pg-connection': f"postgresql://broker:{values['postgres-password']}@{addresses['postgres']}:5432/{name}",
             }
         )
-        if name == 'shipments':
-            variables.update(
-                {
-                    'dispatcher-enabled': True,
-                    'dispatcher-client-secret': dispatcher_secret,
-                    'dispatcher-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
-                }
-            )
         if lan:
             internal_auth = f"https://{addresses['keycloak']}:8443"
             variables.update(
@@ -452,10 +449,15 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}.:4317',
                 }
             )
-        if lan and name == 'shipments':
-            variables['dispatcher-token-url'] = (
-                internal_auth + '/realms/broker/protocol/openid-connect/token'
+        token_base = internal_auth if lan else f"http://{addresses['keycloak']}:8080"
+        variables.update(
+            account_variables(
+                accounts,
+                name,
+                account_secrets,
+                token_base + '/realms/broker/protocol/openid-connect/token',
             )
+        )
         components = static['components_manager']['components']
         if lan:
             # Логи читаются из stdout; OTLP используется для трасс, без двойной доставки.

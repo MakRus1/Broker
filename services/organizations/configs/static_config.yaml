@@ -8,7 +8,7 @@ components_manager:
     components:
         service-token-provider:
             endpoint: $users-token-url
-            client-id: organizations-manager
+            client-id: $users-client-id
             client-secret: $users-client-secret
             timeout-ms: 2000
             max-retries: 0

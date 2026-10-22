@@ -1,6 +1,7 @@
 """Декларативное подключение инфраструктуры без перезаписи ручного кода."""
 from pathlib import Path
 from auth import policy as auth_policy
+from service_accounts import policy as service_accounts_policy, load as load_service_accounts
 import json
 import re
 import yaml
@@ -30,8 +31,11 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment', 'auth'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment/auth')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment', 'auth', 'service_accounts'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment/auth/service_accounts')
+    service_accounts_policy(spec)
+    if service.parent.name == 'services':
+        load_service_accounts(service.parent.parent, loader)
     auth = auth_policy(spec)
     logging_policy(spec)
     validate_deployment(spec.get('deployment', {}))

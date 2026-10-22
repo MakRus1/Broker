@@ -138,14 +138,18 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         sync_keycloak(context, plan['namespace'], plan['admin_origin'], plan['web_origin'])
         for name in NAMES:
             run(*ns, 'rollout', 'status', f'deployment/{name}', '--timeout=300s')
-    if infrastructure:
+    from openapi_gen.service_accounts import load as load_accounts
+
+    account_services = {account['service'] for account in load_accounts(ROOT).values()}
+    if infrastructure or account_services.intersection(services):
         from organization_identity import configure_cluster
 
         configure_cluster(
             context,
             plan['namespace'],
-            (directory / 'organizations-manager-secret').read_text().strip(),
-            dispatcher_secret=(directory / 'shipments-dispatcher-secret').read_text().strip(),
+            state_dir=directory,
+            services=None if infrastructure else services,
+            configure_users=infrastructure or 'organizations' in services,
         )
     if paths['migrations']:
         run(

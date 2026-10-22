@@ -1,7 +1,7 @@
 """Идемпотентная настройка Keycloak для управления сотрудниками."""
 
 
-def configure(api, secret, *, platform_admin=None):
+def configure(api, *, platform_admin=None):
     api(
         '',
         {
@@ -13,31 +13,6 @@ def configure(api, secret, *, platform_admin=None):
         },
         method='PUT',
     )
-    clients = api('clients?clientId=organizations-manager')
-    desired = {
-        'clientId': 'organizations-manager',
-        'protocol': 'openid-connect',
-        'enabled': True,
-        'publicClient': False,
-        'serviceAccountsEnabled': True,
-        'standardFlowEnabled': False,
-        'directAccessGrantsEnabled': False,
-        'fullScopeAllowed': False,
-        'secret': secret,
-    }
-    if clients:
-        api('clients/' + clients[0]['id'], {**clients[0], **desired}, method='PUT')
-    else:
-        api('clients', desired)
-    manager = api('clients?clientId=organizations-manager')[0]['id']
-    account = api('clients/' + manager + '/service-account-user')
-    management = api('clients?clientId=realm-management')[0]['id']
-    names = {'manage-users', 'query-users', 'view-users'}
-    roles = [role for role in api('clients/' + management + '/roles') if role['name'] in names]
-    if {role['name'] for role in roles} != names:
-        raise ValueError('В Keycloak отсутствуют необходимые роли управления пользователями')
-    api('users/' + account['id'] + '/role-mappings/clients/' + management, roles)
-    api('clients/' + manager + '/scope-mappings/clients/' + management, roles)
     # Служебная метка недоступна для изменения через пользовательский профиль.
     profile = api('users/profile')
     attributes = profile['attributes']
@@ -86,33 +61,9 @@ def configure(api, secret, *, platform_admin=None):
         api('users/' + users[0]['id'] + '/role-mappings/clients/' + resource, [role])
 
 
-def configure_dispatcher(api, secret):
-    import json
-    from pathlib import Path
-
-    template = json.loads(
-        (
-            Path(__file__).resolve().parents[1] / 'tools/local/keycloak/realm.template.json'
-        ).read_text()
-    )
-    desired = next(
-        client for client in template['clients'] if client['clientId'] == 'shipments-dispatcher'
-    )
-    desired['secret'] = secret
-    clients = api('clients?clientId=shipments-dispatcher')
-    if clients:
-        api('clients/' + clients[0]['id'], {**clients[0], **desired}, method='PUT')
-    else:
-        api('clients', desired)
-    client = api('clients?clientId=shipments-dispatcher')[0]['id']
-    account = api('clients/' + client + '/service-account-user')
-    resource = api('clients?clientId=broker-logistics')[0]['id']
-    role = api('clients/' + resource + '/roles/transportations.create')
-    api('users/' + account['id'] + '/role-mappings/clients/' + resource, [role])
-    api('clients/' + client + '/scope-mappings/clients/' + resource, [role])
-
-
-def configure_cluster(context, namespace, secret, *, platform_admin=None, dispatcher_secret=None):
+def configure_cluster(
+    context, namespace, *, state_dir, platform_admin=None, services=None, configure_users=True
+):
     import json
     import subprocess
     import uuid
@@ -179,9 +130,25 @@ def configure_cluster(context, namespace, secret, *, platform_admin=None, dispat
         return json.loads(result.stdout) if verb == 'get' else None
 
     try:
-        configure(api, secret, platform_admin=platform_admin)
-        if dispatcher_secret is not None:
-            configure_dispatcher(api, dispatcher_secret)
+        from pathlib import Path
+        import sys
+
+        root = Path(__file__).resolve().parents[1]
+        sys.path.insert(0, str(root / 'scripts/openapi_gen'))
+        from service_accounts import load, provision, secret_key
+
+        accounts = load(root)
+        if services is not None:
+            accounts = {
+                key: account for key, account in accounts.items() if account['service'] in services
+            }
+        credentials = {
+            secret_key(account): (Path(state_dir) / secret_key(account)).read_text().strip()
+            for account in accounts.values()
+        }
+        provision(api, accounts, credentials)
+        if configure_users:
+            configure(api, platform_admin=platform_admin)
     finally:
         subprocess.run(command + ['rm -rf "$1"', 'sh', folder], check=True, capture_output=True)
 
@@ -199,7 +166,7 @@ if __name__ == '__main__':
     configure_cluster(
         args.context,
         args.namespace,
-        (args.state_dir / 'organizations-manager-secret').read_text().strip(),
+        state_dir=args.state_dir,
         platform_admin=args.platform_admin,
     )
     print('Управление сотрудниками в Keycloak настроено')

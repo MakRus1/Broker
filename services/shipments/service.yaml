@@ -24,3 +24,14 @@ auth:
     /api/v1/transportation-operations/create: shipments.write
     /api/v1/transportation-operations/get: shipments.read
   organization-access: true
+service_accounts:
+  dispatcher:
+    client_id: shipments-dispatcher
+    audience: broker-logistics
+    permissions:
+    - transportations.create
+    config:
+      client_id: dispatcher-client-id
+      client_secret: dispatcher-client-secret
+      token_url: dispatcher-token-url
+      enabled: dispatcher-enabled

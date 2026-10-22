@@ -689,9 +689,12 @@ kubectl -n kube-system rollout status deployment/coredns --timeout=90s
 
 На staging обработчик Shipments включается автоматически. Секрет служебного клиента
 `shipments-dispatcher` хранится в `.staging/shipments-dispatcher-secret` и сохраняется
-между рендерами. Deploy infrastructure настраивает клиент в существующем Keycloak
+между рендерами. Деплой Shipments или инфраструктуры настраивает клиент в существующем Keycloak
 с правом `transportations.create`; пароли пользователей не изменяются.
 В LAN-профиле получение токена использует внутренний HTTPS Keycloak.
 
 При первом включении выполните Deploy all с инфраструктурой. Уже принятые операции
 `pending` будут обработаны автоматически; повторять создание через UI не нужно.
+
+Служебные подключения локального стенда и staging описываются одинаково в
+`service.yaml → service_accounts`; см. [контракт сервиса](service-manifest.md#служебные-oauth-клиенты).

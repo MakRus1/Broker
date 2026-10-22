@@ -403,6 +403,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'client-transportations-base-url': f"http://{addresses['transportations']}:8080",
                 'client-organizations-base-url': f"http://{addresses['organizations']}:8080",
                 'organization-access-url': f"http://{addresses['organizations']}:8080/api/organizations/access",
+                'platform-access-url': f"http://{addresses['organizations']}:8080/api/platform/access",
                 'users-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
                 'users-admin-url': f"http://{addresses['keycloak']}:8080/admin/realms/broker",
                 'users-client-secret': manager_secret,

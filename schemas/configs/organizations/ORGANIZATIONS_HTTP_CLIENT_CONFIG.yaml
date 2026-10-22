@@ -12,8 +12,11 @@ paths:
 - /api/admin/organizations/roles/list
 - /api/admin/organizations/roles/update
 - /api/admin/organizations/update
+- /api/admin/platform-access/get
+- /api/admin/platform-access/update
 - /api/organizations/access
 - /api/organizations/me
+- /api/platform/access
 default:
   '**default**':
     timeout: 1000

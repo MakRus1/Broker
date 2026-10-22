@@ -20,3 +20,5 @@ config-cache-path: ''
 auth-issuer: http://localhost:18888/realms/broker
 auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
 auth-allow-http: true
+
+platform-access-url: http://localhost:8130/api/platform/access

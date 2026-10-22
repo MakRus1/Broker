@@ -92,6 +92,7 @@ struct Component::State {
     std::string Url;
     std::string Prefix;
     std::string OrganizationUrl;
+    std::string PlatformUrl;
     std::map<std::string, std::string> ServiceClients;
     std::map<std::string, std::string> Permissions;
     std::map<std::string, std::vector<std::string>> Dependencies;
@@ -109,6 +110,7 @@ struct Component::State {
           Url(config["jwks-url"].As<std::string>()),
           Prefix(config["protected-prefix"].As<std::string>()),
           OrganizationUrl(config["organization-url"].As<std::string>("")),
+          PlatformUrl(config["platform-url"].As<std::string>("")),
           ServiceClients(config["service-clients"].As<std::map<std::string, std::string>>({})),
           Permissions(config["permissions"].As<std::map<std::string, std::string>>()),
           Dependencies(
@@ -119,7 +121,10 @@ struct Component::State {
         auto valid = [insecure](const std::string& url) {
             return url.starts_with("https://") || (insecure && url.starts_with("http://"));
         };
-        if ((!OrganizationUrl.empty() && !OrganizationUrl.starts_with("http://") &&
+        if ((!PlatformUrl.empty() && !PlatformUrl.starts_with("http://") &&
+                !PlatformUrl.starts_with("https://")) ||
+            (!PlatformUrl.empty() && !OrganizationUrl.empty()) ||
+            (!OrganizationUrl.empty() && !OrganizationUrl.starts_with("http://") &&
                 !OrganizationUrl.starts_with("https://")) ||
             !valid(Config.Issuer) || !valid(Url) || Config.Issuer.find('#') != std::string::npos ||
             Config.Issuer.size() > 1024 || Config.Audience.empty() || Config.RolesClient.empty() ||
@@ -189,7 +194,9 @@ Identity Component::Authorize(const std::string& path, const std::string& author
     if (permission == state_->Permissions.end())
         throw Forbidden{};
     const auto service_client = state_->ServiceClients.find(permission->second);
-    if (!state_->OrganizationUrl.empty() && service_client == state_->ServiceClients.end()) {
+    const auto& access_url =
+        state_->PlatformUrl.empty() ? state_->OrganizationUrl : state_->PlatformUrl;
+    if (!access_url.empty() && service_client == state_->ServiceClients.end()) {
         if (organization.size() > 36)
             throw Forbidden{};
         userver::formats::json::ValueBuilder body;
@@ -197,26 +204,29 @@ Identity Component::Authorize(const std::string& path, const std::string& author
         if (!organization.empty())
             body["organization_id"] = organization;
         try {
-            const auto response = state_->Client.CreateRequest()
-                                      .post(state_->OrganizationUrl,
-                                          userver::formats::json::ToString(body.ExtractValue()))
-                                      .headers({{"Authorization", authorization},
-                                          {"Content-Type", "application/json"}})
-                                      .timeout(std::chrono::seconds{2})
-                                      .retry(1)
-                                      .follow_redirects(false)
-                                      .SetLoggedUrl("organizations/access")
-                                      .perform();
+            const auto response =
+                state_->Client.CreateRequest()
+                    .post(access_url, userver::formats::json::ToString(body.ExtractValue()))
+                    .headers(
+                        {{"Authorization", authorization}, {"Content-Type", "application/json"}})
+                    .timeout(std::chrono::seconds{2})
+                    .retry(1)
+                    .follow_redirects(false)
+                    .SetLoggedUrl("organizations/access")
+                    .perform();
             if (response->status_code() == 400 || response->status_code() == 403)
                 throw Forbidden{};
             if (response->status_code() != 200)
                 throw Unavailable{};
             const auto result = userver::formats::json::FromString(response->body());
-            identity.Organization = result["organization_id"].As<std::string>();
             identity.Permissions = result["permissions"].As<std::set<std::string>>();
-            if (identity.Organization.value().empty() ||
-                (!organization.empty() && identity.Organization.value() != organization) ||
-                !identity.Permissions.contains(permission->second))
+            if (state_->PlatformUrl.empty()) {
+                identity.Organization = result["organization_id"].As<std::string>();
+                if (!identity.Organization.has_value() ||
+                    (!organization.empty() && identity.Organization.value() != organization))
+                    throw Unavailable{};
+            }
+            if (!identity.Permissions.contains(permission->second))
                 throw Unavailable{};
         } catch (const Forbidden&) {
             throw;
@@ -318,6 +328,7 @@ properties:
         properties: {}
         additionalProperties: {type: string, description: Client ID}
         default: {}
+    platform-url: {type: string, description: Центральная проверка платформенных прав, default: ""}
     organization-url: {type: string, description: Центральная проверка членства и прав, default: ""}
     allow-http: {type: boolean, description: HTTP только в локальном окружении, default: false}
     max-key-age-seconds: {type: integer, description: Максимальный возраст кеша ключей, default: 300}

@@ -52,15 +52,28 @@ export function useWorkspace() {
     setCatalog(value.items);
   }
   useEffect(() => {
-    request<Session>('/api/session')
-      .then(async (value) => {
-        setSession(value);
-        if (value.permissions.includes('configs.read')) await refreshCatalog();
-      })
-      .catch(fail);
+    let active = true;
+    function refreshSession() {
+      request<Session>('/api/session')
+        .then(async (value) => {
+          if (!active) return;
+          setSession(value);
+          if (value.permissions.includes('configs.read')) await refreshCatalog();
+          else setCatalog([]);
+        })
+        .catch((reason: unknown) => {
+          if (active) fail(reason);
+        });
+    }
+    refreshSession();
+    window.addEventListener('broker-permissions-changed', refreshSession);
+    return () => {
+      active = false;
+      window.removeEventListener('broker-permissions-changed', refreshSession);
+    };
   }, []);
   useEffect(() => {
-    if (!selected || !session) return;
+    if (!selected || !session || !session.permissions.includes('configs.read')) return;
     let cancelled = false;
     setCurrent(undefined);
     setDraft(undefined);
@@ -87,7 +100,7 @@ export function useWorkspace() {
     };
   }, [selected, session]);
   useEffect(() => {
-    if (!draft || !session) {
+    if (!draft || !session || !session.permissions.includes('configs.read')) {
       setEvents([]);
       return;
     }

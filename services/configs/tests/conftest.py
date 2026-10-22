@@ -39,6 +39,7 @@ def configure_auth(mockserver_info):
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
+        component['platform-url'] = mockserver_info.url('/api/platform/access')
     return patch
 
 
@@ -71,3 +72,9 @@ def admin_client(monitor_client, access_token):
             return await monitor_client.get(path, headers={
                 'Authorization': 'Bearer ' + access_token(user), **(headers or {})}, **kwargs)
     return Client()
+
+
+@pytest.fixture(autouse=True)
+def platform_access(mockserver):
+    from platform_access import install
+    return install(mockserver)

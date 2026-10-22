@@ -797,6 +797,135 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/platform-access/get:
+    post:
+      summary: 'Платформенные права сотрудника: get'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - subject
+              properties:
+                subject:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/PlatformAccessResult
+        '400':
+          description: Неверные параметры или разрешения
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет прав управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или роль не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Роль изменена или организация останется без администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимость временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/admin/platform-access/update:
+    post:
+      summary: 'Платформенные права сотрудника: update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - subject
+              - permissions
+              - expected_revision
+              properties:
+                subject:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                expected_revision:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/PlatformAccessResult
+        '400':
+          description: Неверные параметры или разрешения
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет прав управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или роль не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Роль изменена или организация останется без администратора
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимость временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

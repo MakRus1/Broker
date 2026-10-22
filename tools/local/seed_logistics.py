@@ -64,3 +64,13 @@ for owner in sorted(path.name for path in Path('/workspaces/broker/services').it
     subprocess.run(
         ['psql', '-h', 'postgres-organizations', '-U', 'testsuite', '-d', 'organizations_db_1', '-v', 'ON_ERROR_STOP=1'],
         env={**os.environ, 'PGPASSWORD': 'testsuite'}, input=register_sql(owner, version, catalog) + reconcile_sql(owner, [version]), text=True, check=True)
+
+# Изолированные технические аккаунты нужны локальным сценариям подготовки конфигов.
+for client, subject in json.loads(Path('/cache/platform-users.json').read_text()).items():
+    permissions = ['configs.read', 'configs.write' if client == 'local-author' else 'configs.approve']
+    subprocess.run(
+        ['psql', '-h', 'postgres-organizations', '-U', 'testsuite', '-d', 'organizations_db_1',
+         '-v', 'ON_ERROR_STOP=1', '-v', 'subject=' + subject],
+        env={**os.environ, 'PGPASSWORD': 'testsuite'}, text=True, check=True,
+        input="INSERT INTO platform_access(issuer,subject,permissions,revision) VALUES "
+              "('http://localhost:18888/realms/broker', :'subject', ARRAY[" + ','.join("'" + code + "'" for code in permissions) + "], 1) ON CONFLICT DO NOTHING;")

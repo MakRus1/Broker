@@ -248,3 +248,30 @@ Permission:
       type: array
       items:
         type: string
+PlatformAccess:
+  type: object
+  additionalProperties: false
+  required:
+  - permissions
+  - revision
+  properties:
+    permissions:
+      type: array
+      items:
+        type: string
+    revision:
+      type: integer
+      minimum: 0
+PlatformAccessResult:
+  type: object
+  additionalProperties: false
+  required:
+  - access
+  - catalog
+  properties:
+    access:
+      $ref: '#/PlatformAccess'
+    catalog:
+      type: array
+      items:
+        $ref: '#/Permission'

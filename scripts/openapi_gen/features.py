@@ -184,6 +184,8 @@ def pgsql_local(service_source_dir, pgsql_local_create):
             components['platform-auth']['permission-dependencies'] = dependencies
         if auth.get('service-clients'):
             components['platform-auth']['service-clients'] = auth['service-clients']
+        if auth.get('platform-access'):
+            components['platform-auth']['platform-url'] = '$platform-access-url'
         if auth.get('organization-access'):
             components['platform-auth']['organization-url'] = '$organization-access-url'
         components['auth-http-client'] = {'wait-for-dynamic-configs': False}

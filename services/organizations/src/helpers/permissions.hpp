@@ -9,6 +9,8 @@
 #include <vector>
 
 namespace organizations::helpers {
+enum class PermissionScope { Organization, Platform };
+
 struct PermissionRow {
     std::string Group;
     std::string Id;
@@ -17,23 +19,28 @@ struct PermissionRow {
 };
 
 inline std::vector<PermissionRow> LoadPermissions(
-    userver::storages::postgres::Transaction& transaction) {
-    return transaction.Execute(sql::kListPermissions)
+    userver::storages::postgres::Transaction& transaction,
+    PermissionScope scope = PermissionScope::Organization) {
+    return transaction
+        .Execute(scope == PermissionScope::Platform ? sql::kListPlatformPermissions
+                                                    : sql::kListPermissions)
         .AsContainer<std::vector<PermissionRow>>(userver::storages::postgres::kRowTag);
 }
 
 inline std::vector<models::Permission> PermissionCatalog(
-    userver::storages::postgres::Transaction& transaction) {
+    userver::storages::postgres::Transaction& transaction,
+    PermissionScope scope = PermissionScope::Organization) {
     std::vector<models::Permission> result;
-    for (const auto& row : LoadPermissions(transaction))
+    for (const auto& row : LoadPermissions(transaction, scope))
         result.push_back(
             {.group = row.Group, .id = row.Id, .name = row.Name, .dependencies = row.Requires});
     return result;
 }
 
 inline void ValidatePermissions(userver::storages::postgres::Transaction& transaction,
-    const std::vector<std::string>& permissions, const std::vector<std::string>& previous = {}) {
-    const auto catalog = LoadPermissions(transaction);
+    const std::vector<std::string>& permissions, const std::vector<std::string>& previous = {},
+    PermissionScope scope = PermissionScope::Organization) {
+    const auto catalog = LoadPermissions(transaction, scope);
     std::set<std::string> selected;
     for (const auto& code : permissions) {
         if (!selected.insert(code).second ||

@@ -123,6 +123,7 @@ def prepare():
                 'users-admin-url': 'http://keycloak:8080/admin/realms/broker',
                 'users-client-secret': auth_secrets['organizations-manager-secret']})
         variables['organization-access-url'] = 'http://organizations:8130/api/organizations/access'
+        variables['platform-access-url'] = 'http://organizations:8130/api/platform/access'
         variables["config-updates-enabled"] = name != "configs"
         config = yaml.safe_load((ROOT / f"services/{name}/configs/static_config.yaml").read_text())
 

@@ -78,6 +78,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-admin-platform_access-get:
+            path: /api/admin/platform-access/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-platform_access-update:
+            path: /api/admin/platform-access/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-organizations-access:
             path: /api/organizations/access
             method: POST
@@ -87,6 +99,12 @@ components_manager:
         handler-api-organizations-me:
             path: /api/organizations/me
             method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-platform-access:
+            path: /api/platform/access
+            method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
@@ -122,8 +140,11 @@ components_manager:
                 /api/admin/organizations/roles/list: authenticated
                 /api/admin/organizations/roles/update: authenticated
                 /api/admin/organizations/update: authenticated
+                /api/admin/platform-access/get: authenticated
+                /api/admin/platform-access/update: authenticated
                 /api/organizations/access: authenticated
                 /api/organizations/me: authenticated
+                /api/platform/access: authenticated
             permission-dependencies:
                 configs.write:
                 - configs.read

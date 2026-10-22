@@ -196,3 +196,15 @@ async def test_mutation_also_requires_read(monitor_client, access_token, permiss
         headers={'Authorization': 'Bearer ' + access_token(roles=[permission])},
     )
     assert response.status == 403
+
+
+async def test_platform_assignments_override_token_roles(monitor_client, access_token, platform_access):
+    platform_access['permissions'] = []
+    assert (await call(monitor_client, access_token())).status == 403
+    platform_access['permissions'] = ['configs.read']
+    assert (await call(monitor_client, access_token(roles=[]))).status == 200
+
+
+async def test_platform_access_unavailable_fails_closed(monitor_client, access_token, platform_access):
+    platform_access['unavailable'] = True
+    assert (await call(monitor_client, access_token())).status == 503

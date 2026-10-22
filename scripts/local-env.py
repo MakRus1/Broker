@@ -451,7 +451,7 @@ def main():
     prepare()
     command = ["docker", "compose", "-f", str(STATE / "compose.yaml")]
     actions = {
-        "up": ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "900"],
+        "up": ["up", "-d", "--force-recreate", "--wait", "--wait-timeout", "1800"],
         "down": ["down"],
         "status": ["ps", "-a"],
         "logs": ["logs", "--tail=100"],

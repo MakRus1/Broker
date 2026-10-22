@@ -6,12 +6,11 @@
 #include <views/api/organizations/me/view.hpp>
 
 namespace organizations::views::api::organizations::me {
-Response View::Handle(
-    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
+Response View::Handle(Request&&, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
     try {
-        (void)request;
+
         const auto rows = deps.pg_cluster->Execute(
             pg::ClusterHostType::kMaster, sql::kMyOrganizations, identity.Issuer, identity.Subject);
         const auto managed = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,

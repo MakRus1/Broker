@@ -31,16 +31,21 @@ Users::Users(const userver::components::ComponentConfig& config,
         throw std::invalid_argument("Некорректные настройки Keycloak Admin API");
 }
 
+userver::clients::http::Request Users::MakeRequest() const {
+    return http_.CreateRequest()
+        .headers({{"Authorization", "Bearer " + tokens_.GetAccessToken()},
+            {"Content-Type", "application/json"}})
+        .timeout(timeout_)
+        .follow_redirects(false)
+        .SetLoggedUrl("keycloak/users");
+}
+
 userver::formats::json::Value Users::Lookup(const std::string& username) const {
     const auto response =
-        http_.CreateRequest()
+        MakeRequest()
             .get(base_url_ + "/users?" +
                 userver::http::MakeQuery({{"username", username}, {"exact", "true"}}))
-            .headers({{"Authorization", "Bearer " + tokens_.GetAccessToken()}})
-            .timeout(timeout_)
             .retry(1)
-            .follow_redirects(false)
-            .SetLoggedUrl("keycloak/users")
             .perform();
     if (response->status_code() != 200)
         throw ApiError{503, "identity_provider_unavailable",
@@ -84,18 +89,14 @@ User Users::Create(const std::string& request_id, const std::string& username,
     credential["temporary"] = true;
     body["credentials"].PushBack(credential.ExtractValue());
     const auto response =
-        http_.CreateRequest()
+        MakeRequest()
             .post(base_url_ + "/users", userver::formats::json::ToString(body.ExtractValue()))
-            .headers({{"Authorization", "Bearer " + tokens_.GetAccessToken()},
-                {"Content-Type", "application/json"}})
-            .timeout(timeout_)
-            .retry(1)
-            .follow_redirects(false)
-            .SetLoggedUrl("keycloak/users")
+            .retry(0)
             .perform();
     if (response->status_code() != 201 && response->status_code() != 409)
         throw ApiError{503, "identity_provider_unavailable",
             "Создание пользователя не завершено. Повторите с тем же идентификатором запроса"};
+    // Keycloak возвращает 201 без тела. Чтение также проверяет владельца запроса при 409.
     const auto value = Lookup(username);
     const auto provisioning = value["attributes"]["broker-provisioning-id"];
     if (provisioning.IsMissing() || provisioning.GetSize() != 1 ||

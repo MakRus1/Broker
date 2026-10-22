@@ -93,6 +93,17 @@ def run(build):
 
             def do_POST(self):
                 self.rfile.read(int(self.headers.get('Content-Length', '0')))
+                if self.path == '/access':
+                    return self.respond(
+                        {
+                            'organization_id': ORGANIZATION,
+                            'permissions': [
+                                'shipments.read',
+                                'shipments.write',
+                                'transportations.read',
+                            ],
+                        }
+                    )
                 self.respond({'access_token': make_token('dispatcher', ['transportations.create'])})
 
             def respond(self, value):
@@ -116,6 +127,7 @@ def run(build):
                 claims={
                     'iss': issuer,
                     'aud': 'broker-logistics',
+                    'azp': 'shipments-dispatcher' if subject == 'dispatcher' else 'broker-web',
                     'resource_access': {'broker-logistics': {'roles': roles}},
                 },
             )
@@ -153,6 +165,7 @@ def run(build):
                     'auth-issuer': issuer,
                     'auth-jwks-url': issuer + '/jwks',
                     'auth-allow-http': True,
+                    'organization-access-url': issuer + '/access',
                     'logger-level': 'warning',
                 }
             )

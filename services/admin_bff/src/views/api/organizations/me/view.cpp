@@ -3,9 +3,8 @@
 #include <views/api/organizations/me/view.hpp>
 
 namespace admin_bff::views::api::organizations::me {
-Response View::Handle(
-    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    (void)request;
+Response View::Handle(Request&&, userver::server::request::RequestContext& context, Deps deps) {
+
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::organizations::ApiOrganizationsMe;
     const auto result = deps.organizations.ApiOrganizationsMe({}, session.Access);

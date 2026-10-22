@@ -5,7 +5,7 @@
 namespace admin_bff::views::api::admin::organizations::members::list {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    (void)request;
+
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::organizations::ApiAdminOrganizationsMembersList;
     const auto result = deps.organizations.ApiAdminOrganizationsMembersList(

@@ -9,3 +9,4 @@ counterparties.write:
   scope: organization
   requires:
   - counterparties.read
+  - organizations.read_employees

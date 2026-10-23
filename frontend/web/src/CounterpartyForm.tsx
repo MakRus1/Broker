@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { DirectoryLookup } from './DirectoryLookup';
 import { RegistryLookup } from './RegistryLookup';
 import { ApiError, request, type Session } from './api';
 import { useDiscardConfirmation } from './components';
@@ -224,6 +225,19 @@ export function CounterpartyForm({
               </label>
             ))}
           </div>
+        </fieldset>
+        <fieldset disabled={busy}>
+          <legend>Ответственный сотрудник</legend>
+          <DirectoryLookup
+            session={session}
+            kind="employees"
+            label="Логист"
+            value={draft.logist}
+            onChange={(value) => set('logist', value)}
+          />
+          <p className="hint">
+            Подставляется при создании поставки для этого клиента. В поставке его можно изменить.
+          </p>
         </fieldset>
         <fieldset disabled={busy}>
           <legend>Контактные лица</legend>

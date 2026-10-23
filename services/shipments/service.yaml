@@ -12,6 +12,9 @@ clients:
   organizations:
     service: organizations
     transport: http
+  counterparties:
+    service: counterparties
+    transport: http
 auth:
   audience: broker-logistics
   roles-client: broker-logistics
@@ -30,6 +33,8 @@ auth:
     /api/v1/shipments/cargo-suggestions: shipments.read
     /api/v1/shipments/cargo-suggestions/remove: shipments.write
     /api/v1/shipments/dictionaries: shipments.read
+    /api/admin/shipments/settings/get: authenticated
+    /api/admin/shipments/settings/update: authenticated
   organization-access: true
 service_accounts:
   dispatcher:

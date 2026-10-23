@@ -21,6 +21,7 @@ export interface Counterparty {
   country_code: string | null;
   tax_id: string | null;
   kpp?: string | null;
+  logist?: string | null;
   registration_id: string | null;
   legal_address: string | null;
   roles: CounterpartyRole[];
@@ -38,6 +39,7 @@ export interface CounterpartyDetails {
   country_code: string;
   tax_id: string;
   kpp: string;
+  logist: string;
   registration_id: string;
   legal_address: string;
   roles: CounterpartyRole[];
@@ -50,6 +52,7 @@ export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
     country_code: value?.country_code ?? '',
     tax_id: value?.tax_id ?? '',
     kpp: value?.kpp ?? '',
+    logist: value?.logist ?? '',
     registration_id: value?.registration_id ?? '',
     legal_address: value?.legal_address ?? '',
     roles: [...(value?.roles ?? [])],
@@ -75,6 +78,7 @@ export function counterpartyPayload(
     country_code: nullableField(value.country_code)?.toUpperCase() ?? null,
     tax_id: nullableField(value.tax_id),
     kpp: nullableField(value.kpp),
+    logist: nullableField(value.logist),
     registration_id: nullableField(value.registration_id),
     legal_address: nullableField(value.legal_address),
     contacts: value.contacts.map((contact) => ({
@@ -138,7 +142,11 @@ export function restoreCounterpartyDraft(
     if (fields.kpp !== undefined && typeof fields.kpp !== 'string') return fallback;
     return {
       ...candidate,
-      value: { ...fields, kpp: fields.kpp ?? '' },
+      value: {
+        ...fields,
+        kpp: fields.kpp ?? '',
+        logist: typeof fields.logist === 'string' ? fields.logist : '',
+      },
     } as unknown as CounterpartyDraft;
   } catch {
     return fallback;

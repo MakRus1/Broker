@@ -28,3 +28,5 @@ config-cache-path: ''
 admin-assets-dir: frontend/admin/dist
 client-config_admin-base-url: http://localhost:8080
 client-organizations-base-url: http://localhost:8130
+client-counterparties-base-url: http://localhost:8080
+client-shipments-base-url: http://localhost:8080

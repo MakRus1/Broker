@@ -1,3 +1,6 @@
-SELECT value FROM cargo_suggestions
-WHERE organization_id = $1::UUID AND NOT removed AND strpos(search_value, $2) > 0
-ORDER BY used_at DESC, value LIMIT 20;
+SELECT value
+FROM customer_cargo_suggestions
+WHERE organization_id = $1::UUID AND customer_id = $2::UUID
+    AND NOT removed AND strpos(search_value, $3) > 0
+ORDER BY used_at DESC, value
+LIMIT 20;

@@ -486,7 +486,11 @@ CargoSuggestionsRequest:
     query:
       type: string
       maxLength: 200
-  required: []
+    customer_id:
+      type: string
+      format: uuid
+  required:
+  - customer_id
 DeleteCargoSuggestionRequest:
   type: object
   additionalProperties: false
@@ -495,8 +499,12 @@ DeleteCargoSuggestionRequest:
       type: string
       maxLength: 2000
       minLength: 1
+    customer_id:
+      type: string
+      format: uuid
   required:
   - value
+  - customer_id
 GetShipmentSettingsRequest:
   type: object
   additionalProperties: false

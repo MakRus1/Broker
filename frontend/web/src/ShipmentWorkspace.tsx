@@ -241,7 +241,12 @@ function ShipmentCard({
     return () => controller.abort();
   }, [props.session, draft.customer_id, initial?.id]);
   useEffect(() => {
-    if (!cargoOpen) return;
+    if (!cargoOpen || !draft.customer_id) {
+      setSuggestions([]);
+      setCargoLoading(false);
+      setCargoFailure('');
+      return;
+    }
     const controller = new AbortController();
     setCargoLoading(true);
     setSuggestions([]);
@@ -249,7 +254,7 @@ function ShipmentCard({
       request<{ items: string[] }>(
         '/api/v1/shipments/cargo-suggestions',
         props.session,
-        { query: draft.cargo_description.slice(0, 200) },
+        { customer_id: draft.customer_id, query: draft.cargo_description.slice(0, 200) },
         controller.signal,
       )
         .then((result) => {
@@ -269,10 +274,13 @@ function ShipmentCard({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [props.session, draft.cargo_description, cargoOpen]);
+  }, [props.session, draft.customer_id, draft.cargo_description, cargoOpen]);
   async function removeSuggestion(value: string) {
     try {
-      await request('/api/v1/shipments/cargo-suggestions/remove', props.session, { value });
+      await request('/api/v1/shipments/cargo-suggestions/remove', props.session, {
+        customer_id: draft.customer_id,
+        value,
+      });
       setSuggestions((old) => old.filter((item) => item !== value));
     } catch (error) {
       setCargoFailure(error instanceof Error ? error.message : 'Не удалось удалить подсказку');

@@ -29,6 +29,22 @@ def resolve(value, variables):
     return value
 
 
+def client_variables(name):
+    # Адреса объявленных клиентов берём из service.yaml, чтобы новые зависимости
+    # не уходили на localhost внутри контейнера.
+    ports = {'configs': 8090, 'broker': 8080, 'shipments': 8100,
+             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130}
+    specification = yaml.safe_load((ROOT / f'services/{name}/service.yaml').read_text())
+    result = {}
+    for alias, client in specification.get('clients', {}).items():
+        target = client['service']
+        if target not in ports:
+            raise ValueError(f'Для клиента {name}.{alias} не настроен локальный сервис {target}')
+        port = 8092 if alias == 'config_admin' else ports[target]
+        result[f'client-{alias}-base-url'] = f'http://{target}:{port}'
+    return result
+
+
 def prepare():
     STATE.mkdir(exist_ok=True)
     provision_dashboards(ROOT, STATE / "grafana-dashboards", UniqueLoader)
@@ -127,6 +143,7 @@ def prepare():
         variables["config-updates-enabled"] = name != "configs"
         config = yaml.safe_load((ROOT / f"services/{name}/configs/static_config.yaml").read_text())
 
+        variables.update(client_variables(name))
         config = resolve(config, variables)
         components = config["components_manager"]["components"]
         components["server"]["listener-monitor"]["address"] = "0.0.0.0"
@@ -235,6 +252,7 @@ def prepare():
         "otlp-endpoint": "collector:4317",
     })
     variables.update(account_variables(accounts, 'admin_bff', auth_secrets, 'http://keycloak:8080/realms/broker/protocol/openid-connect/token'))
+    variables.update(client_variables('admin_bff'))
     config = resolve(yaml.safe_load((ROOT / "services/admin_bff/configs/static_config.yaml").read_text()), variables)
     config["components_manager"]["components"]["server"]["listener"]["port"] = 8180
     admin_components = config["components_manager"]["components"]
@@ -282,6 +300,7 @@ def prepare():
         'config-server-url': 'http://configs:8090', 'otlp-enabled': True,
         'otlp-endpoint': 'collector:4317',
     })
+    variables.update(client_variables('web_bff'))
     config = resolve(yaml.safe_load((ROOT / 'services/web_bff/configs/static_config.yaml').read_text()), variables)
     config['components_manager']['components']['server']['listener-monitor']['address'] = '0.0.0.0'
     (STATE / 'web_bff.yaml').write_text(yaml.safe_dump(config, sort_keys=False))

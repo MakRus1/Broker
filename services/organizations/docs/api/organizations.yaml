@@ -1124,6 +1124,72 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/organizations.yaml#/ApiError
+  /api/organizations/administration/check:
+    post:
+      summary: Проверить управление выбранной организацией
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+              required:
+              - organization_id
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  organization_id:
+                    type: string
+                    format: uuid
+                required:
+                - organization_id
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет права управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Зависимый сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
 components:
   securitySchemes:
     BearerAuth:

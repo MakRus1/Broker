@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Бизнес-правила поставок
+  version: '1'
+paths:
+  /api/admin/shipments/settings/get:
+    post:
+      summary: Правила поставок организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+              required:
+              - organization_id
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  revision:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  rules:
+                    $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessRules
+                  allowed_route_types:
+                    type: array
+                    items:
+                      $ref: components/schemas/shipment_settings.yaml#/DictionaryValue
+                  allowed_container_types:
+                    type: array
+                    items:
+                      type: string
+                  planned_containers_allowed:
+                    type: boolean
+                required:
+                - revision
+                - rules
+                - allowed_route_types
+                - allowed_container_types
+                - planned_containers_allowed
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '403':
+          description: Нет права управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '503':
+          description: Зависимый сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+      security:
+      - BrowserSession: []
+  /api/admin/shipments/settings/update:
+    post:
+      summary: Изменить бизнес-правила поставок
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                expected_revision:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                rules:
+                  $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessRules
+              required:
+              - organization_id
+              - expected_revision
+              - rules
+      responses:
+        '200':
+          description: Результат операции
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  revision:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  rules:
+                    $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessRules
+                  allowed_route_types:
+                    type: array
+                    items:
+                      $ref: components/schemas/shipment_settings.yaml#/DictionaryValue
+                  allowed_container_types:
+                    type: array
+                    items:
+                      type: string
+                  planned_containers_allowed:
+                    type: boolean
+                required:
+                - revision
+                - rules
+                - allowed_route_types
+                - allowed_container_types
+                - planned_containers_allowed
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '403':
+          description: Нет права управления организацией
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+        '503':
+          description: Зависимый сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipment_settings.yaml#/ApiError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin

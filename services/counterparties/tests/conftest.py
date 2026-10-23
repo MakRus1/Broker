@@ -42,6 +42,7 @@ def configure_auth(mockserver_info):
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
+        config_vars['client-organizations-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -64,7 +65,11 @@ def organization_access(mockserver):
 def api(service_client, auth_key):
     class Client:
         async def post(self, path, body, *, user='author', roles=None, expected=200):
-            roles = roles if roles is not None else ['counterparties.read', 'counterparties.write']
+            roles = (
+                roles
+                if roles is not None
+                else ['counterparties.read', 'counterparties.write', 'organizations.read_employees']
+            )
             token = auth_key.token(
                 user,
                 roles=roles,
@@ -101,3 +106,19 @@ def configure_registry(mockserver_info, daemon_scoped_mark):
         component.pop('api-key#env', None)
 
     return patch
+
+
+@pytest.fixture(autouse=True)
+def employee_directory(mockserver):
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def employees(request):
+        body = request.json
+        subject = body.get('subject')
+        expected = (
+            'other-logist' if body['organization_id'] == OTHER_ORGANIZATION else 'author-logist'
+        )
+        return {
+            'items': (
+                [{'subject': expected, 'display_name': 'Логист'}] if subject == expected else []
+            )
+        }

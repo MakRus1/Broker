@@ -47,8 +47,9 @@ Response View::Handle(
                         .Execute(sql::kUpdateShipment, organization, request.body.shipment_id,
                             request.body.expected_revision, card)
                         .AsSingleRow<pgtypes::ShipmentV2>());
-        if (card.CargoDescription != previous.CargoDescription)
-            RememberCargo(transaction, organization, card.CargoDescription);
+        if (card.CargoDescription != previous.CargoDescription ||
+            card.CustomerId != previous.CustomerId)
+            RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);
         WriteAudit(transaction, organization, identity, "update_shipment", result.id, request.body,
             result);
         transaction.Commit();

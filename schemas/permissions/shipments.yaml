@@ -4,6 +4,7 @@ shipments.read:
   scope: organization
   requires:
   - organizations.read_employees
+  - counterparties.read
 shipments.write:
   name: Изменение поставок
   group: Поставки

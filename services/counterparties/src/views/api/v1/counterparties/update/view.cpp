@@ -1,4 +1,5 @@
 #include <helpers/details.hpp>
+#include <helpers/employees.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/update/view.hpp>
@@ -11,6 +12,8 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_WRITE);
         const auto organization = platform::auth::GetOrganization(identity);
+        if (request.body.logist.has_value())
+            ValidateLogist(deps, context, request.body.logist.value());
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto id = boost::uuids::to_string(boost::uuids::string_generator{}(request.body.id));
@@ -18,7 +21,7 @@ Response View::Handle(
         const auto rows = transaction.Execute(sql::kLockCounterparty, organization, id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Контрагент не найден"};
-        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV4>());
+        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV5>());
         if (previous.revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict",
                 "Контрагент изменился. Обновите карточку перед редактированием"};
@@ -28,7 +31,7 @@ Response View::Handle(
         CheckDuplicate(transaction, organization, value);
         const auto updated =
             transaction.Execute(sql::kUpdateCounterparty, organization, Convert(value));
-        const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV4>());
+        const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV5>());
         WriteAudit(transaction, organization, identity, "update_counterparty", result.id,
             request.body, result, std::optional{previous});
         transaction.Commit();
@@ -41,6 +44,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         case 409:
             return Response409{.error = error.Code, .message = error.what()};
         default:

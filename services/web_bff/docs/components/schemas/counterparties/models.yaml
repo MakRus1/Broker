@@ -84,6 +84,11 @@ Counterparty:
       nullable: true
       pattern: ^[0-9]{9}$
       maxLength: 9
+    logist:
+      type: string
+      nullable: true
+      minLength: 1
+      maxLength: 256
   required:
   - id
   - name
@@ -158,6 +163,11 @@ CreateCounterpartyRequest:
       nullable: true
       pattern: ^[0-9]{9}$
       maxLength: 9
+    logist:
+      type: string
+      nullable: true
+      minLength: 1
+      maxLength: 256
   required:
   - id
   - name
@@ -214,6 +224,11 @@ UpdateCounterpartyRequest:
       nullable: true
       pattern: ^[0-9]{9}$
       maxLength: 9
+    logist:
+      type: string
+      nullable: true
+      minLength: 1
+      maxLength: 256
   required:
   - id
   - expected_revision
@@ -320,6 +335,11 @@ CounterpartySnapshot:
       nullable: true
       pattern: ^[0-9]{9}$
       maxLength: 9
+    logist:
+      type: string
+      nullable: true
+      minLength: 1
+      maxLength: 256
   required:
   - name
 ListCounterpartyHistoryRequest:

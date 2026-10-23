@@ -72,6 +72,7 @@ inline models::counterparties::Counterparty Convert(
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
+    result.logist = value.logist;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -90,6 +91,7 @@ inline clients::counterparties::ApiV1CounterpartiesCreate::RequestBody Convert(
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
+    result.logist = value.logist;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -111,6 +113,7 @@ inline clients::counterparties::ApiV1CounterpartiesUpdate::RequestBody Convert(
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
+    result.logist = value.logist;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.expected_revision = value.expected_revision;
@@ -174,6 +177,7 @@ inline models::counterparties::CounterpartySnapshot Convert(
     result.country_code = value.country_code;
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
+    result.logist = value.logist;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.archived = value.archived;

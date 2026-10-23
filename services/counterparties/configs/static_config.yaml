@@ -58,8 +58,14 @@ components_manager:
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        client-organizations:
+            base-url: $client-organizations-base-url
         platform-readiness: {}
         platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
         postgres-counterparties:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -92,10 +98,12 @@ components_manager:
                 - configs.read
                 counterparties.write:
                 - counterparties.read
+                - organizations.read_employees
                 organizations.manage:
                 - organizations.read_employees
                 shipments.read:
                 - organizations.read_employees
+                - counterparties.read
                 shipments.write:
                 - shipments.read
                 transportations.write:
@@ -103,6 +111,31 @@ components_manager:
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: counterparties
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
+            update-interval: 1s
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: counterparties
@@ -178,12 +211,6 @@ components_manager:
             method: GET
             task_processor: main-task-processor
             monitor-handler: true
-        dynamic-config:
-            defaults:
-                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
-                POSTGRES_DEFAULT_COMMAND_CONTROL:
-                    network_timeout_ms: 750
-                    statement_timeout_ms: 500
         testsuite-support: {}
         congestion-control:
             fake-mode: true

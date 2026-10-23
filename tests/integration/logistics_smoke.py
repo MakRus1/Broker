@@ -26,6 +26,7 @@ from auth_tokens import SigningKey
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 CUSTOMER = '33333333-3333-4333-8333-333333333333'
 USER_PERMISSIONS = [
+    'counterparties.read',
     'organizations.read_employees',
     'shipments.read',
     'shipments.write',
@@ -224,7 +225,7 @@ def run(build):
         shipment = post(
             senders[0],
             '/api/v1/shipments/create',
-            {'customer_id': CUSTOMER, 'idempotency_key': 'create-shipment'},
+            {'customer_id': CUSTOMER, 'logist': None, 'idempotency_key': 'create-shipment'},
             token,
             201,
         )['shipment']

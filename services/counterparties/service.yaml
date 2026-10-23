@@ -17,3 +17,7 @@ auth:
     /api/v1/counterparties/history: counterparties.read
     /api/v1/counterparties/lookup: counterparties.write
   organization-access: true
+clients:
+  organizations:
+    service: organizations
+    transport: http

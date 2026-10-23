@@ -13,7 +13,7 @@ export interface ShipmentSettings {
   route_types: string[];
   planned_containers: boolean;
   container_types: string[];
-  default_logist?: string | null;
+  customer_logist?: string | null;
 }
 type DictionaryValue = { code: string; name: string };
 type ShipmentDictionaries = {
@@ -213,7 +213,7 @@ function ShipmentCard({
             JSON.stringify({
               ...JSON.parse(previous),
               status: value.statuses[0],
-              logist: value.default_logist ?? '',
+              logist: value.customer_logist ?? '',
             }),
           );
         }
@@ -221,7 +221,7 @@ function ShipmentCard({
           const previousAutomaticLogist = automaticLogist.current;
           const previousAutomaticStatus = automaticStatus.current;
           automaticStatus.current = value.statuses[0];
-          automaticLogist.current = value.default_logist ?? '';
+          automaticLogist.current = value.customer_logist ?? '';
           setDraft((old) => ({
             ...old,
             status:
@@ -230,7 +230,7 @@ function ShipmentCard({
                 : old.status,
             logist:
               !manualLogist.current && (!old.logist || old.logist === previousAutomaticLogist)
-                ? (value.default_logist ?? '')
+                ? (value.customer_logist ?? '')
                 : old.logist,
           }));
         }

@@ -25,31 +25,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  revision:
-                    type: integer
-                    format: int64
-                    minimum: 0
-                  rules:
-                    $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessRules
-                  allowed_route_types:
-                    type: array
-                    items:
-                      $ref: components/schemas/shipment_settings.yaml#/DictionaryValue
-                  allowed_container_types:
-                    type: array
-                    items:
-                      type: string
-                  planned_containers_allowed:
-                    type: boolean
-                required:
-                - revision
-                - rules
-                - allowed_route_types
-                - allowed_container_types
-                - planned_containers_allowed
+                $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessSettings
         '400':
           description: Некорректные параметры
           content:
@@ -118,31 +94,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  revision:
-                    type: integer
-                    format: int64
-                    minimum: 0
-                  rules:
-                    $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessRules
-                  allowed_route_types:
-                    type: array
-                    items:
-                      $ref: components/schemas/shipment_settings.yaml#/DictionaryValue
-                  allowed_container_types:
-                    type: array
-                    items:
-                      type: string
-                  planned_containers_allowed:
-                    type: boolean
-                required:
-                - revision
-                - rules
-                - allowed_route_types
-                - allowed_container_types
-                - planned_containers_allowed
+                $ref: components/schemas/shipment_settings.yaml#/ShipmentBusinessSettings
         '400':
           description: Некорректные параметры
           content:

@@ -319,7 +319,7 @@ async def test_logist_must_be_active_member(api, subject):
     assert result['error'] == 'invalid_logist'
 
 
-async def test_customer_default_logist_can_be_overridden_or_cleared(api, mockserver):
+async def test_customer_logist_can_be_overridden_or_cleared(api, mockserver):
     @mockserver.json_handler('/api/v1/counterparties/get')
     def customer_record(request):
         return {
@@ -341,7 +341,7 @@ async def test_customer_default_logist_can_be_overridden_or_cleared(api, mockser
 
     customer = '33333333-3333-4333-8333-333333333333'
     settings = await api.post('/api/v1/shipments/settings', {'customer_id': customer})
-    assert settings['default_logist'] == 'logist-default'
+    assert settings['customer_logist'] == 'logist-default'
     for fields, expected in [
         ({}, 'logist-default'),
         ({'logist': 'logist-author'}, 'logist-author'),
@@ -404,3 +404,9 @@ async def test_cargo_suggestions_are_scoped_to_customer(api):
             '/api/v1/shipments/cargo-suggestions', {'customer_id': second['customer_id']}
         )
     )['items'] == ['Оборудование']
+
+
+async def test_settings_without_customer_have_no_assigned_logist(api):
+    settings = await api.post('/api/v1/shipments/settings', {})
+    assert settings['customer_logist'] is None
+    assert 'default_logist' not in settings

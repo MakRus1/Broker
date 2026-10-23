@@ -21,11 +21,9 @@ Response View::Handle(
         if (saved.has_value())
             return Response201{.shipment = saved.value()};
         const auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
-        auto default_logist = settings.DefaultLogist;
-        if (!request.body.logist.has_value())
-            default_logist = CustomerLogist(deps, context, request.body.customer_id);
-        const auto logist = request.body.logist.has_value() ? CleanText(request.body.logist.value())
-                                                            : default_logist;
+        const auto logist = request.body.logist.has_value()
+            ? CleanText(request.body.logist.value())
+            : CustomerLogist(deps, context, request.body.customer_id);
         ValidateLogist(deps, context, logist);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});

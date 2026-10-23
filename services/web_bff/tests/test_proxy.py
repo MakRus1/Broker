@@ -115,7 +115,7 @@ COUNTERPARTY = {
             'shipments/settings',
             {},
             {
-                'default_logist': None,
+                'customer_logist': None,
                 'number_template': 'S-{sequence}',
                 'reset_number_yearly': False,
                 'statuses': ['Новая'],

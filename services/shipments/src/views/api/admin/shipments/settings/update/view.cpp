@@ -12,7 +12,7 @@ Response View::Handle(
 
         const auto rules = Convert(request.body.rules);
         ValidateBusinessRules(deps, request.body.organization_id, rules);
-        auto result = GetBusinessRulesResponse<Response200>(deps, request.body.organization_id);
+        auto result = GetBusinessSettings(deps, request.body.organization_id);
         result.rules = request.body.rules;
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -27,7 +27,11 @@ Response View::Handle(
             request.body.rules);
         transaction.Commit();
         result.revision = revision;
-        return result;
+        return Response200{.allowed_container_types = result.allowed_container_types,
+            .allowed_route_types = result.allowed_route_types,
+            .planned_containers_allowed = result.planned_containers_allowed,
+            .revision = result.revision,
+            .rules = result.rules};
     } catch (const platform::http::ApiError& error) {
         if (error.GetStatus() == 403)
             return Response403{

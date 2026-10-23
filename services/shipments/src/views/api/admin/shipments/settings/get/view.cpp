@@ -10,7 +10,12 @@ Response View::Handle(
         platform::auth::RequireOrganizationAdministrator(
             deps.organizations, context, request.body.organization_id);
 
-        return GetBusinessRulesResponse<Response200>(deps, request.body.organization_id);
+        const auto result = GetBusinessSettings(deps, request.body.organization_id);
+        return Response200{.allowed_container_types = result.allowed_container_types,
+            .allowed_route_types = result.allowed_route_types,
+            .planned_containers_allowed = result.planned_containers_allowed,
+            .revision = result.revision,
+            .rules = result.rules};
     } catch (const platform::http::ApiError& error) {
         if (error.GetStatus() == 403)
             return Response403{

@@ -9,12 +9,12 @@ Response View::Handle(
     try {
         const auto organization =
             platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
-        if (request.body.customer_id.has_value())
-            settings.DefaultLogist =
-                CustomerLogist(deps, context, request.body.customer_id.value());
+        const auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
+        const auto customer_logist = request.body.customer_id.has_value()
+            ? CustomerLogist(deps, context, request.body.customer_id.value())
+            : std::nullopt;
         return Response200{.container_types = settings.ContainerTypes,
-            .default_logist = settings.DefaultLogist,
+            .customer_logist = customer_logist,
             .number_template = settings.NumberTemplate,
             .planned_containers = settings.PlannedContainers,
             .reset_number_yearly = settings.ResetNumberYearly,

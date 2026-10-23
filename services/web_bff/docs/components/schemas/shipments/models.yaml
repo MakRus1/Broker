@@ -467,7 +467,7 @@ ShipmentSettings:
       items:
         type: string
         maxLength: 16
-    default_logist:
+    customer_logist:
       type: string
       maxLength: 200
       nullable: true
@@ -478,7 +478,7 @@ ShipmentSettings:
   - route_types
   - planned_containers
   - container_types
-  - default_logist
+  - customer_logist
 CargoSuggestionsRequest:
   type: object
   additionalProperties: false

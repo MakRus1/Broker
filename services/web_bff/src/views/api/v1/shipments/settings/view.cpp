@@ -9,7 +9,7 @@ Response View::Handle(
     const auto result = deps.shipments.ApiV1ShipmentsSettings(
         api::Request{.body = {.customer_id = request.body.customer_id}}, session.Access);
     return Response200{.container_types = result.container_types,
-        .default_logist = result.default_logist,
+        .customer_logist = result.customer_logist,
         .number_template = result.number_template,
         .planned_containers = result.planned_containers,
         .reset_number_yearly = result.reset_number_yearly,

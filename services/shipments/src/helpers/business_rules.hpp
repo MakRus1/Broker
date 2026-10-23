@@ -1,6 +1,5 @@
 #pragma once
 #include <helpers/shipment_card.hpp>
-#include <platform/auth/organization_admin.hpp>
 
 namespace shipments::helpers {
 inline pgtypes::ShipmentBusinessRulesV1 Convert(const models::ShipmentBusinessRules& value) {
@@ -63,14 +62,14 @@ inline void ValidateBusinessRules(const Deps& deps, const std::string& organizat
             400, "platform_limit", "Настройки выходят за доступные организации возможности"};
 }
 
-template <typename Response>
-Response GetBusinessRulesResponse(const Deps& deps, const std::string& organization) {
+inline models::ShipmentBusinessSettings GetBusinessSettings(
+    const Deps& deps, const std::string& organization) {
     const auto limits = GetPlatformShipmentSettings(deps, organization);
     const auto effective = GetShipmentSettings(deps, organization);
     const auto stored = LoadOrganizationRules(deps, organization);
     const auto rows =
         deps.pg_cluster->Execute(pg::ClusterHostType::kSlave, sql::kListShipmentDictionaries);
-    Response result;
+    models::ShipmentBusinessSettings result;
     result.revision = stored.has_value() ? stored.value().Revision : 0;
     result.rules =
         Convert(pgtypes::ShipmentBusinessRulesV1{.NumberTemplate = effective.NumberTemplate,
@@ -81,7 +80,7 @@ Response GetBusinessRulesResponse(const Deps& deps, const std::string& organizat
             .ContainerTypes = effective.ContainerTypes});
     result.allowed_container_types = limits.ContainerTypes;
     result.planned_containers_allowed = limits.PlannedContainers;
-    for (const auto& entry : rows.template AsSetOf<pgtypes::ShipmentDictionaryValueV1>())
+    for (const auto& entry : rows.AsSetOf<pgtypes::ShipmentDictionaryValueV1>())
         if (ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
             std::find(limits.RouteTypes.begin(), limits.RouteTypes.end(), entry.Code) !=
                 limits.RouteTypes.end())

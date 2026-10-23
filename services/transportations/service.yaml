@@ -16,6 +16,13 @@ auth:
     /api/v1/transportation-actuals/record: transportations.write
     /api/v1/transportation-actuals/correct: transportations.write
     /api/v1/transportations/history: transportations.read
+    /api/v1/transportations/create: transportations.write
+    /api/v1/transportations/update: transportations.write
+    /api/v1/transportation-routes/usage: shipments.write
   organization-access: true
   service-clients:
     transportations.create: shipments-dispatcher
+clients:
+  shipments:
+    service: shipments
+    transport: http

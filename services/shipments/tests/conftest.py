@@ -44,6 +44,7 @@ def configure_auth(mockserver_info):
         component['organization-url'] = mockserver_info.url('/organizations/access')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url
+        config_vars['client-transportations-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -185,3 +186,12 @@ def organization_administration(mockserver):
                 status=403, json={'error': 'forbidden', 'message': 'Forbidden'}
             )
         return {'organization_id': expected}
+
+
+@pytest.fixture(autouse=True)
+def transportation_route_usage(mockserver):
+    used = set()
+    @mockserver.json_handler('/api/v1/transportation-routes/usage')
+    def usage(request):
+        return {'segment_ids': sorted(used)}
+    return used

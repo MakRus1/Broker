@@ -1,4 +1,4 @@
-#include <helpers/transportations.hpp>
+#include <helpers/inherited_route.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/transportations/get/view.hpp>
@@ -8,14 +8,8 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::transportations::helpers;
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
-        // Перевозка и её плечи читаются из одного снимка.
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = platform::auth::GetOrganization(identity);
-        const auto result =
-            ReadTransportation(transaction, organization, request.body.transportation_id, false);
-        transaction.Commit();
+        const auto result = LoadTransportation(deps, context, request.body.transportation_id);
         return Response200{.transportation = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {
@@ -25,6 +19,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         default:
             return Response409{.error = error.Code, .message = error.what()};
         }

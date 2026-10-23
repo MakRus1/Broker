@@ -35,6 +35,8 @@ auth:
     /api/v1/shipments/dictionaries: shipments.read
     /api/admin/shipments/settings/get: authenticated
     /api/admin/shipments/settings/update: authenticated
+    /api/v1/shipments/transportation-contexts: transportations.read
+    /api/v1/shipments/route-segments/register-usage: transportations.write
   organization-access: true
 service_accounts:
   dispatcher:

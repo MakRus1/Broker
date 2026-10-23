@@ -13,7 +13,9 @@ paths:
 - /api/v1/shipments/dictionaries
 - /api/v1/shipments/get
 - /api/v1/shipments/list
+- /api/v1/shipments/route-segments/register-usage
 - /api/v1/shipments/settings
+- /api/v1/shipments/transportation-contexts
 - /api/v1/shipments/update
 - /api/v1/transportation-operations/create
 - /api/v1/transportation-operations/get

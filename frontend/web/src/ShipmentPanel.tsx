@@ -18,6 +18,7 @@ import {
 import { CardNavigation, Dialog, TransportationTable, useDiscardConfirmation } from './components';
 
 type Props = {
+  active?: boolean;
   initial: Shipment;
   containerTypes?: string[];
   embedded?: boolean;
@@ -29,6 +30,7 @@ type Props = {
   onUpdate: (shipment: Shipment) => void;
 };
 export function ShipmentPanel({
+  active = true,
   customerName,
   containerTypes = ['20DC', '40DC', '40HC'],
   embedded = false,
@@ -98,6 +100,7 @@ export function ShipmentPanel({
     [session, initial.id, canReadTransportations, onUpdate],
   );
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     void refresh(controller.signal)
       .catch((value) => {
@@ -110,7 +113,7 @@ export function ShipmentPanel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [refresh, onError]);
+  }, [refresh, onError, active]);
   useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -365,11 +368,19 @@ export function ShipmentPanel({
                 <p>Нет права на просмотр перевозок.</p>
               ) : (
                 <>
+                  {session.permissions.includes('transportations.write') && (
+                    <div className="section-heading">
+                      <h3>Перевозки поставки</h3>
+                      <a className="primary" href={`#/transportations/new/${shipment.id}`}>
+                        ＋ Создать перевозку
+                      </a>
+                    </div>
+                  )}
                   <TransportationTable items={transportations} />
                   {!transportations.length && (
                     <div className="empty">
                       <h3>Перевозки ещё не созданы</h3>
-                      <p>Создайте их из доступного количества позиции.</p>
+                      <p>Создайте перевозку вручную или из плановой позиции.</p>
                     </div>
                   )}
                   <AutoLoadMore

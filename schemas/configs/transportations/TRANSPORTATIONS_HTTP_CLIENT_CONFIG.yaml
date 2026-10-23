@@ -6,9 +6,12 @@ paths:
 - /api/v1/transportation-actuals/correct
 - /api/v1/transportation-actuals/record
 - /api/v1/transportation-routes/set
+- /api/v1/transportation-routes/usage
+- /api/v1/transportations/create
 - /api/v1/transportations/get
 - /api/v1/transportations/history
 - /api/v1/transportations/list
+- /api/v1/transportations/update
 default:
   '**default**':
     timeout: 1000

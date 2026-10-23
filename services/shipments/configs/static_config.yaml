@@ -73,8 +73,20 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-shipments-route_segments-register_usage:
+            path: /api/v1/shipments/route-segments/register-usage
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipments-settings:
             path: /api/v1/shipments/settings
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-shipments-transportation_contexts:
+            path: /api/v1/shipments/transportation-contexts
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -140,7 +152,9 @@ components_manager:
                 /api/v1/shipments/dictionaries: shipments.read
                 /api/v1/shipments/get: shipments.read
                 /api/v1/shipments/list: shipments.read
+                /api/v1/shipments/route-segments/register-usage: transportations.write
                 /api/v1/shipments/settings: shipments.read
+                /api/v1/shipments/transportation-contexts: transportations.read
                 /api/v1/shipments/update: shipments.write
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read

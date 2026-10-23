@@ -1,0 +1,1 @@
+ALTER TABLE route_segments DROP CONSTRAINT transportation_legs_tenant_id_transportation_id_position_key;

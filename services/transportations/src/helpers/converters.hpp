@@ -6,17 +6,22 @@
 #include <vector>
 
 namespace transportations::helpers {
-inline models::Transportation Convert(const pgtypes::TransportationV2& row) {
+inline models::Transportation Convert(const pgtypes::TransportationV3& row) {
     models::Transportation result;
     result.number = row.Number;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.shipment_id = boost::uuids::to_string(row.ShipmentId);
-    result.item_id = boost::uuids::to_string(row.ItemId);
-    result.operation_id = boost::uuids::to_string(row.OperationId);
+    if (row.ItemId.has_value())
+        result.item_id = boost::uuids::to_string(row.ItemId.value());
+    if (row.OperationId.has_value())
+        result.operation_id = boost::uuids::to_string(row.OperationId.value());
     result.container_type_code = row.ContainerType;
-    result.container_ownership =
-        models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
+    if (row.Ownership.has_value())
+        result.container_ownership =
+            models::ParseEnumScalar(row.Ownership.value(), models::ContainerOwnership{});
+    result.type = models::ParseEnumScalar(row.Type, models::TransportationType{});
+    result.hazardous = row.Hazardous;
     return result;
 }
 
@@ -31,7 +36,7 @@ inline std::vector<models::RouteSegment> Convert(
 }
 
 inline std::vector<models::Transportation> Convert(
-    const std::vector<pgtypes::TransportationV2>& rows,
+    const std::vector<pgtypes::TransportationV3>& rows,
     const std::vector<pgtypes::RouteSegmentV1>& route_segments) {
     std::vector<models::Transportation> result;
     result.reserve(rows.size());

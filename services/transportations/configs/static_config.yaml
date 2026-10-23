@@ -31,6 +31,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-transportation_routes-usage:
+            path: /api/v1/transportation-routes/usage
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-transportations-create:
+            path: /api/v1/transportations/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-transportations-get:
             path: /api/v1/transportations/get
             method: POST
@@ -49,10 +61,22 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-transportations-update:
+            path: /api/v1/transportations/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        client-shipments:
+            base-url: $client-shipments-base-url
         platform-readiness: {}
         platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
         postgres-transportations:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -75,9 +99,12 @@ components_manager:
                 /api/v1/transportation-actuals/correct: transportations.write
                 /api/v1/transportation-actuals/record: transportations.write
                 /api/v1/transportation-routes/set: transportations.write
+                /api/v1/transportation-routes/usage: shipments.write
+                /api/v1/transportations/create: transportations.write
                 /api/v1/transportations/get: transportations.read
                 /api/v1/transportations/history: transportations.read
                 /api/v1/transportations/list: transportations.read
+                /api/v1/transportations/update: transportations.write
             permission-dependencies:
                 configs.write:
                 - configs.read
@@ -100,6 +127,31 @@ components_manager:
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: transportations
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
+            update-interval: 1s
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: transportations
@@ -175,12 +227,6 @@ components_manager:
             method: GET
             task_processor: main-task-processor
             monitor-handler: true
-        dynamic-config:
-            defaults:
-                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
-                POSTGRES_DEFAULT_COMMAND_CONTROL:
-                    network_timeout_ms: 750
-                    statement_timeout_ms: 500
         testsuite-support: {}
         congestion-control:
             fake-mode: true

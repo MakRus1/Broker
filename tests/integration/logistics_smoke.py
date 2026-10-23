@@ -15,6 +15,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from uuid import uuid4
 
 import psycopg2
 import yaml
@@ -31,6 +32,7 @@ USER_PERMISSIONS = [
     'shipments.read',
     'shipments.write',
     'transportations.read',
+    'transportations.write',
 ]
 
 
@@ -151,11 +153,15 @@ def run(build):
                     cursor.execute(migration.read_text())
             db.commit()
 
+        ports = {
+            service: [free_port(), free_port()] for service in ['shipments', 'transportations']
+        }
+
         def start(service, index, receiver=None):
             source = ROOT / 'services' / service
             config = yaml.safe_load((source / 'configs/static_config.yaml').read_text())
             variables = yaml.safe_load((source / 'configs/config_vars.yaml').read_text())
-            port, monitor = free_port(), free_port()
+            port, monitor = ports[service][index], free_port()
             variables.update(
                 {
                     'server-port': port,
@@ -168,6 +174,10 @@ def run(build):
                     'logger-level': 'warning',
                 }
             )
+            if service == 'transportations':
+                variables['client-shipments-base-url'] = (
+                    f'http://127.0.0.1:{ports["shipments"][index]}'
+                )
             if receiver:
                 variables.update(
                     {
@@ -222,10 +232,17 @@ def run(build):
         receivers = [start('transportations', index) for index in range(2)]
         senders = [start('shipments', index, receivers[index]) for index in range(2)]
         token = make_token('author', USER_PERMISSIONS)
+        stages = [{'id': str(uuid4()), 'type': kind} for kind in ['sea', 'pickup']]
         shipment = post(
             senders[0],
             '/api/v1/shipments/create',
-            {'customer_id': CUSTOMER, 'logist': None, 'idempotency_key': 'create-shipment'},
+            {
+                'customer_id': CUSTOMER,
+                'logist': None,
+                'idempotency_key': 'create-shipment',
+                'route_segments': stages,
+                'incoterms': 'FOB',
+            },
             token,
             201,
         )['shipment']
@@ -287,7 +304,68 @@ def run(build):
             counter['pending_quantity'],
             counter['available_quantity'],
         ) == (5, 0, 0)
-        print('OK: 2 shipments + 2 transportations, 5 перевозок, общий inbox/outbox без дублей')
+        manual = post(
+            receivers[0],
+            '/api/v1/transportations/create',
+            {
+                'id': str(uuid4()),
+                'shipment_id': shipment['id'],
+                'type': 'air',
+                'hazardous': False,
+            },
+            token,
+        )['transportation']
+        assert [stage['id'] for stage in manual['route_segments']] == [
+            stage['id'] for stage in stages
+        ]
+        assert manual['incoterms'] == 'FOB'
+        manual = post(
+            receivers[1],
+            '/api/v1/transportation-actuals/record',
+            {
+                'transportation_id': manual['id'],
+                'expected_revision': 1,
+                'route_segment_id': stages[0]['id'],
+                'event_kind': 'departure',
+                'occurred_at': '2026-10-20T09:00:00Z',
+            },
+            token,
+        )['transportation']
+        current = post(senders[0], '/api/v1/shipments/get', {'shipment_id': shipment['id']}, token)[
+            'shipment'
+        ]
+        update = {
+            'shipment_id': shipment['id'],
+            'expected_revision': current['revision'],
+            'reference': '',
+        }
+        denied = post(
+            senders[1],
+            '/api/v1/shipments/update',
+            {**update, 'route_segments': [stages[1]]},
+            token,
+            409,
+        )
+        assert denied['error'] == 'route_segment_in_use'
+        post(
+            senders[0],
+            '/api/v1/shipments/update',
+            {
+                **update,
+                'route_segments': list(reversed(stages)),
+                'incoterms': 'CIF',
+            },
+            token,
+        )
+        inherited = post(
+            receivers[0], '/api/v1/transportations/get', {'transportation_id': manual['id']}, token
+        )['transportation']
+        assert inherited['incoterms'] == 'CIF'
+        assert inherited['route_segments'][1]['actual_departure_at'] == '2026-10-20T09:00:00Z'
+        assert inherited['route_segments'][1]['id'] == stages[0]['id']
+        print(
+            'OK: 2 shipments + 2 transportations; inbox/outbox без дублей, ручное создание, наследование и защита маршрута'
+        )
 
 
 if __name__ == '__main__':

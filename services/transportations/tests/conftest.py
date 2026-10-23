@@ -42,6 +42,7 @@ def configure_auth(mockserver_info):
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
+        config_vars['client-shipments-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -84,3 +85,31 @@ def api(service_client, auth_key):
             return response.json()
 
     return Client()
+
+
+@pytest.fixture(autouse=True)
+def shipment_routes(mockserver):
+    contexts = {}
+    registrations = []
+
+    @mockserver.json_handler('/api/v1/shipments/transportation-contexts')
+    def load(request):
+        return {'items': [contexts.get(identifier, {
+            'shipment_id': identifier, 'revision': 1, 'route_segments': [],
+        }) for identifier in request.json['shipment_ids']]}
+
+    @mockserver.json_handler('/api/v1/shipments/route-segments/register-usage')
+    def register(request):
+        registrations.append(request.json)
+        return {'registered': True}
+
+    class Source:
+        def set(self, shipment_id, route, **terms):
+            contexts[shipment_id] = {
+                'shipment_id': shipment_id, 'revision': 1,
+                'route_segments': [{'id': item['id'], 'type': item.get('mode', item.get('type'))} for item in route],
+                **terms,
+            }
+    source = Source()
+    source.registrations = registrations
+    return source

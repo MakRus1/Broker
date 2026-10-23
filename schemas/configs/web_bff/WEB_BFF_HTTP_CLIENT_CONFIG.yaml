@@ -29,9 +29,11 @@ paths:
 - /api/v1/transportation-operations/create
 - /api/v1/transportation-operations/get
 - /api/v1/transportation-routes/set
+- /api/v1/transportations/create
 - /api/v1/transportations/get
 - /api/v1/transportations/history
 - /api/v1/transportations/list
+- /api/v1/transportations/update
 default:
   '**default**':
     timeout: 1000

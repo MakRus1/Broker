@@ -24,8 +24,8 @@ describe('Маршрут и время', () => {
   it.each([
     { name: 'пустой маршрут', route_segments: [] },
     {
-      name: 'пустой пункт',
-      route_segments: [{ ...route_segment, destination: { name: '', country_code: 'RU' } }],
+      name: 'некорректный код страны',
+      route_segments: [{ ...route_segment, destination: { name: '', country_code: 'RUS' } }],
     },
     { name: 'повтор ID', route_segments: [route_segment, route_segment] },
     {

@@ -58,3 +58,29 @@ types:
       type: text
     - name: document
       type: jsonb
+  public.transportation_v3:
+    fields:
+    - name: id
+      type: uuid
+    - name: revision
+      type: bigint
+    - name: shipment_id
+      type: uuid
+    - name: item_id
+      type: uuid
+      nullable: true
+    - name: operation_id
+      type: uuid
+      nullable: true
+    - name: container_type
+      type: text
+      nullable: true
+    - name: ownership
+      type: text
+      nullable: true
+    - name: number
+      type: text
+    - name: type
+      type: text
+    - name: hazardous
+      type: boolean

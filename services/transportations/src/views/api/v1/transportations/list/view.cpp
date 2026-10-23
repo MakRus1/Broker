@@ -1,6 +1,7 @@
-#include <helpers/transportations.hpp>
+#include <helpers/inherited_route.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
+#include <set>
 #include <views/api/v1/transportations/list/view.hpp>
 
 namespace transportations::views::api::v1::transportations::list {
@@ -17,7 +18,7 @@ Response View::Handle(
             transaction
                 .Execute(sql::kListTransportations, organization, request.body.after,
                     request.body.shipment_id, request.body.item_id, request.body.limit)
-                .AsContainer<std::vector<pgtypes::TransportationV2>>();
+                .AsContainer<std::vector<pgtypes::TransportationV3>>();
         std::vector<std::string> ids;
         ids.reserve(rows.size());
         for (const auto& row : rows)
@@ -27,8 +28,15 @@ Response View::Handle(
             ? std::vector<pgtypes::RouteSegmentV1>{}
             : transaction.Execute(sql::kListRouteSegments, organization, ids)
                   .AsContainer<std::vector<pgtypes::RouteSegmentV1>>();
-        const auto result = Convert(rows, route_segments);
+        auto result = Convert(rows, route_segments);
         transaction.Commit();
+        std::set<std::string> unique_shipments;
+        for (const auto& item : result)
+            unique_shipments.insert(item.shipment_id);
+        const auto sources =
+            LoadShipmentContexts(deps, context, {unique_shipments.begin(), unique_shipments.end()});
+        for (auto& item : result)
+            InheritRoute(item, FindShipmentContext(sources, item.shipment_id));
         return Response200{.items = result};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {
@@ -38,6 +46,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         default:
             return Response409{.error = error.Code, .message = error.what()};
         }

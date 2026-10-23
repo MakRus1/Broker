@@ -60,7 +60,7 @@ export function routeRequest(id: string, revision: number, route_segments: Plann
       for (const point of [result.origin, result.destination]) {
         point.name = point.name.trim();
         point.country_code = point.country_code.trim().toUpperCase();
-        if (!point.name || !/^[A-Z]{2}$/.test(point.country_code))
+        if (point.country_code && !/^[A-Z]{2}$/.test(point.country_code))
           throw new Error('Укажите пункт и двухбуквенный код страны');
       }
       for (const value of [route_segment.planned_departure_at, route_segment.planned_arrival_at]) {

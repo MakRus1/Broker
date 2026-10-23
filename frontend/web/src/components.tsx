@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { modes, ownership, type Transportation } from './api';
+import { modes, ownership, transportationTypes, type Transportation } from './api';
 
 export function Dialog({
   title,
@@ -147,12 +147,11 @@ export function CardNavigation({
 export function TransportationTable({ items }: { items: Transportation[] }) {
   return (
     <div className="table-scroll">
-      <table>
+      <table className="transportation-table">
         <thead>
           <tr>
             <th>Перевозка</th>
             <th>Контейнер</th>
-            <th>Принадлежность</th>
             <th>Маршрут</th>
           </tr>
         </thead>
@@ -165,7 +164,7 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
                 location.hash = `/transportations/${item.id}`;
               }}
             >
-              <td>
+              <td className="transportation-number-cell">
                 <a
                   className="link"
                   href={`#/transportations/${item.id}`}
@@ -173,18 +172,42 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
                 >
                   {item.number}
                 </a>
+                <span className="registry-secondary">{transportationTypes[item.type]}</span>
+                {item.hazardous && <span className="registry-hazard">Опасный груз</span>}
               </td>
-              <td>{item.container_type_code}</td>
-              <td>{ownership[item.container_ownership]}</td>
+              <td className="transportation-container-cell">
+                {item.container_type_code ? (
+                  <strong>{item.container_type_code}</strong>
+                ) : (
+                  <span className="registry-muted">—</span>
+                )}
+                {item.container_ownership && (
+                  <span className="registry-ownership">{ownership[item.container_ownership]}</span>
+                )}
+              </td>
               <td>
-                {item.route_segments.length
-                  ? item.route_segments
-                      .map(
-                        (route_segment) =>
-                          `${modes[route_segment.mode]}: ${route_segment.origin.name} → ${route_segment.destination.name}`,
-                      )
-                      .join(' · ')
-                  : 'Маршрут ещё не задан'}
+                {item.route_segments.length ? (
+                  <div className="registry-route">
+                    {item.route_segments.slice(0, 2).map((stage) => (
+                      <div className="registry-route-stage" key={stage.id}>
+                        <span className="registry-route-mode">{modes[stage.mode]}</span>
+                        {(stage.origin.name || stage.destination.name) && (
+                          <span>
+                            {stage.origin.name || 'Не указан'} →{' '}
+                            {stage.destination.name || 'Не указан'}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {item.route_segments.length > 2 && (
+                      <span className="registry-secondary">
+                        Ещё участков: {item.route_segments.length - 2}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="registry-muted">Не задан</span>
+                )}
               </td>
             </tr>
           ))}

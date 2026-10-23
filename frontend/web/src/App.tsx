@@ -8,6 +8,7 @@ import { ApiError, request, type Session, type Shipment, type Transportation } f
 import { CounterpartiesPage } from './CounterpartiesPage';
 import { type Counterparty } from './CustomerSelect';
 import { TransportationPage } from './TransportationPage';
+import { NewTransportation } from './TransportationDetailsForm';
 import { TransportationTable } from './components';
 
 export function App() {
@@ -391,22 +392,26 @@ export function App() {
         </div>
         <div className="workspace-content">
           <div
+            className={tab === 'transportations' ? 'transportation-registry' : undefined}
             hidden={
               tab === 'counterparties' ||
               creating ||
               Boolean(shipmentId) ||
-              Boolean(transportationId)
+              Boolean(transportationId) ||
+              route.startsWith('/transportations/new/')
             }
           >
             <div className="page-heading">
               <div>
-                <p className="eyebrow">ЛОГИСТИКА</p>
+                {tab === 'shipments' && <p className="eyebrow">ЛОГИСТИКА</p>}
                 <h1>{tab === 'shipments' ? 'Поставки' : 'Перевозки'}</h1>
-                <p>
-                  {tab === 'shipments'
-                    ? 'От заявки клиента до фактических перевозок.'
-                    : 'Фактические перевозки и их маршруты.'}
-                </p>
+                {tab === 'shipments' ? (
+                  <p>От заявки клиента до фактических перевозок.</p>
+                ) : (
+                  <span className="registry-count" role="status">
+                    {loading ? 'Загрузка…' : `Загружено: ${transportations.length}`}
+                  </span>
+                )}
               </div>
               <div className="actions">
                 <button disabled={loading} onClick={() => void load()}>
@@ -425,14 +430,16 @@ export function App() {
               </div>
             </div>
             <section className="surface" aria-busy={loading}>
-              <div className="table-title">
-                <strong>{tab === 'shipments' ? 'Реестр поставок' : 'Реестр перевозок'}</strong>
-                <span>
-                  {loading
-                    ? 'Загрузка…'
-                    : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
-                </span>
-              </div>
+              {tab === 'shipments' && (
+                <div className="table-title">
+                  <strong>Реестр поставок</strong>
+                  <span>
+                    {loading
+                      ? 'Загрузка…'
+                      : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
+                  </span>
+                </div>
+              )}
               {tab === 'shipments' ? (
                 <table>
                   <thead>
@@ -483,7 +490,7 @@ export function App() {
                   <p>
                     {tab === 'shipments'
                       ? 'Создайте поставку, добавьте позиции и запустите создание перевозок.'
-                      : 'Перевозки появятся после создания из позиций поставки.'}
+                      : 'Создайте перевозку в карточке поставки вручную или из плановой позиции.'}
                   </p>
                 </div>
               )}
@@ -526,6 +533,7 @@ export function App() {
                 ) : entry.route.startsWith('/shipments') ? (
                   <ShipmentWorkspace
                     route={entry.route}
+                    active={activeWorkspace === entry.id}
                     session={session}
                     customers={customers}
                     onError={error}
@@ -540,6 +548,18 @@ export function App() {
                             : tab,
                         ),
                       );
+                      location.hash = next;
+                      void load();
+                    }}
+                  />
+                ) : entry.route.startsWith('/transportations/new/') ? (
+                  <NewTransportation
+                    shipmentId={entry.route.split('/')[3]}
+                    session={session}
+                    onError={error}
+                    onSaved={(value) => {
+                      const next = `/transportations/${value.id}`;
+                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
                       void load();
                     }}

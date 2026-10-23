@@ -1,3 +1,4 @@
+import { changeShipmentCustomer } from './shipmentParticipants';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Commands, request, type Session, type Shipment } from './api';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
@@ -441,7 +442,9 @@ function ShipmentCard({
                   items={props.customers}
                   value={draft.customer_id}
                   disabled={busy || !write}
-                  onChange={(value) => set('customer_id', value)}
+                  onChange={(value) =>
+                    setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
+                  }
                 />
                 <CustomerSelect
                   label="Получатель"

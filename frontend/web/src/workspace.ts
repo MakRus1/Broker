@@ -18,3 +18,15 @@ export function openWorkspace(tabs: WorkspaceTab[], route: string): WorkspaceTab
   if (existing) return tabs.map((tab) => (tab.id === id ? { ...tab, route } : tab));
   return [...tabs, { id, route, title: workspaceTitle(route) }];
 }
+
+export function replaceWorkspace(
+  tabs: WorkspaceTab[],
+  previous: string,
+  route: string,
+  title: string,
+): WorkspaceTab[] {
+  const id = workspaceId(route);
+  return tabs
+    .filter((tab) => tab.id === previous || tab.id !== id)
+    .map((tab) => (tab.id === previous ? { id, route, title } : tab));
+}

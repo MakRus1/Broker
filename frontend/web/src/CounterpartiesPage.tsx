@@ -15,12 +15,14 @@ type Props = {
   session: Session;
   onError: (error: unknown) => void;
   onChanged: (value: Counterparty) => void;
+  onSaved: (value: Counterparty) => void;
 };
 export function CounterpartiesPage({
   route,
   session,
   onError,
   onChanged,
+  onSaved,
   onTitle,
   active = true,
 }: Props) {
@@ -170,7 +172,7 @@ export function CounterpartiesPage({
               onSaved={(value) => {
                 setItem(value);
                 onChanged(value);
-                location.hash = `/counterparties/${value.id}`;
+                onSaved(value);
               }}
             />
           )
@@ -402,7 +404,7 @@ export function CounterpartiesPage({
                   key={value.id}
                   className="clickable"
                   onClick={() => {
-                    location.hash = `/counterparties/${value.id}`;
+                    onSaved(value);
                   }}
                 >
                   <td>

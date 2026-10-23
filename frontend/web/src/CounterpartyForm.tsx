@@ -41,10 +41,12 @@ export function CounterpartyForm({
   const [draft, setDraft] = useState(stored.value);
   const id = stored.id;
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState('');
   const dirty =
+    !saved &&
     JSON.stringify(counterpartyPayload(draft)) !==
-    JSON.stringify(counterpartyPayload(counterpartyDetails(initial)));
+      JSON.stringify(counterpartyPayload(counterpartyDetails(initial)));
   const stale = stored.baseRevision !== (initial?.revision ?? 0) || (initial && id !== initial.id);
   useEffect(() => {
     try {
@@ -100,6 +102,7 @@ export function CounterpartyForm({
       } catch {
         /* Запись на сервер не зависит от хранилища. */
       }
+      setSaved(true);
       onSaved(result.counterparty);
     } catch (error) {
       setFailure(
@@ -177,6 +180,7 @@ export function CounterpartyForm({
                         />
                       ) : (
                         <input
+                          name={key}
                           value={draft[key]}
                           required={key === 'name' || (key === 'country_code' && !!draft.tax_id)}
                           maxLength={limit}

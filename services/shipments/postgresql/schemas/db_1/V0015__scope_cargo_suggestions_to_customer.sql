@@ -1,4 +1,5 @@
--- Старые поды продолжают пользоваться общей таблицей до завершения раскатки.
+-- Общие подсказки не переносим: новые значения накапливаются отдельно для каждого клиента.
+DROP TABLE cargo_suggestions;
 CREATE TABLE customer_cargo_suggestions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL,

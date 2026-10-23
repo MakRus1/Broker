@@ -19,8 +19,8 @@ async def test_retention(service_client, pgsql, removed, age_days, survives):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
             '''
-            INSERT INTO cargo_suggestions (organization_id, value, search_value, removed, used_at, removed_at)
-            VALUES ('11111111-1111-4111-8111-111111111111', %s, %s, %s,
+            INSERT INTO customer_cargo_suggestions (organization_id, customer_id, value, search_value, removed, used_at, removed_at)
+            VALUES ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333', %s, %s, %s,
                 NOW() - %s * INTERVAL '1 day',
                 CASE WHEN %s THEN NOW() - %s * INTERVAL '1 day' END)
         ''',
@@ -28,7 +28,7 @@ async def test_retention(service_client, pgsql, removed, age_days, survives):
         )
     await service_client.run_periodic_task('cargo-suggestions-cleanup')
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT COUNT(*) FROM cargo_suggestions WHERE value = %s', (value,))
+        cursor.execute('SELECT COUNT(*) FROM customer_cargo_suggestions WHERE value = %s', (value,))
         assert cursor.fetchone()[0] == int(survives)
 
 
@@ -43,14 +43,14 @@ async def test_retention(service_client, pgsql, removed, age_days, survives):
 async def test_custom_retention_drains_multiple_batches(service_client, pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('''
-            INSERT INTO cargo_suggestions (organization_id, value, search_value, used_at)
-            SELECT '11111111-1111-4111-8111-111111111111', 'Просрочено ' || n, 'просрочено ' || n,
+            INSERT INTO customer_cargo_suggestions (organization_id, customer_id, value, search_value, used_at)
+            SELECT '11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333', 'Просрочено ' || n, 'просрочено ' || n,
                 NOW() - INTERVAL '3 days'
             FROM generate_series(1, 5) AS n
         ''')
     await service_client.run_periodic_task('cargo-suggestions-cleanup')
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT COUNT(*) FROM cargo_suggestions')
+        cursor.execute('SELECT COUNT(*) FROM customer_cargo_suggestions')
         assert cursor.fetchone()[0] == 0
 
 
@@ -110,13 +110,13 @@ async def test_removal_time_and_old_shipment_updates(api, pgsql, service_client)
 async def test_cleanup_can_be_disabled(service_client, pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute("""
-            INSERT INTO cargo_suggestions (organization_id, value, search_value, used_at)
-            VALUES ('11111111-1111-4111-8111-111111111111', 'Сохранить', 'сохранить',
+            INSERT INTO customer_cargo_suggestions (organization_id, customer_id, value, search_value, used_at)
+            VALUES ('11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333', 'Сохранить', 'сохранить',
                 NOW() - INTERVAL '400 days')
         """)
     await service_client.run_periodic_task('cargo-suggestions-cleanup')
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT COUNT(*) FROM cargo_suggestions')
+        cursor.execute('SELECT COUNT(*) FROM customer_cargo_suggestions')
         assert cursor.fetchone()[0] == 1
 
 
@@ -132,18 +132,18 @@ async def test_backlog_continues_in_bounded_passes(service_client, pgsql):
     await service_client.run_periodic_task('cargo-suggestions-cleanup')
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('''
-            INSERT INTO cargo_suggestions (organization_id, value, search_value, used_at)
-            SELECT '11111111-1111-4111-8111-111111111111', 'Очередь ' || n, 'очередь ' || n,
+            INSERT INTO customer_cargo_suggestions (organization_id, customer_id, value, search_value, used_at)
+            SELECT '11111111-1111-4111-8111-111111111111', '33333333-3333-4333-8333-333333333333', 'Очередь ' || n, 'очередь ' || n,
                 NOW() - INTERVAL '3 days'
             FROM generate_series(1, 25) AS n
         ''')
     await service_client.run_periodic_task('cargo-suggestions-cleanup')
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT COUNT(*) FROM cargo_suggestions')
+        cursor.execute('SELECT COUNT(*) FROM customer_cargo_suggestions')
         assert cursor.fetchone()[0] == 5
     await service_client.run_periodic_task('cargo-suggestions-cleanup-backlog')
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT COUNT(*) FROM cargo_suggestions')
+        cursor.execute('SELECT COUNT(*) FROM customer_cargo_suggestions')
         assert cursor.fetchone()[0] == 0
 
 
@@ -165,15 +165,3 @@ async def test_cleanup_of_same_description_does_not_delete_another_customer(pgsq
             ('Оборудование',),
         )
         assert cursor.fetchall() == [(active_customer,)]
-
-
-async def test_legacy_writer_remains_compatible_during_rollout(pgsql):
-    with pgsql['db_1'].cursor() as cursor:
-        for _ in range(2):
-            cursor.execute('''
-                INSERT INTO cargo_suggestions (organization_id, value, search_value)
-                VALUES ('11111111-1111-4111-8111-111111111111', 'Старый под', 'старый под')
-                ON CONFLICT (organization_id, value) DO UPDATE SET used_at = NOW()
-            ''')
-        cursor.execute('SELECT count(*) FROM cargo_suggestions WHERE value = %s', ('Старый под',))
-        assert cursor.fetchone()[0] == 1

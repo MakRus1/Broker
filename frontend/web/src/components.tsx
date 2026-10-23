@@ -168,9 +168,10 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
                 <a
                   className="link"
                   href={`#/transportations/${item.id}`}
+                  title={item.container_number || 'Без номера'}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  {item.number}
+                  {item.container_number || 'Без номера'}
                 </a>
                 <span className="registry-secondary">{transportationTypes[item.type]}</span>
                 {item.hazardous && <span className="registry-hazard">Опасный груз</span>}

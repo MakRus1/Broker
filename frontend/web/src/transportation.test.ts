@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { localDateTime, routeRequest, utcDateTime } from './transportation';
+import {
+  containerNumberWarning,
+  transportationTitle,
+  localDateTime,
+  routeRequest,
+  utcDateTime,
+} from './transportation';
 
 const route_segment = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -51,4 +57,24 @@ it.each(['2026-02-30T12:00', '2026-13-01T12:00', '2026-01-01T25:00', '0000-01-01
 it('не ограничивает год произвольным бизнес-диапазоном', () => {
   expect(localDateTime(utcDateTime('1111-11-11T11:11'))).toBe('1111-11-11T11:11');
   expect(localDateTime(utcDateTime('2030-01-01T12:00'))).toBe('2030-01-01T12:00');
+});
+
+it.each(['CSQU3054383', 'ABCD1234567', 'csqu3054383', '', '  '])(
+  'номер %s не требует предупреждения',
+  (value) => {
+    expect(containerNumberWarning(value)).toBe('');
+  },
+);
+it.each(['CSQU305438', 'CSQU30543833', 'АБВГ1234567', 'ожидается'])(
+  'показывает подсказку для %s',
+  (value) => {
+    expect(containerNumberWarning(value)).not.toBe('');
+  },
+);
+it('использует фактический номер контейнера и понятное название без номера', () => {
+  expect(transportationTitle({ type: 'container', container_number: 'CSQU3054383' })).toBe(
+    'CSQU3054383',
+  );
+  expect(transportationTitle({ type: 'container' })).toBe('Контейнер · Без номера');
+  expect(transportationTitle({ type: 'air' })).toBe('Авиа · Без номера');
 });

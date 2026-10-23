@@ -2003,3 +2003,19 @@ main > header {
     padding-inline: 12px;
   }
 }
+
+.transportation-number-field {
+  grid-column: 1 / -1;
+}
+.transportation-number-field .field-warning {
+  color: #9b611f;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.transportation-number-cell > .link {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

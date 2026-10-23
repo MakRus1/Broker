@@ -18,7 +18,7 @@ Response View::Handle(
             transaction
                 .Execute(sql::kListTransportations, organization, request.body.after,
                     request.body.shipment_id, request.body.item_id, request.body.limit)
-                .AsContainer<std::vector<pgtypes::TransportationV3>>();
+                .AsContainer<std::vector<pgtypes::TransportationV4>>();
         std::vector<std::string> ids;
         ids.reserve(rows.size());
         for (const auto& row : rows)

@@ -31,7 +31,7 @@ TRANSPORTATION = {
     'type': 'container',
     'hazardous': False,
     'id': ID,
-    'number': 'T-1',
+    'container_number': 'CSQU3054383',
     'revision': 1,
     'shipment_id': ID,
     'item_id': ID,

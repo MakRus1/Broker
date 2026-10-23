@@ -1,4 +1,4 @@
-import type { Transportation } from './api';
+import { transportationTypes, type Transportation } from './api';
 
 export type RouteSegment = Transportation['route_segments'][number];
 export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'actual_arrival_at'>;
@@ -82,3 +82,15 @@ export const historyActions: Record<string, string> = {
   record_actual: 'Записана фактическая дата',
   correct_actual: 'Исправлена фактическая дата',
 };
+
+export function transportationTitle(
+  value: Pick<Transportation, 'container_number' | 'type'>,
+): string {
+  return value.container_number || `${transportationTypes[value.type]} · Без номера`;
+}
+
+export function containerNumberWarning(value: string): string {
+  const number = value.trim().toUpperCase();
+  if (!number || /^[A-Z]{4}[0-9]{7}$/.test(number)) return '';
+  return 'Обычно номер содержит 4 латинские буквы и 7 цифр, например CSQU3054383. Можно сохранить и этот вариант.';
+}

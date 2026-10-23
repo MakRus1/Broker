@@ -1,3 +1,4 @@
+import { containerNumberWarning } from './transportation';
 import { useState, type FormEvent } from 'react';
 import { request, transportationTypes, type Session, type Transportation } from './api';
 import { Select } from './Select';
@@ -22,6 +23,8 @@ export function TransportationDetailsForm({
   const [id] = useState(() => crypto.randomUUID());
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
+  const [containerNumber, setContainerNumber] = useState(initial?.container_number ?? '');
+  const numberWarning = containerNumberWarning(containerNumber);
   const [containerType, setContainerType] = useState(initial?.container_type_code ?? '');
   const [ownership, setOwnership] = useState(initial?.container_ownership ?? '');
   const [busy, setBusy] = useState(false);
@@ -33,7 +36,8 @@ export function TransportationDetailsForm({
     (type !== (initial?.type ?? 'container') ||
       hazardous !== (initial?.hazardous ?? false) ||
       containerType !== (initial?.container_type_code ?? '') ||
-      ownership !== (initial?.container_ownership ?? ''));
+      ownership !== (initial?.container_ownership ?? '') ||
+      containerNumber !== (initial?.container_number ?? ''));
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -49,6 +53,9 @@ export function TransportationDetailsForm({
             : { id, shipment_id: shipmentId }),
           type,
           hazardous,
+          ...(type === 'container' && containerNumber.trim()
+            ? { container_number: containerNumber.trim().toUpperCase() }
+            : {}),
           ...(type === 'container' && containerType
             ? { container_type_code: containerType.trim().toUpperCase() }
             : {}),
@@ -88,6 +95,22 @@ export function TransportationDetailsForm({
             </label>
             {type === 'container' && (
               <>
+                <label className="transportation-number-field">
+                  Номер контейнера
+                  <input
+                    maxLength={64}
+                    placeholder="CSQU3054383"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    value={containerNumber}
+                    onChange={(event) => setContainerNumber(event.target.value.toUpperCase())}
+                  />
+                  {numberWarning && (
+                    <small className="field-warning" role="status">
+                      {numberWarning}
+                    </small>
+                  )}
+                </label>
                 <label>
                   Тип контейнера
                   <input

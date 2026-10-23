@@ -81,10 +81,10 @@ inline void RegisterRouteUsage(const Deps& deps,
                          .segment_ids = ids,
                          .shipment_id = source.shipment_id}},
         platform::auth::GetAccessToken(context));
-} catch (const platform::http::ApiError& error) {
+} catch (const clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage::Error409& error) {
 
-    if (error.GetStatus() == 409)
-        throw ApiError{409, "route_changed", "Маршрут поставки изменён. Обновите перевозку"};
+    throw ApiError{409, error.response.error, error.response.message};
+} catch (const platform::http::ApiError&) {
     throw ApiError{503, "shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
 } catch (const platform::http::CancelledError&) {
     throw;

@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
-#include <helpers/revision.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/shipments/route_segments/register_usage/view.hpp>
 
@@ -19,7 +18,9 @@ Response View::Handle(
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         const auto shipment = rows.AsSingleRow<pgtypes::ShipmentV2>();
-        CheckRevision(shipment.Revision, request.body.expected_revision);
+        if (shipment.Revision != request.body.expected_revision)
+            throw ApiError{409, "shipment_revision_conflict",
+                "Поставка изменилась. Обновите перевозку и повторите сохранение"};
         for (const auto& id : request.body.segment_ids) {
             const auto found =
                 std::find_if(shipment.RouteSegments.begin(), shipment.RouteSegments.end(),

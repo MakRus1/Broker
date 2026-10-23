@@ -28,9 +28,7 @@ async def test_inbox_concurrent_replay(api):
     assert len(set(a['operation']['transportation_ids'])) == 5
     listed = await api.post('/api/v1/transportations/list', {'shipment_id': body['shipment_id']})
     assert len(listed['items']) == 5
-    numbers = [item['number'] for item in listed['items']]
-    assert len(set(numbers)) == 5
-    assert all(number.startswith('T-') for number in numbers)
+    assert all('number' not in item and 'container_number' not in item for item in listed['items'])
     await api.post(PATH, {**body, 'quantity': 3}, expected=409)
 
 
@@ -185,9 +183,7 @@ async def test_filtered_pagination_loads_all_route_segments(api, shipment_routes
         },
     )
     assert len(listed['items']) == 5
-    numbers = [item['number'] for item in listed['items']]
-    assert len(set(numbers)) == 5
-    assert all(number.startswith('T-') for number in numbers)
+    assert all('number' not in item and 'container_number' not in item for item in listed['items'])
     selected = next(value for value in listed['items'] if value['id'] == tid)
     assert selected['revision'] == 2
     assert len(selected['route_segments']) == 1

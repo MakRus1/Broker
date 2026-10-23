@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ApiError, request, modes, type Session, type Transportation } from './api';
+import { request, modes, type Session, type Transportation } from './api';
 import { useDiscardConfirmation } from './components';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import {
@@ -126,13 +126,7 @@ export function RouteEditor({
       }
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(
-        error instanceof ApiError && error.status === 409
-          ? 'Перевозка изменилась. Отмените локальное редактирование, обновите карточку и проверьте актуальный маршрут.'
-          : error instanceof Error
-            ? error.message
-            : 'Не удалось сохранить маршрут',
-      );
+      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить маршрут');
       onError(error);
     } finally {
       setBusy(false);

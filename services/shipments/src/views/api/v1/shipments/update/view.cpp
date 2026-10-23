@@ -2,6 +2,7 @@
 #include <helpers/database.hpp>
 #include <helpers/employees.hpp>
 #include <helpers/revision.hpp>
+#include <helpers/route_usage.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
@@ -17,9 +18,19 @@ Response View::Handle(
         platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
         if (request.body.logist.has_value())
             ValidateLogist(deps, context, CleanText(request.body.logist.value()));
+        const auto organization = platform::auth::GetOrganization(identity);
+        if (request.body.route_segments.has_value()) {
+            const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
+                sql::kGetShipment, organization, request.body.shipment_id);
+            if (rows.IsEmpty())
+                throw ApiError{404, "not_found", "Поставка не найдена"};
+            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV2>();
+            CheckRevision(previous.Revision, request.body.expected_revision);
+            CheckExistingRouteUsage(deps, context, request.body.shipment_id,
+                ChangedRouteSegments(previous, request.body.route_segments.value()));
+        }
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization = platform::auth::GetOrganization(identity);
         const auto current =
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (current.IsEmpty())
@@ -39,6 +50,20 @@ Response View::Handle(
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
                 .AsContainer<std::vector<pgtypes::ShipmentDictionaryValueV1>>();
+        const auto protected_ids =
+            transaction.Execute(sql::kGetRouteUsage, organization, request.body.shipment_id)
+                .AsContainer<std::vector<std::string>>();
+        for (const auto& id : protected_ids) {
+            const auto before =
+                std::find_if(previous.RouteSegments.begin(), previous.RouteSegments.end(),
+                    [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
+            const auto after = std::find_if(card.RouteSegments.begin(), card.RouteSegments.end(),
+                [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
+            if (before != previous.RouteSegments.end() &&
+                (after == card.RouteSegments.end() || after->Type != before->Type))
+                throw ApiError{409, "route_segment_in_use",
+                    "Нельзя удалить или изменить тип участка с данными перевозок"};
+        }
         ValidateCard(card,
             GetShipmentSettings(deps, organization, boost::uuids::to_string(card.CustomerId)),
             dictionaries, previous);

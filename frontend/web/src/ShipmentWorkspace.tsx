@@ -28,6 +28,7 @@ export function localDate() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 type Props = {
+  active?: boolean;
   route: string;
   session: Session;
   customers: Counterparty[];
@@ -731,6 +732,7 @@ function ShipmentCard({
         <div hidden={tab !== 'items' && tab !== 'transportations'}>
           <ShipmentPanel
             embedded
+            active={props.active}
             containerTypes={settings?.container_types}
             section={tab === 'items' ? 'items' : 'transportations'}
             initial={initial}

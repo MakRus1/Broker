@@ -4,6 +4,55 @@
 #include <stdexcept>
 
 namespace web_bff {
+inline models::transportations::TransportationType Convert(
+    clients::transportations::models::TransportationType value) {
+    switch (value) {
+    case clients::transportations::models::TransportationType::Consolidated:
+        return models::transportations::TransportationType::Consolidated;
+    case clients::transportations::models::TransportationType::Container:
+        return models::transportations::TransportationType::Container;
+    case clients::transportations::models::TransportationType::Air:
+        return models::transportations::TransportationType::Air;
+    case clients::transportations::models::TransportationType::Oversized:
+        return models::transportations::TransportationType::Oversized;
+    case clients::transportations::models::TransportationType::Rail:
+        return models::transportations::TransportationType::Rail;
+    case clients::transportations::models::TransportationType::Vessel:
+        return models::transportations::TransportationType::Vessel;
+    }
+    throw std::invalid_argument("Неизвестное значение перечисления");
+}
+
+inline clients::transportations::models::TransportationType Convert(
+    models::transportations::TransportationType value) {
+    switch (value) {
+    case models::transportations::TransportationType::Consolidated:
+        return clients::transportations::models::TransportationType::Consolidated;
+    case models::transportations::TransportationType::Container:
+        return clients::transportations::models::TransportationType::Container;
+    case models::transportations::TransportationType::Air:
+        return clients::transportations::models::TransportationType::Air;
+    case models::transportations::TransportationType::Oversized:
+        return clients::transportations::models::TransportationType::Oversized;
+    case models::transportations::TransportationType::Rail:
+        return clients::transportations::models::TransportationType::Rail;
+    case models::transportations::TransportationType::Vessel:
+        return clients::transportations::models::TransportationType::Vessel;
+    }
+    throw std::invalid_argument("Неизвестное значение перечисления");
+}
+
+inline clients::transportations::models::ContainerOwnership Convert(
+    models::transportations::ContainerOwnership value) {
+    switch (value) {
+    case models::transportations::ContainerOwnership::SOC:
+        return clients::transportations::models::ContainerOwnership::SOC;
+    case models::transportations::ContainerOwnership::COC:
+        return clients::transportations::models::ContainerOwnership::COC;
+    }
+    throw std::invalid_argument("Неизвестное значение перечисления");
+}
+
 inline models::transportations::ContainerOwnership Convert(
     clients::transportations::models::ContainerOwnership value) {
     switch (value) {
@@ -22,6 +71,14 @@ inline models::transportations::TransportMode Convert(
         return models::transportations::TransportMode::Road;
     case clients::transportations::models::TransportMode::Rail:
         return models::transportations::TransportMode::Rail;
+    case clients::transportations::models::TransportMode::InternationalRail:
+        return models::transportations::TransportMode::InternationalRail;
+    case clients::transportations::models::TransportMode::InternationalRoad:
+        return models::transportations::TransportMode::InternationalRoad;
+    case clients::transportations::models::TransportMode::Pickup:
+        return models::transportations::TransportMode::Pickup;
+    case clients::transportations::models::TransportMode::Air:
+        return models::transportations::TransportMode::Air;
     case clients::transportations::models::TransportMode::Sea:
         return models::transportations::TransportMode::Sea;
     }
@@ -47,6 +104,7 @@ inline models::transportations::RouteSegmentDestination Convert(
 inline models::transportations::RouteSegment Convert(
     const clients::transportations::models::RouteSegment& value) {
     models::transportations::RouteSegment result;
+    result.inherited = value.inherited;
     result.actual_arrival_at = value.actual_arrival_at;
     result.actual_departure_at = value.actual_departure_at;
     result.contractor_id = value.contractor_id;
@@ -62,10 +120,16 @@ inline models::transportations::RouteSegment Convert(
 inline models::transportations::Transportation Convert(
     const clients::transportations::models::Transportation& value) {
     models::transportations::Transportation result;
-    result.container_ownership = Convert(value.container_ownership);
+    if (value.container_ownership.has_value())
+        result.container_ownership = Convert(value.container_ownership.value());
     result.container_type_code = value.container_type_code;
     result.id = value.id;
     result.item_id = value.item_id;
+    result.type = Convert(value.type);
+    result.hazardous = value.hazardous;
+    result.incoterms = value.incoterms;
+    result.loading = value.loading;
+    result.carriage_terms = value.carriage_terms;
     result.route_segments.reserve(value.route_segments.size());
     for (const auto& item : value.route_segments)
         result.route_segments.push_back(Convert(item));
@@ -97,6 +161,14 @@ inline clients::transportations::models::TransportMode Convert(
         return Target::Road;
     case models::transportations::TransportMode::Rail:
         return Target::Rail;
+    case models::transportations::TransportMode::InternationalRail:
+        return Target::InternationalRail;
+    case models::transportations::TransportMode::InternationalRoad:
+        return Target::InternationalRoad;
+    case models::transportations::TransportMode::Pickup:
+        return Target::Pickup;
+    case models::transportations::TransportMode::Air:
+        return Target::Air;
     case models::transportations::TransportMode::Sea:
         return Target::Sea;
     }
@@ -192,4 +264,31 @@ inline models::transportations::TransportationEvent Convert(
         result.route_segments.push_back(Convert(route_segment));
     return result;
 }
+
+inline clients::transportations::ApiV1TransportationsCreate::RequestBody Convert(
+    const models::transportations::CreateTransportationRequest& value) {
+    clients::transportations::ApiV1TransportationsCreate::RequestBody result;
+    result.id = value.id;
+    result.shipment_id = value.shipment_id;
+    result.container_type_code = value.container_type_code;
+    result.hazardous = value.hazardous;
+    result.type = Convert(value.type);
+    if (value.container_ownership.has_value())
+        result.container_ownership = Convert(value.container_ownership.value());
+    return result;
+}
+
+inline clients::transportations::ApiV1TransportationsUpdate::RequestBody Convert(
+    const models::transportations::UpdateTransportationRequest& value) {
+    clients::transportations::ApiV1TransportationsUpdate::RequestBody result;
+    result.transportation_id = value.transportation_id;
+    result.expected_revision = value.expected_revision;
+    result.container_type_code = value.container_type_code;
+    result.hazardous = value.hazardous;
+    result.type = Convert(value.type);
+    if (value.container_ownership.has_value())
+        result.container_ownership = Convert(value.container_ownership.value());
+    return result;
+}
+
 }  // namespace web_bff

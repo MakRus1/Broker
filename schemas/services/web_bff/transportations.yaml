@@ -123,6 +123,124 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/transportations/models.yaml#/ApiError
+  /api/v1/transportations/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/transportations/models.yaml#/CreateTransportationRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  transportation:
+                    $ref: components/schemas/transportations/models.yaml#/Transportation
+                required:
+                - transportation
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Отсутствует действительный Bearer-токен
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Нет требуемого права или доверенной привязки к клиенту
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Объект не найден в доступном клиенте
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Недоступны ключи проверки авторизации
+      summary: Создать перевозку вручную
+  /api/v1/transportations/update:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/transportations/models.yaml#/UpdateTransportationRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  transportation:
+                    $ref: components/schemas/transportations/models.yaml#/Transportation
+                required:
+                - transportation
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Отсутствует действительный Bearer-токен
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Нет требуемого права или доверенной привязки к клиенту
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Объект не найден в доступном клиенте
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией'
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+          description: Недоступны ключи проверки авторизации
+      summary: Изменить основные данные перевозки
 components:
   securitySchemes:
     BrowserSession:

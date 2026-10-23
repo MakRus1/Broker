@@ -4,6 +4,7 @@ import {
   ApiError,
   request,
   modes,
+  transportationTypes,
   type Session,
   type Shipment,
   type Transportation,
@@ -19,6 +20,7 @@ import {
   type RouteSegment,
 } from './transportation';
 import { RouteEditor } from './RouteEditor';
+import { TransportationDetailsForm } from './TransportationDetailsForm';
 
 type Props = {
   id: string;
@@ -83,6 +85,7 @@ export function TransportationPage({
   }, [transportation?.number]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'route' | 'history'>('route');
+  const [editingDetails, setEditingDetails] = useState(false);
   const [actual, setActual] = useState<{
     route_segment: RouteSegment;
     kind: 'departure' | 'arrival';
@@ -111,6 +114,7 @@ export function TransportationPage({
     [id, session],
   );
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     void refresh(controller.signal).catch((error) => {
       if (!controller.signal.aborted) {
@@ -119,7 +123,7 @@ export function TransportationPage({
       }
     });
     return () => controller.abort();
-  }, [refresh, onError]);
+  }, [refresh, onError, active]);
   const write = session.permissions.includes('transportations.write');
   if (!transportation)
     return (
@@ -129,9 +133,6 @@ export function TransportationPage({
         <button onClick={() => void refresh().catch(onError)}>Повторить</button>
       </section>
     );
-  const hasActuals = transportation.route_segments.some(
-    (route_segment) => route_segment.actual_departure_at || route_segment.actual_arrival_at,
-  );
   const customerName = customers.find((item) => item.id === shipment?.customer_id)?.name;
   return (
     <div className="shipment-page">
@@ -140,33 +141,86 @@ export function TransportationPage({
           <div>
             <p className="eyebrow">ПЕРЕВОЗКА</p>
             <h1>{transportation.number}</h1>
+            {(editing || editingDetails) && (
+              <a
+                className="transportation-parent"
+                href={`#/shipments/${transportation.shipment_id}`}
+              >
+                Поставка {shipment?.number || '↗'}
+              </a>
+            )}
           </div>
-          <a href="#/transportations">← К перевозкам</a>
-        </div>
-        <div className="shipment-summary">
-          <div>
-            <span>Поставка</span>
-            <a href={`#/shipments/${transportation.shipment_id}`}>
-              {shipment?.number || 'Открыть поставку'} ↗
-            </a>
-          </div>
-          <div>
-            <span>Клиент</span>
-            <strong>{customerName || '—'}</strong>
-          </div>
-          <div>
-            <span>Контейнер · принадлежность</span>
-            <strong>
-              {transportation.container_type_code} · {transportation.container_ownership}
-            </strong>
+          <div className="transportation-heading-actions">
+            <a href="#/transportations">← К перевозкам</a>
+            {write && !editing && !editingDetails && (
+              <button onClick={() => setEditingDetails(true)}>Редактировать</button>
+            )}
           </div>
         </div>
+        {!editing && !editingDetails && (
+          <>
+            <div className="shipment-summary transportation-summary">
+              <div>
+                <span>Поставка</span>
+                <a href={`#/shipments/${transportation.shipment_id}`}>
+                  {shipment?.number || 'Открыть поставку'} ↗
+                </a>
+              </div>
+              <div>
+                <span>Клиент</span>
+                <strong>{customerName || '—'}</strong>
+              </div>
+              <div>
+                <span>Тип перевозки</span>
+                <strong>{transportationTypes[transportation.type]}</strong>
+                {transportation.type === 'container' && (
+                  <small className="transportation-container">
+                    {transportation.container_type_code || 'Тип не указан'} ·{' '}
+                    {transportation.container_ownership || 'Принадлежность не указана'}
+                  </small>
+                )}
+                {transportation.hazardous && (
+                  <small className="transportation-hazard">Опасный груз</small>
+                )}
+              </div>
+            </div>
+            <div className="shipment-summary transportation-summary transportation-terms">
+              <div>
+                <span>Incoterms</span>
+                <strong>{transportation.incoterms || '—'}</strong>
+              </div>
+              <div>
+                <span>Загрузка</span>
+                <strong>{transportation.loading || '—'}</strong>
+              </div>
+              <div>
+                <span>Условия перевозки</span>
+                <strong>{transportation.carriage_terms || '—'}</strong>
+              </div>
+            </div>
+          </>
+        )}
+        {editingDetails && (
+          <div className="panel-content transportation-edit-content">
+            <TransportationDetailsForm
+              initial={transportation}
+              shipmentId={transportation.shipment_id}
+              session={session}
+              onSaved={(value) => {
+                setTransportation(value);
+                setEditingDetails(false);
+              }}
+              onCancel={() => setEditingDetails(false)}
+              onError={onError}
+            />
+          </div>
+        )}
         {editing ? (
           <RouteEditor
             initial={transportation}
             session={session}
             customers={customers}
-            allowed={write && !hasActuals}
+            allowed={write}
             onSaved={(value) => {
               setTransportation(value);
               if (location.hash === `#/transportations/${id}/route`)
@@ -174,7 +228,7 @@ export function TransportationPage({
             }}
             onError={onError}
           />
-        ) : (
+        ) : editingDetails ? null : (
           <>
             <CardNavigation onRefresh={() => refresh().catch(onError)}>
               <button aria-pressed={tab === 'route'} onClick={() => setTab('route')}>
@@ -203,20 +257,12 @@ export function TransportationPage({
                         {Intl.DateTimeFormat().resolvedOptions().timeZone}.
                       </p>
                     </div>
-                    {write && !hasActuals && (
+                    {write && transportation.route_segments.length > 0 && (
                       <a className="primary" href={`#/transportations/${id}/route`}>
-                        {transportation.route_segments.length
-                          ? 'Редактировать маршрут'
-                          : 'Добавить маршрут'}
+                        Заполнить участки
                       </a>
                     )}
                   </div>
-                  {hasActuals && (
-                    <p className="route-notice">
-                      Маршрут с фактическими датами нельзя заменить. Для изменения даты используйте
-                      «Исправить».
-                    </p>
-                  )}
                   <RouteView
                     route_segments={transportation.route_segments}
                     customers={customers}
@@ -267,7 +313,7 @@ export function RouteView({
     return (
       <div className="empty">
         <h3>Маршрут ещё не задан</h3>
-        <p>Добавьте участки и плановые даты перевозки.</p>
+        <p>Задайте участки маршрута в поставке. Они появятся здесь автоматически.</p>
       </div>
     );
   return (
@@ -276,8 +322,9 @@ export function RouteView({
         <article className="route-segment" key={route_segment.id}>
           <div className="section-heading">
             <h3>
-              {index + 1}. {modes[route_segment.mode]} · {route_segment.origin.name} →{' '}
-              {route_segment.destination.name}
+              {index + 1}. {modes[route_segment.mode]} ·{' '}
+              {route_segment.origin.name || 'Пункт не указан'} →{' '}
+              {route_segment.destination.name || 'Пункт не указан'}
             </h3>
           </div>
           <p className="route-segment-meta">
@@ -286,6 +333,12 @@ export function RouteView({
             {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
               (route_segment.contractor_id ? 'Недоступен' : 'Не выбран')}
           </p>
+          {route_segment.inherited === false && (
+            <p className="hint">
+              Исторический участок: отсутствует в текущем маршруте поставки. Доступен только
+              просмотр.
+            </p>
+          )}
           <div className="route-segment-dates">
             {(['departure', 'arrival'] as const).map((kind) => {
               const value =
@@ -304,7 +357,7 @@ export function RouteView({
                     )}
                   </span>
                   <span>Факт: {formatDate(value)}</span>
-                  {onActual && (
+                  {onActual && route_segment.inherited !== false && (
                     <button type="button" onClick={() => onActual(route_segment, kind)}>
                       {value ? 'Исправить' : 'Записать факт'}
                     </button>

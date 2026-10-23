@@ -11,14 +11,6 @@ import {
 } from './transportation';
 
 type Draft = { revision: number; route_segments: PlannedRouteSegment[] };
-function emptyRouteSegment(previous?: PlannedRouteSegment): PlannedRouteSegment {
-  return {
-    id: crypto.randomUUID(),
-    mode: 'sea',
-    origin: previous ? { ...previous.destination } : { name: '', country_code: '' },
-    destination: { name: '', country_code: '' },
-  };
-}
 function readDraft(key: string, fallback: Draft): Draft {
   try {
     const value = JSON.parse(sessionStorage.getItem(key) || 'null');
@@ -32,7 +24,7 @@ function readDraft(key: string, fallback: Draft): Draft {
         (route_segment: PlannedRouteSegment) =>
           route_segment &&
           typeof route_segment.id === 'string' &&
-          ['road', 'rail', 'sea'].includes(route_segment.mode) &&
+          route_segment.mode in modes &&
           [route_segment.origin, route_segment.destination].every(
             (point) =>
               point && typeof point.name === 'string' && typeof point.country_code === 'string',
@@ -68,9 +60,9 @@ export function RouteEditor({
   const key = `broker:route-draft:${session.actor}:${initial.id}`;
   const [baseline] = useState<Draft>(() => ({
     revision: initial.revision,
-    route_segments: initial.route_segments.length
-      ? initial.route_segments.map(routeSegment)
-      : [emptyRouteSegment()],
+    route_segments: initial.route_segments
+      .filter((stage) => stage.inherited !== false)
+      .map(routeSegment),
   }));
   const [draft, setDraft] = useState(() => readDraft(key, baseline));
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
@@ -104,16 +96,6 @@ export function RouteEditor({
         i === index ? value : route_segment,
       ),
     }));
-  }
-  function move(index: number, delta: number) {
-    setDraft((old) => {
-      const route_segments = [...old.route_segments];
-      [route_segments[index], route_segments[index + delta]] = [
-        route_segments[index + delta],
-        route_segments[index],
-      ];
-      return { ...old, route_segments };
-    });
   }
   function discard() {
     if (busy) return;
@@ -159,7 +141,7 @@ export function RouteEditor({
   if (!allowed)
     return (
       <div className="panel-content">
-        <p>Редактирование недоступно: проверьте право на изменение и наличие фактических дат.</p>
+        <p>Нет права на изменение перевозок.</p>
         <a href={`#/transportations/${initial.id}`}>Вернуться к перевозке</a>
       </div>
     );
@@ -174,15 +156,9 @@ export function RouteEditor({
       >
         <div className="section-heading">
           <div>
-            <h2>Редактирование маршрута</h2>
-            <p className="hint">
-              Черновик сохраняется только в этой вкладке. Время:{' '}
-              {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-            </p>
+            <h2>Участки маршрута</h2>
+            <p className="hint">Время: {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
           </div>
-          <button type="button" disabled={busy} onClick={discard}>
-            Отменить
-          </button>
         </div>
         {stale && (
           <p className="error" role="alert">
@@ -194,62 +170,11 @@ export function RouteEditor({
           {draft.route_segments.map((route_segment, index) => (
             <section className="route-segment" key={route_segment.id}>
               <div className="section-heading">
-                <h3>Участок {index + 1}</h3>
-                <div className="actions">
-                  <button
-                    type="button"
-                    aria-label={`Поднять участок ${index + 1}`}
-                    disabled={!index}
-                    onClick={() => move(index, -1)}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Опустить участок ${index + 1}`}
-                    disabled={index === draft.route_segments.length - 1}
-                    onClick={() => move(index, 1)}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDraft((old) => ({
-                        ...old,
-                        route_segments: old.route_segments.filter((_, i) => i !== index),
-                      }))
-                    }
-                  >
-                    Удалить
-                  </button>
-                </div>
+                <h3>
+                  {index + 1}. {modes[route_segment.mode]}
+                </h3>
               </div>
               <div className="route-fields">
-                <div className="route-mode-field">
-                  <span id={`transport-label-${route_segment.id}`}>Транспорт</span>
-                  <div
-                    className="transport-options"
-                    role="group"
-                    aria-labelledby={`transport-label-${route_segment.id}`}
-                  >
-                    {Object.entries(modes).map(([value, title]) => (
-                      <button
-                        type="button"
-                        key={value}
-                        aria-pressed={route_segment.mode === value}
-                        onClick={() =>
-                          update(index, {
-                            ...route_segment,
-                            mode: value as PlannedRouteSegment['mode'],
-                          })
-                        }
-                      >
-                        {title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <div className="route-contractor-field">
                   <CustomerSelect
                     label="Подрядчик"
@@ -268,7 +193,6 @@ export function RouteEditor({
                     <label>
                       {point === 'origin' ? 'Откуда' : 'Куда'}
                       <input
-                        required
                         maxLength={256}
                         value={route_segment[point].name}
                         onChange={(event) =>
@@ -280,9 +204,8 @@ export function RouteEditor({
                       />
                     </label>
                     <label>
-                      Код страны
+                      Страна
                       <input
-                        required
                         pattern="[A-Za-z]{2}"
                         minLength={2}
                         maxLength={2}
@@ -328,34 +251,22 @@ export function RouteEditor({
               </div>
             </section>
           ))}
-          <button
-            type="button"
-            disabled={draft.route_segments.length >= 32}
-            onClick={() =>
-              setDraft((old) => ({
-                ...old,
-                route_segments: [
-                  ...old.route_segments,
-                  emptyRouteSegment(old.route_segments.at(-1)),
-                ],
-              }))
-            }
-          >
-            ＋ Добавить участок
-          </button>
         </fieldset>
-        {!draft.route_segments.length && <p className="hint">Добавьте хотя бы один участок.</p>}
+        {!draft.route_segments.length && <p className="hint">Задайте маршрут в поставке.</p>}
         {failure && (
           <p className="error" role="alert">
             {failure}
           </p>
         )}
-        <div className="form-actions">
+        <div className="transportation-form-actions">
+          <button type="button" disabled={busy} onClick={discard}>
+            Отменить
+          </button>
           <button
             className="primary"
             disabled={busy || stale || !dirty || !draft.route_segments.length}
           >
-            {busy ? 'Сохраняем…' : 'Сохранить маршрут'}
+            {busy ? 'Сохраняем…' : 'Сохранить'}
           </button>
         </div>
       </form>

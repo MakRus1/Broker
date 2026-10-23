@@ -1802,3 +1802,204 @@ main > header {
 .directory-lookup .shipment-lookup-options {
   z-index: 40;
 }
+
+.transportation-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.transportation-danger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: end;
+  min-height: 44px;
+}
+.transportation-danger input {
+  width: 18px;
+  height: 18px;
+}
+
+.transportation-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+  padding-bottom: 16px;
+}
+.transportation-summary > div {
+  min-width: 0;
+}
+.transportation-summary strong {
+  overflow-wrap: anywhere;
+}
+.transportation-heading-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-end;
+}
+.transportation-heading-actions button {
+  font-size: 14px;
+  padding: 10px 15px;
+  border: 1px solid #d9e0e9;
+  color: #243247;
+}
+
+.transportation-container,
+.transportation-hazard {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+}
+.transportation-container {
+  color: #6f7d91;
+}
+.transportation-hazard {
+  color: #a4561b;
+}
+@media (max-width: 480px) {
+  .transportation-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.transportation-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+.transportation-form-actions button {
+  height: 44px;
+  padding: 0 18px;
+  line-height: 20px;
+}
+.transportation-editor .transportation-danger {
+  flex-direction: row;
+}
+.transportation-parent {
+  display: inline-block;
+  font-size: 13px;
+  color: #6f7d91;
+  margin-top: 8px;
+}
+.route-editor .route-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.route-editor .point-fields {
+  grid-template-columns: minmax(0, 1fr) 80px;
+}
+.route-editor .transportation-form-actions {
+  position: sticky;
+  bottom: 0;
+  padding-block: 16px;
+  background: white;
+}
+@media (max-width: 640px) {
+  .route-editor .route-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.transportation-edit-content,
+.route-editor {
+  background: white;
+}
+
+.transportation-registry .page-heading {
+  padding: 26px 28px 24px;
+  flex-direction: row;
+  align-items: center;
+}
+.transportation-registry .page-heading h1 {
+  font-size: 25px;
+  margin-bottom: 7px;
+}
+.registry-count {
+  color: #7a8799;
+  font-size: 12px;
+}
+.transportation-registry .surface {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.transportation-table {
+  table-layout: fixed;
+}
+.transportation-table th,
+.transportation-table td {
+  padding: 15px 22px;
+  vertical-align: top;
+}
+.transportation-table th {
+  font-size: 11px;
+  padding-block: 12px;
+}
+.transportation-table th:nth-child(1) {
+  width: 24%;
+}
+.transportation-table th:nth-child(2) {
+  width: 22%;
+}
+.transportation-number-cell > .link {
+  display: inline-block;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.registry-secondary,
+.registry-hazard {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #78869a;
+}
+.registry-hazard {
+  color: #a4561b;
+  margin-top: 4px;
+}
+.transportation-container-cell strong {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6px;
+}
+.registry-ownership {
+  display: inline-block;
+  color: #64738a;
+  background: #f1f4f8;
+  border-radius: 4px;
+  font-size: 10px;
+  padding: 2px 5px;
+}
+.registry-muted {
+  color: #8a96a7;
+}
+.registry-route {
+  display: grid;
+  gap: 6px;
+  line-height: 1.5;
+}
+.registry-route-stage {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  overflow-wrap: anywhere;
+}
+.registry-route-mode {
+  color: #7a8799;
+  font-size: 11px;
+}
+@media (max-width: 480px) {
+  .transportation-registry .page-heading {
+    padding: 22px 18px;
+  }
+  .transportation-table th,
+  .transportation-table td {
+    padding-inline: 12px;
+  }
+}

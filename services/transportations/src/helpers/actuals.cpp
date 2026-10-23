@@ -5,8 +5,7 @@
 #include <helpers/json.hpp>
 
 namespace transportations::helpers {
-void UpdateActual(pg::Transaction& transaction, const std::string& organization,
-    models::Transportation& transportation, const std::string& route_segment_id,
+std::size_t ApplyActual(models::Transportation& transportation, const std::string& route_segment_id,
     models::EventKind event, const std::string& occurred_at, ActualChange change) {
     const auto requested = boost::uuids::string_generator{}(route_segment_id);
     const auto found = std::find_if(transportation.route_segments.begin(),
@@ -24,8 +23,15 @@ void UpdateActual(pg::Transaction& transaction, const std::string& organization,
                        : "Факт уже записан; используйте команду исправления"};
     value = occurred_at;
     domain::ValidateActualTimes(*found);
-    transaction.Execute(sql::kUpdateRouteSegment, organization, transportation.id, route_segment_id,
-        Document(*found));
+    return static_cast<std::size_t>(std::distance(transportation.route_segments.begin(), found));
+}
+
+void UpdateActual(pg::Transaction& transaction, const std::string& organization,
+    models::Transportation& transportation, const std::string& route_segment_id,
+    models::EventKind event, const std::string& occurred_at, ActualChange change) {
+    const auto position = ApplyActual(transportation, route_segment_id, event, occurred_at, change);
+    transaction.Execute(sql::kInsertRouteSegment, organization, transportation.id, route_segment_id,
+        static_cast<std::int64_t>(position), Document(transportation.route_segments.at(position)));
     transaction.Execute(sql::kBumpTransportationRevision, organization, transportation.id);
     ++transportation.revision;
 }

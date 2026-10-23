@@ -28,6 +28,8 @@ ITEM = {
 }
 OPERATION = {'id': ID, 'item_id': ID, 'quantity': 3, 'status': 'pending', 'transportation_ids': []}
 TRANSPORTATION = {
+    'type': 'container',
+    'hazardous': False,
     'id': ID,
     'number': 'T-1',
     'revision': 1,

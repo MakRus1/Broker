@@ -48,13 +48,19 @@ export interface Transportation {
   id: string;
   revision: number;
   shipment_id: string;
-  item_id: string;
-  operation_id: string;
-  container_type_code: string;
-  container_ownership: 'SOC' | 'COC';
+  item_id?: string;
+  operation_id?: string;
+  container_type_code?: string;
+  container_ownership?: 'SOC' | 'COC';
+  type: 'consolidated' | 'container' | 'air' | 'oversized' | 'rail' | 'vessel';
+  hazardous: boolean;
+  incoterms?: string;
+  loading?: string;
+  carriage_terms?: string;
   route_segments: {
     id: string;
-    mode: 'sea' | 'road' | 'rail';
+    mode: keyof typeof modes;
+    inherited?: boolean;
     contractor_id?: string;
     planned_departure_at?: string;
     planned_arrival_at?: string;
@@ -141,7 +147,23 @@ export const statusName = {
   succeeded: 'Созданы',
   rejected: 'Отклонено',
 } as const;
-export const modes = { sea: 'Море', road: 'Авто', rail: 'ЖД' } as const;
+export const modes = {
+  sea: 'Море',
+  international_rail: 'Международное ЖД',
+  international_road: 'Международное авто',
+  rail: 'ЖД РФ',
+  road: 'Авто',
+  pickup: 'Вывоз',
+  air: 'Авиа',
+} as const;
+export const transportationTypes = {
+  consolidated: 'Сборка',
+  container: 'Контейнер',
+  air: 'Авиа',
+  oversized: 'Негабарит',
+  rail: 'ЖД',
+  vessel: 'Судно',
+} as const;
 export const ownership = { COC: 'COC', SOC: 'SOC' } as const;
 export function operationStorageKey(subject: string, shipment: string) {
   return `broker.operations:${subject}:${shipment}`;

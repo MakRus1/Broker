@@ -14,11 +14,45 @@
 #include <userver/utils/text.hpp>
 
 namespace shipments::helpers {
-inline auto GetShipmentSettings(const Deps& deps, const std::string& organization,
+inline auto GetPlatformShipmentSettings(const Deps& deps, const std::string& organization,
     const std::optional<std::string>& customer = std::nullopt) {
     return deps.configs.GetSnapshot().Get(configs::SHIPMENT_SETTINGS,
         config_contexts::ShipmentOrganizationContext{
             .CustomerId = customer, .OrganizationId = organization});
+}
+
+inline std::optional<pgtypes::OrganizationShipmentRulesV1> LoadOrganizationRules(
+    const Deps& deps, const std::string& organization) {
+    const auto rows = deps.pg_cluster->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization);
+    if (rows.IsEmpty())
+        return std::nullopt;
+    return rows.AsSingleRow<pgtypes::OrganizationShipmentRulesV1>();
+}
+
+inline auto GetShipmentSettings(const Deps& deps, const std::string& organization,
+    const std::optional<std::string>& customer = std::nullopt) {
+    auto result = GetPlatformShipmentSettings(deps, organization, customer);
+    const auto limits = GetPlatformShipmentSettings(deps, organization);
+    const auto stored = LoadOrganizationRules(deps, organization);
+    if (stored.has_value()) {
+        const auto& rules = stored.value().Rules;
+        result.NumberTemplate = rules.NumberTemplate;
+        result.ResetNumberYearly = rules.ResetNumberYearly;
+        result.Statuses = rules.Statuses;
+        result.RouteTypes = rules.RouteTypes;
+        result.PlannedContainers = rules.PlannedContainers;
+        result.ContainerTypes = rules.ContainerTypes;
+    }
+    const auto intersect = [](auto& values, const auto& allowed) {
+        std::erase_if(values, [&](const auto& value) {
+            return std::find(allowed.begin(), allowed.end(), value) == allowed.end();
+        });
+    };
+    intersect(result.RouteTypes, limits.RouteTypes);
+    intersect(result.ContainerTypes, limits.ContainerTypes);
+    result.PlannedContainers = result.PlannedContainers && limits.PlannedContainers;
+    return result;
 }
 
 inline std::optional<std::string> CleanText(const std::optional<std::string>& value) {
@@ -146,9 +180,9 @@ inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
 }
 
 inline void RememberCargo(pg::Transaction& transaction, const std::string& organization,
-    const std::optional<std::string>& description) {
+    const boost::uuids::uuid& customer, const std::optional<std::string>& description) {
     if (description.has_value())
-        transaction.Execute(sql::kRememberCargo, organization, description.value(),
+        transaction.Execute(sql::kRememberCargo, organization, customer, description.value(),
             userver::utils::text::ToLower(description.value()));
 }
 }  // namespace shipments::helpers

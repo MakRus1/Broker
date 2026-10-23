@@ -38,4 +38,24 @@ inline void ValidateLogist(const Deps& deps,
     if (subject.has_value() && FindEmployees(deps, context, std::nullopt, subject, 1).empty())
         throw ApiError{400, "invalid_logist", "Выберите действующего сотрудника организации"};
 }
+
+inline std::optional<std::string> CustomerLogist(const Deps& deps,
+    const userver::server::request::RequestContext& context, const std::string& customer) try {
+    namespace api = clients::counterparties::ApiV1CounterpartiesGet;
+    const auto result = deps.counterparties.ApiV1CounterpartiesGet(
+        api::Request{.body = {.id = customer}}, platform::auth::GetAccessToken(context));
+    return result.counterparty.logist.value_or(std::nullopt);
+} catch (const platform::http::ApiError& error) {
+
+    if (error.GetStatus() == 404)
+        throw ApiError{400, "invalid_customer", "Клиент не найден в организации"};
+    throw ApiError{503, "customer_directory_unavailable", "Не удалось получить карточку клиента"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::TransportError&) {
+    throw ApiError{503, "customer_directory_unavailable", "Не удалось получить карточку клиента"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError{
+        503, "customer_directory_unavailable", "Некорректный ответ справочника контрагентов"};
+}
 }  // namespace shipments::helpers

@@ -1,3 +1,4 @@
+import { EmployeeName } from './EmployeeName';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
@@ -130,12 +131,20 @@ export function CounterpartyHistory({
                   <tr key={change.key} className={change.changed ? 'changed' : ''}>
                     <th scope="row">{change.label}</th>
                     <td className={change.changed ? 'before' : ''}>
-                      {created
-                        ? 'Контрагент ещё не создан'
-                        : historyFieldValue(selected.before, change.key)}
+                      {created ? (
+                        'Контрагент ещё не создан'
+                      ) : change.key === 'logist' ? (
+                        <EmployeeName subject={selected.before?.logist} session={session} />
+                      ) : (
+                        historyFieldValue(selected.before, change.key)
+                      )}
                     </td>
                     <td className={change.changed ? 'after' : ''}>
-                      {historyFieldValue(selected.after, change.key)}
+                      {change.key === 'logist' ? (
+                        <EmployeeName subject={selected.after.logist} session={session} />
+                      ) : (
+                        historyFieldValue(selected.after, change.key)
+                      )}
                     </td>
                   </tr>
                 ))}

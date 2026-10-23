@@ -169,3 +169,23 @@ types:
       type: uuid
     - name: type
       type: text
+  public.shipment_business_rules_v1:
+    fields:
+    - name: number_template
+      type: text
+    - name: reset_number_yearly
+      type: boolean
+    - name: statuses
+      type: text[]
+    - name: route_types
+      type: text[]
+    - name: planned_containers
+      type: boolean
+    - name: container_types
+      type: text[]
+  public.organization_shipment_rules_v1:
+    fields:
+    - name: rules
+      type: public.shipment_business_rules_v1
+    - name: revision
+      type: bigint

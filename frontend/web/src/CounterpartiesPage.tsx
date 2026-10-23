@@ -1,3 +1,4 @@
+import { EmployeeName } from './EmployeeName';
 import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -248,6 +249,12 @@ export function CounterpartiesPage({
                         <dd>{value || 'Не указано'}</dd>
                       </div>
                     ))}
+                    <div>
+                      <dt>Логист</dt>
+                      <dd>
+                        <EmployeeName subject={item.logist} session={session} />
+                      </dd>
+                    </div>
                   </dl>
                   <section className="counterparty-contacts">
                     <h2>Контактные лица</h2>

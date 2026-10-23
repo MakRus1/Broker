@@ -28,6 +28,7 @@ const fields = {
   legal_address: 'Юридический адрес',
   roles: 'Роли',
   contacts: 'Контактные лица',
+  logist: 'Логист',
   archived: 'Состояние',
 } as const;
 export type HistoryField = keyof typeof fields;

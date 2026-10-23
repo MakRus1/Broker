@@ -7,7 +7,9 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::shipments::ApiV1ShipmentsCargoSuggestions;
     const auto result = deps.shipments.ApiV1ShipmentsCargoSuggestions(
-        api::Request{.body = {.query = request.body.query}}, session.Access);
+        api::Request{
+            .body = {.customer_id = request.body.customer_id, .query = request.body.query}},
+        session.Access);
     return Response200{.items = result.items};
 }
 }  // namespace web_bff::views::api::v1::shipments::cargo_suggestions

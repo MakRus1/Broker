@@ -1,4 +1,5 @@
 #include <helpers/details.hpp>
+#include <helpers/employees.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/create/view.hpp>
@@ -12,6 +13,8 @@ Response View::Handle(
         platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_WRITE);
         const auto organization = platform::auth::GetOrganization(identity);
         const auto value = Prepare(request.body);
+        if (request.body.logist.has_value())
+            ValidateLogist(deps, context, request.body.logist.value());
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         transaction.Execute(sql::kLockCounterpartyIdentity, organization, value.id);
@@ -22,7 +25,7 @@ Response View::Handle(
         const auto rows = inserted.IsEmpty()
             ? transaction.Execute(sql::kGetCounterparty, organization, value.id)
             : inserted;
-        const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV4>());
+        const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV5>());
         if (Document(result) != Document(value))
             throw ApiError{409, "id_conflict", "Идентификатор занят другим контрагентом"};
         if (!inserted.IsEmpty())
@@ -38,6 +41,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         case 409:
             return Response409{.error = error.Code, .message = error.what()};
         default:

@@ -25,7 +25,8 @@ class PermissionCatalogTest(unittest.TestCase):
         sql = register_sql('shipments', 'image', values)
         self.assertIn('ON CONFLICT', sql)
         self.assertNotIn('DELETE', sql)
-        self.assertNotIn('counterparties.read', sql)
+        self.assertNotIn('"code": "counterparties.read"', sql)
+        self.assertIn('"counterparties.read"', sql)
 
     def test_reconciliation_requires_live_versions(self):
         with self.assertRaises(ValueError):

@@ -10,6 +10,9 @@ clients:
   organizations:
     service: organizations
     transport: http
+  shipments:
+    service: shipments
+    transport: http
 dashboard:
   title: Broker · Административный BFF
   tags:

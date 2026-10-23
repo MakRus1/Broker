@@ -21,8 +21,9 @@ Response View::Handle(
         if (saved.has_value())
             return Response201{.shipment = saved.value()};
         const auto settings = GetShipmentSettings(deps, organization, request.body.customer_id);
-        const auto logist = request.body.logist.has_value() ? CleanText(request.body.logist.value())
-                                                            : settings.DefaultLogist;
+        const auto logist = request.body.logist.has_value()
+            ? CleanText(request.body.logist.value())
+            : CustomerLogist(deps, context, request.body.customer_id);
         ValidateLogist(deps, context, logist);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -37,7 +38,7 @@ Response View::Handle(
         card.Reference = request.body.reference.value_or("");
         card.ShipmentDate = Today();
         card.Status = settings.Statuses.front();
-        card.Logist = settings.DefaultLogist;
+        card.Logist = logist;
         ApplyCard(request.body, card);
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
@@ -50,7 +51,7 @@ Response View::Handle(
             throw ApiError{400, "invalid_number", "Укажите номер поставки"};
         const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
                              .AsSingleRow<pgtypes::ShipmentV2>();
-        RememberCargo(transaction, organization, row.CargoDescription);
+        RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
         const auto result = Convert(row);
         SaveReplay(transaction, organization, "create_shipment", request.body, result);
         WriteAudit(transaction, organization, identity, "create_shipment", result.id, request.body,

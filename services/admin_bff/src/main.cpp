@@ -28,6 +28,7 @@
 // SERVICE_INCLUDES_BEGIN
 #include <clients/config_admin/client.hpp>
 #include <clients/organizations/client.hpp>
+#include <clients/shipments/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
@@ -71,6 +72,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<admin_bff::clients::config_admin::Component>();
     component_list.Append<admin_bff::clients::organizations::Component>();
+    component_list.Append<admin_bff::clients::shipments::Component>();
     // SERVICE_REGISTRATION_END
 
     component_list = admin_bff::openapi::AppendGeneratedHandlers(component_list);

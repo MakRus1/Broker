@@ -13,7 +13,7 @@ export interface ShipmentSettings {
   route_types: string[];
   planned_containers: boolean;
   container_types: string[];
-  default_logist?: string | null;
+  customer_logist?: string | null;
 }
 type DictionaryValue = { code: string; name: string };
 type ShipmentDictionaries = {
@@ -213,7 +213,7 @@ function ShipmentCard({
             JSON.stringify({
               ...JSON.parse(previous),
               status: value.statuses[0],
-              logist: value.default_logist ?? '',
+              logist: value.customer_logist ?? '',
             }),
           );
         }
@@ -221,7 +221,7 @@ function ShipmentCard({
           const previousAutomaticLogist = automaticLogist.current;
           const previousAutomaticStatus = automaticStatus.current;
           automaticStatus.current = value.statuses[0];
-          automaticLogist.current = value.default_logist ?? '';
+          automaticLogist.current = value.customer_logist ?? '';
           setDraft((old) => ({
             ...old,
             status:
@@ -230,7 +230,7 @@ function ShipmentCard({
                 : old.status,
             logist:
               !manualLogist.current && (!old.logist || old.logist === previousAutomaticLogist)
-                ? (value.default_logist ?? '')
+                ? (value.customer_logist ?? '')
                 : old.logist,
           }));
         }
@@ -241,7 +241,12 @@ function ShipmentCard({
     return () => controller.abort();
   }, [props.session, draft.customer_id, initial?.id]);
   useEffect(() => {
-    if (!cargoOpen) return;
+    if (!cargoOpen || !draft.customer_id) {
+      setSuggestions([]);
+      setCargoLoading(false);
+      setCargoFailure('');
+      return;
+    }
     const controller = new AbortController();
     setCargoLoading(true);
     setSuggestions([]);
@@ -249,7 +254,7 @@ function ShipmentCard({
       request<{ items: string[] }>(
         '/api/v1/shipments/cargo-suggestions',
         props.session,
-        { query: draft.cargo_description.slice(0, 200) },
+        { customer_id: draft.customer_id, query: draft.cargo_description.slice(0, 200) },
         controller.signal,
       )
         .then((result) => {
@@ -269,10 +274,13 @@ function ShipmentCard({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [props.session, draft.cargo_description, cargoOpen]);
+  }, [props.session, draft.customer_id, draft.cargo_description, cargoOpen]);
   async function removeSuggestion(value: string) {
     try {
-      await request('/api/v1/shipments/cargo-suggestions/remove', props.session, { value });
+      await request('/api/v1/shipments/cargo-suggestions/remove', props.session, {
+        customer_id: draft.customer_id,
+        value,
+      });
       setSuggestions((old) => old.filter((item) => item !== value));
     } catch (error) {
       setCargoFailure(error instanceof Error ? error.message : 'Не удалось удалить подсказку');

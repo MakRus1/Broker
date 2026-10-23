@@ -245,7 +245,11 @@ async def test_custom_role_updates_permissions_for_all_assigned_members(api, ide
         ADMIN + '/roles/update',
         {
             **body,
-            'permissions': ['organizations.read_employees', 'shipments.read'],
+            'permissions': [
+                'counterparties.read',
+                'organizations.read_employees',
+                'shipments.read',
+            ],
             'expected_revision': role['revision'],
         },
         user='org-admin',
@@ -298,7 +302,11 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
             'id': 'foreign',
             'name': 'Чужая роль',
             'description': '',
-            'permissions': ['organizations.read_employees', 'shipments.read'],
+            'permissions': [
+                'counterparties.read',
+                'organizations.read_employees',
+                'shipments.read',
+            ],
         },
         user='org-admin',
         expected=403,
@@ -310,7 +318,11 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
             'id': 'administrator',
             'name': 'Без управления',
             'description': '',
-            'permissions': ['organizations.read_employees', 'shipments.read'],
+            'permissions': [
+                'counterparties.read',
+                'organizations.read_employees',
+                'shipments.read',
+            ],
             'expected_revision': 1,
         },
         user='org-admin',
@@ -492,3 +504,27 @@ async def test_employee_search_filters_name_subject_and_limit(api):
         user='viewer',
     )
     assert missing['items'] == []
+
+
+@pytest.mark.parametrize(
+    'user,organization,expected',
+    [
+        ('platform', ORGANIZATION, 200),
+        ('org-admin', ORGANIZATION, 200),
+        ('viewer', ORGANIZATION, 403),
+        ('org-admin', OTHER_ORGANIZATION, 403),
+    ],
+)
+async def test_administration_check_uses_target_organization(api, user, organization, expected):
+    await api.call(
+        '/api/organizations/administration/check',
+        {'organization_id': organization},
+        user=user,
+        expected=expected,
+    )
+
+
+async def test_platform_admin_can_search_employees_in_selected_organization(api):
+    result = await api.call('/api/organizations/employees/list', {'organization_id': ORGANIZATION}, user='platform')
+    assert any(item['subject'] == 'org-admin' for item in result['items'])
+    await api.call('/api/organizations/employees/list', {'organization_id': str(uuid4())}, user='platform', expected=403)

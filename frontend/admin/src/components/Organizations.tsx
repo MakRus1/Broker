@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { request, type Session } from '../api';
+import { ShipmentSettings } from './organizations/ShipmentSettings';
 import { EditorPanel } from './organizations/EditorPanel';
 import { MemberEditor } from './organizations/MemberEditor';
 import { PlatformAccessEditor } from './organizations/PlatformAccessEditor';
@@ -34,7 +35,7 @@ export function Organizations({
   const [selected, setSelected] = useState<Organization | undefined>(
     access.platform_admin ? undefined : ownOrganizations[0],
   );
-  const [tab, setTab] = useState<'members' | 'roles'>('members');
+  const [tab, setTab] = useState<'members' | 'roles' | 'shipments'>('members');
   const [members, setMembers] = useState<Member[]>([]);
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -412,107 +413,118 @@ export function Organizations({
             <button role="tab" aria-selected={tab === 'roles'} onClick={() => setTab('roles')}>
               Роли и доступы
             </button>
+            <button
+              role="tab"
+              aria-selected={tab === 'shipments'}
+              onClick={() => setTab('shipments')}
+            >
+              Правила поставок
+            </button>
           </div>
-          <section className="organization-content" role="tabpanel">
-            <div className="organization-content-heading">
-              <h2>{tab === 'members' ? 'Сотрудники' : 'Роли и доступы'}</h2>
-              <div className="actions">
-                <button
-                  disabled={busy || loading}
-                  onClick={() =>
-                    void run(() =>
-                      tab === 'members' ? loadMembers(selected) : loadRoles(selected),
-                    )
-                  }
-                >
-                  Обновить
-                </button>
-                <button
-                  className="primary"
-                  disabled={busy || loading}
-                  onClick={() => openEditor({ kind: tab === 'members' ? 'member' : 'role' })}
-                >
-                  {tab === 'members' ? 'Добавить сотрудника' : 'Создать роль'}
-                </button>
-              </div>
-            </div>
-            {loading ? (
-              <p role="status">Загрузка…</p>
-            ) : tab === 'members' ? (
-              <>
-                <div className="members-table">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Сотрудник</th>
-                        <th>Роль</th>
-                        <th>Доступ</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {members.map((member) => (
-                        <tr
-                          key={member.subject}
-                          className="organization-row"
-                          onClick={() => openEditor({ kind: 'member', member })}
-                        >
-                          <td>
-                            <button className="organization-open">{member.display_name}</button>
-                            <small>
-                              {member.username} · {member.email}
-                            </small>
-                          </td>
-                          <td>{roleName(member.role)}</td>
-                          <td>
-                            <span
-                              className={`organization-status ${member.enabled ? 'active' : ''}`}
-                            >
-                              {member.enabled ? 'Разрешён' : 'Отключён'}
-                            </span>
-                          </td>
-                          <td>
-                            <button>Изменить</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {tab === 'shipments' ? (
+            <ShipmentSettings key={selected.id} session={session} organization={selected.id} />
+          ) : (
+            <section className="organization-content" role="tabpanel">
+              <div className="organization-content-heading">
+                <h2>{tab === 'members' ? 'Сотрудники' : 'Роли и доступы'}</h2>
+                <div className="actions">
+                  <button
+                    disabled={busy || loading}
+                    onClick={() =>
+                      void run(() =>
+                        tab === 'members' ? loadMembers(selected) : loadRoles(selected),
+                      )
+                    }
+                  >
+                    Обновить
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={busy || loading}
+                    onClick={() => openEditor({ kind: tab === 'members' ? 'member' : 'role' })}
+                  >
+                    {tab === 'members' ? 'Добавить сотрудника' : 'Создать роль'}
+                  </button>
                 </div>
-                {!members.length && (
-                  <div className="organization-empty">
-                    <h3>Добавьте первого сотрудника</h3>
-                    <p>Начните с администратора, который будет управлять командой.</p>
-                  </div>
-                )}
-                {moreMembers && (
-                  <button
-                    disabled={busy}
-                    onClick={() => void run(() => loadMembers(selected, true))}
-                  >
-                    Показать ещё
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="organization-role-list">
-                {roles.map((role) => (
-                  <button
-                    key={role.id}
-                    className="organization-role-card"
-                    onClick={() => openEditor({ kind: 'role', role })}
-                  >
-                    <strong>{role.name}</strong>
-                    <span>{role.description || 'Без описания'}</span>
-                    <small>
-                      Разрешений: {role.permissions.length}
-                      <span aria-hidden="true">Изменить →</span>
-                    </small>
-                  </button>
-                ))}
               </div>
-            )}
-          </section>
+              {loading ? (
+                <p role="status">Загрузка…</p>
+              ) : tab === 'members' ? (
+                <>
+                  <div className="members-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Сотрудник</th>
+                          <th>Роль</th>
+                          <th>Доступ</th>
+                          <th />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {members.map((member) => (
+                          <tr
+                            key={member.subject}
+                            className="organization-row"
+                            onClick={() => openEditor({ kind: 'member', member })}
+                          >
+                            <td>
+                              <button className="organization-open">{member.display_name}</button>
+                              <small>
+                                {member.username} · {member.email}
+                              </small>
+                            </td>
+                            <td>{roleName(member.role)}</td>
+                            <td>
+                              <span
+                                className={`organization-status ${member.enabled ? 'active' : ''}`}
+                              >
+                                {member.enabled ? 'Разрешён' : 'Отключён'}
+                              </span>
+                            </td>
+                            <td>
+                              <button>Изменить</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {!members.length && (
+                    <div className="organization-empty">
+                      <h3>Добавьте первого сотрудника</h3>
+                      <p>Начните с администратора, который будет управлять командой.</p>
+                    </div>
+                  )}
+                  {moreMembers && (
+                    <button
+                      disabled={busy}
+                      onClick={() => void run(() => loadMembers(selected, true))}
+                    >
+                      Показать ещё
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="organization-role-list">
+                  {roles.map((role) => (
+                    <button
+                      key={role.id}
+                      className="organization-role-card"
+                      onClick={() => openEditor({ kind: 'role', role })}
+                    >
+                      <strong>{role.name}</strong>
+                      <span>{role.description || 'Без описания'}</span>
+                      <small>
+                        Разрешений: {role.permissions.length}
+                        <span aria-hidden="true">Изменить →</span>
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
       {editor?.kind === 'member' && (

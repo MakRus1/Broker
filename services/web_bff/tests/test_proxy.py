@@ -9,7 +9,7 @@ SHIPMENT = {
     'id': ID,
     'revision': 1,
     'number': 'S-1',
-    'customer_id': CUSTOMER,
+    'customer_id': '33333333-3333-4333-8333-333333333333',
     'reference': 'Тест',
     'shipment_date': '2026-10-22',
     'status': 'Новая',
@@ -86,7 +86,7 @@ COUNTERPARTY = {
         ),
         (
             'shipments/create',
-            {'customer_id': CUSTOMER, 'idempotency_key': ID},
+            {'customer_id': '33333333-3333-4333-8333-333333333333', 'idempotency_key': ID},
             {'shipment': SHIPMENT},
             201,
         ),
@@ -115,7 +115,7 @@ COUNTERPARTY = {
             'shipments/settings',
             {},
             {
-                'default_logist': None,
+                'customer_logist': None,
                 'number_template': 'S-{sequence}',
                 'reset_number_yearly': False,
                 'statuses': ['Новая'],
@@ -142,8 +142,18 @@ COUNTERPARTY = {
             {'items': [{'subject': 'employee-1', 'display_name': 'Иванов Иван'}]},
             200,
         ),
-        ('shipments/cargo-suggestions', {'query': 'груз'}, {'items': ['Груз']}, 200),
-        ('shipments/cargo-suggestions/remove', {'value': 'Груз'}, {'deleted': True}, 200),
+        (
+            'shipments/cargo-suggestions',
+            {'customer_id': '33333333-3333-4333-8333-333333333333', 'query': 'груз'},
+            {'items': ['Груз']},
+            200,
+        ),
+        (
+            'shipments/cargo-suggestions/remove',
+            {'customer_id': '33333333-3333-4333-8333-333333333333', 'value': 'Груз'},
+            {'deleted': True},
+            200,
+        ),
         ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM]}, 200),
         (
             'shipment-items/update',

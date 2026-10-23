@@ -43,7 +43,7 @@ def configure_auth(mockserver_info):
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url
-
+        config_vars['client-counterparties-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -69,7 +69,13 @@ def api(service_client, auth_key):
             roles = (
                 roles
                 if roles is not None
-                else ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.create']
+                else [
+                    'counterparties.read',
+                    'organizations.read_employees',
+                    'shipments.read',
+                    'shipments.write',
+                    'transportations.create',
+                ]
             )
             token = auth_key.token(
                 user,
@@ -82,7 +88,9 @@ def api(service_client, auth_key):
             response = await service_client.post(
                 path, json=body, headers={'Authorization': 'Bearer ' + token}
             )
-            assert response.status == expected, response.text
+            assert response.status in (
+                expected if isinstance(expected, tuple) else (expected,)
+            ), response.text
             return response.json()
 
     return Client()
@@ -123,6 +131,7 @@ def _shipment_config_updates(userver_config_testsuite):
     def patch(config, config_vars):
         userver_config_testsuite(config, config_vars)
         config_vars['config-updates-enabled'] = True
+
     return patch
 
 
@@ -132,6 +141,47 @@ def employee_directory(mockserver):
     def employees(request):
         body = request.json
         subject = body.get('subject')
-        items = [{'subject': 'logist-author', 'display_name': 'Иванов Иван'},
-                 {'subject': 'logist-default', 'display_name': 'Петров Пётр'}]
+        items = [
+            {'subject': 'logist-author', 'display_name': 'Иванов Иван'},
+            {'subject': 'logist-default', 'display_name': 'Петров Пётр'},
+        ]
         return {'items': [item for item in items if not subject or item['subject'] == subject]}
+
+
+@pytest.fixture(autouse=True)
+def customer_directory(mockserver):
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def customer(request):
+        return {
+            'counterparty': {
+                'id': request.json['id'],
+                'name': 'Клиент',
+                'revision': 1,
+                'archived': False,
+                'legal_name': None,
+                'country_code': None,
+                'tax_id': None,
+                'registration_id': None,
+                'legal_address': None,
+                'roles': ['customer'],
+                'contacts': [],
+                'logist': None,
+            }
+        }
+
+
+@pytest.fixture(autouse=True)
+def organization_administration(mockserver):
+    import base64
+    import json
+
+    @mockserver.json_handler('/api/organizations/administration/check')
+    def administration(request):
+        token = request.headers['Authorization'].split()[1].split('.')[1]
+        claims = json.loads(base64.urlsafe_b64decode(token + '=' * (-len(token) % 4)))
+        expected = {'author': ORGANIZATION, 'other': OTHER_ORGANIZATION}.get(claims['sub'])
+        if expected != request.json['organization_id']:
+            return mockserver.make_response(
+                status=403, json={'error': 'forbidden', 'message': 'Forbidden'}
+            )
+        return {'organization_id': expected}

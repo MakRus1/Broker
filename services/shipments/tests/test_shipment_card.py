@@ -144,17 +144,31 @@ async def test_catalog_is_source_for_validation(api, pgsql):
 async def test_cargo_suggestions_are_isolated_and_removed_values_stay_hidden(api):
     body = creation(cargo_description='Комплектующие')
     await api.post('/api/v1/shipments/create', body, expected=201)
-    assert (await api.post('/api/v1/shipments/cargo-suggestions', {'query': 'компл'}))['items'] == [
-        'Комплектующие'
-    ]
-    assert (await api.post('/api/v1/shipments/cargo-suggestions', {}, user='other'))['items'] == []
     assert (
-        await api.post('/api/v1/shipments/cargo-suggestions/remove', {'value': 'Комплектующие'})
+        await api.post(
+            '/api/v1/shipments/cargo-suggestions',
+            {'customer_id': body['customer_id'], 'query': 'компл'},
+        )
+    )['items'] == ['Комплектующие']
+    assert (
+        await api.post(
+            '/api/v1/shipments/cargo-suggestions',
+            {'customer_id': body['customer_id']},
+            user='other',
+        )
+    )['items'] == []
+    assert (
+        await api.post(
+            '/api/v1/shipments/cargo-suggestions/remove',
+            {'customer_id': body['customer_id'], 'value': 'Комплектующие'},
+        )
     )['deleted']
     await api.post(
         '/api/v1/shipments/create', {**body, 'idempotency_key': str(uuid4())}, expected=201
     )
-    assert (await api.post('/api/v1/shipments/cargo-suggestions', {}))['items'] == []
+    assert (
+        await api.post('/api/v1/shipments/cargo-suggestions', {'customer_id': body['customer_id']})
+    )['items'] == []
 
 
 def settings_value(**overrides):
@@ -270,19 +284,33 @@ async def test_route_segment_ids_are_preserved_and_duplicates_rejected(api):
 async def test_cargo_suggestions_limit_and_server_filter(api, pgsql):
     from conftest import ORGANIZATION
 
+    body = creation()
+
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
             '''
-            INSERT INTO cargo_suggestions (organization_id, value, search_value)
-            SELECT %s::UUID, 'Описание ' || index, 'описание ' || index
+            INSERT INTO customer_cargo_suggestions (organization_id, customer_id, value, search_value)
+            SELECT %s::UUID, %s::UUID, 'Описание ' || index, 'описание ' || index
             FROM generate_series(1, 1000) AS index
         ''',
-            (ORGANIZATION,),
+            (ORGANIZATION, body['customer_id']),
         )
-    assert len((await api.post('/api/v1/shipments/cargo-suggestions', {}))['items']) == 20
-    assert (await api.post('/api/v1/shipments/cargo-suggestions', {'query': 'Описание 1000'}))[
-        'items'
-    ] == ['Описание 1000']
+    assert (
+        len(
+            (
+                await api.post(
+                    '/api/v1/shipments/cargo-suggestions', {'customer_id': body['customer_id']}
+                )
+            )['items']
+        )
+        == 20
+    )
+    assert (
+        await api.post(
+            '/api/v1/shipments/cargo-suggestions',
+            {'customer_id': body['customer_id'], 'query': 'Описание 1000'},
+        )
+    )['items'] == ['Описание 1000']
 
 
 @pytest.mark.parametrize('subject', ['missing-employee', 'foreign-employee'])
@@ -291,28 +319,29 @@ async def test_logist_must_be_active_member(api, subject):
     assert result['error'] == 'invalid_logist'
 
 
-@pytest.mark.config(
-    SHIPMENT_SETTINGS={
-        'clauses': [
-            {
-                'title': 'Логист клиента',
-                'predicates': [
-                    {
-                        'field': 'customer_id',
-                        'type': 'eq',
-                        'value': '33333333-3333-4333-8333-333333333333',
-                    }
-                ],
-                'value': settings_value(default_logist='logist-default'),
+async def test_customer_logist_can_be_overridden_or_cleared(api, mockserver):
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def customer_record(request):
+        return {
+            'counterparty': {
+                'id': request.json['id'],
+                'name': 'Клиент',
+                'revision': 1,
+                'archived': False,
+                'legal_name': None,
+                'country_code': None,
+                'tax_id': None,
+                'registration_id': None,
+                'legal_address': None,
+                'roles': ['customer'],
+                'contacts': [],
+                'logist': 'logist-default',
             }
-        ],
-        'default': settings_value(),
-    }
-)
-async def test_customer_default_logist_can_be_overridden_or_cleared(api):
+        }
+
     customer = '33333333-3333-4333-8333-333333333333'
     settings = await api.post('/api/v1/shipments/settings', {'customer_id': customer})
-    assert settings['default_logist'] == 'logist-default'
+    assert settings['customer_logist'] == 'logist-default'
     for fields, expected in [
         ({}, 'logist-default'),
         ({'logist': 'logist-author'}, 'logist-author'),
@@ -356,3 +385,28 @@ async def test_employee_directory_outage_is_explicit_and_does_not_create_shipmen
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT COUNT(*) FROM shipments')
         assert cursor.fetchone()[0] == 0
+
+
+async def test_cargo_suggestions_are_scoped_to_customer(api):
+    first = creation(cargo_description='Оборудование')
+    second = creation(cargo_description='Оборудование')
+    await api.post('/api/v1/shipments/create', first, expected=201)
+    await api.post('/api/v1/shipments/create', second, expected=201)
+    await api.post(
+        '/api/v1/shipments/cargo-suggestions/remove',
+        {'customer_id': first['customer_id'], 'value': 'Оборудование'},
+    )
+    assert (
+        await api.post('/api/v1/shipments/cargo-suggestions', {'customer_id': first['customer_id']})
+    )['items'] == []
+    assert (
+        await api.post(
+            '/api/v1/shipments/cargo-suggestions', {'customer_id': second['customer_id']}
+        )
+    )['items'] == ['Оборудование']
+
+
+async def test_settings_without_customer_have_no_assigned_logist(api):
+    settings = await api.post('/api/v1/shipments/settings', {})
+    assert settings['customer_logist'] is None
+    assert 'default_logist' not in settings

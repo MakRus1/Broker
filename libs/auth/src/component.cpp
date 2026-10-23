@@ -198,7 +198,8 @@ Identity Component::Authorize(const std::string& path, const std::string& author
     const auto service_client = state_->ServiceClients.find(permission->second);
     const auto& access_url =
         state_->PlatformUrl.empty() ? state_->OrganizationUrl : state_->PlatformUrl;
-    if (!access_url.empty() && service_client == state_->ServiceClients.end()) {
+    if (permission->second != "authenticated" && !access_url.empty() &&
+        service_client == state_->ServiceClients.end()) {
         if (organization.size() > 36)
             throw Forbidden{};
         userver::formats::json::ValueBuilder body;

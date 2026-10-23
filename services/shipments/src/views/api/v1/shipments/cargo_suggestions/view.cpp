@@ -7,10 +7,10 @@ Response View::Handle(
     using namespace ::shipments::helpers;
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     return Response200{
-        .items =
-            deps.pg_cluster
-                ->Execute(pg::ClusterHostType::kSlave, sql::kListCargoSuggestions, organization,
-                    userver::utils::text::ToLower(request.body.query.value_or("")))
-                .AsContainer<std::vector<std::string>>()};
+        .items = deps.pg_cluster
+                     ->Execute(pg::ClusterHostType::kSlave, sql::kListCargoSuggestions,
+                         organization, request.body.customer_id,
+                         userver::utils::text::ToLower(request.body.query.value_or("")))
+                     .AsContainer<std::vector<std::string>>()};
 }
 }  // namespace shipments::views::api::v1::shipments::cargo_suggestions

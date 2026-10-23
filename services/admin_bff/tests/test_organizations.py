@@ -69,3 +69,40 @@ async def test_organization_admin_has_no_implicit_config_permissions(browser, oi
     response = await browser.get('/api/organizations/me')
     assert response.status == 200
     assert response.json()['managed_organization_ids'] == [ORG]
+
+
+@pytest.mark.parametrize('action', ['get', 'update'])
+async def test_shipment_rules_proxy_preserves_cookie_csrf_and_token(browser, mockserver, action):
+    rules = {
+        'number_template': 'ABC{sequence}',
+        'reset_number_yearly': False,
+        'statuses': ['Новая'],
+        'route_types': ['sea'],
+        'planned_containers': True,
+        'container_types': ['40HC'],
+    }
+    body = {'organization_id': ORG}
+    if action == 'update':
+        body.update(expected_revision=0, rules=rules)
+    result = {
+        'revision': 1,
+        'rules': rules,
+        'allowed_route_types': [{'code': 'sea', 'name': 'Море'}],
+        'allowed_container_types': ['40HC'],
+        'planned_containers_allowed': True,
+    }
+    path = '/api/admin/shipments/settings/' + action
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.headers['Authorization'].startswith('Bearer ')
+        assert request.json == body
+        return result
+
+    await browser.sign_in()
+    denied = await browser.post(path, body, headers={'X-CSRF-Token': 'invalid'})
+    assert denied.status == 403
+    assert upstream.times_called == 0
+    response = await browser.post(path, body)
+    assert response.status == 200, response.text
+    assert response.json() == result

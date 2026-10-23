@@ -25,13 +25,14 @@ export function RegistryLookup({
     ++requestNumber.current;
     pending.current?.abort();
     setFailure('');
-    setMessage('');
+    if (country && country !== 'RU') setMessage('');
     setBusy(false);
     return () => {
       ++requestNumber.current;
       pending.current?.abort();
     };
   }, [taxId, country]);
+  useEffect(() => setMessage(''), [taxId]);
   async function lookup() {
     if (busy) return;
     if (!isInn(taxId)) {
@@ -66,7 +67,21 @@ export function RegistryLookup({
     }
   }
   return (
-    <section className="registry-lookup" aria-label="Поиск реквизитов по ИНН">
+    <section
+      className="registry-lookup"
+      aria-label="Поиск реквизитов по ИНН"
+      onKeyDown={(event) => {
+        if (
+          event.key !== 'Enter' ||
+          event.nativeEvent.isComposing ||
+          !(event.target instanceof HTMLInputElement) ||
+          event.target.name !== 'tax_id'
+        )
+          return;
+        event.preventDefault();
+        if (taxId && (!country || country === 'RU')) void lookup();
+      }}
+    >
       {children(
         <button
           type="button"

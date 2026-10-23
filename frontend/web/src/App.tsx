@@ -1,4 +1,4 @@
-import { openWorkspace, workspaceId, type WorkspaceTab } from './workspace';
+import { openWorkspace, replaceWorkspace, workspaceId, type WorkspaceTab } from './workspace';
 import { ShipmentWorkspace } from './ShipmentWorkspace';
 import { useDiscardConfirmation } from './components';
 import { profileName } from './profile';
@@ -517,6 +517,11 @@ export function App() {
                     onChanged={(value) =>
                       setCustomers((old) => [...old.filter((item) => item.id !== value.id), value])
                     }
+                    onSaved={(value) => {
+                      const next = `/counterparties/${value.id}`;
+                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
+                      location.hash = next;
+                    }}
                   />
                 ) : entry.route.startsWith('/shipments') ? (
                   <ShipmentWorkspace

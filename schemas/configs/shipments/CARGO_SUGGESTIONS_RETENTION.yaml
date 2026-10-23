@@ -1,0 +1,30 @@
+name: CARGO_SUGGESTIONS_RETENTION
+mode: plain
+schema:
+  type: object
+  additionalProperties: false
+  properties:
+    enabled:
+      type: boolean
+    active_days:
+      type: integer
+      minimum: 1
+      maximum: 3650
+    removed_days:
+      type: integer
+      minimum: 1
+      maximum: 3650
+    batch_size:
+      type: integer
+      minimum: 1
+      maximum: 10000
+  required:
+  - enabled
+  - active_days
+  - removed_days
+  - batch_size
+default:
+  enabled: true
+  active_days: 180
+  removed_days: 30
+  batch_size: 1000

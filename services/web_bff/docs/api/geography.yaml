@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: География
+  version: '1'
+paths:
+  /api/geography/cities:
+    post:
+      summary: Поиск городов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                query:
+                  type: string
+                  minLength: 2
+                  maxLength: 200
+              required:
+              - query
+      responses:
+        '200':
+          description: Результат поиска
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/geography.yaml#/City
+                required:
+                - items
+        '400':
+          description: Некорректные параметры поиска
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '403':
+          description: Нет доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '503':
+          description: Поиск временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web

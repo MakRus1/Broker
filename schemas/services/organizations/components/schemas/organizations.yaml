@@ -331,3 +331,14 @@ UpdateMemberProfileRequest:
   - subject
   - last_name
   - first_name
+OrganizationEmployee:
+  type: object
+  additionalProperties: false
+  properties:
+    subject:
+      type: string
+    display_name:
+      type: string
+  required:
+  - subject
+  - display_name

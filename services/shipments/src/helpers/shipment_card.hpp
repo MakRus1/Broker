@@ -5,6 +5,7 @@
 #include <configs/keys.hpp>
 #include <deps.hpp>
 #include <helpers/database.hpp>
+#include <helpers/dictionaries.hpp>
 #include <openapi/models.hpp>
 #include <platform/date_validation.hpp>
 #include <postgresql/types.hpp>
@@ -96,25 +97,28 @@ inline void ValidateCard(const pgtypes::ShipmentDataV1& row, const auto& setting
             (std::find(settings.RouteTypes.begin(), settings.RouteTypes.end(), segment.Type) ==
                     settings.RouteTypes.end() ||
                 std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                    return entry.Dictionary == "route_type" && entry.Code == segment.Type;
+                    return ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
+                        entry.Code == segment.Type;
                 })))
             throw ApiError{400, "invalid_route_type", "Тип участка недоступен для организации"};
     }
     const auto validate = [&](const std::optional<std::string>& value,
-                              const std::string& dictionary, const std::string& message,
+                              ShipmentDictionary dictionary, const std::string& message,
                               const std::optional<std::string>& old) {
         if (!value.has_value() || (previous.has_value() && old == value))
             return;
         if (std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                return entry.Dictionary == dictionary && entry.Code == value.value();
+                return ParseDictionary(entry.Dictionary) == dictionary &&
+                    entry.Code == value.value();
             }))
-            throw ApiError{400, "invalid_" + dictionary, message};
+            throw ApiError{400, "invalid_" + std::string{DictionaryCode(dictionary)}, message};
     };
-    validate(row.Incoterms, "incoterms", "Выберите Incoterms из справочника",
+    validate(row.Incoterms, ShipmentDictionary::kIncoterms, "Выберите Incoterms из справочника",
         previous.has_value() ? previous.value().Incoterms : std::nullopt);
-    validate(row.CarriageTerms, "carriage_terms", "Выберите условия перевозки из справочника",
+    validate(row.CarriageTerms, ShipmentDictionary::kCarriageTerms,
+        "Выберите условия перевозки из справочника",
         previous.has_value() ? previous.value().CarriageTerms : std::nullopt);
-    validate(row.Loading, "loading", "Выберите загрузку из справочника",
+    validate(row.Loading, ShipmentDictionary::kLoading, "Выберите загрузку из справочника",
         previous.has_value() ? previous.value().Loading : std::nullopt);
 }
 

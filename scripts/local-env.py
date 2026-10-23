@@ -116,6 +116,7 @@ def prepare():
         if name == 'shipments':
             variables.update({
                 'client-transportations-base-url': 'http://transportations:8110',
+                'client-organizations-base-url': 'http://organizations:8130',
             })
         if name == 'organizations':
             variables.update({'users-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
@@ -289,6 +290,7 @@ def prepare():
         'volumes': [*shared, 'web-ui:/web-ui:ro'],
         'command': ['bash', 'tools/local/run.sh', 'web_bff', 'build-local/services/web_bff/web_bff'],
         'ports': ['127.0.0.1:14080:8280'],
+        'env_file': [{'path': str(STATE / 'dadata.env'), 'required': False}],
         'depends_on': {'prepare': {'condition': 'service_completed_successfully'},
                        'web-ui-build': {'condition': 'service_completed_successfully'},
                        'logistics-setup': {'condition': 'service_completed_successfully'},

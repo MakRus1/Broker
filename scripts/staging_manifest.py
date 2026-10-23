@@ -509,7 +509,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'failureThreshold': 3,
             },
         }
-        if name == 'counterparties':
+        if name in {'counterparties', 'web_bff'}:
             # Внешний ключ не попадает в release.json и генерируемые config-vars.
             entry = secret_env('DADATA_API_KEY', 'counterparties-dadata', 'api-key')
             entry['valueFrom']['secretKeyRef']['optional'] = True

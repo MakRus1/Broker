@@ -1,5 +1,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
+#include <helpers/employees.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
@@ -14,6 +15,8 @@ Response View::Handle(
     try {
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+        if (request.body.logist.has_value())
+            ValidateLogist(deps, context, CleanText(request.body.logist.value()));
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto organization = platform::auth::GetOrganization(identity);
@@ -44,7 +47,8 @@ Response View::Handle(
                         .Execute(sql::kUpdateShipment, organization, request.body.shipment_id,
                             request.body.expected_revision, card)
                         .AsSingleRow<pgtypes::ShipmentV2>());
-        RememberCargo(transaction, organization, card.CargoDescription);
+        if (card.CargoDescription != previous.CargoDescription)
+            RememberCargo(transaction, organization, card.CargoDescription);
         WriteAudit(transaction, organization, identity, "update_shipment", result.id, request.body,
             result);
         transaction.Commit();
@@ -59,6 +63,8 @@ Response View::Handle(
             return Response403{.error = error.Code, .message = error.what()};
         case 404:
             return Response404{.error = error.Code, .message = error.what()};
+        case 503:
+            return Response503{.error = error.Code, .message = error.what()};
         default:
             return Response409{.error = error.Code, .message = error.what()};
         }

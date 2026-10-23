@@ -30,3 +30,4 @@ dispatcher-token-timeout-ms: 2000
 dispatcher-token-max-retries: 0
 
 organization-access-url: http://localhost:8130/api/organizations/access
+client-organizations-base-url: http://localhost:8080

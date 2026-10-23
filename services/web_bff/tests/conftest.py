@@ -30,6 +30,12 @@ def configure_web(mockserver_info, service_source_dir):
         config_vars['web-token-url'] = mockserver_info.url('/auth/token')
         config_vars['web-revoke-url'] = mockserver_info.url('/auth/revoke')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url.rstrip('/')
+        cities = config['components_manager']['components']['geography-cities']
+        cities['endpoint'] = mockserver_info.url('/dadata/cities')
+        cities['api-key'] = 'testsuite-key'
+        cities.pop('api-key#env', None)
+        cities.pop('api-key#fallback', None)
+        cities['allow-http'] = True
         config_vars['web-assets-dir'] = str(service_source_dir / 'tests/static')
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url.rstrip('/')
@@ -63,7 +69,7 @@ def oidc(mockserver, auth_key):
         else:
             assert grant == 'refresh_token'
             assert form['refresh_token'] == 'server-only-refresh'
-        claims = {'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': ['shipments.read', 'shipments.write', 'transportations.read']}}, 'azp': 'broker-web', 'preferred_username': 'author', **state['claims']}
+        claims = {'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.read']}}, 'azp': 'broker-web', 'preferred_username': 'author', **state['claims']}
         identity = {'typ': 'ID', 'aud': 'broker-web', 'azp': 'broker-web',
                     'nonce': state['nonce'], **state['id_claims']}
         return mockserver.make_response(status=state['token_status'], json={
@@ -124,5 +130,5 @@ def organization_access(mockserver, oidc):
     @mockserver.json_handler('/api/organizations/access')
     def access(request):
         roles = oidc['claims'].get('resource_access', {}).get('broker-logistics', {}).get('roles',
-            ['shipments.read', 'shipments.write', 'transportations.read'])
+            ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.read'])
         return {'organization_id': '11111111-1111-4111-8111-111111111111', 'permissions': roles}

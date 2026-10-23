@@ -102,6 +102,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-organizations-employees-list:
+            path: /api/organizations/employees/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-organizations-me:
             path: /api/organizations/me
             method: GET
@@ -150,6 +156,7 @@ components_manager:
                 /api/admin/platform-access/get: authenticated
                 /api/admin/platform-access/update: authenticated
                 /api/organizations/access: authenticated
+                /api/organizations/employees/list: authenticated
                 /api/organizations/me: authenticated
                 /api/platform/access: authenticated
             permission-dependencies:
@@ -159,6 +166,10 @@ components_manager:
                 - configs.read
                 counterparties.write:
                 - counterparties.read
+                organizations.manage:
+                - organizations.read_employees
+                shipments.read:
+                - organizations.read_employees
                 shipments.write:
                 - shipments.read
                 transportations.write:

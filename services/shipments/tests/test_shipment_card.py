@@ -14,7 +14,7 @@ async def test_card_roundtrip_and_patch_preserves_fields(api):
         number='LCB-1/2026',
         shipment_date='2026-10-22',
         recipient_id=str(uuid4()),
-        logist='Иванов Иван',
+        logist='logist-author',
         cargo_description='  Запасные части  ',
         status='Новая',
         incoterms='FOB',
@@ -283,3 +283,76 @@ async def test_cargo_suggestions_limit_and_server_filter(api, pgsql):
     assert (await api.post('/api/v1/shipments/cargo-suggestions', {'query': 'Описание 1000'}))[
         'items'
     ] == ['Описание 1000']
+
+
+@pytest.mark.parametrize('subject', ['missing-employee', 'foreign-employee'])
+async def test_logist_must_be_active_member(api, subject):
+    result = await api.post('/api/v1/shipments/create', creation(logist=subject), expected=400)
+    assert result['error'] == 'invalid_logist'
+
+
+@pytest.mark.config(
+    SHIPMENT_SETTINGS={
+        'clauses': [
+            {
+                'title': 'Логист клиента',
+                'predicates': [
+                    {
+                        'field': 'customer_id',
+                        'type': 'eq',
+                        'value': '33333333-3333-4333-8333-333333333333',
+                    }
+                ],
+                'value': settings_value(default_logist='logist-default'),
+            }
+        ],
+        'default': settings_value(),
+    }
+)
+async def test_customer_default_logist_can_be_overridden_or_cleared(api):
+    customer = '33333333-3333-4333-8333-333333333333'
+    settings = await api.post('/api/v1/shipments/settings', {'customer_id': customer})
+    assert settings['default_logist'] == 'logist-default'
+    for fields, expected in [
+        ({}, 'logist-default'),
+        ({'logist': 'logist-author'}, 'logist-author'),
+        ({'logist': None}, None),
+    ]:
+        result = (
+            await api.post(
+                '/api/v1/shipments/create', creation(customer_id=customer, **fields), expected=201
+            )
+        )['shipment']
+        assert result['logist'] == expected
+
+
+async def test_create_replay_survives_employee_directory_outage(api, mockserver):
+    body = creation(logist='logist-author')
+    created = await api.post('/api/v1/shipments/create', body, expected=201)
+
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def unavailable(request):
+        return mockserver.make_response(
+            status=503, json={'error': 'unavailable', 'message': 'Unavailable'}
+        )
+
+    assert await api.post('/api/v1/shipments/create', body, expected=201) == created
+    assert unavailable.times_called == 0
+
+
+async def test_employee_directory_outage_is_explicit_and_does_not_create_shipment(
+    api, mockserver, pgsql
+):
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def unavailable(request):
+        return mockserver.make_response(
+            status=503, json={'error': 'unavailable', 'message': 'Unavailable'}
+        )
+
+    result = await api.post(
+        '/api/v1/shipments/create', creation(logist='logist-author'), expected=503
+    )
+    assert result['error'] == 'employee_directory_unavailable'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT COUNT(*) FROM shipments')
+        assert cursor.fetchone()[0] == 0

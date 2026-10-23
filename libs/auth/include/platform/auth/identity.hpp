@@ -39,6 +39,11 @@ inline const Identity& GetIdentity(const userver::server::request::RequestContex
     return *identity;
 }
 
+inline const std::string& GetAccessToken(const userver::server::request::RequestContext& context) {
+    GetIdentity(context);
+    return context.GetData<std::string>("platform-auth-access-token");
+}
+
 inline bool HasPermission(
     const userver::server::request::RequestContext& context, std::string_view permission) {
     return GetIdentity(context).Permissions.contains(std::string(permission));

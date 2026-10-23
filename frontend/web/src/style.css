@@ -1749,3 +1749,56 @@ main > header {
     justify-content: flex-end;
   }
 }
+
+.shipment-lookup-options > button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: left;
+  white-space: normal;
+}
+.shipment-lookup-options > button:hover,
+.shipment-lookup-options > button[aria-selected='true'] {
+  background: #edf3ff;
+}
+.shipment-lookup-options > small {
+  display: block;
+  padding: 6px 10px;
+  color: #76839a;
+}
+
+.directory-lookup {
+  display: grid;
+  gap: 8px;
+  position: relative;
+  min-width: 0;
+  align-content: start;
+}
+.directory-lookup-control {
+  position: relative;
+  min-width: 0;
+}
+.directory-lookup input.has-clear {
+  padding-right: 40px;
+}
+.directory-lookup-clear {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #76839a;
+  font-size: 20px;
+}
+.directory-lookup-clear:hover {
+  background: #edf3ff;
+}
+.directory-lookup .shipment-lookup-options {
+  z-index: 40;
+}

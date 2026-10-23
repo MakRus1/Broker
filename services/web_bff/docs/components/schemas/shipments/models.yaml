@@ -68,6 +68,7 @@ Shipment:
       format: uuid
       nullable: true
     logist:
+      description: Идентификатор сотрудника организации (subject), не ФИО
       type: string
       maxLength: 200
       nullable: true
@@ -194,6 +195,7 @@ CreateShipmentRequest:
       format: uuid
       nullable: true
     logist:
+      description: Идентификатор сотрудника организации (subject), не ФИО
       type: string
       maxLength: 200
       nullable: true
@@ -284,6 +286,7 @@ UpdateShipmentRequest:
       format: uuid
       nullable: true
     logist:
+      description: Идентификатор сотрудника организации (subject), не ФИО
       type: string
       maxLength: 200
       nullable: true

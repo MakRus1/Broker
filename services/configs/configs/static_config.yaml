@@ -132,6 +132,10 @@ components_manager:
                 - configs.read
                 counterparties.write:
                 - counterparties.read
+                organizations.manage:
+                - organizations.read_employees
+                shipments.read:
+                - organizations.read_employees
                 shipments.write:
                 - shipments.read
                 transportations.write:

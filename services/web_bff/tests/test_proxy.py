@@ -136,6 +136,12 @@ COUNTERPARTY = {
             },
             200,
         ),
+        (
+            'organizations/employees/list',
+            {'query': 'Иван'},
+            {'items': [{'subject': 'employee-1', 'display_name': 'Иванов Иван'}]},
+            200,
+        ),
         ('shipments/cargo-suggestions', {'query': 'груз'}, {'items': ['Груз']}, 200),
         ('shipments/cargo-suggestions/remove', {'value': 'Груз'}, {'deleted': True}, 200),
         ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM]}, 200),
@@ -159,7 +165,9 @@ COUNTERPARTY = {
 async def test_typed_proxy(browser, mockserver, path, body, result, status):
     await browser.sign_in()
 
-    @mockserver.json_handler('/api/v1/' + path)
+    endpoint = '/api/' + path if path.startswith('organizations/') else '/api/v1/' + path
+
+    @mockserver.json_handler(endpoint)
     def upstream(request):
         assert request.headers['Authorization'].startswith('Bearer ')
         assert 'broker_web' not in request.headers.get('Cookie', '')
@@ -167,7 +175,7 @@ async def test_typed_proxy(browser, mockserver, path, body, result, status):
             assert request.json[key] == value
         return mockserver.make_response(status=status, json=result)
 
-    response = await browser.post('/api/v1/' + path, body)
+    response = await browser.post(endpoint, body)
     assert response.status == status, response.text
     assert response.json() == result
 
@@ -321,13 +329,15 @@ async def test_converted_transportation_with_route(browser, mockserver, mode, ow
 async def test_transportation_commands_and_history(browser, mockserver, path, body, result):
     await browser.sign_in()
 
-    @mockserver.json_handler('/api/v1/' + path)
+    endpoint = '/api/' + path if path.startswith('organizations/') else '/api/v1/' + path
+
+    @mockserver.json_handler(endpoint)
     def upstream(request):
         assert request.json == body
         assert request.headers['Authorization'].startswith('Bearer ')
         return result
 
-    response = await browser.post('/api/v1/' + path, body)
+    response = await browser.post(endpoint, body)
     assert response.status == 200, response.text
     assert response.json() == result
 

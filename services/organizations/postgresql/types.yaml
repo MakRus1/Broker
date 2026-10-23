@@ -69,3 +69,9 @@ types:
     - name: middle_name
       type: text
       nullable: true
+  public.organization_employee_v1:
+    fields:
+    - name: subject
+      type: text
+    - name: display_name
+      type: text

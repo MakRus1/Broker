@@ -16,6 +16,7 @@ paths:
 - /api/admin/platform-access/get
 - /api/admin/platform-access/update
 - /api/organizations/access
+- /api/organizations/employees/list
 - /api/organizations/me
 - /api/platform/access
 default:

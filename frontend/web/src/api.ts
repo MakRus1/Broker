@@ -44,7 +44,7 @@ export interface Operation {
   rejection_code?: string;
 }
 export interface Transportation {
-  number: string;
+  container_number?: string;
   id: string;
   revision: number;
   shipment_id: string;

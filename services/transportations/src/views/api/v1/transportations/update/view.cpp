@@ -13,8 +13,8 @@ Response View::Handle(
     try {
         const auto& identity = platform::auth::GetIdentity(context);
         const auto organization = platform::auth::GetOrganization(identity);
-        ValidateDetails(
-            request.body.type, request.body.container_type_code, request.body.container_ownership);
+        ValidateDetails(request.body.type, request.body.container_type_code,
+            request.body.container_ownership, request.body.container_number);
         auto loaded = LoadTransportation(deps, context, request.body.transportation_id);
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -24,8 +24,9 @@ Response View::Handle(
             transaction
                 .Execute(sql::kUpdateTransportation, organization, loaded.id,
                     models::EnumValue(request.body.type), request.body.hazardous,
-                    request.body.container_type_code, Ownership(request.body.container_ownership))
-                .AsSingleRow<pgtypes::TransportationV3>());
+                    request.body.container_type_code, Ownership(request.body.container_ownership),
+                    CleanContainerNumber(request.body.container_number))
+                .AsSingleRow<pgtypes::TransportationV4>());
         result.route_segments = std::move(loaded.route_segments);
         result.incoterms = loaded.incoterms;
         result.loading = loaded.loading;

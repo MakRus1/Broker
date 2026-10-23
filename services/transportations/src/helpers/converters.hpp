@@ -6,9 +6,9 @@
 #include <vector>
 
 namespace transportations::helpers {
-inline models::Transportation Convert(const pgtypes::TransportationV3& row) {
+inline models::Transportation Convert(const pgtypes::TransportationV4& row) {
     models::Transportation result;
-    result.number = row.Number;
+    result.container_number = row.ContainerNumber;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.shipment_id = boost::uuids::to_string(row.ShipmentId);
@@ -36,7 +36,7 @@ inline std::vector<models::RouteSegment> Convert(
 }
 
 inline std::vector<models::Transportation> Convert(
-    const std::vector<pgtypes::TransportationV3>& rows,
+    const std::vector<pgtypes::TransportationV4>& rows,
     const std::vector<pgtypes::RouteSegmentV1>& route_segments) {
     std::vector<models::Transportation> result;
     result.reserve(rows.size());

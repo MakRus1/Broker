@@ -133,7 +133,7 @@ inline models::transportations::Transportation Convert(
     result.route_segments.reserve(value.route_segments.size());
     for (const auto& item : value.route_segments)
         result.route_segments.push_back(Convert(item));
-    result.number = value.number;
+    result.container_number = value.container_number;
     result.operation_id = value.operation_id;
     result.revision = value.revision;
     result.shipment_id = value.shipment_id;
@@ -271,6 +271,7 @@ inline clients::transportations::ApiV1TransportationsCreate::RequestBody Convert
     result.id = value.id;
     result.shipment_id = value.shipment_id;
     result.container_type_code = value.container_type_code;
+    result.container_number = value.container_number;
     result.hazardous = value.hazardous;
     result.type = Convert(value.type);
     if (value.container_ownership.has_value())
@@ -284,6 +285,7 @@ inline clients::transportations::ApiV1TransportationsUpdate::RequestBody Convert
     result.transportation_id = value.transportation_id;
     result.expected_revision = value.expected_revision;
     result.container_type_code = value.container_type_code;
+    result.container_number = value.container_number;
     result.hazardous = value.hazardous;
     result.type = Convert(value.type);
     if (value.container_ownership.has_value())

@@ -1,3 +1,4 @@
+import { transportationTitle } from './transportation';
 import { openWorkspace, replaceWorkspace, workspaceId, type WorkspaceTab } from './workspace';
 import { ShipmentWorkspace } from './ShipmentWorkspace';
 import { useDiscardConfirmation } from './components';
@@ -559,13 +560,20 @@ export function App() {
                     onError={error}
                     onSaved={(value) => {
                       const next = `/transportations/${value.id}`;
-                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
+                      setWorkspaces((old) =>
+                        replaceWorkspace(old, entry.id, next, transportationTitle(value)),
+                      );
                       location.hash = next;
                       void load();
                     }}
                   />
                 ) : (
                   <TransportationPage
+                    onChanged={(value) =>
+                      setTransportations((old) =>
+                        old.map((item) => (item.id === value.id ? value : item)),
+                      )
+                    }
                     id={entry.id.split('/')[2]}
                     active={activeWorkspace === entry.id}
                     onTitle={(title) => renameWorkspace(entry.id, title)}

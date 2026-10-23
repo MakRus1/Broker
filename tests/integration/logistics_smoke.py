@@ -310,7 +310,8 @@ def run(build):
             {
                 'id': str(uuid4()),
                 'shipment_id': shipment['id'],
-                'type': 'air',
+                'type': 'container',
+                'container_number': 'CSQU3054383',
                 'hazardous': False,
             },
             token,
@@ -319,6 +320,8 @@ def run(build):
             stage['id'] for stage in stages
         ]
         assert manual['incoterms'] == 'FOB'
+        assert manual['container_number'] == 'CSQU3054383'
+        assert 'number' not in manual
         manual = post(
             receivers[1],
             '/api/v1/transportation-actuals/record',

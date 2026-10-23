@@ -125,7 +125,17 @@ async def test_update_details_keeps_facts_and_rejects_old_revision(api, shipment
     )
 
 
-async def test_route_change_rejected_before_local_write(api, shipment_routes, mockserver):
+@pytest.mark.parametrize(
+    'code,message',
+    [
+        ('shipment_revision_conflict', 'Поставка изменилась. Обновите перевозку'),
+        ('route_changed', 'Участок больше не входит в маршрут'),
+        ('another_conflict', 'Другая причина конфликта'),
+    ],
+)
+async def test_route_change_rejected_before_local_write(
+    api, shipment_routes, mockserver, code, message
+):
     body = command()
     operation = await api.post(PATH, body)
     identifier = operation['operation']['transportation_ids'][0]
@@ -134,11 +144,9 @@ async def test_route_change_rejected_before_local_write(api, shipment_routes, mo
 
     @mockserver.json_handler('/api/v1/shipments/route-segments/register-usage')
     def changed(request):
-        return mockserver.make_response(
-            status=409, json={'error': 'revision_conflict', 'message': 'Маршрут изменён'}
-        )
+        return mockserver.make_response(status=409, json={'error': code, 'message': message})
 
-    await api.post(
+    conflict = await api.post(
         '/api/v1/transportation-routes/set',
         {
             'transportation_id': identifier,
@@ -147,6 +155,8 @@ async def test_route_change_rejected_before_local_write(api, shipment_routes, mo
         },
         expected=409,
     )
+    assert conflict['error'] == code
+    assert conflict['message'] == message
     loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': identifier}))[
         'transportation'
     ]

@@ -1,7 +1,6 @@
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
-  ApiError,
   request,
   modes,
   transportationTypes,
@@ -14,6 +13,7 @@ import { CardNavigation, Dialog } from './components';
 import type { Counterparty } from './CustomerSelect';
 import {
   formatDate,
+  transportationTitle,
   historyActions,
   localDateTime,
   utcDateTime,
@@ -25,6 +25,7 @@ import { TransportationDetailsForm } from './TransportationDetailsForm';
 type Props = {
   id: string;
   onTitle?: (title: string) => void;
+  onChanged?: (value: Transportation) => void;
   active?: boolean;
   editing: boolean;
   session: Session;
@@ -34,6 +35,7 @@ type Props = {
 export function TransportationPage({
   id,
   onTitle,
+  onChanged,
   active = true,
   editing,
   session,
@@ -42,8 +44,8 @@ export function TransportationPage({
 }: Props) {
   const [transportation, setTransportation] = useState<Transportation>();
   useEffect(() => {
-    if (transportation) onTitle?.(transportation.number);
-  }, [transportation?.number]);
+    if (transportation) onTitle?.(transportationTitle(transportation));
+  }, [transportation?.container_number, transportation?.type]);
   const [shipment, setShipment] = useState<Shipment>();
   const [linkedCustomers, setLinkedCustomers] = useState<Counterparty[]>([]);
   const customers = [
@@ -81,8 +83,9 @@ export function TransportationPage({
     return () => controller.abort();
   }, [session, shipment, transportation, suppliedCustomers]);
   useEffect(() => {
-    if (transportation && active) document.title = `${transportation.number} · Broker`;
-  }, [transportation?.number]);
+    if (transportation && active)
+      document.title = `${transportationTitle(transportation)} · Broker`;
+  }, [transportation?.container_number, transportation?.type, active]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'route' | 'history'>('route');
   const [editingDetails, setEditingDetails] = useState(false);
@@ -140,7 +143,7 @@ export function TransportationPage({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">ПЕРЕВОЗКА</p>
-            <h1>{transportation.number}</h1>
+            <h1>{transportationTitle(transportation)}</h1>
             {(editing || editingDetails) && (
               <a
                 className="transportation-parent"
@@ -208,6 +211,7 @@ export function TransportationPage({
               session={session}
               onSaved={(value) => {
                 setTransportation(value);
+                onChanged?.(value);
                 setEditingDetails(false);
               }}
               onCancel={() => setEditingDetails(false)}
@@ -223,6 +227,7 @@ export function TransportationPage({
             allowed={write}
             onSaved={(value) => {
               setTransportation(value);
+              onChanged?.(value);
               if (location.hash === `#/transportations/${id}/route`)
                 location.hash = `/transportations/${id}`;
             }}
@@ -290,6 +295,7 @@ export function TransportationPage({
             session={session}
             onSaved={(value) => {
               setTransportation(value);
+              onChanged?.(value);
               setActual(undefined);
             }}
             onError={onError}
@@ -414,13 +420,7 @@ function ActualForm({
       );
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(
-        error instanceof ApiError && error.status === 409
-          ? 'Данные изменились или дата уже записана. Закройте форму, обновите перевозку и проверьте факт перед повтором.'
-          : error instanceof Error
-            ? error.message
-            : 'Не удалось сохранить дату',
-      );
+      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить дату');
       onError(error);
     } finally {
       setBusy(false);

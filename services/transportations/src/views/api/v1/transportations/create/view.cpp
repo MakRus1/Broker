@@ -12,8 +12,8 @@ Response View::Handle(
     try {
         const auto& identity = platform::auth::GetIdentity(context);
         const auto organization = platform::auth::GetOrganization(identity);
-        ValidateDetails(
-            request.body.type, request.body.container_type_code, request.body.container_ownership);
+        ValidateDetails(request.body.type, request.body.container_type_code,
+            request.body.container_ownership, request.body.container_number);
         const auto sources = LoadShipmentContexts(deps, context, {request.body.shipment_id});
         const auto& source = FindShipmentContext(sources, request.body.shipment_id);
         auto transaction =
@@ -24,8 +24,11 @@ Response View::Handle(
             const auto command = saved.AsSingleRow<pgtypes::SavedCommandV1>();
             if (command.Payload != Document(request.body))
                 throw ApiError{409, "idempotency_conflict", "Содержимое команды создания изменено"};
+            // Снимки старых команд содержат технический номер, которого больше нет в API.
+            userver::formats::json::ValueBuilder document{command.Result};
+            document.Remove("number");
             auto result = models::ParseModelJson(
-                command.Result, std::type_identity<models::Transportation>{});
+                document.ExtractValue(), std::type_identity<models::Transportation>{});
             transaction.Commit();
             InheritRoute(result, source);
             return Response200{.transportation = result};
@@ -35,8 +38,9 @@ Response View::Handle(
                         .Execute(sql::kCreateManualTransportation, organization, request.body.id,
                             request.body.shipment_id, models::EnumValue(request.body.type),
                             request.body.hazardous, request.body.container_type_code,
-                            Ownership(request.body.container_ownership))
-                        .AsSingleRow<pgtypes::TransportationV3>());
+                            Ownership(request.body.container_ownership),
+                            CleanContainerNumber(request.body.container_number))
+                        .AsSingleRow<pgtypes::TransportationV4>());
         InheritRoute(result, source);
         transaction.Execute(sql::kInsertCommand, organization, request.body.id,
             Document(request.body), Document(result));

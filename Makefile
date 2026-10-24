@@ -76,7 +76,7 @@ docker-pull:
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .
 docker-%:
-	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e CCACHE_DIR=/workspaces/broker/.ccache -e CCACHE_BASEDIR=/workspaces/broker -e CCACHE_MAXSIZE=512M -e CCACHE_COMPILERCHECK=content -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
 
 .PHONY: db-up db-down testsuite-clean dist-clean
 db-up:

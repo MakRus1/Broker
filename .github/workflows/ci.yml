@@ -146,15 +146,29 @@ jobs:
             grep -q __asan_ /tmp/userver-symbols.txt
             grep -q __ubsan_ /tmp/userver-symbols.txt
           '
+      - name: Кеш компиляции
+        uses: actions/cache@v6.1.0
+        with:
+          path: .ccache
+          key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-
       - name: Права рабочего каталога для контейнера
         run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
-      - name: Чистая сборка
+      - name: Сборка выбранных сервисов
         id: compile
         env:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
           CI_BUILD_SERVICES: ${{ needs.plan.outputs.build_services }}
         run: make "docker-ci-build-$PRESET"
+      - name: Статистика кеша компиляции
+        if: always()
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: |
+          mkdir -p .ccache
+          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache "$IMAGE" ccache --show-stats
       - name: Тесты затронутых сервисов
         id: tests
         env:

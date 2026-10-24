@@ -34,12 +34,6 @@ GENERATOR = (
     'CMakeLists.txt',
     'CMakePresets.json',
     'Makefile',
-    'libs/*',
-    'schemas/*',
-    'services/*/service.yaml',
-    'services/*/CMakeLists.txt',
-    'services/*/docs/*',
-    'services/*/postgresql/types.yaml',
     'tests/fixtures/*',
 )
 GENERATOR_TESTS = {
@@ -67,12 +61,12 @@ INFRASTRUCTURE = (
     'scripts/organization_identity.py',
     'scripts/permission_catalog.py',
     'scripts/local-env.py',
+    'scripts/ci-local.py',
     'tools/deploy/*',
     'tools/local/*',
     'tools/observability/*',
     'platform.yaml',
     'docker-compose*',
-    'services/*/service.yaml',
     'services/*/postgresql/schemas/*',
     'services/*/configs/*',
 )
@@ -80,6 +74,8 @@ INFRA_TESTS = {
     'test_deploy_cluster',
     'test_deployment',
     'test_local_seed',
+    'test_ci_local',
+    'test_local_clients',
     'test_log_ingestion',
     'test_migrations',
     'test_organization_identity',
@@ -108,6 +104,14 @@ def select(paths, available):
         if matches(path, FULL):
             return {name: 'Общая основа: ' + path for name in available}
         groups = set()
+        # Контракты и manifests — входы генератора, а не изменение его реализации.
+        # Их валидность проверяют check-gen-all и сборки поставщика/клиентов.
+        if matches(path, ('services/*/service.yaml',)):
+            groups |= {'test_local_clients', 'test_permission_catalog', 'test_deployment'}
+        if path.startswith(('schemas/configs/', 'schemas/config_contexts/')):
+            groups.add('test_configs')
+        if path.startswith('schemas/permissions/'):
+            groups.add('test_permission_catalog')
         if matches(path, GENERATOR):
             groups |= GENERATOR_TESTS
         if matches(path, INFRASTRUCTURE):

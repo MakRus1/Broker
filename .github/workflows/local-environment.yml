@@ -1,24 +1,5 @@
 name: Local environment
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - .github/workflows/local-environment.yml
-      - CMakeLists.txt
-      - cmake/**
-      - libs/**
-      - schemas/**
-      - scripts/local-env.py
-      - scripts/migrations.py
-      - scripts/openapi_gen/**
-      - scripts/templates/**
-      - services/**/service.yaml
-      - services/**/configs/**
-      - services/**/src/bootstrap/**
-      - tests/fixtures/contract_service/**
-      - tools/**
-      - requirements.txt
-      - Makefile
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,7 +18,8 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
-      - run: make local-up
+      - name: Сборка и запуск стенда с прогрессом
+        run: python scripts/ci-local.py
       - run: make local-check
       - name: Диагностика сбоя
         if: failure()

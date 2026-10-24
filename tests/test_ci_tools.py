@@ -43,10 +43,26 @@ class SelectionTest(unittest.TestCase):
         self.assertIn('test_deployment', chosen)
         self.assertNotIn('test_services', chosen)
 
-    def test_manifest_checks_generator_and_deployment(self):
+    def test_manifest_checks_integration_without_retesting_generator(self):
         chosen = tools.select(['services/broker/service.yaml'], ALL)
-        self.assertIn('test_services', chosen)
+        self.assertNotIn('test_services', chosen)
+        self.assertIn('test_local_clients', chosen)
         self.assertIn('test_deployment', chosen)
+
+    def test_business_contract_inputs_do_not_retest_generator(self):
+        self.assertEqual(
+            tools.select(
+                [
+                    'schemas/services/transportations/components/schemas/models.yaml',
+                    'services/transportations/docs/components/schemas/models.yaml',
+                    'libs/auth/src/verifier.cpp',
+                    'services/transportations/CMakeLists.txt',
+                    'services/transportations/postgresql/types.yaml',
+                ],
+                ALL,
+            ),
+            {},
+        )
 
     def test_test_change_runs_itself(self):
         self.assertEqual(set(tools.select(['tests/test_models.py'], ALL)), {'test_models'})

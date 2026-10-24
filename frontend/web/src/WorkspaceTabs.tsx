@@ -103,6 +103,27 @@ export function WorkspaceTabs({
             </button>
           </div>
         ))}
+        <div
+          className="workspace-drop-end"
+          aria-hidden="true"
+          onDragOver={(event) => {
+            const last = tabs.at(-1);
+            if (!dragging.current || !last) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setDrop(dragging.current === last.id ? null : { id: last.id, side: 'after' });
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDrop(null);
+          }}
+          onDrop={(event) => {
+            const last = tabs.at(-1);
+            if (!dragging.current || !last) return;
+            event.preventDefault();
+            move(dragging.current, last.id, 'after');
+            finish();
+          }}
+        />
       </div>
       <span className="visually-hidden" role="status">
         {announcement}

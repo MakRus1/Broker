@@ -1,5 +1,5 @@
 import { Chevron } from './Select';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { request, type Session } from './api';
 export type { Counterparty } from './counterparties';
 import type { Counterparty } from './counterparties';
@@ -11,6 +11,8 @@ export function CustomerSelect({
   session,
   disabled,
   label = 'Клиент',
+  required = false,
+  error = '',
 }: {
   items: Counterparty[];
   value: string;
@@ -18,8 +20,16 @@ export function CustomerSelect({
   session: Session;
   disabled: boolean;
   label?: string;
+  required?: boolean;
+  error?: string;
 }) {
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(
+      required && !value ? 'Выберите клиента из справочника' : '',
+    );
+  }, [required, value]);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -95,6 +105,10 @@ export function CustomerSelect({
       <label htmlFor={`${listId}-input`}>{label}</label>
       <div className="counterparty-combobox">
         <input
+          ref={inputRef}
+          name={required ? 'customer_id' : undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error ? `${listId}-error` : undefined}
           id={`${listId}-input`}
           role="combobox"
           aria-autocomplete="list"
@@ -105,7 +119,7 @@ export function CustomerSelect({
           }
           autoComplete="off"
           disabled={disabled}
-          required={label === 'Клиент' && !value}
+          required={required && !value}
           value={open ? query : (current?.name ?? (value ? 'Контрагент недоступен' : ''))}
           placeholder="Выберите из справочника или начните вводить название / ИНН"
           onFocus={() => {
@@ -183,6 +197,11 @@ export function CustomerSelect({
             <p>Показаны первые 100 записей. Уточните название или ИНН.</p>
           )}
         </div>
+      )}
+      {error && (
+        <small className="field-error" id={`${listId}-error`} role="alert">
+          {error}
+        </small>
       )}
       {value && (
         <div className="counterparty-selected">

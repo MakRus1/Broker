@@ -1,3 +1,4 @@
+import { useFieldValidation } from './fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Commands, request, type Session, type Shipment } from './api';
@@ -122,6 +123,7 @@ function ShipmentCard({
   ...props
 }: Props & { initial?: Shipment; onSaved: (value: Shipment) => void }) {
   const formId = useId();
+  const validation = useFieldValidation();
   const storageKey = `broker:shipment-card:${props.session.actor}:${props.route}`;
   const [draft, setDraft] = useState<CardDraft>(() => {
     try {
@@ -325,6 +327,7 @@ function ShipmentCard({
             props.session,
             payload,
           );
+      validation.reset();
       const next = draftOf(result.shipment);
       setDraft(next);
       setBaseline(JSON.stringify(next));
@@ -412,7 +415,12 @@ function ShipmentCard({
         hidden={!editing}
         id={formId}
         onSubmit={save}
-        onInvalidCapture={() => setTab('details')}
+        data-validation-attempted={validation.attempted}
+        onInputCapture={validation.onInput}
+        onInvalidCapture={(event) => {
+          setTab('details');
+          validation.onInvalid(event);
+        }}
         data-draft-key={storageKey}
         data-dirty={editing && dirty}
         data-busy={busy}
@@ -424,6 +432,11 @@ function ShipmentCard({
                 Номер поставки
                 <div className="shipment-number">
                   <input
+                    name="number"
+                    aria-invalid={Boolean(validation.errors.number) || undefined}
+                    aria-describedby={
+                      validation.errors.number ? `${formId}-number-error` : undefined
+                    }
                     required={manualNumber}
                     readOnly={!manualNumber}
                     maxLength={128}
@@ -444,16 +457,31 @@ function ShipmentCard({
                   )}
                 </div>
                 {!manualNumber && <small>Формат: {settings?.number_template}</small>}
+                {validation.errors.number && (
+                  <small className="field-error" id={`${formId}-number-error`}>
+                    {validation.errors.number}
+                  </small>
+                )}
               </label>
               <label>
                 Дата поставки · обязательно
                 <input
+                  name="shipment_date"
+                  aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
+                  aria-describedby={
+                    validation.errors.shipment_date ? `${formId}-date-error` : undefined
+                  }
                   type="date"
                   min="1900-01-01"
                   required
                   value={draft.shipment_date}
                   onChange={(e) => set('shipment_date', e.target.value)}
                 />
+                {validation.errors.shipment_date && (
+                  <small className="field-error" id={`${formId}-date-error`}>
+                    {validation.errors.shipment_date}
+                  </small>
+                )}
               </label>
             </div>
             <section className="shipment-field-section">
@@ -461,6 +489,12 @@ function ShipmentCard({
               <div className="shipment-fields">
                 <CustomerSelect
                   label="Клиент · обязательно"
+                  required
+                  error={
+                    validation.attempted && !draft.customer_id
+                      ? 'Выберите клиента из справочника'
+                      : ''
+                  }
                   session={props.session}
                   items={props.customers}
                   value={draft.customer_id}
@@ -787,6 +821,7 @@ function ShipmentCard({
                 disabled={busy}
                 onClick={() =>
                   confirmDiscard(dirty, () => {
+                    validation.reset();
                     if (initial) setEditing(false);
                     manualLogist.current = false;
                     manualStatus.current = false;

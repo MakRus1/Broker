@@ -2019,3 +2019,58 @@ main > header {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.select-popup {
+  margin: 0;
+  box-sizing: border-box;
+}
+.shipment-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.shipment-summary-section {
+  padding: 24px 0;
+  border-bottom: 1px solid #e5eaf2;
+}
+.shipment-summary-section:last-child {
+  border-bottom: 0;
+}
+.shipment-summary-section h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+}
+.shipment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 32px;
+  margin: 0;
+}
+.shipment-summary-grid dt {
+  color: #76839a;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.shipment-summary-grid dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.shipment-summary-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 40px;
+  padding-left: 24px;
+}
+@media (max-width: 800px) {
+  .shipment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8290a5;
+  font-weight: 400;
+  opacity: 1;
+}

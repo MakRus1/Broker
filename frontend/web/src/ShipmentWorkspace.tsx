@@ -136,6 +136,7 @@ function ShipmentCard({
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState('details');
+  const [editing, setEditing] = useState(!initial);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -188,14 +189,14 @@ function ShipmentCard({
   }, [storageKey, draft, dirty]);
   useEffect(() => {
     const leaving = (event: BeforeUnloadEvent) => {
-      if (dirty || busy) {
+      if ((editing && dirty) || busy) {
         event.preventDefault();
         event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', leaving);
     return () => window.removeEventListener('beforeunload', leaving);
-  }, [dirty, busy]);
+  }, [editing, dirty, busy]);
   useEffect(() => {
     const controller = new AbortController();
     setSettingsFailure('');
@@ -334,8 +335,10 @@ function ShipmentCard({
       } catch {
         /* Успешное сохранение на сервере не зависит от браузерного хранилища. */
       }
-      if (initial) onSaved(result.shipment);
-      else props.onCreated(result.shipment);
+      if (initial) {
+        onSaved(result.shipment);
+        setEditing(false);
+      } else props.onCreated(result.shipment);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : 'Не удалось сохранить поставку');
       props.onError(error);
@@ -373,7 +376,16 @@ function ShipmentCard({
           <p className="eyebrow">ПОСТАВКА</p>
           <h1>{initial?.number ?? 'Новая поставка'}</h1>
         </div>
-        <span className="badge">{draft.status || 'Новая'}</span>
+        <div className="shipment-card-actions">
+          <span className="badge">
+            {initial && !editing ? initial.status : draft.status || 'Новая'}
+          </span>
+          {initial && !editing && write && (
+            <button className="primary" onClick={() => setEditing(true)}>
+              Редактировать
+            </button>
+          )}
+        </div>
       </div>
       {settingsFailure && (
         <p className="error" role="alert">
@@ -387,12 +399,22 @@ function ShipmentCard({
           </button>
         ))}
       </div>
+      {initial && !editing && (tab === 'details' || tab === 'route') && (
+        <ShipmentSummary
+          shipment={initial}
+          customers={props.customers}
+          session={props.session}
+          routeOnly={tab === 'route'}
+          dictionaries={dictionaries}
+        />
+      )}
       <form
+        hidden={!editing}
         id={formId}
         onSubmit={save}
         onInvalidCapture={() => setTab('details')}
         data-draft-key={storageKey}
-        data-dirty={dirty}
+        data-dirty={editing && dirty}
         data-busy={busy}
       >
         <fieldset disabled={busy || !write || !settings || !dictionaries}>
@@ -749,7 +771,7 @@ function ShipmentCard({
           {failure}
         </p>
       )}
-      {write && (
+      {write && editing && (
         <div className="shipment-save">
           <span>
             {dirty
@@ -759,12 +781,13 @@ function ShipmentCard({
                 : 'Обязательно: дата поставки и клиент'}
           </span>
           <div className="shipment-save-actions">
-            {dirty && (
+            {(dirty || initial) && (
               <button
                 type="button"
                 disabled={busy}
                 onClick={() =>
-                  confirmDiscard(true, () => {
+                  confirmDiscard(dirty, () => {
+                    if (initial) setEditing(false);
                     manualLogist.current = false;
                     manualStatus.current = false;
                     setManualNumber(Boolean(initial));
@@ -789,5 +812,95 @@ function ShipmentCard({
       )}
       {confirmation}
     </section>
+  );
+}
+
+function ShipmentSummary({
+  shipment,
+  customers,
+  session,
+  routeOnly,
+  dictionaries,
+}: {
+  shipment: Shipment;
+  customers: Counterparty[];
+  session: Session;
+  routeOnly: boolean;
+  dictionaries?: ShipmentDictionaries;
+}) {
+  const [logist, setLogist] = useState('');
+  useEffect(() => {
+    if (!shipment.logist) {
+      setLogist('');
+      return;
+    }
+    const controller = new AbortController();
+    request<{ items: { display_name: string }[] }>(
+      '/api/organizations/employees/list',
+      session,
+      { subject: shipment.logist, limit: 1 },
+      controller.signal,
+    )
+      .then(({ items }) => setLogist(items[0]?.display_name ?? 'Сотрудник недоступен'))
+      .catch(() => {
+        if (!controller.signal.aborted) setLogist('Сотрудник недоступен');
+      });
+    return () => controller.abort();
+  }, [shipment.logist, session]);
+  const company = (id?: string | null) => customers.find((item) => item.id === id)?.name ?? '—';
+  const group = (title: string, fields: [string, string | null | undefined][]) => (
+    <section className="shipment-summary-section">
+      <h2>{title}</h2>
+      <dl className="shipment-summary-grid">
+        {fields.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value || '—'}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+  if (routeOnly)
+    return (
+      <section className="shipment-summary-section">
+        <h2>Маршрут поставки</h2>
+        {shipment.route_segments?.length ? (
+          <ol className="shipment-summary-route">
+            {shipment.route_segments.map((segment) => (
+              <li key={segment.id}>
+                {dictionaries?.route_types.find((entry) => entry.code === segment.type)?.name ??
+                  segment.type}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted">Маршрут не задан</p>
+        )}
+      </section>
+    );
+  return (
+    <>
+      {group('Участники', [
+        ['Клиент', company(shipment.customer_id)],
+        ['Получатель', company(shipment.recipient_id)],
+        ['Логист', logist],
+      ])}
+      {group('Груз и условия', [
+        ['Описание груза', shipment.cargo_description],
+        ['Incoterms', shipment.incoterms],
+        ['Условия перевозки', shipment.carriage_terms],
+        ['Загрузка', shipment.loading],
+      ])}
+      {group('Доставка', [
+        ['Город', shipment.delivery_city],
+        ['Страна', shipment.delivery_country],
+        ['Адрес', shipment.delivery_address],
+      ])}
+      {group('Поставка', [
+        ['Дата поставки', shipment.shipment_date?.split('-').reverse().join('.')],
+        ['Примечание', shipment.reference],
+      ])}
+    </>
   );
 }

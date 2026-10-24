@@ -1,5 +1,5 @@
 import { containerNumberWarning } from './transportation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { request, transportationTypes, type Session, type Transportation } from './api';
 import { Select } from './Select';
 import { useDiscardConfirmation } from './components';
@@ -20,6 +20,22 @@ export function TransportationDetailsForm({
   onCancel,
   onError,
 }: Props) {
+  const [containerTypes, setContainerTypes] = useState<string[]>([]);
+  const [settingsFailure, setSettingsFailure] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    request<{ container_types: string[] }>(
+      '/api/v1/shipments/settings',
+      session,
+      {},
+      controller.signal,
+    )
+      .then((settings) => setContainerTypes(settings.container_types))
+      .catch((error) => {
+        if (!controller.signal.aborted) setSettingsFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [session]);
   const [id] = useState(() => crypto.randomUUID());
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
@@ -111,16 +127,22 @@ export function TransportationDetailsForm({
                     </small>
                   )}
                 </label>
-                <label>
-                  Тип контейнера
-                  <input
-                    maxLength={16}
-                    pattern="[A-Za-z0-9]{2,16}"
-                    placeholder="40HC"
-                    value={containerType}
-                    onChange={(event) => setContainerType(event.target.value.toUpperCase())}
-                  />
-                </label>
+                <Select
+                  label="Тип контейнера"
+                  value={containerType}
+                  options={[
+                    { value: '', label: 'Не указан' },
+                    ...[
+                      ...new Set([...containerTypes, ...(containerType ? [containerType] : [])]),
+                    ].map((value) => ({ value, label: value })),
+                  ]}
+                  onChange={setContainerType}
+                />
+                {settingsFailure && (
+                  <p role="alert" className="error">
+                    Типы контейнеров недоступны: {settingsFailure}
+                  </p>
+                )}
                 <Select
                   label="Принадлежность контейнера"
                   value={ownership}

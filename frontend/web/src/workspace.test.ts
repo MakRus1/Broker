@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { openWorkspace, replaceWorkspace, workspaceId } from './workspace';
+import {
+  openWorkspace,
+  replaceWorkspace,
+  workspaceId,
+  moveWorkspace,
+  restoreWorkspaces,
+} from './workspace';
 describe('Рабочие вкладки', () => {
   it('сохраняет реестр при открытии карточки', () => {
     const tabs = openWorkspace(openWorkspace([], '/shipments'), '/shipments/abc');
@@ -35,4 +41,39 @@ it('не дублирует уже открытую карточку при со
   expect(replaceWorkspace(tabs, '/counterparties/new', '/counterparties/abc', 'Клиент')).toEqual([
     { id: '/counterparties/abc', route: '/counterparties/abc', title: 'Клиент' },
   ]);
+});
+
+describe('Порядок рабочих вкладок', () => {
+  const tabs = ['/shipments', '/transportations', '/counterparties'].reduce(
+    openWorkspace,
+    [] as ReturnType<typeof openWorkspace>,
+  );
+  it('переносит вкладку в обе стороны и сохраняет данные вкладок', () => {
+    const moved = moveWorkspace(tabs, '/shipments', '/counterparties', 'after');
+    expect(moved).toEqual([tabs[1], tabs[2], tabs[0]]);
+    expect(moveWorkspace(moved, '/shipments', '/transportations', 'before')).toEqual(tabs);
+    expect(tabs.map((tab) => tab.id)).toEqual([
+      '/shipments',
+      '/transportations',
+      '/counterparties',
+    ]);
+  });
+  it('не теряет вкладки при отменённом переносе или устаревшем идентификаторе', () => {
+    expect(moveWorkspace(tabs, '/shipments', '/shipments', 'after')).toBe(tabs);
+    expect(moveWorkspace(tabs, '/missing', '/shipments', 'before')).toBe(tabs);
+    expect(moveWorkspace(tabs, '/shipments', '/missing', 'after')).toBe(tabs);
+  });
+  it('восстанавливает порядок и оставляет текущую вкладку на прежнем месте', () => {
+    const moved = moveWorkspace(tabs, '/shipments', '/counterparties', 'after');
+    expect(restoreWorkspaces(JSON.stringify(moved), '/transportations')).toEqual(moved);
+  });
+  it('отбрасывает повреждённые и повторные записи, открывает текущий адрес', () => {
+    expect(restoreWorkspaces('broken', '/shipments')).toEqual([tabs[0]]);
+    expect(
+      restoreWorkspaces(
+        JSON.stringify([tabs[1], tabs[1], { route: 'https://example.com', title: 'bad' }, null]),
+        '/shipments',
+      ),
+    ).toEqual([tabs[1], tabs[0]]);
+  });
 });

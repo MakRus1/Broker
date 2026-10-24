@@ -14,7 +14,8 @@ inline bool HasRouteData(const models::RouteSegment& segment) {
         return point.has_value() &&
             (!point.value().name.empty() || !point.value().country_code.empty());
     };
-    return segment.rail.has_value() || filled(segment.origin) || filled(segment.destination) ||
+    return segment.international_road.has_value() || segment.pickup.has_value() ||
+        segment.rail.has_value() || filled(segment.origin) || filled(segment.destination) ||
         segment.contractor_id.has_value() || segment.planned_departure_at.has_value() ||
         segment.planned_arrival_at.has_value() || segment.actual_departure_at.has_value() ||
         segment.actual_arrival_at.has_value();

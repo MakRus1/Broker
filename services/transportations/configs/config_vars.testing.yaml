@@ -23,3 +23,4 @@ config-updates-enabled: false
 config-server-url: http://localhost:8090
 config-cache-path: ''
 client-shipments-base-url: http://localhost:8080
+client-counterparties-base-url: http://localhost:8080

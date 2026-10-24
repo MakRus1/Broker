@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
 #include <domain/rail.hpp>
+#include <domain/road.hpp>
 #include <domain/route.hpp>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
@@ -35,6 +36,7 @@ void CheckInterval(
 
 namespace transportations::domain {
 void ValidateRoute(const models::SetRouteRequest& request) {
+    ValidateRoadDetails(request);
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
         if (!ids.insert(boost::uuids::string_generator{}(route_segment.id)).second)
@@ -85,6 +87,8 @@ void ValidateActualTimes(const models::RouteSegment& route_segment) {
 models::RouteSegment MakeRouteSegment(const models::SetRouteSegmentsItem& source) {
     models::RouteSegment result;
     result.rail = source.rail;
+    result.international_road = source.international_road;
+    result.pickup = source.pickup;
     result.id = source.id;
     result.mode = source.mode;
     if (source.origin.has_value())

@@ -82,6 +82,28 @@ export interface RailwayStation {
   name: string;
   country_code: string;
 }
+export interface InternationalRoadDetails {
+  loading_terminal_id?: string;
+  planned_loading_date?: string;
+  planned_unloading_date?: string;
+  departure_date?: string;
+  unloading_date?: string;
+  vehicle_number?: string;
+  trailer_number?: string;
+  cmr_number?: string;
+}
+export interface PickupDetails {
+  planned_pickup_date?: string;
+  planned_delivery_date?: string;
+  pickup_date?: string;
+  delivery_date?: string;
+  delivery_city?: string;
+  delivery_country?: string;
+  delivery_address?: string;
+  driver?: string;
+  vehicle_number?: string;
+  ttn_date?: string;
+}
 export interface RailDetails {
   origin_station?: RailwayStation;
   destination_station?: RailwayStation;
@@ -110,6 +132,8 @@ export interface Transportation {
     mode: keyof typeof modes;
     inherited?: boolean;
     rail?: RailDetails;
+    international_road?: InternationalRoadDetails;
+    pickup?: PickupDetails;
     sea?: SeaDetails;
     air?: AirDetails;
     contractor_id?: string;

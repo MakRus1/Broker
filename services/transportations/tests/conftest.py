@@ -43,6 +43,7 @@ def configure_auth(mockserver_info):
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url
+        config_vars['client-counterparties-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -113,3 +114,12 @@ def shipment_routes(mockserver):
     source = Source()
     source.registrations = registrations
     return source
+
+
+@pytest.fixture(autouse=True)
+def counterparties(mockserver):
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def get(request):
+        return {'counterparty': {'id': request.json['id'], 'name': 'Перевозчик', 'revision': 1,
+            'archived': False, 'legal_name': None, 'country_code': None, 'tax_id': None,
+            'registration_id': None, 'legal_address': None, 'roles': ['carrier'], 'contacts': [], 'logist': None}}

@@ -3,6 +3,7 @@
 #include <helpers/inherited_route.hpp>
 #include <helpers/railway_stations.hpp>
 #include <helpers/revision.hpp>
+#include <helpers/route_counterparties.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/utils/text.hpp>
@@ -22,6 +23,8 @@ Response View::Handle(
         const auto& source = FindShipmentContext(sources, loaded.shipment_id);
         InheritRoute(loaded, source);
         domain::ValidateRoute(request.body);
+        ValidateRouteCounterparties(
+            deps, context, request.body.route_segments, loaded.route_segments);
         const auto stations =
             LoadRailwayStations(*deps.pg_cluster, domain::GetRailwayStationCodes(request.body));
         domain::ResolveRailwayStations(request.body, loaded, stations);

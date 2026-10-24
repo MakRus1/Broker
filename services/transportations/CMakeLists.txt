@@ -8,6 +8,7 @@ add_library(
     src/helpers/actuals.cpp
     src/domain/route.cpp
     src/domain/rail.cpp
+    src/domain/road.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )

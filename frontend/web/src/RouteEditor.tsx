@@ -1,9 +1,10 @@
+import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
 import { routePoint } from './transportation';
 import { RailFields } from './RailFields';
 import { useRouteCollapse } from './routeCollapse';
 import { useEffect, useState, type FormEvent } from 'react';
-import { request, modes, type Session, type Transportation } from './api';
+import { request, modes, type Session, type Shipment, type Transportation } from './api';
 import { useDiscardConfirmation } from './components';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import {
@@ -235,11 +236,7 @@ export function RouteEditor({
                 <div className="route-fields">
                   <div className="route-contractor-field">
                     <CustomerSelect
-                      label={
-                        route_segment.mode === 'rail' || route_segment.mode === 'international_rail'
-                          ? 'Перевозчик'
-                          : 'Подрядчик'
-                      }
+                      label="Перевозчик"
                       items={customers}
                       session={session}
                       disabled={busy}
@@ -250,7 +247,29 @@ export function RouteEditor({
                     />
                   </div>
 
-                  {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
+                  {route_segment.mode === 'international_road' ||
+                  route_segment.mode === 'road' ||
+                  route_segment.mode === 'pickup' ? (
+                    <RoadFields
+                      international={route_segment.mode === 'international_road'}
+                      road={route_segment.international_road}
+                      pickup={route_segment.pickup}
+                      session={session}
+                      customers={customers}
+                      onRoad={(international_road) =>
+                        update(index, {
+                          ...route_segment,
+                          international_road: Object.values(international_road).some(
+                            (value) => value !== undefined,
+                          )
+                            ? international_road
+                            : undefined,
+                        })
+                      }
+                      onPickup={(pickup) => update(index, { ...route_segment, pickup })}
+                    />
+                  ) : route_segment.mode === 'rail' ||
+                    route_segment.mode === 'international_rail' ? (
                     <RailFields
                       value={route_segment.rail ?? {}}
                       session={session}

@@ -47,3 +47,31 @@ async def test_rail_route_roundtrip(browser, mockserver):
     response = await browser.post('/api/v1/transportation-routes/set', body)
     assert response.status == 200, response.text
     assert response.json()['transportation']['route_segments'][0]['rail'] == stage['rail']
+
+
+async def test_road_details_roundtrip(browser, mockserver):
+    await browser.sign_in()
+    stage = {
+        'id': str(uuid4()),
+        'mode': 'international_road',
+        'international_road': {
+            'vehicle_number': 'А123ВС',
+            'trailer_number': 'АА1234',
+            'cmr_number': '12',
+            'departure_date': '2020-01-01',
+        },
+    }
+    body = {
+        'transportation_id': TRANSPORTATION['id'],
+        'expected_revision': 1,
+        'route_segments': [stage],
+    }
+
+    @mockserver.json_handler('/api/v1/transportation-routes/set')
+    def save(request):
+        assert request.json == body
+        return {'transportation': {**TRANSPORTATION, 'route_segments': [stage]}}
+
+    response = await browser.post('/api/v1/transportation-routes/set', body)
+    assert response.status == 200, response.text
+    assert response.json()['transportation']['route_segments'] == [stage]

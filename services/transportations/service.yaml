@@ -30,3 +30,6 @@ clients:
   shipments:
     service: shipments
     transport: http
+  counterparties:
+    service: counterparties
+    transport: http

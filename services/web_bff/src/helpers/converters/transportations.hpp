@@ -6,6 +6,58 @@
 
 namespace web_bff {
 
+inline models::transportations::InternationalRoadDetails Convert(
+    const clients::transportations::models::InternationalRoadDetails& value) {
+    return {.cmr_number = value.cmr_number,
+        .departure_date = value.departure_date,
+        .loading_terminal_id = value.loading_terminal_id,
+        .planned_loading_date = value.planned_loading_date,
+        .planned_unloading_date = value.planned_unloading_date,
+        .trailer_number = value.trailer_number,
+        .unloading_date = value.unloading_date,
+        .vehicle_number = value.vehicle_number};
+}
+
+inline clients::transportations::models::InternationalRoadDetails Convert(
+    const models::transportations::InternationalRoadDetails& value) {
+    return {.cmr_number = value.cmr_number,
+        .departure_date = value.departure_date,
+        .loading_terminal_id = value.loading_terminal_id,
+        .planned_loading_date = value.planned_loading_date,
+        .planned_unloading_date = value.planned_unloading_date,
+        .trailer_number = value.trailer_number,
+        .unloading_date = value.unloading_date,
+        .vehicle_number = value.vehicle_number};
+}
+
+inline models::transportations::PickupDetails Convert(
+    const clients::transportations::models::PickupDetails& value) {
+    return {.delivery_address = value.delivery_address,
+        .delivery_city = value.delivery_city,
+        .delivery_country = value.delivery_country,
+        .delivery_date = value.delivery_date,
+        .driver = value.driver,
+        .pickup_date = value.pickup_date,
+        .planned_delivery_date = value.planned_delivery_date,
+        .planned_pickup_date = value.planned_pickup_date,
+        .ttn_date = value.ttn_date,
+        .vehicle_number = value.vehicle_number};
+}
+
+inline clients::transportations::models::PickupDetails Convert(
+    const models::transportations::PickupDetails& value) {
+    return {.delivery_address = value.delivery_address,
+        .delivery_city = value.delivery_city,
+        .delivery_country = value.delivery_country,
+        .delivery_date = value.delivery_date,
+        .driver = value.driver,
+        .pickup_date = value.pickup_date,
+        .planned_delivery_date = value.planned_delivery_date,
+        .planned_pickup_date = value.planned_pickup_date,
+        .ttn_date = value.ttn_date,
+        .vehicle_number = value.vehicle_number};
+}
+
 inline models::transportations::RailwayStation Convert(
     const clients::transportations::models::RailwayStation& value) {
     return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
@@ -164,6 +216,10 @@ inline models::transportations::RouteSegment Convert(
     result.planned_departure_at = value.planned_departure_at;
     if (value.rail.has_value())
         result.rail = Convert(value.rail.value());
+    if (value.international_road.has_value())
+        result.international_road = Convert(value.international_road.value());
+    if (value.pickup.has_value())
+        result.pickup = Convert(value.pickup.value());
     return result;
 }
 
@@ -265,6 +321,10 @@ inline clients::transportations::models::SetRouteSegmentsItem Convert(
             .name = value.destination.value().name};
     if (value.rail.has_value())
         result.rail = Convert(value.rail.value());
+    if (value.international_road.has_value())
+        result.international_road = Convert(value.international_road.value());
+    if (value.pickup.has_value())
+        result.pickup = Convert(value.pickup.value());
     return result;
 }
 

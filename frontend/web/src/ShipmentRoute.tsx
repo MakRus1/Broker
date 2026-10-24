@@ -40,19 +40,6 @@ export function ShipmentRoute({
           <h2>Маршрут поставки</h2>
           <p>Море и авиа — общие данные для всех перевозок.</p>
         </div>
-        {onChange && (
-          <button
-            type="button"
-            disabled={!allowedTypes.length || segments.length >= 30}
-            onClick={() => {
-              const id = crypto.randomUUID();
-              onChange([...segments, { id, type: allowedTypes[0] }]);
-              collapse.toggle(id, false);
-            }}
-          >
-            ＋ Добавить участок
-          </button>
-        )}
       </div>
       {!!segments.length && (
         <div className="route-collapse-actions">
@@ -167,6 +154,20 @@ export function ShipmentRoute({
         ))}
       </div>
       {!segments.length && <p className="muted">Добавьте участки в порядке следования.</p>}
+      {onChange && (
+        <button
+          className="shipment-route-add"
+          type="button"
+          disabled={!allowedTypes.length || segments.length >= 30}
+          onClick={() => {
+            const id = crypto.randomUUID();
+            onChange([...segments, { id, type: allowedTypes[0] }]);
+            collapse.toggle(id, false);
+          }}
+        >
+          ＋ Добавить участок
+        </button>
+      )}
     </section>
   );
 }

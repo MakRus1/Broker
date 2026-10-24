@@ -129,6 +129,10 @@ RouteSegment:
       $ref: '#/SeaDetails'
     air:
       $ref: '#/AirDetails'
+    international_road:
+      $ref: '#/InternationalRoadDetails'
+    pickup:
+      $ref: '#/PickupDetails'
   required:
   - id
   - mode
@@ -182,6 +186,10 @@ SetRouteSegmentsItem:
       format: date-time
     rail:
       $ref: '#/RailDetails'
+    international_road:
+      $ref: '#/InternationalRoadDetails'
+    pickup:
+      $ref: '#/PickupDetails'
   required:
   - id
   - mode
@@ -638,3 +646,65 @@ AirDetails:
       type: string
       maxLength: 64
   required: []
+InternationalRoadDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    loading_terminal_id:
+      type: string
+      format: uuid
+    planned_loading_date:
+      type: string
+      format: date
+    planned_unloading_date:
+      type: string
+      format: date
+    departure_date:
+      type: string
+      format: date
+    unloading_date:
+      type: string
+      format: date
+    vehicle_number:
+      type: string
+      maxLength: 64
+    trailer_number:
+      type: string
+      maxLength: 64
+    cmr_number:
+      type: string
+      maxLength: 128
+PickupDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    planned_pickup_date:
+      type: string
+      format: date
+    planned_delivery_date:
+      type: string
+      format: date
+    pickup_date:
+      type: string
+      format: date
+    delivery_date:
+      type: string
+      format: date
+    delivery_city:
+      type: string
+      maxLength: 256
+    delivery_country:
+      type: string
+      pattern: ^(|[A-Z]{2})$
+    delivery_address:
+      type: string
+      maxLength: 1024
+    driver:
+      type: string
+      maxLength: 256
+    vehicle_number:
+      type: string
+      maxLength: 64
+    ttn_date:
+      type: string
+      format: date

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RailwayStations } from './components/RailwayStations';
 import { request } from './api';
 import { Organizations, type OrganizationAccess } from './components/Organizations';
 import { useWorkspace } from './hooks/useWorkspace';
@@ -9,7 +10,7 @@ import { Notifications } from './components/Notifications';
 
 export function App() {
   const workspace = useWorkspace();
-  const [section, setSection] = useState<'configs' | 'organizations'>('configs');
+  const [section, setSection] = useState<'configs' | 'organizations' | 'stations'>('configs');
   const [access, setAccess] = useState<OrganizationAccess>();
   const [accessError, setAccessError] = useState('');
   useEffect(() => {
@@ -63,8 +64,18 @@ export function App() {
             {access.platform_admin ? 'Организации' : 'Сотрудники и роли'}
           </button>
         )}
+        {access?.platform_admin && (
+          <button
+            aria-current={section === 'stations' ? 'page' : undefined}
+            onClick={() => setSection('stations')}
+          >
+            Станции
+          </button>
+        )}
       </nav>
-      {section === 'organizations' ? (
+      {section === 'stations' && access?.platform_admin ? (
+        <RailwayStations session={session} />
+      ) : section === 'organizations' ? (
         access ? (
           <Organizations session={session} access={access} />
         ) : (

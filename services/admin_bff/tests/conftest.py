@@ -33,6 +33,7 @@ def configure_admin(mockserver_info, service_source_dir):
         config_vars['client-organizations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-config_admin-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url.rstrip('/')
+        config_vars['client-transportations-base-url'] = mockserver_info.base_url.rstrip('/')
     return patch
 
 

@@ -74,7 +74,7 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
             assert actual['route_segments'][2]['actual_departure_at'] == '2026-10-20T09:00:00Z'
             assert actual['route_segments'][0]['origin']['name'] == 'Начало'
         else:
-            assert actual['route_segments'][0]['origin']['name'] == ''
+            assert 'origin' not in actual['route_segments'][0]
     assert shipment_routes.registrations
 
 
@@ -161,7 +161,7 @@ async def test_route_change_rejected_before_local_write(
         'transportation'
     ]
     assert loaded['revision'] == 1
-    assert loaded['route_segments'][0]['origin']['name'] == ''
+    assert 'origin' not in loaded['route_segments'][0]
 
 
 async def test_invalid_actual_does_not_protect_segment(api, shipment_routes):

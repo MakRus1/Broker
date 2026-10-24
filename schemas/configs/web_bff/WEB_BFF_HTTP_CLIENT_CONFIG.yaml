@@ -3,6 +3,7 @@ mode: http-client
 generated: true
 paths:
 - /api/geography/cities
+- /api/geography/railway-stations
 - /api/logout
 - /api/organizations/employees/list
 - /api/session

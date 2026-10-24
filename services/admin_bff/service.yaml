@@ -13,6 +13,9 @@ clients:
   shipments:
     service: shipments
     transport: http
+  transportations:
+    service: transportations
+    transport: http
 dashboard:
   title: Broker · Административный BFF
   tags:

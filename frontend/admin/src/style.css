@@ -1243,3 +1243,77 @@ textarea::placeholder {
   font-weight: 400;
   opacity: 1;
 }
+
+.station-directory {
+  padding: 0 32px 32px;
+}
+.station-search {
+  display: grid;
+  gap: 8px;
+  max-width: 560px;
+  margin-bottom: 24px;
+}
+.station-editor {
+  border: 1px solid var(--border, #dce3ee);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.station-editor h2 {
+  margin: 0 0 20px;
+}
+.station-editor-fields {
+  display: grid;
+  grid-template-columns: 150px minmax(200px, 1fr) 200px;
+  gap: 20px;
+}
+.station-editor-fields label {
+  display: grid;
+  gap: 8px;
+}
+.station-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+.station-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.station-table th,
+.station-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #dce3ee);
+}
+.station-table th:last-child,
+.station-table td:last-child {
+  text-align: right;
+}
+.station-name {
+  border: 0;
+  padding: 0;
+  color: #2860d6;
+  background: transparent;
+  text-align: left;
+}
+@media (max-width: 750px) {
+  .station-editor-fields {
+    grid-template-columns: 1fr;
+  }
+  .station-directory {
+    padding: 0 16px 24px;
+  }
+}
+.station-row {
+  cursor: pointer;
+}
+.station-row:hover,
+.station-row:focus-within {
+  background: #f4f7fc;
+}
+.station-row:focus-visible {
+  outline: 2px solid #2860d6;
+  outline-offset: -2px;
+}

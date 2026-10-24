@@ -1,3 +1,4 @@
+import { routePoint } from './transportation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { modes, ownership, transportationTypes, type Transportation } from './api';
@@ -192,10 +193,11 @@ export function TransportationTable({ items }: { items: Transportation[] }) {
                     {item.route_segments.slice(0, 2).map((stage) => (
                       <div className="registry-route-stage" key={stage.id}>
                         <span className="registry-route-mode">{modes[stage.mode]}</span>
-                        {(stage.origin.name || stage.destination.name) && (
+                        {(routePoint(stage, 'origin').name ||
+                          routePoint(stage, 'destination').name) && (
                           <span>
-                            {stage.origin.name || 'Не указан'} →{' '}
-                            {stage.destination.name || 'Не указан'}
+                            {routePoint(stage, 'origin').name || 'Не указан'} →{' '}
+                            {routePoint(stage, 'destination').name || 'Не указан'}
                           </span>
                         )}
                       </div>

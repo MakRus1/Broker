@@ -4,6 +4,47 @@
 #include <stdexcept>
 
 namespace web_bff {
+
+inline models::transportations::RailwayStation Convert(
+    const clients::transportations::models::RailwayStation& value) {
+    return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
+}
+
+inline clients::transportations::models::RailwayStation Convert(
+    const models::transportations::RailwayStation& value) {
+    return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
+}
+
+inline models::transportations::RailDetails Convert(
+    const clients::transportations::models::RailDetails& value) {
+    models::transportations::RailDetails result;
+    if (value.origin_station.has_value())
+        result.origin_station = Convert(value.origin_station.value());
+    if (value.destination_station.has_value())
+        result.destination_station = Convert(value.destination_station.value());
+    result.etd = value.etd;
+    result.eta = value.eta;
+    result.departure_date = value.departure_date;
+    result.arrival_date = value.arrival_date;
+    result.unloading_date = value.unloading_date;
+    return result;
+}
+
+inline clients::transportations::models::RailDetails Convert(
+    const models::transportations::RailDetails& value) {
+    clients::transportations::models::RailDetails result;
+    if (value.origin_station.has_value())
+        result.origin_station = Convert(value.origin_station.value());
+    if (value.destination_station.has_value())
+        result.destination_station = Convert(value.destination_station.value());
+    result.etd = value.etd;
+    result.eta = value.eta;
+    result.departure_date = value.departure_date;
+    result.arrival_date = value.arrival_date;
+    result.unloading_date = value.unloading_date;
+    return result;
+}
+
 inline models::transportations::TransportationType Convert(
     clients::transportations::models::TransportationType value) {
     switch (value) {
@@ -108,12 +149,16 @@ inline models::transportations::RouteSegment Convert(
     result.actual_arrival_at = value.actual_arrival_at;
     result.actual_departure_at = value.actual_departure_at;
     result.contractor_id = value.contractor_id;
-    result.destination = Convert(value.destination);
+    if (value.destination.has_value())
+        result.destination = Convert(value.destination.value());
     result.id = value.id;
     result.mode = Convert(value.mode);
-    result.origin = Convert(value.origin);
+    if (value.origin.has_value())
+        result.origin = Convert(value.origin.value());
     result.planned_arrival_at = value.planned_arrival_at;
     result.planned_departure_at = value.planned_departure_at;
+    if (value.rail.has_value())
+        result.rail = Convert(value.rail.value());
     return result;
 }
 
@@ -200,14 +245,22 @@ inline models::transportations::EventKind Convert(
 
 inline clients::transportations::models::SetRouteSegmentsItem Convert(
     const models::transportations::SetRouteSegmentsItem& value) {
-    return {.contractor_id = value.contractor_id,
-        .destination = {.country_code = value.destination.country_code,
-            .name = value.destination.name},
+    clients::transportations::models::SetRouteSegmentsItem result{
+        .contractor_id = value.contractor_id,
         .id = value.id,
         .mode = Convert(value.mode),
-        .origin = {.country_code = value.origin.country_code, .name = value.origin.name},
         .planned_arrival_at = value.planned_arrival_at,
         .planned_departure_at = value.planned_departure_at};
+    if (value.origin.has_value())
+        result.origin = clients::transportations::models::SetRouteSegmentsItemOrigin{
+            .country_code = value.origin.value().country_code, .name = value.origin.value().name};
+    if (value.destination.has_value())
+        result.destination = clients::transportations::models::SetRouteSegmentsItemDestination{
+            .country_code = value.destination.value().country_code,
+            .name = value.destination.value().name};
+    if (value.rail.has_value())
+        result.rail = Convert(value.rail.value());
+    return result;
 }
 
 inline clients::transportations::ApiV1TransportationRoutesSet::RequestBody Convert(

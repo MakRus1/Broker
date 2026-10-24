@@ -1,4 +1,5 @@
 #pragma once
+#include <domain/rail.hpp>
 #include <map>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
@@ -6,6 +7,16 @@
 #include <vector>
 
 namespace transportations::helpers {
+inline models::RailwayStation Convert(const pgtypes::RailwayStationV1& row) {
+    return {.country_code = row.CountryCode, .esr_code = row.EsrCode, .name = row.Name};
+}
+
+inline models::RouteSegment Convert(const userver::formats::json::Value& document) {
+    auto result = models::ParseModelJson(document, std::type_identity<models::RouteSegment>{});
+    domain::NormalizeRailLocations(result);
+    return result;
+}
+
 inline models::Transportation Convert(const pgtypes::TransportationV4& row) {
     models::Transportation result;
     result.container_number = row.ContainerNumber;
@@ -30,8 +41,7 @@ inline std::vector<models::RouteSegment> Convert(
     std::vector<models::RouteSegment> result;
     result.reserve(documents.size());
     for (const auto& document : documents)
-        result.push_back(
-            models::ParseModelJson(document, std::type_identity<models::RouteSegment>{}));
+        result.push_back(Convert(document));
     return result;
 }
 
@@ -47,8 +57,7 @@ inline std::vector<models::Transportation> Convert(
     }
     for (const auto& route_segment : route_segments)
         result.at(indexes.at(route_segment.TransportationId))
-            .route_segments.push_back(models::ParseModelJson(
-                route_segment.Document, std::type_identity<models::RouteSegment>{}));
+            .route_segments.push_back(Convert(route_segment.Document));
     return result;
 }
 
@@ -71,8 +80,7 @@ inline models::TransportationEvent Convert(const pgtypes::TransportationEventV1&
             models::ParseEnumScalar(request["event_kind"].As<std::string>(), models::EventKind{});
     result.revision = document["result"]["revision"].As<std::int64_t>();
     for (const auto& route_segment : document["result"]["route_segments"])
-        result.route_segments.push_back(
-            models::ParseModelJson(route_segment, std::type_identity<models::RouteSegment>{}));
+        result.route_segments.push_back(Convert(route_segment));
     return result;
 }
 

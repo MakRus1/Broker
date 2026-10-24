@@ -9,8 +9,11 @@ namespace transportations::helpers {
 using ShipmentContext = clients::shipments::models::TransportationContext;
 
 inline bool HasRouteData(const models::RouteSegment& segment) {
-    return !segment.origin.name.empty() || !segment.destination.name.empty() ||
-        !segment.origin.country_code.empty() || !segment.destination.country_code.empty() ||
+    const auto filled = [](const auto& point) {
+        return point.has_value() &&
+            (!point.value().name.empty() || !point.value().country_code.empty());
+    };
+    return segment.rail.has_value() || filled(segment.origin) || filled(segment.destination) ||
         segment.contractor_id.has_value() || segment.planned_departure_at.has_value() ||
         segment.planned_arrival_at.has_value() || segment.actual_departure_at.has_value() ||
         segment.actual_arrival_at.has_value();

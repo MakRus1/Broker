@@ -14,6 +14,9 @@ std::size_t ApplyActual(models::Transportation& transportation, const std::strin
         });
     if (found == transportation.route_segments.end())
         throw ApiError{404, "not_found", "Плечо не найдено"};
+    if (found->rail.has_value())
+        throw ApiError{
+            400, "rail_calendar_dates", "Даты ЖД-участка изменяются в его деталях без времени"};
     auto& value = event == models::EventKind::Departure ? found->actual_departure_at
                                                         : found->actual_arrival_at;
     const bool correction = change == ActualChange::Correction;

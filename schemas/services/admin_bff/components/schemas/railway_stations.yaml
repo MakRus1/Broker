@@ -1,0 +1,29 @@
+RailwayStation:
+  type: object
+  additionalProperties: false
+  properties:
+    esr_code:
+      type: string
+      pattern: ^[0-9]{6}$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+  required:
+  - esr_code
+  - name
+  - country_code
+ApiError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+  required:
+  - error
+  - message

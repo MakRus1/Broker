@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  title: Общий справочник станций
+  version: '1'
+paths:
+  /api/admin/railway-stations/list:
+    post:
+      summary: Общий справочник железнодорожных станций
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                query:
+                  type: string
+                  maxLength: 200
+                after:
+                  type: string
+                  maxLength: 6
+              required: []
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/railway_stations.yaml#/RailwayStation
+                  next:
+                    type: string
+                required:
+                - items
+        '400':
+          description: Некорректные значения
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '403':
+          description: Требуется администратор платформы
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '404':
+          description: Станция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '503':
+          description: Проверка доступа недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+  /api/admin/railway-stations/save:
+    post:
+      summary: Добавить или изменить общую станцию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                esr_code:
+                  type: string
+                  pattern: ^[0-9]{6}$
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                country_code:
+                  type: string
+                  pattern: ^[A-Z]{2}$
+                existing:
+                  type: boolean
+                  description: Явное редактирование существующей записи
+              required:
+              - esr_code
+              - name
+              - country_code
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/RailwayStation
+        '400':
+          description: Некорректные значения
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '403':
+          description: Требуется администратор платформы
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '404':
+          description: Станция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '503':
+          description: Проверка доступа недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '409':
+          description: Код ЕСР уже занят
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+  /api/admin/railway-stations/archive:
+    post:
+      summary: Архивировать общую станцию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                esr_code:
+                  type: string
+                  pattern: ^[0-9]{6}$
+              required:
+              - esr_code
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  esr_code:
+                    type: string
+                required:
+                - esr_code
+        '400':
+          description: Некорректные значения
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '403':
+          description: Требуется администратор платформы
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '404':
+          description: Станция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+        '503':
+          description: Проверка доступа недоступна
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/railway_stations.yaml#/ApiError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+security:
+- BrowserSession: []

@@ -43,6 +43,20 @@ export interface Operation {
   transportation_ids?: string[];
   rejection_code?: string;
 }
+export interface RailwayStation {
+  esr_code: string;
+  name: string;
+  country_code: string;
+}
+export interface RailDetails {
+  origin_station?: RailwayStation;
+  destination_station?: RailwayStation;
+  etd?: string;
+  eta?: string;
+  departure_date?: string;
+  arrival_date?: string;
+  unloading_date?: string;
+}
 export interface Transportation {
   container_number?: string;
   id: string;
@@ -61,13 +75,14 @@ export interface Transportation {
     id: string;
     mode: keyof typeof modes;
     inherited?: boolean;
+    rail?: RailDetails;
     contractor_id?: string;
     planned_departure_at?: string;
     planned_arrival_at?: string;
     actual_departure_at?: string;
     actual_arrival_at?: string;
-    origin: { name: string; country_code: string };
-    destination: { name: string; country_code: string };
+    origin?: { name: string; country_code: string };
+    destination?: { name: string; country_code: string };
   }[];
 }
 export interface TransportationEvent {
@@ -152,7 +167,7 @@ export const modes = {
   international_rail: 'Международное ЖД',
   international_road: 'Международное авто',
   rail: 'ЖД РФ',
-  road: 'Авто',
+  road: 'Вывоз',
   pickup: 'Вывоз',
   air: 'Авиа',
 } as const;

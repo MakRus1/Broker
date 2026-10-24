@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/helpers/actuals.cpp
     src/domain/route.cpp
+    src/domain/rail.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )

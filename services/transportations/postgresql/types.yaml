@@ -111,3 +111,11 @@ types:
       type: text
     - name: hazardous
       type: boolean
+  public.railway_station_v1:
+    fields:
+    - name: esr_code
+      type: text
+    - name: name
+      type: text
+    - name: country_code
+      type: text

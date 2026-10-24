@@ -1,3 +1,6 @@
+import { routePoint } from './transportation';
+import { RailFields } from './RailFields';
+import { useRouteCollapse } from './routeCollapse';
 import { useEffect, useState, type FormEvent } from 'react';
 import { request, modes, type Session, type Transportation } from './api';
 import { useDiscardConfirmation } from './components';
@@ -27,7 +30,8 @@ function readDraft(key: string, fallback: Draft): Draft {
           route_segment.mode in modes &&
           [route_segment.origin, route_segment.destination].every(
             (point) =>
-              point && typeof point.name === 'string' && typeof point.country_code === 'string',
+              point === undefined ||
+              (typeof point.name === 'string' && typeof point.country_code === 'string'),
           ) &&
           [
             route_segment.contractor_id,
@@ -69,6 +73,7 @@ export function RouteEditor({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const dirty = JSON.stringify(draft.route_segments) !== JSON.stringify(baseline.route_segments);
+  const collapse = useRouteCollapse(draft.route_segments.map((stage) => stage.id));
   const stale = draft.revision !== initial.revision;
   useEffect(() => {
     if (!allowed) return;
@@ -151,7 +156,7 @@ export function RouteEditor({
         <div className="section-heading">
           <div>
             <h2>Участки маршрута</h2>
-            <p className="hint">Время: {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
+            <p className="hint">Даты ЖД-участков указываются без времени.</p>
           </div>
         </div>
         {stale && (
@@ -160,18 +165,50 @@ export function RouteEditor({
             Отмените редактирование, чтобы открыть актуальные данные.
           </p>
         )}
+        <div className="route-collapse-actions">
+          <button type="button" onClick={collapse.expandAll}>
+            Развернуть все
+          </button>
+          <button type="button" onClick={collapse.collapseAll}>
+            Свернуть все
+          </button>
+        </div>
         <fieldset disabled={busy || stale}>
           {draft.route_segments.map((route_segment, index) => (
-            <section className="route-segment" key={route_segment.id}>
-              <div className="section-heading">
+            <details
+              className="route-segment"
+              key={route_segment.id}
+              open={!collapse.collapsed.has(route_segment.id)}
+              onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
+            >
+              <summary className="route-stage-summary">
                 <h3>
                   {index + 1}. {modes[route_segment.mode]}
                 </h3>
-              </div>
+                <span>
+                  {routePoint(route_segment, 'origin').name || 'Станция не выбрана'} →{' '}
+                  {routePoint(route_segment, 'destination').name || 'Станция не выбрана'}
+                </span>
+                <span className="route-summary-meta">
+                  {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
+                    'Перевозчик не выбран'}
+                  {route_segment.rail && (
+                    <>
+                      {' '}
+                      · ETD {route_segment.rail.etd?.split('-').reverse().join('.') || '—'} · ETA{' '}
+                      {route_segment.rail.eta?.split('-').reverse().join('.') || '—'}
+                    </>
+                  )}
+                </span>
+              </summary>
               <div className="route-fields">
                 <div className="route-contractor-field">
                   <CustomerSelect
-                    label="Подрядчик"
+                    label={
+                      route_segment.mode === 'rail' || route_segment.mode === 'international_rail'
+                        ? 'Перевозчик'
+                        : 'Подрядчик'
+                    }
                     items={customers}
                     session={session}
                     disabled={busy}
@@ -182,68 +219,89 @@ export function RouteEditor({
                   />
                 </div>
 
-                {(['origin', 'destination'] as const).map((point) => (
-                  <div key={point} className="point-fields">
-                    <label>
-                      {point === 'origin' ? 'Откуда' : 'Куда'}
-                      <input
-                        maxLength={256}
-                        value={route_segment[point].name}
-                        onChange={(event) =>
-                          update(index, {
-                            ...route_segment,
-                            [point]: { ...route_segment[point], name: event.target.value },
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Страна
-                      <input
-                        pattern="[A-Za-z]{2}"
-                        minLength={2}
-                        maxLength={2}
-                        placeholder="RU"
-                        value={route_segment[point].country_code}
-                        onChange={(event) =>
-                          update(index, {
-                            ...route_segment,
-                            [point]: {
-                              ...route_segment[point],
-                              country_code: event.target.value.toUpperCase(),
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  </div>
-                ))}
-                {(['planned_departure_at', 'planned_arrival_at'] as const).map((field) => (
-                  <label key={field}>
-                    {field === 'planned_departure_at'
-                      ? 'Плановое отправление'
-                      : 'Плановое прибытие'}
-                    <input
-                      type="datetime-local"
-                      value={localDateTime(route_segment[field])}
-                      onChange={(event) => {
-                        try {
-                          update(index, {
-                            ...route_segment,
-                            [field]: event.target.value
-                              ? utcDateTime(event.target.value)
-                              : undefined,
-                          });
-                          setFailure('');
-                        } catch (error) {
-                          setFailure(error instanceof Error ? error.message : 'Проверьте дату');
-                        }
-                      }}
-                    />
-                  </label>
-                ))}
+                {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
+                  <RailFields
+                    value={route_segment.rail ?? {}}
+                    session={session}
+                    onChange={(rail) => {
+                      const filled = Object.values(rail).some((value) => value !== undefined);
+                      update(index, {
+                        ...route_segment,
+                        rail: filled ? rail : undefined,
+                        origin: undefined,
+                        destination: undefined,
+                      });
+                    }}
+                  />
+                ) : (
+                  <>
+                    {(['origin', 'destination'] as const).map((point) => (
+                      <div key={point} className="point-fields">
+                        <label>
+                          {point === 'origin' ? 'Откуда' : 'Куда'}
+                          <input
+                            maxLength={256}
+                            value={routePoint(route_segment, point).name}
+                            onChange={(event) =>
+                              update(index, {
+                                ...route_segment,
+                                [point]: {
+                                  ...routePoint(route_segment, point),
+                                  name: event.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                        <label>
+                          Страна
+                          <input
+                            pattern="[A-Za-z]{2}"
+                            minLength={2}
+                            maxLength={2}
+                            placeholder="RU"
+                            value={routePoint(route_segment, point).country_code}
+                            onChange={(event) =>
+                              update(index, {
+                                ...route_segment,
+                                [point]: {
+                                  ...routePoint(route_segment, point),
+                                  country_code: event.target.value.toUpperCase(),
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+                    ))}
+                    {(['planned_departure_at', 'planned_arrival_at'] as const).map((field) => (
+                      <label key={field}>
+                        {field === 'planned_departure_at'
+                          ? 'Плановое отправление'
+                          : 'Плановое прибытие'}
+                        <input
+                          type="datetime-local"
+                          value={localDateTime(route_segment[field])}
+                          onChange={(event) => {
+                            try {
+                              update(index, {
+                                ...route_segment,
+                                [field]: event.target.value
+                                  ? utcDateTime(event.target.value)
+                                  : undefined,
+                              });
+                              setFailure('');
+                            } catch (error) {
+                              setFailure(error instanceof Error ? error.message : 'Проверьте дату');
+                            }
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </>
+                )}
               </div>
-            </section>
+            </details>
           ))}
         </fieldset>
         {!draft.route_segments.length && <p className="hint">Задайте маршрут в поставке.</p>}

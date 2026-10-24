@@ -82,7 +82,8 @@ Transportation:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - id
   - revision
@@ -120,13 +121,13 @@ RouteSegment:
       format: date-time
     inherited:
       type: boolean
-      description: Участок присутствует в текущем маршруте поставки. Отсутствующие старые участки доступны
-        только для просмотра.
+      description: Участок присутствует в текущем маршруте поставки. Отсутствующие
+        старые участки доступны только для просмотра.
+    rail:
+      $ref: '#/RailDetails'
   required:
   - id
   - mode
-  - origin
-  - destination
 RouteSegmentOrigin:
   type: object
   additionalProperties: false
@@ -175,11 +176,11 @@ SetRouteSegmentsItem:
     planned_arrival_at:
       type: string
       format: date-time
+    rail:
+      $ref: '#/RailDetails'
   required:
   - id
   - mode
-  - origin
-  - destination
 SetRouteSegmentsItemOrigin:
   type: object
   additionalProperties: false
@@ -462,7 +463,8 @@ CreateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - id
   - shipment_id
@@ -491,7 +493,8 @@ UpdateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - transportation_id
   - expected_revision
@@ -506,3 +509,44 @@ RouteUsageRequest:
       format: uuid
   required:
   - shipment_id
+RailwayStation:
+  type: object
+  additionalProperties: false
+  properties:
+    esr_code:
+      type: string
+      pattern: ^[0-9]{6}$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+  required:
+  - esr_code
+  - name
+  - country_code
+RailDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    origin_station:
+      $ref: '#/RailwayStation'
+    destination_station:
+      $ref: '#/RailwayStation'
+    etd:
+      type: string
+      format: date
+    eta:
+      type: string
+      format: date
+    departure_date:
+      type: string
+      format: date
+    arrival_date:
+      type: string
+      format: date
+    unloading_date:
+      type: string
+      format: date

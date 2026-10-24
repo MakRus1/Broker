@@ -4,6 +4,7 @@ import {
   transportationTitle,
   localDateTime,
   routeRequest,
+  routePoint,
   utcDateTime,
 } from './transportation';
 
@@ -77,4 +78,28 @@ it('использует фактический номер контейнера 
   );
   expect(transportationTitle({ type: 'container' })).toBe('Контейнер · Без номера');
   expect(transportationTitle({ type: 'air' })).toBe('Авиа · Без номера');
+});
+
+it('сохраняет календарные даты и выбранные станции ЖД без преобразования в UTC', () => {
+  const rail = {
+    origin_station: { esr_code: '000001', name: 'Станция', country_code: 'RU' },
+    etd: '2030-01-01',
+    eta: '2030-01-03',
+    departure_date: '2020-01-01',
+    unloading_date: '2020-01-04',
+  };
+  const result = routeRequest('id', 3, [{ ...route_segment, mode: 'rail', rail }]);
+  expect(result.route_segments[0].rail).toEqual(rail);
+  expect(result.route_segments[0]).not.toHaveProperty('origin');
+  expect(result.route_segments[0]).not.toHaveProperty('destination');
+  expect(routePoint(result.route_segments[0], 'origin')).toEqual(rail.origin_station);
+  expect(routePoint(result.route_segments[0], 'destination').name).toBe('');
+});
+
+it('не использует старые свободные пункты в ЖД-участке', () => {
+  const stage = { ...route_segment, mode: 'rail' as const };
+  const result = routeRequest('id', 1, [stage]).route_segments[0];
+  expect(result).not.toHaveProperty('origin');
+  expect(result).not.toHaveProperty('destination');
+  expect(routePoint(stage, 'origin').name).toBe('');
 });

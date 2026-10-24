@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Маршруты перевозок
+  version: '1'
+paths:
+  /api/v1/railway-stations/search:
+    post:
+      summary: Поиск железнодорожных станций по названию или коду ЕСР
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                query:
+                  type: string
+                  minLength: 2
+                  maxLength: 200
+              required:
+              - query
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/models.yaml#/RailwayStation
+                required:
+                - items
+        '400':
+          description: Некорректные параметры поиска
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

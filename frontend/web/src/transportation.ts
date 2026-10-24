@@ -3,6 +3,15 @@ import { transportationTypes, type Transportation } from './api';
 export type RouteSegment = Transportation['route_segments'][number];
 export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'actual_arrival_at'>;
 
+// Вычисляем подписи, не копируя станции в свободные пункты маршрута.
+export function routePoint(segment: RouteSegment, point: 'origin' | 'destination') {
+  const station =
+    point === 'origin' ? segment.rail?.origin_station : segment.rail?.destination_station;
+  if (segment.mode === 'rail' || segment.mode === 'international_rail')
+    return station ?? { name: '', country_code: '' };
+  return segment[point] ?? { name: '', country_code: '' };
+}
+
 export function localDateTime(value?: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -36,10 +45,38 @@ export function formatDate(value?: string): string {
 }
 export function routeSegment(value: RouteSegment): PlannedRouteSegment {
   return {
+    ...(value.rail
+      ? { rail: { ...value.rail } }
+      : (value.mode === 'rail' || value.mode === 'international_rail') &&
+          (value.planned_departure_at ||
+            value.planned_arrival_at ||
+            value.actual_departure_at ||
+            value.actual_arrival_at)
+        ? {
+            rail: {
+              ...(value.planned_departure_at
+                ? { etd: localDateTime(value.planned_departure_at).slice(0, 10) }
+                : {}),
+              ...(value.planned_arrival_at
+                ? { eta: localDateTime(value.planned_arrival_at).slice(0, 10) }
+                : {}),
+              ...(value.actual_departure_at
+                ? { departure_date: localDateTime(value.actual_departure_at).slice(0, 10) }
+                : {}),
+              ...(value.actual_arrival_at
+                ? { arrival_date: localDateTime(value.actual_arrival_at).slice(0, 10) }
+                : {}),
+            },
+          }
+        : {}),
     id: value.id,
     mode: value.mode,
-    origin: { ...value.origin },
-    destination: { ...value.destination },
+    ...(value.origin && value.mode !== 'rail' && value.mode !== 'international_rail'
+      ? { origin: { ...value.origin } }
+      : {}),
+    ...(value.destination && value.mode !== 'rail' && value.mode !== 'international_rail'
+      ? { destination: { ...value.destination } }
+      : {}),
     ...(value.contractor_id ? { contractor_id: value.contractor_id } : {}),
     ...(value.planned_departure_at ? { planned_departure_at: value.planned_departure_at } : {}),
     ...(value.planned_arrival_at ? { planned_arrival_at: value.planned_arrival_at } : {}),
@@ -58,6 +95,7 @@ export function routeRequest(id: string, revision: number, route_segments: Plann
     route_segments: route_segments.map((route_segment) => {
       const result = routeSegment(route_segment);
       for (const point of [result.origin, result.destination]) {
+        if (!point) continue;
         point.name = point.name.trim();
         point.country_code = point.country_code.trim().toUpperCase();
         if (point.country_code && !/^[A-Z]{2}$/.test(point.country_code))

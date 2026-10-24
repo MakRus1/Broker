@@ -1,3 +1,7 @@
+import { routePoint } from './transportation';
+import { RailDetailsView } from './RailFields';
+import { calendarDate } from './calendar';
+import { useRouteCollapse } from './routeCollapse';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
@@ -12,6 +16,7 @@ import {
 import { CardNavigation, Dialog } from './components';
 import type { Counterparty } from './CustomerSelect';
 import {
+  routeSegment,
   formatDate,
   transportationTitle,
   historyActions,
@@ -285,7 +290,7 @@ export function TransportationPage({
       </section>
       {actual && (
         <Dialog
-          title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${actual.route_segment.origin.name} → ${actual.route_segment.destination.name}`}
+          title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${routePoint(actual.route_segment, 'origin').name} → ${routePoint(actual.route_segment, 'destination').name}`}
           onClose={() => setActual(undefined)}
         >
           <ActualForm
@@ -315,6 +320,7 @@ export function RouteView({
   customers: Counterparty[];
   onActual?: (route_segment: RouteSegment, kind: 'departure' | 'arrival') => void;
 }) {
+  const collapse = useRouteCollapse(route_segments.map((stage) => stage.id));
   if (!route_segments.length)
     return (
       <div className="empty">
@@ -324,55 +330,94 @@ export function RouteView({
     );
   return (
     <div className="route-list">
+      <div className="route-collapse-actions">
+        <button type="button" onClick={collapse.expandAll}>
+          Развернуть все
+        </button>
+        <button type="button" onClick={collapse.collapseAll}>
+          Свернуть все
+        </button>
+      </div>
       {route_segments.map((route_segment, index) => (
-        <article className="route-segment" key={route_segment.id}>
-          <div className="section-heading">
+        <details
+          className="route-segment"
+          key={route_segment.id}
+          open={!collapse.collapsed.has(route_segment.id)}
+          onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
+        >
+          <summary className="route-stage-summary">
             <h3>
               {index + 1}. {modes[route_segment.mode]} ·{' '}
-              {route_segment.origin.name || 'Пункт не указан'} →{' '}
-              {route_segment.destination.name || 'Пункт не указан'}
+              {routePoint(route_segment, 'origin').name || 'Пункт не указан'} →{' '}
+              {routePoint(route_segment, 'destination').name || 'Пункт не указан'}
             </h3>
-          </div>
-          <p className="route-segment-meta">
-            {route_segment.origin.country_code} → {route_segment.destination.country_code} ·
-            Подрядчик:{' '}
-            {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
-              (route_segment.contractor_id ? 'Недоступен' : 'Не выбран')}
-          </p>
+            <span className="route-summary-meta">
+              {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
+                'Перевозчик не выбран'}
+              {route_segment.rail && (
+                <>
+                  {' '}
+                  · ETD {calendarDate(route_segment.rail.etd)} · ETA{' '}
+                  {calendarDate(route_segment.rail.eta)}
+                </>
+              )}
+            </span>
+          </summary>
+          {(routePoint(route_segment, 'origin').country_code ||
+            routePoint(route_segment, 'destination').country_code) && (
+            <p className="route-segment-meta">
+              {[
+                routePoint(route_segment, 'origin').country_code,
+                routePoint(route_segment, 'destination').country_code,
+              ]
+                .filter(Boolean)
+                .join(' → ')}
+            </p>
+          )}
           {route_segment.inherited === false && (
             <p className="hint">
               Исторический участок: отсутствует в текущем маршруте поставки. Доступен только
               просмотр.
             </p>
           )}
-          <div className="route-segment-dates">
-            {(['departure', 'arrival'] as const).map((kind) => {
-              const value =
-                kind === 'departure'
-                  ? route_segment.actual_departure_at
-                  : route_segment.actual_arrival_at;
-              return (
-                <div key={kind}>
-                  <strong>{kind === 'departure' ? 'Отправление' : 'Прибытие'}</strong>
-                  <span>
-                    План:{' '}
-                    {formatDate(
-                      kind === 'departure'
-                        ? route_segment.planned_departure_at
-                        : route_segment.planned_arrival_at,
+          {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
+            <>
+              <p className="rail-stations-meta">
+                ЕСР: {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
+                {route_segment.rail?.destination_station?.esr_code ?? '—'}
+              </p>
+              <RailDetailsView value={routeSegment(route_segment).rail ?? {}} />
+            </>
+          ) : (
+            <div className="route-segment-dates">
+              {(['departure', 'arrival'] as const).map((kind) => {
+                const value =
+                  kind === 'departure'
+                    ? route_segment.actual_departure_at
+                    : route_segment.actual_arrival_at;
+                return (
+                  <div key={kind}>
+                    <strong>{kind === 'departure' ? 'Отправление' : 'Прибытие'}</strong>
+                    <span>
+                      План:{' '}
+                      {formatDate(
+                        kind === 'departure'
+                          ? route_segment.planned_departure_at
+                          : route_segment.planned_arrival_at,
+                      )}
+                    </span>
+                    <span>Факт: {formatDate(value)}</span>
+                    {onActual && route_segment.inherited !== false && (
+                      <button type="button" onClick={() => onActual(route_segment, kind)}>
+                        {value ? 'Исправить' : 'Записать факт'}
+                      </button>
                     )}
-                  </span>
-                  <span>Факт: {formatDate(value)}</span>
-                  {onActual && route_segment.inherited !== false && (
-                    <button type="button" onClick={() => onActual(route_segment, kind)}>
-                      {value ? 'Исправить' : 'Записать факт'}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </article>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </details>
       ))}
     </div>
   );

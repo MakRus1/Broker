@@ -1,8 +1,11 @@
+#include <domain/rail.hpp>
 #include <domain/route.hpp>
 #include <helpers/inherited_route.hpp>
+#include <helpers/railway_stations.hpp>
 #include <helpers/revision.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
+#include <userver/utils/text.hpp>
 #include <views/api/v1/transportation_routes/set/view.hpp>
 
 namespace transportations::views::api::v1::transportation_routes::set {
@@ -19,6 +22,9 @@ Response View::Handle(
         const auto& source = FindShipmentContext(sources, loaded.shipment_id);
         InheritRoute(loaded, source);
         domain::ValidateRoute(request.body);
+        const auto stations =
+            LoadRailwayStations(*deps.pg_cluster, domain::GetRailwayStationCodes(request.body));
+        domain::ResolveRailwayStations(request.body, loaded, stations);
         if (request.body.route_segments.size() != source.route_segments.size())
             throw ApiError{409, "inherited_route", "Состав маршрута изменяется только в поставке"};
         std::vector<std::string> used;
@@ -40,6 +46,7 @@ Response View::Handle(
         for (std::size_t i = 0; i < request.body.route_segments.size(); ++i) {
             auto& stored = result.route_segments[i];
             auto value = domain::MakeRouteSegment(request.body.route_segments[i]);
+            value.inherited = stored.inherited;
             value.actual_departure_at = stored.actual_departure_at;
             value.actual_arrival_at = stored.actual_arrival_at;
             domain::ValidateActualTimes(value);

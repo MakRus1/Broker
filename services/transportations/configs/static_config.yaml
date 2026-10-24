@@ -7,8 +7,32 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-railway_stations-archive:
+            path: /api/admin/railway-stations/archive
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-list:
+            path: /api/admin/railway-stations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-save:
+            path: /api/admin/railway-stations/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-internal-v1-transportations-ensure_created:
             path: /api/internal/v1/transportations/ensure-created
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-railway_stations-search:
+            path: /api/v1/railway-stations/search
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -95,7 +119,11 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/admin/railway-stations/archive: authenticated
+                /api/admin/railway-stations/list: authenticated
+                /api/admin/railway-stations/save: authenticated
                 /api/internal/v1/transportations/ensure-created: transportations.create
+                /api/v1/railway-stations/search: transportations.read
                 /api/v1/transportation-actuals/correct: transportations.write
                 /api/v1/transportation-actuals/record: transportations.write
                 /api/v1/transportation-routes/set: transportations.write

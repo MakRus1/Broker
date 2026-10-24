@@ -2126,3 +2126,109 @@ input[aria-invalid='true'] {
   font-size: 12px;
   font-weight: 400;
 }
+
+.station-lookup {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.station-input {
+  position: relative;
+}
+.station-input input {
+  padding-right: 36px;
+}
+.station-input > button {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+}
+.route-stage-summary {
+  cursor: pointer;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  position: relative;
+  padding-right: 24px;
+}
+.route-stage-summary::-webkit-details-marker {
+  display: none;
+}
+.route-stage-summary::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #76839a;
+  border-bottom: 2px solid #76839a;
+  transform: translateY(-70%) rotate(45deg);
+}
+details[open] > .route-stage-summary::after {
+  transform: translateY(-30%) rotate(225deg);
+}
+.route-stage-summary h3 {
+  margin: 0;
+}
+.route-stage-summary + .route-fields {
+  margin-top: 24px;
+}
+.route-summary-meta {
+  color: #76839a;
+  font-size: 13px;
+}
+.route-collapse-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.route-collapse-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.rail-date-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+.rail-date-grid dt {
+  color: #76839a;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.rail-date-grid dd {
+  margin: 0;
+}
+
+.rail-stations-meta {
+  margin: 16px 0;
+  color: #76839a;
+  font-size: 12px;
+}
+.rail-date-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.rail-date-grid > div {
+  grid-column: span 2;
+}
+.rail-date-grid > div:nth-child(-n + 2) {
+  grid-column: span 3;
+}
+@media (max-width: 800px) {
+  .rail-date-grid > div {
+    grid-column: span 3;
+  }
+}
+@media (max-width: 500px) {
+  .rail-date-grid > div,
+  .rail-date-grid > div:nth-child(-n + 2) {
+    grid-column: span 6;
+  }
+}

@@ -1,3 +1,4 @@
+import { localDate } from './calendar';
 import { useFieldValidation } from './fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
@@ -24,10 +25,7 @@ type ShipmentDictionaries = {
   loading: DictionaryValue[];
   route_types: DictionaryValue[];
 };
-export function localDate() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+
 type Props = {
   active?: boolean;
   route: string;

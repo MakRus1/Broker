@@ -85,6 +85,24 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-archive:
+            path: /api/admin/railway-stations/archive
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-list:
+            path: /api/admin/railway-stations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-save:
+            path: /api/admin/railway-stations/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-admin-shipments-settings-get:
             path: /api/admin/shipments/settings/get
             method: POST
@@ -189,6 +207,8 @@ components_manager:
             base-url: $client-organizations-base-url
         client-shipments:
             base-url: $client-shipments-base-url
+        client-transportations:
+            base-url: $client-transportations-base-url
         platform-readiness: {}
         platform-http-readiness: {}
         platform-config-delivery:

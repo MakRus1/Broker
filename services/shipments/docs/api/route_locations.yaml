@@ -14,7 +14,7 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                kind: &id001
+                kind:
                   $ref: ../components/schemas/models.yaml#/TransportLocationKind
                 query:
                   type: string
@@ -161,7 +161,8 @@ paths:
                 id:
                   type: string
                   format: uuid
-                kind: *id001
+                kind:
+                  $ref: ../components/schemas/models.yaml#/TransportLocationKind
                 name:
                   type: string
                   minLength: 1

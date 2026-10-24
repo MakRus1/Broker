@@ -744,7 +744,7 @@ SeaDetails:
     voyage:
       type: string
       maxLength: 128
-  required: &id001 []
+  required: []
 AirDetails:
   type: object
   additionalProperties: false
@@ -771,4 +771,4 @@ AirDetails:
     flight_number:
       type: string
       maxLength: 64
-  required: *id001
+  required: []

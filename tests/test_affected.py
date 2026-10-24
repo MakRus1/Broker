@@ -97,7 +97,7 @@ class AffectedTest(unittest.TestCase):
             git('add', '.')
             git('commit', '-m', 'Изменение библиотеки авторизации')
             self.assertEqual(subprocess.check_output(script + [base]).decode().strip(), 'broker')
-            # Публичный контракт затрагивает поставщика и транзитивных потребителей.
+            # Публичный контракт затрагивает поставщика и прямых потребителей.
             (repo / 'services/third').mkdir()
             (repo / 'services/other/service.yaml').write_text(
                 'version: 1\nlibraries: [common]\nclients: {api: {service: broker, transport: http}}\n'
@@ -118,7 +118,7 @@ class AffectedTest(unittest.TestCase):
             git('add', '.')
             git('commit', '-m', 'Изменение публичного контракта')
             self.assertEqual(
-                subprocess.check_output(script + [base]).decode().strip(), 'broker other third'
+                subprocess.check_output(script + [base]).decode().strip(), 'broker other'
             )
             # Внутренняя реализация не меняет сгенерированные клиенты потребителей.
             base = git('rev-parse', 'HEAD')

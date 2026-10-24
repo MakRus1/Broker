@@ -163,15 +163,10 @@ def select(paths, services, dependencies, consumers, shared_paths, schema_consum
                 or path.endswith('/service.yaml')
             ):
                 public.add(parts[1])
-    # Только изменение контракта распространяется по HTTP-зависимостям.
-    pending, visited = list(public), set(public)
-    while pending:
-        provider = pending.pop()
-        for consumer in consumers[provider]:
-            add([consumer], 'Потребитель контракта: ' + provider)
-            if consumer not in visited:
-                visited.add(consumer)
-                pending.append(consumer)
+    # Клиент зависит от публичного контракта поставщика, но его собственный контракт
+    # от этого не меняется. Транзитивность нужна для линковки библиотек, не для HTTP.
+    for provider in sorted(public):
+        add(consumers[provider], 'Потребитель контракта: ' + provider)
     return reasons
 
 

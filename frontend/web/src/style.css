@@ -2108,3 +2108,21 @@ textarea::placeholder {
   white-space: nowrap;
   border: 0;
 }
+
+.workspace-drop-end {
+  flex: 1 0 48px;
+  align-self: stretch;
+  min-height: 34px;
+}
+
+form[data-validation-attempted='true'] input:invalid,
+form[data-validation-attempted='true'] textarea:invalid,
+input[aria-invalid='true'] {
+  border-color: #b83246;
+  background: #fff8f8;
+}
+.field-error {
+  color: #b83246;
+  font-size: 12px;
+  font-weight: 400;
+}

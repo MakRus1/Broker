@@ -2067,3 +2067,10 @@ main > header {
     grid-template-columns: 1fr;
   }
 }
+
+input::placeholder,
+textarea::placeholder {
+  color: #8290a5;
+  font-weight: 400;
+  opacity: 1;
+}

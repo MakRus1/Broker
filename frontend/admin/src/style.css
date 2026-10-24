@@ -1236,3 +1236,10 @@ body:has(dialog[open]) .workspace > .notifications {
   color: #64748b;
   font-size: 14px;
 }
+
+input::placeholder,
+textarea::placeholder {
+  color: #8290a5;
+  font-weight: 400;
+  opacity: 1;
+}

@@ -7,7 +7,7 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::transportations::ApiAdminRailwayStationsList;
     const auto result = deps.transportations.ApiAdminRailwayStationsList(
-        api::Request{.body = {.query = request.body.query, .after = request.body.after}},
+        api::Request{.body = {.after = request.body.after, .query = request.body.query}},
         session.Access);
     Response200 response;
     response.next = result.next;

@@ -94,7 +94,12 @@ Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) c
         throw std::invalid_argument("Invalid subject");
     if (decoded.get_expires_at() <= decoded.get_issued_at())
         throw std::invalid_argument("Invalid lifetime");
-    Identity identity{impl_->Config.Issuer, subject, {}, subject};
+    Identity identity{.Issuer = impl_->Config.Issuer,
+        .Subject = subject,
+        .Permissions = {},
+        .DisplayName = subject,
+        .Organization = std::nullopt,
+        .ClientId = {}};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
     identity.ClientId = payload["azp"].As<std::string>("");
     const auto family = payload["family_name"].As<std::string>("");

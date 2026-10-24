@@ -18,6 +18,9 @@ paths:
 - /api/admin/railway-stations/archive
 - /api/admin/railway-stations/list
 - /api/admin/railway-stations/save
+- /api/admin/route-locations/archive
+- /api/admin/route-locations/list
+- /api/admin/route-locations/save
 - /api/admin/shipments/settings/get
 - /api/admin/shipments/settings/update
 - /api/configs/current

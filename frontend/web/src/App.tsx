@@ -91,7 +91,7 @@ export function App() {
     });
   }
   const transportationId = /^\/transportations\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
-  const shipmentId = /^\/shipments\/([0-9a-f-]{36})$/i.exec(route)?.[1];
+  const shipmentId = /^\/shipments\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
   useEffect(() => {
     function changed() {
       if (!location.hash) {

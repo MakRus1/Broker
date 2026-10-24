@@ -1,3 +1,5 @@
+import { ShipmentRoute } from './ShipmentRoute';
+import type { ShipmentRouteSegment } from './api';
 import { localDate } from './calendar';
 import { useFieldValidation } from './fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
@@ -94,7 +96,7 @@ type CardDraft = {
   delivery_country: string;
   delivery_address: string;
   reference: string;
-  route_segments: { id: string; type: string }[];
+  route_segments: ShipmentRouteSegment[];
 };
 function draftOf(initial?: Shipment): CardDraft {
   return {
@@ -135,8 +137,11 @@ function ShipmentCard({
   });
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
-  const [tab, setTab] = useState('details');
+  const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
   const [editing, setEditing] = useState(!initial);
+  const [editingSection, setEditingSection] = useState<'details' | 'route'>(
+    props.route.endsWith('/route') ? 'route' : 'details',
+  );
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -292,7 +297,7 @@ function ShipmentCard({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (busy || !write || !settings || !dictionaries) return;
-    if (!draft.customer_id) {
+    if ((!initial || editingSection === 'details') && !draft.customer_id) {
       setFailure('Выберите клиента');
       setTab('details');
       return;
@@ -312,11 +317,18 @@ function ShipmentCard({
       delivery_country: draft.delivery_country || null,
       delivery_address: draft.delivery_address.trim() || null,
     };
+    const { route_segments, ...detailsPayload } = payload;
+    const updatePayload =
+      editingSection === 'route'
+        ? { route_segments }
+        : {
+            ...detailsPayload,
+            logist: draft.logist === (initial?.logist ?? '') ? undefined : payload.logist,
+          };
     try {
       const result = initial
         ? await request<{ shipment: Shipment }>('/api/v1/shipments/update', props.session, {
-            ...payload,
-            logist: draft.logist === (initial.logist ?? '') ? undefined : payload.logist,
+            ...updatePayload,
             shipment_id: initial.id,
             expected_revision: revision,
           })
@@ -381,9 +393,16 @@ function ShipmentCard({
           <span className="badge">
             {initial && !editing ? initial.status : draft.status || 'Новая'}
           </span>
-          {initial && !editing && write && (
-            <button className="primary" onClick={() => setEditing(true)}>
-              Редактировать
+          {initial && !editing && write && (tab === 'details' || tab === 'route') && (
+            <button
+              className="primary"
+              onClick={() => {
+                setEditingSection(tab);
+                setEditing(true);
+                setFailure('');
+              }}
+            >
+              {tab === 'route' ? 'Редактировать маршрут' : 'Редактировать'}
             </button>
           )}
         </div>
@@ -395,7 +414,25 @@ function ShipmentCard({
       )}
       <div className="tabs shipment-tabs">
         {panels.map(([key, label]) => (
-          <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}>
+          <button
+            key={key}
+            type="button"
+            aria-pressed={tab === key}
+            onClick={() => {
+              if (key === tab) return;
+              const switchTab = () => {
+                if (initial && editing) {
+                  setDraft(JSON.parse(baseline) as CardDraft);
+                  setEditing(false);
+                  validation.reset();
+                  setFailure('');
+                }
+                setTab(key);
+              };
+              if (initial && editing) confirmDiscard(dirty, switchTab);
+              else switchTab();
+            }}
+          >
             {label}
           </button>
         ))}
@@ -416,7 +453,7 @@ function ShipmentCard({
         data-validation-attempted={validation.attempted}
         onInputCapture={validation.onInput}
         onInvalidCapture={(event) => {
-          setTab('details');
+          setTab(initial ? editingSection : 'details');
           validation.onInvalid(event);
         }}
         data-draft-key={storageKey}
@@ -424,7 +461,11 @@ function ShipmentCard({
         data-busy={busy}
       >
         <fieldset disabled={busy || !write || !settings || !dictionaries}>
-          <div hidden={tab !== 'details'}>
+          <fieldset
+            className="shipment-edit-section"
+            disabled={Boolean(initial && editingSection !== 'details')}
+            hidden={tab !== 'details'}
+          >
             <div className="shipment-fields">
               <label>
                 Номер поставки
@@ -695,91 +736,21 @@ function ShipmentCard({
                 </label>
               </div>
             </section>
-          </div>
-          <div hidden={tab !== 'route'}>
-            <section className="shipment-field-section">
-              <h2>Маршрут поставки</h2>
-              {draft.route_segments.map((segment, index) => (
-                <div className="shipment-route-row" key={segment.id}>
-                  <span>{index + 1}</span>
-                  <Select
-                    label={`Тип участка ${index + 1}`}
-                    value={segment.type}
-                    onChange={(value) =>
-                      set(
-                        'route_segments',
-                        draft.route_segments.map((old, i) =>
-                          i === index ? { ...old, type: value } : old,
-                        ),
-                      )
-                    }
-                    options={[...new Set([...(settings?.route_types ?? []), segment.type])].map(
-                      (value) => ({
-                        value,
-                        label:
-                          dictionaries?.route_types.find((entry) => entry.code === value)?.name ??
-                          value,
-                      }),
-                    )}
-                  />
-                  <div
-                    className="shipment-route-actions"
-                    role="group"
-                    aria-label={`Действия с участком ${index + 1}`}
-                  >
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      aria-label={`Поднять участок ${index + 1}`}
-                      onClick={() => {
-                        const values = [...draft.route_segments];
-                        [values[index - 1], values[index]] = [values[index], values[index - 1]];
-                        set('route_segments', values);
-                      }}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === draft.route_segments.length - 1}
-                      aria-label={`Опустить участок ${index + 1}`}
-                      onClick={() => {
-                        const values = [...draft.route_segments];
-                        [values[index], values[index + 1]] = [values[index + 1], values[index]];
-                        set('route_segments', values);
-                      }}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Удалить участок ${index + 1}`}
-                      onClick={() =>
-                        set(
-                          'route_segments',
-                          draft.route_segments.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      Убрать
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                disabled={!settings?.route_types.length || draft.route_segments.length >= 30}
-                onClick={() =>
-                  set('route_segments', [
-                    ...draft.route_segments,
-                    { id: crypto.randomUUID(), type: settings!.route_types[0] },
-                  ])
-                }
-              >
-                ＋ Добавить участок
-              </button>
-            </section>
-          </div>
+          </fieldset>
+          <fieldset
+            className="shipment-edit-section"
+            disabled={Boolean(initial && editingSection !== 'route')}
+            hidden={tab !== 'route'}
+          >
+            <ShipmentRoute
+              segments={draft.route_segments}
+              onChange={(values) => set('route_segments', values)}
+              allowedTypes={settings?.route_types ?? []}
+              types={dictionaries?.route_types ?? []}
+              session={props.session}
+              customers={props.customers}
+            />
+          </fieldset>
         </fieldset>
       </form>
       {initial && (
@@ -838,7 +809,13 @@ function ShipmentCard({
               className="primary"
               disabled={busy || !settings || Boolean(initial && !dirty)}
             >
-              {busy ? 'Сохраняем…' : initial ? 'Сохранить изменения' : 'Создать поставку'}
+              {busy
+                ? 'Сохраняем…'
+                : initial
+                  ? editingSection === 'route'
+                    ? 'Сохранить маршрут'
+                    : 'Сохранить изменения'
+                  : 'Создать поставку'}
             </button>
           </div>
         </div>
@@ -896,22 +873,15 @@ function ShipmentSummary({
   );
   if (routeOnly)
     return (
-      <section className="shipment-summary-section">
-        <h2>Маршрут поставки</h2>
-        {shipment.route_segments?.length ? (
-          <ol className="shipment-summary-route">
-            {shipment.route_segments.map((segment) => (
-              <li key={segment.id}>
-                {dictionaries?.route_types.find((entry) => entry.code === segment.type)?.name ??
-                  segment.type}
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="muted">Маршрут не задан</p>
-        )}
-      </section>
+      <ShipmentRoute
+        segments={shipment.route_segments ?? []}
+        allowedTypes={[]}
+        types={dictionaries?.route_types ?? []}
+        session={session}
+        customers={customers}
+      />
     );
+
   return (
     <>
       {group('Участники', [

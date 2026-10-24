@@ -103,3 +103,17 @@ it('не использует старые свободные пункты в Ж
   expect(result).not.toHaveProperty('destination');
   expect(routePoint(stage, 'origin').name).toBe('');
 });
+
+it('читает морские и авиационные пункты из поставки и не отправляет их в редактирование перевозки', () => {
+  const location = { id: 'port', kind: 'sea_port' as const, name: 'Порт', country_code: 'RU' };
+  const stage = { ...route_segment, sea: { pol: location, eta: '2030-01-01' } };
+  expect(routePoint(stage, 'origin').name).toBe('Порт');
+  expect(routeRequest('id', 1, [stage]).route_segments[0]).not.toHaveProperty('sea');
+  const air = {
+    ...route_segment,
+    mode: 'air' as const,
+    air: { origin_airport: { ...location, kind: 'airport' as const }, flight_number: 'SU123' },
+  };
+  expect(routePoint(air, 'origin').name).toBe('Порт');
+  expect(routeRequest('id', 1, [air]).route_segments[0]).not.toHaveProperty('air');
+});

@@ -1,3 +1,4 @@
+import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
 import { routePoint } from './transportation';
 import { RailFields } from './RailFields';
 import { useRouteCollapse } from './routeCollapse';
@@ -75,6 +76,8 @@ export function RouteEditor({
   const dirty = JSON.stringify(draft.route_segments) !== JSON.stringify(baseline.route_segments);
   const collapse = useRouteCollapse(draft.route_segments.map((stage) => stage.id));
   const stale = draft.revision !== initial.revision;
+  const sharedStage = (stage: PlannedRouteSegment) =>
+    initial.route_segments.find((value) => value.id === stage.id) ?? stage;
   useEffect(() => {
     if (!allowed) return;
     try {
@@ -174,135 +177,166 @@ export function RouteEditor({
           </button>
         </div>
         <fieldset disabled={busy || stale}>
-          {draft.route_segments.map((route_segment, index) => (
-            <details
-              className="route-segment"
-              key={route_segment.id}
-              open={!collapse.collapsed.has(route_segment.id)}
-              onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
-            >
-              <summary className="route-stage-summary">
-                <h3>
-                  {index + 1}. {modes[route_segment.mode]}
-                </h3>
-                <span>
-                  {routePoint(route_segment, 'origin').name || 'Станция не выбрана'} →{' '}
-                  {routePoint(route_segment, 'destination').name || 'Станция не выбрана'}
-                </span>
-                <span className="route-summary-meta">
-                  {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
-                    'Перевозчик не выбран'}
-                  {route_segment.rail && (
-                    <>
-                      {' '}
-                      · ETD {route_segment.rail.etd?.split('-').reverse().join('.') || '—'} · ETA{' '}
-                      {route_segment.rail.eta?.split('-').reverse().join('.') || '—'}
-                    </>
-                  )}
-                </span>
-              </summary>
-              <div className="route-fields">
-                <div className="route-contractor-field">
-                  <CustomerSelect
-                    label={
-                      route_segment.mode === 'rail' || route_segment.mode === 'international_rail'
-                        ? 'Перевозчик'
-                        : 'Подрядчик'
-                    }
-                    items={customers}
+          {draft.route_segments.map((route_segment, index) =>
+            route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
+              <details
+                className="route-segment"
+                key={route_segment.id}
+                open={!collapse.collapsed.has(route_segment.id)}
+                onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
+              >
+                <summary className="route-stage-summary">
+                  <h3>
+                    {index + 1}. {modes[route_segment.mode]}
+                  </h3>
+                  <span className="route-summary-meta">
+                    {sharedRouteDirection(sharedStage(route_segment))}
+                  </span>
+                </summary>
+                <div className="shared-route-inherited">
+                  <a href={`#/shipments/${initial.shipment_id}/route`}>
+                    Открыть маршрут поставки ↗
+                  </a>
+                  <SharedRouteDetailsView
+                    sea={sharedStage(route_segment).sea}
+                    air={sharedStage(route_segment).air}
+                    customers={customers}
                     session={session}
-                    disabled={busy}
-                    value={route_segment.contractor_id ?? ''}
-                    onChange={(id) =>
-                      update(index, { ...route_segment, contractor_id: id || undefined })
-                    }
                   />
                 </div>
+              </details>
+            ) : (
+              <details
+                className="route-segment"
+                key={route_segment.id}
+                open={!collapse.collapsed.has(route_segment.id)}
+                onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
+              >
+                <summary className="route-stage-summary">
+                  <h3>
+                    {index + 1}. {modes[route_segment.mode]}
+                  </h3>
+                  <span>
+                    {routePoint(route_segment, 'origin').name || 'Станция не выбрана'} →{' '}
+                    {routePoint(route_segment, 'destination').name || 'Станция не выбрана'}
+                  </span>
+                  <span className="route-summary-meta">
+                    {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
+                      'Перевозчик не выбран'}
+                    {route_segment.rail && (
+                      <>
+                        {' '}
+                        · ETD {route_segment.rail.etd?.split('-').reverse().join('.') || '—'} · ETA{' '}
+                        {route_segment.rail.eta?.split('-').reverse().join('.') || '—'}
+                      </>
+                    )}
+                  </span>
+                </summary>
+                <div className="route-fields">
+                  <div className="route-contractor-field">
+                    <CustomerSelect
+                      label={
+                        route_segment.mode === 'rail' || route_segment.mode === 'international_rail'
+                          ? 'Перевозчик'
+                          : 'Подрядчик'
+                      }
+                      items={customers}
+                      session={session}
+                      disabled={busy}
+                      value={route_segment.contractor_id ?? ''}
+                      onChange={(id) =>
+                        update(index, { ...route_segment, contractor_id: id || undefined })
+                      }
+                    />
+                  </div>
 
-                {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
-                  <RailFields
-                    value={route_segment.rail ?? {}}
-                    session={session}
-                    onChange={(rail) => {
-                      const filled = Object.values(rail).some((value) => value !== undefined);
-                      update(index, {
-                        ...route_segment,
-                        rail: filled ? rail : undefined,
-                        origin: undefined,
-                        destination: undefined,
-                      });
-                    }}
-                  />
-                ) : (
-                  <>
-                    {(['origin', 'destination'] as const).map((point) => (
-                      <div key={point} className="point-fields">
-                        <label>
-                          {point === 'origin' ? 'Откуда' : 'Куда'}
+                  {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
+                    <RailFields
+                      value={route_segment.rail ?? {}}
+                      session={session}
+                      onChange={(rail) => {
+                        const filled = Object.values(rail).some((value) => value !== undefined);
+                        update(index, {
+                          ...route_segment,
+                          rail: filled ? rail : undefined,
+                          origin: undefined,
+                          destination: undefined,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <>
+                      {(['origin', 'destination'] as const).map((point) => (
+                        <div key={point} className="point-fields">
+                          <label>
+                            {point === 'origin' ? 'Откуда' : 'Куда'}
+                            <input
+                              maxLength={256}
+                              value={routePoint(route_segment, point).name}
+                              onChange={(event) =>
+                                update(index, {
+                                  ...route_segment,
+                                  [point]: {
+                                    ...routePoint(route_segment, point),
+                                    name: event.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Страна
+                            <input
+                              pattern="[A-Za-z]{2}"
+                              minLength={2}
+                              maxLength={2}
+                              placeholder="RU"
+                              value={routePoint(route_segment, point).country_code}
+                              onChange={(event) =>
+                                update(index, {
+                                  ...route_segment,
+                                  [point]: {
+                                    ...routePoint(route_segment, point),
+                                    country_code: event.target.value.toUpperCase(),
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                        </div>
+                      ))}
+                      {(['planned_departure_at', 'planned_arrival_at'] as const).map((field) => (
+                        <label key={field}>
+                          {field === 'planned_departure_at'
+                            ? 'Плановое отправление'
+                            : 'Плановое прибытие'}
                           <input
-                            maxLength={256}
-                            value={routePoint(route_segment, point).name}
-                            onChange={(event) =>
-                              update(index, {
-                                ...route_segment,
-                                [point]: {
-                                  ...routePoint(route_segment, point),
-                                  name: event.target.value,
-                                },
-                              })
-                            }
+                            type="datetime-local"
+                            value={localDateTime(route_segment[field])}
+                            onChange={(event) => {
+                              try {
+                                update(index, {
+                                  ...route_segment,
+                                  [field]: event.target.value
+                                    ? utcDateTime(event.target.value)
+                                    : undefined,
+                                });
+                                setFailure('');
+                              } catch (error) {
+                                setFailure(
+                                  error instanceof Error ? error.message : 'Проверьте дату',
+                                );
+                              }
+                            }}
                           />
                         </label>
-                        <label>
-                          Страна
-                          <input
-                            pattern="[A-Za-z]{2}"
-                            minLength={2}
-                            maxLength={2}
-                            placeholder="RU"
-                            value={routePoint(route_segment, point).country_code}
-                            onChange={(event) =>
-                              update(index, {
-                                ...route_segment,
-                                [point]: {
-                                  ...routePoint(route_segment, point),
-                                  country_code: event.target.value.toUpperCase(),
-                                },
-                              })
-                            }
-                          />
-                        </label>
-                      </div>
-                    ))}
-                    {(['planned_departure_at', 'planned_arrival_at'] as const).map((field) => (
-                      <label key={field}>
-                        {field === 'planned_departure_at'
-                          ? 'Плановое отправление'
-                          : 'Плановое прибытие'}
-                        <input
-                          type="datetime-local"
-                          value={localDateTime(route_segment[field])}
-                          onChange={(event) => {
-                            try {
-                              update(index, {
-                                ...route_segment,
-                                [field]: event.target.value
-                                  ? utcDateTime(event.target.value)
-                                  : undefined,
-                              });
-                              setFailure('');
-                            } catch (error) {
-                              setFailure(error instanceof Error ? error.message : 'Проверьте дату');
-                            }
-                          }}
-                        />
-                      </label>
-                    ))}
-                  </>
-                )}
-              </div>
-            </details>
-          ))}
+                      ))}
+                    </>
+                  )}
+                </div>
+              </details>
+            ),
+          )}
         </fieldset>
         {!draft.route_segments.length && <p className="hint">Задайте маршрут в поставке.</p>}
         {failure && (

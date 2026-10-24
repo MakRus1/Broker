@@ -16,6 +16,6 @@ SELECT ROW(
     delivery_country,
     delivery_address,
     route_segments
-)::public.shipment_v2
+)::public.shipment_v3
 FROM shipments
 WHERE organization_id = $1::UUID AND id = ANY($2::UUID[]);

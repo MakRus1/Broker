@@ -13,7 +13,7 @@ Response View::Handle(
         const auto rows = deps.pg_cluster
                               ->Execute(pg::ClusterHostType::kMaster, sql::kTransportationContexts,
                                   organization, request.body.shipment_ids)
-                              .AsContainer<std::vector<pgtypes::ShipmentV2>>();
+                              .AsContainer<std::vector<pgtypes::ShipmentV3>>();
         std::vector<models::TransportationContext> items;
         for (const auto& row : rows) {
             const auto shipment = Convert(row);

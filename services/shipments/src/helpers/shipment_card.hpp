@@ -4,6 +4,7 @@
 #include <chrono>
 #include <configs/keys.hpp>
 #include <deps.hpp>
+#include <helpers/converters/route_details.hpp>
 #include <helpers/database.hpp>
 #include <helpers/dictionaries.hpp>
 #include <openapi/models.hpp>
@@ -74,7 +75,7 @@ inline void ValidateShipmentDate(const std::string& value) {
             400, "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
-template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV1& row) {
+template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV2& row) {
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
     if (request.recipient_id.has_value()) {
@@ -108,16 +109,15 @@ template <typename Request> void ApplyCard(const Request& request, pgtypes::Ship
             if (!ids.insert(segment.id).second)
                 throw ApiError{
                     400, "duplicate_segment", "Идентификаторы участков должны быть уникальными"};
-            row.RouteSegments.push_back(
-                {boost::uuids::string_generator{}(segment.id), segment.type});
+            row.RouteSegments.push_back(Convert(segment));
         }
     }
     ValidateShipmentDate(row.ShipmentDate);
 }
 
-inline void ValidateCard(const pgtypes::ShipmentDataV1& row, const auto& settings,
+inline void ValidateCard(const pgtypes::ShipmentDataV2& row, const auto& settings,
     const std::vector<pgtypes::ShipmentDictionaryValueV1>& dictionaries,
-    const std::optional<pgtypes::ShipmentV2>& previous = std::nullopt) {
+    const std::optional<pgtypes::ShipmentV3>& previous = std::nullopt) {
     if ((!previous.has_value() || previous.value().Status != row.Status) &&
         std::find(settings.Statuses.begin(), settings.Statuses.end(), row.Status) ==
             settings.Statuses.end())

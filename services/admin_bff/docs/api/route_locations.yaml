@@ -1,0 +1,231 @@
+openapi: 3.0.3
+info:
+  title: Общие транспортные пункты
+  version: '1'
+paths:
+  /api/admin/route-locations/list:
+    post:
+      summary: Общий справочник портов и аэропортов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                kind:
+                  $ref: ../components/schemas/route_locations.yaml#/TransportLocationKind
+                query:
+                  type: string
+                  maxLength: 200
+                after:
+                  type: string
+                  format: uuid
+              required:
+              - kind
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/route_locations.yaml#/TransportLocation
+                  next:
+                    type: string
+                    format: uuid
+                required:
+                - items
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '409':
+          description: Идентификатор или код уже занят
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+  /api/admin/route-locations/save:
+    post:
+      summary: Сохранить порт или аэропорт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                kind:
+                  $ref: ../components/schemas/route_locations.yaml#/TransportLocationKind
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                country_code:
+                  type: string
+                  pattern: ^[A-Z]{2}$
+                code:
+                  type: string
+                  minLength: 1
+                  maxLength: 16
+                existing:
+                  type: boolean
+              required:
+              - id
+              - kind
+              - name
+              - country_code
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/TransportLocation
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '409':
+          description: Идентификатор или код уже занят
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+  /api/admin/route-locations/archive:
+    post:
+      summary: Архивировать порт или аэропорт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                  format: uuid
+              required:
+              - id
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                required:
+                - id
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '409':
+          description: Идентификатор или код уже занят
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/route_locations.yaml#/ApiError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+security:
+- BrowserSession: []

@@ -2,6 +2,8 @@
 #include <helpers/database.hpp>
 #include <helpers/employees.hpp>
 #include <helpers/idempotency.hpp>
+#include <helpers/route_counterparties.hpp>
+#include <helpers/route_locations.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
@@ -25,6 +27,12 @@ Response View::Handle(
             ? CleanText(request.body.logist.value())
             : CustomerLogist(deps, context, request.body.customer_id);
         ValidateLogist(deps, context, logist);
+        if (request.body.route_segments.has_value()) {
+            const auto locations =
+                LoadRouteLocations(*deps.pg_cluster, request.body.route_segments.value());
+            domain::ResolveRouteDetails(request.body.route_segments.value(), {}, locations);
+            ValidateRouteCounterparties(deps, context, request.body.route_segments.value(), {});
+        }
         auto transaction =
             deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto replay = FindReplay<models::Shipment>(
@@ -33,7 +41,7 @@ Response View::Handle(
             transaction.Commit();
             return Response201{.shipment = replay.value()};
         }
-        pgtypes::ShipmentDataV1 card;
+        pgtypes::ShipmentDataV2 card;
         card.CustomerId = boost::uuids::string_generator{}(request.body.customer_id);
         card.Reference = request.body.reference.value_or("");
         card.ShipmentDate = Today();
@@ -50,7 +58,7 @@ Response View::Handle(
         if (card.Number.empty())
             throw ApiError{400, "invalid_number", "Укажите номер поставки"};
         const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
-                             .AsSingleRow<pgtypes::ShipmentV2>();
+                             .AsSingleRow<pgtypes::ShipmentV3>();
         RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
         const auto result = Convert(row);
         SaveReplay(transaction, organization, "create_shipment", request.body, result);

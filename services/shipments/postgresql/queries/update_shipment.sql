@@ -16,7 +16,7 @@ SET
     delivery_address = card.delivery_address,
     route_segments = card.route_segments,
     revision = s.revision + 1
-FROM (SELECT ($4::public.shipment_data_v1).*) AS card
+FROM (SELECT ($4::public.shipment_data_v2).*) AS card
 WHERE s.organization_id = $1::UUID AND s.id = $2::UUID AND s.revision = $3
 RETURNING ROW(
     s.id,
@@ -36,4 +36,4 @@ RETURNING ROW(
     s.delivery_country,
     s.delivery_address,
     s.route_segments
-)::public.shipment_v2;
+)::public.shipment_v3;

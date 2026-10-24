@@ -22,7 +22,7 @@ export interface Shipment {
   delivery_city?: string | null;
   delivery_country?: string | null;
   delivery_address?: string | null;
-  route_segments?: { id: string; type: string }[];
+  route_segments?: ShipmentRouteSegment[];
 }
 export interface Item {
   id: string;
@@ -42,6 +42,40 @@ export interface Operation {
   status: 'pending' | 'succeeded' | 'rejected';
   transportation_ids?: string[];
   rejection_code?: string;
+}
+export type TransportLocationKind = 'sea_port' | 'airport';
+export interface TransportLocation {
+  id: string;
+  kind: TransportLocationKind;
+  name: string;
+  country_code: string;
+  code?: string;
+}
+export interface SeaDetails {
+  pol?: TransportLocation;
+  pod?: TransportLocation;
+  eta?: string;
+  departure_terminal_id?: string;
+  arrival_terminal_id?: string;
+  departure_date?: string;
+  vessel?: string;
+  voyage?: string;
+}
+export interface AirDetails {
+  carrier_id?: string;
+  origin_airport?: TransportLocation;
+  destination_airport?: TransportLocation;
+  etd?: string;
+  eta?: string;
+  departure_date?: string;
+  arrival_date?: string;
+  flight_number?: string;
+}
+export interface ShipmentRouteSegment {
+  id: string;
+  type: string;
+  sea?: SeaDetails;
+  air?: AirDetails;
 }
 export interface RailwayStation {
   esr_code: string;
@@ -76,6 +110,8 @@ export interface Transportation {
     mode: keyof typeof modes;
     inherited?: boolean;
     rail?: RailDetails;
+    sea?: SeaDetails;
+    air?: AirDetails;
     contractor_id?: string;
     planned_departure_at?: string;
     planned_arrival_at?: string;

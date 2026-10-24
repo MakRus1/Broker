@@ -2,8 +2,12 @@ name: SHIPMENTS_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/admin/route-locations/archive
+- /api/admin/route-locations/list
+- /api/admin/route-locations/save
 - /api/admin/shipments/settings/get
 - /api/admin/shipments/settings/update
+- /api/v1/route-locations/search
 - /api/v1/shipment-items/add
 - /api/v1/shipment-items/list
 - /api/v1/shipment-items/update

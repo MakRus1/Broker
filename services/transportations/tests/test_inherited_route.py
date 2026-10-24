@@ -37,14 +37,14 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
     body = command()
     created = await api.post(PATH, body)
     first, second = created['operation']['transportation_ids'][:2]
-    sea, pickup = route_segment('sea'), route_segment('pickup')
-    shipment_routes.set(body['shipment_id'], [sea, pickup], incoterms='FOB')
+    road, pickup = route_segment('international_road'), route_segment('pickup')
+    shipment_routes.set(body['shipment_id'], [road, pickup], incoterms='FOB')
     edited = await api.post(
         '/api/v1/transportation-routes/set',
         {
             'transportation_id': first,
             'expected_revision': 1,
-            'route_segments': [sea, pickup],
+            'route_segments': [road, pickup],
         },
     )
     assert edited['transportation']['revision'] == 2
@@ -53,13 +53,13 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
         {
             'transportation_id': first,
             'expected_revision': 2,
-            'route_segment_id': sea['id'],
+            'route_segment_id': road['id'],
             'event_kind': 'departure',
             'occurred_at': '2026-10-20T09:00:00Z',
         },
     )
     rail = route_segment('international_rail')
-    shipment_routes.set(body['shipment_id'], [pickup, rail, sea], incoterms='CIF', revision=2)
+    shipment_routes.set(body['shipment_id'], [pickup, rail, road], incoterms='CIF', revision=2)
     for identifier in [first, second]:
         actual = (await api.post('/api/v1/transportations/get', {'transportation_id': identifier}))[
             'transportation'
@@ -67,7 +67,7 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
         assert [stage['id'] for stage in actual['route_segments']] == [
             pickup['id'],
             rail['id'],
-            sea['id'],
+            road['id'],
         ]
         assert actual['incoterms'] == 'CIF'
         if identifier == first:

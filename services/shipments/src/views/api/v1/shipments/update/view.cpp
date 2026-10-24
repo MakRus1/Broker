@@ -2,6 +2,8 @@
 #include <helpers/database.hpp>
 #include <helpers/employees.hpp>
 #include <helpers/revision.hpp>
+#include <helpers/route_counterparties.hpp>
+#include <helpers/route_locations.hpp>
 #include <helpers/route_usage.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
@@ -24,8 +26,14 @@ Response View::Handle(
                 sql::kGetShipment, organization, request.body.shipment_id);
             if (rows.IsEmpty())
                 throw ApiError{404, "not_found", "Поставка не найдена"};
-            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV2>();
+            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV3>();
             CheckRevision(previous.Revision, request.body.expected_revision);
+            const auto locations =
+                LoadRouteLocations(*deps.pg_cluster, request.body.route_segments.value());
+            domain::ResolveRouteDetails(
+                request.body.route_segments.value(), Convert(previous).route_segments, locations);
+            ValidateRouteCounterparties(deps, context, request.body.route_segments.value(),
+                Convert(previous).route_segments);
             CheckExistingRouteUsage(deps, context, request.body.shipment_id,
                 ChangedRouteSegments(previous, request.body.route_segments.value()));
         }
@@ -35,10 +43,11 @@ Response View::Handle(
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (current.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto previous = current.AsSingleRow<pgtypes::ShipmentV2>();
+        const auto previous = current.AsSingleRow<pgtypes::ShipmentV3>();
         CheckRevision(previous.Revision, request.body.expected_revision);
         auto card = ConvertData(previous);
-        card.Reference = request.body.reference;
+        if (request.body.reference.has_value())
+            card.Reference = request.body.reference.value();
         if (request.body.customer_id.has_value())
             card.CustomerId = boost::uuids::string_generator{}(request.body.customer_id.value());
         if (request.body.number.has_value()) {
@@ -71,7 +80,7 @@ Response View::Handle(
             Convert(transaction
                         .Execute(sql::kUpdateShipment, organization, request.body.shipment_id,
                             request.body.expected_revision, card)
-                        .AsSingleRow<pgtypes::ShipmentV2>());
+                        .AsSingleRow<pgtypes::ShipmentV3>());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);

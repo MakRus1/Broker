@@ -28,9 +28,9 @@ Response View::Handle(
         if (shipment.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
         CheckRevision(
-            shipment.AsSingleRow<pgtypes::ShipmentV2>().Revision, request.body.expected_revision);
+            shipment.AsSingleRow<pgtypes::ShipmentV3>().Revision, request.body.expected_revision);
         const auto settings = GetShipmentSettings(deps, organization,
-            boost::uuids::to_string(shipment.AsSingleRow<pgtypes::ShipmentV2>().CustomerId));
+            boost::uuids::to_string(shipment.AsSingleRow<pgtypes::ShipmentV3>().CustomerId));
         if (!settings.PlannedContainers)
             throw ApiError{400, "planned_containers_disabled",
                 "Плановые контейнеры отключены для организации"};

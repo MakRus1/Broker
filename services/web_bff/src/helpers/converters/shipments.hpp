@@ -1,5 +1,6 @@
 #pragma once
 #include <clients/shipments/client.hpp>
+#include <helpers/converters/shipment_route.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -22,7 +23,7 @@ inline models::shipments::Shipment Convert(const clients::shipments::models::Shi
     result.delivery_country = value.delivery_country;
     result.delivery_address = value.delivery_address;
     for (const auto& segment : value.route_segments)
-        result.route_segments.push_back({.id = segment.id, .type = segment.type});
+        result.route_segments.push_back(Convert(segment));
     result.revision = value.revision;
     return result;
 }
@@ -108,7 +109,7 @@ inline std::optional<std::vector<clients::shipments::models::ShipmentRouteSegmen
         return std::nullopt;
     std::vector<clients::shipments::models::ShipmentRouteSegment> result;
     for (const auto& value : values.value())
-        result.push_back({.id = value.id, .type = value.type});
+        result.push_back(Convert(value));
     return result;
 }
 

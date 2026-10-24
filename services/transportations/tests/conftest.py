@@ -107,7 +107,7 @@ def shipment_routes(mockserver):
         def set(self, shipment_id, route, **terms):
             contexts[shipment_id] = {
                 'shipment_id': shipment_id, 'revision': 1,
-                'route_segments': [{'id': item['id'], 'type': item.get('mode', item.get('type'))} for item in route],
+                'route_segments': [{'id': item['id'], 'type': item.get('mode', item.get('type')), **{key:item[key] for key in ('sea','air') if key in item}} for item in route],
                 **terms,
             }
     source = Source()

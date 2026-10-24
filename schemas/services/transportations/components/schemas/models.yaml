@@ -125,6 +125,10 @@ RouteSegment:
         старые участки доступны только для просмотра.
     rail:
       $ref: '#/RailDetails'
+    sea:
+      $ref: '#/SeaDetails'
+    air:
+      $ref: '#/AirDetails'
   required:
   - id
   - mode
@@ -550,3 +554,87 @@ RailDetails:
     unloading_date:
       type: string
       format: date
+TransportLocationKind:
+  type: string
+  enum:
+  - sea_port
+  - airport
+TransportLocation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/TransportLocationKind'
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    code:
+      type: string
+      minLength: 1
+      maxLength: 16
+  required:
+  - id
+  - kind
+  - name
+  - country_code
+SeaDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    pol:
+      $ref: '#/TransportLocation'
+    pod:
+      $ref: '#/TransportLocation'
+    eta:
+      type: string
+      format: date
+    departure_terminal_id:
+      type: string
+      format: uuid
+    arrival_terminal_id:
+      type: string
+      format: uuid
+    departure_date:
+      type: string
+      format: date
+    vessel:
+      type: string
+      maxLength: 128
+    voyage:
+      type: string
+      maxLength: 128
+  required: []
+AirDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    carrier_id:
+      type: string
+      format: uuid
+    origin_airport:
+      $ref: '#/TransportLocation'
+    destination_airport:
+      $ref: '#/TransportLocation'
+    eta:
+      type: string
+      format: date
+    etd:
+      type: string
+      format: date
+    departure_date:
+      type: string
+      format: date
+    arrival_date:
+      type: string
+      format: date
+    flight_number:
+      type: string
+      maxLength: 64
+  required: []

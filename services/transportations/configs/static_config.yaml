@@ -93,6 +93,8 @@ components_manager:
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        client-counterparties:
+            base-url: $client-counterparties-base-url
         client-shipments:
             base-url: $client-shipments-base-url
         platform-readiness: {}

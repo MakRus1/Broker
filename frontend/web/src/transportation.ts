@@ -20,6 +20,15 @@ export function routePoint(segment: RouteSegment, point: 'origin' | 'destination
     point === 'origin' ? segment.rail?.origin_station : segment.rail?.destination_station;
   if (segment.mode === 'rail' || segment.mode === 'international_rail')
     return station ?? { name: '', country_code: '' };
+  if (
+    (segment.mode === 'road' || segment.mode === 'pickup') &&
+    point === 'destination' &&
+    segment.pickup
+  )
+    return {
+      name: segment.pickup.delivery_city ?? '',
+      country_code: segment.pickup.delivery_country ?? '',
+    };
   return segment[point] ?? { name: '', country_code: '' };
 }
 
@@ -80,6 +89,8 @@ export function routeSegment(value: RouteSegment): PlannedRouteSegment {
             },
           }
         : {}),
+    ...(value.international_road ? { international_road: { ...value.international_road } } : {}),
+    ...(value.pickup ? { pickup: { ...value.pickup } } : {}),
     id: value.id,
     mode: value.mode,
     ...(value.origin && value.mode !== 'rail' && value.mode !== 'international_rail'

@@ -117,3 +117,17 @@ it('читает морские и авиационные пункты из по
   expect(routePoint(air, 'origin').name).toBe('Порт');
   expect(routeRequest('id', 1, [air]).route_segments[0]).not.toHaveProperty('air');
 });
+
+it('сохраняет поля автоучастков и не подставляет город или адрес', () => {
+  const pickup = { ...route_segment, mode: 'pickup' as const };
+  const empty = routeRequest('transportation', 1, [pickup]).route_segments[0];
+  expect(empty.pickup).toBeUndefined();
+  const details = { delivery_city: 'Казань', delivery_address: 'Склад 2', driver: 'Иванов И. И.' };
+  const filled = routeRequest('transportation', 1, [{ ...pickup, pickup: details }]);
+  expect(filled.route_segments[0].pickup).toEqual(details);
+  const road = { vehicle_number: 'А123АА', trailer_number: 'В456ВВ', cmr_number: 'CMR-1' };
+  const international = routeRequest('transportation', 1, [
+    { ...route_segment, mode: 'international_road', international_road: road },
+  ]);
+  expect(international.route_segments[0].international_road).toEqual(road);
+});

@@ -1,3 +1,4 @@
+import { RoadDetailsView } from './RoadFields';
 import { SharedRouteDetailsView } from './SharedRouteDetails';
 import { routePoint } from './transportation';
 import { RailDetailsView } from './RailFields';
@@ -64,7 +65,9 @@ export function TransportationPage({
       ...new Set([
         ...(shipment ? [shipment.customer_id] : []),
         ...(transportation?.route_segments.flatMap((item) =>
-          item.contractor_id ? [item.contractor_id] : [],
+          [item.contractor_id, item.international_road?.loading_terminal_id].filter(
+            (id): id is string => Boolean(id),
+          ),
         ) ?? []),
       ]),
     ].filter((id) => !suppliedCustomers.some((item) => item.id === id));
@@ -391,12 +394,22 @@ export function RouteView({
               customers={customers}
               session={session}
             />
+          ) : route_segment.mode === 'international_road' ||
+            route_segment.mode === 'road' ||
+            route_segment.mode === 'pickup' ? (
+            <RoadDetailsView
+              road={route_segment.international_road}
+              pickup={route_segment.pickup}
+              customers={customers}
+            />
           ) : route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
             <>
-              <p className="rail-stations-meta">
-                ЕСР: {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
-                {route_segment.rail?.destination_station?.esr_code ?? '—'}
-              </p>
+              {(route_segment.rail?.origin_station || route_segment.rail?.destination_station) && (
+                <p className="rail-stations-meta">
+                  ЕСР: {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
+                  {route_segment.rail?.destination_station?.esr_code ?? '—'}
+                </p>
+              )}
               <RailDetailsView value={routeSegment(route_segment).rail ?? {}} />
             </>
           ) : (

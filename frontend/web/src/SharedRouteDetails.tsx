@@ -212,7 +212,7 @@ export function SharedRouteDetailsView({
           ['Дата прибытия', calendarDate(air.arrival_date)],
         ]
       : [];
-  return rows.length ? (
+  return Object.values(sea ?? air ?? {}).some(Boolean) ? (
     <dl className="shared-route-values">
       {rows.map(([label, value]) => (
         <div key={label}>
@@ -222,6 +222,6 @@ export function SharedRouteDetailsView({
       ))}
     </dl>
   ) : (
-    <p className="muted">Данные участка пока не заполнены.</p>
+    <p className="muted">Данные участка пока не указаны.</p>
   );
 }

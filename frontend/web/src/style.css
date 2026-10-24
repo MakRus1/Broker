@@ -2250,6 +2250,9 @@ details[open] > .route-stage-summary::after {
   color: #76839a;
   margin: 0;
 }
+.shipment-route-add {
+  margin-top: 16px;
+}
 .shipment-route-stages {
   display: grid;
   gap: 16px;
@@ -2316,4 +2319,22 @@ details[open] > .route-stage-summary::after {
 }
 .shipment-edit-section[hidden] {
   display: none;
+}
+.road-details-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.road-details-grid > label {
+  display: grid;
+  gap: 8px;
+}
+.road-address {
+  grid-column: 1 / -1;
+}
+@media (max-width: 700px) {
+  .road-details-grid {
+    grid-template-columns: 1fr;
+  }
 }

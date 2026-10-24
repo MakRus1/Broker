@@ -211,6 +211,8 @@ export function RailFields({
   );
 }
 export function RailDetailsView({ value }: { value: RailDetails }) {
+  if (!Object.values(value).some(Boolean))
+    return <p className="muted">Данные участка пока не указаны.</p>;
   return (
     <dl className="rail-date-grid">
       {railDates.map(([key, label]) => (

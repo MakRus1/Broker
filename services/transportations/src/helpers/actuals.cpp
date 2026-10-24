@@ -16,6 +16,9 @@ std::size_t ApplyActual(models::Transportation& transportation, const std::strin
         throw ApiError{404, "not_found", "Плечо не найдено"};
     if (found->mode == models::TransportMode::Sea || found->mode == models::TransportMode::Air)
         throw ApiError{400, "shipment_route_owned", "Даты моря и авиа изменяются в поставке"};
+    if (found->international_road.has_value() || found->pickup.has_value())
+        throw ApiError{
+            400, "road_calendar_dates", "Даты автоучастка изменяются в его деталях без времени"};
     if (found->rail.has_value())
         throw ApiError{
             400, "rail_calendar_dates", "Даты ЖД-участка изменяются в его деталях без времени"};

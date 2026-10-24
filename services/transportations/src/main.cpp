@@ -20,6 +20,7 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <clients/counterparties/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/auth/component.hpp>
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
     component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<transportations::clients::counterparties::Component>();
     component_list.Append<transportations::clients::shipments::Component>();
     component_list.Append<userver::components::Postgres>("postgres-transportations");
     // SERVICE_REGISTRATION_END

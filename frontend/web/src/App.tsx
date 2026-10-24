@@ -1,5 +1,13 @@
 import { transportationTitle } from './transportation';
-import { openWorkspace, replaceWorkspace, workspaceId, type WorkspaceTab } from './workspace';
+import {
+  openWorkspace,
+  replaceWorkspace,
+  workspaceId,
+  moveWorkspace,
+  restoreWorkspaces,
+  type WorkspaceTab,
+} from './workspace';
+import { WorkspaceTabs } from './WorkspaceTabs';
 import { ShipmentWorkspace } from './ShipmentWorkspace';
 import { useDiscardConfirmation } from './components';
 import { profileName } from './profile';
@@ -23,6 +31,27 @@ export function App() {
   const creating = /^\/shipments\/new(?:\/|$)/.test(route);
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
   const activeWorkspace = workspaceId(route);
+  const [restoredFor, setRestoredFor] = useState('');
+  const storageKey = session ? `broker:workspaces:${session.subject}` : '';
+  useEffect(() => {
+    if (!storageKey) return;
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(storageKey);
+    } catch {
+      /* Вкладки работают без хранилища. */
+    }
+    setWorkspaces(restoreWorkspaces(saved, location.hash.slice(1) || '/shipments'));
+    setRestoredFor(storageKey);
+  }, [storageKey]);
+  useEffect(() => {
+    if (!storageKey || restoredFor !== storageKey) return;
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(workspaces));
+    } catch {
+      /* Недоступность хранилища не мешает менять порядок вкладок. */
+    }
+  }, [storageKey, restoredFor, workspaces]);
   const workspaceNodes = useRef(new Map<string, HTMLDivElement>());
   const workspaceScroll = useRef(new Map<string, number>());
   const lastWorkspace = useRef(activeWorkspace);
@@ -364,33 +393,14 @@ export function App() {
           <span>Операционный учёт</span>
           <span className="environment">Broker / Рабочее пространство</span>
         </header>
-        <div className="workspace-tabs" role="tablist" aria-label="Открытые формы">
-          {workspaces.map((entry) => (
-            <div
-              className={`workspace-tab${activeWorkspace === entry.id ? ' selected' : ''}`}
-              key={entry.id}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeWorkspace === entry.id}
-                onClick={() => {
-                  location.hash = entry.route;
-                }}
-              >
-                {entry.title}
-              </button>
-              <button
-                type="button"
-                className="workspace-close"
-                aria-label={`Закрыть вкладку ${entry.title}`}
-                onClick={() => closeWorkspace(entry.id)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
+        <WorkspaceTabs
+          tabs={workspaces}
+          active={activeWorkspace}
+          onMove={(source, target, side) =>
+            setWorkspaces((old) => moveWorkspace(old, source, target, side))
+          }
+          onClose={closeWorkspace}
+        />
         <div className="workspace-content">
           <div
             className={tab === 'transportations' ? 'transportation-registry' : undefined}

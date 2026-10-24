@@ -31,3 +31,43 @@ export function replaceWorkspace(
     .filter((tab) => tab.id === previous || tab.id !== id)
     .map((tab) => (tab.id === previous ? { id, route, title } : tab));
 }
+
+export function moveWorkspace(
+  tabs: WorkspaceTab[],
+  source: string,
+  target: string,
+  side: 'before' | 'after',
+): WorkspaceTab[] {
+  if (source === target) return tabs;
+  const moving = tabs.find((tab) => tab.id === source);
+  if (!moving || !tabs.some((tab) => tab.id === target)) return tabs;
+  const result = tabs.filter((tab) => tab.id !== source);
+  const index = result.findIndex((tab) => tab.id === target);
+  result.splice(index + (side === 'after' ? 1 : 0), 0, moving);
+  return result;
+}
+
+export function restoreWorkspaces(raw: string | null, route: string): WorkspaceTab[] {
+  try {
+    const saved: unknown = JSON.parse(raw ?? 'null');
+    if (!Array.isArray(saved)) return openWorkspace([], route);
+    const tabs: WorkspaceTab[] = [];
+    for (const value of saved) {
+      if (
+        !value ||
+        typeof value.route !== 'string' ||
+        typeof value.title !== 'string' ||
+        !/^\/(shipments|transportations|counterparties)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+          value.route,
+        )
+      )
+        continue;
+      const id = workspaceId(value.route);
+      if (!tabs.some((tab) => tab.id === id))
+        tabs.push({ id, route: value.route, title: value.title });
+    }
+    return openWorkspace(tabs, route);
+  } catch {
+    return openWorkspace([], route);
+  }
+}

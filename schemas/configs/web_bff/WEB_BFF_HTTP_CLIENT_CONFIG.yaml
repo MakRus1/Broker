@@ -4,6 +4,7 @@ generated: true
 paths:
 - /api/geography/cities
 - /api/geography/railway-stations
+- /api/geography/route-locations
 - /api/logout
 - /api/organizations/employees/list
 - /api/session

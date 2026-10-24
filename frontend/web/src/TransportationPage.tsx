@@ -1,3 +1,4 @@
+import { SharedRouteDetailsView } from './SharedRouteDetails';
 import { routePoint } from './transportation';
 import { RailDetailsView } from './RailFields';
 import { calendarDate } from './calendar';
@@ -276,6 +277,7 @@ export function TransportationPage({
                   <RouteView
                     route_segments={transportation.route_segments}
                     customers={customers}
+                    session={session}
                     onActual={
                       write
                         ? (route_segment, kind) => setActual({ route_segment, kind })
@@ -315,8 +317,10 @@ export function RouteView({
   route_segments,
   customers,
   onActual,
+  session,
 }: {
   route_segments: RouteSegment[];
+  session?: Session;
   customers: Counterparty[];
   onActual?: (route_segment: RouteSegment, kind: 'departure' | 'arrival') => void;
 }) {
@@ -380,7 +384,14 @@ export function RouteView({
               просмотр.
             </p>
           )}
-          {route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
+          {route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
+            <SharedRouteDetailsView
+              sea={route_segment.sea}
+              air={route_segment.air}
+              customers={customers}
+              session={session}
+            />
+          ) : route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
             <>
               <p className="rail-stations-meta">
                 ЕСР: {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}

@@ -16,7 +16,7 @@ Response View::Handle(
             organization, request.body.shipment_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto result = Convert(rows.AsSingleRow<pgtypes::ShipmentV2>());
+        const auto result = Convert(rows.AsSingleRow<pgtypes::ShipmentV3>());
         return Response200{.shipment = result};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {

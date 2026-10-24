@@ -328,7 +328,7 @@ def run(build):
             {
                 'transportation_id': manual['id'],
                 'expected_revision': 1,
-                'route_segment_id': stages[0]['id'],
+                'route_segment_id': stages[1]['id'],
                 'event_kind': 'departure',
                 'occurred_at': '2026-10-20T09:00:00Z',
             },
@@ -345,7 +345,7 @@ def run(build):
         denied = post(
             senders[1],
             '/api/v1/shipments/update',
-            {**update, 'route_segments': [stages[1]]},
+            {**update, 'route_segments': [stages[0]]},
             token,
             409,
         )
@@ -364,8 +364,8 @@ def run(build):
             receivers[0], '/api/v1/transportations/get', {'transportation_id': manual['id']}, token
         )['transportation']
         assert inherited['incoterms'] == 'CIF'
-        assert inherited['route_segments'][1]['actual_departure_at'] == '2026-10-20T09:00:00Z'
-        assert inherited['route_segments'][1]['id'] == stages[0]['id']
+        assert inherited['route_segments'][0]['actual_departure_at'] == '2026-10-20T09:00:00Z'
+        assert inherited['route_segments'][0]['id'] == stages[1]['id']
         print(
             'OK: 2 shipments + 2 transportations; inbox/outbox без дублей, ручное создание, наследование и защита маршрута'
         )

@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <deps.hpp>
+#include <helpers/converters/shipment_route.hpp>
 #include <helpers/transportations.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>
@@ -55,6 +56,12 @@ inline void InheritRoute(models::Transportation& transportation, const ShipmentC
         value.id = stage.id;
         value.inherited = true;
         value.mode = models::ParseEnumScalar(stage.type, models::TransportMode{});
+        value.sea.reset();
+        value.air.reset();
+        if (stage.sea.has_value())
+            value.sea = Convert(stage.sea.value());
+        if (stage.air.has_value())
+            value.air = Convert(stage.air.value());
         route.push_back(std::move(value));
     }
     // Исторические данные самостоятельных маршрутов не теряем при переходе на наследование.

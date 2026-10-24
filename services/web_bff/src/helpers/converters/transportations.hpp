@@ -1,5 +1,6 @@
 #pragma once
 #include <clients/transportations/client.hpp>
+#include <helpers/converters/transportation_shared_route.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -146,6 +147,10 @@ inline models::transportations::RouteSegment Convert(
     const clients::transportations::models::RouteSegment& value) {
     models::transportations::RouteSegment result;
     result.inherited = value.inherited;
+    if (value.sea.has_value())
+        result.sea = Convert(value.sea.value());
+    if (value.air.has_value())
+        result.air = Convert(value.air.value());
     result.actual_arrival_at = value.actual_arrival_at;
     result.actual_departure_at = value.actual_departure_at;
     result.contractor_id = value.contractor_id;

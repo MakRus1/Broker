@@ -9,6 +9,7 @@ add_library(
     src/components/transportation_dispatcher.cpp
     src/components/cargo_suggestions_cleanup.cpp
     src/bootstrap/ping.cpp
+    src/domain/route_details.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

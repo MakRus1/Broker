@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Общие транспортные пункты
+  version: '1'
+paths:
+  /api/geography/route-locations:
+    post:
+      summary: Поиск общих портов или аэропортов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                kind:
+                  $ref: ../components/schemas/shipments/models.yaml#/TransportLocationKind
+                query:
+                  type: string
+                  maxLength: 200
+              required:
+              - kind
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/shipments/models.yaml#/TransportLocation
+                required:
+                - items
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '409':
+          description: Идентификатор или код уже занят
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

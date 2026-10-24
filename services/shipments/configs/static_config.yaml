@@ -7,6 +7,24 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-route_locations-archive:
+            path: /api/admin/route-locations/archive
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-route_locations-list:
+            path: /api/admin/route-locations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-route_locations-save:
+            path: /api/admin/route-locations/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-admin-shipments-settings-get:
             path: /api/admin/shipments/settings/get
             method: POST
@@ -15,6 +33,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-admin-shipments-settings-update:
             path: /api/admin/shipments/settings/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-route_locations-search:
+            path: /api/v1/route-locations/search
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -141,8 +165,12 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/admin/route-locations/archive: authenticated
+                /api/admin/route-locations/list: authenticated
+                /api/admin/route-locations/save: authenticated
                 /api/admin/shipments/settings/get: authenticated
                 /api/admin/shipments/settings/update: authenticated
+                /api/v1/route-locations/search: shipments.read
                 /api/v1/shipment-items/add: shipments.write
                 /api/v1/shipment-items/list: shipments.read
                 /api/v1/shipment-items/update: shipments.write

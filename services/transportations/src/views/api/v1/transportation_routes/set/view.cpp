@@ -47,6 +47,8 @@ Response View::Handle(
             auto& stored = result.route_segments[i];
             auto value = domain::MakeRouteSegment(request.body.route_segments[i]);
             value.inherited = stored.inherited;
+            value.sea = stored.sea;
+            value.air = stored.air;
             value.actual_departure_at = stored.actual_departure_at;
             value.actual_arrival_at = stored.actual_arrival_at;
             domain::ValidateActualTimes(value);

@@ -5,6 +5,17 @@ export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'ac
 
 // Вычисляем подписи, не копируя станции в свободные пункты маршрута.
 export function routePoint(segment: RouteSegment, point: 'origin' | 'destination') {
+  if (segment.mode === 'sea')
+    return (
+      (point === 'origin' ? segment.sea?.pol : segment.sea?.pod) ?? { name: '', country_code: '' }
+    );
+  if (segment.mode === 'air')
+    return (
+      (point === 'origin' ? segment.air?.origin_airport : segment.air?.destination_airport) ?? {
+        name: '',
+        country_code: '',
+      }
+    );
   const station =
     point === 'origin' ? segment.rail?.origin_station : segment.rail?.destination_station;
   if (segment.mode === 'rail' || segment.mode === 'international_rail')

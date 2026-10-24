@@ -1,4 +1,5 @@
 #pragma once
+#include <helpers/converters/route_details.hpp>
 #include <map>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
@@ -6,7 +7,7 @@
 #include <vector>
 
 namespace shipments::helpers {
-inline pgtypes::ShipmentDataV1 ConvertData(const pgtypes::ShipmentV2& row) {
+inline pgtypes::ShipmentDataV2 ConvertData(const pgtypes::ShipmentV3& row) {
     return {.Number = row.Number,
         .CustomerId = row.CustomerId,
         .Reference = row.Reference,
@@ -24,7 +25,7 @@ inline pgtypes::ShipmentDataV1 ConvertData(const pgtypes::ShipmentV2& row) {
         .RouteSegments = row.RouteSegments};
 }
 
-inline models::Shipment Convert(const pgtypes::ShipmentV2& row) {
+inline models::Shipment Convert(const pgtypes::ShipmentV3& row) {
     models::Shipment result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
@@ -42,8 +43,7 @@ inline models::Shipment Convert(const pgtypes::ShipmentV2& row) {
     result.delivery_country.emplace(row.DeliveryCountry);
     result.delivery_address.emplace(row.DeliveryAddress);
     for (const auto& segment : row.RouteSegments)
-        result.route_segments.push_back(
-            {.id = boost::uuids::to_string(segment.Id), .type = segment.Type});
+        result.route_segments.push_back(Convert(segment));
     if (row.RecipientId.has_value())
         result.recipient_id = boost::uuids::to_string(row.RecipientId.value());
     else
@@ -82,7 +82,7 @@ inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row
 inline std::vector<models::Shipment> Convert(const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV2>())
+    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV3>())
         result.push_back(Convert(row));
     return result;
 }

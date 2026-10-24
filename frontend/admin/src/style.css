@@ -1317,3 +1317,8 @@ textarea::placeholder {
   outline: 2px solid #2860d6;
   outline-offset: -2px;
 }
+.station-directory .admin-navigation button[aria-pressed='true'] {
+  color: #2854a6;
+  border-color: #b7c8ef;
+  background: #eaf0fe;
+}

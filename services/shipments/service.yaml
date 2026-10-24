@@ -37,6 +37,10 @@ auth:
     /api/admin/shipments/settings/update: authenticated
     /api/v1/shipments/transportation-contexts: transportations.read
     /api/v1/shipments/route-segments/register-usage: transportations.write
+    /api/v1/route-locations/search: shipments.read
+    /api/admin/route-locations/list: authenticated
+    /api/admin/route-locations/save: authenticated
+    /api/admin/route-locations/archive: authenticated
   organization-access: true
 service_accounts:
   dispatcher:

@@ -200,7 +200,7 @@ async def test_history_snapshots_pagination_and_access(api, shipment_routes):
     # UUID операции и перевозки принадлежат разным пространствам сущностей аудита.
     await api.post(PATH, {**command(), 'operation_id': identifier})
     assert (await api.post('/api/v1/transportations/history', history_request))['items'] == []
-    route = route_segment('sea')
+    route = route_segment('pickup')
     shipment_routes.set(source_command['shipment_id'], [route])
     await api.post(
         '/api/v1/transportation-routes/set',

@@ -1,3 +1,4 @@
+import { DateInput } from './DateInput';
 import { businessDate, calendarDate } from './calendar';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import { DirectoryLookup } from './DirectoryLookup';
@@ -28,12 +29,12 @@ export function RoadFields({
   ) => (
     <label>
       {label}
-      <input
+      <DateInput
         type="date"
         min="1900-01-01"
         max={actual ? businessDate() : '9999-12-31'}
         value={value ?? ''}
-        onChange={(event) => change(event.target.value || undefined)}
+        onChange={(dateValue) => change(dateValue || undefined)}
       />
     </label>
   );

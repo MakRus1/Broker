@@ -1,3 +1,4 @@
+import { DateInput } from './DateInput';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   request,
@@ -36,12 +37,12 @@ export function SharedRouteFields({
     return (
       <label>
         {label}
-        <input
+        <DateInput
           type="date"
           min="1900-01-01"
           max={actual ? businessDate() : '9999-12-31'}
           value={value ?? ''}
-          onChange={(event) => change(event.target.value || undefined)}
+          onChange={(dateValue) => change(dateValue || undefined)}
         />
       </label>
     );

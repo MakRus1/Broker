@@ -1,6 +1,7 @@
+import { DateInput } from './DateInput';
 import { RoadDetailsView } from './RoadFields';
 import { SharedRouteDetailsView } from './SharedRouteDetails';
-import { routePoint } from './transportation';
+import { routePoint, routeDirection } from './transportation';
 import { RailDetailsView } from './RailFields';
 import { calendarDate } from './calendar';
 import { useRouteCollapse } from './routeCollapse';
@@ -354,9 +355,7 @@ export function RouteView({
         >
           <summary className="route-stage-summary">
             <h3>
-              {index + 1}. {modes[route_segment.mode]} ·{' '}
-              {routePoint(route_segment, 'origin').name || 'Пункт не указан'} →{' '}
-              {routePoint(route_segment, 'destination').name || 'Пункт не указан'}
+              {index + 1}. {modes[route_segment.mode]} · {routeDirection(route_segment)}
             </h3>
             <span className="route-summary-meta">
               {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
@@ -500,12 +499,12 @@ function ActualForm({
       {previous && <p>Сейчас: {formatDate(previous)}</p>}
       <label>
         Дата и время
-        <input
+        <DateInput
           type="datetime-local"
           required
           disabled={busy}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(dateValue) => setValue(dateValue)}
         />
       </label>
       <p className="hint">

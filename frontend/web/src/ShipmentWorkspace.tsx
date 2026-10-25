@@ -1,3 +1,4 @@
+import { DateInput } from './DateInput';
 import { ShipmentRoute } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from './api';
 import { localDate } from './calendar';
@@ -504,7 +505,7 @@ function ShipmentCard({
               </label>
               <label>
                 Дата поставки · обязательно
-                <input
+                <DateInput
                   name="shipment_date"
                   aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
                   aria-describedby={
@@ -514,7 +515,7 @@ function ShipmentCard({
                   min="1900-01-01"
                   required
                   value={draft.shipment_date}
-                  onChange={(e) => set('shipment_date', e.target.value)}
+                  onChange={(dateValue) => set('shipment_date', dateValue)}
                 />
                 {validation.errors.shipment_date && (
                   <small className="field-error" id={`${formId}-date-error`}>

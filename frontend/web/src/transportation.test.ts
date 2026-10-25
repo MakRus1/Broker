@@ -131,3 +131,17 @@ it('сохраняет поля автоучастков и не подстав�
   ]);
   expect(international.route_segments[0].international_road).toEqual(road);
 });
+
+it('не называет пункты автомобильных участков станциями', async () => {
+  const { routeDirection } = await import('./transportation');
+  expect(routeDirection({ ...route_segment, mode: 'international_road' })).toBe(
+    'Место погрузки не указано',
+  );
+  expect(
+    routeDirection({ ...route_segment, mode: 'pickup', pickup: { delivery_city: 'Находка' } }),
+  ).toBe('Находка');
+  expect(routeDirection({ ...route_segment, mode: 'road' })).toBe('Место доставки не указано');
+  expect(routeDirection({ id: route_segment.id, mode: 'rail' })).toBe(
+    'Станция не выбрана → Станция не выбрана',
+  );
+});

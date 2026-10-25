@@ -91,6 +91,12 @@ async def test_rail_roundtrip_and_directory(api, shipment_routes, stations, pgsq
     assert history['items'][0]['route_segments'][0]['rail'] == rail
 
 
+@pytest.mark.parametrize('query', ['', 'Т', '000'])
+async def test_station_directory_opens_without_minimum_query(api, stations, query):
+    result = await api.post('/api/v1/railway-stations/search', {'query': query})
+    assert len(result['items']) == 2
+
+
 @pytest.mark.parametrize(
     'change',
     [

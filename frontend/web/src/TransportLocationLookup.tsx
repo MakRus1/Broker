@@ -22,7 +22,7 @@ export function TransportLocationLookup({
   const [failure, setFailure] = useState('');
   const [active, setActive] = useState(-1);
   useEffect(() => {
-    if (!open || query.trim().length < 2) {
+    if (!open) {
       setItems([]);
       setBusy(false);
       return;
@@ -130,9 +130,7 @@ export function TransportLocationLookup({
           role="listbox"
           aria-label={label}
         >
-          {query.trim().length < 2 ? (
-            <p>Введите не менее двух символов</p>
-          ) : busy ? (
+          {busy ? (
             <p role="status">Ищем…</p>
           ) : failure ? (
             <p role="alert">{failure}</p>

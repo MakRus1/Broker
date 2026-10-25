@@ -11,8 +11,14 @@ on:
       - tools/container-images.json
       - tools/local/images.json
   workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: Собрать все образы заново, без наследования предыдущего релиза
+        type: boolean
+        default: false
 permissions:
   contents: read
+  actions: read
   packages: read
 concurrency:
   group: service-images-${{ github.event.pull_request.number || github.ref }}
@@ -23,9 +29,12 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
       packages: write
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: docker/setup-buildx-action@v4.4.1
       - name: Публикация разрешена только из main вручную
         if: github.event_name == 'workflow_dispatch'
@@ -50,10 +59,21 @@ jobs:
               if (name === 'ACTIONS_RUNTIME_TOKEN') core.setSecret(value);
               core.exportVariable(name, value);
             }
+      - name: Найти предыдущий опубликованный релиз
+        id: base
+        if: github.event_name == 'workflow_dispatch' && !inputs.full_rebuild
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/deploy/release_base.py --revision "$GITHUB_SHA" --output .staging/base-release.json
       - name: Собрать сервисные образы
         env:
-          PUBLISH: ${{ github.event_name == 'workflow_dispatch' && '--push' || '' }}
-        run: python tools/deploy/build.py --revision "$GITHUB_SHA" $PUBLISH
+          PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          BASE_RELEASE: ${{ steps.base.outputs.path }}
+        run: |
+          args=(--revision "$GITHUB_SHA")
+          if [[ "$PUBLISH" == true ]]; then args+=(--push); fi
+          if [[ -n "$BASE_RELEASE" ]]; then args+=(--base-release "$BASE_RELEASE"); fi
+          python tools/deploy/build.py "${args[@]}"
       - name: Освободить ресурсы сборщика перед запуском K3s
         run: docker buildx stop
       - name: Проверить запуск runtime без компилятора

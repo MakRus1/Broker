@@ -74,6 +74,7 @@ INFRASTRUCTURE = (
 INFRA_TESTS = {
     'test_deploy_cluster',
     'test_deployment',
+    'test_release_images',
     'test_local_seed',
     'test_ci_local',
     'test_local_clients',

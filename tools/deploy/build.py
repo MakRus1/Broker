@@ -103,14 +103,15 @@ def build(
         with open(target, 'a') as stream:
             stream.write(summary + '\n')
     with tempfile.TemporaryDirectory() as directory:
-        for name in selected:
+        for index, name in enumerate(selected):
             image = f"ghcr.io/makrus1/broker-{name.replace('_', '-')}:{revision}"
             metadata = Path(directory) / f'{name}.json'
             cache = []
             if os.environ.get('GITHUB_ACTIONS') == 'true':
-                scope = f"broker-service-{name}-{platform.replace('/', '-')}"
+                scope = "broker-services-selected-v2-" + platform.replace('/', '-')
                 cache = ['--cache-from', f'type=gha,version=2,scope={scope}']
-                cache += ['--cache-to', f'type=gha,version=2,scope={scope},mode=max']
+                if index == len(selected) - 1:
+                    cache += ['--cache-to', f'type=gha,version=2,scope={scope},mode=max']
             subprocess.run(
                 [
                     'docker',
@@ -128,6 +129,8 @@ def build(
                     f'NODE_IMAGE={node}',
                     '--build-arg',
                     f'SERVICE={name}',
+                    '--build-arg',
+                    'BUILD_SERVICES=' + ' '.join(selected),
                     '--build-arg',
                     'ASSETS_STAGE='
                     + {'admin_bff': 'frontend-admin', 'web_bff': 'frontend-web'}.get(

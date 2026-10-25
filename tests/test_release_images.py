@@ -163,8 +163,10 @@ class BuildImagesTest(unittest.TestCase):
                 command = call.args[0]
                 self.assertIn(f'SERVICE={service}', command)
                 self.assertIn(f'ASSETS_STAGE={assets}', command)
+                self.assertIn('BUILD_SERVICES=' + ' '.join(selected), command)
+                self.assertEqual('--cache-to' in command, service == selected[-1])
                 self.assertIn(
-                    f'type=gha,version=2,scope=broker-service-{service}-linux-amd64,mode=max',
+                    'type=gha,version=2,scope=broker-services-selected-v2-linux-amd64',
                     command,
                 )
 

@@ -1,3 +1,4 @@
+import { DateInput } from './DateInput';
 import { useEffect, useId, useState } from 'react';
 import { request, type Session, type RailDetails, type RailwayStation } from './api';
 import { businessDate, calendarDate } from './calendar';
@@ -21,7 +22,7 @@ function StationLookup({
   const [failure, setFailure] = useState('');
   const [active, setActive] = useState(-1);
   useEffect(() => {
-    if (!open || query.trim().length < 2) {
+    if (!open) {
       setItems([]);
       setBusy(false);
       return;
@@ -131,9 +132,7 @@ function StationLookup({
           role="listbox"
           aria-label={label}
         >
-          {query.trim().length < 2 ? (
-            <p>Введите не менее двух символов</p>
-          ) : busy ? (
+          {busy ? (
             <p role="status">Ищем станции…</p>
           ) : failure ? (
             <p role="alert">{failure}</p>
@@ -198,12 +197,12 @@ export function RailFields({
       {railDates.map(([key, label]) => (
         <label key={key}>
           {label}
-          <input
+          <DateInput
             type="date"
             min="1900-01-01"
             max={key === 'etd' || key === 'eta' ? undefined : businessDate()}
             value={value[key] ?? ''}
-            onChange={(event) => onChange({ ...value, [key]: event.target.value || undefined })}
+            onChange={(dateValue) => onChange({ ...value, [key]: dateValue || undefined })}
           />
         </label>
       ))}

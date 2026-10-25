@@ -1,6 +1,7 @@
+import { DateInput } from './DateInput';
 import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
-import { routePoint } from './transportation';
+import { routePoint, routeDirection } from './transportation';
 import { RailFields } from './RailFields';
 import { useRouteCollapse } from './routeCollapse';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -217,10 +218,7 @@ export function RouteEditor({
                   <h3>
                     {index + 1}. {modes[route_segment.mode]}
                   </h3>
-                  <span>
-                    {routePoint(route_segment, 'origin').name || 'Станция не выбрана'} →{' '}
-                    {routePoint(route_segment, 'destination').name || 'Станция не выбрана'}
-                  </span>
+                  <span>{routeDirection(route_segment)}</span>
                   <span className="route-summary-meta">
                     {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
                       'Перевозчик не выбран'}
@@ -329,16 +327,14 @@ export function RouteEditor({
                           {field === 'planned_departure_at'
                             ? 'Плановое отправление'
                             : 'Плановое прибытие'}
-                          <input
+                          <DateInput
                             type="datetime-local"
                             value={localDateTime(route_segment[field])}
-                            onChange={(event) => {
+                            onChange={(dateValue) => {
                               try {
                                 update(index, {
                                   ...route_segment,
-                                  [field]: event.target.value
-                                    ? utcDateTime(event.target.value)
-                                    : undefined,
+                                  [field]: dateValue ? utcDateTime(dateValue) : undefined,
                                 });
                                 setFailure('');
                               } catch (error) {

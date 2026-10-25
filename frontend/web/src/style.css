@@ -2327,6 +2327,7 @@ details[open] > .route-stage-summary::after {
   gap: 24px;
 }
 .road-details-grid > label {
+  align-content: start;
   display: grid;
   gap: 8px;
 }
@@ -2337,4 +2338,44 @@ details[open] > .route-stage-summary::after {
   .road-details-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.date-input-control {
+  position: relative;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+.date-input-control > input[type='text'] {
+  width: 100%;
+  padding-right: 44px;
+}
+.date-input-control .date-input-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  right: 0;
+  bottom: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.date-input-control .date-input-calendar {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #65758c;
+  display: grid;
+  place-items: center;
+}
+.date-input-control .date-input-calendar:hover {
+  background: #edf3ff;
+  color: #255bcc;
 }

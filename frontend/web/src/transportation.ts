@@ -32,6 +32,24 @@ export function routePoint(segment: RouteSegment, point: 'origin' | 'destination
   return segment[point] ?? { name: '', country_code: '' };
 }
 
+export function routeDirection(segment: RouteSegment): string {
+  if (segment.mode === 'international_road')
+    return segment.international_road?.loading_terminal_id
+      ? 'Место погрузки указано'
+      : 'Место погрузки не указано';
+  if (segment.mode === 'road' || segment.mode === 'pickup')
+    return (
+      segment.pickup?.delivery_city ||
+      segment.pickup?.delivery_address ||
+      'Место доставки не указано'
+    );
+  const fallback =
+    segment.mode === 'rail' || segment.mode === 'international_rail'
+      ? 'Станция не выбрана'
+      : 'Пункт не указан';
+  return `${routePoint(segment, 'origin').name || fallback} → ${routePoint(segment, 'destination').name || fallback}`;
+}
+
 export function localDateTime(value?: string): string {
   if (!value) return '';
   const date = new Date(value);

@@ -26,7 +26,7 @@ inline pgtypes::TransportLocationV1 Convert(const models::TransportLocation& val
     return result;
 }
 
-inline models::SeaDetails Convert(const pgtypes::SeaDetailsV1& value) {
+inline models::SeaDetails Convert(const pgtypes::SeaDetailsV2& value) {
     models::SeaDetails result;
     if (value.Pol.has_value())
         result.pol = Convert(value.Pol.value());
@@ -47,8 +47,8 @@ inline models::SeaDetails Convert(const pgtypes::SeaDetailsV1& value) {
     return result;
 }
 
-inline pgtypes::SeaDetailsV1 Convert(const models::SeaDetails& value) {
-    pgtypes::SeaDetailsV1 result;
+inline pgtypes::SeaDetailsV2 Convert(const models::SeaDetails& value) {
+    pgtypes::SeaDetailsV2 result;
     if (value.pol.has_value())
         result.Pol = Convert(value.pol.value());
     if (value.pod.has_value())
@@ -70,7 +70,7 @@ inline pgtypes::SeaDetailsV1 Convert(const models::SeaDetails& value) {
     return result;
 }
 
-inline models::AirDetails Convert(const pgtypes::AirDetailsV1& value) {
+inline models::AirDetails Convert(const pgtypes::AirDetailsV2& value) {
     models::AirDetails result;
     if (value.CarrierId.has_value())
         result.carrier_id = boost::uuids::to_string(value.CarrierId.value());
@@ -91,8 +91,8 @@ inline models::AirDetails Convert(const pgtypes::AirDetailsV1& value) {
     return result;
 }
 
-inline pgtypes::AirDetailsV1 Convert(const models::AirDetails& value) {
-    pgtypes::AirDetailsV1 result;
+inline pgtypes::AirDetailsV2 Convert(const models::AirDetails& value) {
+    pgtypes::AirDetailsV2 result;
     if (value.carrier_id.has_value())
         result.CarrierId = boost::uuids::string_generator{}(value.carrier_id.value());
     if (value.origin_airport.has_value())
@@ -112,7 +112,7 @@ inline pgtypes::AirDetailsV1 Convert(const models::AirDetails& value) {
     return result;
 }
 
-inline models::ShipmentRouteSegment Convert(const pgtypes::ShipmentRouteSegmentV2& value) {
+inline models::ShipmentRouteSegment Convert(const pgtypes::ShipmentRouteSegmentV3& value) {
     models::ShipmentRouteSegment result;
     result.id = boost::uuids::to_string(value.Id);
     result.type = value.Type;
@@ -123,8 +123,8 @@ inline models::ShipmentRouteSegment Convert(const pgtypes::ShipmentRouteSegmentV
     return result;
 }
 
-inline pgtypes::ShipmentRouteSegmentV2 Convert(const models::ShipmentRouteSegment& value) {
-    pgtypes::ShipmentRouteSegmentV2 result;
+inline pgtypes::ShipmentRouteSegmentV3 Convert(const models::ShipmentRouteSegment& value) {
+    pgtypes::ShipmentRouteSegmentV3 result;
     result.Id = boost::uuids::string_generator{}(value.id);
     result.Type = value.type;
     if (value.sea.has_value())

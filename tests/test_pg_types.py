@@ -41,6 +41,7 @@ class PgTypesTest(unittest.TestCase):
                     'fields': [
                         {'name': 'id', 'type': 'uuid'},
                         {'name': 'name', 'type': 'text'},
+                        {'name': 'day', 'type': 'date'},
                     ]
                 },
             }
@@ -54,6 +55,8 @@ class PgTypesTest(unittest.TestCase):
         header = first['include/postgresql/types.hpp']
         self.assertLess(header.index('struct SampleV1'), header.index('struct SampleV2'))
         self.assertIn('SampleV1 Previous', header)
+        self.assertIn('userver::utils::datetime::Date Day', header)
+        self.assertIn('userver/storages/postgres/io/date.hpp', header)
         self.assertIn('std::vector<boost::uuids::uuid> Identifiers', header)
         self.assertIn('std::optional<userver::formats::json::Value> Value', header)
         self.assertIn('CppToUserPg<::sample::pgtypes::SampleV1>', header)

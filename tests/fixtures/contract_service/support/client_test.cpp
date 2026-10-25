@@ -88,9 +88,9 @@ UTEST(ClientContract, BodyConstraintsAndDefaults) {
     const auto json = userver::formats::json::FromString(*encoded.body);
     EXPECT_EQ(json["status"].As<std::string>(), "new");
     EXPECT_EQ(json["count"].As<int>(), 3);
-    request.body.created = "2025-02-29T12:00:00Z";
-    EXPECT_THROW(api::ValidatedCreate::Encode(request), std::invalid_argument);
-    request.body.created.reset();
+    EXPECT_THROW(api::ValidatedCreate::ParseBody(userver::formats::json::FromString(
+                     R"({"status":"new","created":"2025-02-29T12:00:00Z"})")),
+        std::exception);
     request.body.labels = {"same", "same"};
     EXPECT_THROW(api::ValidatedCreate::Encode(request), std::invalid_argument);
 }
@@ -241,4 +241,27 @@ UTEST(ClientContract, JsonBoundaryForBff) {
         EXPECT_EQ(json["error"].As<std::string>(), "conflict");
         EXPECT_EQ(json["message"].As<std::string>(), error.response.message);
     }
+}
+
+UTEST(CalendarDateClient, QueryAndJsonUseIsoWireRepresentation) {
+    const auto day = userver::utils::datetime::DateFromRFC3339String("2000-02-29");
+    const auto request = api::CalendarCheck::Encode(api::CalendarCheck::Request{.day = day});
+    ASSERT_EQ(request.query.size(), 1);
+    EXPECT_EQ(request.query.front().first, "day");
+    EXPECT_EQ(request.query.front().second, "2000-02-29");
+    const auto body =
+        api::CalendarEcho::ToJson(api::CalendarEcho::RequestBody{.day = day, .days = {day}});
+    const auto value = userver::formats::json::FromString(body);
+    EXPECT_EQ(value["day"].As<std::string>(), "2000-02-29");
+    EXPECT_EQ(value["days"][0].As<std::string>(), "2000-02-29");
+}
+
+UTEST(CalendarDateClient, InstantPreservesMomentAndPrecision) {
+    const auto instant =
+        userver::utils::datetime::FromRfc3339StringSaturating<std::chrono::system_clock::duration>(
+            "2026-10-25T12:34:56.123456+03:00");
+    const auto body = api::CalendarEcho::ToJson(api::CalendarEcho::RequestBody{.instant = instant});
+    const auto json = userver::formats::json::FromString(body);
+    EXPECT_EQ(json["instant"].As<std::chrono::system_clock::time_point>(), instant);
+    EXPECT_EQ(platform::http::Scalar(instant).substr(0, 19), "2026-10-25T09:34:56");
 }

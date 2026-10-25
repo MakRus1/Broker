@@ -55,6 +55,8 @@ paths:
                     minimum: 0
                   updated_at:
                     type: string
+                    format: date-time
+                    description: Время публикации текущей ревизии из PostgreSQL
         '400':
           description: Невалидный запрос или конфиг
           content:

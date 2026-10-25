@@ -1,8 +1,8 @@
 SELECT ROW(
     event.id, event.actor, event.action,
-    to_char(event.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+    event.occurred_at,
     event.document, previous.result
-)::public.counterparty_event_v1
+)::public.counterparty_event_v2
 FROM business_audit AS event
 LEFT JOIN LATERAL (
     -- Предыдущее событие может находиться за границей запрошенной страницы.

@@ -21,7 +21,7 @@ Response View::Handle(
         const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kListHistory,
             organization, request.body.id, request.body.before, request.body.limit);
         return Response200{
-            .items = Convert(rows.AsContainer<std::vector<pgtypes::CounterpartyEventV1>>())};
+            .items = Convert(rows.AsContainer<std::vector<pgtypes::CounterpartyEventV2>>())};
     } catch (const ::counterparties::ApiError& error) {
         return Response403{.error = error.Code, .message = error.what()};
     }

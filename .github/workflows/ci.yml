@@ -147,7 +147,8 @@ jobs:
             grep -q __ubsan_ /tmp/userver-symbols.txt
           '
       - name: Кеш компиляции
-        uses: actions/cache@v6.1.0
+        id: compile-cache
+        uses: actions/cache/restore@v6.1.0
         with:
           path: .ccache
           key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-${{ github.sha }}
@@ -161,14 +162,22 @@ jobs:
           PRESET: ${{ matrix.preset }}
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
           CI_BUILD_SERVICES: ${{ needs.plan.outputs.build_services }}
-        run: make "docker-ci-build-$PRESET"
+        run: |
+          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE=512M "$DOCKER_IMAGE" ccache --zero-stats
+          make "docker-ci-build-$PRESET"
       - name: Статистика кеша компиляции
         if: always()
         env:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: |
           mkdir -p .ccache
-          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache "$IMAGE" ccache --show-stats
+          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE=512M "$IMAGE" ccache --show-stats
+      - name: Сохранить кеш успешной сборки
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.compile-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: .ccache
+          key: ${{ steps.compile-cache.outputs.cache-primary-key }}
       - name: Тесты затронутых сервисов
         id: tests
         env:

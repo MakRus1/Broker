@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { DateTimeInput } from './DateInput';
 import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
 import { routePoint, routeDirection } from './transportation';
@@ -327,8 +327,7 @@ export function RouteEditor({
                           {field === 'planned_departure_at'
                             ? 'Плановое отправление'
                             : 'Плановое прибытие'}
-                          <DateInput
-                            type="datetime-local"
+                          <DateTimeInput
                             value={localDateTime(route_segment[field])}
                             onChange={(dateValue) => {
                               try {

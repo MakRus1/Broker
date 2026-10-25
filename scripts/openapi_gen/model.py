@@ -39,6 +39,10 @@ class Type:
             return self.model_name if self.model_name.startswith("::") else "models::" + self.model_name
         if self.enum_name:
             return self.enum_name
+        if self.kind == 'string' and self.schema.get('format') == 'date':
+            return 'userver::utils::datetime::Date'
+        if self.kind == 'string' and self.schema.get('format') == 'date-time':
+            return 'std::chrono::system_clock::time_point'
         if self.kind == 'integer' and self.schema.get('format') == 'int32':
             return 'std::int32_t'
         if self.kind == 'number' and self.schema.get('format') == 'float':

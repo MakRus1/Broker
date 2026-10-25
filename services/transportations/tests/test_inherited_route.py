@@ -55,7 +55,7 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
             'expected_revision': 2,
             'route_segment_id': road['id'],
             'event_kind': 'departure',
-            'occurred_at': '2026-10-20T09:00:00Z',
+            'occurred_at': '2026-10-20T09:00:00+00:00',
         },
     )
     rail = route_segment('international_rail')
@@ -71,7 +71,7 @@ async def test_live_route_reorder_and_terms_keep_local_data(api, shipment_routes
         ]
         assert actual['incoterms'] == 'CIF'
         if identifier == first:
-            assert actual['route_segments'][2]['actual_departure_at'] == '2026-10-20T09:00:00Z'
+            assert actual['route_segments'][2]['actual_departure_at'] == '2026-10-20T09:00:00+00:00'
             assert actual['route_segments'][0]['origin']['name'] == 'Начало'
         else:
             assert 'origin' not in actual['route_segments'][0]
@@ -177,7 +177,7 @@ async def test_invalid_actual_does_not_protect_segment(api, shipment_routes):
             'expected_revision': 1,
             'route_segment_id': stage['id'],
             'event_kind': 'departure',
-            'occurred_at': '2026-10-20T09:00:00Z',
+            'occurred_at': '2026-10-20T09:00:00+00:00',
             'reason': 'Нет исправляемого факта',
         },
         expected=409,

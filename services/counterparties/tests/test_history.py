@@ -69,7 +69,7 @@ async def test_history_records_actor_and_snapshots(api):
     for event in events:
         assert event['actor'].endswith('#author')
         assert event['actor_name'] == 'author'
-        assert event['occurred_at'].endswith('Z')
+        assert event['occurred_at'].endswith('+00:00')
     assert events[0]['before'] == snapshot(archived)
     assert events[0]['after'] == snapshot(restored)
     assert events[1]['before'] == snapshot(updated)

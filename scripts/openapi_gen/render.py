@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-from cpp_types import declarations, enums, literal, quoted, type_cpp
+from cpp_types import declarations, enums, literal, quoted, type_cpp, json_value
 from runtime_validation import CODE as VALIDATION_RUNTIME
 from model import enum_types, collect_models
 
@@ -50,6 +50,11 @@ def preamble(service, op, include_types=True):
 #include <variant>
 #include <userver/formats/json/value.hpp>
 #include <userver/formats/json/value_builder.hpp>
+#include <platform/calendar_date.hpp>
+#include <platform/timestamp.hpp>
+#include <userver/utils/datetime/date.hpp>
+#include <userver/utils/datetime.hpp>
+#include <userver/formats/parse/common.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/serialize/common_containers.hpp>
 namespace {service}::views::{op.ns} {{
@@ -83,9 +88,9 @@ def responses(service, op):
             text += f'inline std::string ToJson(const {name}& value) {{\n    userver::formats::json::ValueBuilder out(userver::formats::json::Type::kObject);\n'
             for f in r.body.fields:
                 if not f.optional:
-                    text += f'    Validate_{name}_{f.name}(value.{f.name});\n    out[{quote(f.name)}] = value.{f.name};\n'
+                    text += f'    Validate_{name}_{f.name}(value.{f.name});\n    out[{quote(f.name)}] = {json_value(f.type, "value." + f.name)};\n'
                 else:
-                    text += f'    if (value.{f.name}.has_value()) {{ Validate_{name}_{f.name}(value.{f.name}.value()); out[{quote(f.name)}] = value.{f.name}.value(); }}\n'
+                    text += f'    if (value.{f.name}.has_value()) {{ Validate_{name}_{f.name}(value.{f.name}.value()); out[{quote(f.name)}] = {json_value(f.type, "value." + f.name + ".value()")}; }}\n'
             text += '    return userver::formats::json::ToString(out.ExtractValue());\n}\n'
     types = ', '.join(f'Response{r.status}' for r in op.responses)
     text += f'using Response = std::variant<{types}>;\n}}\n'
@@ -133,9 +138,15 @@ COMMON = r'''#pragma once
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <platform/calendar_date.hpp>
+#include <platform/timestamp.hpp>
+#include <userver/utils/datetime/date.hpp>
+#include <userver/utils/datetime.hpp>
+#include <userver/formats/parse/common.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/serialize/common_containers.hpp>
 #include <userver/formats/json/value.hpp>
+#include <userver/formats/json/value_builder.hpp>
 namespace broker_codegen {
 template <std::size_t N> class InputPresence {
 public:
@@ -147,6 +158,8 @@ private:
 template <typename T> T ParseScalar(const std::string& text) {
     if constexpr (std::is_enum_v<T>) return ParseEnumScalar(text, T{});
     else if constexpr (std::is_same_v<T, std::string>) return text;
+    else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) { return platform::ParseCalendarDate(text); }
+    else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) return platform::ParseTimestamp(text);
     else if constexpr (std::is_same_v<T, bool>) {
         if (text == "true") return true;
         if (text == "false") return false;
@@ -173,11 +186,27 @@ template <typename T> struct IsVector : std::false_type {};
 template <typename T> struct IsVector<std::vector<T>> : std::true_type {};
 template <typename T> struct IsOptional : std::false_type {};
 template <typename T> struct IsOptional<std::optional<T>> : std::true_type {};
+template <typename T> userver::formats::json::Value CalendarDateJson(const std::optional<T>&);
+template <typename T> userver::formats::json::Value CalendarDateJson(const std::vector<T>&);
+inline userver::formats::json::Value CalendarDateJson(userver::utils::datetime::Date date) {
+    return userver::formats::json::ValueBuilder(platform::FormatCalendarDate(date)).ExtractValue();
+}
+template <typename T> userver::formats::json::Value CalendarDateJson(const std::optional<T>& value) {
+    if (value.has_value()) return CalendarDateJson(value.value());
+    return userver::formats::json::ValueBuilder{}.ExtractValue();
+}
+template <typename T> userver::formats::json::Value CalendarDateJson(const std::vector<T>& values) {
+    userver::formats::json::ValueBuilder result(userver::formats::json::Type::kArray);
+    for (const auto& value : values) result.PushBack(CalendarDateJson(value));
+    return result.ExtractValue();
+}
 template <typename T> T ParseJson(const userver::formats::json::Value& value) {
     if constexpr (IsOptional<T>::value) {
         if (value.IsNull()) return std::nullopt;
         return T{ParseJson<typename T::value_type>(value)};
     } else if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
+    else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) return ParseScalar<T>(value.As<std::string>());
+    else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) return ParseScalar<T>(value.As<std::string>());
     else if constexpr (std::is_same_v<T, userver::formats::json::Value>) {
         if (!value.IsObject()) throw std::invalid_argument("object");
         return value;

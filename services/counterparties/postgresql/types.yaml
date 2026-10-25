@@ -59,7 +59,7 @@ types:
       type: text[]
     - name: contacts
       type: jsonb
-  public.counterparty_event_v1:
+  public.counterparty_event_v2:
     fields:
     - name: id
       type: bigint
@@ -68,7 +68,7 @@ types:
     - name: action
       type: text
     - name: occurred_at
-      type: text
+      type: timestamptz
     - name: document
       type: jsonb
     - name: previous

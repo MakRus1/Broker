@@ -8,6 +8,7 @@
 #include <helpers/database.hpp>
 #include <helpers/dictionaries.hpp>
 #include <openapi/models.hpp>
+#include <platform/calendar_date.hpp>
 #include <platform/date_validation.hpp>
 #include <postgresql/types.hpp>
 #include <set>
@@ -63,11 +64,12 @@ inline std::optional<std::string> CleanText(const std::optional<std::string>& va
     return result.empty() ? std::nullopt : std::optional<std::string>{result};
 }
 
-inline std::string Today() {
-    return userver::utils::datetime::Timestring(userver::utils::datetime::Now(), "UTC", "%Y-%m-%d");
+inline userver::utils::datetime::Date Today() {
+    return userver::utils::datetime::Date{
+        std::chrono::floor<std::chrono::days>(userver::utils::datetime::Now())};
 }
 
-inline void ValidateShipmentDate(const std::string& value) {
+inline void ValidateShipmentDate(userver::utils::datetime::Date value) {
     using namespace std::chrono;
     if (!platform::IsCalendarDateInRange(
             value, year{1900} / January / 1, year{9999} / December / 31))
@@ -75,7 +77,7 @@ inline void ValidateShipmentDate(const std::string& value) {
             400, "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
-template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV2& row) {
+template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV3& row) {
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
     if (request.recipient_id.has_value()) {
@@ -115,9 +117,9 @@ template <typename Request> void ApplyCard(const Request& request, pgtypes::Ship
     ValidateShipmentDate(row.ShipmentDate);
 }
 
-inline void ValidateCard(const pgtypes::ShipmentDataV2& row, const auto& settings,
+inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& settings,
     const std::vector<pgtypes::ShipmentDictionaryValueV1>& dictionaries,
-    const std::optional<pgtypes::ShipmentV3>& previous = std::nullopt) {
+    const std::optional<pgtypes::ShipmentV4>& previous = std::nullopt) {
     if ((!previous.has_value() || previous.value().Status != row.Status) &&
         std::find(settings.Statuses.begin(), settings.Statuses.end(), row.Status) ==
             settings.Statuses.end())
@@ -157,14 +159,18 @@ inline void ValidateCard(const pgtypes::ShipmentDataV2& row, const auto& setting
 }
 
 inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
-    const std::string& organization, const std::string& date, const auto& settings) {
-    const auto period = settings.ResetNumberYearly ? std::stoi(date.substr(0, 4)) : 0;
+    const std::string& organization, userver::utils::datetime::Date date, const auto& settings) {
+    const auto formatted = platform::FormatCalendarDate(date);
+    const std::chrono::year_month_day calendar{
+        std::chrono::floor<std::chrono::days>(date.GetSysDays())};
+    const auto period = settings.ResetNumberYearly ? static_cast<int>(calendar.year()) : 0;
     const auto sequence = transaction.Execute(sql::kNextShipmentNumber, organization, period)
                               .template AsSingleRow<std::int64_t>();
     std::string result = settings.NumberTemplate;
     const std::vector<std::pair<std::string, std::string>> tokens{
-        {"{sequence}", std::to_string(sequence)}, {"{yyyy}", date.substr(0, 4)},
-        {"{yy}", date.substr(2, 2)}, {"{mm}", date.substr(5, 2)}, {"{dd}", date.substr(8, 2)}};
+        {"{sequence}", std::to_string(sequence)}, {"{yyyy}", formatted.substr(0, 4)},
+        {"{yy}", formatted.substr(2, 2)}, {"{mm}", formatted.substr(5, 2)},
+        {"{dd}", formatted.substr(8, 2)}};
     if (result.find("{sequence}") == std::string::npos)
         throw ApiError{400, "invalid_number_template", "Шаблон номера должен содержать {sequence}"};
     for (const auto& [token, value] : tokens) {

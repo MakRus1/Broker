@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { DateTimeInput } from './DateInput';
 import { RoadDetailsView } from './RoadFields';
 import { SharedRouteDetailsView } from './SharedRouteDetails';
 import { routePoint, routeDirection } from './transportation';
@@ -499,8 +499,7 @@ function ActualForm({
       {previous && <p>Сейчас: {formatDate(previous)}</p>}
       <label>
         Дата и время
-        <DateInput
-          type="datetime-local"
+        <DateTimeInput
           required
           disabled={busy}
           value={value}

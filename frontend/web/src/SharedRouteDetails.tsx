@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { IsoDateInput } from './DateInput';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   request,
@@ -37,8 +37,7 @@ export function SharedRouteFields({
     return (
       <label>
         {label}
-        <DateInput
-          type="date"
+        <IsoDateInput
           min="1900-01-01"
           max={actual ? businessDate() : '9999-12-31'}
           value={value ?? ''}

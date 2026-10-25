@@ -26,7 +26,7 @@ Response View::Handle(
                 sql::kGetShipment, organization, request.body.shipment_id);
             if (rows.IsEmpty())
                 throw ApiError{404, "not_found", "Поставка не найдена"};
-            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV3>();
+            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV4>();
             CheckRevision(previous.Revision, request.body.expected_revision);
             const auto locations =
                 LoadRouteLocations(*deps.pg_cluster, request.body.route_segments.value());
@@ -43,7 +43,7 @@ Response View::Handle(
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (current.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto previous = current.AsSingleRow<pgtypes::ShipmentV3>();
+        const auto previous = current.AsSingleRow<pgtypes::ShipmentV4>();
         CheckRevision(previous.Revision, request.body.expected_revision);
         auto card = ConvertData(previous);
         if (request.body.reference.has_value())
@@ -80,7 +80,7 @@ Response View::Handle(
             Convert(transaction
                         .Execute(sql::kUpdateShipment, organization, request.body.shipment_id,
                             request.body.expected_revision, card)
-                        .AsSingleRow<pgtypes::ShipmentV3>());
+                        .AsSingleRow<pgtypes::ShipmentV4>());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);

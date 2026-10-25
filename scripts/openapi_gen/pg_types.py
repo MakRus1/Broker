@@ -6,6 +6,7 @@ from model import keys
 
 BUILTINS = {
     'text': 'std::string',
+    'date': 'userver::utils::datetime::Date',
     'boolean': 'bool',
     'smallint': 'std::int16_t',
     'integer': 'std::int32_t',
@@ -125,6 +126,7 @@ def outputs(service, loader):
 #include <boost/uuid/uuid_io.hpp>
 #include <userver/storages/postgres/io/array_types.hpp>
 #include <userver/storages/postgres/io/chrono.hpp>
+#include <userver/storages/postgres/io/date.hpp>
 #include <userver/storages/postgres/io/composite_types.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>

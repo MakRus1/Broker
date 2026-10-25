@@ -4,7 +4,7 @@ SELECT ROW(
     number,
     customer_id,
     reference,
-    shipment_date::TEXT,
+    shipment_date,
     recipient_id,
     logist,
     cargo_description,
@@ -16,7 +16,7 @@ SELECT ROW(
     delivery_country,
     delivery_address,
     route_segments
-)::public.shipment_v3
+)::public.shipment_v4
 FROM shipments
 WHERE organization_id = $1::UUID AND id = $2::UUID
 FOR UPDATE;

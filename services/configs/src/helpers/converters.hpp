@@ -18,7 +18,7 @@ struct DraftRow {
 
 struct EventRow {
     Json Event;
-    std::string Created;
+    userver::storages::postgres::TimePointTz Created;
 };
 
 inline std::vector<CatalogEntry> Convert(const std::vector<CatalogRow>& rows) {

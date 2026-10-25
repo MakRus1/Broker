@@ -1,4 +1,7 @@
 #pragma once
+#include <platform/calendar_date.hpp>
+#include <userver/utils/datetime.hpp>
+#include <userver/utils/datetime/date.hpp>
 
 #include <charconv>
 #include <chrono>
@@ -77,6 +80,11 @@ template <typename T> std::string Scalar(const T& value) {
         return Scalar(EnumValue(value));
     } else if constexpr (std::is_same_v<T, std::string>) {
         return value;
+    } else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) {
+        return platform::FormatCalendarDate(value);
+    } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+        return userver::utils::datetime::UtcTimestring(
+            value, userver::utils::datetime::kRfc3339Format);
     } else if constexpr (std::is_same_v<T, bool>) {
         return value ? "true" : "false";
     } else {

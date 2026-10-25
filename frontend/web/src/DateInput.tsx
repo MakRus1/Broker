@@ -1,7 +1,8 @@
+import { CalendarDate } from './CalendarDate';
 import { useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes } from 'react';
 import { displayDateInput, parseDateInput, maskDateInput } from './dateText';
 
-type Props = Omit<
+type TextProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   'type' | 'value' | 'onChange' | 'min' | 'max'
 > & {
@@ -10,9 +11,18 @@ type Props = Omit<
   min?: string;
   max?: string;
   onChange: (value: string) => void;
+  onDraftChange?: (state: DateDraft) => void;
 };
 
-export function DateInput({ type = 'date', value, onChange, min, max, ...props }: Props) {
+function DateTextControl({
+  type = 'date',
+  value,
+  onChange,
+  onDraftChange,
+  min,
+  max,
+  ...props
+}: TextProps) {
   const [text, setText] = useState(() => displayDateInput(value));
   const [touched, setTouched] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -48,7 +58,8 @@ export function DateInput({ type = 'date', value, onChange, min, max, ...props }
     setText(next);
     const result = parseDateInput(next, withTime);
     emitted.current = result ?? '';
-    onChange(result ?? '');
+    onDraftChange?.({ text: next, valid: result !== undefined });
+    if (result !== undefined) onChange(result);
   }
   return (
     <span className="date-input-control">
@@ -123,5 +134,69 @@ export function DateInput({ type = 'date', value, onChange, min, max, ...props }
         </svg>
       </button>
     </span>
+  );
+}
+
+export interface DateDraft {
+  text: string;
+  valid: boolean;
+}
+
+type CalendarProps = Omit<TextProps, 'type' | 'value' | 'min' | 'max' | 'onChange'> & {
+  value: CalendarDate | null;
+  min?: CalendarDate;
+  max?: CalendarDate;
+  onChange: (value: CalendarDate | null) => void;
+};
+
+export function DateInput({ value, min, max, onChange, ...props }: CalendarProps) {
+  return (
+    <DateTextControl
+      {...props}
+      value={value?.toString() ?? ''}
+      min={min?.toString()}
+      max={max?.toString()}
+      onChange={(iso) => onChange(iso ? CalendarDate.fromISO(iso) : null)}
+    />
+  );
+}
+
+// Адаптер для форм, которые редактируют JSON DTO. Преобразование сосредоточено здесь.
+export function IsoDateInput({
+  value,
+  min,
+  max,
+  onChange,
+  onDraftChange,
+  ...props
+}: Omit<TextProps, 'type'>) {
+  return (
+    <DateInput
+      {...props}
+      value={value ? CalendarDate.fromISO(value) : null}
+      min={min ? CalendarDate.fromISO(min) : undefined}
+      max={max ? CalendarDate.fromISO(max) : undefined}
+      onChange={(date) => onChange(date?.toString() ?? '')}
+      onDraftChange={(draft) => {
+        if (!draft.valid) onChange('');
+        onDraftChange?.(draft);
+      }}
+    />
+  );
+}
+
+// Локальная дата со временем имеет отдельный контракт от календарного дня.
+export function DateTimeInput(props: Omit<TextProps, 'type'>) {
+  const { onChange, onDraftChange, ...rest } = props;
+  return (
+    <DateTextControl
+      {...rest}
+      type="datetime-local"
+      onChange={onChange}
+      onDraftChange={(draft) => {
+        if (!draft.valid) onChange('');
+        onDraftChange?.(draft);
+      }}
+    />
   );
 }

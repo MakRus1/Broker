@@ -5,7 +5,7 @@
 
 namespace transportations::domain {
 namespace {
-void CheckDate(const std::optional<std::string>& value, bool actual) {
+void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool actual) {
     if (!value.has_value())
         return;
     using namespace std::chrono;
@@ -18,7 +18,8 @@ void CheckDate(const std::optional<std::string>& value, bool actual) {
                    : "Укажите корректную календарную дату от 01.01.1900"};
 }
 
-void CheckOrder(const std::optional<std::string>& from, const std::optional<std::string>& to) {
+void CheckOrder(const std::optional<userver::utils::datetime::Date>& from,
+    const std::optional<userver::utils::datetime::Date>& to) {
     if (from.has_value() && to.has_value() && from.value() > to.value())
         throw ApiError{
             400, "invalid_road_sequence", "Проверьте последовательность дат автоучастка"};

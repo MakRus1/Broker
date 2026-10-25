@@ -9,17 +9,17 @@ def test_storage_type_contract(pgsql, service_source_dir):
     assert_postgres_types(pgsql['db_1'], service_source_dir)
 
 
-async def test_v3_and_future_projection_coexist(api, pgsql):
+async def test_current_and_future_projection_coexist(api, pgsql):
     database = pgsql['db_1']
     with database.cursor() as cursor:
         cursor.execute('''
-            CREATE TYPE public.shipment_v4 AS (
+            CREATE TYPE public.shipment_future_v1 AS (
                 id UUID, revision BIGINT, number TEXT, customer_id UUID, reference TEXT, note TEXT
             );
             ALTER TABLE shipments ADD COLUMN note TEXT NOT NULL DEFAULT 'новое поле';
         ''')
     try:
-        # Новая проекция хранения не меняет контракт используемого shipment_v3.
+        # Новая проекция хранения не меняет контракт используемого shipment_v4.
         created = await api.post(
             '/api/v1/shipments/create',
             {
@@ -36,7 +36,7 @@ async def test_v3_and_future_projection_coexist(api, pgsql):
             cursor.execute(
                 '''
                 SELECT (ROW(id, revision, number, customer_id, reference, note)
-                    ::public.shipment_v4).note
+                    ::public.shipment_future_v1).note
                 FROM shipments WHERE id = %s::UUID
             ''',
                 (shipment['id'],),
@@ -56,4 +56,4 @@ async def test_v3_and_future_projection_coexist(api, pgsql):
             assert cursor.fetchone()[0] == 'новое поле'
     finally:
         with database.cursor() as cursor:
-            cursor.execute('ALTER TABLE shipments DROP COLUMN note; DROP TYPE public.shipment_v4;')
+            cursor.execute('ALTER TABLE shipments DROP COLUMN note; DROP TYPE public.shipment_future_v1;')

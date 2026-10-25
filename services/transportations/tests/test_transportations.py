@@ -68,7 +68,7 @@ async def test_route_actual_and_correction(api, shipment_routes):
         'route_segment_id': route_segments[0]['id'],
         'expected_revision': 2,
         'event_kind': 'departure',
-        'occurred_at': '2026-10-20T09:00:00Z',
+        'occurred_at': '2026-10-20T09:00:00+00:00',
     }
     await api.post('/api/v1/transportation-actuals/record', actual)
     await api.post(
@@ -80,7 +80,7 @@ async def test_route_actual_and_correction(api, shipment_routes):
             **actual,
             'expected_revision': 3,
             'reason': 'Уточнение времени',
-            'occurred_at': '2026-10-20T10:00:00Z',
+            'occurred_at': '2026-10-20T10:00:00+00:00',
         },
     )
     assert corrected['transportation']['revision'] == 4
@@ -122,8 +122,8 @@ async def test_duplicate_legs_and_invalid_time(api):
             'route_segments': [
                 {
                     **first,
-                    'planned_departure_at': '2026-10-21T10:00:00Z',
-                    'planned_arrival_at': '2026-10-21T09:00:00Z',
+                    'planned_departure_at': '2026-10-21T10:00:00+00:00',
+                    'planned_arrival_at': '2026-10-21T09:00:00+00:00',
                 }
             ],
         },
@@ -137,9 +137,9 @@ async def test_duplicate_legs_and_invalid_time(api):
 @pytest.mark.parametrize(
     'departure,arrival,status',
     [
-        ('2026-10-21T12:00:00+03:00', '2026-10-21T09:30:00Z', 200),
-        ('2026-10-21T09:00:00.500Z', '2026-10-21T09:00:00.100Z', 400),
-        ('2026-10-21t09:00:00z', '2026-10-21T09:00:00Z', 200),
+        ('2026-10-21T12:00:00+03:00', '2026-10-21T09:30:00+00:00', 200),
+        ('2026-10-21T09:00:00.500+00:00', '2026-10-21T09:00:00.100+00:00', 400),
+        ('2026-10-21t09:00:00z', '2026-10-21T09:00:00+00:00', 200),
     ],
 )
 async def test_route_timezones_and_fractions(api, shipment_routes, departure, arrival, status):
@@ -211,7 +211,7 @@ async def test_history_snapshots_pagination_and_access(api, shipment_routes):
         'route_segment_id': route['id'],
         'expected_revision': 2,
         'event_kind': 'departure',
-        'occurred_at': '2026-10-21T10:00:00Z',
+        'occurred_at': '2026-10-21T10:00:00+00:00',
     }
     await api.post('/api/v1/transportation-actuals/record', actual)
     await api.post(
@@ -219,7 +219,7 @@ async def test_history_snapshots_pagination_and_access(api, shipment_routes):
         {
             **actual,
             'expected_revision': 3,
-            'occurred_at': '2026-10-21T11:00:00Z',
+            'occurred_at': '2026-10-21T11:00:00+00:00',
             'reason': 'Уточнено по данным терминала',
         },
     )
@@ -231,8 +231,8 @@ async def test_history_snapshots_pagination_and_access(api, shipment_routes):
     assert latest[0]['actor_name'] == 'author'
     assert latest[0]['reason'] == 'Уточнено по данным терминала'
     assert latest[0]['event_kind'] == 'departure'
-    assert latest[0]['route_segments'][0]['actual_departure_at'] == '2026-10-21T11:00:00Z'
-    assert latest[1]['route_segments'][0]['actual_departure_at'] == '2026-10-21T10:00:00Z'
+    assert latest[0]['route_segments'][0]['actual_departure_at'] == '2026-10-21T11:00:00+00:00'
+    assert latest[1]['route_segments'][0]['actual_departure_at'] == '2026-10-21T10:00:00+00:00'
     earlier = (
         await api.post(
             '/api/v1/transportations/history', {**history_request, 'before': latest[-1]['id']}

@@ -1,4 +1,7 @@
 """Выдача опубликованных значений и отделение административного API."""
+import asyncio
+from datetime import datetime, timezone
+
 import pytest
 
 
@@ -26,7 +29,7 @@ async def publish_one(client, name, value):
     return response.json()
 
 
-async def test_values_and_history(service_client, admin_client):
+async def test_values_and_history(service_client, admin_client, pgsql):
     initial = await current(service_client)
     assert initial['revision'] == 0
     published = await publish_one(admin_client, 'SHIPMENT_TERMS_CONFIG', terms(True, 60))
@@ -35,7 +38,16 @@ async def test_values_and_history(service_client, admin_client):
     assert values['updated_at'] > initial['updated_at']
     assert values['configs']['SHIPMENT_TERMS_CONFIG'] == terms(True, 60)
     history = await admin_client.get('/admin/configs/history')
-    assert len(history.json()["items"]) == 1
+    assert [item['revision'] for item in history.json()['items']] == [1, 0]
+    assert values['updated_at'] == history.json()['items'][0]['created_at']
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT created_at FROM config_revisions WHERE revision = %s',
+                       (values['revision'],))
+        published_at = cursor.fetchone()[0]
+    actual = datetime.fromisoformat(values['updated_at'].replace('Z', '+00:00'))
+    assert actual == published_at
+    assert actual.utcoffset().total_seconds() == 0
+    assert await current(service_client) == values
 
 
 @pytest.mark.parametrize('name,value', [
@@ -95,3 +107,18 @@ async def test_native_userver_untyped_json(service_client):
                                          headers={'Content-Type': 'application/x-www-form-urlencoded'})
     assert response.status == 200
     assert 'configs' in response.json()
+
+
+async def test_initial_revision_has_persisted_publication_time(service_client, pgsql):
+    responses = await asyncio.gather(*(current(service_client) for _ in range(6)))
+    assert all(response == responses[0] for response in responses)
+    initial = responses[0]
+    assert initial['revision'] == 0
+    actual = datetime.fromisoformat(initial['updated_at'].replace('Z', '+00:00'))
+    assert actual > datetime(2020, 1, 1, tzinfo=timezone.utc)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT revision, created_at FROM config_revisions')
+        rows = cursor.fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == 0
+    assert rows[0][1] == actual

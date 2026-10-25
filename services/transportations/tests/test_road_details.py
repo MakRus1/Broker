@@ -83,7 +83,7 @@ async def test_roundtrip(api, shipment_routes, mode, field, details):
             'expected_revision': 2,
             'route_segment_id': stage['id'],
             'event_kind': 'departure',
-            'occurred_at': '2020-01-01T00:00:00Z',
+            'occurred_at': '2020-01-01T00:00:00+00:00',
         },
         expected=400,
     )

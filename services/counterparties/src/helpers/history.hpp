@@ -11,7 +11,7 @@ inline models::CounterpartySnapshot ReadSnapshot(const userver::formats::json::V
         snapshot.ExtractValue(), std::type_identity<models::CounterpartySnapshot>{});
 }
 
-inline models::CounterpartyEvent Convert(const pgtypes::CounterpartyEventV1& row) {
+inline models::CounterpartyEvent Convert(const pgtypes::CounterpartyEventV2& row) {
     models::CounterpartyEvent event;
     event.id = row.Id;
     event.actor = row.Actor;
@@ -36,7 +36,7 @@ inline models::CounterpartyEvent Convert(const pgtypes::CounterpartyEventV1& row
 }
 
 inline std::vector<models::CounterpartyEvent> Convert(
-    const std::vector<pgtypes::CounterpartyEventV1>& rows) {
+    const std::vector<pgtypes::CounterpartyEventV2>& rows) {
     std::vector<models::CounterpartyEvent> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

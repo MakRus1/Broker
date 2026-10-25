@@ -6,6 +6,6 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
     const ::configs::ConfigStore store{deps.pg_cluster};
     const auto values = store.Values(request.body.ids);
     return Response200{
-        .configs = values.Values, .revision = values.Revision, .updated_at = values.UpdatedAt};
+        .configs = values.Values, .revision = values.Revision, .updated_at = values.PublishedAt};
 }
 }  // namespace configs::views::configs::values

@@ -78,3 +78,12 @@ def admin_client(monitor_client, access_token):
 def platform_access(mockserver):
     from platform_access import install
     return install(mockserver)
+
+
+@pytest.fixture(autouse=True)
+def initial_revision(pgsql, service_source_dir):
+    # Testsuite очищает таблицы между тестами, включая созданную миграцией ревизию 0.
+    migration = (service_source_dir / 'postgresql/schemas/db_1'
+                 / 'V0003__initialize_config_revision.sql')
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(migration.read_text())

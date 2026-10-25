@@ -10,3 +10,4 @@ ConfigRevision:
       minimum: 0
     created_at:
       type: string
+      format: date-time

@@ -9,6 +9,11 @@ export function Catalog({ workspace }: { workspace: Workspace }) {
   );
   return (
     <section className="panel catalog" aria-label="Каталог конфигов">
+      {workspace.write && (
+        <button className="primary" onClick={workspace.createConfig}>
+          Создать конфиг
+        </button>
+      )}
       <label htmlFor="search">Поиск по названию</label>
       <input
         id="search"
@@ -43,7 +48,7 @@ export function Catalog({ workspace }: { workspace: Workspace }) {
                   {item.config_name}
                 </button>
               </td>
-              <td>{item.version}</td>
+              <td>{item.version || '—'}</td>
               <td>
                 <span className={'badge ' + (item.active_draft_id ? 'amber' : '')}>
                   {item.active_draft_id ? `Драфт #${item.active_draft_id}` : 'Опубликован'}

@@ -18,6 +18,9 @@ export function useWorkspace() {
   const [loginRequired, setLoginRequired] = useState(false);
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
   const [selected, setSelected] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [newName, setNewName] = useState('');
   const [current, setCurrent] = useState<Current>();
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draft, setDraft] = useState<Draft>();
@@ -73,9 +76,10 @@ export function useWorkspace() {
     };
   }, []);
   useEffect(() => {
-    if (!selected || !session || !session.permissions.includes('configs.read')) return;
+    if (creating || !selected || !session || !session.permissions.includes('configs.read')) return;
     let cancelled = false;
     setCurrent(undefined);
+    setRemoving(false);
     setDraft(undefined);
     setEditor(false);
     setEvents([]);
@@ -98,7 +102,7 @@ export function useWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [selected, session]);
+  }, [selected, session, creating]);
   useEffect(() => {
     if (!draft || !session || !session.permissions.includes('configs.read')) {
       setEvents([]);
@@ -129,7 +133,38 @@ export function useWorkspace() {
       setBusy(false);
     }
   }
+  function closeConfig() {
+    setCreating(false);
+    setRemoving(false);
+    setSelected('');
+    setEditor(false);
+  }
+  function createConfig() {
+    setSelected('');
+    setCreating(true);
+    setRemoving(false);
+    setNewName('');
+    setCurrent({ config_name: '', version: 0, value: null });
+    setDraft(undefined);
+    setDrafts([]);
+    setEvents([]);
+    setText('{}');
+    setDescription('');
+    setEditor(true);
+    setError('');
+    setNotice('');
+  }
+  function removeConfig() {
+    if (!current || current.value === null) return;
+    setRemoving(true);
+    setText(pretty(current.value));
+    setDescription('');
+    setEditor(true);
+    setError('');
+    setNotice('');
+  }
   function edit() {
+    setRemoving(false);
     setText(pretty(owner && draft ? draft.value : current?.value));
     setDescription(owner && draft ? draft.description : '');
     setEditor(true);
@@ -148,17 +183,25 @@ export function useWorkspace() {
     if (draft) setDraft(history.items.find((item) => item.id === draft.id));
   }
   function restore(value: Current['value'], label: string) {
+    setRemoving(false);
     setDraft(drafts.find((item) => item.id === current?.active_draft_id));
     setText(pretty(value));
     setDescription(label);
     setEditor(true);
   }
-  const initial = owner && draft ? draft.value : current?.value;
+  const initial = creating ? {} : owner && draft ? draft.value : current?.value;
   const editing = editorState(text, initial, current?.value);
-  const saveDisabled = busy || !description.trim() || !editing.changed;
+  const saveDisabled =
+    busy ||
+    !description.trim() ||
+    !!editing.error ||
+    (creating
+      ? !/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/.test(newName) || newName.length > 256
+      : !removing && !editing.changed);
   const unsaved =
     editor &&
-    hasUnsavedChanges(text, initial, description, owner && draft ? draft.description : '');
+    ((creating && newName.length > 0) ||
+      hasUnsavedChanges(text, initial, description, owner && draft ? draft.description : ''));
   function discardChanges(action: () => void) {
     if (unsaved) setDiscardAction(() => action);
     else action();
@@ -174,6 +217,16 @@ export function useWorkspace() {
     if (!session || !current) return;
     if (editing.error) throw new Error(editing.error);
     if (saveDisabled) return;
+    const name = creating ? newName : selected;
+    let expectedVersion = current.version;
+    if (creating) {
+      const existing = await request<Current>('/api/configs/current', session, {
+        config_name: name,
+      });
+      if (existing.value !== null || existing.active_draft_id)
+        throw new Error('Конфиг с таким именем уже существует. Откройте его в каталоге.');
+      expectedVersion = existing.version;
+    }
     const value = parseValue(text);
     if (!description.trim()) throw new Error('Опишите, зачем меняется конфиг');
     const result =
@@ -185,23 +238,26 @@ export function useWorkspace() {
             description,
           })
         : await request<Draft>('/api/configs/drafts/create', session, {
-            config_name: selected,
-            expected_config_version: current.version,
-            value,
+            config_name: name,
+            expected_config_version: expectedVersion,
+            ...(removing ? { remove: true } : { value }),
             description,
           });
+    setCreating(false);
+    setRemoving(false);
+    setSelected(name);
     setDraft(result);
     setEditor(false);
-    setNotice('Драфт сохранён. Для публикации требуется подтверждение другого пользователя.');
+    setNotice('Драфт сохранён. Для публикации требуется подтверждение.');
     const fresh = await request<Current>('/api/configs/current', session, {
-      config_name: selected,
+      config_name: name,
     });
     setCurrent(fresh);
     await refreshCatalog();
     setDrafts(
       (
         await request<{ items: Draft[] }>('/api/configs/drafts/list', session, {
-          config_name: selected,
+          config_name: name,
         })
       ).items,
     );
@@ -212,9 +268,20 @@ export function useWorkspace() {
       id: draft.id,
       expected_version: draft.version,
     });
+    if (operation === 'cancel' && current?.value === null) {
+      closeConfig();
+      await refreshCatalog();
+      return;
+    }
     setDraft(value);
     setEditor(false);
-    setNotice(operation === 'approve' ? 'Конфиг опубликован.' : 'Драфт отменён.');
+    setNotice(
+      operation === 'approve'
+        ? draft.value === null
+          ? 'Конфиг удалён.'
+          : 'Конфиг опубликован.'
+        : 'Драфт отменён.',
+    );
     const [fresh, history] = await Promise.all([
       request<Current>('/api/configs/current', session, { config_name: selected }),
       request<{ items: Draft[] }>('/api/configs/drafts/list', session, { config_name: selected }),
@@ -229,6 +296,13 @@ export function useWorkspace() {
     location.assign(value.logout_url);
   }
   return {
+    removing,
+    removeConfig,
+    creating,
+    newName,
+    setNewName,
+    createConfig,
+    closeConfig,
     editing,
     confirmDiscard,
     discardChanges,

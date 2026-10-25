@@ -9,9 +9,10 @@ Response View::Handle(
     try {
         const auto draft =
             store.ApproveDraft({.Actor = platform::auth::GetIdentity(context).ActorId(),
-                .Id = request.body.id,
-                .ExpectedVersion = request.body.expected_version,
-                .ActorName = platform::auth::GetIdentity(context).DisplayName});
+                                   .Id = request.body.id,
+                                   .ExpectedVersion = request.body.expected_version,
+                                   .ActorName = platform::auth::GetIdentity(context).DisplayName},
+                deps.allow_self_approval);
         return Response200{.approved_by = draft.ApprovedBy,
             .approved_by_name = draft.ApprovedByName,
             .author = draft.Author,

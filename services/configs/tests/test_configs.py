@@ -51,7 +51,7 @@ async def test_values_and_history(service_client, admin_client, pgsql):
 
 
 @pytest.mark.parametrize('name,value', [
-    ('UNKNOWN', {}),
+    ('invalid-name', {}),
     ('SHIPMENT_TERMS_CONFIG', {'clauses': [], 'default': {'max_days': 30}}),
     ('SHIPMENT_TERMS_CONFIG', terms(True, 0)),
     ('BROKER_HTTP_CLIENT_CONFIG', {'**default**': {'timeout': 0, 'max_retries': 0}}),

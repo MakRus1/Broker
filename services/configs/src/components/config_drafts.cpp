@@ -6,6 +6,7 @@
 #include <repositories/draft_document.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/utils/regex.hpp>
 
 namespace {
 namespace pg = userver::storages::postgres;
@@ -25,29 +26,40 @@ void ValidateId(std::int64_t id) {
         throw configs::InvalidRequest("Invalid draft id");
 }
 
-void ValidateConfig(const std::string& name, const Json& value) {
-    Builder patch{userver::formats::json::Type::kObject};
-    patch[name] = value;
-    // Только ошибки проверки входного значения считаются ошибками клиента.
-    try {
-        configs::Validate(patch.ExtractValue());
-    } catch (const std::invalid_argument& error) {
-        throw configs::InvalidRequest(error.what());
-    } catch (const userver::formats::json::Exception& error) {
-        throw configs::InvalidRequest(error.what());
-    }
+void ValidateName(const std::string& name) {
+    static const userver::utils::regex pattern{"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*"};
+    if (name == "BROKER_CONFIG_DELIVERY_META" || !userver::utils::regex_match(name, pattern))
+        throw configs::InvalidRequest("Используйте имя в формате MY_CONFIG");
 }
 }  // namespace
 
 namespace configs {
+void ConfigStore::ValidateConfig(const std::string& name, const Json& value) const {
+    ValidateName(name);
+    if (!value.IsObject())
+        throw InvalidRequest("Значение конфига должно быть JSON-объектом");
+    // Для известных схем сохраняем проверку; неизвестные ключи проверяет типизированный
+    // потребитель.
+    if (!Defaults().HasMember(name))
+        return;
+    Builder patch{userver::formats::json::Type::kObject};
+    patch[name] = value;
+    try {
+        configs::Validate(patch.ExtractValue());
+    } catch (const std::invalid_argument& error) {
+        throw InvalidRequest(error.what());
+    } catch (const userver::formats::json::Exception& error) {
+        throw InvalidRequest(error.what());
+    }
+}
+
 std::vector<CatalogEntry> ConfigStore::Catalog() const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kCatalog, Defaults());
+    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kCatalog);
     return helpers::Convert(rows.AsContainer<std::vector<helpers::CatalogRow>>(pg::kRowTag));
 }
 
 Config ConfigStore::GetConfig(const std::string& name) const {
-    if (!Defaults().HasMember(name))
-        throw InvalidRequest("Unknown config");
+    ValidateName(name);
     // Значение, версия и активный драфт читаются согласованно, без блокировки публикации.
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
@@ -57,8 +69,10 @@ Config ConfigStore::GetConfig(const std::string& name) const {
     const auto active = transaction.Execute(sql::kActiveDraft, name);
     const auto draft_id =
         active.IsEmpty() ? std::nullopt : std::optional{active.AsSingleRow<std::int64_t>()};
+    const auto value =
+        current.Values.HasMember(name) ? std::optional{current.Values[name]} : std::nullopt;
     transaction.Commit();
-    return {name, current.Values[name], version, draft_id};
+    return {name, value, version, draft_id};
 }
 
 Draft ConfigStore::GetDraft(std::int64_t id) const {
@@ -72,7 +86,9 @@ Draft ConfigStore::GetDraft(std::int64_t id) const {
 std::vector<Draft> ConfigStore::ListDrafts(const DraftFilter& filter) const {
     const auto name = filter.ConfigName.value_or("");
     const auto before = filter.BeforeId.value_or(0);
-    if (before < 0 || (!name.empty() && !Defaults().HasMember(name)))
+    if (!name.empty())
+        ValidateName(name);
+    if (before < 0)
         throw InvalidRequest("Invalid list filter");
 
     const auto rows =
@@ -115,10 +131,12 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
     ValidateText(request.Actor, 2048);
     ValidateText(request.ConfigName, 256);
     ValidateText(request.Description, 4096);
-    if (!Defaults().HasMember(request.ConfigName))
-        throw InvalidRequest("Unknown config");
-    if (request.Value.has_value() == request.SourceRevision.has_value())
-        throw InvalidRequest("Choose value or source_revision");
+    ValidateName(request.ConfigName);
+    if (static_cast<int>(request.Value.has_value()) +
+            static_cast<int>(request.SourceRevision.has_value()) +
+            static_cast<int>(request.Remove) !=
+        1)
+        throw InvalidRequest("Выберите значение, историческую ревизию или удаление");
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Общая блокировка защищает проверку версии, единственность драфта и публикацию.
     transaction.Execute(sql::kLockRevision);
@@ -129,25 +147,29 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
         transaction.Execute(sql::kConfigVersion, request.ConfigName).AsSingleRow<std::int64_t>();
     if (request.ExpectedConfigVersion != version)
         throw RevisionConflict("Config changed while editing");
-    Json value;
-    if (request.Value) {
-        value = *request.Value;
-    } else {
-        const auto source = *request.SourceRevision;
+    const auto base = current.Values.HasMember(request.ConfigName)
+        ? std::optional{current.Values[request.ConfigName]}
+        : std::nullopt;
+    if (request.Remove && !base.has_value())
+        throw RevisionNotFound("Конфиг не опубликован");
+    std::optional<Json> value;
+    if (request.Value.has_value()) {
+        value = request.Value.value();
+    } else if (request.SourceRevision.has_value()) {
+        const auto source = request.SourceRevision.value();
         if (source < 0)
             throw InvalidRequest("Invalid source revision");
-        auto values = Defaults();
-        if (source != 0) {
-            const auto rows = transaction.Execute(sql::kFindRevision, source);
-            if (rows.IsEmpty())
-                throw RevisionNotFound("Revision not found");
-            values = rows.AsSingleRow<Revision>(pg::kRowTag).Values;
-        }
-        value = values.HasMember(request.ConfigName) ? values[request.ConfigName]
-                                                     : Defaults()[request.ConfigName];
+        const auto rows = transaction.Execute(sql::kFindRevision, source);
+        if (rows.IsEmpty())
+            throw RevisionNotFound("Revision not found");
+        const auto snapshot = rows.AsSingleRow<Revision>(pg::kRowTag).Values;
+        if (!snapshot.HasMember(request.ConfigName))
+            throw RevisionNotFound("Config did not exist in revision");
+        value = snapshot[request.ConfigName];
     }
-    ValidateConfig(request.ConfigName, value);
-    if (value == current.Values[request.ConfigName])
+    if (value.has_value())
+        ValidateConfig(request.ConfigName, value.value());
+    if (base.has_value() && value == base.value())
         throw InvalidRequest("Config value has no changes");
     Draft draft{.Id = 0,
         .ConfigName = request.ConfigName,
@@ -157,7 +179,7 @@ Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
         .Status = DraftStatus::Draft,
         .ApprovedBy = std::nullopt,
         .BaseVersion = version,
-        .BaseValue = current.Values[request.ConfigName],
+        .BaseValue = base,
         .Value = value,
         .SourceRevision = request.SourceRevision,
         .PublishedRevision = std::nullopt,
@@ -177,17 +199,19 @@ Draft ConfigStore::EditDraft(const EditDraftRequest& request) const {
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
     if (draft.Author != request.Actor)
         throw DraftForbidden("Only author can edit");
-    if (!request.Value && !request.Description)
+    if (!request.Value.has_value() && !request.Description.has_value())
         throw InvalidRequest("Empty edit");
-    if (request.Value) {
-        ValidateConfig(draft.ConfigName, *request.Value);
-        if (*request.Value == draft.BaseValue)
+    if (request.Value.has_value()) {
+        if (!draft.Value.has_value())
+            throw InvalidRequest("Драфт удаления нельзя заменить изменением значения");
+        ValidateConfig(draft.ConfigName, request.Value.value());
+        if (draft.BaseValue.has_value() && request.Value.value() == draft.BaseValue.value())
             throw InvalidRequest("Config value has no changes");
-        draft.Value = *request.Value;
+        draft.Value = request.Value.value();
     }
-    if (request.Description) {
-        ValidateText(*request.Description, 4096);
-        draft.Description = *request.Description;
+    if (request.Description.has_value()) {
+        ValidateText(request.Description.value(), 4096);
+        draft.Description = request.Description.value();
     }
     ++draft.Version;
     SaveDraft(transaction, draft, request.Actor, "edit");
@@ -209,21 +233,28 @@ Draft ConfigStore::CancelDraft(const DraftActionRequest& request) const {
     return draft;
 }
 
-Draft ConfigStore::ApproveDraft(const DraftActionRequest& request) const {
+Draft ConfigStore::ApproveDraft(const DraftActionRequest& request, bool allow_self_approval) const {
     ValidateText(request.Actor, 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
-    if (draft.Author == request.Actor)
+    if (draft.Author == request.Actor && !allow_self_approval)
         throw DraftForbidden("Author cannot approve");
-    ValidateConfig(draft.ConfigName, draft.Value);
+    if (draft.Value.has_value())
+        ValidateConfig(draft.ConfigName, draft.Value.value());
     const auto current = Current(transaction);
     const auto version =
         transaction.Execute(sql::kConfigVersion, draft.ConfigName).AsSingleRow<std::int64_t>();
-    if (draft.BaseVersion != version || draft.BaseValue != current.Values[draft.ConfigName])
+    const auto value = current.Values.HasMember(draft.ConfigName)
+        ? std::optional{current.Values[draft.ConfigName]}
+        : std::nullopt;
+    if (draft.BaseVersion != version || draft.BaseValue != value)
         throw RevisionConflict("Config changed; cancel draft and open editor again");
     Builder values{current.Values};
-    values[draft.ConfigName] = draft.Value;
+    if (draft.Value.has_value())
+        values[draft.ConfigName] = draft.Value.value();
+    else
+        values.Remove(draft.ConfigName);
     const auto published = PublishLocked(transaction, current, values.ExtractValue());
     draft.PublishedRevision = published.Id;
     draft.Status = DraftStatus::Published;

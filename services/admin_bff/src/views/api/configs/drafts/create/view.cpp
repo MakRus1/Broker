@@ -10,6 +10,7 @@ Response View::Handle(
         {.body = {.config_name = std::move(request.body.config_name),
              .description = std::move(request.body.description),
              .expected_config_version = std::move(request.body.expected_config_version),
+             .remove = request.body.remove,
              .source_revision = std::move(request.body.source_revision),
              .value = std::move(request.body.value)}},
         session.Access);

@@ -14,7 +14,8 @@ Response View::Handle(
                 .ExpectedConfigVersion = request.body.expected_config_version,
                 .Value = request.body.value,
                 .SourceRevision = request.body.source_revision,
-                .ActorName = platform::auth::GetIdentity(context).DisplayName});
+                .ActorName = platform::auth::GetIdentity(context).DisplayName,
+                .Remove = request.body.remove.value_or(false)});
         return Response201{.approved_by = draft.ApprovedBy,
             .approved_by_name = draft.ApprovedByName,
             .author = draft.Author,

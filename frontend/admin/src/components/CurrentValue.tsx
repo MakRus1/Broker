@@ -9,16 +9,31 @@ export function CurrentValue({ workspace }: { workspace: Workspace }) {
     <section className="panel">
       <div className="panelhead">
         <h2>Значение</h2>
-        {write && !current.active_draft_id && !editor && (
+        {write && current.value !== null && !current.active_draft_id && !editor && (
           <button className="primary" disabled={busy} onClick={edit}>
             Редактировать
+          </button>
+        )}
+        {write && current.value !== null && !current.active_draft_id && !editor && (
+          <button className="danger" disabled={busy} onClick={workspace.removeConfig}>
+            Удалить
           </button>
         )}
         {current.active_draft_id && (
           <span className="badge amber">Открыт драфт #{current.active_draft_id}</span>
         )}
       </div>
-      {editor ? <ConfigEditor workspace={workspace} /> : <pre>{pretty(current.value)}</pre>}
+      {editor ? (
+        <ConfigEditor workspace={workspace} />
+      ) : current.value === null ? (
+        <p className="muted">
+          {current.version === 0
+            ? 'Значение появится после подтверждения драфта.'
+            : 'Конфиг удалён. Предыдущее значение можно восстановить из истории.'}
+        </p>
+      ) : (
+        <pre>{pretty(current.value)}</pre>
+      )}
     </section>
   );
 }

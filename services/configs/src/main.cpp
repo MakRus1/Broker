@@ -11,6 +11,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/draft_policy.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
 #include <userver/server/handlers/server_monitor.hpp>
@@ -48,6 +49,8 @@ int main(int argc, char* argv[]) {
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
             .Append<userver::otlp::LoggerComponent>();
+
+    component_list.Append<configs::DraftPolicy>();
 
     // SERVICE_REGISTRATION_BEGIN
     component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();

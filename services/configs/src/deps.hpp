@@ -1,5 +1,6 @@
 #pragma once
 
+#include <components/draft_policy.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <configs/keys.hpp>
@@ -21,6 +22,7 @@ struct Deps {
     platform::configs::Source configs;
     userver::storages::postgres::ClusterPtr pg_cluster;
     // SERVICE_DEPS_FIELDS_END
+    bool allow_self_approval;
 };
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
@@ -34,6 +36,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
             component_context.FindComponent<userver::components::Postgres>("postgres-configs")
                 .GetCluster(),
         // SERVICE_DEPS_INIT_END
+        .allow_self_approval = component_context.FindComponent<DraftPolicy>().AllowSelfApproval(),
     };
 }
 

@@ -6,6 +6,8 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        config-draft-policy:
+            allow-self-approval: $configs-allow-self-approval
         # OPENAPI_HANDLERS_BEGIN
         handler-admin-configs-current:
             path: /admin/configs/current

@@ -20,6 +20,19 @@ from test_deployment import RELEASE
 
 
 class LanTest(unittest.TestCase):
+    def test_self_approval_is_an_environment_override(self):
+        defaults = staging_manifest.read_yaml(
+            staging_manifest.ROOT / 'services/configs/configs/config_vars.yaml')
+        self.assertFalse(defaults['configs-allow-self-approval'])
+        with tempfile.TemporaryDirectory() as directory:
+            phases = staging_manifest.render(RELEASE, Path(directory))
+            variables = next(obj for obj in phases['services']
+                if obj['kind'] == 'Secret' and obj['metadata']['name'].startswith('configs-vars-'))
+            values = yaml.safe_load(base64.b64decode(variables['data']['config_vars.yaml']))
+            self.assertTrue(values['configs-allow-self-approval'])
+            self.assertEqual(values['environment'], 'staging')
+
+
     def test_https_and_monitoring_are_explicitly_enabled(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -16,8 +16,8 @@ struct Draft {
     DraftStatus Status;
     std::optional<std::string> ApprovedBy;
     std::int64_t BaseVersion;
-    Json BaseValue;
-    Json Value;
+    std::optional<Json> BaseValue;
+    std::optional<Json> Value;
     std::optional<std::int64_t> SourceRevision;
     std::optional<std::int64_t> PublishedRevision;
     std::optional<std::string> AuthorName;
@@ -32,6 +32,7 @@ struct CreateDraftRequest {
     std::optional<Json> Value;
     std::optional<std::int64_t> SourceRevision;
     std::optional<std::string> ActorName = std::nullopt;
+    bool Remove = false;
 };
 
 struct EditDraftRequest {

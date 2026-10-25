@@ -5,7 +5,7 @@ info:
 paths:
   /api/configs/drafts/create:
     post:
-      summary: Создать валидный драфт одного конфига
+      summary: Создать драфт нового или существующего конфига
       requestBody:
         required: true
         content:
@@ -21,6 +21,7 @@ paths:
                 config_name:
                   type: string
                   minLength: 1
+                  pattern: ^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$
                 description:
                   type: string
                   minLength: 1
@@ -34,8 +35,12 @@ paths:
                 source_revision:
                   type: integer
                   minimum: 0
-      description: Укажите ровно одно из value и source_revision. На конфиг разрешен
-        один активный драфт.
+                remove:
+                  type: boolean
+                  description: Создать драфт удаления существующего конфига. Не передавайте
+                    value и source_revision.
+      description: 'Укажите одно действие: value, source_revision или remove: true.
+        На конфиг разрешён один активный драфт.'
       responses:
         '201':
           description: Успех

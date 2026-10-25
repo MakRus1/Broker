@@ -1,0 +1,26 @@
+worker-threads: 4
+worker-fs-threads: 2
+logger-level: info
+
+is-testing: false
+
+server-port: 8090
+grpc-server-port: 8081
+
+pg-connection: postgresql://testsuite:testsuite@127.0.0.1:15434/configs_db_1
+
+monitor-port: 8092
+otlp-enabled: false
+otlp-endpoint: localhost:4317
+environment: local
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''
+
+auth-issuer: http://localhost:18888/realms/broker
+auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
+auth-allow-http: true
+
+platform-access-url: http://localhost:8130/api/platform/access
+
+configs-allow-self-approval: true

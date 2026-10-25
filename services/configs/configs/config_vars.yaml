@@ -22,3 +22,5 @@ auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/cert
 auth-allow-http: true
 
 platform-access-url: http://localhost:8130/api/platform/access
+
+configs-allow-self-approval: false

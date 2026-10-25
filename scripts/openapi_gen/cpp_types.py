@@ -48,9 +48,9 @@ def literal(typ, value, scope=''):
     if typ.kind == 'array':
         return type_cpp(typ, scope) + '{' + ', '.join(literal(typ.item, item, scope) for item in value) + '}'
     if typ.kind == 'string' and typ.schema.get('format') == 'date-time':
-        return 'userver::utils::datetime::FromRfc3339StringSaturating<std::chrono::system_clock::duration>(' + quoted(value) + ')'
+        return 'platform::ParseTimestamp(' + quoted(value) + ')'
     if typ.kind == 'string' and typ.schema.get('format') == 'date':
-        return 'userver::utils::datetime::DateFromRFC3339String(' + quoted(value) + ')'
+        return 'platform::ParseCalendarDate(' + quoted(value) + ')'
     if typ.kind == 'string':
         return 'std::string{' + quoted(value) + (f', {len(value.encode("utf-8"))}' if '\0' in value else '') + '}'
     if typ.kind == 'boolean':
@@ -94,7 +94,7 @@ def validator(typ, name):
     before = validator(typ.item, name + '_item') if typ.item else ''
     raw = 'EnumValue(value)' if typ.enum_name else 'value'
     if typ.kind == 'string' and typ.schema.get('format') == 'date':
-        raw = 'userver::utils::datetime::ToString(value)'
+        raw = 'platform::FormatCalendarDate(value)'
     elif typ.kind == 'string' and typ.schema.get('format') == 'date-time':
         raw = 'userver::utils::datetime::UtcTimestring(value, userver::utils::datetime::kRfc3339Format)'
     schema = typ.schema
@@ -140,3 +140,12 @@ def validator(typ, name):
 
 def declarations(name, fields):
     return ''.join(validator(f.type, name + '_' + f.name) for f in fields)
+
+
+def json_value(typ, expression):
+    """Use calendar I/O without converting day precision to system_clock nanoseconds."""
+    if typ.kind == 'string' and typ.schema.get('format') == 'date':
+        return f'broker_codegen::CalendarDateJson({expression})'
+    if typ.kind == 'array' and typ.item and json_value(typ.item, 'item') != 'item':
+        return f'broker_codegen::CalendarDateJson({expression})'
+    return expression

@@ -1,6 +1,6 @@
 """Общие именованные модели, проверка полей и JSON-преобразования на границе HTTP."""
 from dataclasses import replace
-from cpp_types import declarations, enums, quoted
+from cpp_types import declarations, enums, quoted, json_value
 
 
 def bind_type(typ, namespace):
@@ -66,7 +66,7 @@ userver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject)
 '''
             for f in body.fields:
                 access = f'value.{f.name}' + ('.value()' if f.optional else '')
-                assignment = f'json[{quoted(f.name)}] = {access};'
+                assignment = f'json[{quoted(f.name)}] = {json_value(f.type, access)};'
                 code += f'if (value.{f.name}.has_value()) {{ {assignment} }}\n' if f.optional else assignment + '\n'
             code += 'return json.ExtractValue();\n}\n'
         elif model.type.enum_name:

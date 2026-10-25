@@ -4,7 +4,7 @@ import re
 import yaml
 from model import identifier, enum_types, collect_models
 from configs import http_name
-from cpp_types import enums, declarations, quoted, type_cpp
+from cpp_types import enums, declarations, quoted, type_cpp, json_value
 from render import fields, format_cpp
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +45,7 @@ def json_write(name, items):
     lines = ['userver::formats::json::ValueBuilder json(userver::formats::json::Type::kObject);']
     for f in items:
         value = f'value.{f.name}.value()' if f.optional else f'value.{f.name}'
-        line = f'Validate_{name}_{f.name}({value}); json[{quoted(f.name)}] = {value};'
+        line = f'Validate_{name}_{f.name}({value}); json[{quoted(f.name)}] = {json_value(f.type, value)};'
         lines.append(f'if (value.{f.name}.has_value()) {{ {line} }}' if f.optional else line)
     return '\n'.join(lines) + '\nreturn userver::formats::json::ToString(json.ExtractValue());'
 

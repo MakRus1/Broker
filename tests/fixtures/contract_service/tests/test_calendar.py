@@ -3,7 +3,7 @@
 import pytest
 
 
-@pytest.mark.parametrize('day', ['1900-01-01', '2000-02-29', '2026-10-25', '2099-12-31'])
+@pytest.mark.parametrize('day', ['0001-01-01', '1111-11-11', '2263-01-01', '9999-12-31', '1900-01-01', '2000-02-29', '2026-10-25', '2099-12-31'])
 async def test_calendar_body_roundtrip(service_client, day):
     response = await service_client.post(
         '/calendar/echo',
@@ -62,7 +62,7 @@ async def test_instant_offset_is_normalized(service_client):
     assert actual == datetime(2026, 10, 25, 9, 34, 56, 123456, tzinfo=timezone.utc)
 
 
-@pytest.mark.parametrize('instant', ['not-a-date', '2026-02-30T12:00:00Z', 42, None])
+@pytest.mark.parametrize('instant', ['not-a-date', '2026-02-30T12:00:00Z', '1111-11-11T12:00:00Z', '9999-12-31T12:00:00Z', 42, None])
 async def test_invalid_instant(service_client, instant):
     response = await service_client.post('/calendar/echo', json={'instant': instant})
     assert response.status == 400

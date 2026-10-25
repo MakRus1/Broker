@@ -124,7 +124,7 @@ class CalendarDateModelTest(unittest.TestCase):
         self.assertIn('Date{1, 1, 1}', code)
         self.assertNotIn('ToString', code)
         self.assertNotIn('CheckFormat', code)
-        self.assertIn('DateFromRFC3339String', literal(value, '2026-10-25'))
+        self.assertIn('ParseCalendarDate', literal(value, '2026-10-25'))
 
 
 class InstantModelTest(unittest.TestCase):

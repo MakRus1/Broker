@@ -8,6 +8,7 @@
 #include <helpers/database.hpp>
 #include <helpers/dictionaries.hpp>
 #include <openapi/models.hpp>
+#include <platform/calendar_date.hpp>
 #include <platform/date_validation.hpp>
 #include <postgresql/types.hpp>
 #include <set>
@@ -159,7 +160,7 @@ inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& setting
 
 inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
     const std::string& organization, userver::utils::datetime::Date date, const auto& settings) {
-    const auto formatted = userver::utils::datetime::ToString(date);
+    const auto formatted = platform::FormatCalendarDate(date);
     const std::chrono::year_month_day calendar{
         std::chrono::floor<std::chrono::days>(date.GetSysDays())};
     const auto period = settings.ResetNumberYearly ? static_cast<int>(calendar.year()) : 0;

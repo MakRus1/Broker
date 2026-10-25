@@ -98,7 +98,7 @@ types:
     - name: code
       type: text
       nullable: true
-  public.sea_details_v1:
+  public.sea_details_v2:
     fields:
     - name: pol
       type: public.transport_location_v1
@@ -107,7 +107,7 @@ types:
       type: public.transport_location_v1
       nullable: true
     - name: eta
-      type: text
+      type: date
       nullable: true
     - name: departure_terminal_id
       type: uuid
@@ -116,7 +116,7 @@ types:
       type: uuid
       nullable: true
     - name: departure_date
-      type: text
+      type: date
       nullable: true
     - name: vessel
       type: text
@@ -124,7 +124,7 @@ types:
     - name: voyage
       type: text
       nullable: true
-  public.air_details_v1:
+  public.air_details_v2:
     fields:
     - name: carrier_id
       type: uuid
@@ -136,31 +136,31 @@ types:
       type: public.transport_location_v1
       nullable: true
     - name: eta
-      type: text
+      type: date
       nullable: true
     - name: etd
-      type: text
+      type: date
       nullable: true
     - name: departure_date
-      type: text
+      type: date
       nullable: true
     - name: arrival_date
-      type: text
+      type: date
       nullable: true
     - name: flight_number
       type: text
       nullable: true
-  public.shipment_route_segment_v2:
+  public.shipment_route_segment_v3:
     fields:
     - name: id
       type: uuid
     - name: type
       type: text
     - name: sea
-      type: public.sea_details_v1
+      type: public.sea_details_v2
       nullable: true
     - name: air
-      type: public.air_details_v1
+      type: public.air_details_v2
       nullable: true
   public.shipment_v4:
     fields:
@@ -206,7 +206,7 @@ types:
       type: text
       nullable: true
     - name: route_segments
-      type: public.shipment_route_segment_v2[]
+      type: public.shipment_route_segment_v3[]
 
   public.shipment_data_v3:
     fields:
@@ -248,4 +248,4 @@ types:
       type: text
       nullable: true
     - name: route_segments
-      type: public.shipment_route_segment_v2[]
+      type: public.shipment_route_segment_v3[]

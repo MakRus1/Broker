@@ -8,7 +8,8 @@ namespace configs {
 struct ConfigValues {
     Json Values;
     std::int64_t Revision;
-    std::string UpdatedAt;
+    // Протокол динамических конфигов использует updated_at как курсор ревизии, не дату.
+    std::string RevisionCursor;
 };
 
 struct CatalogEntry {

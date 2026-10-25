@@ -1,1 +1,1 @@
-SELECT revision, created_at::text FROM config_revisions ORDER BY revision DESC LIMIT 100;
+SELECT revision, created_at FROM config_revisions ORDER BY revision DESC LIMIT 100;

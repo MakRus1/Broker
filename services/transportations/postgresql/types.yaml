@@ -46,7 +46,7 @@ types:
       type: text
     - name: number
       type: text
-  public.transportation_event_v1:
+  public.transportation_event_v2:
     fields:
     - name: id
       type: bigint
@@ -55,7 +55,7 @@ types:
     - name: action
       type: text
     - name: occurred_at
-      type: text
+      type: timestamptz
     - name: document
       type: jsonb
   public.transportation_v3:

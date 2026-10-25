@@ -1,4 +1,5 @@
 #pragma once
+#include <userver/utils/datetime.hpp>
 #include <userver/utils/datetime/date.hpp>
 
 #include <charconv>
@@ -80,6 +81,9 @@ template <typename T> std::string Scalar(const T& value) {
         return value;
     } else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) {
         return userver::utils::datetime::ToString(value);
+    } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+        return userver::utils::datetime::UtcTimestring(
+            value, userver::utils::datetime::kRfc3339Format);
     } else if constexpr (std::is_same_v<T, bool>) {
         return value ? "true" : "false";
     } else {

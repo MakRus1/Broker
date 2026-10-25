@@ -125,3 +125,14 @@ class CalendarDateModelTest(unittest.TestCase):
         self.assertNotIn('ToString', code)
         self.assertNotIn('CheckFormat', code)
         self.assertIn('DateFromRFC3339String', literal(value, '2026-10-25'))
+
+
+class InstantModelTest(unittest.TestCase):
+    def test_date_time_has_native_type_without_string_validation(self):
+        from model import parse_type
+        from cpp_types import validator
+        value = parse_type({'type': 'string', 'format': 'date-time'}, 'instant')
+        self.assertEqual(value.cpp, 'std::chrono::system_clock::time_point')
+        code = validator(value, 'Instant')
+        self.assertNotIn('Utf8Length', code)
+        self.assertNotIn('CheckFormat', code)

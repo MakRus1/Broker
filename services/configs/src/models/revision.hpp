@@ -2,6 +2,7 @@
 
 #include <models/json.hpp>
 #include <string>
+#include <userver/storages/postgres/io/chrono.hpp>
 
 namespace configs {
 struct Revision {
@@ -11,6 +12,6 @@ struct Revision {
 
 struct RevisionInfo {
     std::int64_t Id;
-    std::string CreatedAt;
+    userver::storages::postgres::TimePointTz CreatedAt;
 };
 }  // namespace configs

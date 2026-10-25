@@ -45,6 +45,9 @@ paths:
                     type: string
                     format: date
                   default: []
+                instant:
+                  type: string
+                  format: date-time
                 optional_day:
                   type: string
                   format: date
@@ -66,6 +69,9 @@ paths:
                     items:
                       type: string
                       format: date
+                  instant:
+                    type: string
+                    format: date-time
                   optional_day:
                     type: string
                     format: date

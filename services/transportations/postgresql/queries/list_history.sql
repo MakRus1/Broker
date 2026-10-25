@@ -2,9 +2,9 @@ SELECT ROW(
     id,
     actor,
     action,
-    to_char(occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+    occurred_at,
     document
-)::public.transportation_event_v1
+)::public.transportation_event_v2
 FROM business_audit
 WHERE organization_id = $1::UUID
   AND entity_id = $2::UUID

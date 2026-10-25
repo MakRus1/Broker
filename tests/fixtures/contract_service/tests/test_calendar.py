@@ -50,3 +50,19 @@ async def test_short_calendar_input_is_normalized(service_client):
     response = await service_client.get('/calendar/check', params={'day': '2026-1-1'})
     assert response.status == 200
     assert response.json() == {'day': '2026-01-01'}
+
+
+async def test_instant_offset_is_normalized(service_client):
+    response = await service_client.post('/calendar/echo', json={
+        'instant': '2026-10-25T12:34:56.123456+03:00',
+    })
+    assert response.status == 200
+    from datetime import datetime, timezone
+    actual = datetime.fromisoformat(response.json()['instant'].replace('Z', '+00:00'))
+    assert actual == datetime(2026, 10, 25, 9, 34, 56, 123456, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize('instant', ['not-a-date', '2026-02-30T12:00:00Z', 42, None])
+async def test_invalid_instant(service_client, instant):
+    response = await service_client.post('/calendar/echo', json={'instant': instant})
+    assert response.status == 400

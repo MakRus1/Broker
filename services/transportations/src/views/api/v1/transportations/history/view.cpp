@@ -22,7 +22,7 @@ Response View::Handle(
             request.body.transportation_id, request.body.before, request.body.limit);
         transaction.Commit();
         return Response200{
-            .items = Convert(rows.AsContainer<std::vector<pgtypes::TransportationEventV1>>())};
+            .items = Convert(rows.AsContainer<std::vector<pgtypes::TransportationEventV2>>())};
     } catch (const ::transportations::ApiError& error) {
         return Response403{.error = error.Code, .message = error.what()};
     }

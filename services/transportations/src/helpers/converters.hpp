@@ -61,7 +61,7 @@ inline std::vector<models::Transportation> Convert(
     return result;
 }
 
-inline models::TransportationEvent Convert(const pgtypes::TransportationEventV1& row) {
+inline models::TransportationEvent Convert(const pgtypes::TransportationEventV2& row) {
     models::TransportationEvent result;
     result.id = row.Id;
     result.actor = row.Actor;
@@ -85,7 +85,7 @@ inline models::TransportationEvent Convert(const pgtypes::TransportationEventV1&
 }
 
 inline std::vector<models::TransportationEvent> Convert(
-    const std::vector<pgtypes::TransportationEventV1>& rows) {
+    const std::vector<pgtypes::TransportationEventV2>& rows) {
     std::vector<models::TransportationEvent> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

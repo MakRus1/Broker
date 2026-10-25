@@ -25,7 +25,7 @@ ROUTES = [
     ),
     pytest.param(
         'GET', 'history', None,
-        {'items': [{'revision': 3, 'created_at': '2026-10-19T00:00:00Z'}]},
+        {'items': [{'revision': 3, 'created_at': '2026-10-19T00:00:00+00:00'}]},
         200, id='history',
     ),
     pytest.param(
@@ -73,7 +73,7 @@ ROUTES = [
             'items': [{
                 'action': 'create',
                 'actor': 'issuer#author',
-                'created_at': '2026-10-19T00:00:00Z',
+                'created_at': '2026-10-19T00:00:00+00:00',
                 'snapshot': {key: value for key, value in DRAFT.items() if key != 'id'},
             }],
         },

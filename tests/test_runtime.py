@@ -15,7 +15,7 @@ class RuntimeTest(unittest.TestCase):
         # Берется генерируемый числовой парсер. Date требует userver и проверяется
         # настоящим contract_service и его скомпилированным клиентом.
         code = COMMON.split('template <typename T> struct IsVector')[0]
-        code = '\n'.join(line for line in code.splitlines() if '<userver/' not in line and 'userver::utils::datetime::Date' not in line and line != '#pragma once')
+        code = '\n'.join(line for line in code.splitlines() if '<userver/' not in line and 'userver::utils::datetime::Date' not in line and 'std::chrono::system_clock::time_point' not in line and line != '#pragma once')
         code += '''
 }
 #include <cassert>

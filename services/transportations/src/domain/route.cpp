@@ -10,25 +10,11 @@
 #include <userver/utils/datetime_light.hpp>
 
 namespace {
-void CheckInterval(
-    const std::optional<std::string>& departure, const std::optional<std::string>& arrival) {
+void CheckInterval(const std::optional<std::chrono::system_clock::time_point>& departure,
+    const std::optional<std::chrono::system_clock::time_point>& arrival) {
     if (!departure.has_value() || !arrival.has_value())
         return;
-    auto parse = [](std::string value) {
-        if (value.size() < 20)
-            throw std::invalid_argument("date-time");
-        value[10] = 'T';
-        if (value.back() == 'z')
-            value.back() = 'Z';
-        return userver::utils::datetime::UtcStringtime(
-            value, userver::utils::datetime::kRfc3339Format);
-    };
-    bool reversed;
-    try {
-        reversed = parse(departure.value()) > parse(arrival.value());
-    } catch (const std::exception&) {
-        throw transportations::ApiError{400, "invalid_request", "Неподдерживаемая временная метка"};
-    }
+    const bool reversed = departure.value() > arrival.value();
     if (reversed)
         throw transportations::ApiError{400, "invalid_request", "Отправление позже прибытия"};
 }

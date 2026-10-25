@@ -52,7 +52,7 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
             'expected_revision': 1,
             'route_segment_id': stage['id'],
             'event_kind': 'departure',
-            'occurred_at': '2020-01-01T00:00:00Z',
+            'occurred_at': '2020-01-01T00:00:00+00:00',
         },
         expected=400,
     )

@@ -51,6 +51,8 @@ def preamble(service, op, include_types=True):
 #include <userver/formats/json/value.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/utils/datetime/date.hpp>
+#include <userver/utils/datetime.hpp>
+#include <userver/formats/parse/common.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/serialize/common_containers.hpp>
 namespace {service}::views::{op.ns} {{
@@ -135,6 +137,8 @@ COMMON = r'''#pragma once
 #include <type_traits>
 #include <vector>
 #include <userver/utils/datetime/date.hpp>
+#include <userver/utils/datetime.hpp>
+#include <userver/formats/parse/common.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/serialize/common_containers.hpp>
 #include <userver/formats/json/value.hpp>
@@ -150,6 +154,7 @@ template <typename T> T ParseScalar(const std::string& text) {
     if constexpr (std::is_enum_v<T>) return ParseEnumScalar(text, T{});
     else if constexpr (std::is_same_v<T, std::string>) return text;
     else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) { if (text.substr(0, 4) == "0000") throw std::invalid_argument("date"); return userver::utils::datetime::DateFromRFC3339String(text); }
+    else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) { auto normalized = text; if (normalized.size() > 10 && normalized[10] == 't') normalized[10] = 'T'; if (!normalized.empty() && normalized.back() == 'z') normalized.back() = 'Z'; return userver::utils::datetime::FromRfc3339StringSaturating<std::chrono::system_clock::duration>(normalized); }
     else if constexpr (std::is_same_v<T, bool>) {
         if (text == "true") return true;
         if (text == "false") return false;
@@ -182,6 +187,7 @@ template <typename T> T ParseJson(const userver::formats::json::Value& value) {
         return T{ParseJson<typename T::value_type>(value)};
     } else if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
     else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) return ParseScalar<T>(value.As<std::string>());
+    else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) return ParseScalar<T>(value.As<std::string>());
     else if constexpr (std::is_same_v<T, userver::formats::json::Value>) {
         if (!value.IsObject()) throw std::invalid_argument("object");
         return value;

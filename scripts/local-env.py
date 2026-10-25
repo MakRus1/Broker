@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import yaml
+from service_catalog import discover as discover_services
 from migrations import discover, render
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'openapi_gen'))
 from generate import UniqueLoader
@@ -114,7 +115,13 @@ def prepare():
             "working_dir": "/workspaces/broker",
             "volumes": shared,
             "command": ["bash", "tools/local/build.sh"],
-            "environment": {"PIP_CACHE_DIR": "/cache/pip"},
+            "environment": {
+                "PIP_CACHE_DIR": "/cache/pip",
+                "CCACHE_DIR": "/cache/ccache",
+                "CCACHE_BASEDIR": "/workspaces/broker",
+                "CCACHE_MAXSIZE": "512M",
+                "CCACHE_COMPILERCHECK": "content",
+            },
         }
     }
     for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132)]:
@@ -473,10 +480,81 @@ def prepare():
     )
 
 
+def update(service, jobs):
+    if service not in discover_services(ROOT):
+        raise ValueError(f'Неизвестный сервис: {service}')
+    if jobs < 1:
+        raise ValueError('Количество задач сборки должно быть положительным')
+    compose = STATE / 'compose.yaml'
+    if not compose.is_file():
+        raise ValueError('Локальный стенд ещё не создан: выполните make local-up')
+    command = ['docker', 'compose', '-f', str(compose)]
+    container = subprocess.check_output(command + ['ps', '--all', '--quiet', service], text=True)
+    if not container.strip():
+        raise ValueError(f'Контейнер {service} отсутствует: сначала выполните make local-up')
+    prepare()
+    services = yaml.safe_load(compose.read_text())['services']
+    if service not in services:
+        raise ValueError(f'{service} не поддерживается локальным стендом')
+    config = yaml.safe_load((STATE / f'{service}.yaml').read_text())
+    port = config['components_manager']['components']['server']['listener-monitor']['port']
+    print(f'Сборка только {service}, затем миграции и перезапуск этого сервиса', flush=True)
+    subprocess.run(
+        command
+        + [
+            'run',
+            '--rm',
+            '--no-deps',
+            '-e',
+            f'NPROCS={jobs}',
+            'prepare',
+            'bash',
+            'tools/local/build.sh',
+            service,
+        ],
+        check=True,
+    )
+    migration = f'migrate-{service}'
+    if migration in services:
+        print(f'Миграции {service}', flush=True)
+        subprocess.run(command + ['run', '--rm', '--no-deps', migration], check=True)
+    print(f'Перезапуск {service}', flush=True)
+    try:
+        subprocess.run(command + ['up', '-d', '--no-deps', '--force-recreate', service], check=True)
+        subprocess.run(
+            command
+            + [
+                'exec',
+                '-T',
+                service,
+                'python3',
+                'tools/local/wait_ready.py',
+                '--port',
+                str(port),
+                '--timeout',
+                '120',
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        subprocess.run(command + ['logs', '--no-color', '--tail', '50', service], check=False)
+        raise
+    print(f'{service} готов', flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["up", "down", "status", "logs", "check", "migrate"])
+    parser.add_argument("action", choices=["up", "down", "status", "logs", "check", "migrate", "update"])
+    parser.add_argument('--service')
+    parser.add_argument('--jobs', type=int, default=4)
     args = parser.parse_args()
+    if args.action == 'update':
+        if not args.service:
+            parser.error('update требует --service; пример: make local-update SERVICE=shipments')
+        update(args.service, args.jobs)
+        return
+    if args.service:
+        parser.error('--service поддерживается только для update')
     prepare()
     command = ["docker", "compose", "-f", str(STATE / "compose.yaml")]
     actions = {

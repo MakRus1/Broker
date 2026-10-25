@@ -58,8 +58,22 @@ CMake автоматически добавляет пути Homebrew к OpenLDA
 lock-файл и заготовки ручной реализации. Сборка отслеживает зависимости спецификаций
 и генератора; повторная ручная конфигурация CMake не требуется.
 
-`make test-tools` проверяет инструменты без сборки userver. `make test-debug` строит
-C++ и запускает unit/functional tests. `make test-all-release` проверяет все сервисы.
+`make test-tools` проверяет инструменты без сборки userver.
+Для проверки одного сервиса используйте:
+
+```sh
+make test-debug SERVICE=shipments
+# То же в закреплённом Linux-окружении:
+make docker-test-debug SERVICE=shipments
+# Дополнительно проверить общие клиентские контракты:
+make docker-test-debug SERVICE=shipments TEST_SHARED_CONTRACTS=1
+```
+
+Собираются выбранный сервис, его зависимости и существующие тестовые цели;
+запускаются только его unit/functional tests. Общие контрактные тесты по умолчанию
+не входят в эту проверку. `make test-all-release` собирает и проверяет все сервисы.
+Для обновления уже поднятого стенда: `make local-update SERVICE=shipments`
+([подробнее](local-environment.md)).
 `make new-service` не перезаписывает существующий сервис и откатывает регистрацию
 при ошибке. Одновременное создание сервисов блокируется файлом `.service-create.lock`.
 После аварийного завершения проверьте изменения и удалите оставшийся lock вручную.

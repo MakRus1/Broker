@@ -4,6 +4,7 @@ include $(REPO_ROOT)/tools/versions.env
 SERVICE ?= broker
 PYTHON3 ?= $(shell command -v python3.12 || command -v python3)
 NPROCS ?= 4
+TEST_SHARED_CONTRACTS ?= 0
 DOCKER_IMAGE ?= $(shell $(PYTHON3) $(REPO_ROOT)/scripts/container-images.py ref --variant $(if $(filter %-sanitize,$(MAKECMDGOALS)),sanitize,dev))
 DOCKER_PLATFORM ?= $(shell docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
 DOCKER_VOLUME_PREFIX = broker-$(subst /,-,$(DOCKER_PLATFORM))
@@ -14,7 +15,7 @@ PRESETS := debug release sanitize
 
 .PHONY: format check-format help gen check-gen check-gen-all test-tools doctor docker-image docker-pull lock-images new-service testsuite-clean
 help:
-	@echo 'make doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-pull | docker-image | docker-test-debug | lock-images'
+	@echo 'make local-update SERVICE=shipments | doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-pull | docker-image | docker-test-debug | lock-images'
 
 gen:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py --service-dir "services/$(SERVICE)"
@@ -41,8 +42,8 @@ $(addprefix cmake-,$(PRESETS)): cmake-%:
 $(addprefix build-,$(PRESETS)): build-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
 $(addprefix test-,$(PRESETS)): test-%: cmake-%
-	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS)
-	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)|testsuite-contract_service|client_contract_unittest)$$'
+	$(REPO_ROOT)/.venv-gen/bin/python scripts/ci-tests.py build --build-dir build-$* --services "$(SERVICE)" --jobs $(NPROCS) $(if $(filter 1,$(TEST_SHARED_CONTRACTS)),--shared-contracts,--no-shared-contracts)
+	$(REPO_ROOT)/.venv-gen/bin/ctest --test-dir build-$* --output-on-failure --no-tests=error -R '^($(SERVICE)_unittest|testsuite-$(SERVICE)$(if $(filter 1,$(TEST_SHARED_CONTRACTS)),|testsuite-contract_service|client_contract_unittest,))$$'
 # CI собирает один раз на окружение; тесты выбранных сервисов запускаются отдельно.
 .PHONY: $(addprefix ci-build-,$(PRESETS)) $(addprefix ci-test-,$(PRESETS))
 $(addprefix ci-build-,$(PRESETS)): ci-build-%: cmake-%
@@ -76,7 +77,7 @@ docker-pull:
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .
 docker-%:
-	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e CCACHE_DIR=/workspaces/broker/.ccache -e CCACHE_BASEDIR=/workspaces/broker -e CCACHE_MAXSIZE=512M -e CCACHE_COMPILERCHECK=content -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS)
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e CCACHE_DIR=/workspaces/broker/.ccache -e CCACHE_BASEDIR=/workspaces/broker -e CCACHE_MAXSIZE=512M -e CCACHE_COMPILERCHECK=content -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS) TEST_SHARED_CONTRACTS=$(TEST_SHARED_CONTRACTS)
 
 .PHONY: db-up db-down testsuite-clean dist-clean
 db-up:
@@ -96,3 +97,7 @@ local-up local-down local-status local-logs local-check local-migrate:
 .PHONY: export-client-specs check-client-specs
 export-client-specs check-client-specs:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py $(if $(filter command line,$(origin SERVICE)),--service-dir "services/$(SERVICE)",) $(if $(filter check-client-specs,$@),--check,)
+
+.PHONY: local-update
+local-update:
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/local-env.py update $(if $(filter file default undefined,$(origin SERVICE)),,--service "$(SERVICE)") --jobs $(NPROCS)

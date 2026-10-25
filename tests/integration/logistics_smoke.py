@@ -3,6 +3,7 @@
 
 import argparse
 import contextlib
+from datetime import datetime, timezone
 import http.server
 import json
 import os
@@ -364,7 +365,10 @@ def run(build):
             receivers[0], '/api/v1/transportations/get', {'transportation_id': manual['id']}, token
         )['transportation']
         assert inherited['incoterms'] == 'CIF'
-        assert inherited['route_segments'][0]['actual_departure_at'] == '2026-10-20T09:00:00Z'
+        actual_departure = datetime.fromisoformat(
+            inherited['route_segments'][0]['actual_departure_at'].replace('Z', '+00:00')
+        )
+        assert actual_departure == datetime(2026, 10, 20, 9, tzinfo=timezone.utc)
         assert inherited['route_segments'][0]['id'] == stages[1]['id']
         print(
             'OK: 2 shipments + 2 transportations; inbox/outbox без дублей, ручное создание, наследование и защита маршрута'

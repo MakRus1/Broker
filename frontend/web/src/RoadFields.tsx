@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { IsoDateInput } from './DateInput';
 import { businessDate, calendarDate } from './calendar';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
 import { DirectoryLookup } from './DirectoryLookup';
@@ -29,8 +29,7 @@ export function RoadFields({
   ) => (
     <label>
       {label}
-      <DateInput
-        type="date"
+      <IsoDateInput
         min="1900-01-01"
         max={actual ? businessDate() : '9999-12-31'}
         value={value ?? ''}

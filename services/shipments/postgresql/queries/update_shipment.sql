@@ -3,7 +3,7 @@ SET
     number = card.number,
     customer_id = card.customer_id,
     reference = card.reference,
-    shipment_date = card.shipment_date::DATE,
+    shipment_date = card.shipment_date,
     recipient_id = card.recipient_id,
     logist = card.logist,
     cargo_description = card.cargo_description,
@@ -16,7 +16,7 @@ SET
     delivery_address = card.delivery_address,
     route_segments = card.route_segments,
     revision = s.revision + 1
-FROM (SELECT ($4::public.shipment_data_v2).*) AS card
+FROM (SELECT ($4::public.shipment_data_v3).*) AS card
 WHERE s.organization_id = $1::UUID AND s.id = $2::UUID AND s.revision = $3
 RETURNING ROW(
     s.id,
@@ -24,7 +24,7 @@ RETURNING ROW(
     s.number,
     s.customer_id,
     s.reference,
-    s.shipment_date::TEXT,
+    s.shipment_date,
     s.recipient_id,
     s.logist,
     s.cargo_description,
@@ -36,4 +36,4 @@ RETURNING ROW(
     s.delivery_country,
     s.delivery_address,
     s.route_segments
-)::public.shipment_v3;
+)::public.shipment_v4;

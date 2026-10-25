@@ -17,7 +17,7 @@ Response View::Handle(
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Поставка не найдена"};
-        const auto shipment = rows.AsSingleRow<pgtypes::ShipmentV3>();
+        const auto shipment = rows.AsSingleRow<pgtypes::ShipmentV4>();
         if (shipment.Revision != request.body.expected_revision)
             throw ApiError{409, "shipment_revision_conflict",
                 "Поставка изменилась. Обновите перевозку и повторите сохранение"};

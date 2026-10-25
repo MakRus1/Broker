@@ -112,3 +112,16 @@ class ModelsTest(unittest.TestCase):
                                           'default': [0]}})
         with self.assertRaises(ValueError):
             parse_spec(data)
+
+
+class CalendarDateModelTest(unittest.TestCase):
+    def test_calendar_date_has_native_type_and_typed_validation(self):
+        from model import parse_type
+        from cpp_types import validator, literal
+        value = parse_type({'type': 'string', 'format': 'date'}, 'day')
+        self.assertEqual(value.cpp, 'userver::utils::datetime::Date')
+        code = validator(value, 'Day')
+        self.assertIn('Date{1, 1, 1}', code)
+        self.assertNotIn('ToString', code)
+        self.assertNotIn('CheckFormat', code)
+        self.assertIn('DateFromRFC3339String', literal(value, '2026-10-25'))

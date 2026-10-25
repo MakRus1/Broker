@@ -56,7 +56,7 @@ void ValidateRoute(const models::SetRouteRequest& request) {
         // Календарь бизнесовых событий — Europe/Moscow, без времени в API и БД.
         const std::chrono::year_month_day today{std::chrono::floor<std::chrono::days>(
             userver::utils::datetime::Now() + std::chrono::hours{3})};
-        auto check = [&](const std::optional<std::string>& value, bool actual) {
+        auto check = [&](const std::optional<userver::utils::datetime::Date>& value, bool actual) {
             if (value.has_value() &&
                 !platform::IsCalendarDateInRange(value.value(), minimum, actual ? today : maximum))
                 throw ApiError{400, "invalid_rail_date",

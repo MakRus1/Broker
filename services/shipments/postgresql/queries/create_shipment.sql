@@ -21,7 +21,7 @@ SELECT
     card.number,
     card.customer_id,
     card.reference,
-    card.shipment_date::DATE,
+    card.shipment_date,
     card.recipient_id,
     card.logist,
     card.cargo_description,
@@ -33,14 +33,14 @@ SELECT
     card.delivery_country,
     card.delivery_address,
     card.route_segments
-FROM (SELECT ($2::public.shipment_data_v2).*) AS card
+FROM (SELECT ($2::public.shipment_data_v3).*) AS card
 RETURNING ROW(
     id,
     revision,
     number,
     customer_id,
     reference,
-    shipment_date::TEXT,
+    shipment_date,
     recipient_id,
     logist,
     cargo_description,
@@ -52,4 +52,4 @@ RETURNING ROW(
     delivery_country,
     delivery_address,
     route_segments
-)::public.shipment_v3;
+)::public.shipment_v4;

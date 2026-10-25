@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Типизированные календарные даты
+  version: '1'
+paths:
+  /calendar/check:
+    get:
+      parameters:
+      - name: day
+        in: query
+        schema:
+          type: string
+          format: date
+          default: '2026-10-25'
+      responses:
+        '200':
+          description: День
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  day:
+                    type: string
+                    format: date
+                required: [day]
+  /calendar/echo:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                day:
+                  type: string
+                  format: date
+                  default: '2026-10-25'
+                days:
+                  type: array
+                  items:
+                    type: string
+                    format: date
+                  default: []
+                optional_day:
+                  type: string
+                  format: date
+                  nullable: true
+      responses:
+        '200':
+          description: Календарные даты
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  day:
+                    type: string
+                    format: date
+                  days:
+                    type: array
+                    items:
+                      type: string
+                      format: date
+                  optional_day:
+                    type: string
+                    format: date
+                    nullable: true
+                required: [day, days]

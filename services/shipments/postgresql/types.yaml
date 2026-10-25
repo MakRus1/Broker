@@ -1,17 +1,5 @@
 version: 1
 types:
-  public.shipment_v1:
-    fields:
-    - name: id
-      type: uuid
-    - name: revision
-      type: bigint
-    - name: number
-      type: text
-    - name: customer_id
-      type: uuid
-    - name: reference
-      type: text
   public.shipment_item_v1:
     fields:
     - name: id
@@ -69,51 +57,6 @@ types:
       type: uuid
     - name: payload
       type: jsonb
-  public.shipment_v2:
-    fields:
-    - name: id
-      type: uuid
-    - name: revision
-      type: bigint
-    - name: number
-      type: text
-    - name: customer_id
-      type: uuid
-    - name: reference
-      type: text
-    - name: shipment_date
-      type: text
-    - name: recipient_id
-      type: uuid
-      nullable: true
-    - name: logist
-      type: text
-      nullable: true
-    - name: cargo_description
-      type: text
-      nullable: true
-    - name: status
-      type: text
-    - name: incoterms
-      type: text
-      nullable: true
-    - name: carriage_terms
-      type: text
-      nullable: true
-    - name: loading
-      type: text
-      nullable: true
-    - name: delivery_city
-      type: text
-      nullable: true
-    - name: delivery_country
-      type: text
-      nullable: true
-    - name: delivery_address
-      type: text
-      nullable: true
-    - name: route_segments
-      type: public.shipment_route_segment_v1[]
   public.shipment_dictionary_value_v1:
     fields:
     - name: dictionary
@@ -121,53 +64,6 @@ types:
     - name: code
       type: text
     - name: name
-      type: text
-  public.shipment_data_v1:
-    fields:
-    - name: number
-      type: text
-    - name: customer_id
-      type: uuid
-    - name: reference
-      type: text
-    - name: shipment_date
-      type: text
-    - name: recipient_id
-      type: uuid
-      nullable: true
-    - name: logist
-      type: text
-      nullable: true
-    - name: cargo_description
-      type: text
-      nullable: true
-    - name: status
-      type: text
-    - name: incoterms
-      type: text
-      nullable: true
-    - name: carriage_terms
-      type: text
-      nullable: true
-    - name: loading
-      type: text
-      nullable: true
-    - name: delivery_city
-      type: text
-      nullable: true
-    - name: delivery_country
-      type: text
-      nullable: true
-    - name: delivery_address
-      type: text
-      nullable: true
-    - name: route_segments
-      type: public.shipment_route_segment_v1[]
-  public.shipment_route_segment_v1:
-    fields:
-    - name: id
-      type: uuid
-    - name: type
       type: text
   public.shipment_business_rules_v1:
     fields:
@@ -266,7 +162,7 @@ types:
     - name: air
       type: public.air_details_v1
       nullable: true
-  public.shipment_v3:
+  public.shipment_v4:
     fields:
     - name: id
       type: uuid
@@ -279,7 +175,7 @@ types:
     - name: reference
       type: text
     - name: shipment_date
-      type: text
+      type: date
     - name: recipient_id
       type: uuid
       nullable: true
@@ -311,7 +207,8 @@ types:
       nullable: true
     - name: route_segments
       type: public.shipment_route_segment_v2[]
-  public.shipment_data_v2:
+
+  public.shipment_data_v3:
     fields:
     - name: number
       type: text
@@ -320,7 +217,7 @@ types:
     - name: reference
       type: text
     - name: shipment_date
-      type: text
+      type: date
     - name: recipient_id
       type: uuid
       nullable: true

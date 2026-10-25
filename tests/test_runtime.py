@@ -12,9 +12,10 @@ from render import COMMON
 class RuntimeTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which('clang++') or shutil.which('g++'), 'Нужен C++ компилятор')
     def test_scalar_parser_compiles_and_rejects_invalid_numbers(self):
-        # Берется именно генерируемая реализация; JSON проверяет функциональный сервис.
+        # Берется генерируемый числовой парсер. Date требует userver и проверяется
+        # настоящим contract_service и его скомпилированным клиентом.
         code = COMMON.split('template <typename T> struct IsVector')[0]
-        code = '\n'.join(line for line in code.splitlines() if '<userver/' not in line and line != '#pragma once')
+        code = '\n'.join(line for line in code.splitlines() if '<userver/' not in line and 'userver::utils::datetime::Date' not in line and line != '#pragma once')
         code += '''
 }
 #include <cassert>

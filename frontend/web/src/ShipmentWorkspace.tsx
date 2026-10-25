@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { IsoDateInput } from './DateInput';
 import { ShipmentRoute } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from './api';
 import { localDate } from './calendar';
@@ -505,13 +505,13 @@ function ShipmentCard({
               </label>
               <label>
                 Дата поставки · обязательно
-                <DateInput
+                <IsoDateInput
                   name="shipment_date"
                   aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
                   aria-describedby={
                     validation.errors.shipment_date ? `${formId}-date-error` : undefined
                   }
-                  type="date"
+
                   min="1900-01-01"
                   required
                   value={draft.shipment_date}

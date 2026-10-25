@@ -1,4 +1,4 @@
-import { DateInput } from './DateInput';
+import { IsoDateInput } from './DateInput';
 import { useEffect, useId, useState } from 'react';
 import { request, type Session, type RailDetails, type RailwayStation } from './api';
 import { businessDate, calendarDate } from './calendar';
@@ -197,8 +197,7 @@ export function RailFields({
       {railDates.map(([key, label]) => (
         <label key={key}>
           {label}
-          <DateInput
-            type="date"
+          <IsoDateInput
             min="1900-01-01"
             max={key === 'etd' || key === 'eta' ? undefined : businessDate()}
             value={value[key] ?? ''}

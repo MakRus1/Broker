@@ -4,6 +4,7 @@
 #include <postgresql/types.hpp>
 
 namespace shipments::helpers {
+// Хранимые route_segment_v2 сохраняют совместимость: текст дат разбирается на границе БД.
 inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& value) {
     models::TransportLocation result;
     result.id = boost::uuids::to_string(value.Id);
@@ -33,13 +34,14 @@ inline models::SeaDetails Convert(const pgtypes::SeaDetailsV1& value) {
     if (value.Pod.has_value())
         result.pod = Convert(value.Pod.value());
     if (value.Eta.has_value())
-        result.eta = value.Eta.value();
+        result.eta = userver::utils::datetime::DateFromRFC3339String(value.Eta.value());
     if (value.DepartureTerminalId.has_value())
         result.departure_terminal_id = boost::uuids::to_string(value.DepartureTerminalId.value());
     if (value.ArrivalTerminalId.has_value())
         result.arrival_terminal_id = boost::uuids::to_string(value.ArrivalTerminalId.value());
     if (value.DepartureDate.has_value())
-        result.departure_date = value.DepartureDate.value();
+        result.departure_date =
+            userver::utils::datetime::DateFromRFC3339String(value.DepartureDate.value());
     if (value.Vessel.has_value())
         result.vessel = value.Vessel.value();
     if (value.Voyage.has_value())
@@ -54,7 +56,7 @@ inline pgtypes::SeaDetailsV1 Convert(const models::SeaDetails& value) {
     if (value.pod.has_value())
         result.Pod = Convert(value.pod.value());
     if (value.eta.has_value())
-        result.Eta = value.eta.value();
+        result.Eta = userver::utils::datetime::ToString(value.eta.value());
     if (value.departure_terminal_id.has_value())
         result.DepartureTerminalId =
             boost::uuids::string_generator{}(value.departure_terminal_id.value());
@@ -62,7 +64,7 @@ inline pgtypes::SeaDetailsV1 Convert(const models::SeaDetails& value) {
         result.ArrivalTerminalId =
             boost::uuids::string_generator{}(value.arrival_terminal_id.value());
     if (value.departure_date.has_value())
-        result.DepartureDate = value.departure_date.value();
+        result.DepartureDate = userver::utils::datetime::ToString(value.departure_date.value());
     if (value.vessel.has_value())
         result.Vessel = value.vessel.value();
     if (value.voyage.has_value())
@@ -79,13 +81,15 @@ inline models::AirDetails Convert(const pgtypes::AirDetailsV1& value) {
     if (value.DestinationAirport.has_value())
         result.destination_airport = Convert(value.DestinationAirport.value());
     if (value.Eta.has_value())
-        result.eta = value.Eta.value();
+        result.eta = userver::utils::datetime::DateFromRFC3339String(value.Eta.value());
     if (value.Etd.has_value())
-        result.etd = value.Etd.value();
+        result.etd = userver::utils::datetime::DateFromRFC3339String(value.Etd.value());
     if (value.DepartureDate.has_value())
-        result.departure_date = value.DepartureDate.value();
+        result.departure_date =
+            userver::utils::datetime::DateFromRFC3339String(value.DepartureDate.value());
     if (value.ArrivalDate.has_value())
-        result.arrival_date = value.ArrivalDate.value();
+        result.arrival_date =
+            userver::utils::datetime::DateFromRFC3339String(value.ArrivalDate.value());
     if (value.FlightNumber.has_value())
         result.flight_number = value.FlightNumber.value();
     return result;
@@ -100,13 +104,13 @@ inline pgtypes::AirDetailsV1 Convert(const models::AirDetails& value) {
     if (value.destination_airport.has_value())
         result.DestinationAirport = Convert(value.destination_airport.value());
     if (value.eta.has_value())
-        result.Eta = value.eta.value();
+        result.Eta = userver::utils::datetime::ToString(value.eta.value());
     if (value.etd.has_value())
-        result.Etd = value.etd.value();
+        result.Etd = userver::utils::datetime::ToString(value.etd.value());
     if (value.departure_date.has_value())
-        result.DepartureDate = value.departure_date.value();
+        result.DepartureDate = userver::utils::datetime::ToString(value.departure_date.value());
     if (value.arrival_date.has_value())
-        result.ArrivalDate = value.arrival_date.value();
+        result.ArrivalDate = userver::utils::datetime::ToString(value.arrival_date.value());
     if (value.flight_number.has_value())
         result.FlightNumber = value.flight_number.value();
     return result;

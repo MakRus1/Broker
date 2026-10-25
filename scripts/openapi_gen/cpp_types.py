@@ -47,6 +47,8 @@ def literal(typ, value, scope=''):
         return f'{type_cpp(typ, scope)}::{enum_labels(typ)[typ.schema["enum"].index(value)]}'
     if typ.kind == 'array':
         return type_cpp(typ, scope) + '{' + ', '.join(literal(typ.item, item, scope) for item in value) + '}'
+    if typ.kind == 'string' and typ.schema.get('format') == 'date':
+        return 'userver::utils::datetime::DateFromRFC3339String(' + quoted(value) + ')'
     if typ.kind == 'string':
         return 'std::string{' + quoted(value) + (f', {len(value.encode("utf-8"))}' if '\0' in value else '') + '}'
     if typ.kind == 'boolean':
@@ -88,9 +90,14 @@ def validator(typ, name):
     if typ.nullable:
         return validator(replace(typ, nullable=False), name + '_value') + f'inline void Validate_{name}(const {typ.cpp}& value) {{ if (value.has_value()) Validate_{name}_value(value.value()); }}\n'
     before = validator(typ.item, name + '_item') if typ.item else ''
-    raw = 'EnumValue(value)' if typ.enum_name else 'value'
+    raw = 'EnumValue(value)' if typ.enum_name else (
+        'userver::utils::datetime::ToString(value)'
+        if typ.kind == 'string' and typ.schema.get('format') == 'date' else 'value')
     schema = typ.schema
     checks = []
+    calendar_date = typ.kind == 'string' and schema.get('format') == 'date'
+    if calendar_date:
+        checks.append('if (value < userver::utils::datetime::Date{1, 1, 1} || value > userver::utils::datetime::Date{9999, 12, 31}) throw std::invalid_argument("date");')
     if typ.kind == 'record':
         checks.append('ValidateModel(value);')
     if typ.kind == 'object':
@@ -100,7 +107,7 @@ def validator(typ, name):
         checks.append(f'if ({allowed}) throw std::invalid_argument("enum");')
     if typ.kind == 'number':
         checks.append(f'if (!std::isfinite({raw})) throw std::invalid_argument("number");')
-    if typ.kind == 'string' and not ('minLength' in schema or 'maxLength' in schema):
+    if typ.kind == 'string' and not calendar_date and not ('minLength' in schema or 'maxLength' in schema):
         checks.append(f'(void)broker_codegen::Utf8Length({raw});')
     if typ.kind == 'array':
         checks.append(f'for (const auto& item : value) Validate_{name}_item(item);')
@@ -121,7 +128,7 @@ def validator(typ, name):
             checks.append(f'if ({expression} {operation} {schema[key]}) throw std::invalid_argument("{key}");')
     if 'pattern' in schema:
         checks.append(f'static const userver::utils::regex pattern{{{quoted(schema["pattern"])}}}; if (!userver::utils::regex_search({raw}, pattern)) throw std::invalid_argument("pattern");')
-    if typ.kind == 'string' and schema.get('format') not in {None, 'password'}:
+    if typ.kind == 'string' and schema.get('format') not in {None, 'password', 'date'}:
         checks.append(f'broker_codegen::CheckFormat({raw}, {quoted(schema["format"])});')
     parameter = ' value' if checks else ''
     return before + f'inline void Validate_{name}(const {typ.cpp}&{parameter}) {{\n' + '\n'.join(checks) + '\n}\n'

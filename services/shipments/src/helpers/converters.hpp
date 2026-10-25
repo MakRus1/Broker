@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace shipments::helpers {
-inline pgtypes::ShipmentDataV2 ConvertData(const pgtypes::ShipmentV3& row) {
+inline pgtypes::ShipmentDataV3 ConvertData(const pgtypes::ShipmentV4& row) {
     return {.Number = row.Number,
         .CustomerId = row.CustomerId,
         .Reference = row.Reference,
@@ -25,7 +25,7 @@ inline pgtypes::ShipmentDataV2 ConvertData(const pgtypes::ShipmentV3& row) {
         .RouteSegments = row.RouteSegments};
 }
 
-inline models::Shipment Convert(const pgtypes::ShipmentV3& row) {
+inline models::Shipment Convert(const pgtypes::ShipmentV4& row) {
     models::Shipment result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
@@ -82,7 +82,7 @@ inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row
 inline std::vector<models::Shipment> Convert(const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV3>())
+    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV4>())
         result.push_back(Convert(row));
     return result;
 }

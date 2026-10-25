@@ -242,3 +242,16 @@ UTEST(ClientContract, JsonBoundaryForBff) {
         EXPECT_EQ(json["message"].As<std::string>(), error.response.message);
     }
 }
+
+UTEST(CalendarDateClient, QueryAndJsonUseIsoWireRepresentation) {
+    const auto day = userver::utils::datetime::DateFromRFC3339String("2000-02-29");
+    const auto request = api::CalendarCheck::Encode(api::CalendarCheck::Request{.day = day});
+    ASSERT_EQ(request.query.size(), 1);
+    EXPECT_EQ(request.query.front().first, "day");
+    EXPECT_EQ(request.query.front().second, "2000-02-29");
+    const auto body =
+        api::CalendarEcho::ToJson(api::CalendarEcho::RequestBody{.day = day, .days = {day}});
+    const auto value = userver::formats::json::FromString(body);
+    EXPECT_EQ(value["day"].As<std::string>(), "2000-02-29");
+    EXPECT_EQ(value["days"][0].As<std::string>(), "2000-02-29");
+}

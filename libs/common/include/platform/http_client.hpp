@@ -1,4 +1,5 @@
 #pragma once
+#include <userver/utils/datetime/date.hpp>
 
 #include <charconv>
 #include <chrono>
@@ -77,6 +78,8 @@ template <typename T> std::string Scalar(const T& value) {
         return Scalar(EnumValue(value));
     } else if constexpr (std::is_same_v<T, std::string>) {
         return value;
+    } else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) {
+        return userver::utils::datetime::ToString(value);
     } else if constexpr (std::is_same_v<T, bool>) {
         return value ? "true" : "false";
     } else {

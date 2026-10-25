@@ -41,7 +41,7 @@ Response View::Handle(
             transaction.Commit();
             return Response201{.shipment = replay.value()};
         }
-        pgtypes::ShipmentDataV2 card;
+        pgtypes::ShipmentDataV3 card;
         card.CustomerId = boost::uuids::string_generator{}(request.body.customer_id);
         card.Reference = request.body.reference.value_or("");
         card.ShipmentDate = Today();
@@ -58,7 +58,7 @@ Response View::Handle(
         if (card.Number.empty())
             throw ApiError{400, "invalid_number", "Укажите номер поставки"};
         const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
-                             .AsSingleRow<pgtypes::ShipmentV3>();
+                             .AsSingleRow<pgtypes::ShipmentV4>();
         RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
         const auto result = Convert(row);
         SaveReplay(transaction, organization, "create_shipment", request.body, result);

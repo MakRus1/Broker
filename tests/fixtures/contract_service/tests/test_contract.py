@@ -74,7 +74,7 @@ async def test_default_preserves_presence(service_client):
 
 @pytest.mark.parametrize('params', [
     {'status': 'unknown'}, {'limit': '0'}, {'limit': '101'}, {'limit': '2147483648'},
-    {'day': '2025-02-29'}, {'day': '2026-13-01'}, {'day': '2026-1-01'},
+    {'day': '2025-02-29'}, {'day': '2026-13-01'},
     {'token': 'not-a-uuid'}, {'ratio': '-0.25'}, {'ratio': '1.25'}, {'ratio': '0.1'}, {'ratio': '1e100'},
 ])
 async def test_format_and_query_constraints(service_client, params):

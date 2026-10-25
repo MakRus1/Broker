@@ -37,6 +37,7 @@ paths:
                   value:
                     type: object
                     additionalProperties: true
+                    nullable: true
                   version:
                     type: integer
                     minimum: 0

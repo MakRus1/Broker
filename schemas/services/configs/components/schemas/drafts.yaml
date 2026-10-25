@@ -45,9 +45,12 @@ ConfigDraft:
     base_value:
       type: object
       additionalProperties: true
+      nullable: true
     value:
       type: object
       additionalProperties: true
+      nullable: true
+      description: Новое значение; null означает удаление конфига после подтверждения
     approved_by:
       type: string
       maxLength: 2048
@@ -94,9 +97,12 @@ DraftSnapshot:
     base_value:
       type: object
       additionalProperties: true
+      nullable: true
     value:
       type: object
       additionalProperties: true
+      nullable: true
+      description: Новое значение; null означает удаление конфига после подтверждения
     approved_by:
       type: string
       maxLength: 2048

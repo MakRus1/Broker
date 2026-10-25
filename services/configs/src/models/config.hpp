@@ -20,7 +20,7 @@ struct CatalogEntry {
 
 struct Config {
     std::string Name;
-    Json Value;
+    std::optional<Json> Value;
     std::int64_t Version;
     std::optional<std::int64_t> ActiveDraftId;
 };

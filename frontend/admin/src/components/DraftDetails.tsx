@@ -19,7 +19,10 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
   return (
     <section className="panel">
       <div className="panelhead">
-        <h2>Драфт #{draft.id}</h2>
+        <h2>
+          Драфт #{draft.id}
+          {draft.value === null ? ' · Удаление конфига' : ''}
+        </h2>
         <span className={'badge ' + (draft.status === 'draft' ? 'amber' : '')}>
           {statusName[draft.status]}
         </span>
@@ -27,7 +30,10 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
       <p>{draft.description}</p>
       <p className="muted">
         Автор: <Actor actor={draft.author} name={draft.author_name} session={session} /> · Версия
-        драфта {draft.version} · На основе версии {draft.base_version}
+        драфта {draft.version} ·{' '}
+        {draft.base_value === null
+          ? 'Первоначальное создание'
+          : `На основе версии ${draft.base_version}`}
       </p>
       {draft.approved_by && (
         <p className="muted">
@@ -39,7 +45,7 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
       <div className="actions">
         {owner && write && (
           <>
-            <button disabled={busy} onClick={edit}>
+            <button disabled={busy || draft.value === null} onClick={edit}>
               Изменить драфт
             </button>
             <button
@@ -60,14 +66,17 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
             Подтвердить и опубликовать
           </button>
         )}
-        {write && !current?.active_draft_id && draft.status === 'published' && (
-          <button
-            disabled={busy || changes(current?.value, draft.value).length === 0}
-            onClick={() => restore(draft.value, `Откат к значению из драфта #${draft.id}`)}
-          >
-            Откатить
-          </button>
-        )}
+        {write &&
+          !current?.active_draft_id &&
+          draft.status === 'published' &&
+          draft.value !== null && (
+            <button
+              disabled={busy || changes(current?.value, draft.value).length === 0}
+              onClick={() => restore(draft.value, `Откат к значению из драфта #${draft.id}`)}
+            >
+              Откатить
+            </button>
+          )}
       </div>
       {owner && <p className="muted">Подтвердить этот драфт должен другой пользователь.</p>}
       {draft.status === 'published' && write && (

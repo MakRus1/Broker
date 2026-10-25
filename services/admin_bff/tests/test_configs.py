@@ -39,3 +39,41 @@ async def test_no_arbitrary_proxy(browser):
     await browser.sign_in()
     assert (await browser.get('/api/configs/unknown')).status == 404
     assert (await browser.post('/api/configs/values', {})).status == 404
+
+
+@pytest.mark.parametrize('remove', [False, True])
+async def test_create_and_delete_draft_keep_nullable_values(browser, mockserver, remove):
+    await browser.sign_in()
+    body = {'config_name': 'CUSTOM_SETTINGS', 'description': 'Проверка драфта',
+            'expected_config_version': 2 if remove else 0}
+    body.update({'remove': True} if remove else {'value': {}})
+
+    @mockserver.json_handler('/admin/configs/drafts/create')
+    def create(request):
+        assert request.json == body
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return mockserver.make_response(status=201, json={
+            'id': 1, 'config_name': body['config_name'], 'author': 'issuer#author',
+            'description': body['description'], 'version': 1, 'status': 'draft',
+            'base_version': body['expected_config_version'],
+            'base_value': {'enabled': True} if remove else None,
+            'value': None if remove else {},
+        })
+
+    response = await browser.post('/api/configs/drafts/create', body)
+    assert response.status == 201
+    assert response.json()['value'] == (None if remove else {})
+    assert response.json()['base_value'] == ({'enabled': True} if remove else None)
+
+
+async def test_unpublished_current_value_is_null(browser, mockserver):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/admin/configs/current')
+    def current(request):
+        return {'config_name': 'CUSTOM_SETTINGS', 'version': 0, 'value': None,
+                'active_draft_id': 1}
+
+    response = await browser.post('/api/configs/current', {'config_name': 'CUSTOM_SETTINGS'})
+    assert response.status == 200
+    assert response.json()['value'] is None

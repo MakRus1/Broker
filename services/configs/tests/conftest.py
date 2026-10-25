@@ -87,3 +87,18 @@ def initial_revision(pgsql, service_source_dir):
                  / 'V0003__initialize_config_revision.sql')
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(migration.read_text())
+
+
+@pytest.fixture(autouse=True)
+def published_configs(pgsql, request, initial_revision):
+    """Для существующих сценариев явно сохраняем опубликованные тестовые значения."""
+    import json
+    if request.node.get_closest_marker('empty_configs'):
+        return
+    values = {
+        'SHIPMENT_TERMS_CONFIG': {'clauses': [], 'default': {'is_enabled': False, 'max_days': 30}},
+        'BROKER_HTTP_CLIENT_CONFIG': {'**default**': {'timeout': 1000, 'max_retries': 0}},
+    }
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('UPDATE config_revisions SET configs = %s WHERE revision = 0',
+                       (json.dumps(values),))

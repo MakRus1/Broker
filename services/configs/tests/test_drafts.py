@@ -132,7 +132,7 @@ async def test_list_and_get(admin_client):
 
 
 @pytest.mark.parametrize('patch', [
-    {'actor': ''}, {'actor': ' '}, {'actor': 5}, {'config_name': 'UNKNOWN'},
+    {'actor': ''}, {'actor': ' '}, {'actor': 5}, {'config_name': 'invalid-name'},
     {'description': ''}, {'source_revision': 0}, {'extra': True},
 ])
 async def test_invalid_create(admin_client, patch):

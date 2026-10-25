@@ -28,6 +28,7 @@ class ConfigStore final {
     std::vector<DraftEvent> DraftEvents(std::int64_t id) const;
 
   private:
+    void ValidateConfig(const std::string& name, const Json& value) const;
     Revision Current(userver::storages::postgres::Transaction& transaction) const;
     Revision PublishLocked(userver::storages::postgres::Transaction&, const Revision& current,
         const Json& values) const;

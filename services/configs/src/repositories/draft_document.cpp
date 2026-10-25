@@ -33,6 +33,8 @@ std::string_view StatusName(DraftStatus status) {
 }
 
 Draft ReadDraft(std::int64_t id, const Json& document) {
+    if (!document.HasMember("value"))
+        throw std::runtime_error("Stored draft has no value");
     return {.Id = id,
         .ConfigName = document["config_name"].As<std::string>(),
         .Author = document["author"].As<std::string>(),
@@ -41,8 +43,8 @@ Draft ReadDraft(std::int64_t id, const Json& document) {
         .Status = ReadStatus(document["status"].As<std::string>()),
         .ApprovedBy = Optional<std::string>(document, "approved_by"),
         .BaseVersion = document["base_version"].As<std::int64_t>(),
-        .BaseValue = document["base_value"],
-        .Value = document["value"],
+        .BaseValue = Optional<Json>(document, "base_value"),
+        .Value = Optional<Json>(document, "value"),
         .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
         .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
         .AuthorName = Optional<std::string>(document, "author_name"),
@@ -53,24 +55,30 @@ Json WriteDraft(const Draft& draft) {
     userver::formats::json::ValueBuilder document;
     document["config_name"] = draft.ConfigName;
     document["author"] = draft.Author;
-    if (draft.AuthorName)
-        document["author_name"] = *draft.AuthorName;
-    if (draft.ApprovedByName)
-        document["approved_by_name"] = *draft.ApprovedByName;
+    if (draft.AuthorName.has_value())
+        document["author_name"] = draft.AuthorName.value();
+    if (draft.ApprovedByName.has_value())
+        document["approved_by_name"] = draft.ApprovedByName.value();
     document["description"] = draft.Description;
     document["version"] = draft.Version;
     document["status"] = std::string(StatusName(draft.Status));
-    if (draft.ApprovedBy)
-        document["approved_by"] = *draft.ApprovedBy;
+    if (draft.ApprovedBy.has_value())
+        document["approved_by"] = draft.ApprovedBy.value();
     else
         document["approved_by"] = nullptr;
     document["base_version"] = draft.BaseVersion;
-    document["base_value"] = draft.BaseValue;
-    document["value"] = draft.Value;
-    if (draft.SourceRevision)
-        document["source_revision"] = *draft.SourceRevision;
-    if (draft.PublishedRevision)
-        document["published_revision"] = *draft.PublishedRevision;
+    if (draft.BaseValue.has_value())
+        document["base_value"] = draft.BaseValue.value();
+    else
+        document["base_value"] = nullptr;
+    if (draft.Value.has_value())
+        document["value"] = draft.Value.value();
+    else
+        document["value"] = nullptr;
+    if (draft.SourceRevision.has_value())
+        document["source_revision"] = draft.SourceRevision.value();
+    if (draft.PublishedRevision.has_value())
+        document["published_revision"] = draft.PublishedRevision.value();
     return document.ExtractValue();
 }
 }  // namespace configs::storage

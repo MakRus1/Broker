@@ -13,7 +13,7 @@ export interface CatalogEntry {
 }
 export interface Current {
   config_name: string;
-  value: JsonObject;
+  value: JsonObject | null;
   version: number;
   active_draft_id?: number;
 }
@@ -27,8 +27,8 @@ export interface Draft {
   version: number;
   status: 'draft' | 'published' | 'cancelled';
   base_version: number;
-  base_value: JsonObject;
-  value: JsonObject;
+  base_value: JsonObject | null;
+  value: JsonObject | null;
   approved_by?: string;
   published_revision?: number;
 }

@@ -106,7 +106,9 @@ export function App() {
             </div>
           </div>
           <Catalog workspace={workspace} />
-          {selected && <ConfigDrawer key={selected} workspace={workspace} />}
+          {(selected || workspace.creating) && (
+            <ConfigDrawer key={selected || 'new'} workspace={workspace} />
+          )}
         </>
       )}
       <Notifications workspace={workspace} />

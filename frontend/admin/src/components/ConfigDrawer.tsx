@@ -14,7 +14,7 @@ export function ConfigDrawer({ workspace }: { workspace: Workspace }) {
     drafts,
     editor,
     busy,
-    setSelected,
+    closeConfig,
     setDraft,
     run,
     reload,
@@ -42,7 +42,7 @@ export function ConfigDrawer({ workspace }: { workspace: Workspace }) {
     content.current?.scrollTo({ top: 0 });
   }, [historyDetail, tab, editor]);
   function close() {
-    if (!busy) discardChanges(() => setSelected(''));
+    if (!busy) discardChanges(closeConfig);
   }
   function outsidePanel(event: {
     currentTarget: HTMLDialogElement;
@@ -82,8 +82,16 @@ export function ConfigDrawer({ workspace }: { workspace: Workspace }) {
       <div className="drawer-heading">
         <div>
           <p className="eyebrow">КОНФИГ</p>
-          <h1 id="config-title">{selected}</h1>
-          {current && <p>Версия {current.version} · Применяется без перезапуска</p>}
+          <h1 id="config-title">{workspace.creating ? 'Новый конфиг' : selected}</h1>
+          {current && (
+            <p>
+              {current.value === null
+                ? current.version === 0
+                  ? 'Ещё не опубликован'
+                  : 'Удалён'
+                : `Версия ${current.version} · Применяется без перезапуска`}
+            </p>
+          )}
         </div>
         <button aria-label="Закрыть конфиг" disabled={busy} onClick={close}>
           ✕

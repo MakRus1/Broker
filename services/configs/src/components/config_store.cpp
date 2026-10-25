@@ -8,25 +8,17 @@
 namespace {
 namespace pg = userver::storages::postgres;
 
-configs::Revision WithDefaults(const pg::ResultSet& rows) {
-    auto defaults = configs::Defaults();
-    auto revision = rows.AsSingleRow<configs::Revision>(pg::kRowTag);
-    userver::formats::json::ValueBuilder merged{defaults};
-    for (auto it = revision.Values.begin(); it != revision.Values.end(); ++it)
-        merged[it.GetName()] = *it;
-    revision.Values = merged.ExtractValue();
-    return revision;
-}
 }  // namespace
 
 namespace configs {
 
 Revision ConfigStore::Current() const {
-    return WithDefaults(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision));
+    return cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision)
+        .AsSingleRow<Revision>(pg::kRowTag);
 }
 
 Revision ConfigStore::Current(pg::Transaction& transaction) const {
-    return WithDefaults(transaction.Execute(sql::kLastRevision));
+    return transaction.Execute(sql::kLastRevision).AsSingleRow<Revision>(pg::kRowTag);
 }
 
 ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {
@@ -45,11 +37,16 @@ ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& 
 Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision& current,
     const platform::configs::Json& values) const {
     // Откат и подтверждение тоже проверяются по текущим схемам.
-    Validate(values);
+    for (auto it = values.begin(); it != values.end(); ++it)
+        ValidateConfig(it.GetName(), *it);
     const auto published =
         transaction.Execute(sql::kInsertRevision, values).AsSingleRow<Revision>(pg::kRowTag);
     for (auto it = values.begin(); it != values.end(); ++it) {
         if (!current.Values.HasMember(it.GetName()) || current.Values[it.GetName()] != *it)
+            transaction.Execute(sql::kSetConfigVersion, it.GetName(), published.Id);
+    }
+    for (auto it = current.Values.begin(); it != current.Values.end(); ++it) {
+        if (!values.HasMember(it.GetName()))
             transaction.Execute(sql::kSetConfigVersion, it.GetName(), published.Id);
     }
     return published;

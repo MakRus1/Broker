@@ -233,12 +233,12 @@ Draft ConfigStore::CancelDraft(const DraftActionRequest& request) const {
     return draft;
 }
 
-Draft ConfigStore::ApproveDraft(const DraftActionRequest& request) const {
+Draft ConfigStore::ApproveDraft(const DraftActionRequest& request, bool allow_self_approval) const {
     ValidateText(request.Actor, 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
     auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
-    if (draft.Author == request.Actor)
+    if (draft.Author == request.Actor && !allow_self_approval)
         throw DraftForbidden("Author cannot approve");
     if (draft.Value.has_value())
         ValidateConfig(draft.ConfigName, draft.Value.value());

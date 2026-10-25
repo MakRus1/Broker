@@ -57,7 +57,7 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
             </button>
           </>
         )}
-        {canApprove(session, draft) && (
+        {canApprove(session, draft, current?.allow_self_approval) && (
           <button
             className="primary"
             disabled={busy}
@@ -78,11 +78,12 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
             </button>
           )}
       </div>
-      {owner && <p className="muted">Подтвердить этот драфт должен другой пользователь.</p>}
+      {owner && !current?.allow_self_approval && (
+        <p className="muted">Подтвердить этот драфт должен другой пользователь.</p>
+      )}
       {draft.status === 'published' && write && (
         <p className="muted">
-          «Откатить» подставит значение этой версии в новый драфт. Публикация — после подтверждения
-          другим пользователем.
+          «Откатить» подставит значение этой версии в новый драфт. Публикация — после подтверждения.
         </p>
       )}
       {events.length > 0 && (

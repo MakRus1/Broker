@@ -248,7 +248,7 @@ export function useWorkspace() {
     setSelected(name);
     setDraft(result);
     setEditor(false);
-    setNotice('Драфт сохранён. Для публикации требуется подтверждение другого пользователя.');
+    setNotice('Драфт сохранён. Для публикации требуется подтверждение.');
     const fresh = await request<Current>('/api/configs/current', session, {
       config_name: name,
     });

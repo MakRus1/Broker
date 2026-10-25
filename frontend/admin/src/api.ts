@@ -12,6 +12,7 @@ export interface CatalogEntry {
   active_draft_id: number | null;
 }
 export interface Current {
+  allow_self_approval?: boolean;
   config_name: string;
   value: JsonObject | null;
   version: number;
@@ -75,10 +76,11 @@ export function parseValue(text: string): JsonObject {
 export function canApprove(
   session: Pick<Session, 'actor' | 'permissions'>,
   draft: Pick<Draft, 'author' | 'status'>,
+  allowSelfApproval = false,
 ): boolean {
   return (
     draft.status === 'draft' &&
-    draft.author !== session.actor &&
+    (allowSelfApproval || draft.author !== session.actor) &&
     session.permissions.includes('configs.approve')
   );
 }

@@ -21,7 +21,7 @@ class ConfigStore final {
     std::vector<RevisionInfo> History() const;
     Draft CreateDraft(const CreateDraftRequest& request) const;
     Draft EditDraft(const EditDraftRequest& request) const;
-    Draft ApproveDraft(const DraftActionRequest& request) const;
+    Draft ApproveDraft(const DraftActionRequest& request, bool allow_self_approval = false) const;
     Draft CancelDraft(const DraftActionRequest& request) const;
     Draft GetDraft(std::int64_t id) const;
     std::vector<Draft> ListDrafts(const DraftFilter& filter) const;

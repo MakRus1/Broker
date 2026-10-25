@@ -72,8 +72,9 @@ async def test_unpublished_current_value_is_null(browser, mockserver):
     @mockserver.json_handler('/admin/configs/current')
     def current(request):
         return {'config_name': 'CUSTOM_SETTINGS', 'version': 0, 'value': None,
-                'active_draft_id': 1}
+                'active_draft_id': 1, 'allow_self_approval': True}
 
     response = await browser.post('/api/configs/current', {'config_name': 'CUSTOM_SETTINGS'})
     assert response.status == 200
     assert response.json()['value'] is None
+    assert response.json()['allow_self_approval'] is True

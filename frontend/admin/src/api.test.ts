@@ -30,6 +30,12 @@ describe('редактор', () => {
     expect(canApprove(session, draft)).toBe(false);
   });
 
+  it('разрешает самоподтверждение только с настройкой и правом', () => {
+    expect(canApprove(session, draft, true)).toBe(true);
+    expect(canApprove({ ...session, permissions: [] }, draft, true)).toBe(false);
+    expect(canApprove(session, { ...draft, status: 'published' }, true)).toBe(false);
+  });
+
   it('проверяет право и статус', () => {
     const other = { ...draft, author: 'issuer#other' };
 

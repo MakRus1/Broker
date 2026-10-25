@@ -392,6 +392,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         app_start, migration_start = len(apps), len(migrations)
         static = read_yaml(root / f'services/{name}/configs/static_config.yaml')
         variables = read_yaml(root / f'services/{name}/configs/config_vars.yaml')
+        overrides = root / f'services/{name}/configs/config_vars.{environment}.yaml'
+        if overrides.is_file():
+            variables.update(read_yaml(overrides))
         variables.update(
             {
                 'environment': environment,

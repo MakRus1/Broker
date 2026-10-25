@@ -44,6 +44,10 @@ paths:
                   active_draft_id:
                     type: integer
                     minimum: 1
+                  allow_self_approval:
+                    type: boolean
+                    description: Автор с правом configs.approve может подтвердить
+                      собственный драфт в этом окружении
         '400':
           description: Невалидный запрос или конфиг
           content:

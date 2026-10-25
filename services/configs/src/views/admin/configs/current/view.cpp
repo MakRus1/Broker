@@ -7,6 +7,7 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
     try {
         const auto config = store.GetConfig(request.body.config_name);
         return Response200{.active_draft_id = config.ActiveDraftId,
+            .allow_self_approval = deps.allow_self_approval,
             .config_name = config.Name,
             .value = config.Value,
             .version = config.Version};

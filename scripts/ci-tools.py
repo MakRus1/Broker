@@ -40,6 +40,7 @@ GENERATOR_TESTS = {
     'test_auth_codegen',
     'test_clients',
     'test_cmake',
+    'test_selected_services',
     'test_codegen',
     'test_configs',
     'test_dashboards',

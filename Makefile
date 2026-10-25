@@ -5,12 +5,18 @@ SERVICE ?= broker
 PYTHON3 ?= $(shell command -v python3.12 || command -v python3)
 NPROCS ?= 4
 TEST_SHARED_CONTRACTS ?= 0
+PRESETS := debug release sanitize
+CMAKE_SERVICES ?= $(SERVICE)
+CMAKE_SHARED_CONTRACTS ?= $(if $(filter 1,$(TEST_SHARED_CONTRACTS)),ON,OFF)
+$(addprefix test-all-,$(PRESETS)): CMAKE_SERVICES = all
+$(addprefix test-all-,$(PRESETS)): CMAKE_SHARED_CONTRACTS = ON
+$(addprefix ci-build-,$(PRESETS)): CMAKE_SERVICES = $(CI_BUILD_SERVICES)
+$(addprefix ci-build-,$(PRESETS)): CMAKE_SHARED_CONTRACTS = $(if $(filter false,$(CI_SHARED_CONTRACTS)),OFF,ON)
 DOCKER_IMAGE ?= $(shell $(PYTHON3) $(REPO_ROOT)/scripts/container-images.py ref --variant $(if $(filter %-sanitize,$(MAKECMDGOALS)),sanitize,dev))
 DOCKER_PLATFORM ?= $(shell docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
 DOCKER_VOLUME_PREFIX = broker-$(subst /,-,$(DOCKER_PLATFORM))
 # Linux-окружение и результаты сборки не смешиваются с нативными файлами хоста.
 DOCKER_STATE_VOLUMES = $(foreach dir,.venv-gen build-debug build-release build-sanitize,-v $(DOCKER_VOLUME_PREFIX)-$(subst .,_,$(dir)):/workspaces/broker/$(dir))
-PRESETS := debug release sanitize
 .PHONY: $(addprefix cmake-,$(PRESETS)) $(addprefix build-,$(PRESETS)) $(addprefix test-,$(PRESETS)) $(addprefix test-only-,$(PRESETS)) $(addprefix test-all-,$(PRESETS)) $(addprefix run-,$(PRESETS)) $(addprefix start-,$(PRESETS))
 
 .PHONY: format check-format help gen check-gen check-gen-all test-tools doctor docker-image docker-pull lock-images new-service testsuite-clean
@@ -38,7 +44,7 @@ doctor:
 
 $(addprefix cmake-,$(PRESETS)): cmake-%:
 	@PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh >/dev/null
-	$(REPO_ROOT)/.venv-gen/bin/cmake --preset $* -DCMAKE_MAKE_PROGRAM=$(REPO_ROOT)/.venv-gen/bin/ninja -DPython3_EXECUTABLE=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh)
+	$(REPO_ROOT)/.venv-gen/bin/cmake --preset $* -DBROKER_SERVICES="$(CMAKE_SERVICES)" -DBROKER_SHARED_CONTRACTS=$(CMAKE_SHARED_CONTRACTS) -DCMAKE_MAKE_PROGRAM=$(REPO_ROOT)/.venv-gen/bin/ninja -DPython3_EXECUTABLE=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh)
 $(addprefix build-,$(PRESETS)): build-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
 $(addprefix test-,$(PRESETS)): test-%: cmake-%

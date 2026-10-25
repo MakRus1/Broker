@@ -8,6 +8,13 @@ target_link_libraries(contract_service_objs PUBLIC userver::core broker_common)
 add_executable(contract_service main.cpp ${OPENAPI_VIEW_SRCS})
 target_link_libraries(contract_service PRIVATE contract_service_objs)
 broker_openapi_apply(contract_service)
+# Для сценария gRPC нужны только protobuf-типы, не весь сервис broker.
+if(NOT TARGET broker_proto)
+    file(GLOB_RECURSE broker_contract_protos CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/services/broker/proto/*.proto")
+    userver_add_grpc_library(broker_proto
+        SOURCE_PATH "${CMAKE_SOURCE_DIR}/services/broker/proto"
+        PROTOS ${broker_contract_protos})
+endif()
 target_link_libraries(contract_service PRIVATE userver::core userver::grpc userver::otlp broker_proto broker_common)
 userver_testsuite_add_simple()
 

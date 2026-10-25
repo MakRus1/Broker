@@ -34,7 +34,7 @@ check-gen-all:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-migrations.py && "$$PYTHON" scripts/check-config.py && "$$PYTHON" scripts/openapi_gen/generate.py --service-dir tests/fixtures/contract_service --check
 
 test-tools:
-	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" -m unittest discover -s tests -v
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/ci-tools.py --full
 
 format check-format:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/check-format.py $(if $(filter format,$@),--fix,)

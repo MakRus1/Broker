@@ -1,7 +1,6 @@
 """Проверка создания сервисов и атомарности отказов в отдельной копии репозитория."""
 import importlib.util
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -10,6 +9,8 @@ from unittest import mock
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tests'))
+from support.generator_repository import copy_generator_repository
 sys.path.insert(0, str(ROOT / 'scripts'))
 import create_service
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
@@ -21,7 +22,7 @@ class ServicesTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name) / 'repo'
-        shutil.copytree(ROOT, self.root, ignore=shutil.ignore_patterns('.git', '.venv*', 'build-*', '__pycache__', '.cache', '.ccache', '.new-service-*', 'node_modules', 'dist', 'coverage'))
+        copy_generator_repository(self.root)
         self.patch = mock.patch.object(create_service, 'ROOT', self.root)
         self.patch.start()
         self.feature_patch = mock.patch.object(features, 'ROOT', self.root)

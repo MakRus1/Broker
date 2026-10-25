@@ -8,6 +8,8 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tests'))
+from support.generator_repository import copy_generator_repository
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
 from dashboards import provision, render
 from generate import UniqueLoader, run
@@ -133,13 +135,10 @@ class DashboardsTest(unittest.TestCase):
             self.assertFalse((target / 'service-example.json').exists())
 
     def test_check_and_build_do_not_rewrite_dashboard(self):
-        service = ROOT / 'services/broker'
-        # Работаем в отдельной копии, сохраняя paths библиотек исходного репозитория.
-        import shutil
-
         with tempfile.TemporaryDirectory() as directory:
-            copy = Path(directory) / 'broker'
-            shutil.copytree(service, copy, ignore=shutil.ignore_patterns('__pycache__'))
+            root = Path(directory)
+            copy_generator_repository(root)
+            copy = root / 'services/broker'
             run(copy)
             path = copy / 'monitoring/grafana.json'
             original = path.read_text()

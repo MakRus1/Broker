@@ -8,6 +8,8 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tests'))
+from support.generator_repository import copy_generator_repository
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
 from generate import load, run
 from model import parse_spec
@@ -102,7 +104,9 @@ class CodegenTest(unittest.TestCase):
 
     def test_scaffold_check_and_build_are_separate(self):
         with tempfile.TemporaryDirectory() as temp:
-            base = Path(temp); service = base / 'example'
+            base = Path(temp)
+            copy_generator_repository(base)
+            service = base / 'services/example'
             (service / 'docs/api').mkdir(parents=True)
             (service / 'configs').mkdir()
             (service / 'docs/api/api.yaml').write_text(yaml.safe_dump(spec()))

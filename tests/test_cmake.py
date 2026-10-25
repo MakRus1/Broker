@@ -7,6 +7,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tests'))
+from support.generator_repository import copy_generator_repository
 
 
 class CMakeTest(unittest.TestCase):
@@ -14,13 +16,7 @@ class CMakeTest(unittest.TestCase):
     def test_codegen_target_preserves_sources(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / 'source';build = Path(tmp) / 'build'
-            (root / 'services').mkdir(parents=True)
-            shutil.copy2(ROOT / '.clang-format', root / '.clang-format')
-            shutil.copytree(ROOT / 'scripts/openapi_gen', root / 'scripts/openapi_gen', ignore=shutil.ignore_patterns('__pycache__'))
-            shutil.copytree(ROOT / 'services', root / 'services', dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__'))
-            shutil.copytree(ROOT / 'schemas', root / 'schemas')
-            shutil.copytree(ROOT / 'cmake', root / 'cmake')
-            shutil.copytree(ROOT / 'libs', root / 'libs')
+            copy_generator_repository(root)
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(broker LANGUAGES NONE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -45,10 +41,9 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/services/broker")
     def test_client_rebuilds_on_provider_contract_change(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / 'source';build = Path(tmp) / 'build'
-            root.mkdir()
-            for directory in ['scripts/openapi_gen', 'cmake', 'libs', 'schemas', 'services', 'tests/fixtures/contract_service']:
-                shutil.copytree(ROOT / directory, root / directory, ignore=shutil.ignore_patterns('__pycache__'))
-            shutil.copy2(ROOT / '.clang-format', root / '.clang-format')
+            copy_generator_repository(root)
+            shutil.copytree(ROOT / 'tests/fixtures/contract_service', root / 'tests/fixtures/contract_service',
+                            ignore=shutil.ignore_patterns('__pycache__'))
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(consumer LANGUAGES NONE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

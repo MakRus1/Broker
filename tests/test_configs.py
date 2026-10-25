@@ -2,7 +2,6 @@
 from copy import deepcopy
 import importlib.util
 from pathlib import Path
-import shutil
 import sys
 import tempfile
 import unittest
@@ -10,6 +9,8 @@ from unittest.mock import patch
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tests'))
+from support.generator_repository import copy_generator_repository
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
 import configs
 from generate import UniqueLoader, run
@@ -19,8 +20,7 @@ class ConfigSchemasTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        shutil.copytree(ROOT / 'schemas', self.root / 'schemas')
-        shutil.copytree(ROOT / 'services', self.root / 'services', ignore=shutil.ignore_patterns('__pycache__'))
+        copy_generator_repository(self.root)
 
     def tearDown(self):
         self.tmp.cleanup()

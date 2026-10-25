@@ -167,7 +167,9 @@ def main():
         return
     sys.path.insert(0, str(ROOT / 'tests'))
     suite = unittest.defaultTestLoader.loadTestsFromNames(sorted(chosen))
-    if not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful():
+    # На Python 3.12+ unittest сам измеряет тест целиком, включая setUp/tearDown.
+    timing = {'durations': 10} if sys.version_info >= (3, 12) else {}
+    if not unittest.TextTestRunner(verbosity=2, **timing).run(suite).wasSuccessful():
         raise SystemExit(1)
 
 

@@ -8,6 +8,7 @@ namespace configs {
 struct Revision {
     std::int64_t Id;
     Json Values;
+    userver::storages::postgres::TimePointTz PublishedAt;
 };
 
 struct RevisionInfo {

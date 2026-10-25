@@ -1,6 +1,4 @@
 #include <components/config_store.hpp>
-#include <iomanip>
-#include <sstream>
 
 #include <configs/keys.hpp>
 #include <configs/sql_queries.hpp>
@@ -12,8 +10,6 @@ namespace pg = userver::storages::postgres;
 
 configs::Revision WithDefaults(const pg::ResultSet& rows) {
     auto defaults = configs::Defaults();
-    if (rows.IsEmpty())
-        return {0, defaults};
     auto revision = rows.AsSingleRow<configs::Revision>(pg::kRowTag);
     userver::formats::json::ValueBuilder merged{defaults};
     for (auto it = revision.Values.begin(); it != revision.Values.end(); ++it)
@@ -43,22 +39,20 @@ ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& 
     } else {
         values = userver::formats::json::ValueBuilder{current.Values};
     }
-    std::ostringstream version;
-    version << std::setw(20) << std::setfill('0') << current.Id;
-    return {values.ExtractValue(), current.Id, version.str()};
+    return {values.ExtractValue(), current.Id, current.PublishedAt};
 }
 
 Revision ConfigStore::PublishLocked(pg::Transaction& transaction, const Revision& current,
     const platform::configs::Json& values) const {
     // Откат и подтверждение тоже проверяются по текущим схемам.
     Validate(values);
-    const auto revision =
-        transaction.Execute(sql::kInsertRevision, values).AsSingleRow<std::int64_t>();
+    const auto published =
+        transaction.Execute(sql::kInsertRevision, values).AsSingleRow<Revision>(pg::kRowTag);
     for (auto it = values.begin(); it != values.end(); ++it) {
         if (!current.Values.HasMember(it.GetName()) || current.Values[it.GetName()] != *it)
-            transaction.Execute(sql::kSetConfigVersion, it.GetName(), revision);
+            transaction.Execute(sql::kSetConfigVersion, it.GetName(), published.Id);
     }
-    return {revision, values};
+    return published;
 }
 
 std::vector<RevisionInfo> ConfigStore::History() const {

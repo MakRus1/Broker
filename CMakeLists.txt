@@ -58,17 +58,9 @@ foreach(library_cmake IN LISTS library_cmake_files)
     add_subdirectory("${library_dir}")
 endforeach()
 
-if(BUILD_TESTING)
-    add_subdirectory(tests/fixtures/contract_service)
-endif()
-
 if(APPLE)
     cmake_language(DEFER CALL broker_native_headers "${CMAKE_SOURCE_DIR}")
 endif()
 
-# service.yaml является источником списка сервисов и для CMake.
-file(GLOB service_manifests CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/services/*/service.yaml")
-foreach(service_manifest IN LISTS service_manifests)
-    get_filename_component(service_dir "${service_manifest}" DIRECTORY)
-    add_subdirectory("${service_dir}")
-endforeach()
+include(SelectedServices)
+broker_add_selected_services()

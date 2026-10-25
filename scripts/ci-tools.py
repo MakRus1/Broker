@@ -76,6 +76,7 @@ INFRA_TESTS = {
     'test_local_seed',
     'test_ci_local',
     'test_local_clients',
+    'test_local_workflow',
     'test_log_ingestion',
     'test_migrations',
     'test_organization_identity',

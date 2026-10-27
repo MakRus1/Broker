@@ -1,3 +1,9 @@
+import {
+  RegistryTable,
+  useRegistryColumns,
+  type RegistryColumns,
+  type RegistryColumn,
+} from './RegistryTable';
 import type { RegistrySort } from './transportationRegistry';
 import { routePoint } from './transportation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
@@ -146,111 +152,105 @@ export function CardNavigation({
   );
 }
 
+export const transportationColumns: RegistryColumn<Transportation>[] = [
+  {
+    id: 'container_number',
+    cellClassName: 'transportation-number-cell',
+    label: 'Перевозка',
+    width: 250,
+    required: true,
+    sort: 'container_number',
+    render: (item) => (
+      <>
+        <a
+          className="link"
+          href={`#/transportations/${item.id}`}
+          title={item.container_number || 'Без номера'}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {item.container_number || 'Без номера'}
+        </a>
+        <span className="registry-secondary">{transportationTypes[item.type]}</span>
+        {item.hazardous && <span className="registry-hazard">Опасный груз</span>}
+      </>
+    ),
+  },
+  {
+    id: 'container_type',
+    cellClassName: 'transportation-container-cell',
+    label: 'Контейнер',
+    width: 180,
+    sort: 'container_type',
+    render: (item) => (
+      <>
+        {item.container_type_code ? (
+          <strong>{item.container_type_code}</strong>
+        ) : (
+          <span className="registry-muted">—</span>
+        )}
+        {item.container_ownership && (
+          <span className="registry-ownership">{ownership[item.container_ownership]}</span>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'route',
+    label: 'Маршрут',
+    width: 480,
+    render: (item) => (
+      <>
+        {item.route_segments.length ? (
+          <div className="registry-route">
+            {item.route_segments.slice(0, 2).map((stage) => (
+              <div className="registry-route-stage" key={stage.id}>
+                <span className="registry-route-mode">{modes[stage.mode]}</span>
+                {(routePoint(stage, 'origin').name || routePoint(stage, 'destination').name) && (
+                  <span>
+                    {routePoint(stage, 'origin').name || 'Не указан'} →{' '}
+                    {routePoint(stage, 'destination').name || 'Не указан'}
+                  </span>
+                )}
+              </div>
+            ))}
+            {item.route_segments.length > 2 && (
+              <span className="registry-secondary">
+                Ещё участков: {item.route_segments.length - 2}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="registry-muted">Не задан</span>
+        )}
+      </>
+    ),
+  },
+];
 export function TransportationTable({
   items,
   sort,
   descending = false,
   onSort,
+  columns,
 }: {
   items: Transportation[];
   sort?: RegistrySort;
   descending?: boolean;
   onSort?: (sort: RegistrySort) => void;
+  columns?: RegistryColumns;
 }) {
+  const fallback = useRegistryColumns('', 'transportations', transportationColumns);
   return (
-    <div className="table-scroll">
-      <table className="transportation-table">
-        <thead>
-          <tr>
-            <th
-              aria-sort={
-                sort === 'container_number' ? (descending ? 'descending' : 'ascending') : undefined
-              }
-            >
-              {onSort ? (
-                <button className="table-sort" onClick={() => onSort('container_number')}>
-                  Перевозка {sort === 'container_number' ? (descending ? '↓' : '↑') : '↕'}
-                </button>
-              ) : (
-                'Перевозка'
-              )}
-            </th>
-            <th
-              aria-sort={
-                sort === 'container_type' ? (descending ? 'descending' : 'ascending') : undefined
-              }
-            >
-              {onSort ? (
-                <button className="table-sort" onClick={() => onSort('container_type')}>
-                  Контейнер {sort === 'container_type' ? (descending ? '↓' : '↑') : '↕'}
-                </button>
-              ) : (
-                'Контейнер'
-              )}
-            </th>
-            <th>Маршрут</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr
-              key={item.id}
-              className="clickable"
-              onClick={() => {
-                location.hash = `/transportations/${item.id}`;
-              }}
-            >
-              <td className="transportation-number-cell">
-                <a
-                  className="link"
-                  href={`#/transportations/${item.id}`}
-                  title={item.container_number || 'Без номера'}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {item.container_number || 'Без номера'}
-                </a>
-                <span className="registry-secondary">{transportationTypes[item.type]}</span>
-                {item.hazardous && <span className="registry-hazard">Опасный груз</span>}
-              </td>
-              <td className="transportation-container-cell">
-                {item.container_type_code ? (
-                  <strong>{item.container_type_code}</strong>
-                ) : (
-                  <span className="registry-muted">—</span>
-                )}
-                {item.container_ownership && (
-                  <span className="registry-ownership">{ownership[item.container_ownership]}</span>
-                )}
-              </td>
-              <td>
-                {item.route_segments.length ? (
-                  <div className="registry-route">
-                    {item.route_segments.slice(0, 2).map((stage) => (
-                      <div className="registry-route-stage" key={stage.id}>
-                        <span className="registry-route-mode">{modes[stage.mode]}</span>
-                        {(routePoint(stage, 'origin').name ||
-                          routePoint(stage, 'destination').name) && (
-                          <span>
-                            {routePoint(stage, 'origin').name || 'Не указан'} →{' '}
-                            {routePoint(stage, 'destination').name || 'Не указан'}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                    {item.route_segments.length > 2 && (
-                      <span className="registry-secondary">
-                        Ещё участков: {item.route_segments.length - 2}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="registry-muted">Не задан</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <RegistryTable
+      items={items}
+      columns={columns ?? fallback}
+      definitions={transportationColumns}
+      sort={sort}
+      descending={descending}
+      onSort={onSort ? (field) => onSort(field as RegistrySort) : undefined}
+      onOpen={(item) => {
+        location.hash = `/transportations/${item.id}`;
+      }}
+    />
   );
 }

@@ -5,6 +5,27 @@
 #include <stdexcept>
 
 namespace web_bff {
+inline std::optional<clients::shipments::models::ShipmentRegistryCursor> Convert(
+    const std::optional<models::shipments::ShipmentRegistryCursor>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return clients::shipments::models::ShipmentRegistryCursor{
+        .date_value = value.value().date_value,
+        .id = value.value().id,
+        .scope = value.value().scope,
+        .text_value = value.value().text_value};
+}
+
+inline std::optional<models::shipments::ShipmentRegistryCursor> Convert(
+    const std::optional<clients::shipments::models::ShipmentRegistryCursor>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return models::shipments::ShipmentRegistryCursor{.date_value = value.value().date_value,
+        .id = value.value().id,
+        .scope = value.value().scope,
+        .text_value = value.value().text_value};
+}
+
 inline models::shipments::Shipment Convert(const clients::shipments::models::Shipment& value) {
     models::shipments::Shipment result;
     result.customer_id = value.customer_id;
@@ -140,7 +161,19 @@ inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(
 
 inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
     const models::shipments::ListShipmentsRequest& value) {
-    return {.after = value.after, .limit = value.limit};
+    return {.after = value.after,
+        .cargo_query = value.cargo_query,
+        .cursor = Convert(value.cursor),
+        .customer_id = value.customer_id,
+        .date_from = value.date_from,
+        .date_to = value.date_to,
+        .descending = value.descending,
+        .limit = value.limit,
+        .number_query = value.number_query,
+        .sort =
+            clients::shipments::models::ParseEnumScalar(models::shipments::EnumValue(value.sort),
+                clients::shipments::models::ListShipmentsRequest_sort{}),
+        .statuses = value.statuses};
 }
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(

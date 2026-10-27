@@ -19,6 +19,10 @@ export class CalendarDate {
     return `${String(this.year).padStart(4, '0')}-${String(this.month).padStart(2, '0')}-${String(this.day).padStart(2, '0')}`;
   }
 
+  toDisplayString(): string {
+    return `${String(this.day).padStart(2, '0')}.${String(this.month).padStart(2, '0')}.${String(this.year).padStart(4, '0')}`;
+  }
+
   toJSON(): string {
     return this.toString();
   }

@@ -15,7 +15,7 @@ Response View::Handle(
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         const auto organization = platform::auth::GetOrganization(identity);
-        const auto scope = RegistryScope(request.body, organization);
+        const auto scope = CursorScope(request.body, organization);
         if (request.body.after.has_value() &&
             (request.body.cursor.has_value() ||
                 request.body.sort != models::ListTransportationsRequest_sort::Id ||
@@ -31,11 +31,11 @@ Response View::Handle(
         transaction.Execute(sql::kRegistryPlan);
         auto page =
             transaction
-                .Execute(sql::kListTransportations, organization,
-                    ContainerSearch(request.body.query), Convert(request.body.types),
-                    request.body.container_types, request.body.hazardous,
-                    models::EnumValue(request.body.sort), request.body.descending, key, after,
-                    request.body.limit + 1, request.body.shipment_id, request.body.item_id)
+                .Execute(sql::kListTransportations, organization, SearchPattern(request.body.query),
+                    Convert(request.body.types), request.body.container_types,
+                    request.body.hazardous, models::EnumValue(request.body.sort),
+                    request.body.descending, key, after, request.body.limit + 1,
+                    request.body.shipment_id, request.body.item_id)
                 .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
         const bool has_more = page.size() > static_cast<std::size_t>(request.body.limit);
         if (has_more)

@@ -9,6 +9,6 @@ Response View::Handle(
     namespace api = clients::counterparties::ApiV1CounterpartiesList;
     const auto result = deps.counterparties.ApiV1CounterpartiesList(
         api::Request{.body = Convert(request.body)}, session.Access);
-    return Response200{.items = Convert(result.items)};
+    return Response200{.items = Convert(result.items), .next_cursor = Convert(result.next_cursor)};
 }
 }  // namespace web_bff::views::api::v1::counterparties::list

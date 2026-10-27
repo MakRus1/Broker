@@ -126,7 +126,8 @@ UTEST(ClientContract, ConfigsAdminJsonObjects) {
         R"({"config_name":"SHIPMENT_TERMS_CONFIG","version":5,"value":{"nested":[{"enabled":true}]}})"};
     const auto response = client.AdminConfigsCurrent(request, "test-access-token");
     EXPECT_EQ(transport.last.path, "/admin/configs/current");
-    EXPECT_TRUE(response.value["nested"][0]["enabled"].As<bool>());
+    ASSERT_TRUE(response.value.has_value());
+    EXPECT_TRUE(response.value.value()["nested"][0]["enabled"].As<bool>());
     transport.reply = {
         400, "application/json", R"({"error":"invalid_request","message":"Bad config"})"};
     EXPECT_THROW(client.AdminConfigsCurrent(request, "test-access-token"),

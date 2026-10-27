@@ -50,8 +50,7 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: Ключ идемпотентности уже использован с другим запросом или изменена редакция родительской
-            поставки
+          description: Ключ идемпотентности уже использован с другим запросом или изменена редакция родительской поставки
           content:
             application/json:
               schema:
@@ -142,6 +141,8 @@ paths:
                     type: array
                     items:
                       $ref: ../components/schemas/models.yaml#/Shipment
+                  next_cursor:
+                    $ref: ../components/schemas/models.yaml#/ShipmentRegistryCursor
                 required:
                 - items
         '400':

@@ -228,12 +228,10 @@ async def test_converted_request_defaults(browser, mockserver, path, limit):
 
     @mockserver.json_handler('/api/v1/' + path + '/list')
     def upstream(request):
-        assert request.json == (
-            {'limit': limit, 'query': '', 'status': 'active'}
-            if path == 'counterparties'
-            else {'limit': limit, 'sort': 'id', 'descending': False}
-            if path == 'transportations' else {'limit': limit}
-        )
+        expected = {'limit': limit, 'sort': 'id', 'descending': False}
+        if path == 'counterparties':
+            expected.update(query='', status='active')
+        assert request.json == expected
         return {'items': []}
 
     response = await browser.post('/api/v1/' + path + '/list', {})
@@ -464,5 +462,50 @@ async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):
         return {'items': [], 'next_cursor': cursor}
 
     response = await browser.post('/api/v1/transportations/list', body)
+    assert response.status == 200
+    assert response.json()['next_cursor'] == cursor
+
+
+@pytest.mark.parametrize(
+    'path,body,cursor',
+    [
+        (
+            'shipments',
+            {
+                'number_query': 'S-',
+                'cargo_query': 'сталь',
+                'date_from': '2026-01-01',
+                'date_to': '2026-01-31',
+                'statuses': ['Новая'],
+                'sort': 'shipment_date',
+                'descending': True,
+            },
+            {'id': ID, 'scope': 'a' * 64, 'date_value': '2026-01-15'},
+        ),
+        (
+            'counterparties',
+            {
+                'ids': [ID],
+                'query': 'alpha',
+                'role': 'customer',
+                'country_code': 'RU',
+                'sort': 'name',
+                'descending': False,
+                'status': 'all',
+            },
+            {'id': ID, 'scope': 'a' * 64, 'value': 'alpha'},
+        ),
+    ],
+)
+async def test_registry_filters_and_typed_cursors(browser, mockserver, path, body, cursor):
+    await browser.sign_in()
+    body = {**body, 'limit': 10, 'cursor': cursor}
+
+    @mockserver.json_handler('/api/v1/' + path + '/list')
+    def upstream(request):
+        assert request.json == body
+        return {'items': [], 'next_cursor': cursor}
+
+    response = await browser.post('/api/v1/' + path + '/list', body)
     assert response.status == 200
     assert response.json()['next_cursor'] == cursor

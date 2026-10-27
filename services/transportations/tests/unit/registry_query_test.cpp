@@ -44,11 +44,13 @@ UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
     const auto query = BuildRegistryQuery(request, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 4);
-    EXPECT_NE(sql.find("(lower(COALESCE(container_number, '')) COLLATE \"C\", id) < "
-                       "($2::TEXT COLLATE \"C\", $3::UUID)"),
-        std::string::npos);
     EXPECT_NE(
-        sql.find("ORDER BY lower(COALESCE(container_number, '')) COLLATE \"C\" DESC, id DESC"),
+        sql.find(
+            "(lower(COALESCE(container_number, '')) COLLATE public.registry_number_order, id) < "
+            "($2::TEXT, $3::UUID)"),
+        std::string::npos);
+    EXPECT_NE(sql.find("ORDER BY lower(COALESCE(container_number, '')) COLLATE "
+                       "public.registry_number_order DESC, id DESC"),
         std::string::npos);
 }
 
@@ -130,10 +132,28 @@ UTEST(RegistryQuery, TextIdentityIsUsedForCursorAndTieBreaker) {
         sql::kListTransportations, registry::OrderBy(fields, "name"), false, subject};
     builder.After(std::optional<std::string>{"external-subject"}, std::string{"alpha"});
     const auto sql = Statement(std::move(builder).Build(51));
-    EXPECT_NE(sql.find("(lower(name) COLLATE \"C\", subject) > ($1::TEXT COLLATE \"C\", $2::TEXT)"),
-        std::string::npos);
+    EXPECT_NE(
+        sql.find("(lower(name) COLLATE \"C\", subject) > ($1::TEXT, $2::TEXT)"), std::string::npos);
     EXPECT_NE(sql.find("ORDER BY lower(name) COLLATE \"C\" ASC, subject ASC"), std::string::npos);
     EXPECT_EQ(sql.find("::UUID"), std::string::npos);
 }
 }  // namespace
 }  // namespace transportations::helpers
+
+UTEST(RegistryQuery, CursorInheritsTheSortCollation) {
+    namespace registry = platform::registry;
+    constexpr registry::Field<std::string> number{
+        "number", "lower(number) COLLATE public.registry_number_order"};
+    const userver::storages::postgres::Query selection{
+        "SELECT {sort_key} FROM shipments WHERE {where} ORDER BY {order_by} LIMIT {limit}"};
+    registry::QueryBuilder query{selection,
+        registry::OrderBy(std::array<registry::FieldDefinition, 1>{number}, "number"), false};
+    query.After(
+        std::optional<std::string>{"11111111-1111-4111-8111-111111111111"}, std::string{"s-2"});
+    const auto built = std::move(query).Build(10);
+    const auto sql = built.Statement.GetStatementView();
+    EXPECT_NE(
+        sql.find("(lower(number) COLLATE public.registry_number_order, id) > ($1::TEXT, $2::UUID)"),
+        std::string::npos);
+    EXPECT_EQ(sql.find("COLLATE \"C\""), std::string::npos);
+}

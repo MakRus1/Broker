@@ -144,3 +144,52 @@ async def test_number_and_cargo_are_independent(api, records):
     matched = await api.post(PATH, {'number_query': 'S-00', 'cargo_query': 'Сталь'})
     assert [row['id'] for row in matched['items']] == [records[0]['id']]
     assert (await api.post(PATH, {'number_query': 'S-00', 'cargo_query': 'Трубы'}))['items'] == []
+
+
+@pytest.mark.parametrize('descending', [False, True])
+@pytest.mark.parametrize('limit', [1, 3, 10])
+async def test_number_natural_order_across_pages(api, pgsql, descending, limit):
+    """Числа внутри номера, включая несколько частей и числа больше int64."""
+    numbers = [
+        'LCB-2/9',
+        'LCB-2/10',
+        'LCB-10/1',
+        'S-1',
+        'S-2',
+        's-2',
+        'S-9',
+        'S-10',
+        'S-11',
+        'S-99',
+        'S-100',
+        'S-999999999999999999999999999999',
+        'S-1000000000000000000000000000000',
+    ]
+    rows = [(str(UUID(int=500 + i)), number) for i, number in enumerate(numbers)]
+    # Физический порядок вставки не определяет порядок выдачи.
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO shipments (
+                organization_id,
+                id,
+                number,
+                customer_id,
+                shipment_date,
+                status,
+                route_segments
+            ) VALUES (%s, %s, %s, %s, '2026-01-01', 'Новая', '{}')
+            """,
+            [(ORGANIZATION, row_id, number, str(UUID(int=1000)))
+             for row_id, number in reversed(rows)],
+        )
+    found = []
+    request = {'sort': 'number', 'descending': descending, 'limit': limit}
+    for _ in range(len(rows) + 1):
+        page = await api.post(PATH, request)
+        found.extend((item['id'], item['number']) for item in page['items'])
+        if not page.get('next_cursor'):
+            break
+        request['cursor'] = page['next_cursor']
+    assert found == (list(reversed(rows)) if descending else rows)
+    assert len({row_id for row_id, _ in found}) == len(rows)

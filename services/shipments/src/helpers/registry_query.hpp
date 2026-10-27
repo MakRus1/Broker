@@ -10,7 +10,9 @@ using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kOrganization{
     "organization_id", "organization_id", "UUID"};
-inline constexpr registry::Field<std::string> kNumber{"number", "lower(number) COLLATE \"C\""};
+inline constexpr auto kNumber =
+    registry::Field<std::string>{"number", "lower(number) COLLATE \"C\""}.SortedAs(
+        "lower(number) COLLATE public.registry_number_order");
 inline constexpr registry::Field<std::string> kCargo{
     "cargo_description", "lower(COALESCE(cargo_description, '')) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer_id", "UUID"};

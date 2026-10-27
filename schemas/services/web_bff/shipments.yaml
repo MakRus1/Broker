@@ -144,6 +144,8 @@ paths:
                     type: array
                     items:
                       $ref: components/schemas/shipments/models.yaml#/Shipment
+                  next_cursor:
+                    $ref: components/schemas/shipments/models.yaml#/ShipmentRegistryCursor
                 required:
                 - items
         '400':

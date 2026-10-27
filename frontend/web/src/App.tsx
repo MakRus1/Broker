@@ -1,3 +1,12 @@
+import { ShipmentFilters } from './ShipmentFilters';
+import { RegistrySortHeading } from './RegistrySortHeading';
+import {
+  initialShipmentQuery,
+  shipmentRegistryRequest,
+  type ShipmentRegistryCursor,
+  type ShipmentSort,
+} from './shipmentRegistry';
+import { CalendarDate } from './CalendarDate';
 import { transportationTitle } from './transportation';
 import { TransportationFilters } from './TransportationFilters';
 import {
@@ -140,6 +149,8 @@ export function App() {
       return false;
     }
   });
+  const [shipmentQuery, setShipmentQuery] = useState(initialShipmentQuery);
+  const [shipmentCursor, setShipmentCursor] = useState<ShipmentRegistryCursor>();
   const [registryQuery, setRegistryQuery] = useState(initialRegistryQuery);
   const [registryCursor, setRegistryCursor] = useState<RegistryCursor>();
   const [loading, setLoading] = useState(false);
@@ -175,21 +186,24 @@ export function App() {
       if (!session || tab === 'counterparties' || !session.permissions.includes(tab + '.read'))
         return;
       const currentRequest = ++requestNumber.current;
-      if (!append && tab === 'transportations') {
-        setTransportations([]);
+      if (!append) {
+        if (tab === 'transportations') setTransportations([]);
+        else setShipments([]);
         setMore(false);
       }
       setLoading(true);
       setLoadFailed(false);
       try {
         if (tab === 'shipments') {
-          const page = await request<{ items: Shipment[] }>('/api/v1/shipments/list', session, {
-            limit: 50,
-            ...(append && shipments.length ? { after: shipments.at(-1)!.id } : {}),
-          });
+          const page = await request<{ items: Shipment[]; next_cursor?: ShipmentRegistryCursor }>(
+            '/api/v1/shipments/list',
+            session,
+            shipmentRegistryRequest(shipmentQuery, append ? shipmentCursor : undefined),
+          );
           if (currentRequest !== requestNumber.current) return;
           setShipments((old) => (append ? [...old, ...page.items] : page.items));
-          setMore(page.items.length === 50);
+          setShipmentCursor(page.next_cursor);
+          setMore(Boolean(page.next_cursor));
         } else {
           const page = await request<{ items: Transportation[]; next_cursor?: RegistryCursor }>(
             '/api/v1/transportations/list',
@@ -210,7 +224,17 @@ export function App() {
         if (currentRequest === requestNumber.current) setLoading(false);
       }
     },
-    [session, tab, shipments, transportations, registryQuery, registryCursor, error],
+    [
+      session,
+      tab,
+      shipments,
+      transportations,
+      registryQuery,
+      registryCursor,
+      shipmentQuery,
+      shipmentCursor,
+      error,
+    ],
   );
   // Первую страницу запрашиваем только при входе или переключении раздела.
   useEffect(() => {
@@ -218,7 +242,7 @@ export function App() {
     return () => {
       requestNumber.current++;
     };
-  }, [session, tab, registryQuery]);
+  }, [session, tab, registryQuery, shipmentQuery]);
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
     const controller = new AbortController();
@@ -241,34 +265,29 @@ export function App() {
   }, [session, error]);
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
-    const ids = [...new Set([...shipments.map((item) => item.customer_id)])].filter(
-      (id) => !customers.some((item) => item.id === id),
-    );
+    const ids = [...new Set(shipments.map((item) => item.customer_id))]
+      .filter((id) => !customers.some((item) => item.id === id))
+      .slice(0, 100);
     if (!ids.length) return;
     const controller = new AbortController();
-    void Promise.allSettled(
-      ids.map((id) =>
-        request<{ counterparty: Counterparty }>(
-          '/api/v1/counterparties/get',
-          session,
-          { id },
-          controller.signal,
-        ),
-      ),
-    ).then((results) => {
-      if (!controller.signal.aborted) {
-        const found = results.flatMap((result) =>
-          result.status === 'fulfilled' ? [result.value.counterparty] : [],
-        );
-        if (found.length)
+    void request<{ items: Counterparty[] }>(
+      '/api/v1/counterparties/list',
+      session,
+      { ids, status: 'all', limit: 100 },
+      controller.signal,
+    )
+      .then((result) => {
+        if (!controller.signal.aborted && result.items.length)
           setCustomers((old) => [
             ...old,
-            ...found.filter((item) => !old.some((value) => value.id === item.id)),
+            ...result.items.filter((item) => !old.some((known) => known.id === item.id)),
           ]);
-      }
-    });
+      })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) error(reason);
+      });
     return () => controller.abort();
-  }, [session, shipments, customers]);
+  }, [session, shipments, customers, error]);
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || 'Клиент недоступен';
   const write = session?.permissions.includes('shipments.write') ?? false;
@@ -414,7 +433,7 @@ export function App() {
         />
         <div className="workspace-content">
           <div
-            className={tab === 'transportations' ? 'transportation-registry' : undefined}
+            className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
             hidden={
               tab === 'counterparties' ||
               creating ||
@@ -425,15 +444,12 @@ export function App() {
           >
             <div className="page-heading">
               <div>
-                {tab === 'shipments' && <p className="eyebrow">ЛОГИСТИКА</p>}
                 <h1>{tab === 'shipments' ? 'Поставки' : 'Перевозки'}</h1>
-                {tab === 'shipments' ? (
-                  <p>От заявки клиента до фактических перевозок.</p>
-                ) : (
-                  <span className="registry-count" role="status">
-                    {loading ? 'Загрузка…' : `Загружено: ${transportations.length}`}
-                  </span>
-                )}
+                <span className="registry-count" role="status">
+                  {loading
+                    ? 'Загрузка…'
+                    : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
+                </span>
               </div>
               <div className="actions">
                 <button disabled={loading} onClick={() => void load()}>
@@ -451,6 +467,18 @@ export function App() {
                 )}
               </div>
             </div>
+            {tab === 'shipments' && (
+              <ShipmentFilters
+                session={session}
+                customers={customers}
+                value={shipmentQuery}
+                loading={loading}
+                onApply={(value) => {
+                  setShipmentCursor(undefined);
+                  setShipmentQuery(value);
+                }}
+              />
+            )}
             {tab === 'transportations' && (
               <TransportationFilters
                 session={session}
@@ -463,56 +491,83 @@ export function App() {
               />
             )}
             <section className="surface" aria-busy={loading}>
-              {tab === 'shipments' && (
-                <div className="table-title">
-                  <strong>Реестр поставок</strong>
-                  <span>
-                    {loading
-                      ? 'Загрузка…'
-                      : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
-                  </span>
-                </div>
-              )}
               {tab === 'shipments' ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Поставка</th>
-                      <th>Клиент</th>
-                      <th>Примечание</th>
-                      <th>Редакция</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shipments.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="clickable"
-                        onClick={() => {
-                          location.hash = `/shipments/${item.id}`;
-                        }}
-                      >
-                        <td>
-                          <a
-                            className="link"
-                            href={`#/shipments/${item.id}`}
-                            onClick={(event) => event.stopPropagation()}
+                <div className="table-scroll">
+                  <table className="shipment-table">
+                    <thead>
+                      <tr>
+                        {(['number', 'shipment_date'] as ShipmentSort[]).map((field) => (
+                          <RegistrySortHeading
+                            key={field}
+                            field={field}
+                            sort={shipmentQuery.sort}
+                            descending={shipmentQuery.descending}
+                            onSort={(sort) => {
+                              setShipmentCursor(undefined);
+                              setShipmentQuery((old) => ({
+                                ...old,
+                                sort,
+                                descending: old.sort === sort ? !old.descending : false,
+                              }));
+                            }}
                           >
-                            {item.number}
-                          </a>
-                          <small>{item.id}</small>
-                        </td>
-                        <td>{customerName(item.customer_id)}</td>
-                        <td>{item.reference || '—'}</td>
-                        <td>
-                          <span className="badge">{item.revision}</span>
-                        </td>
-                        <td>↗</td>
+                            {field === 'number' ? 'Поставка' : 'Дата поставки'}
+                          </RegistrySortHeading>
+                        ))}
+                        <th>Клиент</th>
+                        {(['cargo_description', 'status'] as ShipmentSort[]).map((field) => (
+                          <RegistrySortHeading
+                            key={field}
+                            field={field}
+                            sort={shipmentQuery.sort}
+                            descending={shipmentQuery.descending}
+                            onSort={(sort) => {
+                              setShipmentCursor(undefined);
+                              setShipmentQuery((old) => ({
+                                ...old,
+                                sort,
+                                descending: old.sort === sort ? !old.descending : false,
+                              }));
+                            }}
+                          >
+                            {field === 'status' ? 'Статус' : 'Груз'}
+                          </RegistrySortHeading>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {shipments.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="clickable"
+                          onClick={() => {
+                            location.hash = `/shipments/${item.id}`;
+                          }}
+                        >
+                          <td>
+                            <a
+                              className="link"
+                              href={`#/shipments/${item.id}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {item.number}
+                            </a>
+                          </td>
+                          <td>
+                            {item.shipment_date
+                              ? CalendarDate.fromISO(item.shipment_date).toDisplayString()
+                              : '—'}
+                          </td>
+                          <td>{customerName(item.customer_id)}</td>
+                          <td>{item.cargo_description || '—'}</td>
+                          <td>
+                            <span className="badge">{item.status || '—'}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <TransportationTable
                   items={transportations}
@@ -531,10 +586,10 @@ export function App() {
               {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
                 <div className="empty">
                   <span>▣</span>
-                  <h2>{tab === 'shipments' ? 'Пока нет поставок' : 'Перевозки не найдены'}</h2>
+                  <h2>{tab === 'shipments' ? 'Поставки не найдены' : 'Перевозки не найдены'}</h2>
                   <p>
                     {tab === 'shipments'
-                      ? 'Создайте поставку, добавьте позиции и запустите создание перевозок.'
+                      ? 'Измените фильтры или создайте поставку.'
                       : 'Измените фильтры или создайте перевозку в карточке поставки.'}
                   </p>
                 </div>

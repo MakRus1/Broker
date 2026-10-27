@@ -1910,12 +1910,16 @@ main > header {
   background: white;
 }
 
-.transportation-registry .page-heading {
+.transportation-registry .page-heading,
+.shipment-registry .page-heading,
+.counterparty-registry .page-heading {
   padding: 26px 28px 24px;
   flex-direction: row;
   align-items: center;
 }
-.transportation-registry .page-heading h1 {
+.transportation-registry .page-heading h1,
+.shipment-registry .page-heading h1,
+.counterparty-registry .page-heading h1 {
   font-size: 25px;
   margin-bottom: 7px;
 }
@@ -1923,7 +1927,9 @@ main > header {
   color: #7a8799;
   font-size: 12px;
 }
-.transportation-registry .surface {
+.transportation-registry .surface,
+.shipment-registry .surface,
+.counterparty-registry .surface {
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -2390,7 +2396,7 @@ details[open] > .route-stage-summary::after {
 }
 .registry-search {
   display: grid;
-  grid-template-columns: minmax(0, 420px) max-content max-content;
+  grid-template-columns: minmax(0, 420px) max-content;
   align-items: end;
   gap: 12px;
 }
@@ -2399,7 +2405,7 @@ details[open] > .route-stage-summary::after {
   min-width: 0;
 }
 .registry-search input,
-.registry-search > button {
+.registry-search-actions > button {
   height: 42px;
   min-height: 42px;
   box-sizing: border-box;
@@ -2407,7 +2413,7 @@ details[open] > .route-stage-summary::after {
   line-height: 20px;
   margin: 0;
 }
-.registry-search > button {
+.registry-search-actions > button {
   padding: 10px 16px;
 }
 .registry-filters details {
@@ -2487,6 +2493,19 @@ details[open] > .route-stage-summary::after {
   cursor: pointer;
   box-shadow: none;
 }
+.registry-filter-fields--three {
+  grid-template-columns: repeat(3, minmax(0, 220px));
+}
+.registry-date-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 576px;
+}
+.registry-date-range input {
+  height: 42px;
+  box-sizing: border-box;
+}
 @media (max-width: 600px) {
   .registry-filters {
     padding-inline: 20px;
@@ -2500,5 +2519,48 @@ details[open] > .route-stage-summary::after {
   }
   .registry-search > label {
     flex: 1 0 100%;
+  }
+}
+
+.shipment-table {
+  min-width: 780px;
+}
+.shipment-table td {
+  vertical-align: top;
+}
+.shipment-table th:nth-child(1) {
+  width: 14%;
+}
+.shipment-table th:nth-child(2) {
+  width: 18%;
+}
+.shipment-table th:nth-child(3) {
+  width: 22%;
+}
+.shipment-table th:nth-child(4) {
+  width: 30%;
+}
+
+.registry-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.registry-search--multiple {
+  grid-template-columns: repeat(2, minmax(0, 320px)) max-content;
+}
+.table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .registry-search--multiple {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 656px;
+  }
+  .registry-search--multiple .registry-search-actions {
+    grid-column: 1 / -1;
   }
 }

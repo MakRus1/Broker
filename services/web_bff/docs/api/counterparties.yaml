@@ -83,6 +83,8 @@ paths:
                     type: array
                     items:
                       $ref: ../components/schemas/counterparties/models.yaml#/Counterparty
+                  next_cursor:
+                    $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyRegistryCursor
                 required:
                 - items
         '400':

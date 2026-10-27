@@ -1,4 +1,5 @@
 #include <helpers/details.hpp>
+#include <helpers/registry.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/list/view.hpp>
@@ -14,11 +15,40 @@ Response View::Handle(
         std::optional<std::string> role;
         if (request.body.role.has_value())
             role = models::EnumValue(request.body.role.value());
-        const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
-            sql::kListCounterparties, organization, request.body.after, request.body.limit,
-            userver::utils::text::Trim(request.body.query), role,
-            models::EnumValue(request.body.status));
-        return Response200{.items = Convert(rows)};
+        const auto& body = request.body;
+        const auto scope = platform::registry::CursorScope(body, organization);
+        if (body.after.has_value() &&
+            (body.cursor.has_value() || body.sort != models::ListCounterpartiesRequest_sort::Id ||
+                body.descending))
+            throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
+        if (body.cursor.has_value() && body.cursor.value().scope != scope)
+            throw ApiError{
+                400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+        const auto after =
+            body.cursor.has_value() ? std::optional{body.cursor.value().id} : body.after;
+        const auto key = body.cursor.has_value() ? body.cursor.value().value : "";
+        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+            pg::TransactionOptions{
+                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        transaction.Execute(sql::kRegistryPlan);
+        auto rows = transaction
+                        .Execute(sql::kListCounterparties, organization,
+                            platform::registry::SearchPattern(body.query), role,
+                            models::EnumValue(body.status), body.country_code, body.limit + 1,
+                            models::EnumValue(body.sort), body.descending, key, after, body.ids)
+                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+        const bool more = rows.size() > static_cast<std::size_t>(body.limit);
+        if (more)
+            rows.pop_back();
+        std::optional<models::CounterpartyRegistryCursor> cursor;
+        if (more)
+            cursor = models::CounterpartyRegistryCursor{
+                .id = boost::uuids::to_string(rows.back().Counterparty.Id),
+                .scope = scope,
+                .value = rows.back().SortKey};
+        transaction.Commit();
+        return Response200{.items = Convert(rows), .next_cursor = cursor};
     } catch (const ::counterparties::ApiError& error) {
         switch (error.Status) {
         case 400:

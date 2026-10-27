@@ -1,7 +1,13 @@
+import { CounterpartyFilters } from './CounterpartyFilters';
+import { RegistrySortHeading } from './RegistrySortHeading';
+import type {
+  CounterpartyRegistryCursor,
+  CounterpartyRegistryQuery,
+  CounterpartySort,
+} from './counterpartyRegistry';
 import { EmployeeName } from './EmployeeName';
-import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { request, type Session } from './api';
 import { CardNavigation, Dialog } from './components';
 import { CounterpartyHistory } from './CounterpartyHistory';
@@ -36,7 +42,11 @@ export function CounterpartiesPage({
   const [items, setItems] = useState<Counterparty[]>([]);
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
-  const [status, setStatus] = useState('active');
+  const [status, setStatus] = useState<CounterpartyRegistryQuery['status']>('active');
+  const [country, setCountry] = useState<string>();
+  const [sort, setSort] = useState<CounterpartySort>('name');
+  const [descending, setDescending] = useState(false);
+  const [nextCursor, setNextCursor] = useState<CounterpartyRegistryCursor>();
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(false);
@@ -46,23 +56,44 @@ export function CounterpartiesPage({
   useEffect(() => {
     if (item) onTitle?.(item.name);
   }, [item?.name]);
+  const registryFilters = useMemo(
+    () => ({ query, role: role || undefined, status, country_code: country, sort, descending }),
+    [query, role, status, country, sort, descending],
+  );
   const write = session.permissions.includes('counterparties.write');
   const read = session.permissions.includes('counterparties.read');
   const load = useCallback(
-    async (after?: string, signal?: AbortSignal) => {
+    async (cursor?: CounterpartyRegistryCursor, signal?: AbortSignal) => {
       const current = ++epoch.current;
+      if (!cursor) {
+        setItems([]);
+        setMore(false);
+      }
       setLoading(true);
       setFailure('');
       try {
-        const result = await request<{ items: Counterparty[] }>(
+        const result = await request<{
+          items: Counterparty[];
+          next_cursor?: CounterpartyRegistryCursor;
+        }>(
           '/api/v1/counterparties/list',
           session,
-          { query, status, ...(role ? { role } : {}), limit: 50, ...(after ? { after } : {}) },
+          {
+            query,
+            status,
+            country_code: country,
+            sort,
+            descending,
+            ...(role ? { role } : {}),
+            limit: 50,
+            ...(cursor ? { cursor } : {}),
+          },
           signal,
         );
         if (signal?.aborted || current !== epoch.current) return;
-        setItems((old) => (after ? [...old, ...result.items] : result.items));
-        setMore(result.items.length === 50);
+        setItems((old) => (cursor ? [...old, ...result.items] : result.items));
+        setNextCursor(result.next_cursor);
+        setMore(Boolean(result.next_cursor));
       } catch (error) {
         if (!signal?.aborted && current === epoch.current) {
           setFailure(error instanceof Error ? error.message : 'Ошибка загрузки');
@@ -72,15 +103,14 @@ export function CounterpartiesPage({
         if (current === epoch.current) setLoading(false);
       }
     },
-    [query, role, status, session, onError],
+    [query, role, status, country, sort, descending, session, onError],
   );
   useEffect(() => {
     if (id || creating || !read) return;
     const controller = new AbortController();
     setLoading(true);
-    const timer = setTimeout(() => void load(undefined, controller.signal), 250);
+    void load(undefined, controller.signal);
     return () => {
-      clearTimeout(timer);
       controller.abort();
       epoch.current++;
     };
@@ -332,12 +362,13 @@ export function CounterpartiesPage({
       </section>
     );
   return (
-    <>
+    <div className="counterparty-registry">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">СПРАВОЧНИК</p>
           <h1>Контрагенты</h1>
-          <p>Юридические лица, их реквизиты, контакты и роли.</p>
+          <span className="registry-count" role="status">
+            {loading ? 'Загрузка…' : `Загружено: ${items.length}`}
+          </span>
         </div>
         <div className="actions">
           <button disabled={loading} onClick={() => void load()}>
@@ -350,38 +381,17 @@ export function CounterpartiesPage({
           )}
         </div>
       </div>
+      <CounterpartyFilters
+        value={registryFilters}
+        loading={loading}
+        onApply={(value) => {
+          setQuery(value.query);
+          setRole(value.role ?? '');
+          setStatus(value.status);
+          setCountry(value.country_code);
+        }}
+      />
       <section className="surface counterparty-list" aria-busy={loading}>
-        <div className="directory-filters">
-          <label>
-            Поиск
-            <input
-              type="search"
-              value={query}
-              maxLength={256}
-              placeholder="Название или налоговый номер"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <Select
-            label="Роль"
-            value={role}
-            onChange={setRole}
-            options={[
-              { value: '', label: 'Все роли' },
-              ...Object.entries(counterpartyRoles).map(([value, label]) => ({ value, label })),
-            ]}
-          />
-          <Select
-            label="Состояние"
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: 'active', label: 'Действующие' },
-              { value: 'archived', label: 'Архив' },
-              { value: 'all', label: 'Все' },
-            ]}
-          />
-        </div>
         {failure && (
           <p className="error" role="alert">
             {failure}
@@ -391,11 +401,51 @@ export function CounterpartiesPage({
           <table>
             <thead>
               <tr>
-                <th>Наименование</th>
-                <th>Страна</th>
-                <th>Налоговый номер</th>
+                <RegistrySortHeading
+                  field="name"
+                  sort={sort}
+                  descending={descending}
+                  onSort={(field) => {
+                    setSort(field);
+                    setDescending(sort === field ? !descending : false);
+                  }}
+                >
+                  Наименование
+                </RegistrySortHeading>
+                <RegistrySortHeading
+                  field="country_code"
+                  sort={sort}
+                  descending={descending}
+                  onSort={(field) => {
+                    setSort(field);
+                    setDescending(sort === field ? !descending : false);
+                  }}
+                >
+                  Страна
+                </RegistrySortHeading>
+                <RegistrySortHeading
+                  field="tax_id"
+                  sort={sort}
+                  descending={descending}
+                  onSort={(field) => {
+                    setSort(field);
+                    setDescending(sort === field ? !descending : false);
+                  }}
+                >
+                  Налоговый номер
+                </RegistrySortHeading>
                 <th>Роли</th>
-                <th>Состояние</th>
+                <RegistrySortHeading
+                  field="archived"
+                  sort={sort}
+                  descending={descending}
+                  onSort={(field) => {
+                    setSort(field);
+                    setDescending(sort === field ? !descending : false);
+                  }}
+                >
+                  Состояние
+                </RegistrySortHeading>
               </tr>
             </thead>
             <tbody>
@@ -440,9 +490,9 @@ export function CounterpartiesPage({
           enabled={more}
           loading={loading}
           failed={Boolean(failure)}
-          onLoad={() => load(items.at(-1)?.id)}
+          onLoad={() => load(nextCursor)}
         />
       </section>
-    </>
+    </div>
   );
 }

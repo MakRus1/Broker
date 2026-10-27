@@ -1,10 +1,8 @@
 #pragma once
-#include <boost/algorithm/string/trim.hpp>
 #include <helpers/database.hpp>
 #include <openapi/models.hpp>
+#include <platform/registry.hpp>
 #include <postgresql/types.hpp>
-#include <userver/crypto/hash.hpp>
-#include <userver/formats/json/value_builder.hpp>
 
 namespace transportations::helpers {
 struct RegistryRow {
@@ -12,31 +10,8 @@ struct RegistryRow {
     std::string SortKey;
 };
 
-inline std::string RegistryScope(
-    const models::ListTransportationsRequest& request, const std::string& organization) {
-    userver::formats::json::ValueBuilder value{request};
-    value.Remove("cursor");
-    value.Remove("after");
-    value.Remove("limit");
-    value["organization_id"] = organization;
-    return userver::crypto::hash::Sha256(
-        userver::formats::json::ToStableString(value.ExtractValue()));
-}
-
-inline std::optional<std::string> ContainerSearch(const std::optional<std::string>& query) {
-    if (!query.has_value())
-        return std::nullopt;
-    const auto text = boost::algorithm::trim_copy(query.value());
-    if (text.empty())
-        return std::nullopt;
-    std::string pattern;
-    for (const char character : text) {
-        if (character == '%' || character == '_' || character == '\\')
-            pattern += '\\';
-        pattern += character;
-    }
-    return '%' + pattern + '%';
-}
+using platform::registry::CursorScope;
+using platform::registry::SearchPattern;
 
 inline std::optional<std::vector<std::string>> Convert(
     const std::optional<std::vector<models::ListTransportationsRequest_types_item>>& values) {

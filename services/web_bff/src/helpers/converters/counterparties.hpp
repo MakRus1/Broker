@@ -4,6 +4,22 @@
 #include <stdexcept>
 
 namespace web_bff {
+inline std::optional<clients::counterparties::models::CounterpartyRegistryCursor> Convert(
+    const std::optional<models::counterparties::CounterpartyRegistryCursor>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return clients::counterparties::models::CounterpartyRegistryCursor{
+        .id = value.value().id, .scope = value.value().scope, .value = value.value().value};
+}
+
+inline std::optional<models::counterparties::CounterpartyRegistryCursor> Convert(
+    const std::optional<clients::counterparties::models::CounterpartyRegistryCursor>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return models::counterparties::CounterpartyRegistryCursor{
+        .id = value.value().id, .scope = value.value().scope, .value = value.value().value};
+}
+
 inline models::counterparties::RegistryParty Convert(
     const clients::counterparties::models::RegistryParty& value) {
     return {.kpp = value.kpp,
@@ -147,6 +163,13 @@ inline clients::counterparties::ApiV1CounterpartiesList::RequestBody Convert(
     result.after = value.after;
     result.limit = value.limit;
     result.query = value.query;
+    result.country_code = value.country_code;
+    result.ids = value.ids;
+    result.cursor = Convert(value.cursor);
+    result.descending = value.descending;
+    result.sort = clients::counterparties::models::ParseEnumScalar(
+        models::counterparties::EnumValue(value.sort),
+        clients::counterparties::models::ListCounterpartiesRequest_sort{});
     if (value.role.has_value())
         result.role = Convert(value.role.value());
     // Enum фильтра принадлежит собственному контракту каждого участника.

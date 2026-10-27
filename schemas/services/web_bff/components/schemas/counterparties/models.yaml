@@ -286,6 +286,31 @@ ListCounterpartiesRequest:
       - archived
       - all
       default: active
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    sort:
+      type: string
+      enum:
+      - id
+      - name
+      - country_code
+      - tax_id
+      - archived
+      default: id
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/CounterpartyRegistryCursor'
+    ids:
+      type: array
+      minItems: 1
+      maxItems: 100
+      items:
+        type: string
+        format: uuid
+      description: Получить нужные карточки одним запросом в пределах организации
   required: []
 CounterpartySnapshot:
   type: object
@@ -430,3 +455,20 @@ LookupCounterpartyRequest:
       pattern: ^([0-9]{10}|[0-9]{12})$
   required:
   - tax_id
+CounterpartyRegistryCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - scope
+  - value
+  properties:
+    id:
+      type: string
+      format: uuid
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+    value:
+      type: string
+      maxLength: 1024

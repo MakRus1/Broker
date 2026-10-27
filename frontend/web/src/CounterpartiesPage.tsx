@@ -1,13 +1,16 @@
+import { preferenceKey, useRegistryPreference } from './registryPreferences';
+import { initialCounterpartyQuery, restoreCounterpartyQuery } from './registryQueryPreferences';
 import { CounterpartyFilters } from './CounterpartyFilters';
-import { RegistrySortHeading } from './RegistrySortHeading';
-import type {
-  CounterpartyRegistryCursor,
-  CounterpartyRegistryQuery,
-  CounterpartySort,
-} from './counterpartyRegistry';
+import {
+  RegistryTable,
+  RegistryColumnSettings,
+  useRegistryColumns,
+  type RegistryColumn,
+} from './RegistryTable';
+import type { CounterpartyRegistryCursor, CounterpartySort } from './counterpartyRegistry';
 import { EmployeeName } from './EmployeeName';
 import { AutoLoadMore } from './AutoLoadMore';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { request, type Session } from './api';
 import { CardNavigation, Dialog } from './components';
 import { CounterpartyHistory } from './CounterpartyHistory';
@@ -32,6 +35,52 @@ export function CounterpartiesPage({
   onTitle,
   active = true,
 }: Props) {
+  const columns: RegistryColumn<Counterparty>[] = [
+    {
+      id: 'name',
+      label: 'Наименование',
+      width: 340,
+      required: true,
+      sort: 'name',
+      render: (value) => (
+        <a
+          className="link"
+          href={`#/counterparties/${value.id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {value.name}
+        </a>
+      ),
+    },
+    {
+      id: 'country_code',
+      label: 'Страна',
+      width: 150,
+      sort: 'country_code',
+      render: (value) => value.country_code || '—',
+    },
+    {
+      id: 'tax_id',
+      label: 'Налоговый номер',
+      width: 210,
+      sort: 'tax_id',
+      render: (value) => value.tax_id || '—',
+    },
+    {
+      id: 'roles',
+      label: 'Роли',
+      width: 280,
+      render: (value) => value.roles.map((role) => counterpartyRoles[role]).join(', ') || '—',
+    },
+    {
+      id: 'archived',
+      label: 'Состояние',
+      width: 180,
+      sort: 'archived',
+      render: (value) => (value.archived ? 'В архиве' : 'Действующий'),
+    },
+  ];
+  const columnState = useRegistryColumns(session.subject, 'counterparties', columns);
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = route === '/counterparties/new';
   const editing = creating || route.endsWith('/edit');
@@ -40,12 +89,12 @@ export function CounterpartiesPage({
   const [item, setItem] = useState<Counterparty>();
   const [failure, setFailure] = useState('');
   const [items, setItems] = useState<Counterparty[]>([]);
-  const [query, setQuery] = useState('');
-  const [role, setRole] = useState('');
-  const [status, setStatus] = useState<CounterpartyRegistryQuery['status']>('active');
-  const [country, setCountry] = useState<string>();
-  const [sort, setSort] = useState<CounterpartySort>('name');
-  const [descending, setDescending] = useState(false);
+  const [registryFilters, setRegistryFilters] = useRegistryPreference(
+    preferenceKey(session.subject, 'counterparties', 'query'),
+    initialCounterpartyQuery,
+    restoreCounterpartyQuery,
+  );
+  const { query, role, status, country_code: country, sort, descending } = registryFilters;
   const [nextCursor, setNextCursor] = useState<CounterpartyRegistryCursor>();
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,10 +105,6 @@ export function CounterpartiesPage({
   useEffect(() => {
     if (item) onTitle?.(item.name);
   }, [item?.name]);
-  const registryFilters = useMemo(
-    () => ({ query, role: role || undefined, status, country_code: country, sort, descending }),
-    [query, role, status, country, sort, descending],
-  );
   const write = session.permissions.includes('counterparties.write');
   const read = session.permissions.includes('counterparties.read');
   const load = useCallback(
@@ -371,6 +416,7 @@ export function CounterpartiesPage({
           </span>
         </div>
         <div className="actions">
+          <RegistryColumnSettings {...columnState} />
           <button disabled={loading} onClick={() => void load()}>
             Обновить
           </button>
@@ -385,10 +431,7 @@ export function CounterpartiesPage({
         value={registryFilters}
         loading={loading}
         onApply={(value) => {
-          setQuery(value.query);
-          setRole(value.role ?? '');
-          setStatus(value.status);
-          setCountry(value.country_code);
+          setRegistryFilters(value);
         }}
       />
       <section className="surface counterparty-list" aria-busy={loading}>
@@ -397,84 +440,21 @@ export function CounterpartiesPage({
             {failure}
           </p>
         )}
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <RegistrySortHeading
-                  field="name"
-                  sort={sort}
-                  descending={descending}
-                  onSort={(field) => {
-                    setSort(field);
-                    setDescending(sort === field ? !descending : false);
-                  }}
-                >
-                  Наименование
-                </RegistrySortHeading>
-                <RegistrySortHeading
-                  field="country_code"
-                  sort={sort}
-                  descending={descending}
-                  onSort={(field) => {
-                    setSort(field);
-                    setDescending(sort === field ? !descending : false);
-                  }}
-                >
-                  Страна
-                </RegistrySortHeading>
-                <RegistrySortHeading
-                  field="tax_id"
-                  sort={sort}
-                  descending={descending}
-                  onSort={(field) => {
-                    setSort(field);
-                    setDescending(sort === field ? !descending : false);
-                  }}
-                >
-                  Налоговый номер
-                </RegistrySortHeading>
-                <th>Роли</th>
-                <RegistrySortHeading
-                  field="archived"
-                  sort={sort}
-                  descending={descending}
-                  onSort={(field) => {
-                    setSort(field);
-                    setDescending(sort === field ? !descending : false);
-                  }}
-                >
-                  Состояние
-                </RegistrySortHeading>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((value) => (
-                <tr
-                  key={value.id}
-                  className="clickable"
-                  onClick={() => {
-                    onSaved(value);
-                  }}
-                >
-                  <td>
-                    <a
-                      className="link"
-                      href={`#/counterparties/${value.id}`}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {value.name}
-                    </a>
-                  </td>
-                  <td>{value.country_code || '—'}</td>
-                  <td>{value.tax_id || '—'}</td>
-                  <td>{value.roles.map((role) => counterpartyRoles[role]).join(', ') || '—'}</td>
-                  <td>{value.archived ? 'В архиве' : 'Действующий'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RegistryTable
+          items={items}
+          columns={columnState}
+          definitions={columns}
+          sort={sort}
+          descending={descending}
+          onSort={(field) => {
+            setRegistryFilters((old) => ({
+              ...old,
+              sort: field as CounterpartySort,
+              descending: old.sort === field ? !old.descending : false,
+            }));
+          }}
+          onOpen={onSaved}
+        />
         {loading && (
           <p className="directory-loading" role="status">
             Загружаем контрагентов…

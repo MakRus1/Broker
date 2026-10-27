@@ -1,5 +1,13 @@
+import { preferenceKey, useRegistryPreference } from './registryPreferences';
+import { restoreShipmentQuery, restoreTransportationQuery } from './registryQueryPreferences';
 import { ShipmentFilters } from './ShipmentFilters';
-import { RegistrySortHeading } from './RegistrySortHeading';
+import {
+  RegistryTable,
+  RegistryColumnSettings,
+  useRegistryColumns,
+  type RegistryColumn,
+} from './RegistryTable';
+import { transportationColumns } from './components';
 import {
   initialShipmentQuery,
   shipmentRegistryRequest,
@@ -43,6 +51,62 @@ export function App() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
 
+  const shipmentColumns: RegistryColumn<Shipment>[] = [
+    {
+      id: 'number',
+      label: 'Поставка',
+      width: 180,
+      required: true,
+      sort: 'number',
+      render: (item) => (
+        <a
+          className="link"
+          href={`#/shipments/${item.id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {item.number}
+        </a>
+      ),
+    },
+    {
+      id: 'shipment_date',
+      label: 'Дата поставки',
+      width: 190,
+      sort: 'shipment_date',
+      render: (item) =>
+        item.shipment_date ? CalendarDate.fromISO(item.shipment_date).toDisplayString() : '—',
+    },
+    {
+      id: 'customer',
+      label: 'Клиент',
+      width: 280,
+      render: (item) => customerName(item.customer_id),
+    },
+    {
+      id: 'cargo_description',
+      label: 'Груз',
+      width: 340,
+      sort: 'cargo_description',
+      render: (item) => item.cargo_description || '—',
+    },
+    {
+      id: 'status',
+      label: 'Статус',
+      width: 180,
+      sort: 'status',
+      render: (item) => <span className="badge">{item.status || '—'}</span>,
+    },
+  ];
+  const shipmentColumnState = useRegistryColumns(
+    session?.subject ?? '',
+    'shipments',
+    shipmentColumns,
+  );
+  const transportationColumnState = useRegistryColumns(
+    session?.subject ?? '',
+    'transportations',
+    transportationColumns,
+  );
   const [route, setRoute] = useState(() => location.hash.slice(1) || '/shipments');
   const creating = /^\/shipments\/new(?:\/|$)/.test(route);
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
@@ -149,9 +213,17 @@ export function App() {
       return false;
     }
   });
-  const [shipmentQuery, setShipmentQuery] = useState(initialShipmentQuery);
+  const [shipmentQuery, setShipmentQuery] = useRegistryPreference(
+    preferenceKey(session?.subject ?? '', 'shipments', 'query'),
+    initialShipmentQuery,
+    restoreShipmentQuery,
+  );
   const [shipmentCursor, setShipmentCursor] = useState<ShipmentRegistryCursor>();
-  const [registryQuery, setRegistryQuery] = useState(initialRegistryQuery);
+  const [registryQuery, setRegistryQuery] = useRegistryPreference(
+    preferenceKey(session?.subject ?? '', 'transportations', 'query'),
+    initialRegistryQuery,
+    restoreTransportationQuery,
+  );
   const [registryCursor, setRegistryCursor] = useState<RegistryCursor>();
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
@@ -452,6 +524,9 @@ export function App() {
                 </span>
               </div>
               <div className="actions">
+                <RegistryColumnSettings
+                  {...(tab === 'shipments' ? shipmentColumnState : transportationColumnState)}
+                />
                 <button disabled={loading} onClick={() => void load()}>
                   Обновить
                 </button>
@@ -492,85 +567,29 @@ export function App() {
             )}
             <section className="surface" aria-busy={loading}>
               {tab === 'shipments' ? (
-                <div className="table-scroll">
-                  <table className="shipment-table">
-                    <thead>
-                      <tr>
-                        {(['number', 'shipment_date'] as ShipmentSort[]).map((field) => (
-                          <RegistrySortHeading
-                            key={field}
-                            field={field}
-                            sort={shipmentQuery.sort}
-                            descending={shipmentQuery.descending}
-                            onSort={(sort) => {
-                              setShipmentCursor(undefined);
-                              setShipmentQuery((old) => ({
-                                ...old,
-                                sort,
-                                descending: old.sort === sort ? !old.descending : false,
-                              }));
-                            }}
-                          >
-                            {field === 'number' ? 'Поставка' : 'Дата поставки'}
-                          </RegistrySortHeading>
-                        ))}
-                        <th>Клиент</th>
-                        {(['cargo_description', 'status'] as ShipmentSort[]).map((field) => (
-                          <RegistrySortHeading
-                            key={field}
-                            field={field}
-                            sort={shipmentQuery.sort}
-                            descending={shipmentQuery.descending}
-                            onSort={(sort) => {
-                              setShipmentCursor(undefined);
-                              setShipmentQuery((old) => ({
-                                ...old,
-                                sort,
-                                descending: old.sort === sort ? !old.descending : false,
-                              }));
-                            }}
-                          >
-                            {field === 'status' ? 'Статус' : 'Груз'}
-                          </RegistrySortHeading>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shipments.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="clickable"
-                          onClick={() => {
-                            location.hash = `/shipments/${item.id}`;
-                          }}
-                        >
-                          <td>
-                            <a
-                              className="link"
-                              href={`#/shipments/${item.id}`}
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {item.number}
-                            </a>
-                          </td>
-                          <td>
-                            {item.shipment_date
-                              ? CalendarDate.fromISO(item.shipment_date).toDisplayString()
-                              : '—'}
-                          </td>
-                          <td>{customerName(item.customer_id)}</td>
-                          <td>{item.cargo_description || '—'}</td>
-                          <td>
-                            <span className="badge">{item.status || '—'}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <RegistryTable
+                  items={shipments}
+                  columns={shipmentColumnState}
+                  definitions={shipmentColumns}
+                  sort={shipmentQuery.sort}
+                  descending={shipmentQuery.descending}
+                  onSort={(field) => {
+                    const sort = field as ShipmentSort;
+                    setShipmentCursor(undefined);
+                    setShipmentQuery((old) => ({
+                      ...old,
+                      sort,
+                      descending: old.sort === sort ? !old.descending : false,
+                    }));
+                  }}
+                  onOpen={(item) => {
+                    location.hash = `/shipments/${item.id}`;
+                  }}
+                />
               ) : (
                 <TransportationTable
                   items={transportations}
+                  columns={transportationColumnState}
                   sort={registryQuery.sort}
                   descending={registryQuery.descending}
                   onSort={(sort: RegistrySort) => {

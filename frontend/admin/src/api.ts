@@ -47,10 +47,16 @@ export class ApiError extends Error {
     super(message);
   }
 }
-export async function request<T>(path: string, session?: Session, body?: unknown): Promise<T> {
+export async function request<T>(
+  path: string,
+  session?: Session,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
     credentials: 'same-origin',
+    ...(signal ? { signal } : {}),
     headers:
       body === undefined
         ? {}

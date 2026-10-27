@@ -11,19 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                kind:
-                  $ref: ../components/schemas/route_locations.yaml#/TransportLocationKind
-                query:
-                  type: string
-                  maxLength: 200
-                after:
-                  type: string
-                  format: uuid
-              required:
-              - kind
+              $ref: ../components/schemas/route_locations.yaml#/ListLocationsRequest
       responses:
         '200':
           description: Успех
@@ -40,6 +28,8 @@ paths:
                   next:
                     type: string
                     format: uuid
+                  next_cursor:
+                    $ref: ../components/schemas/route_locations.yaml#/LocationListCursor
                 required:
                 - items
         '400':

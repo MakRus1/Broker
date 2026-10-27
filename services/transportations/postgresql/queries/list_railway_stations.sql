@@ -1,7 +1,11 @@
-SELECT ROW(esr_code, name, country_code)::railway_station_v1
+SELECT
+    ROW(
+        esr_code,
+        name,
+        country_code
+    )::public.railway_station_v1,
+    {sort_key} AS sort_key
 FROM railway_stations
-WHERE NOT archived
-  AND esr_code > $2
-  AND ($1 = '' OR name ILIKE '%' || $1 || '%' OR esr_code LIKE $1 || '%')
-ORDER BY esr_code
-LIMIT 51;
+WHERE {where}
+ORDER BY {order_by}
+LIMIT {limit};

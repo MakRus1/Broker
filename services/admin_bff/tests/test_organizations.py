@@ -106,3 +106,23 @@ async def test_shipment_rules_proxy_preserves_cookie_csrf_and_token(browser, moc
     response = await browser.post(path, body)
     assert response.status == 200, response.text
     assert response.json() == result
+
+@pytest.mark.parametrize('path,filters',[
+    ('/api/admin/organizations/list',{'sort':'name','enabled':False}),
+    ('/api/admin/organizations/members/list',{'organization_id':ORG,'sort':'display_name','role':'viewer','enabled':True}),
+    ('/api/admin/railway-stations/list',{'sort':'name','country_code':'RU'}),
+    ('/api/admin/route-locations/list',{'sort':'code','kind':'airport','country_code':'RU'}),
+])
+async def test_registry_proxy_preserves_filters_and_cursor(browser,mockserver,path,filters):
+    identity='000001' if 'railway' in path else ORG
+    cursor={'id':identity,'scope':'0'*64,'value':'alpha'}
+    body={**filters,'query':'часть','limit':5,'descending':True,'cursor':cursor}
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.headers['Authorization'].startswith('Bearer ')
+        assert request.json==body
+        return {'items':[],'next_cursor':cursor}
+    await browser.sign_in()
+    response=await browser.post(path,body)
+    assert response.status==200,response.text
+    assert response.json()=={'items':[],'next_cursor':cursor}

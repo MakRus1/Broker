@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { request, type Session } from '../api';
+import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
+import { RegistryFilters, RegistryMore, SortHeading } from './Registry';
 
 type RouteLocation = {
   id: string;
@@ -8,44 +10,21 @@ type RouteLocation = {
   country_code: string;
   code?: string;
 };
-type Page = { items: RouteLocation[]; next?: string };
 const emptyLocation: RouteLocation = { id: '', kind: 'sea_port', name: '', country_code: '' };
 
 export function RouteLocations({ session }: { session: Session }) {
   const [kind, setKind] = useState<'sea_port' | 'airport'>('sea_port');
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState<Page>({ items: [] });
-  const [reload, setReload] = useState(0);
+  const [filters, setFilters] = useState<RegistryQuery>({ sort: 'name', descending: false });
   const [editor, setEditor] = useState<RouteLocation>();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [archive, setArchive] = useState<string>();
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    const timer = window.setTimeout(() => {
-      request<Page>('/api/admin/route-locations/list', session, { query, kind })
-        .then((value) => {
-          if (active) {
-            setPage(value);
-            setError('');
-          }
-        })
-        .catch((reason: unknown) => {
-          if (active)
-            setError(reason instanceof Error ? reason.message : 'Не удалось загрузить записи');
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [query, reload, session, kind]);
+  const registry = useRegistry<RouteLocation>('/api/admin/route-locations/list', session, {
+    ...filters,
+    kind,
+  });
+  const { items, loading } = registry;
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!editor) return;
@@ -57,7 +36,7 @@ export function RouteLocations({ session }: { session: Session }) {
         existing: editing,
       });
       setEditor(undefined);
-      setReload((value) => value + 1);
+      registry.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись');
     } finally {
@@ -70,25 +49,9 @@ export function RouteLocations({ session }: { session: Session }) {
     try {
       await request('/api/admin/route-locations/archive', session, { id: code });
       setArchive(undefined);
-      setReload((value) => value + 1);
+      registry.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось архивировать запись');
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function more() {
-    if (!page.next) return;
-    setBusy(true);
-    try {
-      const next = await request<Page>('/api/admin/route-locations/list', session, {
-        query,
-        after: page.next,
-        kind,
-      });
-      setPage((current) => ({ items: [...current.items, ...next.items], next: next.next }));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Не удалось загрузить записи');
     } finally {
       setBusy(false);
     }
@@ -117,7 +80,7 @@ export function RouteLocations({ session }: { session: Session }) {
           onClick={() => {
             setKind('sea_port');
             setEditor(undefined);
-            setQuery('');
+            setFilters({ sort: 'name', descending: false });
           }}
         >
           Морские порты
@@ -127,20 +90,33 @@ export function RouteLocations({ session }: { session: Session }) {
           onClick={() => {
             setKind('airport');
             setEditor(undefined);
-            setQuery('');
+            setFilters({ sort: 'name', descending: false });
           }}
         >
           Аэропорты
         </button>
       </div>
-      <label className="station-search">
-        Поиск по названию или коду
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Название или код"
-        />
-      </label>
+      <RegistryFilters
+        value={filters}
+        onApply={setFilters}
+        loading={loading}
+        placeholder="Название или код…"
+      >
+        {(draft, change) => (
+          <label>
+            Страна
+            <input
+              placeholder="Код страны…"
+              maxLength={2}
+              pattern="[A-Z]{2}"
+              value={draft.country_code ?? ''}
+              onChange={(event) =>
+                change({ ...draft, country_code: event.target.value.toUpperCase() || undefined })
+              }
+            />
+          </label>
+        )}
+      </RegistryFilters>
       {error && <p role="alert">{error}</p>}
       {editor && (
         <form className="station-editor" onSubmit={save}>
@@ -197,16 +173,21 @@ export function RouteLocations({ session }: { session: Session }) {
           <table className="station-table">
             <thead>
               <tr>
-                <th>Код</th>
-                <th>Название</th>
-                <th>Страна</th>
+                <SortHeading label="Код" field="code" value={filters} onChange={setFilters} />
+                <SortHeading label="Название" field="name" value={filters} onChange={setFilters} />
+                <SortHeading
+                  label="Страна"
+                  field="country_code"
+                  value={filters}
+                  onChange={setFilters}
+                />
                 <th>
                   <span className="visually-hidden">Действия</span>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {page.items.map((location) => (
+              {items.map((location) => (
                 <tr
                   key={location.id}
                   tabIndex={0}
@@ -257,14 +238,19 @@ export function RouteLocations({ session }: { session: Session }) {
               ))}
             </tbody>
           </table>
-          {!page.items.length && (
-            <p>{query ? 'Записи не найдены.' : 'Справочник пока пуст. Добавьте первую запись.'}</p>
+          {!registry.error && !items.length && (
+            <p>
+              {filters.query || filters.country_code
+                ? 'Записи не найдены.'
+                : 'Справочник пока пуст. Добавьте первую запись.'}
+            </p>
           )}
-          {page.next && (
-            <button disabled={busy} onClick={more}>
-              Показать следующие
-            </button>
-          )}
+          <RegistryMore
+            hasMore={registry.hasMore}
+            loading={registry.loadingMore}
+            error={registry.error}
+            loadMore={registry.loadMore}
+          />
         </>
       )}
     </section>

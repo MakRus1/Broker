@@ -1,6 +1,6 @@
 #include <helpers/access.hpp>
+#include <helpers/admin_registry.hpp>
 #include <helpers/audit.hpp>
-#include <helpers/converters.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
 #include <views/api/admin/organizations/list/view.hpp>
@@ -12,9 +12,31 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     try {
         RequirePlatformAdmin(identity);
-        const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
-            sql::kListOrganizations, request.body.after, request.body.limit);
-        return Response200{.items = ConvertRows<pgtypes::OrganizationV1>(rows)};
+        const auto scope = registry::CursorScope(request.body, "organizations");
+        if (!registry::CursorMatches(request.body, scope, EnumValue(request.body.sort) == "id"))
+            throw ApiError{
+                400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+        const auto query = OrganizationQuery(request.body);
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+            pg::TransactionOptions{
+                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        transaction.Execute(sql::kRegistryPlan);
+        auto rows =
+            transaction.Execute(query.Statement, query.Parameters)
+                .AsContainer<std::vector<registry::Row<pgtypes::OrganizationV1>>>(pg::kRowTag);
+        const bool more = rows.size() > static_cast<std::size_t>(request.body.limit);
+        if (more)
+            rows.pop_back();
+        std::optional<models::OrganizationListCursor> next;
+        if (more)
+            next =
+                models::OrganizationListCursor{.id = boost::uuids::to_string(rows.back().Value.Id),
+                    .scope = scope,
+                    .value = rows.back().SortKey};
+        const auto items =
+            registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
+        transaction.Commit();
+        return Response200{.items = items, .next_cursor = next};
     } catch (const ::organizations::ApiError& error) {
         switch (error.Status) {
         case 400:

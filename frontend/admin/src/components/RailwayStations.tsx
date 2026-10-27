@@ -1,44 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { request, type Session } from '../api';
+import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
+import { RegistryFilters, RegistryMore, SortHeading } from './Registry';
 
 type Station = { esr_code: string; name: string; country_code: string };
-type Page = { items: Station[]; next?: string };
 const emptyStation: Station = { esr_code: '', name: '', country_code: '' };
 
 export function RailwayStations({ session }: { session: Session }) {
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState<Page>({ items: [] });
-  const [reload, setReload] = useState(0);
+  const [filters, setFilters] = useState<RegistryQuery>({ sort: 'name', descending: false });
   const [editor, setEditor] = useState<Station>();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [archive, setArchive] = useState<string>();
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    const timer = window.setTimeout(() => {
-      request<Page>('/api/admin/railway-stations/list', session, { query })
-        .then((value) => {
-          if (active) {
-            setPage(value);
-            setError('');
-          }
-        })
-        .catch((reason: unknown) => {
-          if (active)
-            setError(reason instanceof Error ? reason.message : 'Не удалось загрузить станции');
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [query, reload, session]);
+  const registry = useRegistry<Station>('/api/admin/railway-stations/list', session, filters);
+  const { items, loading } = registry;
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!editor) return;
@@ -50,7 +26,7 @@ export function RailwayStations({ session }: { session: Session }) {
         existing: editing,
       });
       setEditor(undefined);
-      setReload((value) => value + 1);
+      registry.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось сохранить станцию');
     } finally {
@@ -63,24 +39,9 @@ export function RailwayStations({ session }: { session: Session }) {
     try {
       await request('/api/admin/railway-stations/archive', session, { esr_code: code });
       setArchive(undefined);
-      setReload((value) => value + 1);
+      registry.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось архивировать станцию');
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function more() {
-    if (!page.next) return;
-    setBusy(true);
-    try {
-      const next = await request<Page>('/api/admin/railway-stations/list', session, {
-        query,
-        after: page.next,
-      });
-      setPage((current) => ({ items: [...current.items, ...next.items], next: next.next }));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Не удалось загрузить станции');
     } finally {
       setBusy(false);
     }
@@ -103,14 +64,27 @@ export function RailwayStations({ session }: { session: Session }) {
           Добавить станцию
         </button>
       </div>
-      <label className="station-search">
-        Поиск по названию или ЕСР
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Название или код"
-        />
-      </label>
+      <RegistryFilters
+        value={filters}
+        onApply={setFilters}
+        loading={loading}
+        placeholder="Название или код ЕСР…"
+      >
+        {(draft, change) => (
+          <label>
+            Страна
+            <input
+              placeholder="Код страны…"
+              maxLength={2}
+              pattern="[A-Z]{2}"
+              value={draft.country_code ?? ''}
+              onChange={(event) =>
+                change({ ...draft, country_code: event.target.value.toUpperCase() || undefined })
+              }
+            />
+          </label>
+        )}
+      </RegistryFilters>
       {error && <p role="alert">{error}</p>}
       {editor && (
         <form className="station-editor" onSubmit={save}>
@@ -168,16 +142,21 @@ export function RailwayStations({ session }: { session: Session }) {
           <table className="station-table">
             <thead>
               <tr>
-                <th>ЕСР</th>
-                <th>Название</th>
-                <th>Страна</th>
+                <SortHeading label="ЕСР" field="esr_code" value={filters} onChange={setFilters} />
+                <SortHeading label="Название" field="name" value={filters} onChange={setFilters} />
+                <SortHeading
+                  label="Страна"
+                  field="country_code"
+                  value={filters}
+                  onChange={setFilters}
+                />
                 <th>
                   <span className="visually-hidden">Действия</span>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {page.items.map((station) => (
+              {items.map((station) => (
                 <tr
                   key={station.esr_code}
                   tabIndex={0}
@@ -228,16 +207,19 @@ export function RailwayStations({ session }: { session: Session }) {
               ))}
             </tbody>
           </table>
-          {!page.items.length && (
+          {!registry.error && !items.length && (
             <p>
-              {query ? 'Станции не найдены.' : 'Справочник пока пуст. Добавьте первую станцию.'}
+              {filters.query || filters.country_code
+                ? 'Станции не найдены.'
+                : 'Справочник пока пуст. Добавьте первую станцию.'}
             </p>
           )}
-          {page.next && (
-            <button disabled={busy} onClick={more}>
-              Показать следующие
-            </button>
-          )}
+          <RegistryMore
+            hasMore={registry.hasMore}
+            loading={registry.loadingMore}
+            error={registry.error}
+            loadMore={registry.loadMore}
+          />
         </>
       )}
     </section>

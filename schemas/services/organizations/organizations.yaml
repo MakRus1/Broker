@@ -137,17 +137,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: []
-              properties:
-                after:
-                  type: string
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 50
+              $ref: components/schemas/organizations.yaml#/ListOrganizationsRequest
       responses:
         '200':
           description: Успех
@@ -163,6 +153,8 @@ paths:
                     type: array
                     items:
                       $ref: components/schemas/organizations.yaml#/Organization
+                  next_cursor:
+                    $ref: components/schemas/organizations.yaml#/OrganizationListCursor
         '400':
           description: Некорректные данные
           content:
@@ -323,21 +315,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - organization_id
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                after:
-                  type: string
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 50
+              $ref: components/schemas/organizations.yaml#/ListMembersRequest
       responses:
         '200':
           description: Успех
@@ -353,6 +331,8 @@ paths:
                     type: array
                     items:
                       $ref: components/schemas/organizations.yaml#/Member
+                  next_cursor:
+                    $ref: components/schemas/organizations.yaml#/MemberListCursor
         '400':
           description: Некорректные данные
           content:

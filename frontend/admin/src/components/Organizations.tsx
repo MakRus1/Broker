@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { request, type Session } from '../api';
+import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
+import { RegistryFilters, RegistryMore, SortHeading, EnabledFilter } from './Registry';
+import { Select } from './Select';
 import { ShipmentSettings } from './organizations/ShipmentSettings';
 import { EditorPanel } from './organizations/EditorPanel';
 import { MemberEditor } from './organizations/MemberEditor';
@@ -28,15 +31,36 @@ export function Organizations({
   session: Session;
   access: OrganizationAccess;
 }) {
-  const ownOrganizations = access.organizations.filter((item) =>
-    access.managed_organization_ids.includes(item.id),
+  const ownOrganizations = useMemo(
+    () => access.organizations.filter((item) => access.managed_organization_ids.includes(item.id)),
+    [access],
   );
-  const [organizations, setOrganizations] = useState(access.platform_admin ? [] : ownOrganizations);
+  const [organizationFilters, setOrganizationFilters] = useState<RegistryQuery>({
+    sort: 'name',
+    descending: false,
+  });
+  const [memberFilters, setMemberFilters] = useState<RegistryQuery>({
+    sort: 'display_name',
+    descending: false,
+  });
+  const organizationList = useRegistry<Organization>(
+    '/api/admin/organizations/list',
+    session,
+    organizationFilters,
+    access.platform_admin,
+  );
+  const organizations = access.platform_admin ? organizationList.items : ownOrganizations;
   const [selected, setSelected] = useState<Organization | undefined>(
     access.platform_admin ? undefined : ownOrganizations[0],
   );
   const [tab, setTab] = useState<'members' | 'roles' | 'shipments'>('members');
-  const [members, setMembers] = useState<Member[]>([]);
+  const memberList = useRegistry<Member>(
+    '/api/admin/organizations/members/list',
+    session,
+    { ...memberFilters, organization_id: selected?.id },
+    Boolean(selected),
+  );
+  const members = memberList.items;
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [editor, setEditor] = useState<Editor>();
@@ -44,8 +68,6 @@ export function Organizations({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [moreMembers, setMoreMembers] = useState(false);
   const newRoleId = useRef('');
   const pendingCreate = useRef<{ key: string; id: string } | null>(null);
 
@@ -63,9 +85,11 @@ export function Organizations({
         ? window.location.hash.slice(prefix.length)
         : undefined;
       const available = access.platform_admin ? organizations : ownOrganizations;
-      setSelected(
+      setSelected((previous) =>
         id
-          ? available.find((item) => item.id === id)
+          ? previous?.id === id
+            ? previous
+            : available.find((item) => item.id === id)
           : access.platform_admin
             ? undefined
             : available[0],
@@ -91,27 +115,11 @@ export function Organizations({
       setBusy(false);
     }
   }
-  async function loadOrganizations(append = false) {
-    const value = await request<{ items: Organization[] }>(
-      '/api/admin/organizations/list',
-      session,
-      { limit: 50, ...(append && organizations.length ? { after: organizations.at(-1)?.id } : {}) },
-    );
-    setOrganizations((current) => (append ? [...current, ...value.items] : value.items));
-    setHasMore(value.items.length === 50);
+  async function loadOrganizations() {
+    organizationList.refresh();
   }
-  async function loadMembers(organization: Organization, append = false) {
-    const value = await request<{ items: Member[] }>(
-      '/api/admin/organizations/members/list',
-      session,
-      {
-        organization_id: organization.id,
-        limit: 50,
-        ...(append && members.length ? { after: members.at(-1)?.subject } : {}),
-      },
-    );
-    setMembers((current) => (append ? [...current, ...value.items] : value.items));
-    setMoreMembers(value.items.length === 50);
+  async function loadMembers() {
+    memberList.refresh();
   }
   async function loadRoles(organization: Organization) {
     const value = await request<{ items: OrganizationRole[]; permissions: Permission[] }>(
@@ -123,45 +131,18 @@ export function Organizations({
     setPermissions(value.permissions);
   }
   useEffect(() => {
-    if (!access.platform_admin) return;
-    let active = true;
-    request<{ items: Organization[] }>('/api/admin/organizations/list', session, { limit: 50 })
-      .then((value) => {
-        if (active) {
-          setOrganizations(value.items);
-          setHasMore(value.items.length === 50);
-        }
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          setError(reason instanceof Error ? reason.message : 'Не удалось загрузить организации');
-      });
-    return () => {
-      active = false;
-    };
-  }, [session, access.platform_admin]);
-  useEffect(() => {
     if (!selected) return;
     let active = true;
     setLoading(true);
-    setMembers([]);
     setRoles([]);
     setError('');
-    Promise.all([
-      request<{ items: Member[] }>('/api/admin/organizations/members/list', session, {
-        organization_id: selected.id,
-        limit: 50,
-      }),
-      request<{ items: OrganizationRole[]; permissions: Permission[] }>(
-        '/api/admin/organizations/roles/list',
-        session,
-        { organization_id: selected.id },
-      ),
-    ])
-      .then(([people, roleData]) => {
+    request<{ items: OrganizationRole[]; permissions: Permission[] }>(
+      '/api/admin/organizations/roles/list',
+      session,
+      { organization_id: selected.id },
+    )
+      .then((roleData) => {
         if (!active) return;
-        setMembers(people.items);
-        setMoreMembers(people.items.length === 50);
         setRoles(roleData.items);
         setPermissions(roleData.permissions);
       })
@@ -250,7 +231,7 @@ export function Organizations({
         }
       }
       closeEditor();
-      await loadMembers(organization);
+      await loadMembers();
       setNotice(member ? 'Изменения сохранены.' : 'Сотрудник добавлен.');
     });
   }
@@ -284,7 +265,7 @@ export function Organizations({
       );
       closeEditor();
       await loadOrganizations();
-      setSelected(organization);
+      openOrganization(organization);
       setNotice(
         previous
           ? 'Организация обновлена.'
@@ -360,11 +341,35 @@ export function Organizations({
       {!selected ? (
         access.platform_admin ? (
           <div className="organization-registry">
+            <RegistryFilters
+              value={organizationFilters}
+              onApply={setOrganizationFilters}
+              loading={organizationList.loading}
+              placeholder="Название организации…"
+            >
+              {(draft, change) => (
+                <EnabledFilter
+                  value={draft.enabled}
+                  onChange={(enabled) => change({ ...draft, enabled })}
+                />
+              )}
+            </RegistryFilters>
+            {organizationList.loading && <p role="status">Загрузка…</p>}
             <table>
               <thead>
                 <tr>
-                  <th>Организация</th>
-                  <th>Статус</th>
+                  <SortHeading
+                    label="Организация"
+                    field="name"
+                    value={organizationFilters}
+                    onChange={setOrganizationFilters}
+                  />
+                  <SortHeading
+                    label="Статус"
+                    field="enabled"
+                    value={organizationFilters}
+                    onChange={setOrganizationFilters}
+                  />
                   <th />
                 </tr>
               </thead>
@@ -394,12 +399,15 @@ export function Organizations({
                 ))}
               </tbody>
             </table>
-            {!organizations.length && <p>Организаций пока нет.</p>}
-            {hasMore && (
-              <button disabled={busy} onClick={() => void run(() => loadOrganizations(true))}>
-                Показать ещё
-              </button>
+            {!organizationList.loading && !organizationList.error && !organizations.length && (
+              <p>Организации не найдены.</p>
             )}
+            <RegistryMore
+              hasMore={organizationList.hasMore}
+              loading={organizationList.loadingMore}
+              error={organizationList.error}
+              loadMore={organizationList.loadMore}
+            />
           </div>
         ) : (
           <p>Нет организаций, в которых вам разрешено управлять сотрудниками.</p>
@@ -431,9 +439,7 @@ export function Organizations({
                   <button
                     disabled={busy || loading}
                     onClick={() =>
-                      void run(() =>
-                        tab === 'members' ? loadMembers(selected) : loadRoles(selected),
-                      )
+                      void run(() => (tab === 'members' ? loadMembers() : loadRoles(selected)))
                     }
                   >
                     Обновить
@@ -451,13 +457,53 @@ export function Organizations({
                 <p role="status">Загрузка…</p>
               ) : tab === 'members' ? (
                 <>
+                  <RegistryFilters
+                    value={memberFilters}
+                    onApply={setMemberFilters}
+                    loading={memberList.loading}
+                    placeholder="ФИО, логин или почта…"
+                  >
+                    {(draft, change) => (
+                      <>
+                        <EnabledFilter
+                          value={draft.enabled}
+                          onChange={(enabled) => change({ ...draft, enabled })}
+                        />
+                        <Select
+                          label="Роль"
+                          value={draft.role ?? ''}
+                          options={[
+                            { value: '', label: 'Все роли' },
+                            ...roles.map((role) => ({ value: role.id, label: role.name })),
+                          ]}
+                          onChange={(role) => change({ ...draft, role: role || undefined })}
+                        />
+                      </>
+                    )}
+                  </RegistryFilters>
+                  {memberList.loading && <p role="status">Загрузка…</p>}
                   <div className="members-table">
                     <table>
                       <thead>
                         <tr>
-                          <th>Сотрудник</th>
-                          <th>Роль</th>
-                          <th>Доступ</th>
+                          <SortHeading
+                            label="Сотрудник"
+                            field="display_name"
+                            value={memberFilters}
+                            onChange={setMemberFilters}
+                          />
+                          <SortHeading
+                            label="Роль"
+                            field="role"
+                            value={memberFilters}
+                            onChange={setMemberFilters}
+                          />
+                          <SortHeading
+                            label="Доступ"
+                            field="enabled"
+                            value={memberFilters}
+                            onChange={setMemberFilters}
+                          />
                           <th />
                         </tr>
                       </thead>
@@ -490,20 +536,18 @@ export function Organizations({
                       </tbody>
                     </table>
                   </div>
-                  {!members.length && (
+                  {!memberList.loading && !memberList.error && !members.length && (
                     <div className="organization-empty">
-                      <h3>Добавьте первого сотрудника</h3>
-                      <p>Начните с администратора, который будет управлять командой.</p>
+                      <h3>Сотрудники не найдены</h3>
+                      <p>Измените фильтры или добавьте сотрудника.</p>
                     </div>
                   )}
-                  {moreMembers && (
-                    <button
-                      disabled={busy}
-                      onClick={() => void run(() => loadMembers(selected, true))}
-                    >
-                      Показать ещё
-                    </button>
-                  )}
+                  <RegistryMore
+                    hasMore={memberList.hasMore}
+                    loading={memberList.loadingMore}
+                    error={memberList.error}
+                    loadMore={memberList.loadMore}
+                  />
                 </>
               ) : (
                 <div className="organization-role-list">

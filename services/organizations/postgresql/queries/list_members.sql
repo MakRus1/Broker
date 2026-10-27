@@ -1,5 +1,20 @@
-SELECT ROW(m.subject, m.username, m.display_name, m.email, m.role, m.enabled, m.revision, m.last_name, m.first_name, m.middle_name)::public.member_v2
-FROM memberships m
-WHERE m.organization_id = $1::UUID AND ($2::TEXT IS NULL OR m.subject > $2)
-ORDER BY m.subject
-LIMIT $3;
+SELECT
+    ROW(
+        m.subject,
+        m.username,
+        m.display_name,
+        m.email,
+        m.role,
+        m.enabled,
+        m.revision,
+        m.last_name,
+        m.first_name,
+        m.middle_name
+    )::public.member_v2,
+    {sort_key} AS sort_key
+FROM memberships AS m
+LEFT JOIN organization_roles AS r
+    ON r.organization_id = m.organization_id AND r.id = m.role
+WHERE {where}
+ORDER BY {order_by}
+LIMIT {limit};

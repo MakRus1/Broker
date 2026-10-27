@@ -121,5 +121,19 @@ UTEST(RegistryQuery, FilterAndOrderCanUseDifferentRepresentationsOfSameField) {
     EXPECT_NE(sql.find("ORDER BY CASE WHEN archived THEN '1' ELSE '0' END ASC, id ASC"),
         std::string::npos);
 }
+
+UTEST(RegistryQuery, TextIdentityIsUsedForCursorAndTieBreaker) {
+    constexpr registry::Field<std::string> subject{"subject", "subject", "TEXT", true};
+    constexpr registry::Field<std::string> name{"name", "lower(name) COLLATE \"C\""};
+    const std::array<registry::FieldDefinition, 2> fields{subject, name};
+    registry::QueryBuilder builder{
+        sql::kListTransportations, registry::OrderBy(fields, "name"), false, subject};
+    builder.After(std::optional<std::string>{"external-subject"}, std::string{"alpha"});
+    const auto sql = Statement(std::move(builder).Build(51));
+    EXPECT_NE(sql.find("(lower(name) COLLATE \"C\", subject) > ($1::TEXT COLLATE \"C\", $2::TEXT)"),
+        std::string::npos);
+    EXPECT_NE(sql.find("ORDER BY lower(name) COLLATE \"C\" ASC, subject ASC"), std::string::npos);
+    EXPECT_EQ(sql.find("::UUID"), std::string::npos);
+}
 }  // namespace
 }  // namespace transportations::helpers

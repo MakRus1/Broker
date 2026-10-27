@@ -1322,3 +1322,185 @@ textarea::placeholder {
   border-color: #b7c8ef;
   background: #eaf0fe;
 }
+
+.registry-filters {
+  display: grid;
+  gap: 18px;
+  margin: 20px 0 24px;
+}
+.registry-search {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.registry-search > label {
+  flex: 0 1 420px;
+  min-width: 180px;
+  margin: 0;
+}
+.registry-search input,
+.registry-search button {
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+.registry-filters label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.registry-filters summary {
+  width: fit-content;
+  cursor: pointer;
+  color: #526177;
+  font-size: 13px;
+  font-weight: 600;
+}
+.registry-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 260px));
+  gap: 16px;
+  margin-top: 16px;
+}
+.registry-filter-fields input,
+.registry-filter-fields select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  box-sizing: border-box;
+}
+.registry-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+}
+.registry-sort:hover {
+  color: #2859ce;
+  background: transparent;
+}
+.registry-more {
+  min-height: 1px;
+  margin-top: 12px;
+}
+.organization-registry {
+  border: 0;
+  border-radius: 0;
+}
+@media (max-width: 600px) {
+  .registry-search > label {
+    flex-basis: 100%;
+  }
+  .registry-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.registry-filters details {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.admin-select {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.admin-select .field-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.admin-select .select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 42px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  background: #fff;
+  color: #243247;
+  border: 1px solid #d8e0eb;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+}
+.admin-select .select-trigger svg {
+  flex-shrink: 0;
+  color: #64738a;
+}
+.admin-select .select-options {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid #d8e0eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px #15263c20;
+}
+.admin-select .select-options > button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 20px;
+}
+.admin-select .select-options > button:hover,
+.admin-select .select-options > button.active,
+.admin-select .select-options > button[aria-selected='true'] {
+  background: #edf3ff;
+  color: #255bcc;
+}
+.registry-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.registry-filter-actions > button {
+  height: 42px;
+  min-height: 42px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 20px;
+}
+@media (max-width: 760px) {
+  .members-table table {
+    min-width: 0;
+  }
+  .members-table th:first-child {
+    width: 42%;
+  }
+  .members-table th:nth-child(2) {
+    width: 32%;
+  }
+  .members-table th:nth-child(3) {
+    width: 26%;
+  }
+  .members-table th:last-child,
+  .members-table td:last-child {
+    display: none;
+  }
+}

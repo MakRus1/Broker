@@ -11,16 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                query:
-                  type: string
-                  maxLength: 200
-                after:
-                  type: string
-                  maxLength: 6
-              required: []
+              $ref: components/schemas/models.yaml#/ListStationsRequest
       responses:
         '200':
           description: Успех
@@ -36,6 +27,8 @@ paths:
                       $ref: components/schemas/models.yaml#/RailwayStation
                   next:
                     type: string
+                  next_cursor:
+                    $ref: components/schemas/models.yaml#/StationListCursor
                 required:
                 - items
         '400':

@@ -1,3 +1,4 @@
+#include <helpers/registry.hpp>
 #include <models/organization_conversions.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/admin/organizations/members/list/view.hpp>
@@ -9,10 +10,20 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::organizations::ApiAdminOrganizationsMembersList;
     const auto result = deps.organizations.ApiAdminOrganizationsMembersList(
-        api::Request{.body = api::RequestBody{.after = request.body.after,
-                         .limit = request.body.limit,
-                         .organization_id = request.body.organization_id}},
+        api::Request{
+            .body = api::RequestBody{.after = request.body.after,
+                .cursor = ConvertRegistryCursor<clients::organizations::models::MemberListCursor>(
+                    request.body.cursor),
+                .descending = request.body.descending,
+                .enabled = request.body.enabled,
+                .limit = request.body.limit,
+                .organization_id = request.body.organization_id,
+                .query = request.body.query,
+                .role = request.body.role,
+                .sort = clients::organizations::models::ParseEnumScalar(
+                    EnumValue(request.body.sort), decltype(api::RequestBody{}.sort){})}},
         session.Access);
-    return Response200{.items = ConvertOrganizations(result.items)};
+    return Response200{.items = ConvertOrganizations(result.items),
+        .next_cursor = ConvertRegistryCursor<models::MemberListCursor>(result.next_cursor)};
 }
 }  // namespace admin_bff::views::api::admin::organizations::members::list

@@ -53,6 +53,28 @@ inline Order OrderBy(std::span<const FieldDefinition> fields, std::string_view n
     throw std::logic_error{"Поле не зарегистрировано для сортировки"};
 }
 
+template <typename Item> struct Row {
+    Item Value;
+    std::string SortKey;
+};
+
+template <typename Item, typename Converter>
+auto ConvertItems(const std::vector<Row<Item>>& rows, Converter convert) {
+    std::vector<decltype(convert(std::declval<const Item&>()))> result;
+    result.reserve(rows.size());
+    for (const auto& row : rows)
+        result.push_back(convert(row.Value));
+    return result;
+}
+
+template <typename Request>
+bool CursorMatches(const Request& request, const std::string& scope, bool identity_order) {
+    if (request.after.has_value() &&
+        (request.cursor.has_value() || !identity_order || request.descending))
+        return false;
+    return !request.cursor.has_value() || request.cursor.value().scope == scope;
+}
+
 struct BuiltQuery {
     pg::Query Statement;
     pg::ParameterStore Parameters;
@@ -61,8 +83,9 @@ struct BuiltQuery {
 // Ограниченный построитель реестра: без JOIN и произвольных фрагментов запроса.
 class QueryBuilder {
   public:
-    QueryBuilder(const pg::Query& selection, Order order, bool descending)
-        : order_(order), descending_(descending) {
+    QueryBuilder(const pg::Query& selection, Order order, bool descending,
+        Field<std::string> identity = {"id", "id", "UUID", true})
+        : order_(order), descending_(descending), identity_(identity) {
         statement_ = selection.GetStatementView();
         selection_name_ = selection.GetOptionalNameView().has_value()
             ? std::string{selection.GetOptionalNameView().value()}
@@ -125,13 +148,14 @@ class QueryBuilder {
             return;
         const std::string comparison = descending_ ? " < " : " > ";
         if (order_.ById) {
-            AddCondition("id", comparison + Bind(id.value(), "UUID"));
+            AddCondition(identity_.Expression, comparison + Bind(id.value(), identity_.PgType));
         } else {
             auto key_parameter = Bind(key, order_.PgType);
             if (order_.PgType == "TEXT")
                 key_parameter += " COLLATE \"C\"";
-            const auto id_parameter = Bind(id.value(), "UUID");
-            AddCondition("(" + std::string{order_.Expression} + ", id)",
+            const auto id_parameter = Bind(id.value(), identity_.PgType);
+            AddCondition("(" + std::string{order_.Expression} + ", " +
+                    std::string{identity_.Expression} + ")",
                 comparison + "(" + key_parameter + ", " + id_parameter + ")");
         }
     }
@@ -141,14 +165,14 @@ class QueryBuilder {
         std::string order;
         if (!order_.ById)
             order = std::string{order_.Expression} + direction + ", ";
-        order += "id" + direction;
+        order += std::string{identity_.Expression} + direction;
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(statement_),
             fmt::arg("sort_key",
                 (order_.ById || order_.PgType == "DATE") ? "'' COLLATE \"C\"" : order_.Expression),
             fmt::arg("date_key", order_.PgType == "DATE" ? order_.Expression : "NULL::DATE"),
-            fmt::arg("where", conditions_), fmt::arg("order_by", order),
-            fmt::arg("limit", limit_parameter));
+            fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
+            fmt::arg("order_by", order), fmt::arg("limit", limit_parameter));
         return {pg::Query{std::move(statement), pg::Query::Name{std::string{selection_name_}}},
             std::move(parameters_)};
     }
@@ -167,6 +191,7 @@ class QueryBuilder {
 
     Order order_;
     bool descending_;
+    Field<std::string> identity_;
     std::string statement_;
     std::string selection_name_;
     std::string conditions_;

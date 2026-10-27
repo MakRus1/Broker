@@ -331,3 +331,106 @@ UpdateMemberProfileRequest:
   - subject
   - last_name
   - first_name
+OrganizationListCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - value
+  - scope
+  properties:
+    id:
+      type: string
+      format: uuid
+    value:
+      type: string
+      maxLength: 1024
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+MemberListCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - value
+  - scope
+  properties:
+    id:
+      type: string
+      maxLength: 256
+    value:
+      type: string
+      maxLength: 1024
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+ListOrganizationsRequest:
+  type: object
+  additionalProperties: false
+  required: []
+  properties:
+    after:
+      type: string
+      format: uuid
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    query:
+      type: string
+      maxLength: 200
+    enabled:
+      type: boolean
+    sort:
+      type: string
+      enum:
+      - id
+      - name
+      - enabled
+      default: id
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/OrganizationListCursor'
+ListMembersRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    after:
+      type: string
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    query:
+      type: string
+      maxLength: 200
+    enabled:
+      type: boolean
+    role:
+      type: string
+      maxLength: 128
+    sort:
+      type: string
+      enum:
+      - subject
+      - display_name
+      - username
+      - email
+      - role
+      - enabled
+      default: subject
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/MemberListCursor'

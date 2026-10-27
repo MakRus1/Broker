@@ -19,7 +19,8 @@ async def test_station_proxy(browser, mockserver, operation, body, result):
 
     @mockserver.json_handler(path)
     def upstream(request):
-        assert request.json == body
+        expected = {**body, 'sort': 'esr_code', 'descending': False, 'limit': 50} if operation == 'list' else body
+        assert request.json == expected
         assert request.headers['Authorization'].startswith('Bearer ')
         return result
 

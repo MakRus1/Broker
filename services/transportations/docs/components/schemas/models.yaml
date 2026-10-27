@@ -82,8 +82,7 @@ Transportation:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - id
   - revision
@@ -121,8 +120,8 @@ RouteSegment:
       format: date-time
     inherited:
       type: boolean
-      description: Участок присутствует в текущем маршруте поставки. Отсутствующие
-        старые участки доступны только для просмотра.
+      description: Участок присутствует в текущем маршруте поставки. Отсутствующие старые участки доступны
+        только для просмотра.
     rail:
       $ref: '#/RailDetails'
     sea:
@@ -512,8 +511,7 @@ CreateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - id
   - shipment_id
@@ -542,8 +540,7 @@ UpdateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - transportation_id
   - expected_revision
@@ -762,3 +759,51 @@ RegistryCursor:
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
+StationListCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - value
+  - scope
+  properties:
+    id:
+      type: string
+      pattern: ^[0-9]{6}$
+    value:
+      type: string
+      maxLength: 1024
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+ListStationsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    query:
+      type: string
+      maxLength: 200
+    after:
+      type: string
+      maxLength: 6
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    sort:
+      type: string
+      enum:
+      - esr_code
+      - name
+      - country_code
+      default: esr_code
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/StationListCursor'
+  required: []

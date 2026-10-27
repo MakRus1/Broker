@@ -1,5 +1,5 @@
 #include <helpers/details.hpp>
-#include <helpers/registry.hpp>
+#include <helpers/registry_query.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/counterparties/list/view.hpp>
@@ -12,9 +12,6 @@ Response View::Handle(
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_READ);
         const auto organization = platform::auth::GetOrganization(identity);
-        std::optional<std::string> role;
-        if (request.body.role.has_value())
-            role = models::EnumValue(request.body.role.value());
         const auto& body = request.body;
         const auto scope = platform::registry::CursorScope(body, organization);
         if (body.after.has_value() &&
@@ -24,19 +21,13 @@ Response View::Handle(
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
             throw ApiError{
                 400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        const auto after =
-            body.cursor.has_value() ? std::optional{body.cursor.value().id} : body.after;
-        const auto key = body.cursor.has_value() ? body.cursor.value().value : "";
+        const auto query = BuildRegistryQuery(body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
         transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction
-                        .Execute(sql::kListCounterparties, organization,
-                            platform::registry::SearchPattern(body.query), role,
-                            models::EnumValue(body.status), body.country_code, body.limit + 1,
-                            models::EnumValue(body.sort), body.descending, key, after, body.ids)
+        auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)

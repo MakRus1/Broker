@@ -3,7 +3,10 @@
 import argparse
 import json
 from pathlib import Path
+import re
+import shlex
 import shutil
+import hashlib
 import statistics
 import subprocess
 import time
@@ -63,6 +66,12 @@ def main():
     parser.add_argument('--rows', type=int, default=50000)
     parser.add_argument('--repetitions', type=int, default=3)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument(
+        '--query-renderer',
+        required=True,
+        help='Команда утилиты SERVICE_registry_query_dump; JSON через stdin',
+    )
+    parser.add_argument('--baseline', type=Path, help='Прежний статический SQL для сравнения')
     args = parser.parse_args()
     if not 1000 <= args.rows <= 5000000 or not 1 <= args.repetitions <= 10:
         parser.error('Ожидается 1000–5000000 строк и 1–10 повторений')
@@ -122,10 +131,82 @@ def main():
         sql('\n'.join(path.read_text() for path in migrations))
         seed, types, cases, indexes = workload(args.service, args.rows)
         sql(seed + f'\nANALYZE {args.service};')
-        query = (
-            ROOT / f'services/{args.service}/postgresql/queries/list_{args.service}.sql'
-        ).read_text()
-        prepared = f'PREPARE registry({types}) AS ' + query
+        if args.service == 'shipments':
+            requests = {
+                'date_first': ({'sort': 'shipment_date', 'descending': True}, []),
+                'number_first': ({'sort': 'number'}, []),
+                'deep_date': (
+                    {
+                        'sort': 'shipment_date',
+                        'descending': True,
+                        'cursor': {
+                            'id': '00000000-0000-0000-0000-000000000000',
+                            'scope': '0' * 64,
+                            'date_value': '2025-10-01',
+                        },
+                    },
+                    ["'2025-10-01'", "'00000000-0000-0000-0000-000000000000'"],
+                ),
+                'rare_cargo': (
+                    {'sort': 'shipment_date', 'descending': True, 'cargo_query': 'редкий'},
+                    ["'%редкий%'"],
+                ),
+                'combined': (
+                    {
+                        'sort': 'shipment_date',
+                        'descending': True,
+                        'customer_id': hashlib.md5(b'42').hexdigest(),
+                        'statuses': ['Новая'],
+                        'date_from': '2026-01-01',
+                        'date_to': '2026-01-31',
+                    },
+                    ["md5('42')::uuid", "ARRAY['Новая']", "'2026-01-01'", "'2026-01-31'"],
+                ),
+                'cargo_sort': ({'sort': 'cargo_description'}, []),
+            }
+            # UUID в JSON использует канонический формат.
+            requests['combined'][0]['customer_id'] = str(
+                uuid.UUID(requests['combined'][0]['customer_id'])
+            )
+        else:
+            requests = {
+                'name_first': ({'sort': 'name'}, ['false']),
+                'deep_name': (
+                    {
+                        'sort': 'name',
+                        'cursor': {
+                            'id': '00000000-0000-0000-0000-000000000000',
+                            'scope': '0' * 64,
+                            'value': 'alpha-30000',
+                        },
+                    },
+                    ['false', "'alpha-30000'", "'00000000-0000-0000-0000-000000000000'"],
+                ),
+                'rare_search': ({'sort': 'name', 'query': '12345'}, ["'%12345%'", 'false']),
+                'combined': (
+                    {'sort': 'name', 'query': 'alpha', 'role': 'customer', 'country_code': 'RU'},
+                    ["'%alpha%'", "'customer'", 'false', "'RU'"],
+                ),
+                'country_sort': ({'sort': 'country_code', 'status': 'all'}, []),
+            }
+        built = {}
+        for name, (request, values) in requests.items():
+            query = subprocess.run(
+                shlex.split(args.query_renderer),
+                input=json.dumps({**request, 'limit': 50}),
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout
+            bindings = {
+                int(index): kind for index, kind in re.findall(r'\$(\d+)::([A-Z]+(?:\[\])?)', query)
+            }
+            parameter_types = ','.join(bindings[index] for index in range(1, len(bindings) + 1))
+            built[name] = (
+                f'PREPARE registry({parameter_types}) AS ' + query.rstrip().rstrip(';') + ';',
+                ','.join([f"'{ORG}'", *values, '51']),
+            )
+        baseline = args.baseline.read_text() if args.baseline else None
         report = {
             'service': args.service,
             'rows': args.rows,
@@ -138,26 +219,44 @@ def main():
             },
             'cases': {},
         }
-        for mode in ['force_custom_plan', 'force_generic_plan']:
-            report['cases'][mode] = {}
-            for name, parameters in cases.items():
-                timings = []
-                for _ in range(args.repetitions):
-                    result = sql(
+        rows_by_case = {}
+        for variant in ['builder'] + (['baseline'] if baseline else []):
+            for mode in ['force_custom_plan', 'force_generic_plan']:
+                label = variant + ':' + mode
+                report['cases'][label] = {}
+                for name, parameters in cases.items():
+                    if variant == 'builder':
+                        prepared, arguments = built[name]
+                    else:
+                        prepared = f'PREPARE registry({types}) AS ' + baseline
+                        arguments = f"'{ORG}',{parameters}"
+                    actual = sql(
                         f'SET plan_cache_mode={mode};\n'
                         + prepared
-                        + f"\nEXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) EXECUTE registry('{ORG}',{parameters});"
+                        + f'\nEXECUTE registry({arguments});'
                     )
-                    plan = json.loads(result[result.index('[') :])[0]
-                    timings.append(plan['Execution Time'])
-                median = statistics.median(timings)
-                report['cases'][mode][name] = {
-                    'median_ms': median,
-                    'min_ms': min(timings),
-                    'max_ms': max(timings),
-                    'explain': plan,
-                }
-                print(f'{args.service}: {mode}: {name}: {median:.3f} ms', flush=True)
+                    if name in rows_by_case and actual != rows_by_case[name]:
+                        raise RuntimeError(f'Различаются строки или порядок: {label}, {name}')
+                    rows_by_case[name] = actual
+                    timings = []
+                    for _ in range(args.repetitions):
+                        result = sql(
+                            f'SET plan_cache_mode={mode};\n'
+                            + prepared
+                            + f"\nEXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) EXECUTE registry({arguments});"
+                        )
+                        plan = json.loads(result[result.index('[') :])[0]
+                        timings.append(plan['Execution Time'])
+                    median = statistics.median(timings)
+                    report['cases'][label][name] = {
+                        'median_ms': median,
+                        'min_ms': min(timings),
+                        'max_ms': max(timings),
+                        'explain': plan,
+                        'query': prepared,
+                        'arguments': arguments,
+                    }
+                    print(f'{args.service}: {label}: {name}: {median:.3f} ms', flush=True)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     finally:

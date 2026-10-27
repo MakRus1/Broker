@@ -95,3 +95,15 @@ async def test_search_matches_inside_number(api, records):
 async def test_next_cursor_is_returned_without_opt_in(api, records):
     page = await api.post(PATH, {'limit': 2})
     assert page['next_cursor']['id'] == page['items'][-1]['id']
+
+
+@pytest.mark.parametrize('field', ['types', 'container_types'])
+async def test_empty_filter_set_matches_nothing(api, records, field):
+    assert (await api.post(PATH, {field: []}))['items'] == []
+
+
+async def test_false_hazardous_filter_is_not_omitted(api, records):
+    page = await api.post(PATH, {'hazardous': False})
+    assert {row['id'] for row in page['items']} == {
+        row['id'] for row in records if not row['hazardous']
+    }

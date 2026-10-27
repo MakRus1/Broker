@@ -1,5 +1,5 @@
 #include <helpers/database.hpp>
-#include <helpers/registry.hpp>
+#include <helpers/registry_query.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/shipments/list/view.hpp>
@@ -29,22 +29,12 @@ Response View::Handle(
                 throw ApiError{
                     400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         }
-        const auto after =
-            body.cursor.has_value() ? std::optional{body.cursor.value().id} : body.after;
-        const auto text =
-            body.cursor.has_value() ? body.cursor.value().text_value.value_or("") : "";
-        const auto date = body.cursor.has_value() ? body.cursor.value().date_value : std::nullopt;
+        const auto query = BuildRegistryQuery(body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         transaction.Execute(sql::kRegistryPlan);
-        auto rows =
-            transaction
-                .Execute(sql::kListShipments, organization,
-                    platform::registry::SearchPattern(body.number_query),
-                    platform::registry::SearchPattern(body.cargo_query), body.customer_id,
-                    body.statuses, body.date_from, body.date_to, models::EnumValue(body.sort),
-                    body.descending, text, date, after, body.limit + 1)
-                .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+        auto rows = transaction.Execute(query.Statement, query.Parameters)
+                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)
             rows.pop_back();

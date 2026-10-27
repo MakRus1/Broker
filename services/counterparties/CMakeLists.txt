@@ -44,6 +44,9 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(counterparties_registry_query_dump EXCLUDE_FROM_ALL tests/unit/registry_query_dump.cpp)
+    target_link_libraries(counterparties_registry_query_dump PRIVATE ${PROJECT_NAME}_objs)
+    broker_openapi_apply(counterparties_registry_query_dump)
     userver_testsuite_add_simple()
 endif()
 

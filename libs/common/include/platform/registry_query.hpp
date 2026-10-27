@@ -150,9 +150,9 @@ class QueryBuilder {
         if (order_.ById) {
             AddCondition(identity_.Expression, comparison + Bind(id.value(), identity_.PgType));
         } else {
-            auto key_parameter = Bind(key, order_.PgType);
-            if (order_.PgType == "TEXT")
-                key_parameter += " COLLATE \"C\"";
+            // Параметр наследует COLLATE левого выражения. Принудительный C
+            // переопределил бы выбранный полем порядок (например, числовой).
+            const auto key_parameter = Bind(key, order_.PgType);
             const auto id_parameter = Bind(id.value(), identity_.PgType);
             AddCondition("(" + std::string{order_.Expression} + ", " +
                     std::string{identity_.Expression} + ")",

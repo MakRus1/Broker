@@ -9,8 +9,10 @@ namespace registry_fields {
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kOrganization{
     "organization_id", "organization_id", "UUID"};
-inline constexpr registry::Field<std::string> kNumber{
-    "container_number", "lower(COALESCE(container_number, '')) COLLATE \"C\""};
+inline constexpr auto kNumber =
+    registry::Field<std::string>{
+        "container_number", "lower(COALESCE(container_number, '')) COLLATE \"C\""}
+        .SortedAs("lower(COALESCE(container_number, '')) COLLATE public.registry_number_order");
 inline constexpr registry::Field<std::string> kType{"type", "type COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kContainerType{
     "container_type", "COALESCE(container_type_code, '') COLLATE \"C\""};

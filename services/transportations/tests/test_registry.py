@@ -107,3 +107,39 @@ async def test_false_hazardous_filter_is_not_omitted(api, records):
     assert {row['id'] for row in page['items']} == {
         row['id'] for row in records if not row['hazardous']
     }
+
+
+@pytest.mark.parametrize('descending', [False, True])
+@pytest.mark.parametrize('limit', [1, 3, 10])
+async def test_natural_container_numbers_with_empty_and_duplicate_values(api, pgsql, descending, limit):
+    numbers = [
+        None, '', 'ABCD2', 'abcd2', 'ABCD9', 'ABCD10', 'ABCD100',
+        'MSCU0000002', 'MSCU0000010', 'MSCU1234567',
+        'X999999999999999999999999999999', 'X1000000000000000000000000000000',
+    ]
+    rows = [(str(UUID(int=500 + i)), number) for i, number in enumerate(numbers)]
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO transportations (
+                organization_id,
+                id,
+                shipment_id,
+                ordinal,
+                container_number,
+                type
+            ) VALUES (%s, %s, %s, 1, %s, 'container')
+            """,
+            [(ORGANIZATION, row_id, str(UUID(int=1000)), number)
+             for row_id, number in reversed(rows)],
+        )
+    found = []
+    request = {'sort': 'container_number', 'descending': descending, 'limit': limit}
+    for _ in range(len(rows) + 1):
+        page = await api.post(PATH, request)
+        found.extend((item['id'], item.get('container_number')) for item in page['items'])
+        if not page.get('next_cursor'):
+            break
+        request['cursor'] = page['next_cursor']
+    assert found == (list(reversed(rows)) if descending else rows)
+    assert len({row_id for row_id, _ in found}) == len(rows)

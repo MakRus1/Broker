@@ -253,10 +253,31 @@ inline clients::transportations::ApiV1TransportationsGet::RequestBody Convert(
 
 inline clients::transportations::ApiV1TransportationsList::RequestBody Convert(
     const models::transportations::ListTransportationsRequest& value) {
-    return {.after = value.after,
-        .item_id = value.item_id,
-        .limit = value.limit,
-        .shipment_id = value.shipment_id};
+    auto result =
+        clients::transportations::ApiV1TransportationsList::RequestBody{.after = value.after,
+            .container_types = value.container_types,
+            .descending = value.descending,
+            .hazardous = value.hazardous,
+            .item_id = value.item_id,
+            .limit = value.limit,
+            .query = value.query,
+            .shipment_id = value.shipment_id,
+            .sort = clients::transportations::models::ParseEnumScalar(
+                models::transportations::EnumValue(value.sort),
+                clients::transportations::models::ListTransportationsRequest_sort{})};
+    if (value.types.has_value()) {
+        result.types.emplace();
+        for (const auto item : value.types.value())
+            result.types.value().push_back(clients::transportations::models::ParseEnumScalar(
+                models::transportations::EnumValue(item),
+                clients::transportations::models::ListTransportationsRequest_types_item{}));
+    }
+    if (value.cursor.has_value())
+        result.cursor =
+            clients::transportations::models::RegistryCursor{.id = value.cursor.value().id,
+                .scope = value.cursor.value().scope,
+                .value = value.cursor.value().value};
+    return result;
 }
 
 inline clients::transportations::models::TransportMode Convert(

@@ -1,3 +1,4 @@
+import type { RegistrySort } from './transportationRegistry';
 import { routePoint } from './transportation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -145,14 +146,48 @@ export function CardNavigation({
   );
 }
 
-export function TransportationTable({ items }: { items: Transportation[] }) {
+export function TransportationTable({
+  items,
+  sort,
+  descending = false,
+  onSort,
+}: {
+  items: Transportation[];
+  sort?: RegistrySort;
+  descending?: boolean;
+  onSort?: (sort: RegistrySort) => void;
+}) {
   return (
     <div className="table-scroll">
       <table className="transportation-table">
         <thead>
           <tr>
-            <th>Перевозка</th>
-            <th>Контейнер</th>
+            <th
+              aria-sort={
+                sort === 'container_number' ? (descending ? 'descending' : 'ascending') : undefined
+              }
+            >
+              {onSort ? (
+                <button className="table-sort" onClick={() => onSort('container_number')}>
+                  Перевозка {sort === 'container_number' ? (descending ? '↓' : '↑') : '↕'}
+                </button>
+              ) : (
+                'Перевозка'
+              )}
+            </th>
+            <th
+              aria-sort={
+                sort === 'container_type' ? (descending ? 'descending' : 'ascending') : undefined
+              }
+            >
+              {onSort ? (
+                <button className="table-sort" onClick={() => onSort('container_type')}>
+                  Контейнер {sort === 'container_type' ? (descending ? '↓' : '↑') : '↕'}
+                </button>
+              ) : (
+                'Контейнер'
+              )}
+            </th>
             <th>Маршрут</th>
           </tr>
         </thead>

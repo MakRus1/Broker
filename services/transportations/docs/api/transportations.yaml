@@ -83,6 +83,8 @@ paths:
                     type: array
                     items:
                       $ref: ../components/schemas/models.yaml#/Transportation
+                  next_cursor:
+                    $ref: ../components/schemas/models.yaml#/RegistryCursor
                 required:
                 - items
         '400':

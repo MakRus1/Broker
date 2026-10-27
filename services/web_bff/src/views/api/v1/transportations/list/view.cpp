@@ -9,6 +9,11 @@ Response View::Handle(
     namespace api = clients::transportations::ApiV1TransportationsList;
     const auto result = deps.transportations.ApiV1TransportationsList(
         api::Request{.body = Convert(request.body)}, session.Access);
-    return Response200{.items = Convert(result.items)};
+    std::optional<models::transportations::RegistryCursor> cursor;
+    if (result.next_cursor.has_value())
+        cursor = models::transportations::RegistryCursor{.id = result.next_cursor.value().id,
+            .scope = result.next_cursor.value().scope,
+            .value = result.next_cursor.value().value};
+    return Response200{.items = Convert(result.items), .next_cursor = cursor};
 }
 }  // namespace web_bff::views::api::v1::transportations::list

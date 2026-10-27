@@ -2379,3 +2379,126 @@ details[open] > .route-stage-summary::after {
   background: #edf3ff;
   color: #255bcc;
 }
+
+.registry-filters {
+  margin: 0 0 8px;
+  padding: 0 28px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 14px;
+}
+.registry-search {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) max-content max-content;
+  align-items: end;
+  gap: 12px;
+}
+.registry-search > label {
+  margin: 0;
+  min-width: 0;
+}
+.registry-search input,
+.registry-search > button {
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+.registry-search > button {
+  padding: 10px 16px;
+}
+.registry-filters details {
+  margin: 0;
+}
+.registry-filters summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  width: fit-content;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: #526177;
+}
+.registry-filters summary::-webkit-details-marker {
+  display: none;
+}
+.registry-filters details[open] summary svg {
+  transform: rotate(180deg);
+}
+.registry-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 280px));
+  align-items: start;
+  gap: 18px 16px;
+  margin-top: 16px;
+}
+.registry-filter-fields fieldset {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.registry-filter-fields legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.registry-filter-fields .select-trigger {
+  height: 42px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+.registry-type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.registry-type-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+.registry-type-options input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  accent-color: #285bd4;
+}
+.table-sort {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: none;
+}
+@media (max-width: 600px) {
+  .registry-filters {
+    padding-inline: 20px;
+  }
+  .registry-filter-fields {
+    grid-template-columns: 1fr;
+  }
+  .registry-search {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .registry-search > label {
+    flex: 1 0 100%;
+  }
+}

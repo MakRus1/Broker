@@ -1,4 +1,11 @@
 import { transportationTitle } from './transportation';
+import { TransportationFilters } from './TransportationFilters';
+import {
+  registryRequest,
+  initialRegistryQuery,
+  type RegistryCursor,
+  type RegistrySort,
+} from './transportationRegistry';
 import {
   openWorkspace,
   replaceWorkspace,
@@ -133,6 +140,8 @@ export function App() {
       return false;
     }
   });
+  const [registryQuery, setRegistryQuery] = useState(initialRegistryQuery);
+  const [registryCursor, setRegistryCursor] = useState<RegistryCursor>();
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState('');
@@ -166,6 +175,10 @@ export function App() {
       if (!session || tab === 'counterparties' || !session.permissions.includes(tab + '.read'))
         return;
       const currentRequest = ++requestNumber.current;
+      if (!append && tab === 'transportations') {
+        setTransportations([]);
+        setMore(false);
+      }
       setLoading(true);
       setLoadFailed(false);
       try {
@@ -178,17 +191,15 @@ export function App() {
           setShipments((old) => (append ? [...old, ...page.items] : page.items));
           setMore(page.items.length === 50);
         } else {
-          const page = await request<{ items: Transportation[] }>(
+          const page = await request<{ items: Transportation[]; next_cursor?: RegistryCursor }>(
             '/api/v1/transportations/list',
             session,
-            {
-              limit: 50,
-              ...(append && transportations.length ? { after: transportations.at(-1)!.id } : {}),
-            },
+            registryRequest(registryQuery, append ? registryCursor : undefined),
           );
           if (currentRequest !== requestNumber.current) return;
           setTransportations((old) => (append ? [...old, ...page.items] : page.items));
-          setMore(page.items.length === 50);
+          setRegistryCursor(page.next_cursor);
+          setMore(Boolean(page.next_cursor));
         }
       } catch (value) {
         if (currentRequest === requestNumber.current) {
@@ -199,7 +210,7 @@ export function App() {
         if (currentRequest === requestNumber.current) setLoading(false);
       }
     },
-    [session, tab, shipments, transportations, error],
+    [session, tab, shipments, transportations, registryQuery, registryCursor, error],
   );
   // Первую страницу запрашиваем только при входе или переключении раздела.
   useEffect(() => {
@@ -207,7 +218,7 @@ export function App() {
     return () => {
       requestNumber.current++;
     };
-  }, [session, tab]);
+  }, [session, tab, registryQuery]);
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
     const controller = new AbortController();
@@ -440,6 +451,17 @@ export function App() {
                 )}
               </div>
             </div>
+            {tab === 'transportations' && (
+              <TransportationFilters
+                session={session}
+                value={registryQuery}
+                loading={loading}
+                onApply={(value) => {
+                  setRegistryCursor(undefined);
+                  setRegistryQuery(value);
+                }}
+              />
+            )}
             <section className="surface" aria-busy={loading}>
               {tab === 'shipments' && (
                 <div className="table-title">
@@ -492,16 +514,28 @@ export function App() {
                   </tbody>
                 </table>
               ) : (
-                <TransportationTable items={transportations} />
+                <TransportationTable
+                  items={transportations}
+                  sort={registryQuery.sort}
+                  descending={registryQuery.descending}
+                  onSort={(sort: RegistrySort) => {
+                    setRegistryCursor(undefined);
+                    setRegistryQuery((old) => ({
+                      ...old,
+                      sort,
+                      descending: old.sort === sort ? !old.descending : false,
+                    }));
+                  }}
+                />
               )}
               {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
                 <div className="empty">
                   <span>▣</span>
-                  <h2>{tab === 'shipments' ? 'Пока нет поставок' : 'Пока нет перевозок'}</h2>
+                  <h2>{tab === 'shipments' ? 'Пока нет поставок' : 'Перевозки не найдены'}</h2>
                   <p>
                     {tab === 'shipments'
                       ? 'Создайте поставку, добавьте позиции и запустите создание перевозок.'
-                      : 'Создайте перевозку в карточке поставки вручную или из плановой позиции.'}
+                      : 'Измените фильтры или создайте перевозку в карточке поставки.'}
                   </p>
                 </div>
               )}

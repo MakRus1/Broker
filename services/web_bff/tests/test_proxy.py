@@ -231,7 +231,8 @@ async def test_converted_request_defaults(browser, mockserver, path, limit):
         assert request.json == (
             {'limit': limit, 'query': '', 'status': 'active'}
             if path == 'counterparties'
-            else {'limit': limit}
+            else {'limit': limit, 'sort': 'id', 'descending': False}
+            if path == 'transportations' else {'limit': limit}
         )
         return {'items': []}
 
@@ -448,3 +449,20 @@ async def test_session_uses_profile_name(browser, oidc, claims, expected):
     oidc['claims'].update(claims)
     session = await browser.sign_in()
     assert session['display_name'] == expected
+
+
+async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):
+    await browser.sign_in()
+    cursor = {'id': ID, 'value': 'mscu1234567', 'scope': 'a' * 64}
+    body = {'limit': 10, 'query': '123', 'types': ['container', 'air'],
+            'container_types': ['40HC'], 'hazardous': False,
+            'sort': 'container_number', 'descending': True, 'cursor': cursor}
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def upstream(request):
+        assert request.json == body
+        return {'items': [], 'next_cursor': cursor}
+
+    response = await browser.post('/api/v1/transportations/list', body)
+    assert response.status == 200
+    assert response.json()['next_cursor'] == cursor

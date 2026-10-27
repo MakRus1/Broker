@@ -12,26 +12,43 @@
 #include <userver/storages/postgres/query.hpp>
 #include <vector>
 
-namespace transportations::helpers::registry {
+namespace platform::registry {
 namespace pg = userver::storages::postgres;
 
 // SQL-выражения задаёт разработчик. Значения запроса всегда идут через ParameterStore.
-template <typename T> struct Field {
+struct FieldDefinition {
     std::string_view Name;
     std::string_view Expression;
     std::string_view PgType = "TEXT";
     bool ById = false;
+    std::string_view SortExpression;
+    std::string_view SortPgType;
+};
+
+template <typename T> struct Field : FieldDefinition {
+    constexpr Field(std::string_view name, std::string_view expression,
+        std::string_view pg_type = "TEXT", bool by_id = false)
+        : FieldDefinition{name, expression, pg_type, by_id, {}, {}} {}
+
+    constexpr Field SortedAs(std::string_view expression, std::string_view pg_type = "TEXT") const {
+        auto field = *this;
+        field.SortExpression = expression;
+        field.SortPgType = pg_type;
+        return field;
+    }
 };
 
 struct Order {
     std::string_view Expression;
     bool ById = false;
+    std::string_view PgType = "TEXT";
 };
 
-inline Order OrderBy(std::span<const Field<std::string>> fields, std::string_view name) {
+inline Order OrderBy(std::span<const FieldDefinition> fields, std::string_view name) {
     for (const auto& field : fields) {
         if (field.Name == name)
-            return {field.Expression, field.ById};
+            return {field.SortExpression.empty() ? field.Expression : field.SortExpression,
+                field.ById, field.SortPgType.empty() ? field.PgType : field.SortPgType};
     }
     throw std::logic_error{"Поле не зарегистрировано для сортировки"};
 }
@@ -41,12 +58,15 @@ struct BuiltQuery {
     pg::ParameterStore Parameters;
 };
 
-// Прототип для одного реестра: без JOIN, произвольных фрагментов и языка выражений.
+// Ограниченный построитель реестра: без JOIN и произвольных фрагментов запроса.
 class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending)
         : order_(order), descending_(descending) {
         statement_ = selection.GetStatementView();
+        selection_name_ = selection.GetOptionalNameView().has_value()
+            ? std::string{selection.GetOptionalNameView().value()}
+            : "registry";
         for (const auto slot : {"{sort_key}", "{where}", "{order_by}", "{limit}"}) {
             const auto position = statement_.find(slot);
             if (position == std::string::npos ||
@@ -55,6 +75,11 @@ class QueryBuilder {
                 throw std::logic_error{
                     "Каждое место SQL-шаблона должно встречаться ровно один раз"};
         }
+        const auto date_slot = statement_.find("{date_key}");
+        if ((order_.PgType == "DATE" && date_slot == std::string::npos) ||
+            (date_slot != std::string::npos &&
+                statement_.find("{date_key}", date_slot + 10) != std::string::npos))
+            throw std::logic_error{"Некорректное место календарного ключа SQL-шаблона"};
     }
 
     template <typename T> void WhereEqual(Field<T> field, const T& value) {
@@ -79,17 +104,35 @@ class QueryBuilder {
             AddCondition(field.Expression, " LIKE lower(" + Bind(pattern.value(), "TEXT") + ")");
     }
 
-    void After(const std::optional<std::string>& id, const std::string& key) {
+    template <typename T> void WhereAtLeast(Field<T> field, const std::optional<T>& value) {
+        if (value.has_value())
+            AddCondition(field.Expression, " >= " + Bind(value.value(), field.PgType));
+    }
+
+    template <typename T> void WhereAtMost(Field<T> field, const std::optional<T>& value) {
+        if (value.has_value())
+            AddCondition(field.Expression, " <= " + Bind(value.value(), field.PgType));
+    }
+
+    template <typename T> void WhereArrayContains(Field<T> field, const std::optional<T>& value) {
+        if (value.has_value())
+            AddCondition(
+                Bind(value.value(), field.PgType), " = ANY(" + std::string{field.Expression} + ")");
+    }
+
+    template <typename T> void After(const std::optional<std::string>& id, const T& key) {
         if (!id.has_value())
             return;
         const std::string comparison = descending_ ? " < " : " > ";
         if (order_.ById) {
             AddCondition("id", comparison + Bind(id.value(), "UUID"));
         } else {
-            const auto key_parameter = Bind(key, "TEXT");
+            auto key_parameter = Bind(key, order_.PgType);
+            if (order_.PgType == "TEXT")
+                key_parameter += " COLLATE \"C\"";
             const auto id_parameter = Bind(id.value(), "UUID");
             AddCondition("(" + std::string{order_.Expression} + ", id)",
-                comparison + "(" + key_parameter + " COLLATE \"C\", " + id_parameter + ")");
+                comparison + "(" + key_parameter + ", " + id_parameter + ")");
         }
     }
 
@@ -101,10 +144,12 @@ class QueryBuilder {
         order += "id" + direction;
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(statement_),
-            fmt::arg("sort_key", order_.ById ? "'' COLLATE \"C\"" : order_.Expression),
+            fmt::arg("sort_key",
+                (order_.ById || order_.PgType == "DATE") ? "'' COLLATE \"C\"" : order_.Expression),
+            fmt::arg("date_key", order_.PgType == "DATE" ? order_.Expression : "NULL::DATE"),
             fmt::arg("where", conditions_), fmt::arg("order_by", order),
             fmt::arg("limit", limit_parameter));
-        return {pg::Query{std::move(statement), pg::Query::Name{"transportations_registry"}},
+        return {pg::Query{std::move(statement), pg::Query::Name{std::string{selection_name_}}},
             std::move(parameters_)};
     }
 
@@ -123,7 +168,8 @@ class QueryBuilder {
     Order order_;
     bool descending_;
     std::string statement_;
+    std::string selection_name_;
     std::string conditions_;
     pg::ParameterStore parameters_;
 };
-}  // namespace transportations::helpers::registry
+}  // namespace platform::registry

@@ -41,7 +41,7 @@
 ## Где находится логика
 
 Базовая выборка лежит в `services/transportations/postgresql/queries/list_transportations.sql`.
-Фильтры и сортировку теперь задаёт локальный [прототип конструктора](transportation-query-builder.md).
+Фильтры и сортировку теперь задаёт общий [конструктор реестров](transportation-query-builder.md).
 В документе показаны реальный код подключения фильтра, итоговый SQL и границы подхода.
 Даты будущих фильтров должны оставаться типами `date` / `date-time` в контракте
 и DATE / TIMESTAMPTZ в PostgreSQL.

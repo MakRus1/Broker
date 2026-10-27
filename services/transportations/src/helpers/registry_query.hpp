@@ -1,8 +1,10 @@
 #pragma once
 #include <helpers/registry.hpp>
-#include <helpers/registry_query_builder.hpp>
+#include <platform/registry_query.hpp>
 
 namespace transportations::helpers {
+namespace registry = platform::registry;
+
 namespace registry_fields {
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kOrganization{
@@ -15,7 +17,8 @@ inline constexpr registry::Field<std::string> kContainerType{
 inline constexpr registry::Field<bool> kHazardous{"hazardous", "hazardous", "BOOLEAN"};
 inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
 inline constexpr registry::Field<std::string> kItem{"item_id", "item_id", "UUID"};
-inline constexpr std::array kSortableFields{kId, kNumber, kContainerType, kType};
+inline constexpr std::array<registry::FieldDefinition, 4> kSortableFields{
+    kId, kNumber, kContainerType, kType};
 }  // namespace registry_fields
 
 inline registry::BuiltQuery BuildRegistryQuery(

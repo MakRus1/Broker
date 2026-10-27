@@ -1,4 +1,5 @@
 #include <helpers/registry_query.hpp>
+#include <platform/calendar_date.hpp>
 #include <userver/utest/utest.hpp>
 
 namespace transportations::helpers {
@@ -54,7 +55,7 @@ UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
 UTEST(RegistryQuery, RegisteringFieldEnablesOrderingWithoutSwitch) {
     constexpr registry::Field<std::string> ownership{
         "container_ownership", "COALESCE(container_ownership, '') COLLATE \"C\""};
-    const std::array fields{ownership};
+    const std::array<registry::FieldDefinition, 1> fields{ownership};
     registry::QueryBuilder builder{
         sql::kListTransportations, registry::OrderBy(fields, "container_ownership"), false};
     builder.WhereEqual(registry_fields::kOrganization, kOrganization);
@@ -86,6 +87,39 @@ UTEST(RegistryQuery, RejectsMissingOrRepeatedTemplateSlots) {
                 "SELECT {sort_key} WHERE {where} OR {where} ORDER BY {order_by} LIMIT {limit}"},
             order, false}),
         std::logic_error);
+}
+
+UTEST(RegistryQuery, DateRangeAndCursorRemainNativeDate) {
+    using Date = userver::utils::datetime::Date;
+    constexpr registry::Field<Date> date{"shipment_date", "shipment_date", "DATE"};
+    const std::array<registry::FieldDefinition, 1> fields{date};
+    const pg::Query selection{"SELECT {sort_key}, {date_key} FROM shipments WHERE {where} ORDER BY "
+                              "{order_by} LIMIT {limit}"};
+    registry::QueryBuilder builder{selection, registry::OrderBy(fields, "shipment_date"), true};
+    builder.WhereEqual(registry_fields::kOrganization, kOrganization);
+    builder.WhereAtLeast(date, std::optional{Date{2026, 1, 1}});
+    builder.WhereAtMost(date, std::optional{Date{2026, 12, 31}});
+    builder.After(std::optional{kOrganization}, Date{2026, 10, 27});
+    const auto query = std::move(builder).Build(51);
+    const auto sql = Statement(query);
+    EXPECT_NE(sql.find("shipment_date >= $2::DATE"), std::string::npos);
+    EXPECT_NE(sql.find("shipment_date <= $3::DATE"), std::string::npos);
+    EXPECT_NE(sql.find("(shipment_date, id) < ($4::DATE, $5::UUID)"), std::string::npos);
+    EXPECT_NE(sql.find("ORDER BY shipment_date DESC, id DESC"), std::string::npos);
+    EXPECT_NE(sql.find("SELECT '' COLLATE \"C\", shipment_date"), std::string::npos);
+}
+
+UTEST(RegistryQuery, FilterAndOrderCanUseDifferentRepresentationsOfSameField) {
+    constexpr auto archived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
+        "CASE WHEN archived THEN '1' ELSE '0' END");
+    const std::array<registry::FieldDefinition, 1> fields{archived};
+    registry::QueryBuilder builder{
+        sql::kListTransportations, registry::OrderBy(fields, "archived"), false};
+    builder.WhereEqual(archived, false);
+    const auto sql = Statement(std::move(builder).Build(51));
+    EXPECT_NE(sql.find("WHERE archived = $1::BOOLEAN"), std::string::npos);
+    EXPECT_NE(sql.find("ORDER BY CASE WHEN archived THEN '1' ELSE '0' END ASC, id ASC"),
+        std::string::npos);
 }
 }  // namespace
 }  // namespace transportations::helpers

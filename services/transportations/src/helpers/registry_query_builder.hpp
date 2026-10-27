@@ -1,7 +1,11 @@
 #pragma once
 
+#include <array>
+#include <fmt/format.h>
 #include <optional>
 #include <platform/registry.hpp>
+#include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <userver/storages/postgres/parameter_store.hpp>
@@ -13,14 +17,24 @@ namespace pg = userver::storages::postgres;
 
 // SQL-выражения задаёт разработчик. Значения запроса всегда идут через ParameterStore.
 template <typename T> struct Field {
+    std::string_view Name;
     std::string_view Expression;
-    std::string_view PgType;
+    std::string_view PgType = "TEXT";
+    bool ById = false;
 };
 
 struct Order {
     std::string_view Expression;
     bool ById = false;
 };
+
+inline Order OrderBy(std::span<const Field<std::string>> fields, std::string_view name) {
+    for (const auto& field : fields) {
+        if (field.Name == name)
+            return {field.Expression, field.ById};
+    }
+    throw std::logic_error{"Поле не зарегистрировано для сортировки"};
+}
 
 struct BuiltQuery {
     pg::Query Statement;
@@ -32,11 +46,15 @@ class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending)
         : order_(order), descending_(descending) {
-        statement_ = "WITH registry AS (\n";
-        statement_ += selection.GetStatementView();
-        statement_ += "\n)\nSELECT transportation, ";
-        statement_ += order_.Expression;
-        statement_ += " AS sort_key\nFROM registry\nWHERE TRUE";
+        statement_ = selection.GetStatementView();
+        for (const auto slot : {"{sort_key}", "{where}", "{order_by}", "{limit}"}) {
+            const auto position = statement_.find(slot);
+            if (position == std::string::npos ||
+                statement_.find(slot, position + std::string_view{slot}.size()) !=
+                    std::string::npos)
+                throw std::logic_error{
+                    "Каждое место SQL-шаблона должно встречаться ровно один раз"};
+        }
     }
 
     template <typename T> void WhereEqual(Field<T> field, const T& value) {
@@ -77,12 +95,16 @@ class QueryBuilder {
 
     BuiltQuery Build(int limit) && {
         const std::string direction = descending_ ? " DESC" : " ASC";
-        statement_ += "\nORDER BY ";
+        std::string order;
         if (!order_.ById)
-            statement_ += std::string{order_.Expression} + direction + ", ";
-        statement_ += "id" + direction;
-        statement_ += "\nLIMIT " + Bind(limit, "INTEGER");
-        return {pg::Query{std::move(statement_), pg::Query::Name{"transportations_registry"}},
+            order = std::string{order_.Expression} + direction + ", ";
+        order += "id" + direction;
+        const auto limit_parameter = Bind(limit, "INTEGER");
+        auto statement = fmt::format(fmt::runtime(statement_),
+            fmt::arg("sort_key", order_.ById ? "'' COLLATE \"C\"" : order_.Expression),
+            fmt::arg("where", conditions_), fmt::arg("order_by", order),
+            fmt::arg("limit", limit_parameter));
+        return {pg::Query{std::move(statement), pg::Query::Name{"transportations_registry"}},
             std::move(parameters_)};
     }
 
@@ -93,14 +115,15 @@ class QueryBuilder {
     }
 
     void AddCondition(std::string_view expression, const std::string& condition) {
-        statement_ += "\n  AND ";
-        statement_ += expression;
-        statement_ += condition;
+        conditions_ += conditions_.empty() ? "" : "\n  AND ";
+        conditions_ += expression;
+        conditions_ += condition;
     }
 
     Order order_;
     bool descending_;
     std::string statement_;
+    std::string conditions_;
     pg::ParameterStore parameters_;
 };
 }  // namespace transportations::helpers::registry

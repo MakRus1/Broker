@@ -11,12 +11,8 @@ SELECT
         type,
         hazardous
     )::public.transportation_v4 AS transportation,
-    id,
-    organization_id,
-    shipment_id,
-    item_id,
-    container_number,
-    container_type_code,
-    type,
-    hazardous
+    {sort_key} AS sort_key
 FROM transportations
+WHERE {where}
+ORDER BY {order_by}
+LIMIT {limit};

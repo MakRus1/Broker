@@ -40,17 +40,15 @@
 
 ## Где находится логика
 
-Запрос целиком лежит в `services/transportations/postgresql/queries/list_transportations.sql`.
-В C++ не склеиваются SELECT, WHERE и ORDER BY. В нём проверяется курсор, экранируется
-строка LIKE и передаются параметры. Даты будущих фильтров должны оставаться типами
-`date` / `date-time` в контракте и DATE / TIMESTAMPTZ в PostgreSQL.
+Базовая выборка лежит в `services/transportations/postgresql/queries/list_transportations.sql`.
+Фильтры и сортировку теперь задаёт локальный [прототип конструктора](transportation-query-builder.md).
+В документе показаны реальный код подключения фильтра, итоговый SQL и границы подхода.
+Даты будущих фильтров должны оставаться типами `date` / `date-time` в контракте
+и DATE / TIMESTAMPTZ в PostgreSQL.
 
-В запросе фиксированный CASE выбирает известный ключ сортировки. PostgreSQL сворачивает
-его при построении плана под конкретные параметры, поэтому индекс номера доступен
-для сортировки и перехода к следующей странице. Для этого внутри короткой транзакции
-реестра выполняется `SET LOCAL plan_cache_mode = 'force_custom_plan'`. Настройка не
-остаётся на соединении после commit/rollback. Без неё общий план подготовленного
-запроса может потерять индексный порядок из-за необязательных предикатов и CASE.
+Короткая транзакция обеспечивает один снимок для перевозок и участков маршрута.
+SET LOCAL force_custom_plan пока сохранён из-за чувствительности поиска LIKE
+к параметрам; выбор сортировки больше не требует CASE.
 
 Добавляются два индекса: B-tree по организации, нормализованному номеру и UUID для
 порядка страниц; GIN с pg_trgm для поиска по вхождению. Индексы на каждое
@@ -91,8 +89,9 @@
 ## Воспроизводимое измерение
 
 ```bash
-python3 scripts/benchmark-transportation-registry.py \
-  --rows 500000 --repetitions 3 --output /tmp/transportation-registry.json
+python3 scripts/benchmark-transportation-registry.py --rows 500000 \
+  --query-renderer 'docker exec -i broker-query-prototype build-debug/services/transportations/transportations_registry_query_dump' \
+  --output /tmp/transportations-registry.json
 ```
 
 Нужен Docker и образ PostgreSQL 16.14. Скрипт создаёт отдельный контейнер без проброса
@@ -100,7 +99,7 @@ python3 scripts/benchmark-transportation-registry.py \
 свой контейнер в finally. Рабочие базы и Kubernetes не затрагиваются. Измерение не
 включено в обязательные проверки каждого PR.
 
-Результат локального запуска 27.10.2026: 500 тысяч перевозок, из них 400 тысяч в одной
+Исторический результат статического запроса до прототипа, 27.10.2026: 500 тысяч перевозок, из них 400 тысяч в одной
 организации; повторяющиеся и пустые номера, опасный груз у 1% записей. Медиана трёх
 запусков, прогретый кеш, последовательные запросы PostgreSQL:
 

@@ -47,6 +47,13 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(transportations_unittest tests/unit/registry_query_test.cpp)
+    target_link_libraries(transportations_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
+    broker_openapi_apply(transportations_unittest)
+    add_google_tests(transportations_unittest)
+    add_executable(transportations_registry_query_dump EXCLUDE_FROM_ALL tests/unit/registry_query_dump.cpp)
+    target_link_libraries(transportations_registry_query_dump PRIVATE ${PROJECT_NAME}_objs)
+    broker_openapi_apply(transportations_registry_query_dump)
     userver_testsuite_add_simple()
 endif()
 

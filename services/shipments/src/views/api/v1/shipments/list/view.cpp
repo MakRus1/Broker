@@ -14,13 +14,13 @@ Response View::Handle(
         const auto organization = platform::auth::GetOrganization(identity);
         const auto& body = request.body;
         const auto scope = platform::registry::CursorScope(body, organization);
-        const bool date_sort = body.sort == models::ListShipmentsRequest_sort::ShipmentDate;
+        const bool date_sort =
+            registry::RegistryOrderBy(registry_fields::kFields, body.sort).PgType == "DATE";
         if (body.date_from.has_value() && body.date_to.has_value() &&
             body.date_from.value() > body.date_to.value())
             throw ApiError{400, "invalid_date_range", "Начало периода позже окончания"};
         if (body.after.has_value() &&
-            (body.cursor.has_value() || body.sort != models::ListShipmentsRequest_sort::Id ||
-                body.descending))
+            (body.cursor.has_value() || body.sort != "id" || body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (body.cursor.has_value()) {
             const auto& cursor = body.cursor.value();
@@ -49,6 +49,8 @@ Response View::Handle(
         }
         transaction.Commit();
         return Response200{.items = Convert(rows), .next_cursor = cursor};
+    } catch (const platform::registry::FilterError& error) {
+        return Response400{.error = "invalid_filter", .message = error.what()};
     } catch (const ::shipments::ApiError& error) {
         switch (error.Status) {
         case 400:

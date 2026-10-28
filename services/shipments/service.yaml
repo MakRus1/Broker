@@ -40,6 +40,7 @@ auth:
     /api/admin/shipments/settings/update: authenticated
     /api/v1/shipments/transportation-contexts: transportations.read
     /api/v1/shipments/route-segments/register-usage: transportations.write
+    /api/v1/shipments/filter-values: shipments.read
   organization-access: true
 service_accounts:
   dispatcher:

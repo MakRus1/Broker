@@ -9,6 +9,7 @@ paths:
 - /api/v1/transportation-routes/usage
 - /api/v1/transportations/container-fact
 - /api/v1/transportations/create
+- /api/v1/transportations/filter-values
 - /api/v1/transportations/get
 - /api/v1/transportations/history
 - /api/v1/transportations/list

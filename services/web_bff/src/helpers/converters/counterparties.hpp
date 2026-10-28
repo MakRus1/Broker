@@ -1,5 +1,6 @@
 #pragma once
 #include <clients/counterparties/client.hpp>
+#include <helpers/registry_filters.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -167,9 +168,9 @@ inline clients::counterparties::ApiV1CounterpartiesList::RequestBody Convert(
     result.ids = value.ids;
     result.cursor = Convert(value.cursor);
     result.descending = value.descending;
-    result.sort = clients::counterparties::models::ParseEnumScalar(
-        models::counterparties::EnumValue(value.sort),
-        clients::counterparties::models::ListCounterpartiesRequest_sort{});
+    result.filters =
+        ConvertRegistryFilters<clients::counterparties::models::RegistryFilter>(value.filters);
+    result.sort = value.sort;
     if (value.role.has_value())
         result.role = Convert(value.role.value());
     // Enum фильтра принадлежит собственному контракту каждого участника.
@@ -229,6 +230,25 @@ inline models::counterparties::CounterpartyEvent Convert(
     result.after = Convert(value.after);
     if (value.before.has_value())
         result.before = Convert(value.before.value());
+    return result;
+}
+
+inline clients::counterparties::models::ListCounterpartiesRequest ConvertRegistry(
+    const models::counterparties::ListCounterpartiesRequest& value) {
+    const auto body = Convert(value);
+    clients::counterparties::models::ListCounterpartiesRequest result;
+    result.after = body.after;
+    result.country_code = body.country_code;
+    result.cursor = body.cursor;
+    result.descending = body.descending;
+    result.filters = body.filters;
+    result.ids = body.ids;
+    result.limit = body.limit;
+    result.query = body.query;
+    result.role = body.role;
+    result.sort = body.sort;
+    result.status = clients::counterparties::models::ParseEnumScalar(
+        EnumValue(body.status), decltype(result.status){});
     return result;
 }
 }  // namespace web_bff

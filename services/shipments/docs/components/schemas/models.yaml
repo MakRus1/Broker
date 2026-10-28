@@ -265,13 +265,9 @@ ListShipmentsRequest:
       format: date
     sort:
       type: string
-      enum:
-      - id
-      - number
-      - shipment_date
-      - status
-      - cargo_description
       default: id
+      minLength: 1
+      maxLength: 64
     descending:
       type: boolean
       default: false
@@ -285,6 +281,11 @@ ListShipmentsRequest:
       type: string
       maxLength: 256
       description: Вхождение в описание груза
+    filters:
+      type: array
+      maxItems: 32
+      items:
+        $ref: '#/RegistryFilter'
   required: []
 UpdateShipmentRequest:
   type: object
@@ -928,3 +929,69 @@ ContainerPlanItem:
   - pending_quantity
   - available_quantity
   - excess_quantity
+RegistryFilter:
+  type: object
+  additionalProperties: false
+  required:
+  - field
+  properties:
+    field:
+      type: string
+      minLength: 1
+      maxLength: 64
+    values:
+      type: array
+      maxItems: 200
+      uniqueItems: true
+      items:
+        type: string
+        maxLength: 2000
+    query:
+      type: string
+      maxLength: 256
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+    empty:
+      type: boolean
+RegistryField:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - label
+  - kind
+  - sortable
+  - case_insensitive
+  properties:
+    id:
+      type: string
+    label:
+      type: string
+    kind:
+      type: string
+      enum:
+      - values
+      - set
+      - date
+      - boolean
+    sortable:
+      type: boolean
+    lookup:
+      type: string
+    case_insensitive:
+      type: boolean
+RegistryValue:
+  type: object
+  additionalProperties: false
+  required:
+  - value
+  - label
+  properties:
+    value:
+      type: string
+    label:
+      type: string

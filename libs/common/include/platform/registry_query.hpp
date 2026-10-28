@@ -160,6 +160,60 @@ class QueryBuilder {
         }
     }
 
+    // Поле и выражение выбираются только из серверного каталога, значения — параметры.
+    void WhereValues(FieldDefinition field, const std::vector<std::string>& values,
+        bool fold = false, bool array = false) {
+        std::vector<std::string> present;
+        bool empty = false;
+        for (const auto& value : values) {
+            if (value.empty())
+                empty = true;
+            else
+                present.push_back(value);
+        }
+        std::string condition;
+        if (!present.empty()) {
+            auto parameter = Bind(present, std::string{field.PgType} + "[]");
+            if (fold)
+                parameter = "ARRAY(SELECT lower(value) FROM unnest(" + parameter + ") AS value)";
+            condition = std::string{field.Expression} + (array ? " && " : " = ANY(") + parameter +
+                (array ? "" : ")");
+        }
+        if (empty) {
+            if (!condition.empty())
+                condition += " OR ";
+            condition += array
+                ? "COALESCE(cardinality(" + std::string{field.Expression} + "), 0) = 0"
+                : field.PgType == "TEXT" ? std::string{field.Expression} + " = ''"
+                                         : std::string{field.Expression} + " IS NULL";
+        }
+        AddCondition("", condition.empty() ? "FALSE" : "(" + condition + ")");
+    }
+
+    void WhereEmpty(FieldDefinition field, bool empty, bool array = false) {
+        if (array)
+            AddCondition("COALESCE(cardinality(" + std::string{field.Expression} + "), 0)",
+                empty ? " = 0" : " <> 0");
+        else
+            AddCondition(field.Expression,
+                field.PgType == "TEXT" ? (empty ? " = ''" : " <> ''")
+                                       : (empty ? " IS NULL" : " IS NOT NULL"));
+    }
+
+    BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
+        std::string_view join, const std::optional<std::string>& after, int limit,
+        std::string_view key_type = "TEXT") && {
+        if (after.has_value())
+            AddCondition(key, " > " + Bind(after.value(), key_type));
+        const auto limit_parameter = Bind(limit, "INTEGER");
+        auto statement = fmt::format(fmt::runtime(selection.GetStatementView()),
+            fmt::arg("key", key), fmt::arg("label", label), fmt::arg("facet_join", join),
+            fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
+            fmt::arg("limit", limit_parameter));
+        return {pg::Query{std::move(statement), pg::Query::Name{"registry_filter_values"}},
+            std::move(parameters_)};
+    }
+
     BuiltQuery Build(int limit) && {
         const std::string direction = descending_ ? " DESC" : " ASC";
         std::string order;

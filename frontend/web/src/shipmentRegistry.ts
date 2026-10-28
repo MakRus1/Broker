@@ -1,5 +1,6 @@
+import { filterRequest, type ColumnFilter } from './registryFilters';
 import type { CalendarDate } from './CalendarDate';
-export type ShipmentSort = 'id' | 'number' | 'shipment_date' | 'status' | 'cargo_description';
+export type ShipmentSort = string;
 export interface ShipmentRegistryCursor {
   id: string;
   scope: string;
@@ -7,6 +8,7 @@ export interface ShipmentRegistryCursor {
   date_value?: string;
 }
 export interface ShipmentRegistryQuery {
+  filters?: ColumnFilter[];
   number_query?: string;
   cargo_query?: string;
   customer_id?: string;
@@ -26,6 +28,7 @@ export function shipmentRegistryRequest(
 ) {
   return {
     ...query,
+    filters: filterRequest(query.filters),
     number_query: query.number_query?.trim() || undefined,
     cargo_query: query.cargo_query?.trim() || undefined,
     limit: 50,

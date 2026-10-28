@@ -38,7 +38,7 @@ UTEST(RegistryQuery, ValuesNeverBecomeSqlText) {
 
 UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
     models::ListTransportationsRequest request;
-    request.sort = models::ListTransportationsRequest_sort::ContainerNumber;
+    request.sort = "container_number";
     request.descending = true;
     request.cursor = models::RegistryCursor{.id = kOrganization, .scope = "scope", .value = "mscu"};
     const auto query = BuildRegistryQuery(request, kOrganization);

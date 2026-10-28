@@ -1,3 +1,4 @@
+import { restoreColumnFilters } from './registryFilters';
 import { CalendarDate } from './CalendarDate';
 import { initialShipmentQuery, type ShipmentRegistryQuery } from './shipmentRegistry';
 import { initialRegistryQuery, type RegistryQuery } from './transportationRegistry';
@@ -31,6 +32,7 @@ function date(raw: unknown): CalendarDate | undefined {
 export function restoreShipmentQuery(raw: unknown): ShipmentRegistryQuery {
   const value = object(raw);
   return {
+    filters: restoreColumnFilters(value.filters),
     number_query: text(value.number_query),
     cargo_query: text(value.cargo_query),
     customer_id:
@@ -40,11 +42,7 @@ export function restoreShipmentQuery(raw: unknown): ShipmentRegistryQuery {
     statuses: list(value.statuses),
     date_from: date(value.date_from),
     date_to: date(value.date_to),
-    sort: choice(
-      value.sort,
-      ['id', 'number', 'shipment_date', 'status', 'cargo_description'],
-      initialShipmentQuery.sort,
-    ),
+    sort: text(value.sort, 64) ?? initialShipmentQuery.sort,
     descending:
       typeof value.descending === 'boolean' ? value.descending : initialShipmentQuery.descending,
   };
@@ -56,15 +54,12 @@ export function restoreTransportationQuery(raw: unknown): RegistryQuery {
       ['consolidated', 'container', 'air', 'oversized', 'rail', 'vessel'].includes(entry),
   );
   return {
+    filters: restoreColumnFilters(value.filters),
     query: text(value.query),
     types: types?.length ? types : undefined,
     container_types: list(value.container_types),
     hazardous: typeof value.hazardous === 'boolean' ? value.hazardous : undefined,
-    sort: choice(
-      value.sort,
-      ['id', 'container_number', 'container_type', 'type'],
-      initialRegistryQuery.sort,
-    ),
+    sort: text(value.sort, 64) ?? initialRegistryQuery.sort,
     descending:
       typeof value.descending === 'boolean' ? value.descending : initialRegistryQuery.descending,
   };
@@ -78,6 +73,7 @@ export const initialCounterpartyQuery: CounterpartyRegistryQuery = {
 export function restoreCounterpartyQuery(raw: unknown): CounterpartyRegistryQuery {
   const value = object(raw);
   return {
+    filters: restoreColumnFilters(value.filters),
     query: text(value.query) ?? '',
     role:
       choice(value.role, ['customer', 'carrier', 'agent', 'supplier', 'partner'], '') || undefined,
@@ -86,7 +82,7 @@ export function restoreCounterpartyQuery(raw: unknown): CounterpartyRegistryQuer
       typeof value.country_code === 'string' && /^[A-Z]{2}$/.test(value.country_code)
         ? value.country_code
         : undefined,
-    sort: choice(value.sort, ['id', 'name', 'country_code', 'tax_id', 'archived'], 'name'),
+    sort: text(value.sort, 64) ?? 'name',
     descending: value.descending === true,
   };
 }

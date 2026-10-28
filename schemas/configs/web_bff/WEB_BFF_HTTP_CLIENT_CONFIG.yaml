@@ -9,6 +9,7 @@ paths:
 - /api/organizations/employees/list
 - /api/session
 - /api/v1/counterparties/create
+- /api/v1/counterparties/filter-values
 - /api/v1/counterparties/get
 - /api/v1/counterparties/history
 - /api/v1/counterparties/list
@@ -22,6 +23,7 @@ paths:
 - /api/v1/shipments/cargo-suggestions/remove
 - /api/v1/shipments/create
 - /api/v1/shipments/dictionaries
+- /api/v1/shipments/filter-values
 - /api/v1/shipments/get
 - /api/v1/shipments/list
 - /api/v1/shipments/settings
@@ -32,6 +34,7 @@ paths:
 - /api/v1/transportation-operations/get
 - /api/v1/transportation-routes/set
 - /api/v1/transportations/create
+- /api/v1/transportations/filter-values
 - /api/v1/transportations/get
 - /api/v1/transportations/history
 - /api/v1/transportations/list

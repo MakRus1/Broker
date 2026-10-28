@@ -1,6 +1,7 @@
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { restoreShipmentQuery, restoreTransportationQuery } from './registryQueryPreferences';
-import { ShipmentFilters } from './ShipmentFilters';
+import { useColumnFilters } from './RegistryColumnFilters';
+import { withColumnFilters } from './registryFilters';
 import {
   RegistryTable,
   RegistryColumnSettings,
@@ -16,7 +17,6 @@ import {
 } from './shipmentRegistry';
 import { CalendarDate } from './CalendarDate';
 import { transportationTitle } from './transportation';
-import { TransportationFilters } from './TransportationFilters';
 import {
   registryRequest,
   initialRegistryQuery,
@@ -78,6 +78,7 @@ export function App() {
     },
     {
       id: 'customer',
+      filterFields: ['customer_id'],
       label: 'Клиент',
       width: 280,
       render: (item) => customerName(item.customer_id),
@@ -224,6 +225,32 @@ export function App() {
     initialRegistryQuery,
     restoreTransportationQuery,
   );
+  const shipmentFilters = useColumnFilters({
+    registry: 'shipments',
+    session,
+    query: shipmentQuery,
+    onChange: (filters) => {
+      setShipmentCursor(undefined);
+      setShipmentQuery((old) => withColumnFilters('shipments', old, filters));
+    },
+    onSort: (sort, descending) => {
+      setShipmentCursor(undefined);
+      setShipmentQuery((old) => ({ ...old, sort: sort as ShipmentSort, descending }));
+    },
+  });
+  const transportationFilters = useColumnFilters({
+    registry: 'transportations',
+    session,
+    query: registryQuery,
+    onChange: (filters) => {
+      setRegistryCursor(undefined);
+      setRegistryQuery((old) => withColumnFilters('transportations', old, filters));
+    },
+    onSort: (sort, descending) => {
+      setRegistryCursor(undefined);
+      setRegistryQuery((old) => ({ ...old, sort: sort as RegistrySort, descending }));
+    },
+  });
   const [registryCursor, setRegistryCursor] = useState<RegistryCursor>();
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
@@ -542,35 +569,13 @@ export function App() {
                 )}
               </div>
             </div>
-            {tab === 'shipments' && (
-              <ShipmentFilters
-                session={session}
-                customers={customers}
-                value={shipmentQuery}
-                loading={loading}
-                onApply={(value) => {
-                  setShipmentCursor(undefined);
-                  setShipmentQuery(value);
-                }}
-              />
-            )}
-            {tab === 'transportations' && (
-              <TransportationFilters
-                session={session}
-                value={registryQuery}
-                loading={loading}
-                onApply={(value) => {
-                  setRegistryCursor(undefined);
-                  setRegistryQuery(value);
-                }}
-              />
-            )}
             <section className="surface" aria-busy={loading}>
               {tab === 'shipments' ? (
                 <RegistryTable
                   items={shipments}
                   columns={shipmentColumnState}
                   definitions={shipmentColumns}
+                  filters={shipmentFilters}
                   sort={shipmentQuery.sort}
                   descending={shipmentQuery.descending}
                   onSort={(field) => {
@@ -589,6 +594,7 @@ export function App() {
               ) : (
                 <TransportationTable
                   items={transportations}
+                  filters={transportationFilters}
                   columns={transportationColumnState}
                   sort={registryQuery.sort}
                   descending={registryQuery.descending}

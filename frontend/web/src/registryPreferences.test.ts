@@ -91,7 +91,7 @@ describe('восстановление применённых фильтров',
       cursor: { id: 'old' },
     });
     expect(query.date_from).toBeUndefined();
-    expect(query.sort).toBe('shipment_date');
+    expect(query.sort).toBe('sql'); // Поддержку поля проверяет серверный каталог, а не второй список во фронте.
     expect(query.customer_id).toBeUndefined();
     expect(query).not.toHaveProperty('cursor');
   });

@@ -512,3 +512,19 @@ async def test_registry_filters_and_typed_cursors(browser, mockserver, path, bod
     response = await browser.post('/api/v1/' + path + '/list', body)
     assert response.status == 200
     assert response.json()['next_cursor'] == cursor
+
+
+@pytest.mark.parametrize('service',['shipments','transportations','counterparties'])
+async def test_registry_filters_and_metadata_are_proxied(browser,mockserver,service):
+    await browser.sign_in()
+    path=f'/api/v1/{service}/filter-values'
+    field='name' if service=='counterparties' else 'number' if service=='shipments' else 'container_number'
+    result={'fields':[{'id':field,'label':'Номер','kind':'values','sortable':True,'case_insensitive':True}], 'values':[{'value':'abc2','label':'ABC2'}],'next_after':'abc2'}
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json['registry']['filters']==[{'field':field,'values':['ABC2','ABC10']}]
+        assert request.json['candidates']==['ABC2','ABC10']
+        return result
+    response=await browser.post(path,{'registry':{'filters':[{'field':field,'values':['ABC2','ABC10']}]},'field':field,'candidates':['ABC2','ABC10']})
+    assert response.status==200,response.text
+    assert response.json()==result

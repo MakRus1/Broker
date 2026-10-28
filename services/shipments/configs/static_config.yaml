@@ -61,6 +61,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-shipments-filter_values:
+            path: /api/v1/shipments/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipments-get:
             path: /api/v1/shipments/get
             method: POST
@@ -152,6 +158,7 @@ components_manager:
                 /api/v1/shipments/cargo-suggestions/remove: shipments.write
                 /api/v1/shipments/create: shipments.write
                 /api/v1/shipments/dictionaries: shipments.read
+                /api/v1/shipments/filter-values: shipments.read
                 /api/v1/shipments/get: shipments.read
                 /api/v1/shipments/list: shipments.read
                 /api/v1/shipments/route-segments/register-usage: transportations.write

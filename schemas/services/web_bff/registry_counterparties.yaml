@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Фильтры реестра
+  version: '1'
+paths:
+  /api/v1/counterparties/filter-values:
+    post:
+      summary: Поля реестра и значения фильтра с учётом остальных условий
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - registry
+              properties:
+                registry:
+                  $ref: components/schemas/counterparties/models.yaml#/ListCounterpartiesRequest
+                field:
+                  type: string
+                  maxLength: 64
+                query:
+                  type: string
+                  maxLength: 256
+                after:
+                  type: string
+                  maxLength: 2000
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 40
+                candidates:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: string
+                    maxLength: 2000
+      responses:
+        '200':
+          description: Каталог полей и очередная страница значений
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - fields
+                - values
+                properties:
+                  fields:
+                    type: array
+                    items:
+                      $ref: components/schemas/counterparties/models.yaml#/RegistryField
+                  values:
+                    type: array
+                    items:
+                      $ref: components/schemas/counterparties/models.yaml#/RegistryValue
+                  next_after:
+                    type: string
+        '400':
+          description: Некорректные фильтры или неизвестное поле
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/counterparties/models.yaml#/CounterpartyError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

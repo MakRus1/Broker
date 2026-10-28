@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/transportations/client.hpp>
 #include <helpers/converters/transportation_shared_route.hpp>
+#include <helpers/registry_filters.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -267,15 +268,15 @@ inline clients::transportations::ApiV1TransportationsList::RequestBody Convert(
         clients::transportations::ApiV1TransportationsList::RequestBody{.after = value.after,
             .container_types = value.container_types,
             .descending = value.descending,
+            .filters = ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(
+                value.filters),
             .hazardous = value.hazardous,
             .incomplete_container = value.incomplete_container,
             .item_id = value.item_id,
             .limit = value.limit,
             .query = value.query,
             .shipment_id = value.shipment_id,
-            .sort = clients::transportations::models::ParseEnumScalar(
-                models::transportations::EnumValue(value.sort),
-                clients::transportations::models::ListTransportationsRequest_sort{})};
+            .sort = value.sort};
     if (value.types.has_value()) {
         result.types.emplace();
         for (const auto item : value.types.value())
@@ -443,4 +444,23 @@ inline clients::transportations::ApiV1TransportationsUpdate::RequestBody Convert
     return result;
 }
 
+inline clients::transportations::models::ListTransportationsRequest ConvertRegistry(
+    const models::transportations::ListTransportationsRequest& value) {
+    const auto body = Convert(value);
+    clients::transportations::models::ListTransportationsRequest result;
+    result.after = body.after;
+    result.container_types = body.container_types;
+    result.cursor = body.cursor;
+    result.descending = body.descending;
+    result.filters = body.filters;
+    result.hazardous = body.hazardous;
+    result.incomplete_container = body.incomplete_container;
+    result.item_id = body.item_id;
+    result.limit = body.limit;
+    result.query = body.query;
+    result.shipment_id = body.shipment_id;
+    result.sort = body.sort;
+    result.types = ConvertRegistryEnumValues<decltype(result.types)>(body.types);
+    return result;
+}
 }  // namespace web_bff

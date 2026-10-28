@@ -1,6 +1,6 @@
 #pragma once
 #include <helpers/registry.hpp>
-#include <platform/registry_query.hpp>
+#include <platform/registry_filters.hpp>
 
 namespace shipments::helpers {
 namespace registry = platform::registry;
@@ -19,22 +19,51 @@ inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer
 inline constexpr auto kStatus =
     registry::Field<std::string>{"status", "status"}.SortedAs("lower(status) COLLATE \"C\"");
 inline constexpr registry::Field<Date> kDate{"shipment_date", "shipment_date", "DATE"};
-inline constexpr std::array<registry::FieldDefinition, 5> kSortableFields{
-    kId, kNumber, kCargo, kStatus, kDate};
+inline constexpr std::array<registry::RegistryField, 6> kFields{{
+    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
+    {.Field = kNumber, .Label = "Номер поставки", .ValueSql = "number", .FoldValues = true},
+    {.Field = kCargo,
+        .Label = "Груз",
+        .ValueSql = "COALESCE(cargo_description, '')",
+        .FoldValues = true},
+    {.Field = kCustomer,
+        .Label = "Клиент",
+        .ValueSql = "customer_id",
+        .Sortable = false,
+        .Lookup = "counterparties"},
+    {.Field = kStatus, .Label = "Статус", .ValueSql = "status"},
+    {.Field = kDate, .Label = "Дата поставки", .ValueSql = "shipment_date"},
+}};
+inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields
+
+inline registry::QueryBuilder BuildRegistryFilters(const models::ListShipmentsRequest& request,
+    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    using namespace registry_fields;
+    const auto order = registry::RegistryOrderBy(kFields, request.sort);
+    registry::QueryBuilder query{sql::kListShipments, order, request.descending};
+    query.WhereEqual(kOrganization, organization);
+    if (registry::UseLegacyFilter(request.filters, "number", exclude))
+        query.WhereContains(kNumber, request.number_query);
+    if (registry::UseLegacyFilter(request.filters, "cargo_description", exclude))
+        query.WhereContains(kCargo, request.cargo_query);
+    if (registry::UseLegacyFilter(request.filters, "customer_id", exclude))
+        query.WhereEqual(kCustomer, request.customer_id);
+    if (registry::UseLegacyFilter(request.filters, "status", exclude))
+        query.WhereAny(kStatus, request.statuses);
+    if (registry::UseLegacyFilter(request.filters, "shipment_date", exclude))
+        query.WhereAtLeast(kDate, request.date_from);
+    if (registry::UseLegacyFilter(request.filters, "shipment_date", exclude))
+        query.WhereAtMost(kDate, request.date_to);
+    registry::ApplyFilters(query, kFields, request.filters, exclude);
+    return query;
+}
 
 inline registry::BuiltQuery BuildRegistryQuery(
     const models::ListShipmentsRequest& request, const std::string& organization) {
     using namespace registry_fields;
-    const auto order = registry::OrderBy(kSortableFields, models::EnumValue(request.sort));
-    registry::QueryBuilder query{sql::kListShipments, order, request.descending};
-    query.WhereEqual(kOrganization, organization);
-    query.WhereContains(kNumber, request.number_query);
-    query.WhereContains(kCargo, request.cargo_query);
-    query.WhereEqual(kCustomer, request.customer_id);
-    query.WhereAny(kStatus, request.statuses);
-    query.WhereAtLeast(kDate, request.date_from);
-    query.WhereAtMost(kDate, request.date_to);
+    auto query = BuildRegistryFilters(request, organization);
+    const auto order = registry::RegistryOrderBy(kFields, request.sort);
     const auto after =
         request.cursor.has_value() ? std::optional{request.cursor.value().id} : request.after;
     if (after.has_value() && order.PgType == "DATE")
@@ -43,5 +72,16 @@ inline registry::BuiltQuery BuildRegistryQuery(
         query.After(after,
             request.cursor.has_value() ? request.cursor.value().text_value.value_or("") : "");
     return std::move(query).Build(request.limit + 1);
+}
+
+inline registry::BuiltQuery BuildRegistryValues(const models::ListShipmentsRequest& request,
+    const std::string& organization, const std::string& field,
+    const std::optional<std::string>& search, const std::optional<std::string>& after, int limit,
+    const std::optional<std::vector<std::string>>& candidates = std::nullopt) {
+    const auto& definition = registry::FindField(registry_fields::kFields, field);
+    auto builder = BuildRegistryFilters(request, organization, field);
+    registry::ApplyCandidates(builder, definition, candidates);
+    return registry::BuildValues(
+        std::move(builder), sql::kRegistryFilterValues, definition, search, after, limit + 1);
 }
 }  // namespace shipments::helpers

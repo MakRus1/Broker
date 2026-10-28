@@ -1,3 +1,4 @@
+import type { ColumnFilterController } from './RegistryColumnFilters';
 import {
   RegistryTable,
   useRegistryColumns,
@@ -155,6 +156,7 @@ export function CardNavigation({
 export const transportationColumns: RegistryColumn<Transportation>[] = [
   {
     id: 'container_number',
+    filterFields: ['container_number', 'type', 'hazardous', 'shipment_id'],
     cellClassName: 'transportation-number-cell',
     label: 'Перевозка',
     width: 250,
@@ -177,6 +179,7 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
   },
   {
     id: 'container_type',
+    filterFields: ['container_type', 'container_ownership'],
     cellClassName: 'transportation-container-cell',
     label: 'Контейнер',
     width: 180,
@@ -196,6 +199,7 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
   },
   {
     id: 'route',
+    filterFields: false,
     label: 'Маршрут',
     width: 480,
     render: (item) => (
@@ -232,7 +236,9 @@ export function TransportationTable({
   descending = false,
   onSort,
   columns,
+  filters,
 }: {
+  filters?: ColumnFilterController;
   items: Transportation[];
   sort?: RegistrySort;
   descending?: boolean;
@@ -243,6 +249,7 @@ export function TransportationTable({
   return (
     <RegistryTable
       items={items}
+      filters={filters}
       columns={columns ?? fallback}
       definitions={transportationColumns}
       sort={sort}

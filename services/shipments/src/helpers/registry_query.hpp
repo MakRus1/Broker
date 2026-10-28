@@ -66,7 +66,7 @@ inline registry::BuiltQuery BuildRegistryQuery(
     const auto order = registry::RegistryOrderBy(kFields, request.sort);
     const auto after =
         request.cursor.has_value() ? std::optional{request.cursor.value().id} : request.after;
-    if (after.has_value() && order.PgType == "DATE")
+    if (after.has_value() && order.CursorType == registry::CursorKeyType::Date)
         query.After(after, request.cursor.value().date_value.value());
     else
         query.After(after,

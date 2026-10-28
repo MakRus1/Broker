@@ -14,13 +14,12 @@ Response View::Handle(
         const auto organization = platform::auth::GetOrganization(identity);
         const auto& body = request.body;
         const auto scope = platform::registry::CursorScope(body, organization);
-        const bool date_sort =
-            registry::RegistryOrderBy(registry_fields::kFields, body.sort).PgType == "DATE";
+        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
+        const bool date_sort = order.CursorType == registry::CursorKeyType::Date;
         if (body.date_from.has_value() && body.date_to.has_value() &&
             body.date_from.value() > body.date_to.value())
             throw ApiError{400, "invalid_date_range", "Начало периода позже окончания"};
-        if (body.after.has_value() &&
-            (body.cursor.has_value() || body.sort != "id" || body.descending))
+        if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (body.cursor.has_value()) {
             const auto& cursor = body.cursor.value();

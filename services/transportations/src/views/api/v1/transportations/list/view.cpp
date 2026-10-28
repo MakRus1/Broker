@@ -14,9 +14,9 @@ Response View::Handle(
         platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
         const auto organization = platform::auth::GetOrganization(identity);
         const auto scope = CursorScope(request.body, organization);
+        const auto order = registry::RegistryOrderBy(registry_fields::kFields, request.body.sort);
         if (request.body.after.has_value() &&
-            (request.body.cursor.has_value() || request.body.sort != "id" ||
-                request.body.descending))
+            (request.body.cursor.has_value() || !order.ById || request.body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (request.body.cursor.has_value() && request.body.cursor.value().scope != scope)
             throw ApiError{400, "invalid_cursor",

@@ -14,8 +14,8 @@ Response View::Handle(
         const auto organization = platform::auth::GetOrganization(identity);
         const auto& body = request.body;
         const auto scope = platform::registry::CursorScope(body, organization);
-        if (body.after.has_value() &&
-            (body.cursor.has_value() || body.sort != "id" || body.descending))
+        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
+        if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
             throw ApiError{

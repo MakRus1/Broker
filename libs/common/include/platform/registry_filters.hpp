@@ -21,10 +21,10 @@ struct RegistryField {
     std::string_view Lookup{};
 
     std::string_view Kind() const {
-        return Array                    ? "set"
-            : Field.PgType == "DATE"    ? "date"
-            : Field.PgType == "BOOLEAN" ? "boolean"
-                                        : "values";
+        return Array                                  ? "set"
+            : Field.CursorType == CursorKeyType::Date ? "date"
+            : Field.PgType == "BOOLEAN"               ? "boolean"
+                                                      : "values";
     }
 
     std::string_view MatchSql() const {

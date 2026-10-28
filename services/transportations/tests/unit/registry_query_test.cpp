@@ -137,6 +137,23 @@ UTEST(RegistryQuery, TextIdentityIsUsedForCursorAndTieBreaker) {
     EXPECT_NE(sql.find("ORDER BY lower(name) COLLATE \"C\" ASC, subject ASC"), std::string::npos);
     EXPECT_EQ(sql.find("::UUID"), std::string::npos);
 }
+
+UTEST(RegistryQuery, DateSortedAsTextUsesTextCursorProjection) {
+    using Date = userver::utils::datetime::Date;
+    constexpr auto date = registry::Field<Date>{"date", "shipment_date", "DATE"}.SortedAs(
+        "to_char(shipment_date, 'YYYY-MM')");
+    const std::array<registry::FieldDefinition, 1> fields{date};
+    const auto order = registry::OrderBy(fields, "date");
+    EXPECT_EQ(order.CursorType, registry::CursorKeyType::Text);
+    const pg::Query selection{"SELECT {sort_key}, {date_key} FROM shipments WHERE {where} "
+                              "ORDER BY {order_by} LIMIT {limit}"};
+    registry::QueryBuilder builder{selection, order, false};
+    builder.After(std::optional{kOrganization}, std::string{"2026-10"});
+    const auto sql = Statement(std::move(builder).Build(51));
+    EXPECT_NE(sql.find("SELECT to_char(shipment_date, 'YYYY-MM'), NULL::DATE"), std::string::npos);
+    EXPECT_NE(sql.find("($1::TEXT, $2::UUID)"), std::string::npos);
+}
+
 }  // namespace
 }  // namespace transportations::helpers
 

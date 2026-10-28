@@ -8,12 +8,20 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <userver/storages/postgres/parameter_store.hpp>
 #include <userver/storages/postgres/query.hpp>
+#include <userver/utils/datetime/date.hpp>
 #include <vector>
 
 namespace platform::registry {
 namespace pg = userver::storages::postgres;
+
+enum class CursorKeyType { Text, Date };
+
+template <typename T>
+inline constexpr CursorKeyType kCursorKeyType =
+    std::is_same_v<T, userver::utils::datetime::Date> ? CursorKeyType::Date : CursorKeyType::Text;
 
 // SQL-выражения задаёт разработчик. Значения запроса всегда идут через ParameterStore.
 struct FieldDefinition {
@@ -23,17 +31,22 @@ struct FieldDefinition {
     bool ById = false;
     std::string_view SortExpression;
     std::string_view SortPgType;
+    CursorKeyType CursorType = CursorKeyType::Text;
+    CursorKeyType SortCursorType = CursorKeyType::Text;
 };
 
 template <typename T> struct Field : FieldDefinition {
     constexpr Field(std::string_view name, std::string_view expression,
         std::string_view pg_type = "TEXT", bool by_id = false)
-        : FieldDefinition{name, expression, pg_type, by_id, {}, {}} {}
+        : FieldDefinition{
+              name, expression, pg_type, by_id, {}, {}, kCursorKeyType<T>, CursorKeyType::Text} {}
 
+    template <typename SortKey = std::string>
     constexpr Field SortedAs(std::string_view expression, std::string_view pg_type = "TEXT") const {
         auto field = *this;
         field.SortExpression = expression;
         field.SortPgType = pg_type;
+        field.SortCursorType = kCursorKeyType<SortKey>;
         return field;
     }
 };
@@ -42,13 +55,15 @@ struct Order {
     std::string_view Expression;
     bool ById = false;
     std::string_view PgType = "TEXT";
+    CursorKeyType CursorType = CursorKeyType::Text;
 };
 
 inline Order OrderBy(std::span<const FieldDefinition> fields, std::string_view name) {
     for (const auto& field : fields) {
         if (field.Name == name)
             return {field.SortExpression.empty() ? field.Expression : field.SortExpression,
-                field.ById, field.SortPgType.empty() ? field.PgType : field.SortPgType};
+                field.ById, field.SortPgType.empty() ? field.PgType : field.SortPgType,
+                field.SortExpression.empty() ? field.CursorType : field.SortCursorType};
     }
     throw std::logic_error{"Поле не зарегистрировано для сортировки"};
 }
@@ -99,7 +114,7 @@ class QueryBuilder {
                     "Каждое место SQL-шаблона должно встречаться ровно один раз"};
         }
         const auto date_slot = statement_.find("{date_key}");
-        if ((order_.PgType == "DATE" && date_slot == std::string::npos) ||
+        if ((order_.CursorType == CursorKeyType::Date && date_slot == std::string::npos) ||
             (date_slot != std::string::npos &&
                 statement_.find("{date_key}", date_slot + 10) != std::string::npos))
             throw std::logic_error{"Некорректное место календарного ключа SQL-шаблона"};
@@ -223,8 +238,10 @@ class QueryBuilder {
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(statement_),
             fmt::arg("sort_key",
-                (order_.ById || order_.PgType == "DATE") ? "'' COLLATE \"C\"" : order_.Expression),
-            fmt::arg("date_key", order_.PgType == "DATE" ? order_.Expression : "NULL::DATE"),
+                (order_.ById || order_.CursorType == CursorKeyType::Date) ? "'' COLLATE \"C\""
+                                                                          : order_.Expression),
+            fmt::arg("date_key",
+                order_.CursorType == CursorKeyType::Date ? order_.Expression : "NULL::DATE"),
             fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
             fmt::arg("order_by", order), fmt::arg("limit", limit_parameter));
         return {pg::Query{std::move(statement), pg::Query::Name{std::string{selection_name_}}},

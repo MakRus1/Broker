@@ -3,7 +3,7 @@ import io
 from uuid import uuid4
 
 import pytest
-from pytest_userver.client import TestsuiteTaskFailed
+from pytest_userver.client import TestsuiteTaskFailed as TaskFailed
 
 
 FIELDS = ['id', 'type', 'name', 'iso_country', 'iata_code', 'icao_code', 'municipality', 'keywords']
@@ -25,7 +25,7 @@ def airport(source=1, name='Heathrow', iata='LHR', icao='EGLL'):
 def feed(mockserver, pgsql):
     # Testsuite очищает таблицы между тестами, включая начальную строку миграции.
     pgsql['db_1'].cursor().execute(
-        "INSERT INTO airport_sync(name, next_attempt_at) VALUES ('ourairports', now())"
+        "INSERT INTO directory_sync(name, next_attempt_at) VALUES ('ourairports', now())"
     )
     state = {'body': dataset(airport()), 'status': 200, 'calls': 0}
 
@@ -38,7 +38,7 @@ def feed(mockserver, pgsql):
 
 
 def due(pgsql):
-    pgsql['db_1'].cursor().execute("UPDATE airport_sync SET next_attempt_at = now() - INTERVAL '1 second'")
+    pgsql['db_1'].cursor().execute("UPDATE directory_sync SET next_attempt_at = now() - INTERVAL '1 second' WHERE name = 'ourairports'")
 
 
 def locations(pgsql):
@@ -63,7 +63,7 @@ async def test_import_updates_same_uuid_and_searches_both_codes(service_client, 
     await service_client.run_periodic('airport-sync')
     assert locations(pgsql) == [(original[0][0], 'New name', 'NEW', False)]
     cursor = pgsql['db_1'].cursor()
-    cursor.execute('SELECT source_hash, record_count, updated_at IS NOT NULL FROM airport_sync')
+    cursor.execute('SELECT source_hash, record_count, updated_at IS NOT NULL FROM directory_sync')
     digest, count, updated = cursor.fetchone()
     assert len(digest) == 64 and count == 1 and updated
 
@@ -93,11 +93,11 @@ async def test_invalid_snapshot_keeps_previous_data(service_client, feed, pgsql,
     previous = locations(pgsql)
     feed['body'] = body
     due(pgsql)
-    with pytest.raises(TestsuiteTaskFailed):
+    with pytest.raises(TaskFailed):
         await service_client.run_periodic('airport-sync')
     assert locations(pgsql) == previous
     cursor = pgsql['db_1'].cursor()
-    cursor.execute('SELECT record_count FROM airport_sync')
+    cursor.execute('SELECT record_count FROM directory_sync')
     assert cursor.fetchone() == (1,)
 
 
@@ -106,7 +106,7 @@ async def test_failed_download_keeps_data_and_respects_lease(service_client, fee
     previous = locations(pgsql)
     due(pgsql)
     feed['status'] = 503
-    with pytest.raises(TestsuiteTaskFailed):
+    with pytest.raises(TaskFailed):
         await service_client.run_periodic('airport-sync')
     # Повторный запуск не обращается к неисправному источнику до истечения аренды.
     await service_client.run_periodic('airport-sync')
@@ -120,7 +120,7 @@ async def test_missing_airports_are_not_deleted(service_client, feed, pgsql):
     feed['body'] = dataset(airport())
     due(pgsql)
     # Подозрительное сокращение более 20% отвергается целиком.
-    with pytest.raises(TestsuiteTaskFailed):
+    with pytest.raises(TaskFailed):
         await service_client.run_periodic('airport-sync')
     assert locations(pgsql) == previous
 
@@ -133,7 +133,7 @@ async def test_publish_conflict_rolls_back_source_and_projection(service_client,
     previous = locations(pgsql)
     feed['body'] = dataset(airport(iata='NEW'))
     due(pgsql)
-    with pytest.raises(TestsuiteTaskFailed):
+    with pytest.raises(TaskFailed):
         await service_client.run_periodic('airport-sync')
     assert locations(pgsql) == previous
     cursor = pgsql['db_1'].cursor()
@@ -147,7 +147,7 @@ async def test_successful_sync_is_not_repeated_before_tomorrow(service_client, f
     await service_client.run_periodic('airport-sync')
     assert feed['calls'] == calls
     cursor = pgsql['db_1'].cursor()
-    cursor.execute("SELECT next_attempt_at > now() + INTERVAL '23 hours', lease FROM airport_sync")
+    cursor.execute("SELECT next_attempt_at > now() + INTERVAL '23 hours', lease FROM directory_sync")
     assert cursor.fetchone() == (True, None)
 
 

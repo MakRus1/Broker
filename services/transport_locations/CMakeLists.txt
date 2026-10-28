@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
     src/components/airport_sync.cpp
+    src/components/sea_port_sync.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

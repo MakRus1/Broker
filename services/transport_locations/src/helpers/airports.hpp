@@ -3,6 +3,7 @@
 #include <boost/uuid/name_generator_sha1.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <charconv>
+#include <helpers/csv.hpp>
 #include <map>
 #include <postgresql/types.hpp>
 #include <set>
@@ -11,57 +12,6 @@
 #include <vector>
 
 namespace transport_locations::helpers {
-// CSV допускает запятые, переносы строк и удвоенные кавычки внутри поля.
-inline std::vector<std::string> ReadAirportCsvRow(std::string_view csv, std::size_t& offset) {
-    std::vector<std::string> fields;
-    do {
-        std::string field;
-        if (offset < csv.size() && csv[offset] == '"') {
-            ++offset;
-            bool closed = false;
-            while (offset < csv.size()) {
-                const auto ch = csv[offset++];
-                if (ch == '"') {
-                    if (offset < csv.size() && csv[offset] == '"')
-                        ++offset;
-                    else {
-                        closed = true;
-                        break;
-                    }
-                }
-                field += ch;
-                if (field.size() > 16384)
-                    throw std::runtime_error("Слишком длинное поле OurAirports");
-            }
-            if (!closed)
-                throw std::runtime_error("Незакрытая кавычка CSV OurAirports");
-        } else {
-            while (offset < csv.size() && csv[offset] != ',' && csv[offset] != '\r' &&
-                csv[offset] != '\n') {
-                if (csv[offset] == '"' || field.size() >= 16384)
-                    throw std::runtime_error("Некорректное поле CSV OurAirports");
-                field += csv[offset++];
-            }
-        }
-        fields.push_back(std::move(field));
-        if (fields.size() > 100)
-            throw std::runtime_error("Слишком много колонок CSV OurAirports");
-        if (offset == csv.size())
-            break;
-        const auto delimiter = csv[offset++];
-        if (delimiter == '\n')
-            break;
-        if (delimiter == '\r') {
-            if (offset < csv.size() && csv[offset] == '\n')
-                ++offset;
-            break;
-        }
-        if (delimiter != ',')
-            throw std::runtime_error("Некорректный разделитель CSV OurAirports");
-    } while (offset <= csv.size());
-    return fields;
-}
-
 inline bool AirportCode(std::string_view value, std::size_t length) {
     return value.size() == length &&
         std::all_of(value.begin(), value.end(), [](char ch) { return ch >= 'A' && ch <= 'Z'; });
@@ -74,7 +24,7 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
     if (csv.starts_with("\xEF\xBB\xBF"))
         csv.remove_prefix(3);
     std::size_t offset = 0;
-    const auto header = ReadAirportCsvRow(csv, offset);
+    const auto header = ReadCsvRow(csv, offset);
     std::map<std::string, std::size_t> columns;
     for (std::size_t index = 0; index < header.size(); ++index) {
         if (!columns.emplace(header[index], index).second)
@@ -92,7 +42,7 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
     std::vector<pgtypes::AirportSourceV1> result;
     std::size_t count = 0;
     while (offset < csv.size()) {
-        const auto row = ReadAirportCsvRow(csv, offset);
+        const auto row = ReadCsvRow(csv, offset);
         if (++count > 200000 || row.size() != header.size())
             throw std::runtime_error("Некорректное количество строк или полей OurAirports");
         const auto get = [&](const char* key) -> const std::string& {

@@ -25,7 +25,7 @@ from auth_tokens import ISSUER, SigningKey
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
-USERVER_CONFIG_HOOKS = ['configure_auth', 'configure_airport_sync']
+USERVER_CONFIG_HOOKS = ['configure_auth', 'configure_airport_sync', 'configure_sea_port_sync']
 
 
 @pytest.fixture(scope='session')
@@ -104,6 +104,18 @@ def configure_airport_sync(mockserver_info):
         component = config['components_manager']['components']['airport-sync']
         component['load-enabled'] = True
         component['url'] = mockserver_info.url('/airports.csv')
+        component['minimum-records'] = 1
+        component['timeout'] = '1s'
+    return patch
+
+
+@pytest.fixture(scope='session')
+def configure_sea_port_sync(mockserver_info):
+    def patch(config, config_vars):
+        component = config['components_manager']['components']['sea-port-sync']
+        component['load-enabled'] = True
+        component['releases-url'] = mockserver_info.url('/unlocode/releases')
+        component['download-base-url'] = mockserver_info.url('/unlocode/artifacts/')
         component['minimum-records'] = 1
         component['timeout'] = '1s'
     return patch

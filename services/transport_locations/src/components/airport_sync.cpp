@@ -39,7 +39,9 @@ AirportSync::~AirportSync() {
 
 void AirportSync::Sync() {
     const auto lease = userver::utils::generators::GenerateBoostUuid();
-    if (pg_->Execute(pg::ClusterHostType::kMaster, sql::kClaimAirportSync, lease).IsEmpty())
+    if (pg_->Execute(pg::ClusterHostType::kMaster, sql::kClaimDirectorySync,
+               std::string{"ourairports"}, lease)
+            .IsEmpty())
         return;
     // Ни скачивание, ни CSV-парсер не удерживают соединение или транзакцию БД.
     const auto response = http_.CreateRequest().get(url_).timeout(timeout_).perform();
@@ -53,7 +55,7 @@ void AirportSync::Sync() {
     for (const auto& airport : airports)
         ids.push_back(airport.SourceId);
     auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto state = tx.Execute(sql::kLockAirportSync, lease);
+    const auto state = tx.Execute(sql::kLockDirectorySync, std::string{"ourairports"}, lease);
     if (state.IsEmpty())
         return;
     const auto previous = state.AsSingleRow<int>();
@@ -62,7 +64,8 @@ void AirportSync::Sync() {
     const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
     tx.Execute(control, sql::kSaveAirportSources, airports);
     tx.Execute(control, sql::kPublishAirports, ids);
-    tx.Execute(sql::kFinishAirportSync, lease, hash, static_cast<int>(airports.size()));
+    tx.Execute(sql::kFinishDirectorySync, std::string{"ourairports"}, lease, hash,
+        static_cast<int>(airports.size()), std::optional<std::string>{});
     tx.Commit();
     LOG_INFO() << "OurAirports: обновлено аэропортов " << airports.size() << ", sha256=" << hash;
 }

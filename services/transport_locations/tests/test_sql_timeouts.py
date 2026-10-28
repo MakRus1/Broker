@@ -20,6 +20,9 @@ def slow_claim(pgsql):
     cursor.execute('DROP TRIGGER slow_directory_claim ON directory_sync; DROP FUNCTION slow_directory_claim();')
 
 
+# Общий тайм-аут влияет и на создание фоновых соединений пула.
+# Не переносим их состояние между независимыми вариантами теста.
+@pytest.mark.uservice_oneshot
 @pytest.mark.parametrize('key,value', [
     ('POSTGRES_DEFAULT_COMMAND_CONTROL', {'network_timeout_ms': 1000, 'statement_timeout_ms': 50}),
     ('POSTGRES_QUERIES_COMMAND_CONTROL', {'claim_directory_sync': {'network_timeout_ms': 1000, 'statement_timeout_ms': 50}}),

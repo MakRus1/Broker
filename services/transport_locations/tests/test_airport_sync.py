@@ -38,7 +38,7 @@ def feed(mockserver, pgsql):
 
 
 def due(pgsql):
-    pgsql['db_1'].cursor().execute("UPDATE directory_sync SET next_attempt_at = now() - INTERVAL '1 second' WHERE name = 'ourairports'")
+    pgsql['db_1'].cursor().execute("UPDATE directory_sync SET next_attempt_at = now() - INTERVAL '1 second', updated_at = now() - INTERVAL '40 days', last_attempt_at = now() - INTERVAL '40 days', lease_until = now() - INTERVAL '1 second' WHERE name = 'ourairports'")
 
 
 def locations(pgsql):

@@ -1,4 +1,5 @@
 #pragma once
+#include <platform/configs/runtime.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -18,7 +19,7 @@ class RailwaySync final : public userver::components::ComponentBase {
     userver::clients::http::Client& http_;
     userver::storages::postgres::ClusterPtr pg_;
     std::string url_;
-    std::chrono::milliseconds timeout_;
+    platform::configs::Source configs_;
     std::size_t minimum_;
     userver::utils::PeriodicTask task_;
 };

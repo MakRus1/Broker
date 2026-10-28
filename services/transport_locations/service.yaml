@@ -2,6 +2,7 @@ version: 1
 libraries:
 - common
 - auth
+- configs
 postgresql:
   enabled: true
   cluster: transport_locations
@@ -26,3 +27,7 @@ dashboard:
   tags:
   - logistics
   - directories
+configs:
+- AIRPORT_SYNC_SETTINGS
+- SEA_PORT_SYNC_SETTINGS
+- RAILWAY_SYNC_SETTINGS

@@ -25,7 +25,7 @@ from auth_tokens import ISSUER, SigningKey
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
-USERVER_CONFIG_HOOKS = ['configure_auth', 'configure_airport_sync', 'configure_sea_port_sync', 'configure_railway_sync']
+USERVER_CONFIG_HOOKS = ['configure_auth', 'configure_airport_sync', 'configure_sea_port_sync', 'configure_railway_sync', 'configure_sync_policies']
 
 
 @pytest.fixture(scope='session')
@@ -105,7 +105,6 @@ def configure_airport_sync(mockserver_info):
         component['load-enabled'] = True
         component['url'] = mockserver_info.url('/airports.csv')
         component['minimum-records'] = 1
-        component['timeout'] = '1s'
     return patch
 
 
@@ -117,7 +116,6 @@ def configure_sea_port_sync(mockserver_info):
         component['releases-url'] = mockserver_info.url('/unlocode/releases')
         component['download-base-url'] = mockserver_info.url('/unlocode/artifacts/')
         component['minimum-records'] = 1
-        component['timeout'] = '1s'
     return patch
 
 
@@ -128,5 +126,28 @@ def configure_railway_sync(mockserver_info):
         component['load-enabled'] = True
         component['url'] = mockserver_info.url('/railway')
         component['minimum-records'] = 1
-        component['timeout'] = '1s'
+    return patch
+
+
+@pytest.fixture(scope='session')
+def configure_sync_policies():
+    def patch(config, config_vars):
+        import yaml
+        config_vars['config-updates-enabled'] = True
+        # Проверяем реальные тайм-ауты из динамического конфига, без замены на 10s.
+        config['components_manager']['components']['http-client-core'].pop('testsuite-timeout', None)
+        policies = config['components_manager']['components']['dynamic-config']['defaults']
+        for name in ('AIRPORT_SYNC_SETTINGS', 'SEA_PORT_SYNC_SETTINGS', 'RAILWAY_SYNC_SETTINGS'):
+            path = Path(__file__).resolve().parents[3] / 'schemas/configs/transport_locations' / (name + '.yaml')
+            policy = yaml.safe_load(path.read_text())['default']
+            policy['http_timeout_ms'] = 1000
+            policies[name] = policy
+    return patch
+
+
+@pytest.fixture(scope='session')
+def userver_config_http_client(userver_config_http_client):
+    def patch(config, config_vars):
+        userver_config_http_client(config, config_vars)
+        config['components_manager']['components']['http-client-core'].pop('testsuite-timeout', None)
     return patch

@@ -1,4 +1,5 @@
 #pragma once
+#include <platform/configs/runtime.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -19,7 +20,7 @@ class SeaPortSync final : public userver::components::ComponentBase {
     userver::storages::postgres::ClusterPtr pg_;
     std::string releases_url_;
     std::string download_base_url_;
-    std::chrono::milliseconds timeout_;
+    platform::configs::Source configs_;
     std::size_t minimum_;
     userver::utils::PeriodicTask task_;
 };

@@ -80,3 +80,33 @@ class ContainerImagesTest(unittest.TestCase):
             sources = shlex.split(line)[1:-1]
             for source in sources:
                 self.assertIn(source, images.INPUTS, f'Добавьте {source} в fingerprint окружения')
+
+
+class CiImageSelectionTest(unittest.TestCase):
+    def test_invalid_environment_stops_step_without_publishing_empty_ref(self):
+        import os
+        import subprocess
+        import yaml
+        ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+        script = next(step['run'] for step in ci['jobs']['build']['steps'] if step.get('id') == 'image')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            python = root / 'python3'
+            python.write_text('#!/bin/sh\necho "stale environment" >&2\nexit 23\n')
+            python.chmod(0o755)
+            output = root / 'output'
+            environment = {**os.environ, 'PATH': str(root) + os.pathsep + os.environ['PATH'],
+                           'PRESET': 'debug', 'GITHUB_OUTPUT': str(output)}
+            result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', script],
+                                    env=environment, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 23)
+            self.assertIn('stale environment', result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_environment_check_precedes_tool_tests(self):
+        import yaml
+        ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+        steps = ci['jobs']['tools']['steps']
+        check = next(i for i, step in enumerate(steps) if 'container-images.py check' in step.get('run', ''))
+        tests = next(i for i, step in enumerate(steps) if 'ci-tools.py' in step.get('run', ''))
+        self.assertLess(check, tests)

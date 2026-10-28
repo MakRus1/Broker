@@ -48,6 +48,8 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
+      - name: Проверка закреплённого окружения
+        run: python scripts/container-images.py check
       - run: python -m pip install -r requirements.txt
       - name: Тесты затронутых инструментов
         env:
@@ -67,7 +69,6 @@ jobs:
         run: make check-gen-all check-format
       - name: YAML без якорей и ссылок
         run: python scripts/check-yaml.py
-      - run: python scripts/container-images.py check
       - run: git diff --exit-code && test -z "$(git ls-files --others --exclude-standard)"
   frontend:
     needs: plan
@@ -124,7 +125,8 @@ jobs:
         run: |
           variant=dev
           if [[ "$PRESET" == sanitize ]]; then variant=sanitize; fi
-          echo "ref=$(python3 scripts/container-images.py ref --variant "$variant")" >> "$GITHUB_OUTPUT"
+          image_ref=$(python3 scripts/container-images.py ref --variant "$variant")
+          echo "ref=$image_ref" >> "$GITHUB_OUTPUT"
       - name: Вход в GHCR
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -155,7 +157,9 @@ jobs:
           restore-keys: |
             ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-
       - name: Права рабочего каталога для контейнера
-        run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
+        run: |
+          mkdir -p .ccache
+          sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
       - name: Сборка выбранных сервисов
         id: compile
         env:
@@ -166,7 +170,7 @@ jobs:
           docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE=512M "$DOCKER_IMAGE" ccache --zero-stats
           make "docker-ci-build-$PRESET"
       - name: Статистика кеша компиляции
-        if: always()
+        if: ${{ always() && steps.image.outcome == 'success' }}
         env:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: |

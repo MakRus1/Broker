@@ -60,8 +60,8 @@ void AirportSync::Sync() {
             ids.reserve(airports.size());
             for (const auto& airport : airports)
                 ids.push_back(airport.SourceId);
-            const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-            auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
+            auto tx = pg_->Begin(
+                "directory-sync.airports", pg::ClusterHostType::kMaster, pg::TransactionOptions{});
             const auto state =
                 tx.Execute(sql::kLockDirectorySync, std::string{"ourairports"}, lease);
             if (state.IsEmpty())

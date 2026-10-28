@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "inputs_sha256": "462e7bef03064356dee1b211087140f3e83eba584d9a706a5b778d17a5b20b84",
+  "inputs_sha256": "68433f9dec2da160b8e759585abb7c8d2b231c2583afac67ea9fd412ebe30ba6",
   "images": {
-    "dev": "ghcr.io/makrus1/broker-dev@sha256:d18873e87b566c185dca2427c3c44f7cba05ae4fa80ad3c6d79004b927ba6e7c",
-    "sanitize": "ghcr.io/makrus1/broker-dev@sha256:93626f6bd55df3034a0bb7759241525de524a7118ae82ec8b85403f9aa34a326"
+    "dev": "ghcr.io/makrus1/broker-dev@sha256:beeb3ce65b61b238baddf2d74f709be3516480aae24c28a54ebf8e5edb67d016",
+    "sanitize": "ghcr.io/makrus1/broker-dev@sha256:6b15da7c3643c60c617d37bf6d2e415a9894d9dc18d3fec68109df2f163ed184"
   }
 }

@@ -74,8 +74,8 @@ void SeaPortSync::Sync() {
             codes.reserve(ports.size());
             for (const auto& port : ports)
                 codes.push_back(port.Locode);
-            const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-            auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
+            auto tx = pg_->Begin(
+                "directory-sync.sea-ports", pg::ClusterHostType::kMaster, pg::TransactionOptions{});
             const auto state = tx.Execute(sql::kLockDirectorySync, source, lease);
             if (state.IsEmpty())
                 return;

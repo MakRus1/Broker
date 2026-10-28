@@ -151,3 +151,13 @@ def userver_config_http_client(userver_config_http_client):
         userver_config_http_client(config, config_vars)
         config['components_manager']['components']['http-client-core'].pop('testsuite-timeout', None)
     return patch
+
+
+@pytest.fixture(scope='session')
+def userver_config_testsuite(userver_config_testsuite):
+    def patch(config, config_vars):
+        userver_config_testsuite(config, config_vars)
+        support = config['components_manager']['components']['testsuite-support']
+        support['testsuite-pg-execute-timeout'] = '0s'
+        support['testsuite-pg-statement-timeout'] = '0s'
+    return patch

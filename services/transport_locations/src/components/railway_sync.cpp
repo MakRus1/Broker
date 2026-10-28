@@ -70,8 +70,8 @@ void RailwaySync::Sync() {
             ids.reserve(stations.size());
             for (const auto& station : stations)
                 ids.push_back(station.SourceId);
-            const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-            auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
+            auto tx = pg_->Begin(
+                "directory-sync.railway", pg::ClusterHostType::kMaster, pg::TransactionOptions{});
             const auto state =
                 tx.Execute(sql::kLockDirectorySync, std::string{"osm-railway"}, lease);
             if (state.IsEmpty())

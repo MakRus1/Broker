@@ -108,3 +108,33 @@ class ConfigSchemasTest(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 module.check(self.root)
             target.unlink()
+
+
+class JsonSchemaConfigsTest(unittest.TestCase):
+    def test_native_query_map_and_default_validation(self):
+        schema = {
+            'type': 'object',
+            'additionalProperties': {'$ref': '#/definitions/Timeout'},
+            'definitions': {'Timeout': {
+                'type': 'object', 'additionalProperties': False,
+                'properties': {'network_timeout_ms': {'type': 'integer', 'minimum': 1}},
+            }},
+        }
+        configs.validate_json_schema(schema)
+        spec = {'name': 'SQL_SETTINGS', 'mode': 'json-schema', 'schema': schema,
+                'default': {'some-query': {'network_timeout_ms': 1000}}}
+        configs.validate_default(spec)
+        for invalid in [{'some-query': {'network_timeout_ms': 0}},
+                        {'some-query': {'network_timeout_ms': '1000'}},
+                        {'some-query': {'unexpected': True}}]:
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                configs.validate_default({**spec, 'default': invalid})
+
+    def test_external_and_missing_references_are_rejected(self):
+        for ref in ['https://example.org/schema.json', '#/definitions/Missing']:
+            with self.subTest(ref=ref), self.assertRaises(ValueError):
+                configs.validate_json_schema({'type': 'object', 'additionalProperties': {'$ref': ref}})
+
+    def test_invalid_schema_is_rejected(self):
+        with self.assertRaises(ValueError):
+            configs.validate_json_schema({'type': 'object', 'properties': {'a': {'type': 'invalid'}}})

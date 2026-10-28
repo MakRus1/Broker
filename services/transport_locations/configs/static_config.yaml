@@ -142,6 +142,16 @@ components_manager:
                 POSTGRES_DEFAULT_COMMAND_CONTROL:
                     network_timeout_ms: 750
                     statement_timeout_ms: 500
+                POSTGRES_QUERIES_COMMAND_CONTROL:
+                    directory-sync.airports:
+                        network_timeout_ms: 30000
+                        statement_timeout_ms: 25000
+                    directory-sync.sea-ports:
+                        network_timeout_ms: 30000
+                        statement_timeout_ms: 25000
+                    directory-sync.railway:
+                        network_timeout_ms: 30000
+                        statement_timeout_ms: 25000
             updates-enabled: $config-updates-enabled
             fs-cache-path: $config-cache-path
             fs-task-processor: fs-task-processor

@@ -4,3 +4,4 @@ cmake==3.31.6
 ninja==1.11.1.4
 clang-format==18.1.8
 google-re2==1.1.20240702
+jsonschema==4.23.0

@@ -82,7 +82,12 @@ it('использует фактический номер контейнера 
 
 it('сохраняет календарные даты и выбранные станции ЖД без преобразования в UTC', () => {
   const rail = {
-    origin_station: { esr_code: '000001', name: 'Станция', country_code: 'RU' },
+    origin_station: {
+      id: '34996a7f-8d2d-1d6c-d1ec-75950190cc6d',
+      esr_code: '000001',
+      name: 'Станция',
+      country_code: 'RU',
+    },
     etd: '2030-01-01',
     eta: '2030-01-03',
     departure_date: '2020-01-01',

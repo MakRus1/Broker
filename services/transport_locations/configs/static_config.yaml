@@ -68,6 +68,11 @@ components_manager:
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
+        railway-sync:
+            load-enabled: $railway-sync-enabled
+            url: https://qlever.dev/api/osm-planet
+            timeout: 90s
+            minimum-records: 10000
         airport-sync:
             load-enabled: $airport-sync-enabled
             url: https://davidmegginson.github.io/ourairports-data/airports.csv

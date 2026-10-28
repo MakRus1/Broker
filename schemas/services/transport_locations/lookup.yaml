@@ -72,14 +72,14 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                codes:
+                ids:
                   type: array
                   maxItems: 200
                   items:
                     type: string
-                    pattern: ^[0-9]{6}$
+                    format: uuid
               required:
-              - codes
+              - ids
       responses:
         '200':
           description: Действующие записи

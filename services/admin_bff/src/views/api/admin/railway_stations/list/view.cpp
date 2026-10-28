@@ -26,7 +26,10 @@ Response View::Handle(
     for (const auto& station : result.items)
         response.items.push_back({.country_code = station.country_code,
             .esr_code = station.esr_code,
-            .name = station.name});
+            .esr_source = station.esr_source,
+            .id = station.id,
+            .name = station.name,
+            .uic_code = station.uic_code});
     return response;
 }
 }  // namespace admin_bff::views::api::admin::railway_stations::list

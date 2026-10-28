@@ -32,9 +32,9 @@ async def create_rail(api, shipment_routes, mode='rail'):
 
 def details():
     return {
-        'origin_station': {'esr_code': '000001', 'name': 'Чужое название', 'country_code': 'CN'},
+        'origin_station': {'id': '34996a7f-8d2d-1d6c-d1ec-75950190cc6d', 'esr_code': '000001', 'name': 'Чужое название', 'country_code': 'CN'},
         'destination_station': {
-            'esr_code': '000002',
+            'id': '3e13ac6a-1d4d-9602-deaa-922533ff8fe2', 'esr_code': '000002',
             'name': 'Чужое название',
             'country_code': 'CN',
         },
@@ -61,7 +61,7 @@ async def test_rail_roundtrip_and_directory(api, shipment_routes, stations, pgsq
     )['transportation']
     rail = saved['route_segments'][0]['rail']
     assert rail['origin_station'] == {
-        'esr_code': '000001',
+        'id': '34996a7f-8d2d-1d6c-d1ec-75950190cc6d', 'esr_code': '000001',
         'name': 'Тестовая станция отправления',
         'country_code': 'RU',
     }
@@ -96,7 +96,7 @@ async def test_rail_roundtrip_and_directory(api, shipment_routes, stations, pgsq
         {'unloading_date': '2020-01-02'},
         {'etd': '1111-01-01'},
         {'eta': '2020-02-30'},
-        {'origin_station': {'esr_code': '999999', 'name': 'Неизвестная', 'country_code': 'RU'}},
+        {'origin_station': {'id': 'fc7c3eef-99bb-23e0-fbd8-462cd2389687', 'esr_code': '999999', 'name': 'Неизвестная', 'country_code': 'RU'}},
     ],
 )
 async def test_rejected_details_do_not_change_revision(api, shipment_routes, stations, change):

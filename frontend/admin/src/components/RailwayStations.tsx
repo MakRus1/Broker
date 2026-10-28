@@ -3,8 +3,15 @@ import { request, type Session } from '../api';
 import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
 import { RegistryFilters, RegistryMore, SortHeading } from './Registry';
 
-type Station = { esr_code: string; name: string; country_code: string };
-const emptyStation: Station = { esr_code: '', name: '', country_code: '' };
+type Station = {
+  id: string;
+  esr_code?: string;
+  uic_code?: string;
+  esr_source?: string;
+  name: string;
+  country_code: string;
+};
+const emptyStation: Station = { id: '', name: '', country_code: '' };
 
 export function RailwayStations({ session }: { session: Session }) {
   const [filters, setFilters] = useState<RegistryQuery>({ sort: 'name', descending: false });
@@ -22,7 +29,11 @@ export function RailwayStations({ session }: { session: Session }) {
     setError('');
     try {
       await request<Station>('/api/admin/railway-stations/save', session, {
-        ...editor,
+        id: editor.id,
+        name: editor.name,
+        country_code: editor.country_code,
+        esr_code: editor.esr_code || undefined,
+        uic_code: editor.uic_code || undefined,
         existing: editing,
       });
       setEditor(undefined);
@@ -37,7 +48,7 @@ export function RailwayStations({ session }: { session: Session }) {
     setBusy(true);
     setError('');
     try {
-      await request('/api/admin/railway-stations/archive', session, { esr_code: code });
+      await request('/api/admin/railway-stations/archive', session, { id: code });
       setArchive(undefined);
       registry.refresh();
     } catch (reason) {
@@ -52,11 +63,17 @@ export function RailwayStations({ session }: { session: Session }) {
         <div>
           <p className="eyebrow">ОБЩИЙ СПРАВОЧНИК</p>
           <h1>Железнодорожные станции</h1>
-          <p>Станции доступны всем организациям.</p>
+          <p>
+            Станции доступны всем организациям. Данные © участники{' '}
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+              OpenStreetMap
+            </a>{' '}
+            (ODbL). ЕСР из OSM — неподтверждённая подсказка.
+          </p>
         </div>
         <button
           onClick={() => {
-            setEditor({ ...emptyStation });
+            setEditor({ ...emptyStation, id: crypto.randomUUID() });
             setEditing(false);
           }}
           disabled={busy}
@@ -68,7 +85,7 @@ export function RailwayStations({ session }: { session: Session }) {
         value={filters}
         onApply={setFilters}
         loading={loading}
-        placeholder="Название или код ЕСР…"
+        placeholder="Название, ЕСР или UIC…"
       >
         {(draft, change) => (
           <label>
@@ -93,13 +110,23 @@ export function RailwayStations({ session }: { session: Session }) {
             <label>
               Код ЕСР
               <input
-                required
                 pattern="[0-9]{6}"
                 maxLength={6}
                 inputMode="numeric"
-                value={editor.esr_code}
-                disabled={editing || busy}
+                value={editor.esr_code ?? ''}
+                disabled={busy}
                 onChange={(event) => setEditor({ ...editor, esr_code: event.target.value })}
+              />
+            </label>
+            <label>
+              Код UIC
+              <input
+                pattern="[0-9]{7}"
+                maxLength={7}
+                inputMode="numeric"
+                value={editor.uic_code ?? ''}
+                disabled={busy}
+                onChange={(event) => setEditor({ ...editor, uic_code: event.target.value })}
               />
             </label>
             <label>
@@ -158,7 +185,7 @@ export function RailwayStations({ session }: { session: Session }) {
             <tbody>
               {items.map((station) => (
                 <tr
-                  key={station.esr_code}
+                  key={station.id}
                   tabIndex={0}
                   className="station-row"
                   onClick={() => {
@@ -176,7 +203,10 @@ export function RailwayStations({ session }: { session: Session }) {
                     }
                   }}
                 >
-                  <td>{station.esr_code}</td>
+                  <td>
+                    {station.esr_code ?? '—'}
+                    {station.esr_source === 'osm_hint' && <small> · OSM</small>}
+                  </td>
                   <td>
                     <button
                       className="station-name"
@@ -190,15 +220,15 @@ export function RailwayStations({ session }: { session: Session }) {
                   </td>
                   <td>{station.country_code}</td>
                   <td onClick={(event) => event.stopPropagation()}>
-                    {archive === station.esr_code ? (
+                    {archive === station.id ? (
                       <div className="station-editor-actions">
-                        <button disabled={busy} onClick={() => archiveStation(station.esr_code)}>
+                        <button disabled={busy} onClick={() => archiveStation(station.id)}>
                           Подтвердить архивирование
                         </button>
                         <button onClick={() => setArchive(undefined)}>Отменить</button>
                       </div>
                     ) : (
-                      <button disabled={busy} onClick={() => setArchive(station.esr_code)}>
+                      <button disabled={busy} onClick={() => setArchive(station.id)}>
                         В архив
                       </button>
                     )}

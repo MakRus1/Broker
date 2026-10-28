@@ -130,9 +130,9 @@ def counterparties(mockserver):
 def transport_locations_lookup(mockserver, pgsql):
     @mockserver.json_handler('/api/v1/railway-stations/get-batch')
     def lookup(request):
-        requested = request.json['codes']
+        requested = request.json['ids']
         with pgsql['db_1'].cursor() as cursor:
-            cursor.execute("SELECT esr_code, name, country_code FROM railway_stations WHERE NOT archived AND esr_code = ANY(%s::text[])", (requested,))
+            cursor.execute("SELECT md5('broker:railway:esr:' || esr_code)::uuid::text, esr_code, name, country_code FROM railway_stations WHERE NOT archived AND md5('broker:railway:esr:' || esr_code)::uuid::text = ANY(%s::text[])", (requested,))
             rows = cursor.fetchall()
-        items = [dict(zip(['esr_code', 'name', 'country_code'], row)) for row in rows]
+        items = [dict(zip(['id', 'esr_code', 'name', 'country_code'], row)) for row in rows]
         return {'items': items}

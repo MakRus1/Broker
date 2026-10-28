@@ -1,3 +1,3 @@
-SELECT ROW(esr_code, name, country_code)::public.railway_station_v1
+SELECT ROW(id, name, country_code, esr_code, uic_code, esr_source)::public.railway_station_v2
 FROM railway_stations
-WHERE NOT archived AND esr_code = ANY($1::TEXT[]);
+WHERE NOT archived AND id = ANY($1::uuid[]);

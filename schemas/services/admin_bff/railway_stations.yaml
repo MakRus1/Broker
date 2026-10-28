@@ -85,8 +85,14 @@ paths:
                 existing:
                   type: boolean
                   description: Явное редактирование существующей записи
+                id:
+                  type: string
+                  format: uuid
+                uic_code:
+                  type: string
+                  pattern: ^[0-9]{7}$
               required:
-              - esr_code
+              - id
               - name
               - country_code
       responses:
@@ -127,7 +133,7 @@ paths:
               schema:
                 $ref: components/schemas/railway_stations.yaml#/ApiError
         '409':
-          description: Код ЕСР уже занят
+          description: Идентификатор станции уже используется
           content:
             application/json:
               schema:
@@ -143,11 +149,11 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                esr_code:
+                id:
                   type: string
-                  pattern: ^[0-9]{6}$
+                  format: uuid
               required:
-              - esr_code
+              - id
       responses:
         '200':
           description: Успех
@@ -157,10 +163,11 @@ paths:
                 type: object
                 additionalProperties: false
                 properties:
-                  esr_code:
+                  id:
                     type: string
+                    format: uuid
                 required:
-                - esr_code
+                - id
         '400':
           description: Некорректные значения
           content:

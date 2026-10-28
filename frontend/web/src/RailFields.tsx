@@ -77,12 +77,23 @@ function StationLookup({
           aria-expanded={open}
           aria-autocomplete="list"
           aria-controls={open ? `${id}-options` : undefined}
-          aria-activedescendant={
-            open && items[active] ? `${id}-${items[active].esr_code}` : undefined
-          }
+          aria-activedescendant={open && items[active] ? `${id}-${items[active].id}` : undefined}
           autoComplete="off"
-          placeholder="Название станции или код ЕСР"
-          value={open ? query : value ? `${value.name} · ${value.esr_code}` : ''}
+          placeholder="Название станции, ЕСР или UIC"
+          value={
+            open
+              ? query
+              : value
+                ? [
+                    value.name,
+                    value.esr_code
+                      ? `ЕСР ${value.esr_code}`
+                      : value.uic_code
+                        ? `UIC ${value.uic_code}`
+                        : value.country_code,
+                  ].join(' · ')
+                : ''
+          }
           onFocus={() => {
             setOpen(true);
             setQuery('');
@@ -143,21 +154,31 @@ function StationLookup({
               <button
                 type="button"
                 role="option"
-                id={`${id}-${station.esr_code}`}
-                key={station.esr_code}
-                aria-selected={value?.esr_code === station.esr_code}
+                id={`${id}-${station.id}`}
+                key={station.id}
+                aria-selected={value?.id === station.id}
                 className={active === index ? 'active' : ''}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(station)}
               >
                 {station.name}
                 <small>
-                  ЕСР {station.esr_code} · {station.country_code}
+                  {station.esr_code
+                    ? `ЕСР ${station.esr_code}${station.esr_source === 'osm_hint' ? ' (OSM)' : ''} · `
+                    : ''}
+                  {station.uic_code ? `UIC ${station.uic_code} · ` : ''}
+                  {station.country_code}
                 </small>
               </button>
             ))
           )}
           {items.length === 20 && <p>Первые 20 совпадений. Уточните название или код.</p>}
+          <p>
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+              © OpenStreetMap
+            </a>{' '}
+            · ЕСР из OSM не подтверждён
+          </p>
         </div>
       )}
     </div>

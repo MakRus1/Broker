@@ -9,7 +9,7 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
     const auto rows = deps.pg_cluster->Execute(
         helpers::pg::ClusterHostType::kSlave, sql::kSearchRailwayStations, query);
     Response200 result;
-    for (const auto& row : rows.AsSetOf<pgtypes::RailwayStationV1>())
+    for (const auto& row : rows.AsSetOf<pgtypes::RailwayStationV2>())
         result.items.push_back(helpers::Convert(row));
     return result;
 }

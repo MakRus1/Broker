@@ -114,7 +114,7 @@ async def test_shipment_rules_proxy_preserves_cookie_csrf_and_token(browser, moc
     ('/api/admin/route-locations/list',{'sort':'code','kind':'airport','country_code':'RU'}),
 ])
 async def test_registry_proxy_preserves_filters_and_cursor(browser,mockserver,path,filters):
-    identity='000001' if 'railway' in path else ORG
+    identity=ORG
     cursor={'id':identity,'scope':'0'*64,'value':'alpha'}
     body={**filters,'query':'часть','limit':5,'descending':True,'cursor':cursor}
     @mockserver.json_handler(path)

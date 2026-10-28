@@ -7,7 +7,7 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::transport_locations::ApiAdminRailwayStationsArchive;
     const auto result = deps.transport_locations.ApiAdminRailwayStationsArchive(
-        api::Request{.body = {.esr_code = request.body.esr_code}}, session.Access);
-    return Response200{.esr_code = result.esr_code};
+        api::Request{.body = {.id = request.body.id}}, session.Access);
+    return Response200{.id = result.id};
 }
 }  // namespace admin_bff::views::api::admin::railway_stations::archive

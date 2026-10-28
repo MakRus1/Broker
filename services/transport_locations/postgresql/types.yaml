@@ -13,14 +13,6 @@ types:
     - name: code
       type: text
       nullable: true
-  public.railway_station_v1:
-    fields:
-    - name: esr_code
-      type: text
-    - name: name
-      type: text
-    - name: country_code
-      type: text
   public.airport_source_v1:
     fields:
     - name: source_id
@@ -49,5 +41,40 @@ types:
       type: text
     - name: country_code
       type: text
+    - name: search_terms
+      type: text
+  public.railway_station_v2:
+    fields:
+    - name: id
+      type: uuid
+    - name: name
+      type: text
+    - name: country_code
+      type: text
+    - name: esr_code
+      type: text
+      nullable: true
+    - name: uic_code
+      type: text
+      nullable: true
+    - name: esr_source
+      type: text
+      nullable: true
+  public.railway_station_source_v1:
+    fields:
+    - name: source_id
+      type: text
+    - name: station_id
+      type: uuid
+    - name: name
+      type: text
+    - name: country_code
+      type: text
+    - name: esr_code
+      type: text
+      nullable: true
+    - name: uic_code
+      type: text
+      nullable: true
     - name: search_terms
       type: text

@@ -9,17 +9,20 @@
 namespace transportations::helpers {
 inline domain::RailwayStations LoadRailwayStations(const Deps& deps,
     const userver::server::request::RequestContext& context,
-    const std::vector<std::string>& codes) try {
+    const std::vector<std::string>& ids) try {
     domain::RailwayStations stations;
-    if (codes.empty())
+    if (ids.empty())
         return stations;
     const auto response = deps.transport_locations.ApiV1RailwayStationsGetBatch(
-        {.body = {.codes = codes}}, platform::auth::GetAccessToken(context));
+        {.body = {.ids = ids}}, platform::auth::GetAccessToken(context));
     for (const auto& value : response.items)
-        stations.emplace(value.esr_code,
+        stations.emplace(value.id,
             models::RailwayStation{.country_code = value.country_code,
                 .esr_code = value.esr_code,
-                .name = value.name});
+                .esr_source = value.esr_source,
+                .id = value.id,
+                .name = value.name,
+                .uic_code = value.uic_code});
     return stations;
 } catch (const platform::http::CancelledError&) {
 

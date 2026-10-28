@@ -1,5 +1,6 @@
 #pragma once
 #include <clients/counterparties/client.hpp>
+#include <helpers/registry_filters.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -159,32 +160,13 @@ inline clients::counterparties::ApiV1CounterpartiesSetArchived::RequestBody Conv
 
 inline clients::counterparties::ApiV1CounterpartiesList::RequestBody Convert(
     const models::counterparties::ListCounterpartiesRequest& value) {
-    clients::counterparties::ApiV1CounterpartiesList::RequestBody result;
-    result.after = value.after;
-    result.limit = value.limit;
-    result.query = value.query;
-    result.country_code = value.country_code;
-    result.ids = value.ids;
-    result.cursor = Convert(value.cursor);
-    result.descending = value.descending;
-    result.sort = clients::counterparties::models::ParseEnumScalar(
-        models::counterparties::EnumValue(value.sort),
-        clients::counterparties::models::ListCounterpartiesRequest_sort{});
-    if (value.role.has_value())
-        result.role = Convert(value.role.value());
-    // Enum фильтра принадлежит собственному контракту каждого участника.
-    switch (value.status) {
-    case models::counterparties::ListCounterpartiesRequest_status::Active:
-        result.status = clients::counterparties::models::ListCounterpartiesRequest_status::Active;
-        break;
-    case models::counterparties::ListCounterpartiesRequest_status::Archived:
-        result.status = clients::counterparties::models::ListCounterpartiesRequest_status::Archived;
-        break;
-    case models::counterparties::ListCounterpartiesRequest_status::All:
-        result.status = clients::counterparties::models::ListCounterpartiesRequest_status::All;
-        break;
-    }
-    return result;
+    return {.after = value.after,
+        .cursor = Convert(value.cursor),
+        .descending = value.descending,
+        .filters =
+            ConvertRegistryFilters<clients::counterparties::models::RegistryFilter>(value.filters),
+        .limit = value.limit,
+        .sort = value.sort};
 }
 
 inline clients::counterparties::ApiV1CounterpartiesHistory::RequestBody Convert(
@@ -229,6 +211,19 @@ inline models::counterparties::CounterpartyEvent Convert(
     result.after = Convert(value.after);
     if (value.before.has_value())
         result.before = Convert(value.before.value());
+    return result;
+}
+
+inline clients::counterparties::models::ListCounterpartiesRequest ConvertRegistry(
+    const models::counterparties::ListCounterpartiesRequest& value) {
+    const auto body = Convert(value);
+    clients::counterparties::models::ListCounterpartiesRequest result;
+    result.after = body.after;
+    result.cursor = body.cursor;
+    result.descending = body.descending;
+    result.filters = body.filters;
+    result.limit = body.limit;
+    result.sort = body.sort;
     return result;
 }
 }  // namespace web_bff

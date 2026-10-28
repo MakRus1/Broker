@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Измерить SQL поставок или контрагентов в отдельном PostgreSQL без рабочих данных."""
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -14,6 +15,11 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 ORG = '00000000-0000-0000-0000-000000000001'
+_BENCH_SPEC = importlib.util.spec_from_file_location(
+    'column_bench', ROOT / 'scripts/benchmark-column-filters.py')
+_COLUMN_BENCH = importlib.util.module_from_spec(_BENCH_SPEC)
+_BENCH_SPEC.loader.exec_module(_COLUMN_BENCH)
+
 
 
 def workload(service, rows):
@@ -191,6 +197,7 @@ def main():
             }
         built = {}
         for name, (request, values) in requests.items():
+            request, values = _COLUMN_BENCH.column_request(args.service, request)
             query = subprocess.run(
                 shlex.split(args.query_renderer),
                 input=json.dumps({**request, 'limit': 50}),
@@ -204,7 +211,8 @@ def main():
             parameter_types = ','.join(bindings[index] for index in range(1, len(bindings) + 1))
             built[name] = (
                 f'PREPARE registry({parameter_types}) AS ' + query.rstrip().rstrip(';') + ';',
-                ','.join([f"'{ORG}'", *values, '51']),
+                ','.join(_COLUMN_BENCH.literal(value, bindings[index])
+                    for index, value in enumerate([ORG, *values, 51], 1)),
             )
         baseline = args.baseline.read_text() if args.baseline else None
         report = {

@@ -89,7 +89,9 @@ async def test_card_edit_archive_and_links(api, pgsql):
     assert created['contacts'][0]['name'] == 'Анна'
     fetched = await api.post('/api/v1/counterparties/get', {'id': identifier})
     assert fetched['counterparty'] == created
-    await api.post('/api/v1/counterparties/get', {'id': identifier}, user='other', expected=404)
+    await api.post(
+        '/api/v1/counterparties/get', {'id': identifier}, user='other', expected=404
+    )
     update = details(id=identifier, name='Новое имя', expected_revision=1)
     changed = (await api.post('/api/v1/counterparties/update', update))['counterparty']
     assert changed['name'] == 'Новое имя'
@@ -103,10 +105,19 @@ async def test_card_edit_archive_and_links(api, pgsql):
     )['counterparty']
     assert archived['archived'] is True
     assert archived['revision'] == 3
-    assert (await api.post('/api/v1/counterparties/list', {}))['items'] == []
-    assert (await api.post('/api/v1/counterparties/list', {'status': 'archived'}))['items'] == [
-        archived
-    ]
+    assert (await api.post('/api/v1/counterparties/list', {}))['items'] == [archived]
+    assert (
+        await api.post(
+            '/api/v1/counterparties/list',
+            {'filters': [{'field': 'archived', 'values': ['false']}]},
+        )
+    )['items'] == []
+    assert (
+        await api.post(
+            '/api/v1/counterparties/list',
+            {'filters': [{'field': 'archived', 'values': ['true']}]},
+        )
+    )['items'] == [archived]
     assert (await api.post('/api/v1/counterparties/get', {'id': identifier}))[
         'counterparty'
     ] == archived
@@ -176,13 +187,27 @@ async def test_search_role_status_and_cursor(api):
     )['counterparty']
     assert [
         item['id']
-        for item in (await api.post('/api/v1/counterparties/list', {'query': '111'}))['items']
+        for item in (
+            await api.post(
+                '/api/v1/counterparties/list',
+                {'filters': [{'field': 'search', 'query': '111'}]},
+            )
+        )['items']
     ] == [a['id']]
     assert [
         item['id']
-        for item in (await api.post('/api/v1/counterparties/list', {'role': 'agent'}))['items']
+        for item in (
+            await api.post(
+                '/api/v1/counterparties/list',
+                {'filters': [{'field': 'roles', 'values': ['agent']}]},
+            )
+        )['items']
     ] == [b['id']]
-    assert (await api.post('/api/v1/counterparties/list', {'query': '%'}))['items'] == []
+    assert (
+        await api.post(
+            '/api/v1/counterparties/list', {'filters': [{'field': 'search', 'query': '%'}]}
+        )
+    )['items'] == []
     page = (await api.post('/api/v1/counterparties/list', {'limit': 1}))['items']
     following = (
         await api.post('/api/v1/counterparties/list', {'after': page[0]['id'], 'limit': 1})
@@ -274,7 +299,10 @@ async def test_nullable_requisites_and_partial_update(api, pgsql):
             (created['id'],),
         )
         assert cursor.fetchone() == (None, None, None, None, None)
-    listed = await api.post('/api/v1/counterparties/list', {'query': created['name']})
+    listed = await api.post(
+        '/api/v1/counterparties/list',
+        {'filters': [{'field': 'search', 'query': created['name']}]},
+    )
     assert listed['items'] == [cleared]
     replaced = (
         await api.post(

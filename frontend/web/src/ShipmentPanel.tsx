@@ -87,7 +87,7 @@ export function ShipmentPanel({
           ? request<{ items: Transportation[] }>(
               '/api/v1/transportations/list',
               session,
-              { shipment_id: initial.id, limit: 50 },
+              { filters: [{ field: 'shipment_id', values: [initial.id] }], limit: 50 },
               signal,
             )
           : Promise.resolve({ items: [] }),
@@ -183,7 +183,11 @@ export function ShipmentPanel({
         const result = await request<{ items: Transportation[] }>(
           '/api/v1/transportations/list',
           session,
-          { shipment_id: shipment.id, after: transportations.at(-1)!.id, limit: 50 },
+          {
+            filters: [{ field: 'shipment_id', values: [shipment.id] }],
+            after: transportations.at(-1)!.id,
+            limit: 50,
+          },
         );
         setTransportations((old) => [...old, ...result.items]);
         setMoreTransportations(result.items.length === 50);

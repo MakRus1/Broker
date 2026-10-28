@@ -49,6 +49,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-filter_values:
+            path: /api/v1/counterparties/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparties-get:
             path: /api/v1/counterparties/get
             method: POST
@@ -127,6 +133,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-shipments-filter_values:
+            path: /api/v1/shipments/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipments-get:
             path: /api/v1/shipments/get
             method: POST
@@ -183,6 +195,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-transportations-create:
             path: /api/v1/transportations/create
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-transportations-filter_values:
+            path: /api/v1/transportations/filter-values
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

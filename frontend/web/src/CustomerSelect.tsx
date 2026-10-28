@@ -48,7 +48,13 @@ export function CustomerSelect({
       void request<{ items: Counterparty[] }>(
         '/api/v1/counterparties/list',
         session,
-        { query: query.trim(), limit: 100, status: 'active' },
+        {
+          filters: [
+            { field: 'archived', values: ['false'] },
+            ...(query.trim() ? [{ field: 'search', query: query.trim() }] : []),
+          ],
+          limit: 100,
+        },
         controller.signal,
       )
         .then((result) => {

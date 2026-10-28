@@ -258,12 +258,6 @@ ListTransportationsRequest:
   type: object
   additionalProperties: false
   properties:
-    shipment_id:
-      type: string
-      format: uuid
-    item_id:
-      type: string
-      format: uuid
     limit:
       type: integer
       minimum: 1
@@ -272,46 +266,21 @@ ListTransportationsRequest:
     after:
       type: string
       format: uuid
-    query:
-      type: string
-      maxLength: 256
-      description: Часть номера контейнера, без учёта регистра
-    types:
-      type: array
-      maxItems: 20
-      items:
-        type: string
-        enum:
-        - consolidated
-        - container
-        - air
-        - oversized
-        - rail
-        - vessel
-    container_types:
-      type: array
-      maxItems: 100
-      items:
-        type: string
-        pattern: ^[A-Z0-9]{2,16}$
-    hazardous:
-      type: boolean
     sort:
       type: string
-      enum:
-      - id
-      - container_number
-      - container_type
-      - type
       default: id
+      minLength: 1
+      maxLength: 64
     descending:
       type: boolean
       default: false
     cursor:
       $ref: '#/RegistryCursor'
-    incomplete_container:
-      type: boolean
-      description: Контейнерные перевозки без типа контейнера или SOC/COC
+    filters:
+      type: array
+      maxItems: 32
+      items:
+        $ref: '#/RegistryFilter'
   required: []
 EnsureCreatedRequest:
   type: object
@@ -849,3 +818,69 @@ OperationFact:
     created_quantity:
       type: integer
       minimum: 0
+RegistryFilter:
+  type: object
+  additionalProperties: false
+  required:
+  - field
+  properties:
+    field:
+      type: string
+      minLength: 1
+      maxLength: 64
+    values:
+      type: array
+      maxItems: 200
+      uniqueItems: true
+      items:
+        type: string
+        maxLength: 2000
+    query:
+      type: string
+      maxLength: 256
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+    empty:
+      type: boolean
+RegistryField:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - label
+  - kind
+  - sortable
+  - case_insensitive
+  properties:
+    id:
+      type: string
+    label:
+      type: string
+    kind:
+      type: string
+      enum:
+      - values
+      - set
+      - date
+      - boolean
+    sortable:
+      type: boolean
+    lookup:
+      type: string
+    case_insensitive:
+      type: boolean
+RegistryValue:
+  type: object
+  additionalProperties: false
+  required:
+  - value
+  - label
+  properties:
+    value:
+      type: string
+    label:
+      type: string

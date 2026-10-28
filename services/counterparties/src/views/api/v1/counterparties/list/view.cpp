@@ -14,9 +14,8 @@ Response View::Handle(
         const auto organization = platform::auth::GetOrganization(identity);
         const auto& body = request.body;
         const auto scope = platform::registry::CursorScope(body, organization);
-        if (body.after.has_value() &&
-            (body.cursor.has_value() || body.sort != models::ListCounterpartiesRequest_sort::Id ||
-                body.descending))
+        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
+        if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
             throw ApiError{
@@ -40,6 +39,8 @@ Response View::Handle(
                 .value = rows.back().SortKey};
         transaction.Commit();
         return Response200{.items = Convert(rows), .next_cursor = cursor};
+    } catch (const platform::registry::FilterError& error) {
+        return Response400{.error = "invalid_filter", .message = error.what()};
     } catch (const ::counterparties::ApiError& error) {
         switch (error.Status) {
         case 400:

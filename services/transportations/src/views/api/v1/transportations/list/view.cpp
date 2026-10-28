@@ -14,10 +14,9 @@ Response View::Handle(
         platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
         const auto organization = platform::auth::GetOrganization(identity);
         const auto scope = CursorScope(request.body, organization);
+        const auto order = registry::RegistryOrderBy(registry_fields::kFields, request.body.sort);
         if (request.body.after.has_value() &&
-            (request.body.cursor.has_value() ||
-                request.body.sort != models::ListTransportationsRequest_sort::Id ||
-                request.body.descending))
+            (request.body.cursor.has_value() || !order.ById || request.body.descending))
             throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (request.body.cursor.has_value() && request.body.cursor.value().scope != scope)
             throw ApiError{400, "invalid_cursor",
@@ -57,6 +56,8 @@ Response View::Handle(
         for (auto& item : result)
             InheritRoute(item, FindShipmentContext(sources, item.shipment_id));
         return Response200{.items = result, .next_cursor = next_cursor};
+    } catch (const platform::registry::FilterError& error) {
+        return Response400{.error = "invalid_filter", .message = error.what()};
     } catch (const ::transportations::ApiError& error) {
         switch (error.Status) {
         case 400:

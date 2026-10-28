@@ -1,3 +1,8 @@
+import {
+  RegistryFilterToolbar,
+  RegistryFilterEditor,
+  type ColumnFilterController,
+} from './RegistryColumnFilters';
 import { useEffect, useRef, useState, useId, type ReactNode } from 'react';
 import {
   preferenceKey,
@@ -108,6 +113,7 @@ export function RegistryColumnSettings({ columns, setColumns, definitions }: Reg
 }
 export interface RegistryColumn<T> extends ColumnDefinition {
   sort?: string;
+  filterFields?: string[] | false;
   cellClassName?: string;
   render: (item: T) => ReactNode;
 }
@@ -119,7 +125,9 @@ export function RegistryTable<T extends { id: string }>({
   descending,
   onSort,
   onOpen,
+  filters,
 }: {
+  filters?: ColumnFilterController;
   items: T[];
   columns: RegistryColumns;
   definitions: readonly RegistryColumn<T>[];
@@ -128,6 +136,10 @@ export function RegistryTable<T extends { id: string }>({
   onSort?: (field: string) => void;
   onOpen: (item: T) => void;
 }) {
+  const [filterEditor, setFilterEditor] = useState<{
+    fields: string[];
+    anchor: HTMLElement;
+  } | null>(null);
   const drag = useRef<{ id: string; x: number; width: number } | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const moving = useRef<string | null>(null);
@@ -193,140 +205,219 @@ export function RegistryTable<T extends { id: string }>({
       ),
     );
   }
+  const hidden = new Set(
+    (filters?.fields ?? [])
+      .filter(
+        (field) =>
+          !visible.some((column) => {
+            const definition = definitions.find((value) => value.id === column.id)!;
+            return (
+              definition.filterFields !== false &&
+              (definition.filterFields ?? [definition.id]).includes(field.id)
+            );
+          }),
+      )
+      .map((field) => field.id),
+  );
   return (
-    <div
-      className="table-scroll"
-      ref={scroll}
-      onDragOver={(event) => {
-        if (!moving.current) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        pointerX.current = event.clientX;
-        setDrop(targetAt(event.clientX));
-      }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          pointerX.current = null;
-          setDrop(null);
-        }
-      }}
-      onDrop={(event) => {
-        if (!moving.current) return;
-        event.preventDefault();
-        const target = targetAt(event.clientX);
-        const id = moving.current;
-        if (target) state.setColumns((old) => placeColumn(old, id, target.id, target.side));
-        finishMove();
-      }}
-    >
-      <table
-        className="personal-registry-table"
-        style={{ width: visible.reduce((sum, column) => sum + column.width, 0) }}
+    <>
+      {filters && (
+        <RegistryFilterToolbar
+          controller={filters}
+          hidden={hidden}
+          onOpen={(fields, anchor) => setFilterEditor({ fields, anchor })}
+        />
+      )}
+      {filters && filterEditor && (
+        <RegistryFilterEditor
+          controller={filters}
+          fields={filterEditor.fields}
+          anchor={filterEditor.anchor}
+          onClose={() => {
+            setFilterEditor(null);
+            if (filterEditor.anchor.isConnected) filterEditor.anchor.focus();
+          }}
+        />
+      )}
+      <div
+        className="table-scroll"
+        ref={scroll}
+        onDragOver={(event) => {
+          if (!moving.current) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          pointerX.current = event.clientX;
+          setDrop(targetAt(event.clientX));
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            pointerX.current = null;
+            setDrop(null);
+          }
+        }}
+        onDrop={(event) => {
+          if (!moving.current) return;
+          event.preventDefault();
+          const target = targetAt(event.clientX);
+          const id = moving.current;
+          if (target) state.setColumns((old) => placeColumn(old, id, target.id, target.side));
+          finishMove();
+        }}
       >
-        <colgroup>
-          {visible.map((column) => (
-            <col key={column.id} style={{ width: column.width }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            {visible.map((column) => {
-              const definition = definitions.find((entry) => entry.id === column.id)!;
-              return (
-                <th
-                  key={column.id}
-                  data-column={column.id}
-                  className={source === column.id ? 'column-dragging' : undefined}
-                  data-drop-side={
-                    drop?.id === column.id && drop.id !== source ? drop.side : undefined
-                  }
-                  draggable
-                  title="Перетащите заголовок для изменения порядка столбцов"
-                  onDragStart={(event) => {
-                    if (
-                      drag.current ||
-                      (event.target as HTMLElement).closest('.registry-column-resize')
-                    ) {
-                      event.preventDefault();
-                      return;
+        <table
+          className="personal-registry-table"
+          style={{ width: visible.reduce((sum, column) => sum + column.width, 0) }}
+        >
+          <colgroup>
+            {visible.map((column) => (
+              <col key={column.id} style={{ width: column.width }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {visible.map((column) => {
+                const definition = definitions.find((entry) => entry.id === column.id)!;
+                const filterFields =
+                  definition.filterFields === false
+                    ? []
+                    : (definition.filterFields ?? [definition.id]).filter((id) =>
+                        filters?.fields.some((field) => field.id === id),
+                      );
+                const sortField =
+                  definition.sort ??
+                  filters?.fields.find((field) => field.id === column.id && field.sortable)?.id;
+                return (
+                  <th
+                    key={column.id}
+                    data-column={column.id}
+                    className={source === column.id ? 'column-dragging' : undefined}
+                    data-drop-side={
+                      drop?.id === column.id && drop.id !== source ? drop.side : undefined
                     }
-                    moving.current = column.id;
-                    setSource(column.id);
-                    event.dataTransfer.effectAllowed = 'move';
-                    event.dataTransfer.setData('text/plain', column.id);
-                    pointerX.current = event.clientX;
-                    frame.current = requestAnimationFrame(autoScroll);
-                  }}
-                  onDragEnd={finishMove}
-                  aria-sort={
-                    definition.sort === sort ? (descending ? 'descending' : 'ascending') : undefined
-                  }
-                >
-                  {definition.sort && onSort ? (
-                    <button
-                      type="button"
-                      className="table-sort"
-                      onClick={() => {
-                        if (Date.now() >= ignoreClickUntil.current) onSort(definition.sort!);
-                      }}
-                    >
-                      {definition.label} {definition.sort === sort ? (descending ? '↓' : '↑') : '↕'}
-                    </button>
-                  ) : (
-                    definition.label
-                  )}
-                  <span
-                    role="separator"
-                    aria-label={`Ширина столбца «${definition.label}»`}
-                    aria-orientation="vertical"
-                    aria-valuemin={120}
-                    aria-valuemax={900}
-                    aria-valuenow={column.width}
-                    tabIndex={0}
-                    className="registry-column-resize"
-                    onKeyDown={(event) => {
-                      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                    draggable
+                    title="Перетащите заголовок для изменения порядка столбцов"
+                    onDragStart={(event) => {
+                      if (
+                        drag.current ||
+                        (event.target as HTMLElement).closest(
+                          '.registry-column-resize,.registry-filter-button',
+                        )
+                      ) {
                         event.preventDefault();
-                        resize(column.id, column.width + (event.key === 'ArrowLeft' ? -20 : 20));
+                        return;
                       }
+                      moving.current = column.id;
+                      setSource(column.id);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', column.id);
+                      pointerX.current = event.clientX;
+                      frame.current = requestAnimationFrame(autoScroll);
                     }}
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      drag.current = { id: column.id, x: event.clientX, width: column.width };
-                    }}
-                    onPointerMove={(event) => {
-                      if (drag.current?.id === column.id)
-                        resize(column.id, drag.current.width + event.clientX - drag.current.x);
-                    }}
-                    onPointerUp={() => {
-                      drag.current = null;
-                    }}
-                    onPointerCancel={() => {
-                      drag.current = null;
-                    }}
-                  />
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id} className="clickable" onClick={() => onOpen(item)}>
-              {visible.map((column) => (
-                <td
-                  key={column.id}
-                  className={definitions.find((entry) => entry.id === column.id)!.cellClassName}
-                >
-                  {definitions.find((entry) => entry.id === column.id)!.render(item)}
-                </td>
-              ))}
+                    onDragEnd={finishMove}
+                    aria-sort={
+                      sortField === sort ? (descending ? 'descending' : 'ascending') : undefined
+                    }
+                  >
+                    <div className="registry-column-heading">
+                      {sortField && onSort ? (
+                        <button
+                          type="button"
+                          className="table-sort"
+                          onClick={() => {
+                            if (Date.now() >= ignoreClickUntil.current) onSort(sortField);
+                          }}
+                        >
+                          <span className="registry-column-name">{definition.label}</span>
+                          {sortField === sort && (
+                            <span className="registry-column-order">{descending ? '↓' : '↑'}</span>
+                          )}
+                        </button>
+                      ) : (
+                        definition.label
+                      )}
+                      {filters && filterFields.length > 0 && (
+                        <button
+                          type="button"
+                          className="registry-filter-button"
+                          data-active={
+                            filters.filters.some((filter) => filterFields.includes(filter.field)) ||
+                            undefined
+                          }
+                          aria-label={`Фильтр «${definition.label}»`}
+                          aria-expanded={filterEditor?.anchor.dataset.columnFilter === column.id}
+                          data-column-filter={column.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setFilterEditor({ fields: filterFields, anchor: event.currentTarget });
+                          }}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            aria-hidden="true"
+                          >
+                            <path d="M4 5h16M7 12h10M10 19h4" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <span
+                      role="separator"
+                      aria-label={`Ширина столбца «${definition.label}»`}
+                      aria-orientation="vertical"
+                      aria-valuemin={120}
+                      aria-valuemax={900}
+                      aria-valuenow={column.width}
+                      tabIndex={0}
+                      className="registry-column-resize"
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                          event.preventDefault();
+                          resize(column.id, column.width + (event.key === 'ArrowLeft' ? -20 : 20));
+                        }
+                      }}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        drag.current = { id: column.id, x: event.clientX, width: column.width };
+                      }}
+                      onPointerMove={(event) => {
+                        if (drag.current?.id === column.id)
+                          resize(column.id, drag.current.width + event.clientX - drag.current.x);
+                      }}
+                      onPointerUp={() => {
+                        drag.current = null;
+                      }}
+                      onPointerCancel={() => {
+                        drag.current = null;
+                      }}
+                    />
+                  </th>
+                );
+              })}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="clickable" onClick={() => onOpen(item)}>
+                {visible.map((column) => (
+                  <td
+                    key={column.id}
+                    className={definitions.find((entry) => entry.id === column.id)!.cellClassName}
+                  >
+                    {definitions.find((entry) => entry.id === column.id)!.render(item)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

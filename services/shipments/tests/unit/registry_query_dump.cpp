@@ -1,4 +1,4 @@
-// Печать реального SQL для изолированного EXPLAIN, не часть обычной сборки.
+// Печать реального SQL API для изолированных бенчмарков; не часть обычной сборки.
 #include <helpers/registry_query.hpp>
 #include <iostream>
 #include <iterator>
@@ -6,10 +6,16 @@
 
 int main() {
     const std::string input{std::istreambuf_iterator<char>{std::cin}, {}};
-    const auto request =
-        shipments::models::ParseModelJson(userver::formats::json::FromString(input),
-            std::type_identity<shipments::models::ListShipmentsRequest>{});
-    const auto query =
-        shipments::helpers::BuildRegistryQuery(request, "00000000-0000-0000-0000-000000000001");
+    const auto document = userver::formats::json::FromString(input);
+    const auto& body = document.HasMember("request") ? document["request"] : document;
+    const auto request = shipments::models::ParseModelJson(
+        body, std::type_identity<shipments::models::ListShipmentsRequest>{});
+    const std::string organization = "00000000-0000-0000-0000-000000000001";
+    const auto query = document.HasMember("facet")
+        ? shipments::helpers::BuildRegistryValues(request, organization,
+              document["facet"].As<std::string>(),
+              document["query"].As<std::optional<std::string>>(),
+              document["after"].As<std::optional<std::string>>(), 50)
+        : shipments::helpers::BuildRegistryQuery(request, organization);
     std::cout << query.Statement.GetStatementView();
 }

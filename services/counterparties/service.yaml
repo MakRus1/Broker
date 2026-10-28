@@ -16,6 +16,7 @@ auth:
     /api/v1/counterparties/set-archived: counterparties.write
     /api/v1/counterparties/history: counterparties.read
     /api/v1/counterparties/lookup: counterparties.write
+    /api/v1/counterparties/filter-values: counterparties.read
   organization-access: true
 clients:
   organizations:

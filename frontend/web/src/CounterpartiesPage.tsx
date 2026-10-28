@@ -1,6 +1,7 @@
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { initialCounterpartyQuery, restoreCounterpartyQuery } from './registryQueryPreferences';
-import { CounterpartyFilters } from './CounterpartyFilters';
+import { useColumnFilters } from './RegistryColumnFilters';
+import { filterRequest } from './registryFilters';
 import {
   RegistryTable,
   RegistryColumnSettings,
@@ -94,7 +95,15 @@ export function CounterpartiesPage({
     initialCounterpartyQuery,
     restoreCounterpartyQuery,
   );
-  const { query, role, status, country_code: country, sort, descending } = registryFilters;
+  const { sort, descending } = registryFilters;
+  const filters = useColumnFilters({
+    registry: 'counterparties',
+    session,
+    query: registryFilters,
+    onChange: (filters) => setRegistryFilters((old) => ({ ...old, filters })),
+    onSort: (sort, descending) =>
+      setRegistryFilters((old) => ({ ...old, sort: sort as CounterpartySort, descending })),
+  });
   const [nextCursor, setNextCursor] = useState<CounterpartyRegistryCursor>();
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -124,12 +133,9 @@ export function CounterpartiesPage({
           '/api/v1/counterparties/list',
           session,
           {
-            query,
-            status,
-            country_code: country,
+            filters: filterRequest(registryFilters.filters),
             sort,
             descending,
-            ...(role ? { role } : {}),
             limit: 50,
             ...(cursor ? { cursor } : {}),
           },
@@ -148,7 +154,7 @@ export function CounterpartiesPage({
         if (current === epoch.current) setLoading(false);
       }
     },
-    [query, role, status, country, sort, descending, session, onError],
+    [sort, descending, registryFilters.filters, session, onError],
   );
   useEffect(() => {
     if (id || creating || !read) return;
@@ -427,13 +433,6 @@ export function CounterpartiesPage({
           )}
         </div>
       </div>
-      <CounterpartyFilters
-        value={registryFilters}
-        loading={loading}
-        onApply={(value) => {
-          setRegistryFilters(value);
-        }}
-      />
       <section className="surface counterparty-list" aria-busy={loading}>
         {failure && (
           <p className="error" role="alert">
@@ -444,6 +443,7 @@ export function CounterpartiesPage({
           items={items}
           columns={columnState}
           definitions={columns}
+          filters={filters}
           sort={sort}
           descending={descending}
           onSort={(field) => {

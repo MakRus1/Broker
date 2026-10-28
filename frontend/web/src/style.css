@@ -2689,3 +2689,355 @@ details[open] > .route-stage-summary::after {
 .item-card > button + button {
   margin-left: 12px;
 }
+
+/* Общие фильтры реестра: условия не зависят от набора видимых колонок. */
+.registry-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5eaf2;
+}
+.registry-filter-toolbar button {
+  font-size: 13px;
+  padding: 7px 10px;
+}
+.registry-filter-chip {
+  display: flex;
+  min-width: 0;
+  max-width: 420px;
+  border: 1px solid #cddbf5;
+  background: #f3f7ff;
+  border-radius: 7px;
+}
+.registry-filter-chip button {
+  border: 0;
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registry-filter-chip button:last-child {
+  flex-shrink: 0;
+}
+.registry-sort-summary {
+  color: #6b7b92;
+  font-size: 12px;
+  margin-left: auto;
+}
+.registry-filter-picker {
+  position: relative;
+}
+.registry-field-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 260px;
+  max-height: 320px;
+  overflow: auto;
+  z-index: 45;
+  padding: 6px;
+  background: white;
+  border: 1px solid #dce4ef;
+  box-shadow: 0 8px 24px #15264020;
+  border-radius: 8px;
+}
+.registry-field-picker button {
+  display: block;
+  width: 100%;
+  border: 0;
+  text-align: left;
+}
+.registry-field-picker button:hover {
+  background: #f0f5ff;
+}
+.registry-column-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.registry-column-heading .table-sort {
+  display: flex;
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registry-column-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registry-column-order {
+  flex: 0 0 auto;
+  margin-left: 2px;
+  color: #285ccc;
+}
+.personal-registry-table th:has(.registry-filter-button) {
+  padding-right: 10px;
+}
+.registry-filter-button {
+  margin-left: auto;
+  padding: 5px !important;
+  flex: 0 0 auto;
+  display: inline-flex;
+  vertical-align: middle;
+  border: 0;
+  background: transparent;
+  color: #74839b;
+  border-radius: 5px;
+}
+.registry-filter-button:hover,
+.registry-filter-button[data-active] {
+  color: #285ccc;
+  background: #eaf1ff;
+}
+.registry-filter-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  width: min(460px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  border: 1px solid #d9e2ef;
+  border-radius: 10px;
+  color: #243348;
+  background: white;
+  box-shadow: 0 14px 45px #12274230;
+}
+.registry-filter-popover:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.registry-filter-popover > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0;
+}
+.registry-filter-title,
+.registry-filter-actions {
+  flex-shrink: 0;
+}
+.registry-filter-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e8ecf2;
+}
+.registry-filter-title h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.registry-filter-title button {
+  border: 0;
+  font-size: 22px;
+  padding: 0 5px;
+  color: #708098;
+}
+.registry-filter-scroll {
+  min-height: 0;
+  max-height: min(62vh, 490px);
+  overflow: auto;
+  padding: 0 18px;
+}
+.registry-field-editor {
+  border: 0;
+  border-top: 1px solid #e8ecf2;
+  padding: 16px 0;
+  margin: 0;
+  min-width: 0;
+}
+.registry-field-editor:first-child {
+  border-top: 0;
+}
+.registry-field-editor legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.registry-field-editor label {
+  font-size: 13px;
+}
+.registry-field-editor input:not([type='checkbox']),
+.registry-field-editor textarea {
+  font-size: 14px;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+.registry-filter-modes,
+.registry-filter-sort {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 12px;
+}
+.registry-filter-modes button,
+.registry-filter-sort button,
+.registry-field-editor > button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.registry-filter-sort span {
+  width: 100%;
+  font-size: 12px;
+  color: #6c7b91;
+}
+.registry-filter-sort button[aria-pressed='true'],
+.registry-filter-modes button[aria-pressed='true'] {
+  color: #275ecc;
+  border-color: #a9c3f5;
+  background: #f0f5ff;
+}
+.registry-value-options {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 10px 0;
+  max-height: 220px;
+  overflow: auto;
+}
+.registry-value-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 0;
+  font-weight: 400;
+}
+.registry-value-options label:hover {
+  background: #f2f6fc;
+}
+.registry-field-editor input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  margin: 2px 0 0;
+  accent-color: #285bd4;
+}
+.registry-value-options label {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.registry-value-options span {
+  flex: 1;
+  min-width: 0;
+}
+.registry-value-options span {
+  overflow-wrap: anywhere;
+}
+.registry-selected-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+.registry-selected-values button {
+  font-size: 12px;
+  padding: 3px 7px;
+  background: #eef4ff;
+  border: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registry-empty-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  margin: 0;
+}
+.registry-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #e8ecf2;
+}
+.registry-filter-actions button {
+  font-size: 14px;
+  padding: 8px 14px;
+}
+.registry-date-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .registry-filter-toolbar {
+    padding: 10px;
+  }
+  .registry-filter-chip {
+    max-width: 100%;
+  }
+  .registry-sort-summary {
+    margin-left: 0;
+    width: 100%;
+  }
+  .registry-date-range {
+    grid-template-columns: 1fr;
+  }
+}
+
+.registry-filter-section {
+  border-bottom: 1px solid #e8ecf2;
+}
+.registry-filter-section:last-child {
+  border-bottom: 0;
+}
+.registry-filter-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 0;
+  list-style: none;
+  cursor: pointer;
+  color: #293a51;
+  font-size: 14px;
+  font-weight: 600;
+}
+.registry-filter-section > summary::-webkit-details-marker {
+  display: none;
+}
+.registry-filter-section > summary > svg {
+  flex: 0 0 16px;
+}
+.registry-filter-section[open] > summary > svg {
+  transform: rotate(90deg);
+}
+.registry-filter-section > summary > small {
+  margin-left: auto;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #285ccc;
+  font-size: 12px;
+  font-weight: 400;
+}
+.registry-filter-section .registry-field-editor {
+  border: 0;
+  padding: 0 0 12px;
+}
+.registry-filter-section .registry-filter-sort {
+  margin-top: 0;
+}
+
+.registry-filter-section .registry-value-options {
+  max-height: 160px;
+}
+.registry-selected-values {
+  max-height: 76px;
+  overflow: auto;
+}

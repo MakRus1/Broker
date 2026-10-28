@@ -48,16 +48,39 @@ async def test_cursor_covers_ties_and_empty_values(api, records, sort, descendin
 
 
 async def test_combined_filters_and_case_insensitive_search(api, records):
-    page = await api.post(PATH, {'query': '  mscu  ', 'types': ['container', 'rail'],
-        'container_types': ['20DC', '40HC'], 'hazardous': True, 'sort': 'container_number'})
-    expected = [row for row in records if (row['container_number'] or '').startswith('MSCU')
-        and row['type'] in ['container', 'rail'] and row['hazardous']]
+    page = await api.post(
+        PATH,
+        {
+            'sort': 'container_number',
+            'filters': [
+                {'field': 'container_number', 'query': '  mscu  '},
+                {'field': 'type', 'values': ['container', 'rail']},
+                {'field': 'container_type', 'values': ['20DC', '40HC']},
+                {'field': 'hazardous', 'values': ['true']},
+            ],
+        },
+    )
+    expected = [
+        row
+        for row in records
+        if (row['container_number'] or '').startswith('MSCU')
+        and row['type'] in ['container', 'rail']
+        and row['hazardous']
+    ]
     assert {row['id'] for row in page['items']} == {row['id'] for row in expected}
     assert 'next_cursor' not in page
 
 
-@pytest.mark.parametrize('patch', [{'types': ['air']}, {'sort': 'type'}, {'descending': True},
-                                  {'query': 'MSCU'}, {'hazardous': False}])
+@pytest.mark.parametrize(
+    'patch',
+    [
+        {'filters': [{'field': 'type', 'values': ['air']}]},
+        {'sort': 'type'},
+        {'descending': True},
+        {'filters': [{'field': 'container_number', 'query': 'MSCU'}]},
+        {'filters': [{'field': 'hazardous', 'values': ['false']}]},
+    ],
+)
 async def test_cursor_cannot_be_reused_for_another_query(api, records, patch):
     page = await api.post(PATH, {'limit': 2})
     await api.post(PATH, {'limit': 2, 'cursor': page['next_cursor'], **patch}, expected=400)
@@ -70,7 +93,9 @@ async def test_cursor_is_scoped_to_organization(api, records):
 
 @pytest.mark.parametrize('query', ['%', '_', "' OR 1=1 --", "\\"])
 async def test_search_treats_special_characters_literally(api, records, query):
-    assert (await api.post(PATH, {'query': query}))['items'] == []
+    assert (
+        await api.post(PATH, {'filters': [{'field': 'container_number', 'query': query}]})
+    )['items'] == []
 
 
 async def test_legacy_after_remains_uuid_ordered(api, records):
@@ -87,7 +112,7 @@ async def test_exact_page_has_no_false_next_cursor(api, records):
 
 
 async def test_search_matches_inside_number(api, records):
-    page = await api.post(PATH, {'query': '123'})
+    page = await api.post(PATH, {'filters': [{'field': 'container_number', 'query': '123'}]})
     assert page['items']
     assert all('123' in row['container_number'] for row in page['items'])
 
@@ -97,13 +122,13 @@ async def test_next_cursor_is_returned_without_opt_in(api, records):
     assert page['next_cursor']['id'] == page['items'][-1]['id']
 
 
-@pytest.mark.parametrize('field', ['types', 'container_types'])
+@pytest.mark.parametrize('field', ['type', 'container_type'])
 async def test_empty_filter_set_matches_nothing(api, records, field):
-    assert (await api.post(PATH, {field: []}))['items'] == []
+    assert (await api.post(PATH, {'filters': [{'field': field, 'values': []}]}))['items'] == []
 
 
 async def test_false_hazardous_filter_is_not_omitted(api, records):
-    page = await api.post(PATH, {'hazardous': False})
+    page = await api.post(PATH, {'filters': [{'field': 'hazardous', 'values': ['false']}]})
     assert {row['id'] for row in page['items']} == {
         row['id'] for row in records if not row['hazardous']
     }

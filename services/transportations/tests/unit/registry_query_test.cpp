@@ -22,23 +22,25 @@ UTEST(RegistryQuery, MissingFiltersProduceOnlyOrganizationAndLimit) {
 
 UTEST(RegistryQuery, ValuesNeverBecomeSqlText) {
     models::ListTransportationsRequest request;
-    request.query = "' OR 1=1 --";
-    request.hazardous = false;
-    request.container_types = std::vector<std::string>{};
+    const std::string unsafe = "' OR 1=1 --";
+    request.filters = std::vector<models::RegistryFilter>{
+        {.field = "container_number", .query = unsafe},
+        {.field = "hazardous", .values = std::vector<std::string>{"false"}},
+        {.field = "container_type", .values = std::vector<std::string>{}},
+    };
     const auto query = BuildRegistryQuery(request, kOrganization);
     const auto sql = Statement(query);
-    EXPECT_EQ(query.Parameters.Size(), 5);
-    EXPECT_EQ(sql.find(request.query.value()), std::string::npos);
+    EXPECT_EQ(query.Parameters.Size(), 4);
+    EXPECT_EQ(sql.find(unsafe), std::string::npos);
     EXPECT_EQ(sql.find(kOrganization), std::string::npos);
     EXPECT_NE(sql.find("LIKE lower($2::TEXT)"), std::string::npos);
-    EXPECT_NE(sql.find("COALESCE(container_type_code, '') COLLATE \"C\" = ANY($3::TEXT[])"),
-        std::string::npos);
-    EXPECT_NE(sql.find("hazardous = $4::BOOLEAN"), std::string::npos);
+    EXPECT_NE(sql.find("hazardous = ANY($3::BOOLEAN[])"), std::string::npos);
+    EXPECT_NE(sql.find("FALSE"), std::string::npos);
 }
 
 UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
     models::ListTransportationsRequest request;
-    request.sort = models::ListTransportationsRequest_sort::ContainerNumber;
+    request.sort = "container_number";
     request.descending = true;
     request.cursor = models::RegistryCursor{.id = kOrganization, .scope = "scope", .value = "mscu"};
     const auto query = BuildRegistryQuery(request, kOrganization);
@@ -137,6 +139,23 @@ UTEST(RegistryQuery, TextIdentityIsUsedForCursorAndTieBreaker) {
     EXPECT_NE(sql.find("ORDER BY lower(name) COLLATE \"C\" ASC, subject ASC"), std::string::npos);
     EXPECT_EQ(sql.find("::UUID"), std::string::npos);
 }
+
+UTEST(RegistryQuery, DateSortedAsTextUsesTextCursorProjection) {
+    using Date = userver::utils::datetime::Date;
+    constexpr auto date = registry::Field<Date>{"date", "shipment_date", "DATE"}.SortedAs(
+        "to_char(shipment_date, 'YYYY-MM')");
+    const std::array<registry::FieldDefinition, 1> fields{date};
+    const auto order = registry::OrderBy(fields, "date");
+    EXPECT_EQ(order.CursorType, registry::CursorKeyType::Text);
+    const pg::Query selection{"SELECT {sort_key}, {date_key} FROM shipments WHERE {where} "
+                              "ORDER BY {order_by} LIMIT {limit}"};
+    registry::QueryBuilder builder{selection, order, false};
+    builder.After(std::optional{kOrganization}, std::string{"2026-10"});
+    const auto sql = Statement(std::move(builder).Build(51));
+    EXPECT_NE(sql.find("SELECT to_char(shipment_date, 'YYYY-MM'), NULL::DATE"), std::string::npos);
+    EXPECT_NE(sql.find("($1::TEXT, $2::UUID)"), std::string::npos);
+}
+
 }  // namespace
 }  // namespace transportations::helpers
 

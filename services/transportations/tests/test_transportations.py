@@ -26,9 +26,14 @@ async def test_inbox_concurrent_replay(api):
     a, b = await asyncio.gather(api.post(PATH, body), api.post(PATH, body))
     assert a == b
     assert len(set(a['operation']['transportation_ids'])) == 5
-    listed = await api.post('/api/v1/transportations/list', {'shipment_id': body['shipment_id']})
+    listed = await api.post(
+        '/api/v1/transportations/list',
+        {'filters': [{'field': 'shipment_id', 'values': [body['shipment_id']]}]},
+    )
     assert len(listed['items']) == 5
-    assert all('number' not in item and 'container_number' not in item for item in listed['items'])
+    assert all(
+        'number' not in item and 'container_number' not in item for item in listed['items']
+    )
     await api.post(PATH, {**body, 'quantity': 3}, expected=409)
 
 
@@ -177,13 +182,17 @@ async def test_filtered_pagination_loads_all_route_segments(api, shipment_routes
     listed = await api.post(
         '/api/v1/transportations/list',
         {
-            'shipment_id': body['shipment_id'],
-            'item_id': body['item_id'],
             'limit': 100,
+            'filters': [
+                {'field': 'shipment_id', 'values': [body['shipment_id']]},
+                {'field': 'item_id', 'values': [body['item_id']]},
+            ],
         },
     )
     assert len(listed['items']) == 5
-    assert all('number' not in item and 'container_number' not in item for item in listed['items'])
+    assert all(
+        'number' not in item and 'container_number' not in item for item in listed['items']
+    )
     selected = next(value for value in listed['items'] if value['id'] == tid)
     assert selected['revision'] == 2
     assert len(selected['route_segments']) == 1

@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/shipments/client.hpp>
 #include <helpers/converters/shipment_route.hpp>
+#include <helpers/registry_filters.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
@@ -185,18 +186,12 @@ inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(
 inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
     const models::shipments::ListShipmentsRequest& value) {
     return {.after = value.after,
-        .cargo_query = value.cargo_query,
         .cursor = Convert(value.cursor),
-        .customer_id = value.customer_id,
-        .date_from = value.date_from,
-        .date_to = value.date_to,
         .descending = value.descending,
+        .filters =
+            ConvertRegistryFilters<clients::shipments::models::RegistryFilter>(value.filters),
         .limit = value.limit,
-        .number_query = value.number_query,
-        .sort =
-            clients::shipments::models::ParseEnumScalar(models::shipments::EnumValue(value.sort),
-                clients::shipments::models::ListShipmentsRequest_sort{}),
-        .statuses = value.statuses};
+        .sort = value.sort};
 }
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
@@ -240,5 +235,18 @@ inline clients::shipments::ApiV1ShipmentItemsUpdate::RequestBody Convert(
     return {.expected_revision = value.expected_revision,
         .item_id = value.item_id,
         .planned_quantity = value.planned_quantity};
+}
+
+inline clients::shipments::models::ListShipmentsRequest ConvertRegistry(
+    const models::shipments::ListShipmentsRequest& value) {
+    const auto body = Convert(value);
+    clients::shipments::models::ListShipmentsRequest result;
+    result.after = body.after;
+    result.cursor = body.cursor;
+    result.descending = body.descending;
+    result.filters = body.filters;
+    result.limit = body.limit;
+    result.sort = body.sort;
+    return result;
 }
 }  // namespace web_bff

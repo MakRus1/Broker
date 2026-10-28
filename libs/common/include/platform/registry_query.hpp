@@ -8,12 +8,22 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <userver/storages/postgres/parameter_store.hpp>
 #include <userver/storages/postgres/query.hpp>
+#include <userver/utils/datetime/date.hpp>
 #include <vector>
 
 namespace platform::registry {
 namespace pg = userver::storages::postgres;
+
+// Описание полей и сортировки
+
+enum class CursorKeyType { Text, Date };
+
+template <typename T>
+inline constexpr CursorKeyType kCursorKeyType =
+    std::is_same_v<T, userver::utils::datetime::Date> ? CursorKeyType::Date : CursorKeyType::Text;
 
 // SQL-выражения задаёт разработчик. Значения запроса всегда идут через ParameterStore.
 struct FieldDefinition {
@@ -23,17 +33,22 @@ struct FieldDefinition {
     bool ById = false;
     std::string_view SortExpression;
     std::string_view SortPgType;
+    CursorKeyType CursorType = CursorKeyType::Text;
+    CursorKeyType SortCursorType = CursorKeyType::Text;
 };
 
 template <typename T> struct Field : FieldDefinition {
     constexpr Field(std::string_view name, std::string_view expression,
         std::string_view pg_type = "TEXT", bool by_id = false)
-        : FieldDefinition{name, expression, pg_type, by_id, {}, {}} {}
+        : FieldDefinition{
+              name, expression, pg_type, by_id, {}, {}, kCursorKeyType<T>, CursorKeyType::Text} {}
 
+    template <typename SortKey = std::string>
     constexpr Field SortedAs(std::string_view expression, std::string_view pg_type = "TEXT") const {
         auto field = *this;
         field.SortExpression = expression;
         field.SortPgType = pg_type;
+        field.SortCursorType = kCursorKeyType<SortKey>;
         return field;
     }
 };
@@ -42,16 +57,20 @@ struct Order {
     std::string_view Expression;
     bool ById = false;
     std::string_view PgType = "TEXT";
+    CursorKeyType CursorType = CursorKeyType::Text;
 };
 
 inline Order OrderBy(std::span<const FieldDefinition> fields, std::string_view name) {
     for (const auto& field : fields) {
         if (field.Name == name)
             return {field.SortExpression.empty() ? field.Expression : field.SortExpression,
-                field.ById, field.SortPgType.empty() ? field.PgType : field.SortPgType};
+                field.ById, field.SortPgType.empty() ? field.PgType : field.SortPgType,
+                field.SortExpression.empty() ? field.CursorType : field.SortCursorType};
     }
     throw std::logic_error{"Поле не зарегистрировано для сортировки"};
 }
+
+// Строки результата и проверка курсора
 
 template <typename Item> struct Row {
     Item Value;
@@ -75,6 +94,7 @@ bool CursorMatches(const Request& request, const std::string& scope, bool identi
     return !request.cursor.has_value() || request.cursor.value().scope == scope;
 }
 
+// SQL и связанные параметры передаются вместе.
 struct BuiltQuery {
     pg::Query Statement;
     pg::ParameterStore Parameters;
@@ -99,11 +119,13 @@ class QueryBuilder {
                     "Каждое место SQL-шаблона должно встречаться ровно один раз"};
         }
         const auto date_slot = statement_.find("{date_key}");
-        if ((order_.PgType == "DATE" && date_slot == std::string::npos) ||
+        if ((order_.CursorType == CursorKeyType::Date && date_slot == std::string::npos) ||
             (date_slot != std::string::npos &&
                 statement_.find("{date_key}", date_slot + 10) != std::string::npos))
             throw std::logic_error{"Некорректное место календарного ключа SQL-шаблона"};
     }
+
+    // Условия: значения всегда связываются через ParameterStore.
 
     template <typename T> void WhereEqual(Field<T> field, const T& value) {
         AddCondition(field.Expression, " = " + Bind(value, field.PgType));
@@ -143,6 +165,48 @@ class QueryBuilder {
                 Bind(value.value(), field.PgType), " = ANY(" + std::string{field.Expression} + ")");
     }
 
+    // Поле и выражение выбираются только из серверного каталога, значения — параметры.
+    void WhereValues(FieldDefinition field, const std::vector<std::string>& values,
+        bool fold = false, bool array = false) {
+        std::vector<std::string> present;
+        bool empty = false;
+        for (const auto& value : values) {
+            if (value.empty())
+                empty = true;
+            else
+                present.push_back(value);
+        }
+        std::string condition;
+        if (!present.empty()) {
+            auto parameter = Bind(present, std::string{field.PgType} + "[]");
+            if (fold)
+                parameter = "ARRAY(SELECT lower(value) FROM unnest(" + parameter + ") AS value)";
+            condition = std::string{field.Expression} + (array ? " && " : " = ANY(") + parameter +
+                (array ? "" : ")");
+        }
+        if (empty) {
+            if (!condition.empty())
+                condition += " OR ";
+            condition += array
+                ? "COALESCE(cardinality(" + std::string{field.Expression} + "), 0) = 0"
+                : field.PgType == "TEXT" ? std::string{field.Expression} + " = ''"
+                                         : std::string{field.Expression} + " IS NULL";
+        }
+        AddCondition("", condition.empty() ? "FALSE" : "(" + condition + ")");
+    }
+
+    void WhereEmpty(FieldDefinition field, bool empty, bool array = false) {
+        if (array)
+            AddCondition("COALESCE(cardinality(" + std::string{field.Expression} + "), 0)",
+                empty ? " = 0" : " <> 0");
+        else
+            AddCondition(field.Expression,
+                field.PgType == "TEXT" ? (empty ? " = ''" : " <> ''")
+                                       : (empty ? " IS NULL" : " IS NOT NULL"));
+    }
+
+    // Курсорная пагинация
+
     template <typename T> void After(const std::optional<std::string>& id, const T& key) {
         if (!id.has_value())
             return;
@@ -160,6 +224,22 @@ class QueryBuilder {
         }
     }
 
+    // Сборка SQL для вариантов фильтра и страницы реестра
+
+    BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
+        std::string_view join, const std::optional<std::string>& after, int limit,
+        std::string_view key_type = "TEXT") && {
+        if (after.has_value())
+            AddCondition(key, " > " + Bind(after.value(), key_type));
+        const auto limit_parameter = Bind(limit, "INTEGER");
+        auto statement = fmt::format(fmt::runtime(selection.GetStatementView()),
+            fmt::arg("key", key), fmt::arg("label", label), fmt::arg("facet_join", join),
+            fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
+            fmt::arg("limit", limit_parameter));
+        return {pg::Query{std::move(statement), pg::Query::Name{"registry_filter_values"}},
+            std::move(parameters_)};
+    }
+
     BuiltQuery Build(int limit) && {
         const std::string direction = descending_ ? " DESC" : " ASC";
         std::string order;
@@ -169,8 +249,10 @@ class QueryBuilder {
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(statement_),
             fmt::arg("sort_key",
-                (order_.ById || order_.PgType == "DATE") ? "'' COLLATE \"C\"" : order_.Expression),
-            fmt::arg("date_key", order_.PgType == "DATE" ? order_.Expression : "NULL::DATE"),
+                (order_.ById || order_.CursorType == CursorKeyType::Date) ? "'' COLLATE \"C\""
+                                                                          : order_.Expression),
+            fmt::arg("date_key",
+                order_.CursorType == CursorKeyType::Date ? order_.Expression : "NULL::DATE"),
             fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
             fmt::arg("order_by", order), fmt::arg("limit", limit_parameter));
         return {pg::Query{std::move(statement), pg::Query::Name{std::string{selection_name_}}},
@@ -178,6 +260,8 @@ class QueryBuilder {
     }
 
   private:
+    // Параметризация и накопление условий
+
     template <typename T> std::string Bind(const T& value, std::string_view type) {
         parameters_.PushBack(value);
         return "$" + std::to_string(parameters_.Size()) + "::" + std::string{type};

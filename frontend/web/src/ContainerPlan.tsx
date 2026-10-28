@@ -96,8 +96,10 @@ export function IncompleteContainers({
         '/api/v1/transportations/list',
         session,
         {
-          shipment_id: shipmentId,
-          incomplete_container: true,
+          filters: [
+            { field: 'shipment_id', values: [shipmentId] },
+            { field: 'incomplete_container', values: ['true'] },
+          ],
           limit: 50,
           ...(after ? { after } : {}),
         },

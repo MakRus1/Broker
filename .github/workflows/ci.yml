@@ -157,7 +157,9 @@ jobs:
           restore-keys: |
             ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-
       - name: Права рабочего каталога для контейнера
-        run: sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
+        run: |
+          mkdir -p .ccache
+          sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
       - name: Сборка выбранных сервисов
         id: compile
         env:

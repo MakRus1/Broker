@@ -22,6 +22,7 @@
 // SERVICE_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
 #include <clients/shipments/client.hpp>
+#include <clients/transport_locations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/auth/component.hpp>
 #include <platform/configs/components.hpp>
@@ -60,6 +61,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<transportations::clients::counterparties::Component>();
     component_list.Append<transportations::clients::shipments::Component>();
+    component_list.Append<transportations::clients::transport_locations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-transportations");
     // SERVICE_REGISTRATION_END
 

@@ -29,7 +29,7 @@ Response View::Handle(
         ValidateLogist(deps, context, logist);
         if (request.body.route_segments.has_value()) {
             const auto locations =
-                LoadRouteLocations(*deps.pg_cluster, request.body.route_segments.value());
+                LoadRouteLocations(deps, context, request.body.route_segments.value());
             domain::ResolveRouteDetails(request.body.route_segments.value(), {}, locations);
             ValidateRouteCounterparties(deps, context, request.body.route_segments.value(), {});
         }

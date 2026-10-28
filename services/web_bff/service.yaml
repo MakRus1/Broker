@@ -16,6 +16,9 @@ clients:
   organizations:
     service: organizations
     transport: http
+  transport_locations:
+    service: transport_locations
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

@@ -162,6 +162,10 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         )
     for name in jobs:
         run(*ns, 'wait', '--for=condition=complete', f'job/{name}', '--timeout=180s')
+    if 'transport_locations' in services:
+        from transport_location_transfer import configure_cluster
+
+        configure_cluster(kubectl, plan['namespace'], services)
     from permission_catalog import prepare as prepare_permissions, finish as finish_permissions
 
     permission_entries = json.loads((directory / 'permissions.json').read_text())

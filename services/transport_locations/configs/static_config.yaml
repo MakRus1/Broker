@@ -1,0 +1,215 @@
+components_manager:
+    task_processors:
+        main-task-processor:
+            worker_threads: $worker-threads
+        fs-task-processor:
+            worker_threads: $worker-fs-threads
+    default_task_processor: main-task-processor
+    components:
+        # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-railway_stations-archive:
+            path: /api/admin/railway-stations/archive
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-list:
+            path: /api/admin/railway-stations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-railway_stations-save:
+            path: /api/admin/railway-stations/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-route_locations-archive:
+            path: /api/admin/route-locations/archive
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-route_locations-list:
+            path: /api/admin/route-locations/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-route_locations-save:
+            path: /api/admin/route-locations/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-railway_stations-get_batch:
+            path: /api/v1/railway-stations/get-batch
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-railway_stations-search:
+            path: /api/v1/railway-stations/search
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-route_locations-get_batch:
+            path: /api/v1/route-locations/get-batch
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-route_locations-search:
+            path: /api/v1/route-locations/search
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        # OPENAPI_HANDLERS_END
+        # SERVICE_CONFIG_BEGIN
+        platform-readiness: {}
+        platform-http-readiness: {}
+        postgres-transport_locations:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
+        platform-http-pipeline:
+            extra-middlewares:
+            - platform-auth
+        platform-auth:
+            issuer: $auth-issuer
+            audience: broker-logistics
+            roles-client: broker-logistics
+            jwks-url: $auth-jwks-url
+            protected-prefix: /api/
+            allow-http: $auth-allow-http
+            permissions:
+                /api/admin/railway-stations/archive: authenticated
+                /api/admin/railway-stations/list: authenticated
+                /api/admin/railway-stations/save: authenticated
+                /api/admin/route-locations/archive: authenticated
+                /api/admin/route-locations/list: authenticated
+                /api/admin/route-locations/save: authenticated
+                /api/v1/railway-stations/get-batch: transportations.read
+                /api/v1/railway-stations/search: transportations.read
+                /api/v1/route-locations/get-batch: shipments.read
+                /api/v1/route-locations/search: shipments.read
+            permission-dependencies:
+                configs.write:
+                - configs.read
+                configs.approve:
+                - configs.read
+                counterparties.write:
+                - counterparties.read
+                - organizations.read_employees
+                organizations.manage:
+                - organizations.read_employees
+                shipments.read:
+                - organizations.read_employees
+                - counterparties.read
+                shipments.write:
+                - shipments.read
+                transportations.write:
+                - transportations.read
+            organization-url: $organization-access-url
+        auth-http-client:
+            wait-for-dynamic-configs: false
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: transport_locations
+            environment: $environment
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: $server-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+            listener-monitor:
+                address: 127.0.0.1
+                port: $monitor-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $logger-level
+                    format: json
+                    overflow_behavior: discard
+        tracing-manager-locator:
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
+            otel-trace-sampling-enabled: true
+        grpc-client-common:
+            blocking-task-processor: fs-task-processor
+        grpc-otlp-factory:
+            load-enabled: $otlp-enabled
+            middlewares:
+                grpc-client-logging:
+                    enabled: false
+        otlp-logger:
+            load-enabled: $otlp-enabled
+            endpoint: $otlp-endpoint
+            endpoint#env: OTEL_EXPORTER_OTLP_ENDPOINT
+            client-factory-name: grpc-otlp-factory
+            service-name: transport_locations
+            log-level: $logger-level
+            sinks:
+                logs: both
+                tracing: both
+            extra-attributes:
+                service.version: 0.1.0
+                deployment.environment.name: $environment
+        grpc-client-logging:
+            msg-log-level: none
+        handler-server-monitor:
+            path: /metrics
+            method: GET
+            task_processor: main-task-processor
+            format: prometheus
+            common-labels:
+                service: transport_locations
+                environment: $environment
+        handler-ping:
+            path: /ping
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+        testsuite-support: {}
+        congestion-control:
+            fake-mode: true
+        http-client: null
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        dns-client:
+            fs-task-processor: fs-task-processor
+        tests-control:
+            load-enabled: $is-testing
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor

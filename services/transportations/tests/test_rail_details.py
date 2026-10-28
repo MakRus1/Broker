@@ -79,22 +79,12 @@ async def test_rail_roundtrip_and_directory(api, shipment_routes, stations, pgsq
     )['transportation']
     assert fetched == saved
     assert shipment_routes.registrations
-    found = await api.post('/api/v1/railway-stations/search', {'query': '000001'})
-    assert found['items'] == [rail['origin_station']]
-    assert (
-        len((await api.post('/api/v1/railway-stations/search', {'query': 'назначения'}))['items'])
-        == 1
-    )
     history = await api.post(
         '/api/v1/transportations/history', {'transportation_id': transportation['id']}
     )
     assert history['items'][0]['route_segments'][0]['rail'] == rail
 
 
-@pytest.mark.parametrize('query', ['', 'Т', '000'])
-async def test_station_directory_opens_without_minimum_query(api, stations, query):
-    result = await api.post('/api/v1/railway-stations/search', {'query': query})
-    assert len(result['items']) == 2
 
 
 @pytest.mark.parametrize(
@@ -138,3 +128,43 @@ async def test_rail_details_reject_non_rail_stage(api, shipment_routes, stations
         },
         expected=400,
     )
+
+
+async def test_archiving_keeps_existing_rail_details(api, pgsql, shipment_routes, stations):
+    transportation, stage = await create_rail(api, shipment_routes)
+    saved = (
+        await api.post(
+            '/api/v1/transportation-routes/set',
+            {
+                'transportation_id': transportation['id'],
+                'expected_revision': 1,
+                'route_segments': [{**stage, 'rail': details()}],
+            },
+        )
+    )['transportation']
+    pgsql['db_1'].cursor().execute("UPDATE railway_stations SET archived = TRUE WHERE esr_code = '000001'")
+    unchanged = (
+        await api.post(
+            '/api/v1/transportation-routes/set',
+            {
+                'transportation_id': transportation['id'],
+                'expected_revision': saved['revision'],
+                'route_segments': [{**stage, 'rail': saved['route_segments'][0]['rail']}],
+            },
+        )
+    )['transportation']
+    assert unchanged['route_segments'][0]['rail'] == saved['route_segments'][0]['rail']
+
+
+async def test_station_dependency_failure_does_not_change_route(api, shipment_routes, mockserver):
+    transportation, stage = await create_rail(api, shipment_routes)
+    @mockserver.handler('/api/v1/railway-stations/get-batch')
+    def unavailable(request):
+        return mockserver.make_response(status=503)
+    result = await api.post('/api/v1/transportation-routes/set', {
+        'transportation_id': transportation['id'], 'expected_revision': 1,
+        'route_segments': [{**stage, 'rail': details()}],
+    }, expected=503)
+    assert result['error'] == 'transport_locations_unavailable'
+    current = await api.post('/api/v1/transportations/get', {'transportation_id': transportation['id']})
+    assert current['transportation']['revision'] == 1

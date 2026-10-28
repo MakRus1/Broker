@@ -45,6 +45,7 @@ def configure_auth(mockserver_info):
         config_vars['client-organizations-base-url'] = mockserver_info.base_url
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url
         config_vars['client-transportations-base-url'] = mockserver_info.base_url
+        config_vars['client-transport_locations-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -195,3 +196,18 @@ def transportation_route_usage(mockserver):
     def usage(request):
         return {'segment_ids': sorted(used)}
     return used
+
+
+@pytest.fixture(autouse=True)
+def transport_locations_lookup(mockserver, pgsql):
+    @mockserver.json_handler('/api/v1/route-locations/get-batch')
+    def lookup(request):
+        requested = request.json['ids']
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute("SELECT id, kind, name, country_code, code FROM route_locations WHERE NOT archived AND id = ANY(%s::uuid[])", (requested,))
+            rows = cursor.fetchall()
+        items = [dict(zip(['id', 'kind', 'name', 'country_code', 'code'], row)) for row in rows]
+        for item in items:
+            item['id'] = str(item['id'])
+            if item['code'] is None: del item['code']
+        return {'items': items}

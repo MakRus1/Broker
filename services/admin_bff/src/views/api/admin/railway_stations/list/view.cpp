@@ -6,18 +6,18 @@ namespace admin_bff::views::api::admin::railway_stations::list {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
-    namespace api = clients::transportations::ApiAdminRailwayStationsList;
-    const auto result = deps.transportations.ApiAdminRailwayStationsList(
+    namespace api = clients::transport_locations::ApiAdminRailwayStationsList;
+    const auto result = deps.transport_locations.ApiAdminRailwayStationsList(
         api::Request{
             .body = api::RequestBody{.after = request.body.after,
                 .country_code = request.body.country_code,
                 .cursor =
-                    ConvertRegistryCursor<clients::transportations::models::StationListCursor>(
+                    ConvertRegistryCursor<clients::transport_locations::models::StationListCursor>(
                         request.body.cursor),
                 .descending = request.body.descending,
                 .limit = request.body.limit,
                 .query = request.body.query,
-                .sort = clients::transportations::models::ParseEnumScalar(
+                .sort = clients::transport_locations::models::ParseEnumScalar(
                     EnumValue(request.body.sort), decltype(api::RequestBody{}.sort){})}},
         session.Access);
     Response200 response;

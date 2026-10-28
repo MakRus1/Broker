@@ -219,6 +219,8 @@ components_manager:
             base-url: $client-organizations-base-url
         client-shipments:
             base-url: $client-shipments-base-url
+        client-transport_locations:
+            base-url: $client-transport_locations-base-url
         client-transportations:
             base-url: $client-transportations-base-url
         platform-readiness: {}

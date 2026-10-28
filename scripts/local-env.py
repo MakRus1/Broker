@@ -34,7 +34,7 @@ def client_variables(name):
     # Адреса объявленных клиентов берём из service.yaml, чтобы новые зависимости
     # не уходили на localhost внутри контейнера.
     ports = {'configs': 8090, 'broker': 8080, 'shipments': 8100,
-             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130}
+             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130, 'transport_locations': 8140}
     specification = yaml.safe_load((ROOT / f'services/{name}/service.yaml').read_text())
     result = {}
     for alias, client in specification.get('clients', {}).items():
@@ -42,7 +42,7 @@ def client_variables(name):
         if target not in ports:
             raise ValueError(f'Для клиента {name}.{alias} не настроен локальный сервис {target}')
         port = 8092 if alias == 'config_admin' else ports[target]
-        result[f'client-{alias}-base-url'] = f'http://{target}:{port}'
+        result[f'client-{alias}-base-url'] = f"http://{target.replace('_', '-')}:{port}"
     return result
 
 
@@ -124,11 +124,11 @@ def prepare():
             },
         }
     }
-    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132)]:
+    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132), ("transport_locations", 8140, 8142)]:
         variables = yaml.safe_load((ROOT / f"services/{name}/configs/config_vars.yaml").read_text())
         variables.update(
             {
-                "pg-connection": f"postgresql://testsuite:testsuite@postgres-{name}:5432/{name}_db_1",
+                "pg-connection": f"postgresql://testsuite:testsuite@postgres-{name.replace('_', '-')}:5432/{name}_db_1",
                 "otlp-enabled": True,
                 "otlp-endpoint": "collector:4317",
                 "config-server-url": "http://configs:8090",
@@ -163,6 +163,7 @@ def prepare():
         # Временный сервер initdb принимает Unix-сокет, но еще не готов для миграций по TCP.
         services[f"postgres-{name}"] = {
             "image": images["postgres"],
+            "networks": {"default": {"aliases": [f"postgres-{name.replace('_', '-')}"]}},
             "environment": {
                 "POSTGRES_USER": "testsuite",
                 "POSTGRES_PASSWORD": "testsuite",
@@ -199,12 +200,22 @@ def prepare():
             "working_dir": "/workspaces/broker",
             "volumes": shared,
             "command": ["bash", "tools/local/run.sh", name, f"build-local/services/{name}/{name}"],
+            "networks": {"default": {"aliases": [name.replace('_', '-')]}},
             "ports": [f"127.0.0.1:{port+10000}:{port}", f"127.0.0.1:{monitor+10000}:{monitor}"],
             "depends_on": {
                 "prepare": {"condition": "service_completed_successfully"},
                 f"migrate-{name}": {"condition": "service_completed_successfully"},
             },
         }
+    services['transport-locations-transfer'] = {
+        'image': images['dev'], 'working_dir': '/workspaces/broker',
+        'volumes': shared, 'environment': {'PGPASSWORD': 'testsuite'},
+        'command': ['python3', 'scripts/transport_location_transfer.py'],
+        'depends_on': {f'migrate-{name}': {'condition': 'service_completed_successfully'}
+                       for name in ('shipments', 'transportations', 'transport_locations')},
+    }
+    for consumer in ('shipments', 'transportations', 'transport_locations'):
+        services[consumer]['depends_on']['transport-locations-transfer'] = {'condition': 'service_completed_successfully'}
     # Ключ DaData хранится отдельно от генерируемых конфигов и не обязателен.
     services['counterparties']['env_file'] = [
         {'path': str(STATE / 'dadata.env'), 'required': False}
@@ -574,6 +585,9 @@ def main():
         for name in ("broker", "configs"):
             subprocess.run(command + ["run", "--rm", f"migrate-{name}"], check=True)
     else:
+        if args.action == 'up':
+            # Старые процессы не должны менять справочники во время первого переноса.
+            subprocess.run(command + ['stop', 'shipments', 'transportations'], check=True)
         subprocess.run(command + actions[args.action], check=True)
 
 

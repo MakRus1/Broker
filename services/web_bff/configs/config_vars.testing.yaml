@@ -30,3 +30,4 @@ client-shipments-base-url: http://localhost:8080
 client-transportations-base-url: http://localhost:8080
 client-counterparties-base-url: http://localhost:8080
 client-organizations-base-url: http://localhost:8130
+client-transport_locations-base-url: http://localhost:8080

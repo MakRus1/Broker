@@ -1,0 +1,159 @@
+ApiError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+  required:
+  - error
+  - message
+TransportLocationKind:
+  type: string
+  enum:
+  - sea_port
+  - airport
+TransportLocation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/TransportLocationKind'
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    code:
+      type: string
+      minLength: 1
+      maxLength: 16
+  required:
+  - id
+  - kind
+  - name
+  - country_code
+LocationListCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - value
+  - scope
+  properties:
+    id:
+      type: string
+      format: uuid
+    value:
+      type: string
+      maxLength: 1024
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+ListLocationsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    kind:
+      $ref: '#/TransportLocationKind'
+    query:
+      type: string
+      maxLength: 200
+    after:
+      type: string
+      format: uuid
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    sort:
+      type: string
+      enum:
+      - id
+      - name
+      - code
+      - country_code
+      default: id
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/LocationListCursor'
+  required:
+  - kind
+RailwayStation:
+  type: object
+  additionalProperties: false
+  properties:
+    esr_code:
+      type: string
+      pattern: ^[0-9]{6}$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+  required:
+  - esr_code
+  - name
+  - country_code
+StationListCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - value
+  - scope
+  properties:
+    id:
+      type: string
+      pattern: ^[0-9]{6}$
+    value:
+      type: string
+      maxLength: 1024
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+ListStationsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    query:
+      type: string
+      maxLength: 200
+    after:
+      type: string
+      maxLength: 6
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    sort:
+      type: string
+      enum:
+      - esr_code
+      - name
+      - country_code
+      default: esr_code
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/StationListCursor'
+  required: []

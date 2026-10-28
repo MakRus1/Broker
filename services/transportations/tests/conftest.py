@@ -43,6 +43,7 @@ def configure_auth(mockserver_info):
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url
+        config_vars['client-transport_locations-base-url'] = mockserver_info.base_url
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url
 
     return patch
@@ -123,3 +124,15 @@ def counterparties(mockserver):
         return {'counterparty': {'id': request.json['id'], 'name': 'Перевозчик', 'revision': 1,
             'archived': False, 'legal_name': None, 'country_code': None, 'tax_id': None,
             'registration_id': None, 'legal_address': None, 'roles': ['carrier'], 'contacts': [], 'logist': None}}
+
+
+@pytest.fixture(autouse=True)
+def transport_locations_lookup(mockserver, pgsql):
+    @mockserver.json_handler('/api/v1/railway-stations/get-batch')
+    def lookup(request):
+        requested = request.json['codes']
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute("SELECT esr_code, name, country_code FROM railway_stations WHERE NOT archived AND esr_code = ANY(%s::text[])", (requested,))
+            rows = cursor.fetchall()
+        items = [dict(zip(['esr_code', 'name', 'country_code'], row)) for row in rows]
+        return {'items': items}

@@ -6,26 +6,39 @@ namespace transportations::helpers {
 namespace registry = platform::registry;
 
 namespace registry_fields {
+
+// SQL-поля: выражения фильтрации и, при необходимости, отдельный порядок сортировки.
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
+
 inline constexpr registry::Field<std::string> kOrganization{
     "organization_id", "organization_id", "UUID"};
+
 inline constexpr auto kNumber =
     registry::Field<std::string>{
         "container_number", "lower(COALESCE(container_number, '')) COLLATE \"C\""}
         .SortedAs("lower(COALESCE(container_number, '')) COLLATE public.registry_number_order");
+
 inline constexpr registry::Field<std::string> kType{"type", "type COLLATE \"C\""};
+
 inline constexpr registry::Field<std::string> kContainerType{
     "container_type", "COALESCE(container_type_code, '') COLLATE \"C\""};
+
 inline constexpr registry::Field<std::string> kOwnership{
     "container_ownership", "COALESCE(container_ownership, '') COLLATE \"C\""};
+
 inline constexpr registry::Field<bool> kIncompleteContainer{"incomplete_container",
     "(type = 'container' AND (container_type_code IS NULL OR container_ownership IS NULL))",
     "BOOLEAN"};
+
 inline constexpr auto kHazardous =
     registry::Field<bool>{"hazardous", "hazardous", "BOOLEAN"}.SortedAs(
         "(CASE WHEN hazardous THEN 'true' ELSE 'false' END) COLLATE \"C\"");
+
 inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
+
 inline constexpr registry::Field<std::string> kItem{"item_id", "item_id", "UUID"};
+
+// Каталог API: подписи, доступные операции и источники отображаемых значений.
 inline constexpr std::array<registry::RegistryField, 9> kFields{{
     {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
     {.Field = kNumber,
@@ -54,9 +67,11 @@ inline constexpr std::array<registry::RegistryField, 9> kFields{{
         .Sortable = false,
         .Visible = false},
 }};
+
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields
 
+// Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(
     const models::ListTransportationsRequest& request, const std::string& organization,
     const std::optional<std::string>& exclude = std::nullopt) {
@@ -68,6 +83,7 @@ inline registry::QueryBuilder BuildRegistryFilters(
     return query;
 }
 
+// Страница реестра: общие условия + курсор + лимит с одной дополнительной записью.
 inline registry::BuiltQuery BuildRegistryQuery(
     const models::ListTransportationsRequest& request, const std::string& organization) {
     using namespace registry_fields;
@@ -78,6 +94,7 @@ inline registry::BuiltQuery BuildRegistryQuery(
     return std::move(query).Build(request.limit + 1);
 }
 
+// Варианты одного фильтра: остальные условия сохраняются, собственное исключается.
 inline registry::BuiltQuery BuildRegistryValues(const models::ListTransportationsRequest& request,
     const std::string& organization, const std::string& field,
     const std::optional<std::string>& search, const std::optional<std::string>& after, int limit,

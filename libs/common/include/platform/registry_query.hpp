@@ -17,6 +17,8 @@
 namespace platform::registry {
 namespace pg = userver::storages::postgres;
 
+// Описание полей и сортировки
+
 enum class CursorKeyType { Text, Date };
 
 template <typename T>
@@ -68,6 +70,8 @@ inline Order OrderBy(std::span<const FieldDefinition> fields, std::string_view n
     throw std::logic_error{"Поле не зарегистрировано для сортировки"};
 }
 
+// Строки результата и проверка курсора
+
 template <typename Item> struct Row {
     Item Value;
     std::string SortKey;
@@ -90,6 +94,7 @@ bool CursorMatches(const Request& request, const std::string& scope, bool identi
     return !request.cursor.has_value() || request.cursor.value().scope == scope;
 }
 
+// SQL и связанные параметры передаются вместе.
 struct BuiltQuery {
     pg::Query Statement;
     pg::ParameterStore Parameters;
@@ -119,6 +124,8 @@ class QueryBuilder {
                 statement_.find("{date_key}", date_slot + 10) != std::string::npos))
             throw std::logic_error{"Некорректное место календарного ключа SQL-шаблона"};
     }
+
+    // Условия: значения всегда связываются через ParameterStore.
 
     template <typename T> void WhereEqual(Field<T> field, const T& value) {
         AddCondition(field.Expression, " = " + Bind(value, field.PgType));
@@ -156,23 +163,6 @@ class QueryBuilder {
         if (value.has_value())
             AddCondition(
                 Bind(value.value(), field.PgType), " = ANY(" + std::string{field.Expression} + ")");
-    }
-
-    template <typename T> void After(const std::optional<std::string>& id, const T& key) {
-        if (!id.has_value())
-            return;
-        const std::string comparison = descending_ ? " < " : " > ";
-        if (order_.ById) {
-            AddCondition(identity_.Expression, comparison + Bind(id.value(), identity_.PgType));
-        } else {
-            // Параметр наследует COLLATE левого выражения. Принудительный C
-            // переопределил бы выбранный полем порядок (например, числовой).
-            const auto key_parameter = Bind(key, order_.PgType);
-            const auto id_parameter = Bind(id.value(), identity_.PgType);
-            AddCondition("(" + std::string{order_.Expression} + ", " +
-                    std::string{identity_.Expression} + ")",
-                comparison + "(" + key_parameter + ", " + id_parameter + ")");
-        }
     }
 
     // Поле и выражение выбираются только из серверного каталога, значения — параметры.
@@ -215,6 +205,27 @@ class QueryBuilder {
                                        : (empty ? " IS NULL" : " IS NOT NULL"));
     }
 
+    // Курсорная пагинация
+
+    template <typename T> void After(const std::optional<std::string>& id, const T& key) {
+        if (!id.has_value())
+            return;
+        const std::string comparison = descending_ ? " < " : " > ";
+        if (order_.ById) {
+            AddCondition(identity_.Expression, comparison + Bind(id.value(), identity_.PgType));
+        } else {
+            // Параметр наследует COLLATE левого выражения. Принудительный C
+            // переопределил бы выбранный полем порядок (например, числовой).
+            const auto key_parameter = Bind(key, order_.PgType);
+            const auto id_parameter = Bind(id.value(), identity_.PgType);
+            AddCondition("(" + std::string{order_.Expression} + ", " +
+                    std::string{identity_.Expression} + ")",
+                comparison + "(" + key_parameter + ", " + id_parameter + ")");
+        }
+    }
+
+    // Сборка SQL для вариантов фильтра и страницы реестра
+
     BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
         std::string_view join, const std::optional<std::string>& after, int limit,
         std::string_view key_type = "TEXT") && {
@@ -249,6 +260,8 @@ class QueryBuilder {
     }
 
   private:
+    // Параметризация и накопление условий
+
     template <typename T> std::string Bind(const T& value, std::string_view type) {
         parameters_.PushBack(value);
         return "$" + std::to_string(parameters_.Size()) + "::" + std::string{type};

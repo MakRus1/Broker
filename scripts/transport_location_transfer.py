@@ -46,7 +46,9 @@ DO $$ BEGIN
         RAISE EXCEPTION 'Целевой справочник содержит несовпадающие записи';
     END IF;
 END $$;
-INSERT INTO route_locations SELECT * FROM location_import ON CONFLICT (id) DO NOTHING;
+INSERT INTO route_locations (id, kind, name, country_code, code, archived, manual_override)
+SELECT id, kind, name, country_code, code, archived, TRUE
+FROM location_import ON CONFLICT (id) DO NOTHING;
 INSERT INTO railway_stations SELECT * FROM station_import ON CONFLICT (esr_code) DO NOTHING;
 INSERT INTO directory_transfers(name, completed_at) VALUES ('{NAME}', clock_timestamp());
 COMMIT;

@@ -21,3 +21,21 @@ types:
       type: text
     - name: country_code
       type: text
+  public.airport_source_v1:
+    fields:
+    - name: source_id
+      type: bigint
+    - name: location_id
+      type: uuid
+    - name: name
+      type: text
+    - name: country_code
+      type: text
+    - name: iata_code
+      type: text
+      nullable: true
+    - name: icao_code
+      type: text
+      nullable: true
+    - name: search_terms
+      type: text

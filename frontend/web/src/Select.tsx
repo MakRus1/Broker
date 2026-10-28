@@ -148,7 +148,8 @@ export function Select({
               </button>
             ))}
           </div>,
-          document.body,
+          // Модальный dialog делает содержимое body вне себя инертным.
+          trigger.current?.closest('dialog') ?? document.body,
         )}
     </div>
   );

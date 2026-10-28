@@ -70,12 +70,12 @@ class MonitoringTest(unittest.TestCase):
         ]
         self.assertEqual({obj['kind'] for group in applies for obj in group}, {'ConfigMap'})
         patches = [json.loads(command[-1]) for command, _ in calls if 'patch' in command]
-        self.assertEqual(len(patches), 2)
+        self.assertEqual(len(patches), 3)
         for patch in patches:
             self.assertEqual(set(patch['spec']['template']['spec']), {'volumes'})
             self.assertEqual(patch['spec']['template']['spec']['volumes'][0]['name'], 'settings')
             self.assertNotIn('persistentVolumeClaim', str(patch))
-        self.assertEqual(sum('rollout' in command for command, _ in calls), 2)
+        self.assertEqual(sum('rollout' in command for command, _ in calls), 3)
 
     def test_unchanged_configuration_does_not_restart_monitoring(self):
         calls = self.execute(current='new')
@@ -89,3 +89,20 @@ class MonitoringTest(unittest.TestCase):
         ]
         with self.assertRaises(ValueError):
             self.execute(objects=objects)
+
+    def test_new_service_refreshes_log_collector(self):
+        self.assertIn('collector', monitoring.NAMES)
+        objects = [
+            obj
+            for name in monitoring.NAMES
+            for obj in [
+                config(('new-' if name == 'collector' else 'old-') + name),
+                deployment(name, ('new-' if name == 'collector' else 'old-') + name),
+            ]
+        ]
+        calls = self.execute(objects=objects)
+        patches = [command for command, _ in calls if 'patch' in command]
+        self.assertEqual(len(patches), 1)
+        self.assertEqual(patches[0][patches[0].index('deployment') + 1], 'collector')
+        applies = [kwargs['input'] for command, kwargs in calls if 'apply' in command]
+        self.assertEqual(yaml.safe_load(applies[0])['metadata']['name'], 'new-collector')

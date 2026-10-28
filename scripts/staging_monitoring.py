@@ -1,4 +1,4 @@
-"""Обновление целей Prometheus и дашбордов без повторной установки инфраструктуры."""
+"""Обновление целей Prometheus, сбора логов и дашбордов без повторной установки инфраструктуры."""
 
 import argparse
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import yaml
 
-NAMES = ('prometheus', 'grafana')
+NAMES = ('prometheus', 'grafana', 'collector')
 
 
 def run(command, **kwargs):
@@ -71,7 +71,7 @@ def refresh(directory, context, namespace):
         )
     for name, _ in updates:
         run([*prefix, 'rollout', 'status', f'deployment/{name}', '--timeout=300s'])
-    print('Цели Prometheus и дашборды Grafana актуальны')
+    print('Цели Prometheus, сбор логов и дашборды Grafana актуальны')
 
 
 if __name__ == '__main__':

@@ -195,6 +195,10 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
     for owner in sorted(services):
         finish_permissions([*kubectl, *ns], owner)
     if plan.get('lan'):
+        if not infrastructure:
+            from staging_monitoring import refresh
+
+            refresh(directory, context, plan['namespace'])
         subprocess.run(
             [
                 sys.executable,

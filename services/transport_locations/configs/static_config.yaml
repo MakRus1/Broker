@@ -73,6 +73,12 @@ components_manager:
             url: https://davidmegginson.github.io/ourairports-data/airports.csv
             timeout: 40s
             minimum-records: 1000
+        sea-port-sync:
+            load-enabled: $sea-port-sync-enabled
+            releases-url: https://opensource.unicc.org/api/v4/projects/un%2Funece%2Funcefact%2Fvocab-locode/repository/tags?search=%5E20&per_page=100&order_by=name&sort=desc
+            download-base-url: https://opensource.unicc.org/un/unece/uncefact/vocab-locode/-/jobs/artifacts/
+            timeout: 40s
+            minimum-records: 1000
         # SERVICE_CONFIG_BEGIN
         platform-readiness: {}
         platform-http-readiness: {}

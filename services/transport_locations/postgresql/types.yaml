@@ -39,3 +39,15 @@ types:
       nullable: true
     - name: search_terms
       type: text
+  public.sea_port_source_v1:
+    fields:
+    - name: locode
+      type: text
+    - name: location_id
+      type: uuid
+    - name: name
+      type: text
+    - name: country_code
+      type: text
+    - name: search_terms
+      type: text

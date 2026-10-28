@@ -16,6 +16,9 @@ inline constexpr auto kNumber =
 inline constexpr registry::Field<std::string> kType{"type", "type COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kContainerType{
     "container_type", "COALESCE(container_type_code, '') COLLATE \"C\""};
+inline constexpr registry::Field<bool> kIncompleteContainer{"incomplete_container",
+    "(type = 'container' AND (container_type_code IS NULL OR container_ownership IS NULL))",
+    "BOOLEAN"};
 inline constexpr registry::Field<bool> kHazardous{"hazardous", "hazardous", "BOOLEAN"};
 inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
 inline constexpr registry::Field<std::string> kItem{"item_id", "item_id", "UUID"};
@@ -33,6 +36,7 @@ inline registry::BuiltQuery BuildRegistryQuery(
     query.WhereAny(kType, Convert(request.types));
     query.WhereAny(kContainerType, request.container_types);
     query.WhereEqual(kHazardous, request.hazardous);
+    query.WhereEqual(kIncompleteContainer, request.incomplete_container);
     query.WhereEqual(kShipment, request.shipment_id);
     query.WhereEqual(kItem, request.item_id);
     query.After(

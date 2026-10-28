@@ -4,7 +4,6 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
 #include <helpers/idempotency.hpp>
-#include <helpers/quantities.hpp>
 #include <helpers/revision.hpp>
 #include <operations/request_transportations.hpp>
 
@@ -22,15 +21,12 @@ models::CreationOperation RequestTransportations(
         transaction.Commit();
         return replay.value();
     }
-    // Эта блокировка сериализует резервирование и изменение плана только одной позиции.
+    // Блокировка защищает снимок позиции при создании операции.
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
         throw ApiError{404, "not_found", "Позиция не найдена"};
     const auto item = rows.AsSingleRow<pgtypes::ShipmentItemV1>();
     CheckRevision(item.Revision, request.expected_revision);
-    const auto totals = ReadTotals(transaction, organization, request.item_id);
-    if (totals.Created + totals.Pending + request.quantity > item.Planned)
-        throw ApiError{409, "quantity_exceeded", "Превышено плановое количество"};
 
     models::CreationOperation result;
     result.id = boost::uuids::to_string(boost::uuids::random_generator{}());

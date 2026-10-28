@@ -21,14 +21,11 @@ Response View::Handle(
             throw ApiError{404, "not_found", "Позиция не найдена"};
         CheckRevision(
             rows.AsSingleRow<pgtypes::ShipmentItemV1>().Revision, request.body.expected_revision);
-        const auto totals = ReadTotals(transaction, organization, request.body.item_id);
-        if (request.body.planned_quantity < totals.Created + totals.Pending)
-            throw ApiError{409, "quantity_reserved", "Количество уже зарезервировано или создано"};
         const auto row = transaction
                              .Execute(sql::kUpdateItem, organization, request.body.item_id,
                                  request.body.planned_quantity)
                              .AsSingleRow<pgtypes::ShipmentItemV1>();
-        const auto result = Convert(row, totals);
+        const auto result = Convert(row);
         WriteAudit(
             transaction, organization, identity, "update_item", result.id, request.body, result);
         transaction.Commit();

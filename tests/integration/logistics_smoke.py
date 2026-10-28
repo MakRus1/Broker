@@ -335,6 +335,22 @@ def run(build):
             },
             token,
         )['transportation']
+        # Ручная перевозка сначала без контейнерных данных, затем меняет группу плана.
+        unclassified = post(senders[0], '/api/v1/shipment-items/list',
+            {'shipment_id': shipment['id']}, token)
+        assert unclassified['unplanned_items'] == [{'quantity': 1}]
+        for ownership, created, excess in [('COC', 6, 1), ('SOC', 5, 0)]:
+            manual = post(receivers[0], '/api/v1/transportations/update', {
+                'transportation_id': manual['id'], 'expected_revision': manual['revision'],
+                'type': 'container', 'hazardous': False, 'container_type_code': '40HC',
+                'container_ownership': ownership, 'container_number': 'CSQU3054383',
+            }, token)['transportation']
+            counts = post(senders[1], '/api/v1/shipment-items/list',
+                {'shipment_id': shipment['id']}, token)
+            assert counts['items'][0]['created_quantity'] == created
+            assert counts['items'][0]['excess_quantity'] == excess
+        assert counts['unplanned_items'] == [
+            {'container_type_code': '40HC', 'container_ownership': 'SOC', 'quantity': 1}]
         current = post(senders[0], '/api/v1/shipments/get', {'shipment_id': shipment['id']}, token)[
             'shipment'
         ]

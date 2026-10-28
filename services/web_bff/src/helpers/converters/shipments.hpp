@@ -60,10 +60,33 @@ inline models::shipments::ContainerOwnership Convert(
     throw std::invalid_argument("Неизвестное значение перечисления клиента");
 }
 
+inline models::shipments::ContainerFact Convert(
+    const clients::shipments::models::ContainerFact& value) {
+    models::shipments::ContainerFact result;
+    result.container_type_code = value.container_type_code;
+    if (value.container_ownership.has_value())
+        result.container_ownership = Convert(value.container_ownership.value());
+    result.quantity = value.quantity;
+    return result;
+}
+
 inline models::shipments::ShipmentItem Convert(
     const clients::shipments::models::ShipmentItem& value) {
     models::shipments::ShipmentItem result;
+    result.container_ownership = Convert(value.container_ownership);
+    result.container_type_code = value.container_type_code;
+    result.id = value.id;
+    result.planned_quantity = value.planned_quantity;
+    result.revision = value.revision;
+    result.shipment_id = value.shipment_id;
+    return result;
+}
+
+inline models::shipments::ContainerPlanItem Convert(
+    const clients::shipments::models::ContainerPlanItem& value) {
+    models::shipments::ContainerPlanItem result;
     result.available_quantity = value.available_quantity;
+    result.excess_quantity = value.excess_quantity;
     result.container_ownership = Convert(value.container_ownership);
     result.container_type_code = value.container_type_code;
     result.created_quantity = value.created_quantity;

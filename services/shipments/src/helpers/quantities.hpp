@@ -1,12 +1,9 @@
 #pragma once
-#include <helpers/database.hpp>
-#include <postgresql/types.hpp>
+#include <cstdint>
 
 namespace shipments::helpers {
-inline pgtypes::QuantityTotalsV1 ReadTotals(
-    pg::Transaction& transaction, const std::string& organization, const std::string& item) {
-    return transaction.Execute(sql::kOperationTotals, organization, item)
-        .AsSingleRow<pgtypes::QuantityTotalsV1>();
-}
-
+struct ContainerTotals {
+    std::int64_t Created{0};
+    std::int64_t Pending{0};
+};
 }  // namespace shipments::helpers

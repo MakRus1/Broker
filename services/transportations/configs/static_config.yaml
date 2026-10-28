@@ -37,6 +37,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-transportations-container_fact:
+            path: /api/v1/transportations/container-fact
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-transportations-create:
             path: /api/v1/transportations/create
             method: POST
@@ -104,6 +110,7 @@ components_manager:
                 /api/v1/transportation-actuals/record: transportations.write
                 /api/v1/transportation-routes/set: transportations.write
                 /api/v1/transportation-routes/usage: shipments.write
+                /api/v1/transportations/container-fact: shipments.read
                 /api/v1/transportations/create: transportations.write
                 /api/v1/transportations/get: transportations.read
                 /api/v1/transportations/history: transportations.read

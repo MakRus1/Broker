@@ -84,9 +84,14 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: components/schemas/shipments/models.yaml#/ShipmentItem
+                      $ref: components/schemas/shipments/models.yaml#/ContainerPlanItem
+                  unplanned_items:
+                    type: array
+                    items:
+                      $ref: components/schemas/shipments/models.yaml#/ContainerFact
                 required:
                 - items
+                - unplanned_items
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат

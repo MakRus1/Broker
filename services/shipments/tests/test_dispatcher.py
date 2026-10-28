@@ -10,7 +10,7 @@ from test_shipments import setup_item
     'first_response', ['unavailable', 'duplicates', 'token_unavailable', 'token_redirect']
 )
 @pytest.mark.uservice_oneshot(config_hooks=['configure_dispatcher'])
-async def test_delivery_retries_and_confirms(api, mockserver, service_client, first_response):
+async def test_delivery_retries_and_confirms(api, mockserver, service_client, first_response, container_facts):
     state = {'calls': [], 'result': None, 'token_calls': 0, 'redirect_calls': 0}
 
     @mockserver.json_handler('/service-token')
@@ -92,6 +92,7 @@ async def test_delivery_retries_and_confirms(api, mockserver, service_client, fi
         assert len(state['calls']) >= 2
     assert state['redirect_calls'] == 0
     assert all(body == state['calls'][0] for body in state['calls'])
+    container_facts['groups'] = [{'container_type_code': '40HC', 'container_ownership': 'COC', 'quantity': 3}]
     listed = await api.post('/api/v1/shipment-items/list', {'shipment_id': shipment['id']})
     assert listed['items'][0]['created_quantity'] == 3
     assert listed['items'][0]['pending_quantity'] == 0

@@ -309,6 +309,9 @@ ListTransportationsRequest:
       default: false
     cursor:
       $ref: '#/RegistryCursor'
+    incomplete_container:
+      type: boolean
+      description: Контейнерные перевозки без типа контейнера или SOC/COC
   required: []
 EnsureCreatedRequest:
   type: object

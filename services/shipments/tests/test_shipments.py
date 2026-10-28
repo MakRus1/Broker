@@ -49,12 +49,12 @@ async def test_reservation_replay_and_quantity(api):
     await api.post(
         '/api/v1/transportation-operations/create',
         {**body, 'idempotency_key': str(uuid4())},
-        expected=409,
+        expected=202,
     )
     await api.post(
         '/api/v1/shipment-items/update',
         {'item_id': item['id'], 'expected_revision': 1, 'planned_quantity': 2},
-        expected=409,
+        expected=200,
     )
 
 
@@ -79,10 +79,10 @@ async def test_concurrent_reservations(api):
             return None
 
     results = await asyncio.gather(reserve(), reserve())
-    assert sum(value is not None for value in results) == 1
+    assert sum(value is not None for value in results) == 2
     result = await api.post('/api/v1/shipment-items/list', {'shipment_id': shipment['id']})
-    assert result['items'][0]['pending_quantity'] == 3
-    assert result['items'][0]['available_quantity'] == 2
+    assert result['items'][0]['pending_quantity'] == 6
+    assert result['items'][0]['available_quantity'] == 0
 
 
 @pytest.mark.parametrize(

@@ -23,9 +23,12 @@ ITEM = {
     'container_ownership': 'COC',
     'planned_quantity': 5,
     'created_quantity': 0,
+    'excess_quantity': 0,
     'pending_quantity': 0,
     'available_quantity': 5,
 }
+PLAN = {key: value for key,value in ITEM.items() if key not in {'available_quantity','created_quantity','pending_quantity','excess_quantity'}}
+
 OPERATION = {'id': ID, 'item_id': ID, 'quantity': 3, 'status': 'pending', 'transportation_ids': []}
 TRANSPORTATION = {
     'type': 'container',
@@ -110,7 +113,7 @@ COUNTERPARTY = {
                 'planned_quantity': 5,
                 'idempotency_key': ID,
             },
-            {'item': ITEM},
+            {'item': PLAN},
             201,
         ),
         (
@@ -156,11 +159,11 @@ COUNTERPARTY = {
             {'deleted': True},
             200,
         ),
-        ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM]}, 200),
+        ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM], 'unplanned_items': []}, 200),
         (
             'shipment-items/update',
             {'item_id': ID, 'expected_revision': 1, 'planned_quantity': 5},
-            {'item': ITEM},
+            {'item': PLAN},
             200,
         ),
         (

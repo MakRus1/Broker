@@ -7,7 +7,5 @@ SELECT ROW(
     planned_quantity::BIGINT
 )::public.shipment_item_v1
 FROM shipment_items
-WHERE organization_id = $1::UUID AND shipment_id = $2::UUID
-  AND ($3::UUID IS NULL OR id > $3::UUID)
-ORDER BY id
-LIMIT $4;
+WHERE organization_id = $1::UUID AND shipment_id = $2::UUID AND NOT archived
+ORDER BY id;

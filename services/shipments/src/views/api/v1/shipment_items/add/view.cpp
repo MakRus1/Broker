@@ -45,7 +45,7 @@ Response View::Handle(
                                  request.body.planned_quantity)
                              .AsSingleRow<pgtypes::ShipmentItemV1>();
         transaction.Execute(sql::kBumpShipmentRevision, organization, request.body.shipment_id);
-        const auto result = Convert(row, pgtypes::QuantityTotalsV1{0, 0});
+        const auto result = Convert(row);
         SaveReplay(transaction, organization, "add_item", request.body, result);
         WriteAudit(
             transaction, organization, identity, "add_item", result.id, request.body, result);

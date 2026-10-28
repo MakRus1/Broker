@@ -211,3 +211,12 @@ def transport_locations_lookup(mockserver, pgsql):
             item['id'] = str(item['id'])
             if item['code'] is None: del item['code']
         return {'items': items}
+
+
+@pytest.fixture(autouse=True)
+def container_facts(mockserver):
+    state = {'groups': [], 'operations': []}
+    @mockserver.json_handler('/api/v1/transportations/container-fact')
+    def facts(request):
+        return state
+    return state

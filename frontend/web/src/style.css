@@ -442,7 +442,7 @@ small {
 }
 .quantities {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
   margin: 22px 0;
 }
@@ -2672,4 +2672,20 @@ details[open] > .route-stage-summary::after {
 }
 .personal-registry-table th[data-drop-side='after'] {
   box-shadow: inset -3px 0 #2861d7;
+}
+
+.plan-excess {
+  color: #9b4c13;
+  margin: 12px 0;
+}
+.unplanned-containers {
+  margin-block: 24px;
+  padding-block: 20px;
+  border-top: 1px solid #dfe5ed;
+}
+.unplanned-containers h3 {
+  margin-bottom: 12px;
+}
+.item-card > button + button {
+  margin-left: 12px;
 }

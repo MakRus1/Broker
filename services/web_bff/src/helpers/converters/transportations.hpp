@@ -268,6 +268,7 @@ inline clients::transportations::ApiV1TransportationsList::RequestBody Convert(
             .container_types = value.container_types,
             .descending = value.descending,
             .hazardous = value.hazardous,
+            .incomplete_container = value.incomplete_container,
             .item_id = value.item_id,
             .limit = value.limit,
             .query = value.query,

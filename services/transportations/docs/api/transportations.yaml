@@ -300,6 +300,54 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
+  /api/v1/transportations/container-fact:
+    post:
+      summary: Фактические контейнеры поставки и выполнение незавершённых операций
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - shipment_id
+              - pending_operation_ids
+              properties:
+                shipment_id:
+                  type: string
+                  format: uuid
+                pending_operation_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Факт из одного снимка БД
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - groups
+                - operations
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/ContainerFact
+                  operations:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/OperationFact
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
 components:
   securitySchemes:
     BearerAuth:

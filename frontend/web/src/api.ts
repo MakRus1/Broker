@@ -34,6 +34,12 @@ export interface Item {
   created_quantity: number;
   pending_quantity: number;
   available_quantity: number;
+  excess_quantity: number;
+}
+export interface ContainerFact {
+  container_type_code?: string;
+  container_ownership?: 'SOC' | 'COC';
+  quantity: number;
 }
 export interface Operation {
   id: string;

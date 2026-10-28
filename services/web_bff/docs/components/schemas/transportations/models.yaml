@@ -82,8 +82,7 @@ Transportation:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - id
   - revision
@@ -121,8 +120,8 @@ RouteSegment:
       format: date-time
     inherited:
       type: boolean
-      description: Участок присутствует в текущем маршруте поставки. Отсутствующие
-        старые участки доступны только для просмотра.
+      description: Участок присутствует в текущем маршруте поставки. Отсутствующие старые участки доступны
+        только для просмотра.
     rail:
       $ref: '#/RailDetails'
     sea:
@@ -309,6 +308,9 @@ ListTransportationsRequest:
       default: false
     cursor:
       $ref: '#/RegistryCursor'
+    incomplete_container:
+      type: boolean
+      description: Контейнерные перевозки без типа контейнера или SOC/COC
   required: []
 EnsureCreatedRequest:
   type: object
@@ -512,8 +514,7 @@ CreateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - id
   - shipment_id
@@ -542,8 +543,7 @@ UpdateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат
-        не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
   required:
   - transportation_id
   - expected_revision
@@ -571,8 +571,7 @@ RailwayStation:
       pattern: ^[0-9]{7}$
     esr_source:
       type: string
-      description: 'Источник ЕСР: manual — ручной ввод, osm_hint — неподтверждённая
-        подсказка OSM'
+      description: 'Источник ЕСР: manual — ручной ввод, osm_hint — неподтверждённая подсказка OSM'
   required:
   - id
   - name

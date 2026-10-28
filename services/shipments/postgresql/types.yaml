@@ -14,20 +14,6 @@ types:
       type: text
     - name: planned
       type: bigint
-  public.quantity_totals_v1:
-    fields:
-    - name: created
-      type: bigint
-    - name: pending
-      type: bigint
-  public.item_totals_v1:
-    fields:
-    - name: item_id
-      type: uuid
-    - name: created
-      type: bigint
-    - name: pending
-      type: bigint
   public.creation_operation_v1:
     fields:
     - name: id
@@ -207,7 +193,6 @@ types:
       nullable: true
     - name: route_segments
       type: public.shipment_route_segment_v3[]
-
   public.shipment_data_v3:
     fields:
     - name: number
@@ -249,3 +234,13 @@ types:
       nullable: true
     - name: route_segments
       type: public.shipment_route_segment_v3[]
+  public.pending_container_creation_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: container_type
+      type: text
+    - name: ownership
+      type: text
+    - name: quantity
+      type: bigint

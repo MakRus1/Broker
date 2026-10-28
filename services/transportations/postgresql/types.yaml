@@ -119,3 +119,16 @@ types:
       type: text
     - name: country_code
       type: text
+  public.container_fact_v1:
+    fields:
+    - name: container_type
+      type: text
+      nullable: true
+    - name: ownership
+      type: text
+      nullable: true
+    - name: operation_id
+      type: uuid
+      nullable: true
+    - name: quantity
+      type: bigint

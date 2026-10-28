@@ -1,4 +1,5 @@
 import { Select } from './Select';
+import { PlanQuantityForm, IncompleteContainers } from './ContainerPlan';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -10,6 +11,7 @@ import {
   request,
   statusName,
   type Item,
+  type ContainerFact,
   type Operation,
   type Session,
   type Shipment,
@@ -46,6 +48,8 @@ export function ShipmentPanel({
     if (!embedded) document.title = `${shipment.number} · Broker`;
   }, [shipment.number]);
   const [items, setItems] = useState<Item[]>([]);
+  const [unplanned, setUnplanned] = useState<ContainerFact[]>([]);
+  const [editPlan, setEditPlan] = useState<Item | null>(null);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
   const [tab, setTab] = useState<'items' | 'transportations'>('items');
   useEffect(() => {
@@ -73,7 +77,7 @@ export function ShipmentPanel({
           { shipment_id: initial.id },
           signal,
         ),
-        request<{ items: Item[] }>(
+        request<{ items: Item[]; unplanned_items: ContainerFact[] }>(
           '/api/v1/shipment-items/list',
           session,
           { shipment_id: initial.id, limit: 100 },
@@ -92,6 +96,7 @@ export function ShipmentPanel({
       setShipment(selected.shipment);
       onUpdate(selected.shipment);
       setItems(positions.items);
+      setUnplanned(positions.unplanned_items);
       setTransportations(deliveries.items);
       setMoreItems(positions.items.length === 100);
       setMoreTransportations(deliveries.items.length === 50);
@@ -284,8 +289,8 @@ export function ShipmentPanel({
             <>
               <div className="section-heading">
                 <div>
-                  <h3>Грузовые позиции</h3>
-                  <p>План, резерв и фактически созданные перевозки.</p>
+                  <h3>Плановые контейнеры</h3>
+                  <p>Перевозки учитываются автоматически по типу контейнера и SOC/COC.</p>
                 </div>
                 {write && (
                   <button
@@ -312,20 +317,29 @@ export function ShipmentPanel({
                       <span>Созданы</span>
                       <strong>{item.created_quantity}</strong>
                     </div>
+                    {item.pending_quantity > 0 && (
+                      <div>
+                        <span>Создаются</span>
+                        <strong>{item.pending_quantity}</strong>
+                      </div>
+                    )}
                     <div>
-                      <span>Создаются</span>
-                      <strong>{item.pending_quantity}</strong>
-                    </div>
-                    <div>
-                      <span>Доступно</span>
+                      <span>Осталось</span>
                       <strong>{item.available_quantity}</strong>
                     </div>
                   </div>
+                  {item.excess_quantity > 0 && (
+                    <p className="plan-excess" role="status">
+                      Превышение плана на {item.excess_quantity}
+                    </p>
+                  )}
                   {write && (
-                    <button
-                      disabled={!item.available_quantity || loading}
-                      onClick={() => setForm(item)}
-                    >
+                    <button disabled={loading} onClick={() => setEditPlan(item)}>
+                      Изменить план
+                    </button>
+                  )}
+                  {write && (
+                    <button disabled={loading} onClick={() => setForm(item)}>
                       Создать перевозки →
                     </button>
                   )}
@@ -336,6 +350,42 @@ export function ShipmentPanel({
                   <h3>Добавьте первую позицию</h3>
                   <p>Укажите тип контейнера, принадлежность и плановое количество.</p>
                 </div>
+              )}
+              {unplanned.length > 0 && (
+                <section className="unplanned-containers">
+                  <h3>Вне плана</h3>
+                  {unplanned
+                    .filter((value) => value.container_type_code && value.container_ownership)
+                    .map((value) => (
+                      <p key={`${value.container_type_code}-${value.container_ownership}`}>
+                        {value.container_type_code} · {value.container_ownership}: {value.quantity}{' '}
+                        перев.
+                      </p>
+                    ))}
+                  {unplanned.some(
+                    (value) => !value.container_type_code || !value.container_ownership,
+                  ) && (
+                    <>
+                      <p>
+                        Не учтены в плане:{' '}
+                        {unplanned
+                          .filter(
+                            (value) => !value.container_type_code || !value.container_ownership,
+                          )
+                          .reduce((sum, value) => sum + value.quantity, 0)}
+                        . Заполните тип контейнера и принадлежность.
+                      </p>
+                      {canReadTransportations && (
+                        <IncompleteContainers
+                          active={active}
+                          shipmentId={shipment.id}
+                          session={session}
+                          onError={onError}
+                        />
+                      )}
+                    </>
+                  )}
+                </section>
               )}
               <AutoLoadMore
                 enabled={moreItems}
@@ -409,6 +459,23 @@ export function ShipmentPanel({
           </Dialog>
         )}
       </section>
+      {editPlan && (
+        <Dialog title="Изменить план" onClose={() => setEditPlan(null)}>
+          <PlanQuantityForm
+            item={editPlan}
+            onError={onError}
+            onSubmit={async (quantity) => {
+              await request('/api/v1/shipment-items/update', session, {
+                item_id: editPlan.id,
+                expected_revision: editPlan.revision,
+                planned_quantity: quantity,
+              });
+              setEditPlan(null);
+              await refresh();
+            }}
+          />
+        </Dialog>
+      )}
       {confirmation}
     </div>
   );
@@ -489,7 +556,7 @@ function PositionForm({
           type="number"
           min={1}
           step={1}
-          max={item ? Math.min(100, item.available_quantity) : 10000}
+          max={item ? 100 : 10000}
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
         />

@@ -78,7 +78,10 @@ export interface ShipmentRouteSegment {
   air?: AirDetails;
 }
 export interface RailwayStation {
-  esr_code: string;
+  id: string;
+  esr_code?: string;
+  uic_code?: string;
+  esr_source?: string;
   name: string;
   country_code: string;
 }

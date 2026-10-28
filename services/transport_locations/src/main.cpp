@@ -11,6 +11,7 @@
 
 #include <bootstrap/ping.hpp>
 #include <components/airport_sync.hpp>
+#include <components/railway_sync.hpp>
 #include <components/sea_port_sync.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -53,7 +54,8 @@ int main(int argc, char* argv[]) {
     // SERVICE_REGISTRATION_END
 
     component_list.Append<transport_locations::AirportSync>()
-        .Append<transport_locations::SeaPortSync>();
+        .Append<transport_locations::SeaPortSync>()
+        .Append<transport_locations::RailwaySync>();
 
     component_list = transport_locations::openapi::AppendGeneratedHandlers(component_list);
 

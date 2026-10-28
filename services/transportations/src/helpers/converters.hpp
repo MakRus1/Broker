@@ -7,10 +7,6 @@
 #include <vector>
 
 namespace transportations::helpers {
-inline models::RailwayStation Convert(const pgtypes::RailwayStationV1& row) {
-    return {.country_code = row.CountryCode, .esr_code = row.EsrCode, .name = row.Name};
-}
-
 inline models::RouteSegment Convert(const userver::formats::json::Value& document) {
     auto result = models::ParseModelJson(document, std::type_identity<models::RouteSegment>{});
     domain::NormalizeRailLocations(result);

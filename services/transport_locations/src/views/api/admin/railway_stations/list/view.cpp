@@ -12,7 +12,7 @@ Response View::Handle(
         return Response403{
             .error = "platform_admin_required", .message = "Нужны права администратора платформы"};
     const auto scope = registry::CursorScope(request.body, "railway_stations");
-    if (!registry::CursorMatches(request.body, scope, EnumValue(request.body.sort) == "esr_code"))
+    if (!registry::CursorMatches(request.body, scope, false))
         return Response400{.error = "invalid_cursor",
             .message = "Курсор не соответствует фильтрам или сортировке"};
     const auto query = StationQuery(request.body);
@@ -20,16 +20,18 @@ Response View::Handle(
     transaction.Execute(sql::kRegistryPlan);
     auto rows =
         transaction.Execute(query.Statement, query.Parameters)
-            .AsContainer<std::vector<registry::Row<pgtypes::RailwayStationV1>>>(pg::kRowTag);
+            .AsContainer<std::vector<registry::Row<pgtypes::RailwayStationV2>>>(pg::kRowTag);
     const bool more = rows.size() > static_cast<std::size_t>(request.body.limit);
     if (more)
         rows.pop_back();
     Response200 result;
     result.items = registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
     if (more) {
-        result.next = rows.back().Value.EsrCode;
-        result.next_cursor = models::StationListCursor{
-            .id = rows.back().Value.EsrCode, .scope = scope, .value = rows.back().SortKey};
+        result.next = boost::uuids::to_string(rows.back().Value.Id);
+        result.next_cursor =
+            models::StationListCursor{.id = boost::uuids::to_string(rows.back().Value.Id),
+                .scope = scope,
+                .value = rows.back().SortKey};
     }
     transaction.Commit();
     return result;

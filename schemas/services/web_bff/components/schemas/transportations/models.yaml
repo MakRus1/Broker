@@ -563,8 +563,18 @@ RailwayStation:
     country_code:
       type: string
       pattern: ^[A-Z]{2}$
+    id:
+      type: string
+      format: uuid
+    uic_code:
+      type: string
+      pattern: ^[0-9]{7}$
+    esr_source:
+      type: string
+      description: 'Источник ЕСР: manual — ручной ввод, osm_hint — неподтверждённая
+        подсказка OSM'
   required:
-  - esr_code
+  - id
   - name
   - country_code
 RailDetails:

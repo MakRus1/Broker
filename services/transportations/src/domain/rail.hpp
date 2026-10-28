@@ -6,7 +6,7 @@
 
 namespace transportations::domain {
 using RailwayStations = std::map<std::string, models::RailwayStation>;
-std::vector<std::string> GetRailwayStationCodes(const models::SetRouteRequest& request);
+std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request);
 void ResolveRailwayStations(models::SetRouteRequest& request,
     const models::Transportation& previous, const RailwayStations& stations);
 // ЖД-участок хранит отправление и назначение только в rail.

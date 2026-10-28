@@ -9,31 +9,31 @@ void ResolveStation(std::optional<models::RailwayStation>& station,
     const std::optional<models::RailwayStation>& previous, const RailwayStations& stations) {
     if (!station.has_value())
         return;
-    const auto found = stations.find(station.value().esr_code);
+    const auto found = stations.find(station.value().id);
     if (found != stations.end()) {
         station = found->second;
         return;
     }
-    if (previous.has_value() && previous.value().esr_code == station.value().esr_code &&
-        previous.value().name == station.value().name &&
-        previous.value().country_code == station.value().country_code)
+    if (previous.has_value() && previous.value().id == station.value().id) {
+        station = previous;
         return;
-    throw ApiError{400, "station_not_found", "Станция не найдена в справочнике ЕСР"};
+    }
+    throw ApiError{400, "station_not_found", "Станция не найдена в справочнике станций"};
 }
 }  // namespace
 
-std::vector<std::string> GetRailwayStationCodes(const models::SetRouteRequest& request) {
-    std::set<std::string> codes;
+std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request) {
+    std::set<std::string> ids;
     for (const auto& segment : request.route_segments) {
         if (!segment.rail.has_value())
             continue;
         const auto& rail = segment.rail.value();
         if (rail.origin_station.has_value())
-            codes.insert(rail.origin_station.value().esr_code);
+            ids.insert(rail.origin_station.value().id);
         if (rail.destination_station.has_value())
-            codes.insert(rail.destination_station.value().esr_code);
+            ids.insert(rail.destination_station.value().id);
     }
-    return {codes.begin(), codes.end()};
+    return {ids.begin(), ids.end()};
 }
 
 void ResolveRailwayStations(models::SetRouteRequest& request,

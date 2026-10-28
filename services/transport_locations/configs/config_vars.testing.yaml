@@ -17,3 +17,5 @@ organization-access-url: http://localhost:8130/api/organizations/access
 airport-sync-enabled: false
 
 sea-port-sync-enabled: false
+
+railway-sync-enabled: false

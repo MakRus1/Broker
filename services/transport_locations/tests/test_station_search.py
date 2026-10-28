@@ -5,7 +5,7 @@ import pytest
 def stations(pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
-            "INSERT INTO railway_stations(esr_code,name,country_code) VALUES ('000001','Тестовая отправления','RU'), ('000002','Тестовая назначения','RU')"
+            "INSERT INTO railway_stations(id,esr_code,name,country_code) VALUES ('00000000-0000-0000-0000-000000000001','000001','Тестовая отправления','RU'), ('00000000-0000-0000-0000-000000000002','000002','Тестовая назначения','RU')"
         )
 
 

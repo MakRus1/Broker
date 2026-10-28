@@ -82,7 +82,8 @@ Transportation:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - id
   - revision
@@ -120,8 +121,8 @@ RouteSegment:
       format: date-time
     inherited:
       type: boolean
-      description: Участок присутствует в текущем маршруте поставки. Отсутствующие старые участки доступны
-        только для просмотра.
+      description: Участок присутствует в текущем маршруте поставки. Отсутствующие
+        старые участки доступны только для просмотра.
     rail:
       $ref: '#/RailDetails'
     sea:
@@ -511,7 +512,8 @@ CreateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - id
   - shipment_id
@@ -540,7 +542,8 @@ UpdateTransportationRequest:
     container_number:
       type: string
       maxLength: 64
-      description: Фактический номер контейнера. Необязателен; нестандартный формат не запрещает сохранение.
+      description: Фактический номер контейнера. Необязателен; нестандартный формат
+        не запрещает сохранение.
   required:
   - transportation_id
   - expected_revision
@@ -569,8 +572,18 @@ RailwayStation:
     country_code:
       type: string
       pattern: ^[A-Z]{2}$
+    id:
+      type: string
+      format: uuid
+    uic_code:
+      type: string
+      pattern: ^[0-9]{7}$
+    esr_source:
+      type: string
+      description: 'Источник ЕСР: manual — ручной ввод, osm_hint — неподтверждённая
+        подсказка OSM'
   required:
-  - esr_code
+  - id
   - name
   - country_code
 RailDetails:
@@ -769,7 +782,7 @@ StationListCursor:
   properties:
     id:
       type: string
-      pattern: ^[0-9]{6}$
+      format: uuid
     value:
       type: string
       maxLength: 1024
@@ -785,7 +798,7 @@ ListStationsRequest:
       maxLength: 200
     after:
       type: string
-      maxLength: 6
+      format: uuid
     country_code:
       type: string
       pattern: ^[A-Z]{2}$
@@ -800,7 +813,7 @@ ListStationsRequest:
       - esr_code
       - name
       - country_code
-      default: esr_code
+      default: name
     descending:
       type: boolean
       default: false

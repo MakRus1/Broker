@@ -11,7 +11,12 @@ inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& val
         .name = value.Name};
 }
 
-inline models::RailwayStation Convert(const pgtypes::RailwayStationV1& value) {
-    return {.country_code = value.CountryCode, .esr_code = value.EsrCode, .name = value.Name};
+inline models::RailwayStation Convert(const pgtypes::RailwayStationV2& value) {
+    return {.country_code = value.CountryCode,
+        .esr_code = value.EsrCode,
+        .esr_source = value.EsrSource,
+        .id = boost::uuids::to_string(value.Id),
+        .name = value.Name,
+        .uic_code = value.UicCode};
 }
 }  // namespace transport_locations::helpers

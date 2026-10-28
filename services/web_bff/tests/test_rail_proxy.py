@@ -6,7 +6,7 @@ from test_proxy import TRANSPORTATION
 
 async def test_railway_station_search(browser, mockserver):
     await browser.sign_in()
-    station = {'esr_code': '000001', 'name': 'Тестовая станция', 'country_code': 'RU'}
+    station = {'id': '34996a7f-8d2d-1d6c-d1ec-75950190cc6d', 'esr_code': '000001', 'name': 'Тестовая станция', 'country_code': 'RU'}
 
     @mockserver.json_handler('/api/v1/railway-stations/search')
     def search(request):
@@ -25,7 +25,7 @@ async def test_rail_route_roundtrip(browser, mockserver):
         'id': str(uuid4()),
         'mode': 'international_rail',
         'rail': {
-            'origin_station': {'esr_code': '000001', 'name': 'Тестовая', 'country_code': 'RU'},
+            'origin_station': {'id': '34996a7f-8d2d-1d6c-d1ec-75950190cc6d', 'esr_code': '000001', 'name': 'Тестовая', 'country_code': 'RU'},
             'etd': '2020-01-01',
             'eta': '2020-01-05',
             'departure_date': '2020-01-02',

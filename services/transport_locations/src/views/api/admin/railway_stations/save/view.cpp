@@ -15,12 +15,17 @@ Response View::Handle(
     if (name.empty())
         return Response400{.error = "invalid_name", .message = "Укажите название станции"};
     const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
-        sql::kSaveRailwayStation, request.body.esr_code, name, request.body.country_code,
-        request.body.existing.value_or(false));
+        sql::kSaveRailwayStation, request.body.id, name, request.body.country_code,
+        request.body.esr_code, request.body.uic_code, request.body.existing.value_or(false));
     if (rows.IsEmpty())
         return Response409{
-            .error = "station_exists", .message = "Код ЕСР уже используется в справочнике"};
-    const auto row = rows.AsSingleRow<pgtypes::RailwayStationV1>();
-    return Response200{.country_code = row.CountryCode, .esr_code = row.EsrCode, .name = row.Name};
+            .error = "station_exists", .message = "Идентификатор станции уже используется"};
+    const auto row = rows.AsSingleRow<pgtypes::RailwayStationV2>();
+    return Response200{.country_code = row.CountryCode,
+        .esr_code = row.EsrCode,
+        .esr_source = row.EsrSource,
+        .id = boost::uuids::to_string(row.Id),
+        .name = row.Name,
+        .uic_code = row.UicCode};
 }
 }  // namespace transport_locations::views::api::admin::railway_stations::save

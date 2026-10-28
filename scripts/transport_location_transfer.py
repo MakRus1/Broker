@@ -49,7 +49,9 @@ END $$;
 INSERT INTO route_locations (id, kind, name, country_code, code, archived, manual_override)
 SELECT id, kind, name, country_code, code, archived, TRUE
 FROM location_import ON CONFLICT (id) DO NOTHING;
-INSERT INTO railway_stations SELECT * FROM station_import ON CONFLICT (esr_code) DO NOTHING;
+INSERT INTO railway_stations (id, esr_code, name, country_code, archived, esr_source, manual_override)
+SELECT md5('broker:railway:esr:' || esr_code)::uuid, esr_code, name, country_code, archived, 'manual', TRUE
+FROM station_import ON CONFLICT (id) DO NOTHING;
 INSERT INTO directory_transfers(name, completed_at) VALUES ('{NAME}', clock_timestamp());
 COMMIT;
 """

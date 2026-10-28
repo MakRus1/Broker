@@ -11,8 +11,8 @@ BASE = {}
 def directory_records(pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.executemany(
-            "INSERT INTO railway_stations(esr_code,name,country_code,archived) VALUES(%s,%s,%s,%s)",
-            [(f'{i+100:06}', f'Alpha-{i%3}', 'RU' if i % 2 else 'KZ', i == 19) for i in range(20)],
+            "INSERT INTO railway_stations(id,esr_code,name,country_code,archived) VALUES(%s,%s,%s,%s,%s)",
+            [(str(UUID(int=i+100)), f'{i+100:06}', f'Alpha-{i%3}', 'RU' if i % 2 else 'KZ', i == 19) for i in range(20)],
         )
 
 
@@ -29,7 +29,7 @@ async def test_directory_cursor_order(api, directory_records, sort, descending):
         query = {**query, 'cursor': page['next_cursor']}
     key = lambda item: (
         (item.get(sort) or '').lower() if sort == 'name' else item.get(sort) or '',
-        item['esr_code'],
+        item['id'],
     )
     assert len(items) == 19
     assert len({item['esr_code'] for item in items}) == 19

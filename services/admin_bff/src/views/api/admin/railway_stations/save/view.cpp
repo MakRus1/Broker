@@ -10,9 +10,15 @@ Response View::Handle(
         api::Request{.body = {.country_code = request.body.country_code,
                          .esr_code = request.body.esr_code,
                          .existing = request.body.existing,
-                         .name = request.body.name}},
+                         .id = request.body.id,
+                         .name = request.body.name,
+                         .uic_code = request.body.uic_code}},
         session.Access);
-    return Response200{
-        .country_code = result.country_code, .esr_code = result.esr_code, .name = result.name};
+    return Response200{.country_code = result.country_code,
+        .esr_code = result.esr_code,
+        .esr_source = result.esr_source,
+        .id = result.id,
+        .name = result.name,
+        .uic_code = result.uic_code};
 }
 }  // namespace admin_bff::views::api::admin::railway_stations::save

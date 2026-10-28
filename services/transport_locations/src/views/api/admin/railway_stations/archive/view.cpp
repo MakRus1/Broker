@@ -12,9 +12,9 @@ Response View::Handle(
         return Response403{
             .error = "platform_admin_required", .message = "Нужны права администратора платформы"};
     const auto rows = deps.pg_cluster->Execute(
-        pg::ClusterHostType::kMaster, sql::kArchiveRailwayStation, request.body.esr_code);
+        pg::ClusterHostType::kMaster, sql::kArchiveRailwayStation, request.body.id);
     if (rows.IsEmpty())
         return Response404{.error = "station_not_found", .message = "Станция не найдена"};
-    return Response200{.esr_code = request.body.esr_code};
+    return Response200{.id = request.body.id};
 }
 }  // namespace transport_locations::views::api::admin::railway_stations::archive

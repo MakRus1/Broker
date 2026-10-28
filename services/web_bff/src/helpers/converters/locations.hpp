@@ -16,6 +16,11 @@ inline models::shipments::TransportLocation Convert(
 
 inline models::transportations::RailwayStation Convert(
     const clients::transport_locations::models::RailwayStation& value) {
-    return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
+    return {.country_code = value.country_code,
+        .esr_code = value.esr_code,
+        .esr_source = value.esr_source,
+        .id = value.id,
+        .name = value.name,
+        .uic_code = value.uic_code};
 }
 }  // namespace web_bff

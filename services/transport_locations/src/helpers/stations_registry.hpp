@@ -7,13 +7,15 @@ namespace transport_locations::helpers {
 namespace registry = platform::registry;
 
 namespace station_fields {
-inline constexpr registry::Field<std::string> kId{"esr_code", "esr_code", "TEXT", true};
+inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kName{"name", "lower(name) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kCountry{"country_code", "country_code"};
-inline constexpr registry::Field<std::string> kSearch{
-    "query", "lower(name || ' ' || esr_code) COLLATE \"C\""};
+inline constexpr registry::Field<std::string> kSearch{"query",
+    "lower(name || ' ' || coalesce(esr_code, '') || ' ' || coalesce(uic_code, '') || ' ' || "
+    "search_terms) COLLATE \"C\""};
 inline constexpr registry::Field<bool> kArchived{"archived", "archived", "BOOLEAN"};
-inline constexpr std::array<registry::FieldDefinition, 3> kSorts{kId, kName, kCountry};
+inline constexpr registry::Field<std::string> kEsr{"esr_code", "coalesce(esr_code, '')"};
+inline constexpr std::array<registry::FieldDefinition, 3> kSorts{kEsr, kName, kCountry};
 }  // namespace station_fields
 
 template <typename Request> registry::BuiltQuery StationQuery(const Request& request) {

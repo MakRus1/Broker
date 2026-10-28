@@ -60,12 +60,22 @@ inline clients::transportations::models::PickupDetails Convert(
 
 inline models::transportations::RailwayStation Convert(
     const clients::transportations::models::RailwayStation& value) {
-    return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
+    return {.country_code = value.country_code,
+        .esr_code = value.esr_code,
+        .esr_source = value.esr_source,
+        .id = value.id,
+        .name = value.name,
+        .uic_code = value.uic_code};
 }
 
 inline clients::transportations::models::RailwayStation Convert(
     const models::transportations::RailwayStation& value) {
-    return {.country_code = value.country_code, .esr_code = value.esr_code, .name = value.name};
+    return {.country_code = value.country_code,
+        .esr_code = value.esr_code,
+        .esr_source = value.esr_source,
+        .id = value.id,
+        .name = value.name,
+        .uic_code = value.uic_code};
 }
 
 inline models::transportations::RailDetails Convert(

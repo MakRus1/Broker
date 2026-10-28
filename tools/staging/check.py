@@ -116,7 +116,9 @@ def check(context, namespace):
         if all(up.get(name) == 1 for name in expected):
             break
         if time.monotonic() > deadline:
-            raise ValueError('Не все установленные сервисы доступны Prometheus')
+            missing = [f'{name}: ' + ('нет цели' if name not in up else f'up={up[name]}')
+                       for name in sorted(expected) if up.get(name) != 1]
+            raise ValueError('Prometheus: ' + '; '.join(missing))
         time.sleep(2)
     trace = probe_trace(f'http://{ips["broker"]}:8080/hello?name=staging-monitoring-check')
     wait_for_telemetry(fetch, trace)

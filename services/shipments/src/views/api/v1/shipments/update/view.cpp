@@ -29,7 +29,7 @@ Response View::Handle(
             const auto previous = rows.AsSingleRow<pgtypes::ShipmentV4>();
             CheckRevision(previous.Revision, request.body.expected_revision);
             const auto locations =
-                LoadRouteLocations(*deps.pg_cluster, request.body.route_segments.value());
+                LoadRouteLocations(deps, context, request.body.route_segments.value());
             domain::ResolveRouteDetails(
                 request.body.route_segments.value(), Convert(previous).route_segments, locations);
             ValidateRouteCounterparties(deps, context, request.body.route_segments.value(),

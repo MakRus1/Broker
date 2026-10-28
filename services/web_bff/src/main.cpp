@@ -30,6 +30,7 @@
 #include <clients/counterparties/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
+#include <clients/transport_locations/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
@@ -75,6 +76,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<web_bff::clients::counterparties::Component>();
     component_list.Append<web_bff::clients::organizations::Component>();
     component_list.Append<web_bff::clients::shipments::Component>();
+    component_list.Append<web_bff::clients::transport_locations::Component>();
     component_list.Append<web_bff::clients::transportations::Component>();
     // SERVICE_REGISTRATION_END
 

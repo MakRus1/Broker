@@ -206,3 +206,9 @@ endforeach()
                 self.assertEqual(
                     {path.stem for path in (root / 'build-debug').glob('*.built')}, targets
                 )
+
+
+class ClientDnsTest(unittest.TestCase):
+    def test_service_name_with_underscore_uses_dns_alias(self):
+        values = local.client_variables('shipments')
+        self.assertEqual(values['client-transport_locations-base-url'], 'http://transport-locations:8140')

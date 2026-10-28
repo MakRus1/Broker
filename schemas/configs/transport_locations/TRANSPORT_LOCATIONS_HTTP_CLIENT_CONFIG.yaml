@@ -1,0 +1,18 @@
+name: TRANSPORT_LOCATIONS_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /api/admin/railway-stations/archive
+- /api/admin/railway-stations/list
+- /api/admin/railway-stations/save
+- /api/admin/route-locations/archive
+- /api/admin/route-locations/list
+- /api/admin/route-locations/save
+- /api/v1/railway-stations/get-batch
+- /api/v1/railway-stations/search
+- /api/v1/route-locations/get-batch
+- /api/v1/route-locations/search
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

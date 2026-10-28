@@ -26,7 +26,7 @@ Response View::Handle(
         ValidateRouteCounterparties(
             deps, context, request.body.route_segments, loaded.route_segments);
         const auto stations =
-            LoadRailwayStations(*deps.pg_cluster, domain::GetRailwayStationCodes(request.body));
+            LoadRailwayStations(deps, context, domain::GetRailwayStationCodes(request.body));
         domain::ResolveRailwayStations(request.body, loaded, stations);
         if (request.body.route_segments.size() != source.route_segments.size())
             throw ApiError{409, "inherited_route", "Состав маршрута изменяется только в поставке"};

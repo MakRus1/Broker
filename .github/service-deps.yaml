@@ -7,6 +7,7 @@ libs:
     - counterparties
     - organizations
     - shipments
+    - transport_locations
     - transportations
     - web_bff
 shared_paths:

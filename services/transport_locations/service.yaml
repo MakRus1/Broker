@@ -1,0 +1,28 @@
+version: 1
+libraries:
+- common
+- auth
+postgresql:
+  enabled: true
+  cluster: transport_locations
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/admin/route-locations/list: authenticated
+    /api/admin/route-locations/save: authenticated
+    /api/admin/route-locations/archive: authenticated
+    /api/admin/railway-stations/list: authenticated
+    /api/admin/railway-stations/save: authenticated
+    /api/admin/railway-stations/archive: authenticated
+    /api/v1/route-locations/search: shipments.read
+    /api/v1/railway-stations/search: transportations.read
+    /api/v1/route-locations/get-batch: shipments.read
+    /api/v1/railway-stations/get-batch: transportations.read
+  organization-access: true
+dashboard:
+  title: Транспортные пункты
+  tags:
+  - logistics
+  - directories

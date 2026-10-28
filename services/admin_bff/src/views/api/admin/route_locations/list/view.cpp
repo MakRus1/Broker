@@ -7,20 +7,21 @@ namespace admin_bff::views::api::admin::route_locations::list {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
-    namespace api = clients::shipments::ApiAdminRouteLocationsList;
-    const auto result = deps.shipments.ApiAdminRouteLocationsList(
+    namespace api = clients::transport_locations::ApiAdminRouteLocationsList;
+    const auto result = deps.transport_locations.ApiAdminRouteLocationsList(
         api::Request{
             .body = api::RequestBody{.after = request.body.after,
                 .country_code = request.body.country_code,
-                .cursor = ConvertRegistryCursor<clients::shipments::models::LocationListCursor>(
-                    request.body.cursor),
+                .cursor =
+                    ConvertRegistryCursor<clients::transport_locations::models::LocationListCursor>(
+                        request.body.cursor),
                 .descending = request.body.descending,
-                .kind = clients::shipments::models::ParseEnumScalar(
+                .kind = clients::transport_locations::models::ParseEnumScalar(
                     models::EnumValue(request.body.kind),
-                    clients::shipments::models::TransportLocationKind{}),
+                    clients::transport_locations::models::TransportLocationKind{}),
                 .limit = request.body.limit,
                 .query = request.body.query,
-                .sort = clients::shipments::models::ParseEnumScalar(
+                .sort = clients::transport_locations::models::ParseEnumScalar(
                     EnumValue(request.body.sort), decltype(api::RequestBody{}.sort){})}},
         session.Access);
     Response200 response;

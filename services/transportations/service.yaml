@@ -19,10 +19,6 @@ auth:
     /api/v1/transportations/create: transportations.write
     /api/v1/transportations/update: transportations.write
     /api/v1/transportation-routes/usage: shipments.write
-    /api/v1/railway-stations/search: transportations.read
-    /api/admin/railway-stations/list: authenticated
-    /api/admin/railway-stations/save: authenticated
-    /api/admin/railway-stations/archive: authenticated
   organization-access: true
   service-clients:
     transportations.create: shipments-dispatcher
@@ -32,4 +28,7 @@ clients:
     transport: http
   counterparties:
     service: counterparties
+    transport: http
+  transport_locations:
+    service: transport_locations
     transport: http

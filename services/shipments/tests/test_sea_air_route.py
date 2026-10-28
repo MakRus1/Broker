@@ -170,28 +170,6 @@ async def test_archived_location_retained_but_cannot_be_selected(api, locations,
     await api.post('/api/v1/shipments/create', creation(route_segments=route), expected=400)
 
 
-async def test_global_directory_permissions(api):
-    item = {
-        'id': str(uuid4()),
-        'kind': 'airport',
-        'name': 'Общий аэропорт',
-        'country_code': 'KZ',
-        'code': 'TEST',
-    }
-    saved = await api.post('/api/admin/route-locations/save', item, roles=['platform.admin'])
-    assert saved == item
-    await api.post('/api/admin/route-locations/save', item, user='other', expected=403)
-    found = await api.post(
-        '/api/v1/route-locations/search', {'kind': 'airport', 'query': 'TEST'}, user='other'
-    )
-    assert found['items'] == [item]
-    await api.post('/api/admin/route-locations/save', item, roles=['platform.admin'], expected=409)
-    await api.post(
-        '/api/admin/route-locations/archive', {'id': item['id']}, roles=['platform.admin']
-    )
-    assert (await api.post('/api/v1/route-locations/search', {'kind': 'airport', 'query': 'TEST'}))[
-        'items'
-    ] == []
 
 
 async def test_route_counterparty_must_belong_to_organization(api, locations, mockserver):
@@ -239,3 +217,14 @@ async def test_route_only_update_preserves_main_fields(api, locations):
         )
     )['shipment']
     assert details['route_segments'] == route
+
+
+async def test_location_dependency_failure_does_not_create_shipment(api, locations, mockserver, pgsql):
+    @mockserver.handler('/api/v1/route-locations/get-batch')
+    def unavailable(request):
+        return mockserver.make_response(status=503)
+    result = await api.post('/api/v1/shipments/create', creation(route_segments=stages(locations)), expected=503)
+    assert result['error'] == 'transport_locations_unavailable'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM shipments')
+        assert cursor.fetchone()[0] == 0

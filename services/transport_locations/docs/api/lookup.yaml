@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Транспортные пункты для маршрутов
+  version: '1'
+paths:
+  /api/v1/route-locations/get-batch:
+    post:
+      summary: Получить действующие транспортные пункты по идентификаторам
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                ids:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: string
+                    format: uuid
+              required:
+              - ids
+      responses:
+        '200':
+          description: Действующие записи
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/TransportLocation
+                required:
+                - items
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+  /api/v1/railway-stations/get-batch:
+    post:
+      summary: Получить действующие транспортные пункты по идентификаторам
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                codes:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: string
+                    pattern: ^[0-9]{6}$
+              required:
+              - codes
+      responses:
+        '200':
+          description: Действующие записи
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/RailwayStation
+                required:
+                - items
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

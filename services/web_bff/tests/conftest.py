@@ -38,7 +38,8 @@ def configure_web(mockserver_info, service_source_dir):
         cities['allow-http'] = True
         config_vars['web-assets-dir'] = str(service_source_dir / 'tests/static')
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url.rstrip('/')
-        config_vars['client-shipments-base-url'] = mockserver_info.base_url.rstrip('/')
+        config_vars['client-shipments-base-url'] = mockserver_info.base_url
+        config_vars['client-transport_locations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-transportations-base-url'] = mockserver_info.base_url.rstrip('/')
     return patch
 

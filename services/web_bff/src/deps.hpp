@@ -7,6 +7,7 @@
 #include <clients/counterparties/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
+#include <clients/transport_locations/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
@@ -27,6 +28,7 @@ struct Deps {
     clients::counterparties::Client counterparties;
     clients::organizations::Client organizations;
     clients::shipments::Client shipments;
+    clients::transport_locations::Client transport_locations;
     clients::transportations::Client transportations;
     // SERVICE_DEPS_FIELDS_END
     platform::browser::Sessions* sessions;
@@ -45,6 +47,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .organizations =
             component_context.FindComponent<clients::organizations::Component>().GetClient(),
         .shipments = component_context.FindComponent<clients::shipments::Component>().GetClient(),
+        .transport_locations =
+            component_context.FindComponent<clients::transport_locations::Component>().GetClient(),
         .transportations =
             component_context.FindComponent<clients::transportations::Component>().GetClient(),
         // SERVICE_DEPS_INIT_END

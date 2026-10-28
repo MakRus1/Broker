@@ -32,3 +32,4 @@ dispatcher-token-max-retries: 0
 organization-access-url: http://localhost:8130/api/organizations/access
 client-organizations-base-url: http://localhost:8080
 client-counterparties-base-url: http://localhost:8080
+client-transport_locations-base-url: http://localhost:8080

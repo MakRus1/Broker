@@ -4,6 +4,7 @@
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
 #include <clients/shipments/client.hpp>
+#include <clients/transport_locations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
@@ -23,6 +24,7 @@ struct Deps {
     platform::configs::Source configs;
     clients::counterparties::Client counterparties;
     clients::shipments::Client shipments;
+    clients::transport_locations::Client transport_locations;
     userver::storages::postgres::ClusterPtr pg_cluster;
     // SERVICE_DEPS_FIELDS_END
 };
@@ -37,6 +39,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .counterparties =
             component_context.FindComponent<clients::counterparties::Component>().GetClient(),
         .shipments = component_context.FindComponent<clients::shipments::Component>().GetClient(),
+        .transport_locations =
+            component_context.FindComponent<clients::transport_locations::Component>().GetClient(),
         .pg_cluster = component_context
                           .FindComponent<userver::components::Postgres>("postgres-transportations")
                           .GetCluster(),

@@ -16,6 +16,9 @@ clients:
   transportations:
     service: transportations
     transport: http
+  transport_locations:
+    service: transport_locations
+    transport: http
 dashboard:
   title: Broker · Административный BFF
   tags:

@@ -411,6 +411,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'web-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
                 'web-revoke-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/revoke",
                 'web-secure-cookie': False,
+                'client-transport_locations-base-url': f"http://{addresses['transport_locations']}:8080",
                 'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
                 'client-shipments-base-url': f"http://{addresses['shipments']}:8080",
                 'client-transportations-base-url': f"http://{addresses['transportations']}:8080",

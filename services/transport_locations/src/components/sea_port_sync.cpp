@@ -66,16 +66,16 @@ void SeaPortSync::Sync() {
     codes.reserve(ports.size());
     for (const auto& port : ports)
         codes.push_back(port.Locode);
-    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
+    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
     const auto state = tx.Execute(sql::kLockDirectorySync, source, lease);
     if (state.IsEmpty())
         return;
     const auto previous = state.AsSingleRow<int>();
     if (ports.size() * 100 < static_cast<std::size_t>(previous) * 80)
         throw std::runtime_error("UN/LOCODE: число портов уменьшилось более чем на 20%");
-    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-    tx.Execute(control, sql::kSaveSeaPortSources, ports);
-    tx.Execute(control, sql::kPublishSeaPorts, codes);
+    tx.Execute(sql::kSaveSeaPortSources, ports);
+    tx.Execute(sql::kPublishSeaPorts, codes);
     tx.Execute(
         sql::kFinishDirectorySync, source, lease, hash, static_cast<int>(ports.size()), release);
     tx.Commit();

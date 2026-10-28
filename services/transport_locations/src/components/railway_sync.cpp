@@ -67,16 +67,16 @@ void RailwaySync::Sync() {
     ids.reserve(stations.size());
     for (const auto& station : stations)
         ids.push_back(station.SourceId);
-    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
+    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
     const auto state = tx.Execute(sql::kLockDirectorySync, std::string{"osm-railway"}, lease);
     if (state.IsEmpty())
         return;
     const auto previous = state.AsSingleRow<int>();
     if (stations.size() * 100 < static_cast<std::size_t>(previous) * 80)
         throw std::runtime_error("OSM railway: число станций уменьшилось более чем на 20%");
-    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-    tx.Execute(control, sql::kSaveRailwaySources, stations);
-    tx.Execute(control, sql::kPublishRailwayStations, ids);
+    tx.Execute(sql::kSaveRailwaySources, stations);
+    tx.Execute(sql::kPublishRailwayStations, ids);
     tx.Execute(sql::kFinishRailwaySync, std::string{"osm-railway"}, lease, hash,
         static_cast<int>(stations.size()), std::optional<std::string>{});
     tx.Commit();

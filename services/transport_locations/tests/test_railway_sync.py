@@ -110,3 +110,28 @@ async def test_invalid_feed_preserves_published_directory(service_client, railwa
     with pytest.raises(TaskFailed):
         await service_client.run_periodic('railway-sync')
     assert await search(api) == before
+
+
+async def test_bulk_publication_timeout_also_covers_commit(service_client, railway_feed, pgsql, api):
+    cursor = pgsql['db_1'].cursor()
+    # Отложенные ограничения выполняются при COMMIT. Старая настройка только
+    # INSERT оставляла COMMIT сетевой тайм-аут 750 мс.
+    cursor.execute("""
+        CREATE FUNCTION slow_station_commit() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            PERFORM pg_sleep(1.1);
+            RETURN NEW;
+        END;
+        $$;
+        CREATE CONSTRAINT TRIGGER slow_station_commit
+            AFTER INSERT ON railway_stations DEFERRABLE INITIALLY DEFERRED
+            FOR EACH ROW EXECUTE FUNCTION slow_station_commit();
+    """)
+    try:
+        await service_client.run_periodic('railway-sync')
+        row, = await search(api)
+        assert row['esr_code'] == '700101'
+        cursor.execute("SELECT record_count, lease IS NULL FROM directory_sync WHERE name = 'osm-railway'")
+        assert cursor.fetchone() == (1, True)
+    finally:
+        cursor.execute('DROP TRIGGER slow_station_commit ON railway_stations; DROP FUNCTION slow_station_commit();')

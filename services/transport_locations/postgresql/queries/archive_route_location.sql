@@ -1,2 +1,2 @@
-UPDATE route_locations SET archived = TRUE
+UPDATE route_locations SET archived = TRUE, manual_override = TRUE
 WHERE id = $1::UUID AND NOT archived RETURNING id;

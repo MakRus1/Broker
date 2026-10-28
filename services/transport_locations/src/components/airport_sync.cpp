@@ -54,16 +54,16 @@ void AirportSync::Sync() {
     ids.reserve(airports.size());
     for (const auto& airport : airports)
         ids.push_back(airport.SourceId);
-    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
+    auto tx = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, control);
     const auto state = tx.Execute(sql::kLockDirectorySync, std::string{"ourairports"}, lease);
     if (state.IsEmpty())
         return;
     const auto previous = state.AsSingleRow<int>();
     if (airports.size() * 100 < static_cast<std::size_t>(previous) * 80)
         throw std::runtime_error("OurAirports: число аэропортов уменьшилось более чем на 20%");
-    const pg::CommandControl control{std::chrono::seconds{30}, std::chrono::seconds{25}};
-    tx.Execute(control, sql::kSaveAirportSources, airports);
-    tx.Execute(control, sql::kPublishAirports, ids);
+    tx.Execute(sql::kSaveAirportSources, airports);
+    tx.Execute(sql::kPublishAirports, ids);
     tx.Execute(sql::kFinishDirectorySync, std::string{"ourairports"}, lease, hash,
         static_cast<int>(airports.size()), std::optional<std::string>{});
     tx.Commit();

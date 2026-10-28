@@ -1,0 +1,48 @@
+name: AIRPORT_SYNC_SETTINGS
+mode: plain
+schema:
+  type: object
+  additionalProperties: false
+  properties:
+    enabled:
+      type: boolean
+      description: Включить синхронизацию источника
+    period_seconds:
+      type: integer
+      minimum: 60
+      maximum: 2678400
+      description: Интервал после успешного обновления, секунды
+    http_timeout_ms:
+      type: integer
+      minimum: 100
+      maximum: 120000
+      description: Тайм-аут одного HTTP-запроса, миллисекунды
+    http_retries:
+      type: integer
+      minimum: 0
+      maximum: 3
+      description: Число повторов одного HTTP-запроса
+    retry_initial_seconds:
+      type: integer
+      minimum: 1
+      maximum: 86400
+      description: Начальная задержка повторного синка после ошибки, секунды
+    retry_max_seconds:
+      type: integer
+      minimum: 1
+      maximum: 86400
+      description: Максимальная задержка повторного синка после ошибки, секунды
+  required:
+  - enabled
+  - period_seconds
+  - http_timeout_ms
+  - http_retries
+  - retry_initial_seconds
+  - retry_max_seconds
+default:
+  enabled: true
+  period_seconds: 86400
+  http_timeout_ms: 40000
+  http_retries: 0
+  retry_initial_seconds: 300
+  retry_max_seconds: 3600

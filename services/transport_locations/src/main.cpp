@@ -22,9 +22,14 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <configs/keys.hpp>
 #include <platform/auth/component.hpp>
+#include <platform/configs/components.hpp>
+#include <platform/configs/runtime.hpp>
 #include <platform/readiness.hpp>
 #include <userver/clients/http/component.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
+#include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/component.hpp>
 
 // SERVICE_INCLUDES_END
@@ -50,6 +55,9 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.Append<platform::auth::Component>();
     component_list.Append<userver::components::HttpClient>("auth-http-client");
+    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
+    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
+    component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<userver::components::Postgres>("postgres-transport_locations");
     // SERVICE_REGISTRATION_END
 

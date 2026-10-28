@@ -19,3 +19,6 @@ airport-sync-enabled: true
 sea-port-sync-enabled: true
 
 railway-sync-enabled: true
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''

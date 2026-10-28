@@ -1,6 +1,8 @@
 UPDATE directory_sync
 SET lease = NULL,
-    next_attempt_at = now() + INTERVAL '24 hours',
+    lease_until = NULL,
+    failure_count = 0,
+    next_attempt_at = now() + $6::INTEGER * INTERVAL '1 second',
     updated_at = now(),
     source_hash = $3,
     record_count = $4,

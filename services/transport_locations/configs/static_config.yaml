@@ -71,22 +71,23 @@ components_manager:
         railway-sync:
             load-enabled: $railway-sync-enabled
             url: https://qlever.dev/api/osm-planet
-            timeout: 90s
             minimum-records: 10000
         airport-sync:
             load-enabled: $airport-sync-enabled
             url: https://davidmegginson.github.io/ourairports-data/airports.csv
-            timeout: 40s
             minimum-records: 1000
         sea-port-sync:
             load-enabled: $sea-port-sync-enabled
             releases-url: https://opensource.unicc.org/api/v4/projects/un%2Funece%2Funcefact%2Fvocab-locode/repository/tags?search=%5E20&per_page=100&order_by=name&sort=desc
             download-base-url: https://opensource.unicc.org/un/unece/uncefact/vocab-locode/-/jobs/artifacts/
-            timeout: 40s
             minimum-records: 1000
         # SERVICE_CONFIG_BEGIN
         platform-readiness: {}
         platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
         postgres-transport_locations:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -135,6 +136,31 @@ components_manager:
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: transport_locations
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
+            update-interval: 1s
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: transport_locations
@@ -210,12 +236,6 @@ components_manager:
             method: GET
             task_processor: main-task-processor
             monitor-handler: true
-        dynamic-config:
-            defaults:
-                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
-                POSTGRES_DEFAULT_COMMAND_CONTROL:
-                    network_timeout_ms: 750
-                    statement_timeout_ms: 500
         testsuite-support: {}
         congestion-control:
             fake-mode: true

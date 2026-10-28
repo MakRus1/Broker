@@ -5,6 +5,8 @@ import json
 import hashlib
 import re
 import yaml
+from jsonschema import Draft4Validator
+from jsonschema.exceptions import SchemaError, ValidationError
 from model import keys, parse_body, parse_spec, enum_types, Operation
 from cpp_types import declarations, enums, quoted, type_cpp
 from render import fields, format_cpp
@@ -76,10 +78,13 @@ def catalog(root, loader):
         validate_name(spec['name'], p)
         if path in configs:
             raise ValueError(f'Config schema collides with automatic HTTP config: {p}')
-        if spec.get('mode') not in {'plain', 'conditional'}:
-            raise ValueError(f'{p}: mode must be plain or conditional')
-        validate_object(spec['schema'])
-        parse_body(spec['schema'], {})
+        if spec.get('mode') not in {'plain', 'conditional', 'json-schema'}:
+            raise ValueError(f'{p}: mode must be plain, conditional or json-schema')
+        if spec['mode'] == 'json-schema':
+            validate_json_schema(spec['schema'])
+        else:
+            validate_object(spec['schema'])
+            parse_body(spec['schema'], {})
         if spec['mode'] == 'conditional':
             if spec.get('context') not in contexts:
                 raise ValueError(f'{p}: unknown config context')
@@ -115,7 +120,50 @@ def validate_name(name, path):
         raise ValueError(f'{path}: expected matching UPPER_CASE name and filename')
 
 
+def validate_json_schema(schema):
+    if not isinstance(schema, dict) or schema.get('type') != 'object':
+        raise ValueError('JSON Schema configs require an object schema')
+    def local_references(value):
+        if isinstance(value, dict):
+            if '$ref' in value and not (isinstance(value['$ref'], str) and value['$ref'].startswith('#/')):
+                raise ValueError('Config JSON Schema references must be local')
+            for item in value.values():
+                local_references(item)
+        elif isinstance(value, list):
+            for item in value:
+                local_references(item)
+    local_references(schema)
+    json.dumps(schema, allow_nan=False)
+    def check_targets(value):
+        if isinstance(value, dict):
+            if '$ref' in value:
+                target = schema
+                try:
+                    for part in value['$ref'][2:].split('/'):
+                        part = part.replace('~1', '/').replace('~0', '~')
+                        target = target[int(part)] if isinstance(target, list) else target[part]
+                except (KeyError, IndexError, ValueError, TypeError) as error:
+                    raise ValueError('Unresolved local config schema reference') from error
+            for item in value.values():
+                check_targets(item)
+        elif isinstance(value, list):
+            for item in value:
+                check_targets(item)
+    check_targets(schema)
+    try:
+        Draft4Validator.check_schema(schema)
+    except SchemaError as error:
+        raise ValueError('Invalid config JSON Schema: ' + error.message) from error
+
+
 def validate_default(spec):
+    if spec['mode'] == 'json-schema':
+        json.dumps(spec['default'], allow_nan=False)
+        try:
+            Draft4Validator(spec['schema']).validate(spec['default'])
+        except ValidationError as error:
+            raise ValueError(spec['name'] + ': invalid default: ' + error.message) from error
+        return
     from validation import validate_value
     body = parse_body(spec['schema'], {})
     value = spec['default']
@@ -230,6 +278,8 @@ def outputs(service, loader):
     if not entries:
         return {}
     text = '#pragma once\n#include <openapi/runtime.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/value.hpp>\n'
+    if any(configs[entry]['mode'] == 'json-schema' for entry in entries):
+        text += '#include <userver/formats/json/schema.hpp>\n'
     used_contexts = sorted({configs[entry]['context'] for entry in entries if configs[entry]['mode'] == 'conditional'})
     for context in used_contexts:
         spec = contexts[context]
@@ -239,7 +289,13 @@ def outputs(service, loader):
     for entry in entries:
         spec = configs[entry];name = spec['name'];ns = 'configs::detail_' + name
         text += f'namespace {ns} {{\n'
-        if spec['mode'] == 'http-client':
+        if spec['mode'] == 'json-schema':
+            typ = 'platform::configs::Json'
+            text += 'using Value = platform::configs::Json;\ninline Value ParseValue(const Value& json) {\n'
+            text += 'static const userver::formats::json::Schema schema{userver::formats::json::FromString(' + quoted(json.dumps(spec['schema'], ensure_ascii=False)) + ')};\n'
+            text += 'schema.Validate(json).ThrowIfError();\nreturn json;\n}\n'
+            parser = 'ParseValue';default = spec['default']
+        elif spec['mode'] == 'http-client':
             typ = 'platform::configs::HttpClientConfig'
             text += 'using Value = platform::configs::HttpClientConfig;\ninline Value ParseValue(const platform::configs::Json& json) { return platform::configs::ParseHttpClient(json, {' + ', '.join(quoted(path) for path in spec['paths']) + '}); }\n'
             parser = 'ParseValue';default = spec['default']

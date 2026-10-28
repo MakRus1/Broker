@@ -1,0 +1,27 @@
+name: POSTGRES_HANDLERS_COMMAND_CONTROL
+mode: json-schema
+schema:
+  type: object
+  additionalProperties:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/CommandControl'
+  definitions:
+    CommandControl:
+      type: object
+      additionalProperties: false
+      properties:
+        network_timeout_ms:
+          type: integer
+          minimum: 1
+          maximum: 3600000
+          description: Сетевой тайм-аут SQL-команды в миллисекундах, включая COMMIT
+        statement_timeout_ms:
+          type: integer
+          minimum: 1
+          maximum: 3600000
+          description: Тайм-аут выполнения SQL на стороне PostgreSQL, миллисекунды
+        prepared_statements_enabled:
+          type: boolean
+          description: Использовать подготовленные запросы
+default: {}

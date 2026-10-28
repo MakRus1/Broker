@@ -174,3 +174,8 @@ mockserver. Настройки `releases-url`, `download-base-url` и
 другого пода не отбирается при изменении параметров. После падения пода
 повтор возможен по истечении аренды. Расписание, счётчик ошибок и последняя
 успешная публикация хранятся в `directory_sync`.
+
+SQL-тайм-ауты публикации настраиваются через стандартный ключ
+`POSTGRES_QUERIES_COMMAND_CONTROL` по именам `directory-sync.airports`,
+`directory-sync.sea-ports`, `directory-sync.railway`. Настройка охватывает COMMIT.
+Дефолты 30/25 секунд сохранены в статике. Подробнее: [SQL-тайм-ауты](../../docs/sql-timeouts.md).

@@ -1,7 +1,7 @@
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { initialCounterpartyQuery, restoreCounterpartyQuery } from './registryQueryPreferences';
 import { useColumnFilters } from './RegistryColumnFilters';
-import { withColumnFilters, filterRequest } from './registryFilters';
+import { filterRequest } from './registryFilters';
 import {
   RegistryTable,
   RegistryColumnSettings,
@@ -95,13 +95,12 @@ export function CounterpartiesPage({
     initialCounterpartyQuery,
     restoreCounterpartyQuery,
   );
-  const { query, role, status, country_code: country, sort, descending } = registryFilters;
+  const { sort, descending } = registryFilters;
   const filters = useColumnFilters({
     registry: 'counterparties',
     session,
     query: registryFilters,
-    onChange: (filters) =>
-      setRegistryFilters((old) => withColumnFilters('counterparties', old, filters)),
+    onChange: (filters) => setRegistryFilters((old) => ({ ...old, filters })),
     onSort: (sort, descending) =>
       setRegistryFilters((old) => ({ ...old, sort: sort as CounterpartySort, descending })),
   });
@@ -134,13 +133,9 @@ export function CounterpartiesPage({
           '/api/v1/counterparties/list',
           session,
           {
-            query,
             filters: filterRequest(registryFilters.filters),
-            status,
-            country_code: country,
             sort,
             descending,
-            ...(role ? { role } : {}),
             limit: 50,
             ...(cursor ? { cursor } : {}),
           },
@@ -159,7 +154,7 @@ export function CounterpartiesPage({
         if (current === epoch.current) setLoading(false);
       }
     },
-    [query, role, status, country, sort, descending, registryFilters.filters, session, onError],
+    [sort, descending, registryFilters.filters, session, onError],
   );
   useEffect(() => {
     if (id || creating || !read) return;

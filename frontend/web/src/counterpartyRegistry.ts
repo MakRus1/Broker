@@ -7,10 +7,6 @@ export interface CounterpartyRegistryCursor {
 }
 export interface CounterpartyRegistryQuery {
   filters?: ColumnFilter[];
-  query: string;
-  role?: string;
-  status: 'active' | 'archived' | 'all';
-  country_code?: string;
   sort: CounterpartySort;
   descending: boolean;
 }

@@ -59,18 +59,6 @@ inline Order RegistryOrderBy(std::span<const RegistryField> fields, std::string_
     return OrderBy(definition, name);
 }
 
-template <typename Filters>
-bool UseLegacyFilter(
-    const Filters& filters, std::string_view field, const std::optional<std::string>& exclude) {
-    if (exclude.has_value() && exclude.value() == field)
-        return false;
-    if (filters.has_value())
-        for (const auto& filter : filters.value())
-            if (filter.field == field)
-                return false;
-    return true;
-}
-
 inline void ValidateValue(const RegistryField& field, const std::string& value) {
     if (value.empty())
         return;

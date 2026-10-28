@@ -54,3 +54,11 @@ async def test_array_facet_uses_same_other_conditions(api, records):
 
 async def test_hidden_or_unknown_sort_is_not_sql(api, records):
     await api.post("/api/v1/counterparties/list", {"sort": "roles"}, expected=400)
+
+
+@pytest.mark.parametrize('endpoint', ['list', 'filter-values'])
+async def test_removed_scalar_filter_is_rejected(api, endpoint):
+    body = {'country_code': 'RU'}
+    if endpoint == 'filter-values':
+        body = {'registry': body, 'field': 'country_code'}
+    await api.post(f'/api/v1/counterparties/{endpoint}', body, expected=400)

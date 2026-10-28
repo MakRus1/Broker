@@ -72,46 +72,55 @@ describe('личная раскладка реестра', () => {
 });
 describe('восстановление применённых фильтров', () => {
   it('восстанавливает календарные даты как CalendarDate после JSON', () => {
-    const query = {
-      number_query: 'LCB',
-      date_from: CalendarDate.fromISO('2026-10-01'),
-      sort: 'shipment_date',
-      descending: true,
-    };
-    const restored = restoreShipmentQuery(JSON.parse(JSON.stringify(query)));
-    expect(restored.date_from).toBeInstanceOf(CalendarDate);
-    expect(restored.date_from?.toDisplayString()).toBe('01.10.2026');
-    expect(restored.number_query).toBe('LCB');
+    const restored = restoreShipmentQuery(
+      JSON.parse(
+        JSON.stringify({
+          filters: [
+            { field: 'number', query: 'LCB' },
+            { field: 'shipment_date', date_from: CalendarDate.fromISO('2026-10-01') },
+          ],
+          sort: 'shipment_date',
+          descending: true,
+        }),
+      ),
+    );
+    expect(restored.filters?.[1].date_from).toBeInstanceOf(CalendarDate);
+    expect(restored.filters?.[1].date_from?.toDisplayString()).toBe('01.10.2026');
+    expect(restored.filters?.[0].query).toBe('LCB');
   });
-  it('отбрасывает неверные даты, сортировки и фильтры; не восстанавливает курсор', () => {
+  it('отбрасывает неверные фильтры и старый формат; не восстанавливает курсор', () => {
     const query = restoreShipmentQuery({
-      date_from: '2026-02-30',
+      filters: [{ field: 'shipment_date', date_from: '2026-02-30' }],
+      number_query: 'old',
+      customer_id: 'old',
       sort: 'sql',
-      customer_id: 'wrong',
       cursor: { id: 'old' },
     });
-    expect(query.date_from).toBeUndefined();
-    expect(query.sort).toBe('sql'); // Поддержку поля проверяет серверный каталог, а не второй список во фронте.
-    expect(query.customer_id).toBeUndefined();
+    expect(query.filters).toBeUndefined();
+    expect(query.sort).toBe('sql');
+    expect(query).not.toHaveProperty('number_query');
+    expect(query).not.toHaveProperty('customer_id');
     expect(query).not.toHaveProperty('cursor');
   });
-  it('сохраняет false и поддерживаемые типы перевозки', () => {
-    expect(
-      restoreTransportationQuery({
-        hazardous: false,
-        types: ['consolidated', 'wrong'],
-        sort: 'type',
-        descending: true,
-      }),
-    ).toMatchObject({ hazardous: false, types: ['consolidated'], sort: 'type', descending: true });
-    expect(
-      restoreCounterpartyQuery({
-        status: 'archived',
-        role: 'carrier',
-        country_code: 'RU',
-        sort: 'tax_id',
-      }),
-    ).toMatchObject({ status: 'archived', role: 'carrier', country_code: 'RU', sort: 'tax_id' });
+  it('сохраняет несколько значений и явное состояние контрагента', () => {
+    const filters = [
+      { field: 'type', values: ['consolidated', 'air'] },
+      { field: 'hazardous', values: ['false'] },
+    ];
+    expect(restoreTransportationQuery({ filters, sort: 'type', descending: true })).toEqual({
+      filters,
+      sort: 'type',
+      descending: true,
+    });
+    const partyFilters = [
+      { field: 'archived', values: ['true'] },
+      { field: 'roles', values: ['carrier'] },
+      { field: 'country_code', values: ['RU'] },
+    ];
+    expect(restoreCounterpartyQuery({ filters: partyFilters, sort: 'tax_id' })).toMatchObject({
+      filters: partyFilters,
+      sort: 'tax_id',
+    });
   });
 });
 

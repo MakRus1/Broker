@@ -264,32 +264,18 @@ inline clients::transportations::ApiV1TransportationsGet::RequestBody Convert(
 
 inline clients::transportations::ApiV1TransportationsList::RequestBody Convert(
     const models::transportations::ListTransportationsRequest& value) {
-    auto result =
-        clients::transportations::ApiV1TransportationsList::RequestBody{.after = value.after,
-            .container_types = value.container_types,
-            .descending = value.descending,
-            .filters = ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(
-                value.filters),
-            .hazardous = value.hazardous,
-            .incomplete_container = value.incomplete_container,
-            .item_id = value.item_id,
-            .limit = value.limit,
-            .query = value.query,
-            .shipment_id = value.shipment_id,
-            .sort = value.sort};
-    if (value.types.has_value()) {
-        result.types.emplace();
-        for (const auto item : value.types.value())
-            result.types.value().push_back(clients::transportations::models::ParseEnumScalar(
-                models::transportations::EnumValue(item),
-                clients::transportations::models::ListTransportationsRequest_types_item{}));
-    }
-    if (value.cursor.has_value())
-        result.cursor =
-            clients::transportations::models::RegistryCursor{.id = value.cursor.value().id,
-                .scope = value.cursor.value().scope,
-                .value = value.cursor.value().value};
-    return result;
+    return {.after = value.after,
+        .cursor = value.cursor.has_value()
+            ? std::optional{clients::transportations::models::RegistryCursor{
+                  .id = value.cursor.value().id,
+                  .scope = value.cursor.value().scope,
+                  .value = value.cursor.value().value}}
+            : std::nullopt,
+        .descending = value.descending,
+        .filters =
+            ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(value.filters),
+        .limit = value.limit,
+        .sort = value.sort};
 }
 
 inline clients::transportations::models::TransportMode Convert(
@@ -449,18 +435,11 @@ inline clients::transportations::models::ListTransportationsRequest ConvertRegis
     const auto body = Convert(value);
     clients::transportations::models::ListTransportationsRequest result;
     result.after = body.after;
-    result.container_types = body.container_types;
     result.cursor = body.cursor;
     result.descending = body.descending;
     result.filters = body.filters;
-    result.hazardous = body.hazardous;
-    result.incomplete_container = body.incomplete_container;
-    result.item_id = body.item_id;
     result.limit = body.limit;
-    result.query = body.query;
-    result.shipment_id = body.shipment_id;
     result.sort = body.sort;
-    result.types = ConvertRegistryEnumValues<decltype(result.types)>(body.types);
     return result;
 }
 }  // namespace web_bff

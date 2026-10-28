@@ -22,18 +22,20 @@ UTEST(RegistryQuery, MissingFiltersProduceOnlyOrganizationAndLimit) {
 
 UTEST(RegistryQuery, ValuesNeverBecomeSqlText) {
     models::ListTransportationsRequest request;
-    request.query = "' OR 1=1 --";
-    request.hazardous = false;
-    request.container_types = std::vector<std::string>{};
+    const std::string unsafe = "' OR 1=1 --";
+    request.filters = std::vector<models::RegistryFilter>{
+        {.field = "container_number", .query = unsafe},
+        {.field = "hazardous", .values = std::vector<std::string>{"false"}},
+        {.field = "container_type", .values = std::vector<std::string>{}},
+    };
     const auto query = BuildRegistryQuery(request, kOrganization);
     const auto sql = Statement(query);
-    EXPECT_EQ(query.Parameters.Size(), 5);
-    EXPECT_EQ(sql.find(request.query.value()), std::string::npos);
+    EXPECT_EQ(query.Parameters.Size(), 4);
+    EXPECT_EQ(sql.find(unsafe), std::string::npos);
     EXPECT_EQ(sql.find(kOrganization), std::string::npos);
     EXPECT_NE(sql.find("LIKE lower($2::TEXT)"), std::string::npos);
-    EXPECT_NE(sql.find("COALESCE(container_type_code, '') COLLATE \"C\" = ANY($3::TEXT[])"),
-        std::string::npos);
-    EXPECT_NE(sql.find("hazardous = $4::BOOLEAN"), std::string::npos);
+    EXPECT_NE(sql.find("hazardous = ANY($3::BOOLEAN[])"), std::string::npos);
+    EXPECT_NE(sql.find("FALSE"), std::string::npos);
 }
 
 UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {

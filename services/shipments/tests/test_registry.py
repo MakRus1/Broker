@@ -74,19 +74,20 @@ async def test_all_pages_preserve_order_and_ties(api, records, sort, descending)
 
 async def test_combined_filters_and_inclusive_range(api, records):
     body = {
-        'cargo_query': 'таль',
-        'customer_id': str(UUID(int=1000)),
-        'statuses': ['Новая'],
-        'date_from': '2026-01-01',
-        'date_to': '2026-01-03',
         'sort': 'shipment_date',
+        'filters': [
+            {'field': 'cargo_description', 'query': 'таль'},
+            {'field': 'customer_id', 'values': [str(UUID(int=1000))]},
+            {'field': 'status', 'values': ['Новая']},
+            {'field': 'shipment_date', 'date_from': '2026-01-01', 'date_to': '2026-01-03'},
+        ],
     }
     page = await api.post(PATH, body)
     expected = [
         r
         for r in records
         if r['cargo_description'] == 'Сталь'
-        and r['customer_id'] == body['customer_id']
+        and r['customer_id'] == str(UUID(int=1000))
         and date(2026, 1, 1) <= r['shipment_date'] <= date(2026, 1, 3)
     ]
     assert {r['id'] for r in page['items']} == {r['id'] for r in expected}
@@ -95,8 +96,8 @@ async def test_combined_filters_and_inclusive_range(api, records):
 @pytest.mark.parametrize(
     'patch',
     [
-        {'date_from': '2026-01-02'},
-        {'customer_id': str(UUID(int=1001))},
+        {'filters': [{'field': 'shipment_date', 'date_from': '2026-01-02'}]},
+        {'filters': [{'field': 'customer_id', 'values': [str(UUID(int=1001))]}]},
         {'sort': 'number'},
         {'descending': True},
     ],
@@ -116,8 +117,20 @@ async def test_cursor_date_cannot_be_replaced_by_text(api, records):
 
 
 async def test_date_range_validation(api, records):
-    await api.post(PATH, {'date_from': '2026-01-04', 'date_to': '2026-01-01'}, expected=400)
-    await api.post(PATH, {'date_from': '2026-02-29'}, expected=400)
+    await api.post(
+        PATH,
+        {
+            'filters': [
+                {'field': 'shipment_date', 'date_from': '2026-01-04', 'date_to': '2026-01-01'}
+            ]
+        },
+        expected=400,
+    )
+    await api.post(
+        PATH,
+        {'filters': [{'field': 'shipment_date', 'date_from': '2026-02-29'}]},
+        expected=400,
+    )
 
 
 async def test_organization_scope(api, records):
@@ -135,15 +148,39 @@ async def test_legacy_after_and_last_page(api, records):
 
 @pytest.mark.parametrize('query', ['%', '_', "' OR 1=1 --"])
 async def test_literal_search(api, records, query):
-    assert (await api.post(PATH, {'cargo_query': query}))['items'] == []
+    assert (
+        await api.post(PATH, {'filters': [{'field': 'cargo_description', 'query': query}]})
+    )['items'] == []
 
 
 async def test_number_and_cargo_are_independent(api, records):
-    assert (await api.post(PATH, {'number_query': 'Сталь'}))['items'] == []
-    assert (await api.post(PATH, {'cargo_query': 'S-'}))['items'] == []
-    matched = await api.post(PATH, {'number_query': 'S-00', 'cargo_query': 'Сталь'})
+    assert (await api.post(PATH, {'filters': [{'field': 'number', 'query': 'Сталь'}]}))[
+        'items'
+    ] == []
+    assert (
+        await api.post(PATH, {'filters': [{'field': 'cargo_description', 'query': 'S-'}]})
+    )['items'] == []
+    matched = await api.post(
+        PATH,
+        {
+            'filters': [
+                {'field': 'number', 'query': 'S-00'},
+                {'field': 'cargo_description', 'query': 'Сталь'},
+            ]
+        },
+    )
     assert [row['id'] for row in matched['items']] == [records[0]['id']]
-    assert (await api.post(PATH, {'number_query': 'S-00', 'cargo_query': 'Трубы'}))['items'] == []
+    assert (
+        await api.post(
+            PATH,
+            {
+                'filters': [
+                    {'field': 'number', 'query': 'S-00'},
+                    {'field': 'cargo_description', 'query': 'Трубы'},
+                ]
+            },
+        )
+    )['items'] == []
 
 
 @pytest.mark.parametrize('descending', [False, True])

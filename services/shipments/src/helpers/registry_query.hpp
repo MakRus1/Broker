@@ -43,18 +43,6 @@ inline registry::QueryBuilder BuildRegistryFilters(const models::ListShipmentsRe
     const auto order = registry::RegistryOrderBy(kFields, request.sort);
     registry::QueryBuilder query{sql::kListShipments, order, request.descending};
     query.WhereEqual(kOrganization, organization);
-    if (registry::UseLegacyFilter(request.filters, "number", exclude))
-        query.WhereContains(kNumber, request.number_query);
-    if (registry::UseLegacyFilter(request.filters, "cargo_description", exclude))
-        query.WhereContains(kCargo, request.cargo_query);
-    if (registry::UseLegacyFilter(request.filters, "customer_id", exclude))
-        query.WhereEqual(kCustomer, request.customer_id);
-    if (registry::UseLegacyFilter(request.filters, "status", exclude))
-        query.WhereAny(kStatus, request.statuses);
-    if (registry::UseLegacyFilter(request.filters, "shipment_date", exclude))
-        query.WhereAtLeast(kDate, request.date_from);
-    if (registry::UseLegacyFilter(request.filters, "shipment_date", exclude))
-        query.WhereAtMost(kDate, request.date_to);
     registry::ApplyFilters(query, kFields, request.filters, exclude);
     return query;
 }

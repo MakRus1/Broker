@@ -26,7 +26,7 @@ inline constexpr auto kHazardous =
         "(CASE WHEN hazardous THEN 'true' ELSE 'false' END) COLLATE \"C\"");
 inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
 inline constexpr registry::Field<std::string> kItem{"item_id", "item_id", "UUID"};
-inline constexpr std::array<registry::RegistryField, 7> kFields{{
+inline constexpr std::array<registry::RegistryField, 9> kFields{{
     {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
     {.Field = kNumber,
         .Label = "Номер контейнера",
@@ -43,6 +43,16 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValueSql = "shipment_id",
         .Sortable = false,
         .Lookup = "shipments"},
+    {.Field = kItem,
+        .Label = "Плановая позиция",
+        .ValueSql = "item_id",
+        .Sortable = false,
+        .Visible = false},
+    {.Field = kIncompleteContainer,
+        .Label = "Неполные данные контейнера",
+        .ValueSql = kIncompleteContainer.Expression,
+        .Sortable = false,
+        .Visible = false},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields
@@ -54,18 +64,6 @@ inline registry::QueryBuilder BuildRegistryFilters(
     registry::QueryBuilder query{sql::kListTransportations,
         registry::RegistryOrderBy(kFields, request.sort), request.descending};
     query.WhereEqual(kOrganization, organization);
-    if (registry::UseLegacyFilter(request.filters, "container_number", exclude))
-        query.WhereContains(kNumber, request.query);
-    if (registry::UseLegacyFilter(request.filters, "type", exclude))
-        query.WhereAny(kType, Convert(request.types));
-    if (registry::UseLegacyFilter(request.filters, "container_type", exclude))
-        query.WhereAny(kContainerType, request.container_types);
-    if (registry::UseLegacyFilter(request.filters, "hazardous", exclude))
-        query.WhereEqual(kHazardous, request.hazardous);
-    query.WhereEqual(kIncompleteContainer, request.incomplete_container);
-    if (registry::UseLegacyFilter(request.filters, "shipment_id", exclude))
-        query.WhereEqual(kShipment, request.shipment_id);
-    query.WhereEqual(kItem, request.item_id);
     registry::ApplyFilters(query, kFields, request.filters, exclude);
     return query;
 }

@@ -87,3 +87,11 @@ async def test_invalid_related_identifiers_do_not_reach_database(api, extra):
         expected=400,
     )
     assert result["error"] == "invalid_filter"
+
+
+@pytest.mark.parametrize('endpoint', ['list', 'filter-values'])
+async def test_removed_scalar_filter_is_rejected(api, endpoint):
+    body = {'query': 'MSCU'}
+    if endpoint == 'filter-values':
+        body = {'registry': body, 'field': 'container_number'}
+    await api.post(f'/api/v1/transportations/{endpoint}', body, expected=400)

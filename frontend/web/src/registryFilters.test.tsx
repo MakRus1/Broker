@@ -5,7 +5,6 @@ import {
   filterRequest,
   restoreColumnFilters,
   splitFilterValues,
-  withColumnFilters,
   replaceFilters,
 } from './registryFilters';
 import { restoreColumns } from './registryPreferences';
@@ -35,20 +34,21 @@ describe('фильтры заголовков реестра', () => {
     const query = {
       sort: 'number',
       descending: true,
-      number_query: 'old',
       filters: [
         { field: 'number', values: ['s-1'] },
         { field: 'status', values: ['Новая'] },
       ],
     };
-    const updated = withColumnFilters(
-      'shipments',
-      query,
-      replaceFilters(query.filters, ['number'], [{ field: 'number', values: ['s-2', 's-3'] }]),
-    );
+    const updated = {
+      ...query,
+      filters: replaceFilters(
+        query.filters,
+        ['number'],
+        [{ field: 'number', values: ['s-2', 's-3'] }],
+      ),
+    };
     expect(updated.sort).toBe('number');
     expect(updated.descending).toBe(true);
-    expect(updated.number_query).toBeUndefined();
     expect(updated.filters).toEqual([
       { field: 'status', values: ['Новая'] },
       { field: 'number', values: ['s-2', 's-3'] },

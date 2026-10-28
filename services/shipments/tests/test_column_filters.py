@@ -112,3 +112,11 @@ async def test_cursor_cannot_be_reused_with_another_filter(api, records):
         },
         expected=400,
     )
+
+
+@pytest.mark.parametrize('endpoint', ['list', 'filter-values'])
+async def test_removed_scalar_filter_is_rejected(api, endpoint):
+    body = {'number_query': 'S-'}
+    if endpoint == 'filter-values':
+        body = {'registry': body, 'field': 'number'}
+    await api.post(f'/api/v1/shipments/{endpoint}', body, expected=400)

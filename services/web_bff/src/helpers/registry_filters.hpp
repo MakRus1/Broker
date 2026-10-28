@@ -3,15 +3,6 @@
 #include <vector>
 
 namespace web_bff {
-template <typename Out, typename In> Out ConvertRegistryEnumValues(const In& values) {
-    if (!values.has_value())
-        return std::nullopt;
-    typename Out::value_type result;
-    for (const auto value : values.value())
-        result.push_back(ParseEnumScalar(EnumValue(value), typename Out::value_type::value_type{}));
-    return result;
-}
-
 template <typename Out, typename In>
 std::optional<std::vector<Out>> ConvertRegistryFilters(
     const std::optional<std::vector<In>>& filters) {

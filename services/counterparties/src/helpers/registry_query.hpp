@@ -17,16 +17,22 @@ inline constexpr registry::Field<std::string> kTaxId{
     "tax_id", "COALESCE(tax_id, '') COLLATE \"C\""};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
     "(CASE WHEN archived THEN '1' ELSE '0' END) COLLATE \"C\"");
-inline constexpr registry::Field<std::string> kSearch{"query",
+inline constexpr registry::Field<std::string> kSearch{"search",
     "lower(name || ' ' || COALESCE(legal_name, '') || ' ' || COALESCE(tax_id, '')) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kRoles{"roles", "roles"};
-inline constexpr std::array<registry::RegistryField, 6> kFields{{
+inline constexpr std::array<registry::RegistryField, 7> kFields{{
     {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
     {.Field = kName, .Label = "Наименование", .ValueSql = "name", .FoldValues = true},
     {.Field = kCountry, .Label = "Страна", .ValueSql = "COALESCE(country_code, '')"},
     {.Field = kTaxId, .Label = "Налоговый номер", .ValueSql = "COALESCE(tax_id, '')"},
     {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
     {.Field = kRoles, .Label = "Роли", .ValueSql = "roles", .Sortable = false, .Array = true},
+    {.Field = kSearch,
+        .Label = "Поиск контрагента",
+        .ValueSql = kSearch.Expression,
+        .Sortable = false,
+        .FoldValues = true,
+        .Visible = false},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields
@@ -37,19 +43,6 @@ inline registry::QueryBuilder BuildRegistryFilters(const models::ListCounterpart
     registry::QueryBuilder query{sql::kListCounterparties,
         registry::RegistryOrderBy(kFields, request.sort), request.descending};
     query.WhereEqual(kOrganization, organization);
-    if (registry::UseLegacyFilter(request.filters, "name", exclude))
-        query.WhereContains(kSearch, request.query);
-    std::optional<std::string> role;
-    if (request.role.has_value())
-        role = models::EnumValue(request.role.value());
-    query.WhereArrayContains(kRoles, role);
-    if ((registry::UseLegacyFilter(request.filters, "archived", exclude)) &&
-        request.status != models::ListCounterpartiesRequest_status::All)
-        query.WhereEqual(
-            kArchived, request.status == models::ListCounterpartiesRequest_status::Archived);
-    if (registry::UseLegacyFilter(request.filters, "country_code", exclude))
-        query.WhereEqual(kCountry, request.country_code);
-    query.WhereAny(kId, request.ids);
     registry::ApplyFilters(query, kFields, request.filters, exclude);
     return query;
 }

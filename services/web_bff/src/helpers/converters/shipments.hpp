@@ -186,18 +186,12 @@ inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(
 inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
     const models::shipments::ListShipmentsRequest& value) {
     return {.after = value.after,
-        .cargo_query = value.cargo_query,
         .cursor = Convert(value.cursor),
-        .customer_id = value.customer_id,
-        .date_from = value.date_from,
-        .date_to = value.date_to,
         .descending = value.descending,
         .filters =
             ConvertRegistryFilters<clients::shipments::models::RegistryFilter>(value.filters),
         .limit = value.limit,
-        .number_query = value.number_query,
-        .sort = value.sort,
-        .statuses = value.statuses};
+        .sort = value.sort};
 }
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
@@ -248,17 +242,11 @@ inline clients::shipments::models::ListShipmentsRequest ConvertRegistry(
     const auto body = Convert(value);
     clients::shipments::models::ListShipmentsRequest result;
     result.after = body.after;
-    result.cargo_query = body.cargo_query;
     result.cursor = body.cursor;
-    result.customer_id = body.customer_id;
-    result.date_from = body.date_from;
-    result.date_to = body.date_to;
     result.descending = body.descending;
     result.filters = body.filters;
     result.limit = body.limit;
-    result.number_query = body.number_query;
     result.sort = body.sort;
-    result.statuses = body.statuses;
     return result;
 }
 }  // namespace web_bff

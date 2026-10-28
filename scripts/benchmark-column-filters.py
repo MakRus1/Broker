@@ -224,6 +224,88 @@ def cases(service):
     ]
 
 
+def column_request(service, request):
+    """Та же нагрузка старых baseline-сценариев, выраженная новым контрактом.
+
+    Используется только бенчмарками для сравнения с сохранёнными старыми бинарниками.
+    Сервисы старые параметры не принимают.
+    """
+    mappings = {
+        "shipments": {
+            "number_query": ("number", "query"),
+            "cargo_query": ("cargo_description", "query"),
+            "customer_id": ("customer_id", "single"),
+            "statuses": ("status", "values"),
+        },
+        "transportations": {
+            "query": ("container_number", "query"),
+            "types": ("type", "values"),
+            "container_types": ("container_type", "values"),
+            "hazardous": ("hazardous", "boolean"),
+            "shipment_id": ("shipment_id", "single"),
+        },
+        "counterparties": {
+            "query": ("search", "query"),
+            "role": ("roles", "single"),
+            "country_code": ("country_code", "single"),
+        },
+    }
+    body = dict(request.get("request", request))
+    filters = []
+    for key, (field, kind) in mappings[service].items():
+        if key not in body:
+            continue
+        value = body.pop(key)
+        if kind == "single":
+            value, kind = [value], "values"
+        elif kind == "boolean":
+            value, kind = [str(value).lower()], "values"
+        filters.append({"field": field, kind: value})
+    if service == "shipments":
+        dates = {key: body.pop(key) for key in ["date_from", "date_to"] if key in body}
+        if dates:
+            filters.append({"field": "shipment_date", **dates})
+    if service == "counterparties":
+        status = body.pop("status", "active")
+        if status != "all" and not any(
+            value["field"] == "archived" for value in body.get("filters", [])
+        ):
+            filters.append(
+                {"field": "archived", "values": [str(status == "archived").lower()]}
+            )
+    filters.extend(body.get("filters", []))
+    if filters:
+        body["filters"] = filters
+    values = []
+    excluded = request.get("facet")
+    for value in filters:
+        if value["field"] == excluded:
+            continue
+        if "query" in value:
+            values.append("%" + value["query"].strip() + "%")
+        if value.get("values"):
+            values.append(value["values"])
+        for key in ["date_from", "date_to"]:
+            if key in value:
+                values.append(value[key])
+    if "facet" in request:
+        for key in ["query", "after"]:
+            if key in request:
+                values.append(
+                    "%" + request[key] + "%" if key == "query" else request[key]
+                )
+        return {**request, "request": body}, values
+    if "cursor" in body:
+        cursor = body["cursor"]
+        values.extend(
+            [
+                cursor.get("date_value", cursor.get("text_value", cursor.get("value"))),
+                cursor["id"],
+            ]
+        )
+    return body, values
+
+
 def literal(value, kind):
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -375,6 +457,8 @@ def main():
             for case, request, values, has_baseline in cases(args.service):
                 if label == "before" and not has_baseline:
                     continue
+                if label == "after":
+                    request, values = column_request(args.service, request)
                 statement = subprocess.run(
                     shlex.split(renderer),
                     input=json.dumps(request),

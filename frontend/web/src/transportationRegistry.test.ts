@@ -1,25 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { initialRegistryQuery, registryRequest } from './transportationRegistry';
-
 describe('запрос реестра перевозок', () => {
-  it('передаёт курсор и фильтры серверу, не вычисляет страницы во фронтенде', () => {
+  it('передаёт курсор и все условия через filters', () => {
     const cursor = { id: 'id', value: 'mscu', scope: 'scope' };
-    expect(
-      registryRequest(
-        { ...initialRegistryQuery, query: ' mscu ', hazardous: false, types: ['air'] },
-        cursor,
-      ),
-    ).toEqual({
+    const filters = [
+      { field: 'container_number', query: 'mscu' },
+      { field: 'hazardous', values: ['false'] },
+      { field: 'type', values: ['air'] },
+    ];
+    expect(registryRequest({ ...initialRegistryQuery, filters }, cursor)).toEqual({
       ...initialRegistryQuery,
-      query: 'mscu',
-      hazardous: false,
-      types: ['air'],
+      filters,
       cursor,
       limit: 50,
     });
   });
   it('новый запрос начинает с первой страницы', () => {
-    expect(registryRequest({ ...initialRegistryQuery, query: '  ' })).not.toHaveProperty('cursor');
-    expect(registryRequest({ ...initialRegistryQuery, query: '  ' }).query).toBeUndefined();
+    expect(registryRequest(initialRegistryQuery)).not.toHaveProperty('cursor');
   });
 });

@@ -1,7 +1,6 @@
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { restoreShipmentQuery, restoreTransportationQuery } from './registryQueryPreferences';
 import { useColumnFilters } from './RegistryColumnFilters';
-import { withColumnFilters } from './registryFilters';
 import {
   RegistryTable,
   RegistryColumnSettings,
@@ -231,7 +230,7 @@ export function App() {
     query: shipmentQuery,
     onChange: (filters) => {
       setShipmentCursor(undefined);
-      setShipmentQuery((old) => withColumnFilters('shipments', old, filters));
+      setShipmentQuery((old) => ({ ...old, filters }));
     },
     onSort: (sort, descending) => {
       setShipmentCursor(undefined);
@@ -244,7 +243,7 @@ export function App() {
     query: registryQuery,
     onChange: (filters) => {
       setRegistryCursor(undefined);
-      setRegistryQuery((old) => withColumnFilters('transportations', old, filters));
+      setRegistryQuery((old) => ({ ...old, filters }));
     },
     onSort: (sort, descending) => {
       setRegistryCursor(undefined);
@@ -350,7 +349,7 @@ export function App() {
       const page = await request<{ items: Counterparty[] }>(
         '/api/v1/counterparties/list',
         session!,
-        { status: 'all', limit: 100 },
+        { limit: 100 },
         controller.signal,
       );
       items.push(...page.items);
@@ -372,7 +371,7 @@ export function App() {
     void request<{ items: Counterparty[] }>(
       '/api/v1/counterparties/list',
       session,
-      { ids, status: 'all', limit: 100 },
+      { filters: [{ field: 'id', values: ids }], limit: 100 },
       controller.signal,
     )
       .then((result) => {

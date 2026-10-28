@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Изолированное измерение реестра: реальные миграции, синтетические данные, EXPLAIN."""
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -13,6 +14,11 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 ORG = '00000000-0000-0000-0000-000000000001'
+_BENCH_SPEC = importlib.util.spec_from_file_location(
+    'column_bench', ROOT / 'scripts/benchmark-column-filters.py')
+_COLUMN_BENCH = importlib.util.module_from_spec(_BENCH_SPEC)
+_BENCH_SPEC.loader.exec_module(_COLUMN_BENCH)
+
 
 
 def main():
@@ -101,6 +107,7 @@ def main():
         baseline = args.baseline.read_text() if args.baseline else None
 
         def render(request, parameters):
+            request, values = _COLUMN_BENCH.column_request('transportations', request)
             query = subprocess.run(
                 shlex.split(args.query_renderer),
                 input=json.dumps(request),
@@ -111,6 +118,8 @@ def main():
             bindings = {
                 int(index): kind for index, kind in re.findall(r'\$(\d+)::([A-Z]+(?:\[\])?)', query)
             }
+            parameters = ','.join(_COLUMN_BENCH.literal(value, bindings[index])
+                for index, value in enumerate([ORG, *values, 51], 1))
             types = ','.join(bindings[index] for index in range(1, len(bindings) + 1))
             return (
                 'PREPARE registry(' + types + ') AS ' + query.rstrip().rstrip(';') + ';',

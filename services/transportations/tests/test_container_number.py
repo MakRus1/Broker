@@ -22,14 +22,19 @@ async def test_container_number_roundtrip_and_clear(api, number):
     created = (await api.post('/api/v1/transportations/create', body))['transportation']
     assert created['container_number'] == number.strip()
     assert 'number' not in created
-    assert (await api.post('/api/v1/transportations/create', body))['transportation'] == created
-    loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))[
+    assert (await api.post('/api/v1/transportations/create', body))[
         'transportation'
-    ]
+    ] == created
+    loaded = (
+        await api.post('/api/v1/transportations/get', {'transportation_id': created['id']})
+    )['transportation']
     assert loaded == created
-    listed = (await api.post('/api/v1/transportations/list', {'shipment_id': body['shipment_id']}))[
-        'items'
-    ]
+    listed = (
+        await api.post(
+            '/api/v1/transportations/list',
+            {'filters': [{'field': 'shipment_id', 'values': [body['shipment_id']]}]},
+        )
+    )['items']
     assert listed == [created]
     cleared = (
         await api.post(

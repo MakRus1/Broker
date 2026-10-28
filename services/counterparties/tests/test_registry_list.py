@@ -46,7 +46,7 @@ def records(pgsql):
 @pytest.mark.parametrize('sort', ['id', 'name', 'country_code', 'tax_id', 'archived'])
 @pytest.mark.parametrize('descending', [False, True])
 async def test_cursor_paging_with_empty_requisites(api, records, sort, descending):
-    body = {'sort': sort, 'descending': descending, 'status': 'all', 'limit': 4}
+    body = {'sort': sort, 'descending': descending, 'limit': 4}
     found = []
     for _ in range(10):
         page = await api.post(PATH, body)
@@ -74,11 +74,13 @@ async def test_combined_filters(api, records):
     page = await api.post(
         PATH,
         {
-            'query': 'LPh',
-            'role': 'customer',
-            'status': 'active',
-            'country_code': 'RU',
             'sort': 'name',
+            'filters': [
+                {'field': 'search', 'query': 'LPh'},
+                {'field': 'roles', 'values': ['customer']},
+                {'field': 'archived', 'values': ['false']},
+                {'field': 'country_code', 'values': ['RU']},
+            ],
         },
     )
     expected = [
@@ -95,10 +97,10 @@ async def test_combined_filters(api, records):
 @pytest.mark.parametrize(
     'patch',
     [
-        {'query': 'alpha'},
-        {'role': 'carrier'},
-        {'status': 'archived'},
-        {'country_code': 'RU'},
+        {'filters': [{'field': 'search', 'query': 'alpha'}]},
+        {'filters': [{'field': 'roles', 'values': ['carrier']}]},
+        {'filters': [{'field': 'archived', 'values': ['true']}]},
+        {'filters': [{'field': 'country_code', 'values': ['RU']}]},
         {'sort': 'name'},
         {'descending': True},
     ],
@@ -115,18 +117,20 @@ async def test_scope_is_bound_to_organization(api, records):
 
 @pytest.mark.parametrize('query', ['%', '_', "' OR 1=1 --"])
 async def test_literal_search(api, records, query):
-    assert (await api.post(PATH, {'query': query, 'status': 'all'}))['items'] == []
+    assert (await api.post(PATH, {'filters': [{'field': 'search', 'query': query}]}))[
+        'items'
+    ] == []
 
 
 async def test_last_page_and_legacy_after(api, records):
-    first = await api.post(PATH, {'limit': 5, 'status': 'all'})
-    second = await api.post(PATH, {'limit': 5, 'status': 'all', 'after': first['items'][-1]['id']})
+    first = await api.post(PATH, {'limit': 5})
+    second = await api.post(PATH, {'limit': 5, 'after': first['items'][-1]['id']})
     assert [r['id'] for r in second['items']] == [r['id'] for r in records[5:10]]
-    assert not (await api.post(PATH, {'limit': len(records), 'status': 'all'})).get('next_cursor')
+    assert not (await api.post(PATH, {'limit': len(records)})).get('next_cursor')
 
 
 async def test_batch_ids_stays_in_organization(api, records):
     ids = [row['id'] for row in records[:3]]
-    page = await api.post(PATH, {'ids': ids, 'status': 'all'})
+    page = await api.post(PATH, {'filters': [{'field': 'id', 'values': ids}]})
     assert {row['id'] for row in page['items']} == set(ids)
     assert len(page['items']) == 3

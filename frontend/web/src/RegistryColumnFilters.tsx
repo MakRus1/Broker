@@ -5,7 +5,6 @@ import { counterpartyRoles } from './counterparties';
 import { DateInput } from './DateInput';
 import {
   filterRequest,
-  legacyColumnFilters,
   replaceFilters,
   splitFilterValues,
   type ColumnFilter,
@@ -73,7 +72,7 @@ export function useColumnFilters({
               limit: 40,
               ...(ids
                 ? { filters: [{ field: 'id', values: ids }] }
-                : { number_query: search || undefined }),
+                : { filters: search ? [{ field: 'number', query: search }] : undefined }),
               ...(cursor ? { cursor } : {}),
               sort: 'number',
             },
@@ -87,8 +86,11 @@ export function useColumnFilters({
           session ?? undefined,
           {
             limit: 100,
-            status: 'all',
-            ...(ids ? { ids } : { query: search || undefined }),
+            filters: ids
+              ? [{ field: 'id', values: ids }]
+              : search
+                ? [{ field: 'search', query: search }]
+                : undefined,
             ...(cursor ? { cursor } : {}),
             sort: 'name',
           },
@@ -144,7 +146,7 @@ export function useColumnFilters({
   );
   return {
     fields,
-    filters: legacyColumnFilters(registry, query as unknown as Record<string, unknown>),
+    filters: query.filters ?? [],
     sort: query.sort,
     descending: query.descending,
     failure,

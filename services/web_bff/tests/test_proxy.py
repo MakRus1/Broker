@@ -159,7 +159,12 @@ COUNTERPARTY = {
             {'deleted': True},
             200,
         ),
-        ('shipment-items/list', {'shipment_id': ID}, {'items': [ITEM], 'unplanned_items': []}, 200),
+        (
+            'shipment-items/list',
+            {'shipment_id': ID},
+            {'items': [ITEM], 'unplanned_items': []},
+            200,
+        ),
         (
             'shipment-items/update',
             {'item_id': ID, 'expected_revision': 1, 'planned_quantity': 5},
@@ -173,8 +178,18 @@ COUNTERPARTY = {
             202,
         ),
         ('transportation-operations/get', {'operation_id': ID}, {'operation': OPERATION}, 200),
-        ('transportations/get', {'transportation_id': ID}, {'transportation': TRANSPORTATION}, 200),
-        ('transportations/list', {'shipment_id': ID}, {'items': [TRANSPORTATION]}, 200),
+        (
+            'transportations/get',
+            {'transportation_id': ID},
+            {'transportation': TRANSPORTATION},
+            200,
+        ),
+        (
+            'transportations/list',
+            {'filters': [{'field': 'shipment_id', 'values': [ID]}]},
+            {'items': [TRANSPORTATION]},
+            200,
+        ),
     ],
 )
 async def test_typed_proxy(browser, mockserver, path, body, result, status):
@@ -232,8 +247,6 @@ async def test_converted_request_defaults(browser, mockserver, path, limit):
     @mockserver.json_handler('/api/v1/' + path + '/list')
     def upstream(request):
         expected = {'limit': limit, 'sort': 'id', 'descending': False}
-        if path == 'counterparties':
-            expected.update(query='', status='active')
         assert request.json == expected
         return {'items': []}
 
@@ -455,9 +468,18 @@ async def test_session_uses_profile_name(browser, oidc, claims, expected):
 async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):
     await browser.sign_in()
     cursor = {'id': ID, 'value': 'mscu1234567', 'scope': 'a' * 64}
-    body = {'limit': 10, 'query': '123', 'types': ['container', 'air'],
-            'container_types': ['40HC'], 'hazardous': False,
-            'sort': 'container_number', 'descending': True, 'cursor': cursor}
+    body = {
+        'limit': 10,
+        'sort': 'container_number',
+        'descending': True,
+        'cursor': cursor,
+        'filters': [
+            {'field': 'container_number', 'query': '123'},
+            {'field': 'type', 'values': ['container', 'air']},
+            {'field': 'container_type', 'values': ['40HC']},
+            {'field': 'hazardous', 'values': ['false']},
+        ],
+    }
 
     @mockserver.json_handler('/api/v1/transportations/list')
     def upstream(request):
@@ -475,26 +497,32 @@ async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):
         (
             'shipments',
             {
-                'number_query': 'S-',
-                'cargo_query': 'сталь',
-                'date_from': '2026-01-01',
-                'date_to': '2026-01-31',
-                'statuses': ['Новая'],
                 'sort': 'shipment_date',
                 'descending': True,
+                'filters': [
+                    {'field': 'number', 'query': 'S-'},
+                    {'field': 'cargo_description', 'query': 'сталь'},
+                    {'field': 'status', 'values': ['Новая']},
+                    {
+                        'field': 'shipment_date',
+                        'date_from': '2026-01-01',
+                        'date_to': '2026-01-31',
+                    },
+                ],
             },
             {'id': ID, 'scope': 'a' * 64, 'date_value': '2026-01-15'},
         ),
         (
             'counterparties',
             {
-                'ids': [ID],
-                'query': 'alpha',
-                'role': 'customer',
-                'country_code': 'RU',
                 'sort': 'name',
                 'descending': False,
-                'status': 'all',
+                'filters': [
+                    {'field': 'id', 'values': [ID]},
+                    {'field': 'search', 'query': 'alpha'},
+                    {'field': 'roles', 'values': ['customer']},
+                    {'field': 'country_code', 'values': ['RU']},
+                ],
             },
             {'id': ID, 'scope': 'a' * 64, 'value': 'alpha'},
         ),

@@ -293,7 +293,8 @@ def run(build):
                 raise RuntimeError('Не завершилась доставка операции')
         for receiver in receivers:
             result = post(
-                receiver, '/api/v1/transportations/list', {'shipment_id': shipment['id']}, token
+                receiver, '/api/v1/transportations/list',
+                {'filters': [{'field': 'shipment_id', 'values': [shipment['id']]}]}, token
             )
             assert len(result['items']) == 5
             assert len({value['id'] for value in result['items']}) == 5

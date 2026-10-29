@@ -117,26 +117,9 @@ components_manager:
                 /api/v1/route-locations/get-batch: shipments.read
                 /api/v1/route-locations/search: shipments.read
             permission-dependencies:
-                configs.write:
-                - configs.read
-                configs.approve:
-                - configs.read
-                counterparties.write:
-                - counterparties.read
-                - organizations.read_employees
-                counterparties.read_bank_accounts:
-                - counterparties.read
-                counterparties.write_bank_accounts:
-                - counterparties.read_bank_accounts
-                organizations.manage:
-                - organizations.read_employees
                 shipments.read:
                 - organizations.read_employees
                 - counterparties.read
-                shipments.write:
-                - shipments.read
-                transportations.write:
-                - transportations.read
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

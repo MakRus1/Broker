@@ -86,7 +86,7 @@ class ServicesTest(unittest.TestCase):
             'audience': 'secured-api',
             'roles-client': 'secured-api',
             'protected-prefix': '/api/',
-            'permissions': {path: 'hello.read' for path in document['paths']},
+            'permissions': {path: 'configs.read' for path in document['paths']},
         }
         manifest.write_text(yaml.safe_dump(spec, sort_keys=False))
         run(directory)
@@ -110,7 +110,7 @@ class ServicesTest(unittest.TestCase):
             if mutation == 'missing':
                 broken['auth']['permissions'].pop(next(iter(document['paths'])))
             elif mutation == 'unknown':
-                broken['auth']['permissions']['/api/unknown'] = 'hello.read'
+                broken['auth']['permissions']['/api/unknown'] = 'configs.read'
             elif mutation == 'no-auth':
                 del broken['auth']
             else:

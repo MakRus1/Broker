@@ -105,3 +105,47 @@ class PermissionCatalogTest(unittest.TestCase):
                 (directory / 'shipments.yaml').write_text(yaml.safe_dump(entries))
                 with self.assertRaises(ValueError):
                     catalog(root, yaml.SafeLoader)
+
+
+class ServicePermissionsTest(unittest.TestCase):
+    def test_only_owned_and_explicit_permissions_with_transitive_dependencies(self):
+        from openapi_gen.permissions import selected
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / 'schemas/permissions'
+            directory.mkdir(parents=True)
+            def right(requires=()):
+                return dict(name='Право', group='Группа', scope='organization', requires=list(requires))
+            (directory / 'provider.yaml').write_text(yaml.safe_dump({
+                'provider.read': right(),
+                'provider.write': right(['provider.read']),
+                'provider.manage': right(['provider.write']),
+                'provider.unused': right(),
+            }))
+            service = root / 'services/consumer'
+            service.mkdir(parents=True)
+            (service / 'service.yaml').write_text(yaml.safe_dump({
+                'auth': {'permissions': {'/read': 'authenticated', '/manage': 'provider.manage'}}
+            }))
+            before = selected(service, yaml.SafeLoader, root)
+            self.assertEqual(set(before), {'provider.read', 'provider.write', 'provider.manage'})
+            (directory / 'unrelated.yaml').write_text(yaml.safe_dump({'unrelated.read': right()}))
+            self.assertEqual(before, selected(service, yaml.SafeLoader, root))
+            (directory / 'consumer.yaml').write_text(yaml.safe_dump({'consumer.read': right()}))
+            self.assertIn('consumer.read', selected(service, yaml.SafeLoader, root))
+
+    def test_service_account_permissions_and_unknown_right(self):
+        from openapi_gen.permissions import selected
+
+        with tempfile.TemporaryDirectory() as temporary:
+            service = Path(temporary) / 'consumer'
+            service.mkdir()
+            manifest = service / 'service.yaml'
+            manifest.write_text(yaml.safe_dump({'service_accounts': {'worker': {
+                'permissions': ['transportations.create']
+            }}}))
+            self.assertIn('transportations.create', selected(service, yaml.SafeLoader))
+            manifest.write_text(yaml.safe_dump({'auth': {'permissions': {'/read': 'missing.read'}}}))
+            with self.assertRaisesRegex(ValueError, 'missing.read'):
+                selected(service, yaml.SafeLoader)

@@ -12,7 +12,7 @@ from configs import selected, readiness_rules
 from dashboards import render as render_dashboard
 from http_logging import policy as logging_policy
 from deployment import validate as validate_deployment
-from permissions import catalog as permission_catalog
+from permissions import selected as selected_permissions
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -195,7 +195,7 @@ def pgsql_local(service_source_dir, pgsql_local_create):
             'protected-prefix': auth['protected-prefix'], 'allow-http': '$auth-allow-http',
             'permissions': dict(sorted(auth['permissions'].items())),
         }
-        rights = permission_catalog(ROOT, loader)
+        rights = selected_permissions(service, loader)
         dependencies = {code: value['requires'] for code, value in rights.items() if value['requires']}
         if dependencies:
             components['platform-auth']['permission-dependencies'] = dependencies

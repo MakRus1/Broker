@@ -128,26 +128,10 @@ components_manager:
                 /admin/configs/history: configs.read
                 /admin/configs/list: configs.read
             permission-dependencies:
-                configs.write:
-                - configs.read
                 configs.approve:
                 - configs.read
-                counterparties.write:
-                - counterparties.read
-                - organizations.read_employees
-                counterparties.read_bank_accounts:
-                - counterparties.read
-                counterparties.write_bank_accounts:
-                - counterparties.read_bank_accounts
-                organizations.manage:
-                - organizations.read_employees
-                shipments.read:
-                - organizations.read_employees
-                - counterparties.read
-                shipments.write:
-                - shipments.read
-                transportations.write:
-                - transportations.read
+                configs.write:
+                - configs.read
             platform-url: $platform-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

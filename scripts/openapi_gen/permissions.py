@@ -46,16 +46,33 @@ def catalog(root, loader):
     return result
 
 
-def outputs(service, loader):
-    root = Path(__file__).resolve().parents[2]
-    values = catalog(root, loader)
-    if service.resolve().parent == (root / 'services').resolve():
-        import yaml
+def selected(service, loader, root=None):
+    """Права сервиса, явно используемые права и их транзитивные зависимости."""
+    import yaml
 
-        manifest = yaml.load((service / 'service.yaml').read_text(), Loader=loader)
-        for code in manifest.get('auth', {}).get('permissions', {}).values():
-            if code != 'authenticated' and code not in values:
-                raise ValueError(f'{service.name}: право {code} не объявлено в schemas/permissions')
+    root = root or Path(__file__).resolve().parents[2]
+    values = catalog(root, loader)
+    manifest_path = service / 'service.yaml'
+    manifest = yaml.load(manifest_path.read_text(), Loader=loader) if manifest_path.exists() else {}
+    codes = {code for code, value in values.items() if value['owner'] == service.name}
+    codes.update(manifest.get('auth', {}).get('permissions', {}).values())
+    for account in manifest.get('service_accounts', {}).values():
+        codes.update(account.get('permissions', []))
+    codes.discard('authenticated')
+    pending = list(codes)
+    while pending:
+        code = pending.pop()
+        if code not in values:
+            raise ValueError(f'{service.name}: право {code} не объявлено в schemas/permissions')
+        for dependency in values[code]['requires']:
+            if dependency not in codes:
+                codes.add(dependency)
+                pending.append(dependency)
+    return {code: values[code] for code in sorted(codes)}
+
+
+def outputs(service, loader):
+    values = selected(service, loader)
     names = set()
     lines = ['#pragma once', '#include <string_view>', 'namespace permissions {']
     for code in values:

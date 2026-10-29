@@ -30,6 +30,24 @@ def spec():
 
 
 class CodegenTest(unittest.TestCase):
+    def test_unrelated_permission_does_not_change_generated_header_or_lock(self):
+        from unittest.mock import patch
+        import generate
+        import permissions
+
+        service = ROOT / 'services/shipments'
+        operations = load(service)
+        before_header = permissions.outputs(service, generate.UniqueLoader)
+        before_lock = generate.digest(service, operations)
+        values = permissions.catalog(ROOT, generate.UniqueLoader)
+        values['unrelated.read'] = dict(
+            name='Чтение', group='Другой сервис', scope='organization',
+            requires=[], owner='unrelated',
+        )
+        with patch('permissions.catalog', return_value=values):
+            self.assertEqual(before_header, permissions.outputs(service, generate.UniqueLoader))
+            self.assertEqual(before_lock, generate.digest(service, operations))
+
     def test_distinct_paths_and_response_statuses(self):
         ops = parse_spec(spec())
         self.assertEqual([o.method for o in ops], ['GET', 'POST'])

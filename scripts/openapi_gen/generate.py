@@ -73,8 +73,7 @@ def configuration(service, ops, source=None):
 
 def digest(service, ops, additions=None):
     h = hashlib.sha256()
-    for path in sorted((Path(__file__).resolve().parents[2] / "schemas/permissions").glob("*.yaml")):
-        h.update(path.name.encode() + path.read_bytes())
+    h.update(json.dumps(permissions.selected(service, UniqueLoader), sort_keys=True).encode())
     for path in pg_types.inputs(service):
         h.update(path.relative_to(service).as_posix().encode() + b'\0' + path.read_bytes())
     for p, content in sorted(specification_files(service, additions).items()):

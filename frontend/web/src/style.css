@@ -3041,3 +3041,27 @@ details[open] > .route-stage-summary::after {
   max-height: 76px;
   overflow: auto;
 }
+
+.route-filter-groups {
+  padding: 12px 18px;
+  border-bottom: 1px solid #e8ecf2;
+}
+.route-filter-groups p {
+  font-size: 12px;
+  color: #6c7b91;
+  margin: 0 0 10px;
+}
+.route-filter-groups > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.route-filter-groups button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.route-filter-groups button[aria-pressed='true'] {
+  color: #285ccc;
+  background: #eef4ff;
+  border-color: #aac2ef;
+}

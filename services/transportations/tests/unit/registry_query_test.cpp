@@ -14,7 +14,7 @@ UTEST(RegistryQuery, MissingFiltersProduceOnlyOrganizationAndLimit) {
     const auto query = BuildRegistryQuery({}, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 2);
-    EXPECT_NE(sql.find("WHERE organization_id = $1::UUID"), std::string::npos);
+    EXPECT_NE(sql.find("WHERE transportations.organization_id = $1::UUID"), std::string::npos);
     EXPECT_NE(sql.find("ORDER BY id ASC\nLIMIT $2::INTEGER"), std::string::npos);
     EXPECT_EQ(sql.find("CASE"), std::string::npos);
     EXPECT_EQ(sql.find(" IS NULL"), std::string::npos);
@@ -46,12 +46,11 @@ UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
     const auto query = BuildRegistryQuery(request, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 4);
-    EXPECT_NE(
-        sql.find(
-            "(lower(COALESCE(container_number, '')) COLLATE public.registry_number_order, id) < "
-            "($2::TEXT, $3::UUID)"),
+    EXPECT_NE(sql.find("(lower(COALESCE(transportations.container_number, '')) COLLATE "
+                       "public.registry_number_order, id) < "
+                       "($2::TEXT, $3::UUID)"),
         std::string::npos);
-    EXPECT_NE(sql.find("ORDER BY lower(COALESCE(container_number, '')) COLLATE "
+    EXPECT_NE(sql.find("ORDER BY lower(COALESCE(transportations.container_number, '')) COLLATE "
                        "public.registry_number_order DESC, id DESC"),
         std::string::npos);
 }
@@ -154,6 +153,30 @@ UTEST(RegistryQuery, DateSortedAsTextUsesTextCursorProjection) {
     const auto sql = Statement(std::move(builder).Build(51));
     EXPECT_NE(sql.find("SELECT to_char(shipment_date, 'YYYY-MM'), NULL::DATE"), std::string::npos);
     EXPECT_NE(sql.find("($1::TEXT, $2::UUID)"), std::string::npos);
+}
+
+UTEST(RegistryQuery, RelatedCollectionReusesParametersAndNativeDates) {
+    using Date = userver::utils::datetime::Date;
+    constexpr registry::RegistryField eta{
+        .Field = registry::Field<Date>{"eta", "(segment.document #>> '{rail,eta}')::DATE", "DATE"},
+        .Label = "ETA",
+        .ValueSql = "(segment.document #>> '{rail,eta}')::DATE",
+        .Sortable = false};
+    const std::array fields{eta};
+    registry::QueryBuilder query{sql::kListTransportations,
+        registry::OrderBy(registry_fields::kSortableFields, "id"), false};
+    query.WhereEqual(registry_fields::kOrganization, kOrganization);
+    query.WhereExists(
+        pg::Query{"SELECT 1 FROM segments AS segment WHERE {where}"}, [&](auto& nested) {
+            registry::ApplyFilters(nested, fields,
+                std::optional{std::vector<models::RegistryFilter>{
+                    {.date_from = Date{2026, 10, 1}, .field = "eta"}}});
+        });
+    const auto result = std::move(query).Build(51);
+    EXPECT_EQ(result.Parameters.Size(), 3);
+    EXPECT_NE(Statement(result).find("EXISTS (SELECT 1 FROM segments AS segment WHERE "
+                                     "(segment.document #>> '{rail,eta}')::DATE >= $2::DATE)"),
+        std::string::npos);
 }
 
 }  // namespace

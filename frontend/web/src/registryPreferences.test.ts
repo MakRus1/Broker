@@ -142,3 +142,20 @@ it('вставляет столбцы до/после цели в обоих н�
   expect(placeColumn(columns, 'name', 'missing', 'before')).toBe(columns);
   expect(placeColumn(columns, 'name', 'tax', 'after')[2]).toBe(columns[0]);
 });
+
+it('сохраняет группы участков независимо от видимости столбцов и восстанавливает даты', () => {
+  const route_filters = [
+    {
+      filters: [
+        { field: 'mode', values: ['rail'] },
+        { field: 'eta', date_from: '2026-10-01' },
+      ],
+    },
+  ];
+  const restored = restoreTransportationQuery({ route_filters, sort: 'container_number' });
+  expect(restored.route_filters?.[0].filters[1].date_from).toBeInstanceOf(CalendarDate);
+  expect(restored.route_filters?.[0].filters[0].values).toEqual(['rail']);
+  expect(
+    restoreTransportationQuery({ route_filters: [{ filters: [] }] }).route_filters,
+  ).toBeUndefined();
+});

@@ -9,6 +9,7 @@ auth:
   roles-client: broker-logistics
   protected-prefix: /api/
   permissions:
+    /api/internal/v1/shipments/route-projection: transportations.create
     /api/internal/v1/transportations/ensure-created: transportations.create
     /api/v1/transportations/get: transportations.read
     /api/v1/transportations/list: transportations.read

@@ -237,8 +237,12 @@ export function TransportationTable({
   onSort,
   columns,
   filters,
+  routeFilter,
+  routeFilterSummary,
 }: {
+  routeFilterSummary?: ReactNode;
   filters?: ColumnFilterController;
+  routeFilter?: { active: boolean; expanded?: boolean; onOpen: (anchor: HTMLElement) => void };
   items: Transportation[];
   sort?: RegistrySort;
   descending?: boolean;
@@ -250,6 +254,8 @@ export function TransportationTable({
     <RegistryTable
       items={items}
       filters={filters}
+      customFilters={routeFilter ? { route: routeFilter } : undefined}
+      filterSummary={routeFilterSummary}
       columns={columns ?? fallback}
       definitions={transportationColumns}
       sort={sort}

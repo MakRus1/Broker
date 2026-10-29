@@ -100,7 +100,7 @@ struct BuiltQuery {
     pg::ParameterStore Parameters;
 };
 
-// Ограниченный построитель реестра: без JOIN и произвольных фрагментов запроса.
+// Построитель реестра: SQL-структура и связи задаются разработчиком, значения параметризованы.
 class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending,
@@ -205,6 +205,21 @@ class QueryBuilder {
                                        : (empty ? " IS NULL" : " IS NOT NULL"));
     }
 
+    // Условия связанной коллекции проверяются в одной строке, параметры общие с родителем.
+    template <typename Apply> void WhereExists(const pg::Query& relation, Apply apply) {
+        auto outer = std::move(conditions_);
+        conditions_.clear();
+        apply(*this);
+        const auto nested = std::move(conditions_);
+        conditions_ = std::move(outer);
+        std::string statement{relation.GetStatementView()};
+        const auto slot = statement.find("{where}");
+        if (slot == std::string::npos || statement.find("{where}", slot + 7) != std::string::npos)
+            throw std::logic_error{"В запросе связанной коллекции нужен один блок условий"};
+        statement.replace(slot, 7, nested.empty() ? "TRUE" : nested);
+        AddCondition("", "EXISTS (" + statement + ")");
+    }
+
     // Курсорная пагинация
 
     template <typename T> void After(const std::optional<std::string>& id, const T& key) {
@@ -228,12 +243,13 @@ class QueryBuilder {
 
     BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
         std::string_view join, const std::optional<std::string>& after, int limit,
-        std::string_view key_type = "TEXT") && {
+        std::string_view key_type = "TEXT", std::string_view value_source = {}) && {
         if (after.has_value())
             AddCondition(key, " > " + Bind(after.value(), key_type));
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(selection.GetStatementView()),
             fmt::arg("key", key), fmt::arg("label", label), fmt::arg("facet_join", join),
+            fmt::arg("value_source", value_source),
             fmt::arg("where", conditions_.empty() ? "TRUE" : conditions_),
             fmt::arg("limit", limit_parameter));
         return {pg::Query{std::move(statement), pg::Query::Name{"registry_filter_values"}},

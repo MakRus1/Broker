@@ -281,6 +281,11 @@ ListTransportationsRequest:
       maxItems: 32
       items:
         $ref: '#/RegistryFilter'
+    route_filters:
+      type: array
+      maxItems: 8
+      items:
+        $ref: '#/RouteFilterGroup'
   required: []
 EnsureCreatedRequest:
   type: object
@@ -801,3 +806,22 @@ RegistryValue:
       type: string
     label:
       type: string
+
+RouteFilterGroup:
+  type: object
+  additionalProperties: false
+  required: [filters]
+  properties:
+    filters:
+      type: array
+      minItems: 1
+      maxItems: 32
+      items:
+        $ref: '#/RegistryFilter'
+
+FilterValuesScope:
+  type: string
+  default: registry
+  enum:
+  - registry
+  - route

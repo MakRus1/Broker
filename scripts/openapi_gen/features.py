@@ -84,6 +84,11 @@ def prepare(service, loader):
     config_includes = '#include <platform/configs/components.hpp>\n#include <configs/keys.hpp>\n#include <platform/configs/runtime.hpp>\n#include <userver/dynamic_config/storage/component.hpp>\n#include <userver/dynamic_config/updater/component_list.hpp>\n' if config_enabled else ''
     client_includes = ''.join(f'#include <clients/{alias}/client.hpp>\n' for alias, _ in clients)
     pg, grpc = enabled['postgresql'], enabled['grpc']
+    outbox = 'outbox' in libraries
+    if outbox and not pg:
+        raise ValueError('service.yaml: библиотека outbox требует postgresql.enabled: true')
+    outbox_include = '#include <platform/outbox/component.hpp>\n' if outbox else ''
+    outbox_registration = '    component_list.Append<platform::outbox::Component>();\n' if outbox else ''
     files = {service / 'monitoring/grafana.json': render_dashboard(name, spec)}
     def edit(relative, blocks, prefix='//'):
         path = service / relative
@@ -93,8 +98,8 @@ def prepare(service, loader):
         files[path] = format_cpp(text) if path.suffix in {'.cpp', '.hpp'} else text
     main_path = 'src/main.cpp' if (service / 'src/main.cpp').exists() else 'main.cpp'
     edit(main_path, {
-        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
-        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
+        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + outbox_include + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
+        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + outbox_registration + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
     })
     edit('src/deps.hpp', {
         'DEPS_INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
@@ -130,6 +135,12 @@ target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_proto)
 endif()
 '''
     edit('CMakeLists.txt', {'CMAKE': cmake}, '#')
+    if outbox:
+        directory = service / 'postgresql/schemas/db_1'
+        if not list(directory.glob('V*__create_outbox.sql')):
+            versions = [int(path.name[1:5]) for path in directory.glob('V[0-9][0-9][0-9][0-9]__*.sql')]
+            version = max(versions, default=0) + 1
+            files[directory / f'V{version:04d}__create_outbox.sql'] = (ROOT / 'libs/outbox/postgresql/schema.sql').read_text()
     if pg:
         for directory in ('postgresql/schemas/db_1', 'postgresql/queries'):
             if not any((service / directory).glob('*.sql')):
@@ -159,6 +170,8 @@ def pgsql_local(service_source_dir, pgsql_local_create):
     if config_enabled:
         components['platform-config-delivery'] = {'load-enabled': '$config-updates-enabled'}
         components['platform-config-readiness'] = {'rules': policies}
+    if outbox:
+        components['platform-outbox'] = {**(yaml.load((service / 'configs/static_config.yaml').read_text(), Loader=loader)['components_manager']['components'].get('platform-outbox', {}) or {}), 'postgres-component': pg_component}
     if pg:
         components[pg_component] = {'dbconnection': '$pg-connection', 'dbconnection#env': 'DB_CONNECTION', 'blocking_task_processor': 'fs-task-processor', 'dns_resolver': 'async', 'sync-start': True, 'connlimit_mode': 'manual'}
     if grpc:

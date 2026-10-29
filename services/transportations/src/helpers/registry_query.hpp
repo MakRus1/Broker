@@ -1,5 +1,6 @@
 #pragma once
 #include <helpers/registry.hpp>
+#include <helpers/route_registry.hpp>
 #include <platform/registry_filters.hpp>
 
 namespace transportations::helpers {
@@ -8,57 +9,61 @@ namespace registry = platform::registry;
 namespace registry_fields {
 
 // SQL-поля: выражения фильтрации и, при необходимости, отдельный порядок сортировки.
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<std::string> kId{"id", "transportations.id", "UUID", true};
 
 inline constexpr registry::Field<std::string> kOrganization{
-    "organization_id", "organization_id", "UUID"};
+    "organization_id", "transportations.organization_id", "UUID"};
 
-inline constexpr auto kNumber =
-    registry::Field<std::string>{
-        "container_number", "lower(COALESCE(container_number, '')) COLLATE \"C\""}
-        .SortedAs("lower(COALESCE(container_number, '')) COLLATE public.registry_number_order");
+inline constexpr auto kNumber = registry::Field<std::string>{"container_number",
+    "lower(COALESCE(transportations.container_number, '')) COLLATE \"C\""}
+                                    .SortedAs("lower(COALESCE(transportations.container_number, "
+                                              "'')) COLLATE public.registry_number_order");
 
-inline constexpr registry::Field<std::string> kType{"type", "type COLLATE \"C\""};
+inline constexpr registry::Field<std::string> kType{"type", "transportations.type COLLATE \"C\""};
 
 inline constexpr registry::Field<std::string> kContainerType{
-    "container_type", "COALESCE(container_type_code, '') COLLATE \"C\""};
+    "container_type", "COALESCE(transportations.container_type_code, '') COLLATE \"C\""};
 
 inline constexpr registry::Field<std::string> kOwnership{
-    "container_ownership", "COALESCE(container_ownership, '') COLLATE \"C\""};
+    "container_ownership", "COALESCE(transportations.container_ownership, '') COLLATE \"C\""};
 
 inline constexpr registry::Field<bool> kIncompleteContainer{"incomplete_container",
-    "(type = 'container' AND (container_type_code IS NULL OR container_ownership IS NULL))",
+    "(transportations.type = 'container' AND (transportations.container_type_code IS NULL OR "
+    "transportations.container_ownership IS NULL))",
     "BOOLEAN"};
 
 inline constexpr auto kHazardous =
-    registry::Field<bool>{"hazardous", "hazardous", "BOOLEAN"}.SortedAs(
-        "(CASE WHEN hazardous THEN 'true' ELSE 'false' END) COLLATE \"C\"");
+    registry::Field<bool>{"hazardous", "transportations.hazardous", "BOOLEAN"}.SortedAs(
+        "(CASE WHEN transportations.hazardous THEN 'true' ELSE 'false' END) COLLATE \"C\"");
 
-inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
+inline constexpr registry::Field<std::string> kShipment{
+    "shipment_id", "transportations.shipment_id", "UUID"};
 
-inline constexpr registry::Field<std::string> kItem{"item_id", "item_id", "UUID"};
+inline constexpr registry::Field<std::string> kItem{"item_id", "transportations.item_id", "UUID"};
 
 // Каталог API: подписи, доступные операции и источники отображаемых значений.
 inline constexpr std::array<registry::RegistryField, 9> kFields{{
-    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
+    {.Field = kId, .Label = "Идентификатор", .ValueSql = "transportations.id", .Visible = false},
     {.Field = kNumber,
         .Label = "Номер контейнера",
-        .ValueSql = "container_number",
+        .ValueSql = "transportations.container_number",
         .FoldValues = true},
-    {.Field = kType, .Label = "Тип перевозки", .ValueSql = "type"},
+    {.Field = kType, .Label = "Тип перевозки", .ValueSql = "transportations.type"},
     {.Field = kContainerType,
         .Label = "Тип контейнера",
-        .ValueSql = "COALESCE(container_type_code, '')"},
-    {.Field = kOwnership, .Label = "Принадлежность", .ValueSql = "container_ownership"},
-    {.Field = kHazardous, .Label = "Опасный груз", .ValueSql = "hazardous"},
+        .ValueSql = "COALESCE(transportations.container_type_code, '')"},
+    {.Field = kOwnership,
+        .Label = "Принадлежность",
+        .ValueSql = "transportations.container_ownership"},
+    {.Field = kHazardous, .Label = "Опасный груз", .ValueSql = "transportations.hazardous"},
     {.Field = kShipment,
         .Label = "Поставка",
-        .ValueSql = "shipment_id",
+        .ValueSql = "transportations.shipment_id",
         .Sortable = false,
         .Lookup = "shipments"},
     {.Field = kItem,
         .Label = "Плановая позиция",
-        .ValueSql = "item_id",
+        .ValueSql = "transportations.item_id",
         .Sortable = false,
         .Visible = false},
     {.Field = kIncompleteContainer,
@@ -80,6 +85,7 @@ inline registry::QueryBuilder BuildRegistryFilters(
         registry::RegistryOrderBy(kFields, request.sort), request.descending};
     query.WhereEqual(kOrganization, organization);
     registry::ApplyFilters(query, kFields, request.filters, exclude);
+    route_registry::ApplyGroups(query, request.route_filters);
     return query;
 }
 

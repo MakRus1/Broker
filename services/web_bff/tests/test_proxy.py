@@ -556,3 +556,23 @@ async def test_registry_filters_and_metadata_are_proxied(browser,mockserver,serv
     response=await browser.post(path,{'registry':{'filters':[{'field':field,'values':['ABC2','ABC10']}]},'field':field,'candidates':['ABC2','ABC10']})
     assert response.status==200,response.text
     assert response.json()==result
+
+
+async def test_route_filter_groups_and_metadata(browser, mockserver):
+    await browser.sign_in()
+    groups=[{'filters':[{'field':'mode','values':['rail']},{'field':'destination_station','values':[ID]}]}]
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def listing(request):
+        assert request.json['route_filters']==groups
+        return {'items':[]}
+    response=await browser.post('/api/v1/transportations/list',{'route_filters':groups})
+    assert response.status==200
+    @mockserver.json_handler('/api/v1/transportations/filter-values')
+    def values(request):
+        assert request.json['registry']['route_filters']==groups
+        assert request.json['group']==0
+        assert request.json['scope']=='route'
+        return {'fields':[{'id':'destination_station','label':'Станция назначения','kind':'values','sortable':False,'case_insensitive':False,'lookup':'route_locations'}], 'values':[{'value':ID,'label':'Москва'}]}
+    response=await browser.post('/api/v1/transportations/filter-values',{'scope':'route','registry':{'route_filters':groups},'group':0,'field':'destination_station'})
+    assert response.status==200
+    assert response.json()['values']==[{'value':ID,'label':'Москва'}]

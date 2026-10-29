@@ -172,6 +172,39 @@ class ServicesTest(unittest.TestCase):
         run(directory)
         self.assertEqual(before, {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()})
 
+    def test_outbox_generates_component_and_one_immutable_migration(self):
+        directory = create_service.create('queued', postgres=True)
+        manifest = directory / 'service.yaml'
+        manifest.write_text('version: 1\nlibraries: [common, outbox]\npostgresql: {enabled: true, cluster: queued}\n')
+        run(directory)
+        migrations = list((directory / 'postgresql/schemas/db_1').glob('V*__create_outbox.sql'))
+        self.assertEqual(len(migrations), 1)
+        migration = migrations[0]
+        original = migration.read_bytes()
+        self.assertEqual(original, (self.root / 'libs/outbox/postgresql/schema.sql').read_bytes())
+        self.assertIn('platform::outbox::Component', (directory / 'src/main.cpp').read_text())
+        self.assertIn('postgres-component: postgres-queued', (directory / 'configs/static_config.yaml').read_text())
+        self.assertIn('broker_outbox', (directory / 'CMakeLists.txt').read_text())
+        static = directory / 'configs/static_config.yaml'
+        static.write_text(static.read_text().replace(
+            'postgres-component: postgres-queued',
+            'postgres-component: postgres-queued\n            max-concurrency: 6\n            topic-concurrency:\n                test.event: 3'))
+        # Обновление шаблона библиотеки не переписывает уже выпущенную миграцию.
+        template = self.root / 'libs/outbox/postgresql/schema.sql'
+        template.write_text(template.read_text() + '\n-- Следующая версия схемы.\n')
+        run(directory)
+        run(directory, check=True)
+        self.assertEqual(migration.read_bytes(), original)
+        self.assertIn('max-concurrency: 6', static.read_text())
+        self.assertIn('test.event: 3', static.read_text())
+        self.assertEqual(len(list(migration.parent.glob('V*__create_outbox.sql'))), 1)
+
+    def test_outbox_requires_postgresql(self):
+        directory = create_service.create('no_database')
+        (directory / 'service.yaml').write_text('version: 1\nlibraries: [common, outbox]\n')
+        with self.assertRaisesRegex(ValueError, 'outbox требует postgresql'):
+            run(directory)
+
     def test_manifest_validation_and_additional_library(self):
         directory = create_service.create('manifest')
         manifest = directory / 'service.yaml'

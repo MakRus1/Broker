@@ -8,17 +8,39 @@ Response View::Handle(
     try {
         const auto organization =
             platform::auth::GetOrganization(platform::auth::GetIdentity(context));
+        const bool route = request.body.scope == models::FilterValuesScope::Route;
         Response200 result;
-        result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
+        result.fields = registry::DescribeFields<models::RegistryField>(route
+                ? std::span<const registry::RegistryField>{route_registry::kFields}
+                : std::span<const registry::RegistryField>{registry_fields::kFields});
         if (!request.body.field.has_value())
             return result;
-        const auto query = BuildRegistryValues(request.body.registry, organization,
-            request.body.field.value(), request.body.query, request.body.after, request.body.limit,
-            request.body.candidates);
-        const auto rows =
-            deps.pg_cluster->Execute(
-                               pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
+        if (route && request.body.candidates.has_value())
+            throw registry::FilterError{"Для участка используйте поиск значений, а не candidates"};
+        if (route &&
+            request.body.group > static_cast<int>(request.body.registry.route_filters.has_value()
+                                         ? request.body.registry.route_filters.value().size()
+                                         : 0))
+            throw registry::FilterError{"Некорректный номер группы участка"};
+        if (!route && request.body.group != 0)
+            throw registry::FilterError{"Номер группы допустим только для участка"};
+        const auto query = route
+            ? route_registry::BuildValues(request.body.registry, organization,
+                  request.body.field.value(), request.body.group, request.body.query,
+                  request.body.after, request.body.limit,
+                  [&](auto& builder) {
+                      registry::ApplyFilters(
+                          builder, registry_fields::kFields, request.body.registry.filters);
+                  })
+            : BuildRegistryValues(request.body.registry, organization, request.body.field.value(),
+                  request.body.query, request.body.after, request.body.limit,
+                  request.body.candidates);
+        // Custom plan сохраняет селективность условий и вариантов связанной коллекции.
+        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+        transaction.Execute(sql::kRegistryPlan);
+        const auto rows = transaction.Execute(query.Statement, query.Parameters)
+                              .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
+        transaction.Commit();
         const bool more = rows.size() > static_cast<std::size_t>(request.body.limit);
         for (std::size_t index = 0;
              index < rows.size() && index < static_cast<std::size_t>(request.body.limit); ++index)

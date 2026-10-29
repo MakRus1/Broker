@@ -4,6 +4,7 @@
 #include <helpers/idempotency.hpp>
 #include <helpers/route_counterparties.hpp>
 #include <helpers/route_locations.hpp>
+#include <helpers/route_projection.hpp>
 #include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
@@ -64,6 +65,7 @@ Response View::Handle(
         SaveReplay(transaction, organization, "create_shipment", request.body, result);
         WriteAudit(transaction, organization, identity, "create_shipment", result.id, request.body,
             result);
+        QueueRouteProjection(transaction, organization, result);
         transaction.Commit();
         return Response201{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {

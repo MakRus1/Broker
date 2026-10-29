@@ -2,6 +2,7 @@ name: TRANSPORTATIONS_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/internal/v1/shipments/route-projection
 - /api/internal/v1/transportations/ensure-created
 - /api/v1/transportation-actuals/correct
 - /api/v1/transportation-actuals/record

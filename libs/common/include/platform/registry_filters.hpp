@@ -19,6 +19,7 @@ struct RegistryField {
     bool Array = false;
     bool Visible = true;
     std::string_view Lookup{};
+    std::string_view ValuesFrom{};
 
     std::string_view Kind() const {
         return Array                                  ? "set"
@@ -133,7 +134,7 @@ void ApplyFilters(QueryBuilder& builder, std::span<const RegistryField> fields,
 
 inline BuiltQuery BuildValues(QueryBuilder builder, const pg::Query& selection,
     const RegistryField& field, const std::optional<std::string>& search,
-    const std::optional<std::string>& after, int limit) {
+    const std::optional<std::string>& after, int limit, std::string_view value_source = {}) {
     if (field.Kind() == "date")
         throw FilterError{"Для даты используйте диапазон"};
     if (after.has_value())
@@ -150,8 +151,8 @@ inline BuiltQuery BuildValues(QueryBuilder builder, const pg::Query& selection,
         ? std::string{field.Field.Expression}
         : "lower(COALESCE((" + label + ")::TEXT, '')) COLLATE \"C\"";
     builder.WhereContains(Field<std::string>{"facet_query", search_expression}, search);
-    return std::move(builder).BuildValues(
-        selection, key, label, join, after, limit, field.Array ? "TEXT" : field.Field.PgType);
+    return std::move(builder).BuildValues(selection, key, label, join, after, limit,
+        field.Array ? "TEXT" : field.Field.PgType, value_source);
 }
 
 struct ValueRow {

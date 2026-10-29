@@ -264,18 +264,31 @@ inline clients::transportations::ApiV1TransportationsGet::RequestBody Convert(
 
 inline clients::transportations::ApiV1TransportationsList::RequestBody Convert(
     const models::transportations::ListTransportationsRequest& value) {
-    return {.after = value.after,
-        .cursor = value.cursor.has_value()
-            ? std::optional{clients::transportations::models::RegistryCursor{
-                  .id = value.cursor.value().id,
-                  .scope = value.cursor.value().scope,
-                  .value = value.cursor.value().value}}
-            : std::nullopt,
-        .descending = value.descending,
-        .filters =
-            ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(value.filters),
-        .limit = value.limit,
-        .sort = value.sort};
+    auto result =
+        clients::transportations::ApiV1TransportationsList::RequestBody{.after = value.after,
+            .cursor = value.cursor.has_value()
+                ? std::optional{clients::transportations::models::RegistryCursor{
+                      .id = value.cursor.value().id,
+                      .scope = value.cursor.value().scope,
+                      .value = value.cursor.value().value}}
+                : std::nullopt,
+            .descending = value.descending,
+            .filters = ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(
+                value.filters),
+            .limit = value.limit,
+            .sort = value.sort};
+    if (value.route_filters.has_value()) {
+        result.route_filters.emplace();
+        for (const auto& group : value.route_filters.value()) {
+            clients::transportations::models::RouteFilterGroup converted;
+            converted.filters =
+                ConvertRegistryFilters<clients::transportations::models::RegistryFilter>(
+                    std::optional{group.filters})
+                    .value();
+            result.route_filters.value().push_back(std::move(converted));
+        }
+    }
+    return result;
 }
 
 inline clients::transportations::models::TransportMode Convert(
@@ -438,6 +451,7 @@ inline clients::transportations::models::ListTransportationsRequest ConvertRegis
     result.cursor = body.cursor;
     result.descending = body.descending;
     result.filters = body.filters;
+    result.route_filters = body.route_filters;
     result.limit = body.limit;
     result.sort = body.sort;
     return result;

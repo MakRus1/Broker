@@ -126,7 +126,14 @@ export function RegistryTable<T extends { id: string }>({
   onSort,
   onOpen,
   filters,
+  customFilters,
+  filterSummary,
 }: {
+  filterSummary?: ReactNode;
+  customFilters?: Record<
+    string,
+    { active: boolean; expanded?: boolean; onOpen: (anchor: HTMLElement) => void }
+  >;
   filters?: ColumnFilterController;
   items: T[];
   columns: RegistryColumns;
@@ -225,6 +232,12 @@ export function RegistryTable<T extends { id: string }>({
         <RegistryFilterToolbar
           controller={filters}
           hidden={hidden}
+          extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => ({
+            id,
+            label: definitions.find((column) => column.id === id)?.label ?? id,
+            onOpen: value.onOpen,
+          }))}
+          children={filterSummary}
           onOpen={(fields, anchor) => setFilterEditor({ fields, anchor })}
         />
       )}
@@ -283,6 +296,7 @@ export function RegistryTable<T extends { id: string }>({
                     : (definition.filterFields ?? [definition.id]).filter((id) =>
                         filters?.fields.some((field) => field.id === id),
                       );
+                const customFilter = customFilters?.[column.id];
                 const sortField =
                   definition.sort ??
                   filters?.fields.find((field) => field.id === column.id && field.sortable)?.id;
@@ -335,20 +349,32 @@ export function RegistryTable<T extends { id: string }>({
                       ) : (
                         definition.label
                       )}
-                      {filters && filterFields.length > 0 && (
+                      {(customFilter || (filters && filterFields.length > 0)) && (
                         <button
                           type="button"
                           className="registry-filter-button"
                           data-active={
-                            filters.filters.some((filter) => filterFields.includes(filter.field)) ||
+                            customFilter?.active ||
+                            filters?.filters.some((filter) =>
+                              filterFields.includes(filter.field),
+                            ) ||
                             undefined
                           }
                           aria-label={`Фильтр «${definition.label}»`}
-                          aria-expanded={filterEditor?.anchor.dataset.columnFilter === column.id}
+                          aria-expanded={
+                            customFilter
+                              ? customFilter.expanded
+                              : filterEditor?.anchor.dataset.columnFilter === column.id
+                          }
                           data-column-filter={column.id}
                           onClick={(event) => {
                             event.stopPropagation();
-                            setFilterEditor({ fields: filterFields, anchor: event.currentTarget });
+                            if (customFilter) customFilter.onOpen(event.currentTarget);
+                            else
+                              setFilterEditor({
+                                fields: filterFields,
+                                anchor: event.currentTarget,
+                              });
                           }}
                         >
                           <svg

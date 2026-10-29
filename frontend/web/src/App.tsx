@@ -1,3 +1,4 @@
+import { useRouteRegistryFilters } from './RouteRegistryFilters';
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { restoreShipmentQuery, restoreTransportationQuery } from './registryQueryPreferences';
 import { useColumnFilters } from './RegistryColumnFilters';
@@ -236,6 +237,10 @@ export function App() {
       setShipmentCursor(undefined);
       setShipmentQuery((old) => ({ ...old, sort: sort as ShipmentSort, descending }));
     },
+  });
+  const routeFilters = useRouteRegistryFilters(session, registryQuery, (route_filters) => {
+    setRegistryCursor(undefined);
+    setRegistryQuery((old) => ({ ...old, route_filters }));
   });
   const transportationFilters = useColumnFilters({
     registry: 'transportations',
@@ -591,21 +596,26 @@ export function App() {
                   }}
                 />
               ) : (
-                <TransportationTable
-                  items={transportations}
-                  filters={transportationFilters}
-                  columns={transportationColumnState}
-                  sort={registryQuery.sort}
-                  descending={registryQuery.descending}
-                  onSort={(sort: RegistrySort) => {
-                    setRegistryCursor(undefined);
-                    setRegistryQuery((old) => ({
-                      ...old,
-                      sort,
-                      descending: old.sort === sort ? !old.descending : false,
-                    }));
-                  }}
-                />
+                <>
+                  {routeFilters.editor}
+                  <TransportationTable
+                    routeFilter={routeFilters.button}
+                    routeFilterSummary={routeFilters.toolbar}
+                    items={transportations}
+                    filters={transportationFilters}
+                    columns={transportationColumnState}
+                    sort={registryQuery.sort}
+                    descending={registryQuery.descending}
+                    onSort={(sort: RegistrySort) => {
+                      setRegistryCursor(undefined);
+                      setRegistryQuery((old) => ({
+                        ...old,
+                        sort,
+                        descending: old.sort === sort ? !old.descending : false,
+                      }));
+                    }}
+                  />
+                </>
               )}
               {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
                 <div className="empty">

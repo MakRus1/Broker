@@ -20,9 +20,16 @@ export function restoreShipmentQuery(raw: unknown): ShipmentRegistryQuery {
       typeof value.descending === 'boolean' ? value.descending : initialShipmentQuery.descending,
   };
 }
+function restoreRouteFilters(raw: unknown) {
+  if (!Array.isArray(raw) || raw.length > 8) return undefined;
+  const groups = raw.map((value) => ({ filters: restoreColumnFilters(value?.filters) }));
+  if (groups.some((value) => !value.filters?.length)) return undefined;
+  return groups as import('./transportationRegistry').RouteFilterGroup[];
+}
 export function restoreTransportationQuery(raw: unknown): RegistryQuery {
   const value = object(raw);
   return {
+    route_filters: restoreRouteFilters(value.route_filters),
     filters: restoreColumnFilters(value.filters),
     sort: text(value.sort, 64) ?? initialRegistryQuery.sort,
     descending:

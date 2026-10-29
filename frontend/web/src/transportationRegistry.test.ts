@@ -19,3 +19,12 @@ describe('запрос реестра перевозок', () => {
     expect(registryRequest(initialRegistryQuery)).not.toHaveProperty('cursor');
   });
 });
+
+it('передаёт группы участков без UI-подписей', () => {
+  const route_filters = [
+    { filters: [{ field: 'destination_station', values: ['uuid'], labels: { uuid: 'Москва' } }] },
+  ];
+  expect(registryRequest({ ...initialRegistryQuery, route_filters }).route_filters).toEqual([
+    { filters: [{ field: 'destination_station', values: ['uuid'] }] },
+  ]);
+});

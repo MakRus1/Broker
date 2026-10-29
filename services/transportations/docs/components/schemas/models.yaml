@@ -281,6 +281,11 @@ ListTransportationsRequest:
       maxItems: 32
       items:
         $ref: '#/RegistryFilter'
+    route_filters:
+      type: array
+      maxItems: 8
+      items:
+        $ref: '#/RouteFilterGroup'
   required: []
 EnsureCreatedRequest:
   type: object
@@ -884,3 +889,50 @@ RegistryValue:
       type: string
     label:
       type: string
+
+RouteFilterGroup:
+  type: object
+  additionalProperties: false
+  required: [filters]
+  properties:
+    filters:
+      type: array
+      minItems: 1
+      maxItems: 32
+      items:
+        $ref: '#/RegistryFilter'
+
+ShipmentRouteProjection:
+  type: object
+  additionalProperties: false
+  required: [organization_id, shipment_id, revision, route_segments]
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    shipment_id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+    route_segments:
+      type: array
+      maxItems: 64
+      items:
+        $ref: '#/ProjectedRouteSegment'
+ProjectedRouteSegment:
+  type: object
+  additionalProperties: false
+  required: [id, type]
+  properties:
+    id:
+      type: string
+      format: uuid
+    type:
+      type: string
+    sea:
+      $ref: '#/SeaDetails'
+    air:
+      $ref: '#/AirDetails'

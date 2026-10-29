@@ -15,9 +15,11 @@ class TransportationDispatcher final : public userver::components::ComponentBase
 
   private:
     void Step();
+    bool DeliverRouteProjection();
     Deps deps_;
     platform::auth::ServiceTokenProvider& tokens_;
     userver::utils::PeriodicTask task_;
+    userver::utils::PeriodicTask route_task_;
 };
 }  // namespace shipments
 

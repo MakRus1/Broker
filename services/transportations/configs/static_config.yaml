@@ -7,6 +7,12 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-internal-v1-shipments-route_projection:
+            path: /api/internal/v1/shipments/route-projection
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-internal-v1-transportations-ensure_created:
             path: /api/internal/v1/transportations/ensure-created
             method: POST
@@ -73,6 +79,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-transportations-route_filter_values:
+            path: /api/v1/transportations/route-filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-transportations-update:
             path: /api/v1/transportations/update
             method: POST
@@ -111,6 +123,7 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/internal/v1/shipments/route-projection: transportations.create
                 /api/internal/v1/transportations/ensure-created: transportations.create
                 /api/v1/transportation-actuals/correct: transportations.write
                 /api/v1/transportation-actuals/record: transportations.write
@@ -122,6 +135,7 @@ components_manager:
                 /api/v1/transportations/get: transportations.read
                 /api/v1/transportations/history: transportations.read
                 /api/v1/transportations/list: transportations.read
+                /api/v1/transportations/route-filter-values: transportations.read
                 /api/v1/transportations/update: transportations.write
             permission-dependencies:
                 configs.write:

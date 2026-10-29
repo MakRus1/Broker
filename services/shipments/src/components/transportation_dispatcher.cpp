@@ -19,10 +19,16 @@ TransportationDispatcher::TransportationDispatcher(
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context), deps_(ResolveDeps(context)),
       tokens_(context.FindComponent<platform::auth::ServiceTokenProvider>()) {
+    route_task_.Start("route-projection-dispatcher", std::chrono::milliseconds{100}, [this] {
+        // Ограниченная пачка без искусственной паузы между записями backfill.
+        for (int count = 0; count < 50 && DeliverRouteProjection(); ++count) {
+        }
+    });
     task_.Start("transportation-dispatcher", std::chrono::seconds{1}, [this] { Step(); });
 }
 
 TransportationDispatcher::~TransportationDispatcher() {
+    route_task_.Stop();
     task_.Stop();
 }
 
@@ -66,6 +72,41 @@ void TransportationDispatcher::Step() {
         deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kRetryOperation,
             delivery.Organization, delivery.Id, delivery.Lease);
     }
+}
+
+bool TransportationDispatcher::DeliverRouteProjection() {
+    struct Delivery {
+        std::string Organization;
+        std::string Shipment;
+        std::int64_t Revision;
+        json::Value Segments;
+        std::string Lease;
+    };
+
+    const auto rows =
+        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kClaimRouteProjection);
+    if (rows.IsEmpty())
+        return false;
+    const auto delivery = rows.AsSingleRow<Delivery>(pg::kRowTag);
+    try {
+        namespace api = clients::transportations::ApiInternalV1ShipmentsRouteProjection;
+        json::ValueBuilder body;
+        body["organization_id"] = delivery.Organization;
+        body["shipment_id"] = delivery.Shipment;
+        body["revision"] = delivery.Revision;
+        body["route_segments"] = delivery.Segments;
+        deps_.transportations.ApiInternalV1ShipmentsRouteProjection(
+            api::Request{.body = api::ParseBody(body.ExtractValue())}, tokens_.GetAccessToken());
+        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kCompleteRouteProjection,
+            delivery.Organization, delivery.Shipment, delivery.Lease);
+    } catch (const platform::http::CancelledError&) {
+        throw;
+    } catch (const std::exception& error) {
+        LOG_WARNING() << "Route projection delivery deferred: " << error.what();
+        deps_.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kRetryRouteProjection,
+            delivery.Organization, delivery.Shipment, delivery.Lease);
+    }
+    return true;
 }
 
 userver::yaml_config::Schema TransportationDispatcher::GetStaticConfigSchema() {

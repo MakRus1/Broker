@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { request, transportationTypes, type Session } from './api';
+import { request, transportationTypes, modes, type Session } from './api';
 import { counterpartyRoles } from './counterparties';
 import { DateInput } from './DateInput';
 import {
@@ -18,6 +18,7 @@ export interface ColumnFilterController {
   sort: string;
   descending: boolean;
   failure: string;
+  scope?: (field: RegistryField) => string;
   change: (filters: ColumnFilter[]) => void;
   order: (field: string, descending: boolean) => void;
   values: (
@@ -161,6 +162,7 @@ function valueLabel(field: RegistryField, value: string, label?: string) {
   if (field.kind === 'boolean') return value === 'true' ? 'Да' : 'Нет';
   if (field.id === 'type')
     return transportationTypes[value as keyof typeof transportationTypes] ?? label ?? value;
+  if (field.id === 'mode') return modes[value as keyof typeof modes] ?? label ?? value;
   if (field.id === 'roles')
     return counterpartyRoles[value as keyof typeof counterpartyRoles] ?? label ?? value;
   return label || value;
@@ -184,7 +186,11 @@ export function RegistryFilterToolbar({
   controller,
   onOpen,
   hidden,
+  extraEntries = [],
+  children,
 }: {
+  extraEntries?: { id: string; label: string; onOpen: (anchor: HTMLElement) => void }[];
+  children?: ReactNode;
   controller: ColumnFilterController;
   onOpen: (fields: string[], anchor: HTMLElement) => void;
   hidden: Set<string>;
@@ -198,6 +204,20 @@ export function RegistryFilterToolbar({
         </button>
         {picker && (
           <div className="registry-field-picker">
+            {extraEntries.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={(event) => {
+                  setPicker(false);
+                  entry.onOpen(
+                    event.currentTarget.parentElement!.parentElement!.querySelector('button')!,
+                  );
+                }}
+              >
+                {entry.label}
+              </button>
+            ))}
             {controller.fields.map((field) => (
               <button
                 key={field.id}
@@ -244,6 +264,7 @@ export function RegistryFilterToolbar({
           </button>
         </div>
       ))}
+      {children}
       {controller.fields.some((field) => field.id === controller.sort) && (
         <span className="registry-sort-summary">
           Порядок: {controller.fields.find((field) => field.id === controller.sort)?.label}{' '}
@@ -269,11 +290,17 @@ export function RegistryFilterEditor({
   fields,
   anchor,
   onClose,
+  header,
+  onDraftChange,
+  titleOverride,
 }: {
   controller: ColumnFilterController;
   fields: string[];
   anchor: HTMLElement;
   onClose: () => void;
+  header?: ReactNode;
+  onDraftChange?: (filters: ColumnFilter[]) => void;
+  titleOverride?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const title = useId();
@@ -321,7 +348,9 @@ export function RegistryFilterEditor({
       }}
     >
       <div className="registry-filter-title">
-        <h2 id={title}>{selected.length === 1 ? selected[0].label : 'Фильтры столбца'}</h2>
+        <h2 id={title}>
+          {titleOverride ?? (selected.length === 1 ? selected[0].label : 'Фильтры столбца')}
+        </h2>
         <button type="button" aria-label="Закрыть фильтр" onClick={onClose}>
           ×
         </button>
@@ -361,6 +390,7 @@ export function RegistryFilterEditor({
           onClose();
         }}
       >
+        {header}
         <div className="registry-filter-scroll">
           {selected.map((field, index) => (
             <FilterSection
@@ -370,9 +400,11 @@ export function RegistryFilterEditor({
               controller={controller}
               field={field}
               value={draft.find((filter) => filter.field === field.id)}
-              onChange={(value) =>
-                setDraft((old) => replaceFilters(old, [field.id], value ? [value] : []))
-              }
+              onChange={(value) => {
+                const next = replaceFilters(draft, [field.id], value ? [value] : []);
+                setDraft(next);
+                onDraftChange?.(next);
+              }}
             />
           ))}
         </div>
@@ -382,7 +414,13 @@ export function RegistryFilterEditor({
           </p>
         )}
         <div className="registry-filter-actions">
-          <button type="button" onClick={() => setDraft([])}>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft([]);
+              onDraftChange?.([]);
+            }}
+          >
             Очистить
           </button>
           <button className="primary" type="submit">
@@ -460,6 +498,7 @@ function FieldEditor({
   const [failure, setFailure] = useState('');
   const [paste, setPaste] = useState('');
   const [labels, setLabels] = useState<Record<string, string>>(value?.labels ?? {});
+  const valuesScope = controller.scope?.(field);
   useEffect(() => {
     if (field.kind === 'date' || field.kind === 'boolean' || mode !== 'values') return;
     const controllerAbort = new AbortController();
@@ -468,7 +507,7 @@ function FieldEditor({
       clearTimeout(timer);
       controllerAbort.abort();
     };
-  }, [search, field.id, mode]);
+  }, [search, field.id, mode, valuesScope]);
   async function load(after?: string, signal?: AbortSignal) {
     setBusy(true);
     setFailure('');

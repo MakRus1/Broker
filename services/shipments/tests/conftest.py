@@ -220,3 +220,11 @@ def container_facts(mockserver):
     def facts(request):
         return state
     return state
+
+
+@pytest.fixture(autouse=True)
+def route_projection_receiver(mockserver):
+    @mockserver.json_handler('/api/internal/v1/shipments/route-projection')
+    def receive(request):
+        return {'applied': True}
+    return receive

@@ -288,6 +288,15 @@ def column_request(service, request):
         for key in ["date_from", "date_to"]:
             if key in value:
                 values.append(value[key])
+    for group in body.get("route_filters", []):
+        for condition in group["filters"]:
+            if condition.get("values"):
+                values.append(condition["values"])
+            if "query" in condition:
+                values.append("%" + condition["query"].strip() + "%")
+            for key in ["date_from", "date_to"]:
+                if key in condition:
+                    values.append(condition[key])
     if "facet" in request:
         for key in ["query", "after"]:
             if key in request:
@@ -335,6 +344,11 @@ def main():
     parser.add_argument("--query-renderer", required=True)
     parser.add_argument("--baseline-renderer")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--route",
+        action="store_true",
+        help="Добавить участки и сценарии групп маршрута",
+    )
     args = parser.parse_args()
     args.rows = args.rows or (1000000 if args.service == "transportations" else 100000)
     if not 1000 <= args.rows <= 5000000 or not 5 <= args.repetitions <= 100:
@@ -380,6 +394,8 @@ def main():
             "2",
             "--memory",
             "2g",
+            "--shm-size",
+            "512m",
             "-e",
             "POSTGRES_HOST_AUTH_METHOD=trust",
             "postgres:16.14-alpine",
@@ -428,6 +444,17 @@ def main():
             spec.loader.exec_module(module)
             seed = module.workload(args.service, args.rows)[0]
         sql(seed + f"\nVACUUM ANALYZE {args.service};")
+        route_workload = None
+        if args.route:
+            if args.service != "transportations":
+                raise ValueError("--route доступен для transportations")
+            spec = importlib.util.spec_from_file_location(
+                "route_bench", ROOT / "scripts/benchmark-route-filters.py"
+            )
+            route_workload = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(route_workload)
+            sql(route_workload.seed(args.rows))
+
         report = {
             "service": args.service,
             "rows": args.rows,
@@ -440,6 +467,7 @@ def main():
             "limits": {
                 "cpus": 2,
                 "memory_bytes": 2147483648,
+                "shared_memory_bytes": 536870912,
                 "shared_buffers": "256MB",
                 "work_mem": "16MB",
             },
@@ -454,7 +482,10 @@ def main():
             if not renderer:
                 continue
             report["cases"][label] = {}
-            for case, request, values, has_baseline in cases(args.service):
+            scenarios = (
+                route_workload.cases() if route_workload else cases(args.service)
+            )
+            for case, request, values, has_baseline in scenarios:
                 if label == "before" and not has_baseline:
                     continue
                 if label == "after":

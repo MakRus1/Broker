@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { request, transportationTypes, modes, type Session } from './api';
 import { counterpartyRoles } from './counterparties';
@@ -308,29 +316,44 @@ export function RegistryFilterEditor({
     controller.filters.filter((filter) => fields.includes(filter.field)),
   );
   const [failure, setFailure] = useState('');
+  const close = useEffectEvent(onClose);
   useEffect(() => {
     const node = ref.current!;
     node.showPopover();
+    const rect = anchor.getBoundingClientRect();
+    const popup = node.getBoundingClientRect();
+    // Привязываемся к заголовку только при открытии. Изменение содержимого
+    // и прокрутка страницы не должны переносить редактируемое окно.
+    const initialLeft = rect.left;
+    const initialTop = Math.max(
+      12,
+      Math.min(rect.bottom + 8, window.innerHeight - popup.height - 12),
+    );
     function position() {
-      const rect = anchor.getBoundingClientRect();
-      const popup = node.getBoundingClientRect();
-      node.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - popup.width - 12))}px`;
-      node.style.top = `${Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - popup.height - 12))}px`;
+      const bounds = node.getBoundingClientRect();
+      const top = Math.max(12, Math.min(initialTop, window.innerHeight - bounds.height - 12));
+      node.style.left = `${Math.max(12, Math.min(initialLeft, window.innerWidth - bounds.width - 12))}px`;
+      node.style.top = `${top}px`;
+      node.style.maxHeight = `calc(100dvh - ${top + 12}px)`;
     }
     position();
     window.addEventListener('resize', position);
-    const resize = new ResizeObserver(position);
-    resize.observe(node);
     function outside(event: PointerEvent) {
-      if (!node.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose();
+      if (!node.contains(event.target as Node) && !anchor.contains(event.target as Node)) close();
     }
+    function scroll(event: Event) {
+      // Прокрутка списка значений не закрывает окно; прокрутка таблицы — закрывает.
+      if (event.target instanceof Node && node.contains(event.target)) return;
+      close();
+    }
+    document.addEventListener('scroll', scroll, true);
     document.addEventListener('pointerdown', outside);
     return () => {
+      document.removeEventListener('scroll', scroll, true);
       document.removeEventListener('pointerdown', outside);
       window.removeEventListener('resize', position);
-      resize.disconnect();
     };
-  }, [anchor, onClose]);
+  }, [anchor]);
   const selected = controller.fields.filter((field) => fields.includes(field.id));
   return createPortal(
     <div

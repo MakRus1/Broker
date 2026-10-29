@@ -2797,6 +2797,7 @@ details[open] > .route-stage-summary::after {
 }
 .registry-filter-popover {
   position: fixed;
+  overflow: hidden;
   inset: auto;
   margin: 0;
   padding: 0;
@@ -2840,6 +2841,7 @@ details[open] > .route-stage-summary::after {
   color: #708098;
 }
 .registry-filter-scroll {
+  overscroll-behavior: contain;
   min-height: 0;
   max-height: min(62vh, 490px);
   overflow: auto;
@@ -2896,6 +2898,7 @@ details[open] > .route-stage-summary::after {
   background: #f0f5ff;
 }
 .registry-value-options {
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 3px;

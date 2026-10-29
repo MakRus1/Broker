@@ -320,6 +320,13 @@ export function RegistryFilterEditor({
   useEffect(() => {
     const node = ref.current!;
     node.showPopover();
+    // Пока выбирают фильтр, таблица и его заголовок остаются на месте.
+    // Прокрутка содержимого самого окна при этом доступна.
+    const page = document.documentElement;
+    const previousOverflow = page.style.overflow;
+    const previousGutter = page.style.scrollbarGutter;
+    page.style.scrollbarGutter = 'stable';
+    page.style.overflow = 'hidden';
     const rect = anchor.getBoundingClientRect();
     const popup = node.getBoundingClientRect();
     // Привязываемся к заголовку только при открытии. Изменение содержимого
@@ -343,6 +350,8 @@ export function RegistryFilterEditor({
     }
     document.addEventListener('pointerdown', outside);
     return () => {
+      page.style.overflow = previousOverflow;
+      page.style.scrollbarGutter = previousGutter;
       document.removeEventListener('pointerdown', outside);
       window.removeEventListener('resize', position);
     };

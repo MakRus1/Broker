@@ -122,7 +122,7 @@ def counterparties(mockserver):
     @mockserver.json_handler('/api/v1/counterparties/get')
     def get(request):
         return {'counterparty': {'id': request.json['id'], 'name': 'Перевозчик', 'revision': 1,
-            'archived': False, 'legal_name': None, 'country_code': None, 'tax_id': None,
+            'archived': False, 'own_company': False, 'legal_name': None, 'country_code': None, 'tax_id': None,
             'registration_id': None, 'legal_address': None, 'roles': ['carrier'], 'contacts': [], 'logist': None}}
 
 

@@ -328,6 +328,7 @@ async def test_customer_logist_can_be_overridden_or_cleared(api, mockserver):
                 'name': 'Клиент',
                 'revision': 1,
                 'archived': False,
+                'own_company': False,
                 'legal_name': None,
                 'country_code': None,
                 'tax_id': None,

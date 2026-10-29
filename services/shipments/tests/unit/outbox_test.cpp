@@ -1,5 +1,5 @@
 #include <optional>
-#include <platform/outbox.hpp>
+#include <platform/outbox/worker.hpp>
 #include <userver/engine/single_consumer_event.hpp>
 #include <userver/engine/sleep.hpp>
 #include <userver/utest/utest.hpp>

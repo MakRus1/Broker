@@ -131,6 +131,8 @@ components_manager:
             load-enabled: $config-updates-enabled
         platform-config-readiness:
             rules: []
+        platform-outbox:
+            postgres-component: postgres-shipments
         postgres-shipments:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION

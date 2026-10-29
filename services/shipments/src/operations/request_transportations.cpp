@@ -4,8 +4,10 @@
 #include <helpers/converters.hpp>
 #include <helpers/database.hpp>
 #include <helpers/idempotency.hpp>
+#include <helpers/outbox.hpp>
 #include <helpers/revision.hpp>
 #include <operations/request_transportations.hpp>
+#include <platform/outbox/component.hpp>
 
 namespace shipments::operations {
 models::CreationOperation RequestTransportations(
@@ -49,8 +51,8 @@ models::CreationOperation RequestTransportations(
 
     // Payload сохраняется один раз и не пересобирается из изменяемой позиции при повторах.
     const auto document = userver::formats::json::FromString(api::ToJson(payload));
-    transaction.Execute(
-        sql::kCreateOperation, organization, result.id, item.Id, request.quantity, document);
+    transaction.Execute(sql::kCreateOperation, organization, result.id, item.Id, request.quantity);
+    platform::outbox::Enqueue(transaction, kCreateTransportations, result.id, document);
     SaveReplay(transaction, organization, "create_operation", request, result);
     WriteAudit(transaction, organization, identity, "create_operation", result.id, request, result);
     transaction.Commit();

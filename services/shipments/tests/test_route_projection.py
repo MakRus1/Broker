@@ -60,7 +60,7 @@ async def test_projection_retries_lost_response_and_preserves_new_revision(
     for _ in range(40):
         with pgsql["db_1"].cursor() as cursor:
             cursor.execute(
-                "SELECT count(*) FROM route_projection_outbox WHERE shipment_id=%s",
+                "SELECT count(*) FROM outbox WHERE topic='shipment.route.project' AND payload->>'shipment_id'=%s",
                 (shipment["id"],),
             )
             if cursor.fetchone()[0] == 0:
@@ -99,13 +99,15 @@ async def test_projection_delivers_postgres_composite_backfill(api, mockserver, 
     with pgsql["db_1"].cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO route_projection_outbox
-                (organization_id, shipment_id, revision, route_segments)
-            SELECT organization_id, id, 100, to_jsonb(route_segments)
+            INSERT INTO outbox (topic, message_key, payload)
+            SELECT 'shipment.route.project', organization_id::TEXT || ':' || id::TEXT,
+                   jsonb_build_object('organization_id', organization_id,
+                       'shipment_id', id, 'revision', 100,
+                       'route_segments', jsonb_strip_nulls(to_jsonb(route_segments)))
             FROM shipments WHERE id = %s
-            ON CONFLICT (organization_id, shipment_id) DO UPDATE
-            SET revision = 100, route_segments = EXCLUDED.route_segments,
-                next_attempt_at = now(), lease_until = NULL, lease_token = NULL
+            ON CONFLICT (topic, message_key) DO UPDATE
+            SET payload = EXCLUDED.payload, generation = outbox.generation + 1,
+                available_at = now(), lease_token = NULL
             """,
             (shipment["id"],),
         )

@@ -1,6 +1,7 @@
 version: 1
 libraries:
 - common
+- outbox
 - configs
 postgresql:
   enabled: true

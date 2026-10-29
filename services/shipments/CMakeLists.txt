@@ -18,12 +18,12 @@ target_link_libraries(
 )
 
 # SERVICE_CMAKE_BEGIN
-foreach(service_library IN ITEMS broker_common broker_configs broker_auth)
+foreach(service_library IN ITEMS broker_common broker_outbox broker_configs broker_auth)
     if(NOT TARGET ${service_library})
         message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")
     endif()
 endforeach()
-target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_configs broker_auth)
+target_link_libraries(${PROJECT_NAME}_objs PUBLIC broker_common broker_outbox broker_configs broker_auth)
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC userver::postgresql)
 file(GLOB_RECURSE service_sql CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/postgresql/queries/*.sql")
 if(service_sql)
@@ -53,7 +53,7 @@ if(BUILD_TESTING)
     userver_testsuite_add_simple()
     add_executable(shipments_unittest tests/unit/date_validation_test.cpp tests/unit/dictionaries_test.cpp tests/unit/outbox_test.cpp)
     target_include_directories(shipments_unittest PRIVATE src)
-    target_link_libraries(shipments_unittest PRIVATE broker_common userver::utest)
+    target_link_libraries(shipments_unittest PRIVATE broker_common broker_outbox userver::utest)
     add_google_tests(shipments_unittest)
 endif()
 

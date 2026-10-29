@@ -31,6 +31,7 @@
 #include <platform/auth/component.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
+#include <platform/outbox/component.hpp>
 #include <platform/readiness.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
@@ -68,6 +69,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<shipments::clients::transport_locations::Component>();
     component_list.Append<shipments::clients::transportations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-shipments");
+    component_list.Append<platform::outbox::Component>();
     // SERVICE_REGISTRATION_END
 
     component_list.Append<platform::auth::ServiceTokenProvider>();

@@ -72,6 +72,13 @@ UTEST(Outbox, BatchStopsAtLimitOrEmptyQueue) {
     EXPECT_EQ(calls, 3);
 }
 
+UTEST(Outbox, BatchPreservesStateOfItsCallback) {
+    auto step = [calls = 0]() mutable { return ++calls < 3; };
+    EXPECT_EQ(platform::outbox::DeliverBatch(1, step), 1);
+    EXPECT_EQ(platform::outbox::DeliverBatch(1, step), 1);
+    EXPECT_EQ(platform::outbox::DeliverBatch(1, step), 0);
+}
+
 UTEST(Outbox, EmptyQueueUsesIdlePauseAndStopInterruptsSleep) {
     platform::outbox::Worker worker;
     userver::engine::SingleConsumerEvent first_poll;

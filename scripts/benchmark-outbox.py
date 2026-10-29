@@ -151,6 +151,28 @@ def main():
                 {topic: value["p95_ms"] for topic, value in output.items()},
                 flush=True,
             )
+        statistics_query = (
+            (ROOT / "libs/outbox/postgresql/queries/queue_statistics.sql")
+            .read_text()
+            .replace("$1", "ARRAY['bulk', 'sparse']")
+        )
+
+        def measure_statistics():
+            return json.loads(
+                sql("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) " + statistics_query)
+            )[0]
+
+        measure_statistics()
+        statistics_plans = [measure_statistics() for _ in range(args.repetitions)]
+        durations = sorted(plan["Execution Time"] for plan in statistics_plans)
+        report["queue_statistics"] = {
+            "sql": statistics_query,
+            "p50_ms": statistics.median(durations),
+            "p95_ms": durations[math.ceil(len(durations) * 0.95) - 1],
+            "samples_ms": durations,
+            "explain": statistics_plans[-1],
+        }
+        print("queue_statistics", report["queue_statistics"]["p95_ms"], flush=True)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     finally:

@@ -1,8 +1,10 @@
 #pragma once
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <platform/outbox/worker.hpp>
 #include <string>
@@ -11,6 +13,8 @@
 #include <userver/formats/json/value.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
+#include <userver/testsuite/periodic_task_control.hpp>
+#include <userver/utils/statistics/writer.hpp>
 #include <vector>
 
 namespace platform::outbox {
@@ -69,8 +73,19 @@ class Component final : public userver::components::ComponentBase {
     using Handler = std::function<Completion(const Message&)>;
     void Register(std::string, Handler);
     std::optional<Message> Claim(const std::string& topic);
-    void Complete(const Message&, const Completion&);
+    bool Complete(const Message&, const Completion&);
     void Retry(const Message&);
+
+    struct TopicStatistics {
+        std::atomic<std::uint64_t> Active{0}, Attempts{0}, Delivered{0}, Failed{0}, Retried{0},
+            Superseded{0}, Cancelled{0}, StorageErrors{0}, Finished{0}, DurationUs{0};
+        std::atomic<std::int64_t> QueueSize{0}, Concurrency{0};
+        std::atomic<double> OldestCreatedAt{0};
+    };
+
+    bool ProcessOne(const std::string&, TopicStatistics&);
+    void RefreshQueueStatistics();
+    void WriteStatistics(userver::utils::statistics::Writer&);
     pg::ClusterPtr cluster_;
     Settings settings_;
     int lease_seconds_;
@@ -84,6 +99,14 @@ class Component final : public userver::components::ComponentBase {
     std::map<std::string, std::size_t> topic_concurrency_;
     std::vector<std::unique_ptr<Worker>> workers_;
     void Stop() noexcept;
+    std::mutex statistics_mutex_;
+    std::map<std::string, std::unique_ptr<TopicStatistics>> statistics_;
+    std::atomic<bool> snapshot_success_{false};
+    std::atomic<double> snapshot_timestamp_{0};
+    std::atomic<std::uint64_t> snapshot_errors_{0};
+    std::chrono::milliseconds statistics_period_;
+    userver::utils::PeriodicTask statistics_task_;
+    userver::testsuite::PeriodicTaskRegistrationHolder statistics_registration_;
 };
 }  // namespace platform::outbox
 

@@ -46,6 +46,21 @@ class DashboardsTest(unittest.TestCase):
         self.assertNotIn('http_status', text)
         self.assertEqual(text, render('example', {}))
 
+    def test_outbox_panels_follow_library_and_do_not_sum_shared_queue(self):
+        dashboard = json.loads(render('queued', {'libraries': ['common', 'outbox']}))
+        lookup = {panel['title']: panel for panel in dashboard['panels']}
+        self.assertIn('Доставка сообщений', lookup)
+        queue = lookup['Outbox: сообщений в очереди']['targets'][0]['expr']
+        self.assertIn('max by(outbox_topic)', queue)
+        self.assertNotIn('sum(', queue)
+        active = lookup['Outbox: активные доставки']['targets'][0]['expr']
+        self.assertIn('sum by(outbox_topic)', active)
+        self.assertIn('Outbox: последний снимок успешен', lookup)
+        plain = json.loads(render('plain', {}))
+        self.assertFalse(any(panel['title'] == 'Доставка сообщений' for panel in plain['panels']))
+        with self.assertRaisesRegex(ValueError, 'libraries: outbox'):
+            render('plain', {'dashboard': {'sections': ['outbox']}})
+
     def test_customization_and_long_service_names(self):
         spec = {
             'dashboard': {

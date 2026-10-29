@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 
-SECTIONS = ('http', 'process', 'http_clients', 'postgresql', 'grpc', 'logs')
+SECTIONS = ('http', 'process', 'http_clients', 'postgresql', 'grpc', 'logs', 'outbox')
 SELECTOR = 'service="$service",environment=~"$environment",instance=~"$instance"'
 PUBLIC_HTTP = SELECTOR + ',http_path!~"/(ping(/ready)?|metrics|tests/.*)"'
 
@@ -38,6 +38,8 @@ def settings(spec):
     for section in ('postgresql', 'grpc'):
         if spec.get(section, {}).get('enabled', False):
             defaults.append(section)
+    if 'outbox' in spec.get('libraries', []):
+        defaults.append('outbox')
     sections = value.get('sections', [*defaults, 'logs'])
     if (
         not isinstance(sections, list)
@@ -48,6 +50,8 @@ def settings(spec):
     for section in ('postgresql', 'grpc'):
         if section in sections and not spec.get(section, {}).get('enabled', False):
             raise ValueError(f'service.yaml: dashboard.sections требует {section}.enabled: true')
+    if 'outbox' in sections and 'outbox' not in spec.get('libraries', []):
+        raise ValueError('service.yaml: dashboard.sections требует libraries: outbox')
     panels = value.get('panels', [])
     if not isinstance(panels, list):
         raise ValueError('service.yaml: dashboard.panels — список PromQL-панелей')
@@ -92,6 +96,44 @@ def panel(title, expr, unit='short', legend='{{instance}}', description=''):
 
 
 def standard(section):
+    if section == 'outbox':
+        return [
+            panel('Outbox: сообщений в очереди',
+                'max by(outbox_topic) (' + query('outbox_queue_size') + ')',
+                legend='{{outbox_topic}}',
+                description='Общая БД: max по подам, а не сумма. Снимок обновляется в фоне; учитывайте свежесть.'),
+            panel('Outbox: возраст старейшего сообщения',
+                'max by(outbox_topic) (' + query('outbox_oldest_message_age_seconds') + ')',
+                's', '{{outbox_topic}}'),
+            panel('Outbox: активные доставки',
+                'sum by(outbox_topic) (' + query('outbox_active') + ')',
+                legend='{{outbox_topic}}'),
+            panel('Outbox: выделенные слоты',
+                'sum by(outbox_topic) (' + query('outbox_concurrency') + ')',
+                legend='{{outbox_topic}}'),
+            panel('Outbox: успешные доставки / с',
+                'sum by(outbox_topic) (' + rate('outbox_delivered_total') + ')',
+                'ops', '{{outbox_topic}}'),
+            panel('Outbox: ошибки доставки / с',
+                'sum by(outbox_topic) (' + rate('outbox_failed_total') + ')',
+                'ops', '{{outbox_topic}}'),
+            panel('Outbox: назначенные повторы / с',
+                'sum by(outbox_topic) (' + rate('outbox_retries_total') + ')',
+                'ops', '{{outbox_topic}}'),
+            panel('Outbox: ошибки хранилища / с',
+                'sum by(outbox_topic) (' + rate('outbox_storage_errors_total') + ')',
+                'ops', '{{outbox_topic}}'),
+            panel('Outbox: среднее время попытки',
+                'sum by(outbox_topic) (' + rate('outbox_duration_microseconds_total') + ') / '
+                'clamp_min(sum by(outbox_topic) (' + rate('outbox_finished_total') + '), 1e-9) / 1000',
+                'ms', '{{outbox_topic}}', 'Включает отправку, подтверждение и назначение повтора; без ожидания в очереди.'),
+            panel('Outbox: последний снимок успешен', query('outbox_queue_snapshot_success'),
+                description='0 означает отсутствие успешного снимка или ошибку последнего обновления. Сохранённые gauges могут быть устаревшими.'),
+            panel('Outbox: давность снимка',
+                'clamp_min(time() - ' + query('outbox_queue_snapshot_timestamp_seconds') + ', 0)', 's'),
+            panel('Outbox: ошибки обновления снимка / с',
+                rate('outbox_queue_snapshot_errors_total'), 'ops'),
+        ]
     if section == 'http':
         return [
             panel(
@@ -339,6 +381,7 @@ def render(service, spec):
         'postgresql': 'PostgreSQL',
         'grpc': 'gRPC-сервер',
         'logs': 'Логи',
+        'outbox': 'Доставка сообщений',
     }
     y = 0
     for section in [*sections, *(['custom'] if custom else [])]:

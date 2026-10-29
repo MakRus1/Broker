@@ -4,7 +4,9 @@ import hashlib
 import json
 import re
 
-SECTIONS = ('http', 'process', 'http_clients', 'postgresql', 'grpc', 'logs', 'outbox')
+SECTIONS = ('http', 'process', 'http_clients', 'postgresql', 'grpc', 'outbox')
+# 600 остаётся зарезервированным для удалённого раздела логов.
+SECTION_IDS = dict(zip(SECTIONS, (100, 200, 300, 400, 500, 700)))
 SELECTOR = 'service="$service",environment=~"$environment",instance=~"$instance"'
 PUBLIC_HTTP = SELECTOR + ',http_path!~"/(ping(/ready)?|metrics|tests/.*)"'
 
@@ -40,7 +42,7 @@ def settings(spec):
             defaults.append(section)
     if 'outbox' in spec.get('libraries', []):
         defaults.append('outbox')
-    sections = value.get('sections', [*defaults, 'logs'])
+    sections = value.get('sections', defaults)
     if (
         not isinstance(sections, list)
         or any(not isinstance(item, str) or item not in SECTIONS for item in sections)
@@ -280,7 +282,7 @@ def standard(section):
     return []
 
 
-def variables(service, logs):
+def variables(service):
     def variable(name, expression, label):
         return {
             'name': name,
@@ -323,30 +325,6 @@ def variables(service, logs):
             'Инстанс (метрики)',
         ),
     ]
-    if logs:
-        result.insert(
-            2,
-            {
-                'name': 'loki',
-                'label': 'Логи',
-                'type': 'datasource',
-                'query': 'loki',
-                'current': {'text': 'Loki', 'value': 'loki'},
-            },
-        )
-    if logs:
-        result.append(
-            {
-                'name': 'level',
-                'label': 'Уровень',
-                'type': 'custom',
-                'query': 'TRACE,DEBUG,INFO,WARNING,ERROR,CRITICAL',
-                'multi': True,
-                'includeAll': True,
-                'allValue': '.*',
-                'current': {'text': 'All', 'value': '$__all'},
-            }
-        )
     return result
 
 
@@ -371,7 +349,7 @@ def render(service, spec):
         'timezone': 'browser',
         'refresh': options.get('refresh', '10s'),
         'time': {'from': 'now-1h', 'to': 'now'},
-        'templating': {'list': variables(service, 'logs' in sections)},
+        'templating': {'list': variables(service)},
         'panels': [],
     }
     titles = {
@@ -380,12 +358,11 @@ def render(service, spec):
         'http_clients': 'HTTP-клиенты',
         'postgresql': 'PostgreSQL',
         'grpc': 'gRPC-сервер',
-        'logs': 'Логи',
         'outbox': 'Доставка сообщений',
     }
     y = 0
     for section in [*sections, *(['custom'] if custom else [])]:
-        base = 1000 if section == 'custom' else (SECTIONS.index(section) + 1) * 100
+        base = 1000 if section == 'custom' else SECTION_IDS[section]
         dashboard['panels'].append(
             {
                 'id': base,
@@ -397,37 +374,6 @@ def render(service, spec):
             }
         )
         y += 1
-        if section == 'logs':
-            dashboard['panels'].append(
-                {
-                    'id': base + 1,
-                    'title': 'Логи сервиса · trace_id → Tempo',
-                    'type': 'logs',
-                    'description': 'Окружение фильтруется как в метриках. Инстанс применяется только к метрикам: у логов пока нет соответствующего label.',
-                    'datasource': {'type': 'loki', 'uid': '${loki}'},
-                    'gridPos': {'x': 0, 'y': y, 'w': 24, 'h': 10},
-                    'targets': [
-                        {
-                            'refId': 'A',
-                            'expr': (
-                                '{service_name="$service",deployment_environment_name=~"$environment"} '
-                                '| level=~"$level" '
-                                '| json log_text="text", log_body="body", log_span="stopwatch_name", log_status="meta_code", log_kind="_type" '
-                                '| line_format "{{if .log_kind}}{{.log_kind}} {{end}}{{if .log_text}}{{.log_text}}{{else}}{{.log_span}}{{end}}'
-                                '{{if .log_status}} status={{.log_status}}{{end}}'
-                                '{{if .log_body}} body={{.log_body}}{{end}} trace_id={{.trace_id}}"'
-                            ),
-                        }
-                    ],
-                    'options': {
-                        'showTime': True,
-                        'wrapLogMessage': True,
-                        'sortOrder': 'Descending',
-                    },
-                }
-            )
-            y += 10
-            continue
         entries = custom if section == 'custom' else standard(section)
         for index, entry in enumerate(entries):
             dashboard['panels'].append(

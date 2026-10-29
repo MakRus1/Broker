@@ -38,16 +38,6 @@
         }
       },
       {
-        "name": "loki",
-        "label": "Логи",
-        "type": "datasource",
-        "query": "loki",
-        "current": {
-          "text": "Loki",
-          "value": "loki"
-        }
-      },
-      {
         "name": "environment",
         "label": "Окружение",
         "type": "query",
@@ -92,19 +82,6 @@
           "value": "$__all"
         },
         "sort": 1
-      },
-      {
-        "name": "level",
-        "label": "Уровень",
-        "type": "custom",
-        "query": "TRACE,DEBUG,INFO,WARNING,ERROR,CRITICAL",
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        }
       }
     ]
   },
@@ -970,46 +947,6 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
-    },
-    {
-      "id": 600,
-      "type": "row",
-      "title": "Логи",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "x": 0,
-        "y": 93,
-        "w": 24,
-        "h": 1
-      }
-    },
-    {
-      "id": 601,
-      "title": "Логи сервиса · trace_id → Tempo",
-      "type": "logs",
-      "description": "Окружение фильтруется как в метриках. Инстанс применяется только к метрикам: у логов пока нет соответствующего label.",
-      "datasource": {
-        "type": "loki",
-        "uid": "${loki}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 94,
-        "w": 24,
-        "h": 10
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "{service_name=\"$service\",deployment_environment_name=~\"$environment\"} | level=~\"$level\" | json log_text=\"text\", log_body=\"body\", log_span=\"stopwatch_name\", log_status=\"meta_code\", log_kind=\"_type\" | line_format \"{{if .log_kind}}{{.log_kind}} {{end}}{{if .log_text}}{{.log_text}}{{else}}{{.log_span}}{{end}}{{if .log_status}} status={{.log_status}}{{end}}{{if .log_body}} body={{.log_body}}{{end}} trace_id={{.trace_id}}\""
-        }
-      ],
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending"
       }
     }
   ]

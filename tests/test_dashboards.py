@@ -90,20 +90,16 @@ class DashboardsTest(unittest.TestCase):
         self.assertLessEqual(len(first), 40)
         self.assertNotEqual(first, second)
 
-    def test_log_level_filter_is_available_only_with_logs(self):
-        enabled = json.loads(render('example', {}))
-        variables = {item['name']: item for item in enabled['templating']['list']}
-        self.assertTrue(variables['level']['multi'])
-        self.assertIn('ERROR', variables['level']['query'])
-        logs = next(panel for panel in enabled['panels'] if panel['type'] == 'logs')
-        self.assertIn('| level=~"$level"', logs['targets'][0]['expr'])
-        self.assertIn('body={{.log_body}}', logs['targets'][0]['expr'])
-        self.assertIn('status={{.log_status}}', logs['targets'][0]['expr'])
-        self.assertIn('trace_id={{.trace_id}}', logs['targets'][0]['expr'])
-        disabled = json.loads(render('example', {'dashboard': {'sections': ['http']}}))
-        self.assertFalse(
-            {'level', 'loki'} & {item['name'] for item in disabled['templating']['list']}
-        )
+    def test_service_dashboard_has_only_metric_sources_and_no_log_panels(self):
+        for spec in [{}, {'libraries': ['common', 'outbox']}]:
+            dashboard = json.loads(render('example', spec))
+            variables = {item['name'] for item in dashboard['templating']['list']}
+            self.assertFalse({'level', 'loki'} & variables)
+            self.assertFalse(any(panel['type'] == 'logs' for panel in dashboard['panels']))
+            self.assertNotIn('Loki', render('example', spec))
+            if 'libraries' in spec:
+                row = next(panel for panel in dashboard['panels'] if panel['title'] == 'Доставка сообщений')
+                self.assertEqual(row['id'], 700)
 
     def test_invalid_settings_are_rejected(self):
         invalid = [
@@ -115,6 +111,7 @@ class DashboardsTest(unittest.TestCase):
             {'tags': 'tag'},
             {'tags': [None]},
             {'sections': ['unknown']},
+            {'sections': ['logs']},
             {'sections': ['http', 'http']},
             {'sections': ['postgresql']},
             {'sections': ['grpc']},

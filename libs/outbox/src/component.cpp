@@ -35,7 +35,17 @@ Component::Component(const userver::components::ComponentConfig& config,
           .IdlePause = std::chrono::milliseconds{config["idle-pause-ms"].As<int>(1000)}},
       lease_seconds_(config["lease-seconds"].As<int>(30)),
       retry_seconds_(config["retry-seconds"].As<int>(2)),
-      max_retry_seconds_(config["max-retry-seconds"].As<int>(60)) {
+      max_retry_seconds_(config["max-retry-seconds"].As<int>(60)),
+      max_concurrency_(config["max-concurrency"].As<std::size_t>(8)),
+      default_topic_concurrency_(config["default-topic-concurrency"].As<std::size_t>(2)) {
+    for (const auto& entry :
+        config["topic-concurrency"].As<std::map<std::string, std::size_t>>({})) {
+        if (entry.second == 0)
+            throw std::invalid_argument{"Лимит типа outbox должен быть положительным"};
+        topic_concurrency_.emplace(entry);
+    }
+    if (max_concurrency_ == 0 || default_topic_concurrency_ == 0)
+        throw std::invalid_argument{"Лимиты параллельности outbox должны быть положительными"};
     if (lease_seconds_ <= 0 || retry_seconds_ <= 0 || max_retry_seconds_ < retry_seconds_ ||
         settings_.BatchSize == 0 || settings_.BusyPause.count() <= 0 ||
         settings_.IdlePause < settings_.BusyPause)
@@ -45,7 +55,7 @@ Component::Component(const userver::components::ComponentConfig& config,
 }
 
 Component::~Component() {
-    worker_.Stop();
+    Stop();
 }
 
 void Component::Register(std::string topic, Handler handler) {
@@ -56,22 +66,52 @@ void Component::Register(std::string topic, Handler handler) {
 
 void Component::OnAllComponentsLoaded() {
     started_ = true;
-    if (topics_.empty())
-        return;
-    worker_.Start(
-        "outbox-delivery", settings_, [this] { return Claim(); },
-        [this](const Message& message) { return handlers_.at(message.Topic)(message); },
-        [this](const Message& message, const Completion& complete) { Complete(message, complete); },
-        [this](const Message& message) { Retry(message); });
+    std::size_t total = 0;
+    for (const auto& [topic, limit] : topic_concurrency_) {
+        if (!handlers_.contains(topic))
+            throw std::invalid_argument{
+                "Лимит задан для незарегистрированного типа outbox: " + topic};
+    }
+    for (const auto& topic : topics_) {
+        const auto found = topic_concurrency_.find(topic);
+        const auto limit =
+            found == topic_concurrency_.end() ? default_topic_concurrency_ : found->second;
+        if (limit > max_concurrency_ - total)
+            throw std::invalid_argument{"Сумма лимитов типов outbox превышает max-concurrency"};
+        total += limit;
+    }
+    workers_.reserve(total);
+    for (const auto& topic : topics_) {
+        const auto found = topic_concurrency_.find(topic);
+        const auto limit =
+            found == topic_concurrency_.end() ? default_topic_concurrency_ : found->second;
+        for (std::size_t slot = 0; slot < limit; ++slot) {
+            auto worker = std::make_unique<Worker>();
+            worker->Start(
+                "outbox/" + topic + "/" + std::to_string(slot), settings_,
+                [this, topic] { return Claim(topic); },
+                [this](const Message& message) { return handlers_.at(message.Topic)(message); },
+                [this](const Message& message, const Completion& complete) {
+                    Complete(message, complete);
+                },
+                [this](const Message& message) { Retry(message); });
+            workers_.push_back(std::move(worker));
+        }
+    }
+}
+
+void Component::Stop() noexcept {
+    for (auto& worker : workers_)
+        worker->Stop();
 }
 
 void Component::OnAllComponentsAreStopping() {
-    worker_.Stop();
+    Stop();
 }
 
-std::optional<Message> Component::Claim() {
-    const auto rows =
-        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClaim, topics_, lease_seconds_);
+std::optional<Message> Component::Claim(const std::string& topic) {
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kClaim, std::vector<std::string>{topic}, lease_seconds_);
     if (rows.IsEmpty())
         return std::nullopt;
     return rows.AsSingleRow<Message>(pg::kRowTag);
@@ -104,6 +144,24 @@ properties:
     postgres-component:
         type: string
         description: Компонент кластера PostgreSQL со стандартной таблицей outbox
+    max-concurrency:
+        type: integer
+        minimum: 1
+        description: Верхняя граница суммы выделенных слотов всех типов на одном поде
+        defaultDescription: 8
+    default-topic-concurrency:
+        type: integer
+        minimum: 1
+        description: Число независимых доставок каждого типа по умолчанию
+        defaultDescription: 2
+    topic-concurrency:
+        type: object
+        properties: {}
+        description: Число выделенных слотов доставки по имени типа сообщения
+        additionalProperties:
+            type: integer
+            minimum: 1
+            description: Максимум одновременных доставок этого типа
     batch-size:
         type: integer
         minimum: 1

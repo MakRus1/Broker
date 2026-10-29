@@ -171,7 +171,7 @@ def pgsql_local(service_source_dir, pgsql_local_create):
         components['platform-config-delivery'] = {'load-enabled': '$config-updates-enabled'}
         components['platform-config-readiness'] = {'rules': policies}
     if outbox:
-        components['platform-outbox'] = {'postgres-component': pg_component}
+        components['platform-outbox'] = {**(yaml.load((service / 'configs/static_config.yaml').read_text(), Loader=loader)['components_manager']['components'].get('platform-outbox', {}) or {}), 'postgres-component': pg_component}
     if pg:
         components[pg_component] = {'dbconnection': '$pg-connection', 'dbconnection#env': 'DB_CONNECTION', 'blocking_task_processor': 'fs-task-processor', 'dns_resolver': 'async', 'sync-start': True, 'connlimit_mode': 'manual'}
     if grpc:

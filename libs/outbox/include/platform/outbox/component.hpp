@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <platform/outbox/worker.hpp>
 #include <string>
@@ -67,7 +68,7 @@ class Component final : public userver::components::ComponentBase {
     using Completion = std::function<void(pg::Transaction&)>;
     using Handler = std::function<Completion(const Message&)>;
     void Register(std::string, Handler);
-    std::optional<Message> Claim();
+    std::optional<Message> Claim(const std::string& topic);
     void Complete(const Message&, const Completion&);
     void Retry(const Message&);
     pg::ClusterPtr cluster_;
@@ -78,7 +79,11 @@ class Component final : public userver::components::ComponentBase {
     bool started_ = false;
     std::map<std::string, Handler> handlers_;
     std::vector<std::string> topics_;
-    Worker worker_;
+    std::size_t max_concurrency_;
+    std::size_t default_topic_concurrency_;
+    std::map<std::string, std::size_t> topic_concurrency_;
+    std::vector<std::unique_ptr<Worker>> workers_;
+    void Stop() noexcept;
 };
 }  // namespace platform::outbox
 

@@ -43,10 +43,10 @@ pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
     if (value.id != request.body.operation_id || value.item_id != request.body.item_id ||
         value.quantity != request.body.quantity)
         throw std::runtime_error("Несогласованный результат операции");
-    const auto status = clients::transportations::models::EnumValue(value.status);
-    if (status != "succeeded" && status != "rejected")
+    using Status = clients::transportations::models::OperationStatus;
+    if (value.status != Status::Succeeded && value.status != Status::Rejected)
         throw std::runtime_error("Операция не завершена");
-    if (status == "succeeded" &&
+    if (value.status == Status::Succeeded &&
         value.transportation_ids.size() != static_cast<std::size_t>(value.quantity))
         throw std::runtime_error("Несогласованное количество перевозок");
     const std::set<std::string> unique_ids(
@@ -58,7 +58,7 @@ pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
         .Id = boost::uuids::string_generator{}(request.body.operation_id),
         .ItemId = boost::uuids::string_generator{}(value.item_id),
         .Quantity = value.quantity,
-        .Status = status,
+        .Status = clients::transportations::models::EnumValue(value.status),
         .Result = document};
 }
 

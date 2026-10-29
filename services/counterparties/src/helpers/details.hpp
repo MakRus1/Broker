@@ -60,6 +60,7 @@ inline models::Counterparty Prepare(const models::CreateCounterpartyRequest& inp
     value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
     value.revision = 1;
     value.archived = false;
+    value.own_company = input.own_company.value_or(false);
     value.name = input.name;
     value.legal_name = input.legal_name.value_or(std::nullopt);
     value.country_code = input.country_code.value_or(std::nullopt);
@@ -76,6 +77,8 @@ inline models::Counterparty Prepare(const models::CreateCounterpartyRequest& inp
 inline models::Counterparty Prepare(
     const models::UpdateCounterpartyRequest& input, models::Counterparty value) {
     value.name = input.name;
+    if (input.own_company.has_value())
+        value.own_company = input.own_company.value();
     if (input.legal_name.has_value())
         value.legal_name = input.legal_name.value();
     if (input.country_code.has_value())

@@ -21,7 +21,7 @@ Response View::Handle(
         const auto rows = transaction.Execute(sql::kLockCounterparty, organization, id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Контрагент не найден"};
-        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV5>());
+        const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>());
         if (previous.revision != request.body.expected_revision)
             throw ApiError{409, "revision_conflict",
                 "Контрагент изменился. Обновите карточку перед редактированием"};
@@ -31,7 +31,7 @@ Response View::Handle(
         CheckDuplicate(transaction, organization, value);
         const auto updated =
             transaction.Execute(sql::kUpdateCounterparty, organization, Convert(value));
-        const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV5>());
+        const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV6>());
         WriteAudit(transaction, organization, identity, "update_counterparty", result.id,
             request.body, result, std::optional{previous});
         transaction.Commit();

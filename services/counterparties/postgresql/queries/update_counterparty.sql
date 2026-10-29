@@ -9,10 +9,11 @@ SET name = value.name,
     contacts = value.contacts,
     kpp = value.kpp,
     logist = value.logist,
+    own_company = value.own_company,
     revision = stored.revision + 1
-FROM (SELECT ($2::public.counterparty_v5).*) AS value
+FROM (SELECT ($2::public.counterparty_v6).*) AS value
 WHERE stored.organization_id = $1::UUID AND stored.id = value.id
 RETURNING ROW(
     stored.id, stored.name, stored.revision, stored.archived, stored.legal_name, stored.country_code,
-    stored.tax_id, stored.registration_id, stored.legal_address, stored.roles, stored.contacts, stored.kpp, stored.logist
-)::public.counterparty_v5;
+    stored.tax_id, stored.registration_id, stored.legal_address, stored.roles, stored.contacts, stored.kpp, stored.logist, stored.own_company
+)::public.counterparty_v6;

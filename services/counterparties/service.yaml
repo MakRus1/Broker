@@ -17,6 +17,8 @@ auth:
     /api/v1/counterparties/history: counterparties.read
     /api/v1/counterparties/lookup: counterparties.write
     /api/v1/counterparties/filter-values: counterparties.read
+    /api/v1/counterparties/bank-accounts/list: counterparties.read_bank_accounts
+    /api/v1/counterparties/bank-accounts/save: counterparties.write_bank_accounts
   organization-access: true
 clients:
   organizations:

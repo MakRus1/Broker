@@ -30,6 +30,7 @@ const fields = {
   contacts: 'Контактные лица',
   logist: 'Логист',
   archived: 'Состояние',
+  own_company: 'Собственное юрлицо',
 } as const;
 export type HistoryField = keyof typeof fields;
 function comparable(snapshot: CounterpartySnapshot | undefined, key: HistoryField): unknown {
@@ -51,6 +52,7 @@ export function historyFieldValue(
   key: HistoryField,
 ): string {
   if (!snapshot || !Object.hasOwn(snapshot, key)) return 'Не сохранено';
+  if (key === 'own_company') return snapshot.own_company ? 'Да' : 'Нет';
   if (key === 'archived') return snapshot.archived ? 'В архиве' : 'Действующий';
   if (key === 'roles')
     return snapshot.roles?.map((role) => counterpartyRoles[role]).join(', ') || 'Не назначены';

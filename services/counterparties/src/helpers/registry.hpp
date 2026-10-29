@@ -5,7 +5,7 @@
 
 namespace counterparties::helpers {
 struct RegistryRow {
-    pgtypes::CounterpartyV5 Counterparty;
+    pgtypes::CounterpartyV6 Counterparty;
     std::string SortKey;
 };
 

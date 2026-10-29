@@ -2,6 +2,8 @@ name: COUNTERPARTIES_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/v1/counterparties/bank-accounts/list
+- /api/v1/counterparties/bank-accounts/save
 - /api/v1/counterparties/create
 - /api/v1/counterparties/filter-values
 - /api/v1/counterparties/get

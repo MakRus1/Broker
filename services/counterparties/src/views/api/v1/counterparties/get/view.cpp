@@ -15,7 +15,7 @@ Response View::Handle(
             pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.body.id);
         if (rows.IsEmpty())
             throw ApiError{404, "not_found", "Контрагент не найден"};
-        return Response200{.counterparty = Convert(rows.AsSingleRow<pgtypes::CounterpartyV5>())};
+        return Response200{.counterparty = Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>())};
     } catch (const ::counterparties::ApiError& error) {
         switch (error.Status) {
         case 400:

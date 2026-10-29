@@ -135,6 +135,10 @@ components_manager:
                 counterparties.write:
                 - counterparties.read
                 - organizations.read_employees
+                counterparties.read_bank_accounts:
+                - counterparties.read
+                counterparties.write_bank_accounts:
+                - counterparties.read_bank_accounts
                 organizations.manage:
                 - organizations.read_employees
                 shipments.read:

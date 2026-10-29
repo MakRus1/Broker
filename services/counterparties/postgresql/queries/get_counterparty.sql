@@ -1,6 +1,6 @@
 SELECT ROW(
     id, name, revision, archived, legal_name, country_code,
-    tax_id, registration_id, legal_address, roles, contacts, kpp, logist
-)::public.counterparty_v5
+    tax_id, registration_id, legal_address, roles, contacts, kpp, logist, own_company
+)::public.counterparty_v6
 FROM counterparties
 WHERE organization_id = $1::UUID AND id = $2::UUID;

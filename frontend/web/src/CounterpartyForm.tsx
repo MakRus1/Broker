@@ -141,6 +141,14 @@ export function CounterpartyForm({
         )}
         <fieldset disabled={busy || !!stale}>
           <legend>Юридическое лицо</legend>
+          <label className="bank-archive-toggle">
+            <input
+              type="checkbox"
+              checked={draft.own_company}
+              onChange={(event) => set('own_company', event.target.checked)}
+            />
+            Собственное юридическое лицо
+          </label>
           <RegistryLookup
             session={session}
             draft={draft}

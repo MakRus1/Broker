@@ -89,6 +89,9 @@ Counterparty:
       nullable: true
       minLength: 1
       maxLength: 256
+    own_company:
+      type: boolean
+      description: Собственное юридическое лицо организации
   required:
   - id
   - name
@@ -101,6 +104,7 @@ Counterparty:
   - contacts
   - revision
   - archived
+  - own_company
 CounterpartyError:
   type: object
   additionalProperties: false
@@ -168,6 +172,9 @@ CreateCounterpartyRequest:
       nullable: true
       minLength: 1
       maxLength: 256
+    own_company:
+      type: boolean
+      description: Собственное юридическое лицо организации
   required:
   - id
   - name
@@ -229,6 +236,9 @@ UpdateCounterpartyRequest:
       nullable: true
       minLength: 1
       maxLength: 256
+    own_company:
+      type: boolean
+      description: Собственное юридическое лицо организации
   required:
   - id
   - expected_revision
@@ -342,6 +352,9 @@ CounterpartySnapshot:
       nullable: true
       minLength: 1
       maxLength: 256
+    own_company:
+      type: boolean
+      description: Собственное юридическое лицо организации
   required:
   - name
 ListCounterpartyHistoryRequest:
@@ -515,3 +528,137 @@ RegistryValue:
       type: string
     label:
       type: string
+BankAccount:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    number:
+      type: string
+      minLength: 1
+      maxLength: 64
+    currency:
+      type: string
+      pattern: ^[A-Za-z]{3}$
+      minLength: 3
+      maxLength: 3
+    bank_name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    bic:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
+    swift:
+      type: string
+      nullable: true
+      pattern: ^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$
+      maxLength: 11
+    correspondent_account:
+      type: string
+      nullable: true
+      maxLength: 64
+    iban:
+      type: string
+      nullable: true
+      maxLength: 34
+    is_primary:
+      type: boolean
+    archived:
+      type: boolean
+    revision:
+      type: integer
+      minimum: 1
+  required:
+  - id
+  - counterparty_id
+  - name
+  - number
+  - currency
+  - bank_name
+  - is_primary
+  - archived
+  - revision
+SaveBankAccountRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    number:
+      type: string
+      minLength: 1
+      maxLength: 64
+    currency:
+      type: string
+      pattern: ^[A-Za-z]{3}$
+      minLength: 3
+      maxLength: 3
+    bank_name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    bic:
+      type: string
+      nullable: true
+      pattern: ^[0-9]{9}$
+      maxLength: 9
+    swift:
+      type: string
+      nullable: true
+      pattern: ^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$
+      maxLength: 11
+    correspondent_account:
+      type: string
+      nullable: true
+      maxLength: 64
+    iban:
+      type: string
+      nullable: true
+      maxLength: 34
+    is_primary:
+      type: boolean
+    archived:
+      type: boolean
+    expected_revision:
+      type: integer
+      minimum: 0
+      description: 0 для нового счёта, текущая редакция для изменения
+  required:
+  - id
+  - counterparty_id
+  - name
+  - number
+  - currency
+  - bank_name
+  - is_primary
+  - archived
+  - expected_revision
+ListBankAccountsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    counterparty_id:
+      type: string
+      format: uuid
+  required:
+  - counterparty_id

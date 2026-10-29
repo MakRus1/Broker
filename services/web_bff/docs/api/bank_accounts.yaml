@@ -1,0 +1,123 @@
+openapi: 3.0.3
+info:
+  title: Банковские счета компаний
+  version: '1'
+paths:
+  /api/v1/counterparties/bank-accounts/list:
+    post:
+      summary: Банковские счета юридического лица
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/counterparties/models.yaml#/ListBankAccountsRequest
+      responses:
+        '200':
+          description: Банковские счета
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/counterparties/models.yaml#/BankAccount
+                required:
+                - items
+        '400':
+          description: Некорректные банковские реквизиты
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '403':
+          description: Нет доступа к организации или банковским счетам
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Юридическое лицо или счёт не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '409':
+          description: Счёт изменён, реквизиты повторяются или выбран архивный владелец
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+      security:
+      - BrowserSession: []
+  /api/v1/counterparties/bank-accounts/save:
+    post:
+      summary: Создать или изменить банковский счёт
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/counterparties/models.yaml#/SaveBankAccountRequest
+      responses:
+        '200':
+          description: Сохранённый банковский счёт
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  account:
+                    $ref: ../components/schemas/counterparties/models.yaml#/BankAccount
+                required:
+                - account
+        '400':
+          description: Некорректные банковские реквизиты
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '403':
+          description: Нет доступа к организации или банковским счетам
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '404':
+          description: Юридическое лицо или счёт не найдены
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+        '409':
+          description: Счёт изменён, реквизиты повторяются или выбран архивный владелец
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/counterparties/models.yaml#/CounterpartyError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

@@ -6,12 +6,13 @@
 #include <vector>
 
 namespace counterparties::helpers {
-inline models::Counterparty Convert(const pgtypes::CounterpartyV5& row) {
+inline models::Counterparty Convert(const pgtypes::CounterpartyV6& row) {
     models::Counterparty result;
     result.id = boost::uuids::to_string(row.Id);
     result.name = row.Name;
     result.revision = row.Revision;
     result.archived = row.Archived;
+    result.own_company = row.OwnCompany;
     result.legal_name = row.LegalName;
     result.country_code = row.CountryCode;
     result.tax_id = row.TaxId;
@@ -34,7 +35,7 @@ inline std::vector<std::string> Convert(const std::vector<models::CounterpartyRo
     return result;
 }
 
-inline pgtypes::CounterpartyV5 Convert(const models::Counterparty& value) {
+inline pgtypes::CounterpartyV6 Convert(const models::Counterparty& value) {
     return {.Id = boost::uuids::string_generator{}(value.id),
         .Name = value.name,
         .Revision = value.revision,
@@ -47,14 +48,15 @@ inline pgtypes::CounterpartyV5 Convert(const models::Counterparty& value) {
         .Roles = Convert(value.roles),
         .Contacts = userver::formats::json::ValueBuilder(value.contacts).ExtractValue(),
         .Kpp = value.kpp.value_or(std::nullopt),
-        .Logist = value.logist.value_or(std::nullopt)};
+        .Logist = value.logist.value_or(std::nullopt),
+        .OwnCompany = value.own_company};
 }
 
 inline std::vector<models::Counterparty> Convert(
     const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Counterparty> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV5>())
+    for (const auto& row : rows.AsSetOf<pgtypes::CounterpartyV6>())
         result.push_back(Convert(row));
     return result;
 }

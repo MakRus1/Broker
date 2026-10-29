@@ -45,6 +45,7 @@ TRANSPORTATION = {
 }
 
 COUNTERPARTY = {
+    'own_company': False,
     'id': ID,
     'name': 'Клиент',
     'revision': 1,
@@ -59,9 +60,18 @@ COUNTERPARTY = {
 }
 
 
+BANK_ACCOUNT = {
+    'id': ID, 'counterparty_id': ID, 'name': 'Основной', 'number': '40702810000000000001',
+    'currency': 'RUB', 'bank_name': 'Банк', 'bic': '044525225', 'swift': None,
+    'iban': None, 'correspondent_account': None, 'is_primary': True, 'archived': False, 'revision': 1,
+}
+
+
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
+        ('counterparties/bank-accounts/list', {'counterparty_id': ID}, {'items':[BANK_ACCOUNT]}, 200),
+        ('counterparties/bank-accounts/save', {**{key:value for key,value in BANK_ACCOUNT.items() if key != 'revision'}, 'expected_revision':0}, {'account':BANK_ACCOUNT}, 200),
         (
             'counterparties/create',
             {'id': ID, 'name': 'Клиент'},

@@ -160,6 +160,7 @@ def customer_directory(mockserver):
                 'name': 'Клиент',
                 'revision': 1,
                 'archived': False,
+                'own_company': False,
                 'legal_name': None,
                 'country_code': None,
                 'tax_id': None,

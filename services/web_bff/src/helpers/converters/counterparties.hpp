@@ -90,6 +90,7 @@ inline models::counterparties::Counterparty Convert(
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
     result.logist = value.logist;
+    result.own_company = value.own_company;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -109,6 +110,7 @@ inline clients::counterparties::ApiV1CounterpartiesCreate::RequestBody Convert(
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
     result.logist = value.logist;
+    result.own_company = value.own_company;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     for (const auto role : value.roles)
@@ -131,6 +133,7 @@ inline clients::counterparties::ApiV1CounterpartiesUpdate::RequestBody Convert(
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
     result.logist = value.logist;
+    result.own_company = value.own_company;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.expected_revision = value.expected_revision;
@@ -183,6 +186,7 @@ inline models::counterparties::CounterpartySnapshot Convert(
     result.tax_id = value.tax_id;
     result.kpp = value.kpp;
     result.logist = value.logist;
+    result.own_company = value.own_company;
     result.registration_id = value.registration_id;
     result.legal_address = value.legal_address;
     result.archived = value.archived;
@@ -225,5 +229,39 @@ inline clients::counterparties::models::ListCounterpartiesRequest ConvertRegistr
     result.limit = body.limit;
     result.sort = body.sort;
     return result;
+}
+
+inline models::counterparties::BankAccount Convert(
+    const clients::counterparties::models::BankAccount& value) {
+    return {.archived = value.archived,
+        .bank_name = value.bank_name,
+        .bic = value.bic,
+        .correspondent_account = value.correspondent_account,
+        .counterparty_id = value.counterparty_id,
+        .currency = value.currency,
+        .iban = value.iban,
+        .id = value.id,
+        .is_primary = value.is_primary,
+        .name = value.name,
+        .number = value.number,
+        .revision = value.revision,
+        .swift = value.swift};
+}
+
+inline clients::counterparties::ApiV1CounterpartiesBankAccountsSave::RequestBody Convert(
+    const models::counterparties::SaveBankAccountRequest& value) {
+    return {.archived = value.archived,
+        .bank_name = value.bank_name,
+        .bic = value.bic,
+        .correspondent_account = value.correspondent_account,
+        .counterparty_id = value.counterparty_id,
+        .currency = value.currency,
+        .expected_revision = value.expected_revision,
+        .iban = value.iban,
+        .id = value.id,
+        .is_primary = value.is_primary,
+        .name = value.name,
+        .number = value.number,
+        .swift = value.swift};
 }
 }  // namespace web_bff

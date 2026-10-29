@@ -3068,3 +3068,59 @@ details[open] > .route-stage-summary::after {
   background: #eef4ff;
   border-color: #aac2ef;
 }
+
+.bank-accounts {
+  padding: 24px 0;
+}
+.bank-archive-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+.bank-account-list {
+  display: grid;
+  gap: 20px;
+}
+.bank-account-card {
+  border-bottom: 1px solid #e8ecf2;
+  padding: 12px 0 24px;
+}
+.bank-account-card h3 {
+  margin: 0 0 8px;
+}
+.bank-account-card dd {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.bank-accounts .role-options {
+  margin-top: 20px;
+}
+.bank-accounts .form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 0;
+}
+
+.bank-archive-toggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  margin: 0;
+}
+.bank-accounts fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.select-popup .select-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-bottom: 6px;
+  font-size: 13px;
+}

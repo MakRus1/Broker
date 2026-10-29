@@ -12,8 +12,9 @@ SELECT
         roles,
         contacts,
         kpp,
-        logist
-    )::public.counterparty_v5,
+        logist,
+        own_company
+    )::public.counterparty_v6,
     {sort_key} AS sort_key
 FROM counterparties
 WHERE {where}

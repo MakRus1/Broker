@@ -1,3 +1,5 @@
+import { BankAccounts } from './BankAccounts';
+import { useDiscardConfirmation } from './components';
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { initialCounterpartyQuery, restoreCounterpartyQuery } from './registryQueryPreferences';
 import { useColumnFilters } from './RegistryColumnFilters';
@@ -74,6 +76,12 @@ export function CounterpartiesPage({
       render: (value) => value.roles.map((role) => counterpartyRoles[role]).join(', ') || '—',
     },
     {
+      id: 'own_company',
+      label: 'Собственное юрлицо',
+      width: 180,
+      render: (value) => (value.own_company ? 'Да' : 'Нет'),
+    },
+    {
       id: 'archived',
       label: 'Состояние',
       width: 180,
@@ -85,7 +93,12 @@ export function CounterpartiesPage({
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = route === '/counterparties/new';
   const editing = creating || route.endsWith('/edit');
-  const [tab, setTab] = useState<'details' | 'history'>('details');
+  const [tab, setTab] = useState<'details' | 'history' | 'accounts'>('details');
+  const [accountsDirty, setAccountsDirty] = useState(false);
+  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  function switchTab(next: 'details' | 'history' | 'accounts') {
+    confirmDiscard(accountsDirty, () => setTab(next));
+  }
   const [historyVersion, setHistoryVersion] = useState(0);
   const [item, setItem] = useState<Counterparty>();
   const [failure, setFailure] = useState('');
@@ -293,14 +306,29 @@ export function CounterpartiesPage({
                 </p>
               )}
               <CardNavigation onRefresh={() => refresh().catch(onError)}>
-                <button aria-pressed={tab === 'details'} onClick={() => setTab('details')}>
+                <button aria-pressed={tab === 'details'} onClick={() => switchTab('details')}>
                   Реквизиты
                 </button>
-                <button aria-pressed={tab === 'history'} onClick={() => setTab('history')}>
+                {session.permissions.includes('counterparties.read_bank_accounts') && (
+                  <button aria-pressed={tab === 'accounts'} onClick={() => switchTab('accounts')}>
+                    Банковские счета
+                  </button>
+                )}
+                <button aria-pressed={tab === 'history'} onClick={() => switchTab('history')}>
                   История
                 </button>
               </CardNavigation>
-              {tab === 'history' ? (
+              {confirmation}
+              {tab === 'accounts' ? (
+                <BankAccounts
+                  counterpartyId={item.id}
+                  session={session}
+                  archivedOwner={item.archived}
+                  version={historyVersion}
+                  onError={onError}
+                  onDirty={setAccountsDirty}
+                />
+              ) : tab === 'history' ? (
                 <CounterpartyHistory
                   key={item.id}
                   id={item.id}
@@ -311,6 +339,7 @@ export function CounterpartiesPage({
               ) : (
                 <>
                   <div className="counterparty-roles">
+                    {item.own_company && <span className="badge">Собственное юрлицо</span>}
                     {item.roles.map((value) => (
                       <span className="badge" key={value}>
                         {counterpartyRoles[value]}

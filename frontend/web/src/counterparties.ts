@@ -17,6 +17,7 @@ export interface Counterparty {
   name: string;
   revision: number;
   archived: boolean;
+  own_company?: boolean;
   legal_name: string | null;
   country_code: string | null;
   tax_id: string | null;
@@ -34,6 +35,7 @@ export interface CounterpartyContactDraft {
   phone: string;
 }
 export interface CounterpartyDetails {
+  own_company: boolean;
   name: string;
   legal_name: string;
   country_code: string;
@@ -47,6 +49,7 @@ export interface CounterpartyDetails {
 }
 export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
   return {
+    own_company: value?.own_company ?? false,
     name: value?.name ?? '',
     legal_name: value?.legal_name ?? '',
     country_code: value?.country_code ?? '',
@@ -144,6 +147,7 @@ export function restoreCounterpartyDraft(
       ...candidate,
       value: {
         ...fields,
+        own_company: fields.own_company === true,
         kpp: fields.kpp ?? '',
         logist: typeof fields.logist === 'string' ? fields.logist : '',
       },

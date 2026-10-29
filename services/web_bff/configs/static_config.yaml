@@ -43,6 +43,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-v1-counterparties-bank_accounts-list:
+            path: /api/v1/counterparties/bank-accounts/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-bank_accounts-save:
+            path: /api/v1/counterparties/bank-accounts/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparties-create:
             path: /api/v1/counterparties/create
             method: POST

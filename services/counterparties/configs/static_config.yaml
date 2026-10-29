@@ -14,6 +14,18 @@ components_manager:
             timeout-ms: 3000
             allow-http: false
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-v1-counterparties-bank_accounts-list:
+            path: /api/v1/counterparties/bank-accounts/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-counterparties-bank_accounts-save:
+            path: /api/v1/counterparties/bank-accounts/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparties-create:
             path: /api/v1/counterparties/create
             method: POST
@@ -90,6 +102,8 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/v1/counterparties/bank-accounts/list: counterparties.read_bank_accounts
+                /api/v1/counterparties/bank-accounts/save: counterparties.write_bank_accounts
                 /api/v1/counterparties/create: counterparties.write
                 /api/v1/counterparties/filter-values: counterparties.read
                 /api/v1/counterparties/get: counterparties.read
@@ -106,6 +120,10 @@ components_manager:
                 counterparties.write:
                 - counterparties.read
                 - organizations.read_employees
+                counterparties.read_bank_accounts:
+                - counterparties.read
+                counterparties.write_bank_accounts:
+                - counterparties.read_bank_accounts
                 organizations.manage:
                 - organizations.read_employees
                 shipments.read:

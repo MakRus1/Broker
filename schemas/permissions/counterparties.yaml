@@ -10,3 +10,15 @@ counterparties.write:
   requires:
   - counterparties.read
   - organizations.read_employees
+counterparties.read_bank_accounts:
+  name: Просмотр банковских счетов
+  group: Контрагенты
+  scope: organization
+  requires:
+  - counterparties.read
+counterparties.write_bank_accounts:
+  name: Изменение банковских счетов
+  group: Контрагенты
+  scope: organization
+  requires:
+  - counterparties.read_bank_accounts

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 export function Chevron() {
@@ -25,14 +25,24 @@ export function Select({
   options,
   onChange,
   disabled = false,
+  searchable = false,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  searchable?: boolean;
 }) {
   const id = useId();
+  const popup = useRef<HTMLDivElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
+  const choices = options.filter(
+    (item) =>
+      !searchable ||
+      `${item.value} ${item.label}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+  );
   const trigger = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({
     left: 0,
@@ -45,6 +55,7 @@ export function Select({
   const [active, setActive] = useState(0);
   useEffect(() => {
     if (!open) return;
+    if (searchable) search.current?.focus();
     const update = () => {
       const rect = trigger.current?.getBoundingClientRect();
       if (!rect) return;
@@ -67,16 +78,40 @@ export function Select({
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
-  }, [open]);
+  }, [open, searchable]);
   function choose(next: string) {
     onChange(next);
     setOpen(false);
+  }
+  function keyDown(event: KeyboardEvent<HTMLInputElement | HTMLButtonElement>) {
+    if (event.key === 'Escape') {
+      if (open) event.stopPropagation();
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus();
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      setOpen(true);
+      if (choices.length)
+        setActive(
+          (old) => (old + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length,
+        );
+    }
+    if (event.key === 'Enter' && open) {
+      event.preventDefault();
+      if (choices[active]) choose(choices[active].value);
+    }
   }
   return (
     <div
       className="app-select"
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        if (
+          !event.currentTarget.contains(event.relatedTarget) &&
+          !popup.current?.contains(event.relatedTarget)
+        )
+          setOpen(false);
       }}
     >
       <span className="field-label" id={`${id}-label`}>
@@ -99,27 +134,10 @@ export function Select({
               options.findIndex((item) => item.value === value),
             ),
           );
+          setQuery('');
           setOpen((old) => !old);
         }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            if (open) event.stopPropagation();
-            event.preventDefault();
-            setOpen(false);
-          }
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault();
-            setOpen(true);
-            setActive(
-              (old) =>
-                (old + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length,
-            );
-          }
-          if (event.key === 'Enter' && open) {
-            event.preventDefault();
-            choose(options[active].value);
-          }
-        }}
+        onKeyDown={keyDown}
       >
         <span>{options.find((item) => item.value === value)?.label ?? 'Не выбрано'}</span>
         <Chevron />
@@ -127,13 +145,29 @@ export function Select({
       {open &&
         createPortal(
           <div
+            ref={popup}
             className="counterparty-options select-popup"
             style={{ position: 'fixed', ...position, zIndex: 1000 }}
             role="listbox"
             id={id}
             aria-labelledby={`${id}-label`}
           >
-            {options.map((item, index) => (
+            {searchable && (
+              <input
+                className="select-search"
+                ref={search}
+                aria-label={`Поиск: ${label}`}
+                placeholder="Код или название"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setActive(0);
+                }}
+                onKeyDown={keyDown}
+              />
+            )}
+            {searchable && !choices.length && <p className="hint">Совпадений нет</p>}
+            {choices.map((item, index) => (
               <button
                 type="button"
                 role="option"

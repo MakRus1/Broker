@@ -44,7 +44,7 @@ bool DeliverOne(Claim& claim, Send& send, Complete& complete, Retry& retry) {
     return true;
 }
 
-template <typename Step> std::size_t DeliverBatch(std::size_t limit, Step step) {
+template <typename Step> std::size_t DeliverBatch(std::size_t limit, Step&& step) {
     std::size_t processed = 0;
     for (; processed < limit; ++processed) {
         if (userver::engine::current_task::ShouldCancel() || !std::invoke(step))
@@ -60,14 +60,20 @@ class Worker final {
     template <typename Claim, typename Send, typename Complete, typename Retry>
     void Start(std::string name, Settings settings, Claim claim, Send send, Complete complete,
         Retry retry) {
+        Start(std::move(name), settings,
+            [claim = std::move(claim), send = std::move(send), complete = std::move(complete),
+                retry = std::move(retry)]() mutable {
+                return DeliverOne(claim, send, complete, retry);
+            });
+    }
+
+    template <typename Step> void Start(std::string name, Settings settings, Step step) {
         if (settings.BatchSize == 0 || settings.BusyPause.count() <= 0 ||
             settings.IdlePause < settings.BusyPause)
             throw std::invalid_argument{"Некорректные настройки outbox worker"};
         task_.Start(std::move(name), TaskSettings(settings.IdlePause, settings.IdlePause),
-            [this, settings, claim = std::move(claim), send = std::move(send),
-                complete = std::move(complete), retry = std::move(retry)]() mutable {
-                const auto processed = DeliverBatch(
-                    settings.BatchSize, [&] { return DeliverOne(claim, send, complete, retry); });
+            [this, settings, step = std::move(step)]() mutable {
+                const auto processed = DeliverBatch(settings.BatchSize, step);
                 const auto pause =
                     processed == settings.BatchSize ? settings.BusyPause : settings.IdlePause;
                 task_.SetSettings(TaskSettings(pause, settings.IdlePause));

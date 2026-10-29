@@ -17,7 +17,7 @@ dashboard:
   description: Техническое состояние сервиса поставок
   tags: [logistics]
   refresh: 10s
-  sections: [http, process, http_clients, postgresql, logs]
+  sections: [http, process, http_clients, postgresql]
   panels:
     - title: Размер очереди обработки
       expr: sum(work_queue_size{service="$service",environment=~"$environment",instance=~"$instance"})
@@ -44,10 +44,10 @@ UID дашборда стабилен: `broker-service-<service>` (для дли
 
 ## Фильтры и источники
 
-В дашборде доступны выбор источника Prometheus/Loki, окружения и инстанса.
+В дашборде доступны выбор источника Prometheus, окружения и инстанса.
 Скрытая константа `$service` равна имени сервиса. Все стандартные PromQL-запросы
 ограничены service/environment/instance; по умолчанию выбраны все окружения и инстансы.
-Источники по умолчанию имеют UID `prometheus` и `loki`; их можно переключить в дашборде.
+Источник метрик по умолчанию имеет UID `prometheus`; его можно переключить в дашборде.
 Для другого стенда импортируйте тот же JSON и выберите свои источники.
 
 Prometheus должен добавлять к собираемым метрикам labels `service`, `environment`
@@ -55,10 +55,9 @@ Prometheus должен добавлять к собираемым метрик�
 на scrape target. `up` показывает доступность `/metrics`, а не readiness приложения.
 На общем локальном дашборде readiness по-прежнему проверяется отдельными HTTP-пробами.
 
-Логи фильтруются по `service_name` и `deployment_environment_name`, как в текущей
-цепочке Collector → Loki. Выбор инстанса относится только к метрикам: соответствующего
-label у логов пока нет. Переход из trace_id в Tempo задается provisioning источника Loki.
-При отсутствии Loki можно убрать раздел `logs`.
+Логи открываются отдельно в **Explore → Loki**. Сервисные дашборды содержат только метрики;
+панели логов, выбор Loki и фильтр уровня из них удалены. Переход из trace_id в Tempo
+по-прежнему задаётся provisioning источника Loki.
 
 HTTP-панели исключают `/ping`, `/ping/ready`, `/metrics` и `/tests/...`, чтобы
 scrape/health-трафик не скрывал поведение API. Латентность берется из готовых gauge
@@ -93,7 +92,7 @@ Production provisioning, алерты и права доступа относя�
 
 ## Фильтр уровня логов
 
-В сервисных дашбордах и общем обзоре есть мультивыбор **Уровень**:
+В общем локальном обзоре есть мультивыбор **Уровень**; в сервисных дашбордах его нет:
 `TRACE`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. По умолчанию выбраны все.
 Для ошибок и предупреждений выберите `WARNING`, `ERROR`, `CRITICAL`.
 
@@ -105,7 +104,7 @@ Production provisioning, алерты и права доступа относя�
 
 Индексированный `level` появляется у новых записей после обновления Loki.
 Ранее загруженные записи содержат его в structured metadata; фильтр после selector
-работает с обоими вариантами (именно он используется в дашбордах):
+работает с обоими вариантами (он используется в общем локальном обзоре):
 
 ```logql
 {service_name="broker"} | level="ERROR"

@@ -46,6 +46,21 @@ class DashboardsTest(unittest.TestCase):
         self.assertNotIn('http_status', text)
         self.assertEqual(text, render('example', {}))
 
+    def test_outbox_panels_follow_library_and_do_not_sum_shared_queue(self):
+        dashboard = json.loads(render('queued', {'libraries': ['common', 'outbox']}))
+        lookup = {panel['title']: panel for panel in dashboard['panels']}
+        self.assertIn('Доставка сообщений', lookup)
+        queue = lookup['Outbox: сообщений в очереди']['targets'][0]['expr']
+        self.assertIn('max by(outbox_topic)', queue)
+        self.assertNotIn('sum(', queue)
+        active = lookup['Outbox: активные доставки']['targets'][0]['expr']
+        self.assertIn('sum by(outbox_topic)', active)
+        self.assertIn('Outbox: последний снимок успешен', lookup)
+        plain = json.loads(render('plain', {}))
+        self.assertFalse(any(panel['title'] == 'Доставка сообщений' for panel in plain['panels']))
+        with self.assertRaisesRegex(ValueError, 'libraries: outbox'):
+            render('plain', {'dashboard': {'sections': ['outbox']}})
+
     def test_customization_and_long_service_names(self):
         spec = {
             'dashboard': {
@@ -75,20 +90,16 @@ class DashboardsTest(unittest.TestCase):
         self.assertLessEqual(len(first), 40)
         self.assertNotEqual(first, second)
 
-    def test_log_level_filter_is_available_only_with_logs(self):
-        enabled = json.loads(render('example', {}))
-        variables = {item['name']: item for item in enabled['templating']['list']}
-        self.assertTrue(variables['level']['multi'])
-        self.assertIn('ERROR', variables['level']['query'])
-        logs = next(panel for panel in enabled['panels'] if panel['type'] == 'logs')
-        self.assertIn('| level=~"$level"', logs['targets'][0]['expr'])
-        self.assertIn('body={{.log_body}}', logs['targets'][0]['expr'])
-        self.assertIn('status={{.log_status}}', logs['targets'][0]['expr'])
-        self.assertIn('trace_id={{.trace_id}}', logs['targets'][0]['expr'])
-        disabled = json.loads(render('example', {'dashboard': {'sections': ['http']}}))
-        self.assertFalse(
-            {'level', 'loki'} & {item['name'] for item in disabled['templating']['list']}
-        )
+    def test_service_dashboard_has_only_metric_sources_and_no_log_panels(self):
+        for spec in [{}, {'libraries': ['common', 'outbox']}]:
+            dashboard = json.loads(render('example', spec))
+            variables = {item['name'] for item in dashboard['templating']['list']}
+            self.assertFalse({'level', 'loki'} & variables)
+            self.assertFalse(any(panel['type'] == 'logs' for panel in dashboard['panels']))
+            self.assertNotIn('Loki', render('example', spec))
+            if 'libraries' in spec:
+                row = next(panel for panel in dashboard['panels'] if panel['title'] == 'Доставка сообщений')
+                self.assertEqual(row['id'], 700)
 
     def test_invalid_settings_are_rejected(self):
         invalid = [
@@ -100,6 +111,7 @@ class DashboardsTest(unittest.TestCase):
             {'tags': 'tag'},
             {'tags': [None]},
             {'sections': ['unknown']},
+            {'sections': ['logs']},
             {'sections': ['http', 'http']},
             {'sections': ['postgresql']},
             {'sections': ['grpc']},

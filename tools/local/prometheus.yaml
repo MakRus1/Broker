@@ -4,27 +4,10 @@ scrape_configs:
 - job_name: services
   metrics_path: /metrics
   honor_labels: true
-  static_configs:
-  - targets:
-    - broker:8082
-    labels:
-      environment: local
-      service: broker
-  - targets:
-    - configs:8092
-    labels:
-      environment: local
-      service: configs
-  - targets:
-    - diagnostics:8085
-    labels:
-      environment: local
-      service: diagnostics
-  - targets:
-    - admin_bff:8182
-    labels:
-      environment: local
-      service: admin_bff
+  file_sd_configs:
+  - files:
+    - /etc/broker-local/prometheus-targets.json
+    refresh_interval: 5s
 - job_name: prometheus
   static_configs:
   - targets:

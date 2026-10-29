@@ -137,7 +137,9 @@ def parallel_outbox(configure_dispatcher):
 
 
 @pytest.mark.uservice_oneshot(config_hooks=["parallel_outbox"])
-async def test_slow_topic_does_not_block_other_topic_and_limits_hold(api, mockserver):
+async def test_slow_topic_does_not_block_other_topic_and_limits_hold(
+    api, mockserver, monitor_client
+):
     import asyncio
     from test_shipments import setup_item
 
@@ -213,6 +215,12 @@ async def test_slow_topic_does_not_block_other_topic_and_limits_hold(api, mockse
         assert active == 2
         assert delivered == 0
         assert maximum == 2
+        from test_outbox_metrics import metric
+
+        text = (await monitor_client.get("/metrics")).text
+        assert metric(text, "outbox_active", "transportations.create") == 2
+        assert metric(text, "outbox_concurrency", "transportations.create") == 2
+        assert metric(text, "outbox_concurrency", "shipment.route.project") == 1
     finally:
         release.set()
     for _ in range(100):

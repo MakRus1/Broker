@@ -20,6 +20,32 @@ ready = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ready)
 
 
+class MonitoringTargetsTest(unittest.TestCase):
+    def test_all_prepared_services_use_their_actual_monitor_ports(self):
+        import json
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            for name, port in [('shipments', 8102), ('new_service', 9876), ('web_bff', 8282)]:
+                (state / f'{name}.yaml').write_text(yaml.safe_dump({
+                    'components_manager': {'components': {'server': {'listener-monitor': {'port': port}}}}
+                }))
+            services = {name: {'command': ['bash', 'tools/local/run.sh', name]}
+                        for name in ['shipments', 'new_service', 'web_bff']}
+            services['postgres-shipments'] = {'command': ['postgres']}
+            services['prepare'] = {'command': ['bash', 'tools/local/build.sh']}
+            local.write_monitoring_targets(state, services)
+            targets = json.loads((state / 'monitoring/prometheus-targets.json').read_text())
+            self.assertEqual({row['labels']['service']: row['targets'] for row in targets}, {
+                'shipments': ['shipments:8102'], 'new_service': ['new_service:9876'],
+                'web_bff': ['web_bff:8282'],
+            })
+            services.pop('new_service')
+            local.write_monitoring_targets(state, services)
+            updated = json.loads((state / 'monitoring/prometheus-targets.json').read_text())
+            self.assertEqual(len(updated), 2)
+            self.assertFalse((state / 'monitoring/prometheus-targets.tmp').exists())
+
+
 class LocalUpdateTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

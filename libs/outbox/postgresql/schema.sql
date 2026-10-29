@@ -7,6 +7,7 @@ CREATE TABLE outbox (
     payload JSONB NOT NULL,
     generation BIGINT NOT NULL DEFAULT 1,
     attempts INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     lease_token UUID,
     UNIQUE (topic, message_key)

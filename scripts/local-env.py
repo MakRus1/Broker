@@ -46,6 +46,25 @@ def client_variables(name):
     return result
 
 
+def write_monitoring_targets(state, services):
+    # Target строится из фактически подготовленного конфига каждого C++-сервиса,
+    # а не отдельного списка базовых сервисов и портов.
+    targets = []
+    for name, service in sorted(services.items()):
+        if 'tools/local/run.sh' not in service.get('command', []):
+            continue
+        config = yaml.safe_load((state / f'{name}.yaml').read_text())
+        port = config['components_manager']['components']['server']['listener-monitor']['port']
+        targets.append({'targets': [f'{name}:{port}'],
+                        'labels': {'environment': 'local', 'service': name}})
+    directory = state / 'monitoring'
+    directory.mkdir(exist_ok=True)
+    path = directory / 'prometheus-targets.json'
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(targets, indent=2) + '\n')
+    temporary.replace(path)
+
+
 def prepare():
     STATE.mkdir(exist_ok=True)
     provision_dashboards(ROOT, STATE / "grafana-dashboards", UniqueLoader)
@@ -484,6 +503,8 @@ def prepare():
             if name == "prepare"
             else ("1g" if name in {"broker", "configs", "admin_bff", "admin-ui-build", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
         )
+    write_monitoring_targets(STATE, services)
+    services['prometheus']['volumes'].append(f"{STATE}/monitoring:/etc/broker-local:ro")
     (STATE / "compose.yaml").write_text(
         yaml.safe_dump(
             {"name": "broker-local", "services": services, "volumes": volumes}, sort_keys=False

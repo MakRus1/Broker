@@ -14,7 +14,6 @@ paths:
 - /api/v1/transportations/get
 - /api/v1/transportations/history
 - /api/v1/transportations/list
-- /api/v1/transportations/route-filter-values
 - /api/v1/transportations/update
 default:
   '**default**':

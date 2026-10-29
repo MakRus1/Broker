@@ -43,24 +43,24 @@ def test_claims_are_exclusive_and_scoped_to_registered_topics(outbox_sql):
     enqueue(sql, topic="other")
     enqueue(sql)
     enqueue(sql)
-    first = sql("claim", ["test"], 30)[0]
-    second = sql("claim", ["test"], 30)[0]
+    first = sql("claim", "test", 30)[0]
+    second = sql("claim", "test", 30)[0]
     assert first[0] != second[0]
     assert first[1] == second[1] == "test"
-    assert sql("claim", ["test"], 30) == []
-    assert len(sql("claim", ["other"], 30)) == 1
+    assert sql("claim", "test", 30) == []
+    assert len(sql("claim", "other", 30)) == 1
 
 
 def test_expired_lease_is_reclaimed_and_old_ack_cannot_remove_it(outbox_sql, pgsql):
     sql = outbox_sql
     enqueue(sql)
-    old = sql("claim", ["test"], 30)[0]
+    old = sql("claim", "test", 30)[0]
     with pgsql["db_1"].cursor() as cursor:
         cursor.execute(
             "UPDATE outbox SET available_at=now()-INTERVAL '1 second' WHERE id=%s",
             (old[0],),
         )
-    current = sql("claim", ["test"], 30)[0]
+    current = sql("claim", "test", 30)[0]
     assert current[0] == old[0]
     assert current[3] != old[3]
     assert sql("lock_delivery", old[0], old[3], old[4]) == []
@@ -73,12 +73,12 @@ def test_expired_lease_is_reclaimed_and_old_ack_cannot_remove_it(outbox_sql, pgs
 def test_latest_state_invalidates_old_delivery(outbox_sql):
     sql = outbox_sql
     key = enqueue(sql)
-    old = sql("claim", ["test"], 30)[0]
+    old = sql("claim", "test", 30)[0]
     enqueue(sql, key=key, payload={"n": 2}, latest=True)
     assert sql("lock_delivery", old[0], old[3], old[4]) == []
     assert sql("complete", old[0], old[3], old[4]) == 0
     assert sql("retry", old[0], old[3], 2, 60) == 0
-    current = sql("claim", ["test"], 30)[0]
+    current = sql("claim", "test", 30)[0]
     assert current[0] == old[0]
     assert current[2] == {"n": 2}
     assert current[4] == old[4] + 1
@@ -88,14 +88,14 @@ def test_enqueue_is_idempotent_while_pending(outbox_sql):
     sql = outbox_sql
     key = enqueue(sql)
     enqueue(sql, key=key, payload={"n": 2})
-    assert sql("claim", ["test"], 30)[0][2] == {"n": 1}
-    assert sql("claim", ["test"], 30) == []
+    assert sql("claim", "test", 30)[0][2] == {"n": 1}
+    assert sql("claim", "test", 30) == []
 
 
 def test_retry_uses_bounded_delay_and_releases_lease(outbox_sql, pgsql):
     sql = outbox_sql
     enqueue(sql)
-    message = sql("claim", ["test"], 30)[0]
+    message = sql("claim", "test", 30)[0]
     with pgsql["db_1"].cursor() as cursor:
         cursor.execute("UPDATE outbox SET attempts=100 WHERE id=%s", (message[0],))
     assert sql("retry", message[0], message[3], 2, 60) == 1
@@ -105,7 +105,7 @@ def test_retry_uses_bounded_delay_and_releases_lease(outbox_sql, pgsql):
             (message[0],),
         )
         assert cursor.fetchone() == (None, True, True)
-    assert sql("claim", ["test"], 30) == []
+    assert sql("claim", "test", 30) == []
 
 
 def test_enqueue_rolls_back_with_business_transaction(outbox_sql, pgsql):
@@ -113,7 +113,7 @@ def test_enqueue_rolls_back_with_business_transaction(outbox_sql, pgsql):
         cursor.execute("BEGIN")
         enqueue(outbox_sql)
         cursor.execute("ROLLBACK")
-    assert outbox_sql("claim", ["test"], 30) == []
+    assert outbox_sql("claim", "test", 30) == []
 
 
 @pytest.fixture(scope="session")

@@ -12,9 +12,13 @@ Response View::Handle(
         api::Request{.body = {.after = request.body.after,
                          .candidates = request.body.candidates,
                          .field = request.body.field,
+                         .group = request.body.group,
                          .limit = request.body.limit,
                          .query = request.body.query,
-                         .registry = ConvertRegistry(request.body.registry)}},
+                         .registry = ConvertRegistry(request.body.registry),
+                         .scope = clients::transportations::models::ParseEnumScalar(
+                             models::transportations::EnumValue(request.body.scope),
+                             clients::transportations::models::FilterValuesScope{})}},
         session.Access);
     Response200 result;
     result.next_after = response.next_after;

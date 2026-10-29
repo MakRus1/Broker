@@ -936,3 +936,10 @@ ProjectedRouteSegment:
       $ref: '#/SeaDetails'
     air:
       $ref: '#/AirDetails'
+
+FilterValuesScope:
+  type: string
+  default: registry
+  enum:
+  - registry
+  - route

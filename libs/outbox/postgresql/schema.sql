@@ -13,4 +13,4 @@ CREATE TABLE outbox (
 );
 
 -- available_at — следующая попытка или срок истечения текущего захвата.
-CREATE INDEX outbox_due_idx ON outbox (available_at, id);
+CREATE INDEX outbox_due_idx ON outbox (topic, available_at, id);

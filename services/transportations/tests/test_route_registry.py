@@ -6,7 +6,7 @@ import pytest
 from conftest import ORGANIZATION, OTHER_ORGANIZATION
 
 LIST = "/api/v1/transportations/list"
-VALUES = "/api/v1/transportations/route-filter-values"
+VALUES = "/api/v1/transportations/filter-values"
 PROJECTION = "/api/internal/v1/shipments/route-projection"
 
 
@@ -204,16 +204,31 @@ async def test_values_respect_other_conditions_and_page(api, routes):
         ]
     }
     result = await api.post(
-        VALUES, {"registry": registry, "field": "mode", "group": 0, "limit": 1}
+        VALUES,
+        {
+            "scope": "route",
+            "registry": registry,
+            "field": "mode",
+            "group": 0,
+            "limit": 1,
+        },
     )
     assert result["values"] == [{"value": "sea", "label": "sea"}]
     result = await api.post(
-        VALUES, {"registry": {}, "field": "destination_station", "query": "Бета"}
+        VALUES,
+        {
+            "scope": "route",
+            "registry": {},
+            "field": "destination_station",
+            "query": "Бета",
+        },
     )
     assert result["values"] == [{"value": routes["b"], "label": "Бета · 123456"}]
     assert (
         await api.post(
-            VALUES, {"registry": {}, "field": "destination_station"}, user="other"
+            VALUES,
+            {"scope": "route", "registry": {}, "field": "destination_station"},
+            user="other",
         )
     )["values"] == []
 
@@ -279,10 +294,18 @@ async def test_projection_is_idempotent_and_rejects_old_versions(api, routes, pg
 
 
 async def test_route_values_cursor_covers_distinct_modes(api, routes):
-    first = await api.post(VALUES, {"registry": {}, "field": "mode", "limit": 2})
+    first = await api.post(
+        VALUES, {"scope": "route", "registry": {}, "field": "mode", "limit": 2}
+    )
     second = await api.post(
         VALUES,
-        {"registry": {}, "field": "mode", "limit": 2, "after": first["next_after"]},
+        {
+            "scope": "route",
+            "registry": {},
+            "field": "mode",
+            "limit": 2,
+            "after": first["next_after"],
+        },
     )
     assert [value["value"] for value in first["values"] + second["values"]] == [
         "air",
@@ -303,6 +326,26 @@ async def test_route_values_cursor_covers_distinct_modes(api, routes):
     ],
 )
 async def test_location_values_catalogue(api, routes, field, key, label):
-    result = await api.post(VALUES, {"registry": {}, "field": field})
+    result = await api.post(VALUES, {"scope": "route", "registry": {}, "field": field})
     expected = [] if key is None else [{"value": routes[key], "label": label}]
     assert result["values"] == expected
+
+
+async def test_shared_endpoint_distinguishes_catalogues(api):
+    root = await api.post(VALUES, {"registry": {}})
+    route = await api.post(VALUES, {"registry": {}, "scope": "route"})
+    assert "container_number" in {field["id"] for field in root["fields"]}
+    assert "mode" not in {field["id"] for field in root["fields"]}
+    assert "mode" in {field["id"] for field in route["fields"]}
+    assert "container_number" not in {field["id"] for field in route["fields"]}
+    await api.post(VALUES, {"registry": {}, "scope": "unknown"}, expected=400)
+    await api.post(
+        VALUES,
+        {"registry": {}, "scope": "route", "field": "mode", "group": 1},
+        expected=400,
+    )
+    await api.post(
+        VALUES,
+        {"registry": {}, "scope": "route", "field": "mode", "candidates": ["sea"]},
+        expected=400,
+    )

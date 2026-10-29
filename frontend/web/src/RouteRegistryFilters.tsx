@@ -25,9 +25,9 @@ export function useRouteRegistryFilters(
     if (!session?.permissions.includes('transportations.read')) return;
     const abort = new AbortController();
     request<{ fields: RegistryField[] }>(
-      '/api/v1/transportations/route-filter-values',
+      '/api/v1/transportations/filter-values',
       session,
-      { registry: {} },
+      { registry: {}, scope: 'route' },
       abort.signal,
     )
       .then((value) => setFields(value.fields))
@@ -151,7 +151,7 @@ function RouteEditor({
     },
     values: (field, search, after, signal) =>
       request<{ values: RegistryValue[]; next_after?: string }>(
-        '/api/v1/transportations/route-filter-values',
+        '/api/v1/transportations/filter-values',
         session,
         {
           registry: {
@@ -162,6 +162,7 @@ function RouteEditor({
               ...(current.filters.length ? [current] : []),
             ].map((value) => ({ filters: filterRequest(value.filters) })),
           },
+          scope: 'route',
           field: field.id,
           group: groups.filter((value, index) => index !== selected && value.filters.length).length,
           query: search || undefined,

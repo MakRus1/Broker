@@ -818,3 +818,10 @@ RouteFilterGroup:
       maxItems: 32
       items:
         $ref: '#/RegistryFilter'
+
+FilterValuesScope:
+  type: string
+  default: registry
+  enum:
+  - registry
+  - route

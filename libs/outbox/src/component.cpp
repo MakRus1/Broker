@@ -110,8 +110,8 @@ void Component::OnAllComponentsAreStopping() {
 }
 
 std::optional<Message> Component::Claim(const std::string& topic) {
-    const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kClaim, std::vector<std::string>{topic}, lease_seconds_);
+    const auto rows =
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClaim, topic, lease_seconds_);
     if (rows.IsEmpty())
         return std::nullopt;
     return rows.AsSingleRow<Message>(pg::kRowTag);

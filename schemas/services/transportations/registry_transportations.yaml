@@ -16,6 +16,13 @@ paths:
               required:
               - registry
               properties:
+                scope:
+                  $ref: components/schemas/models.yaml#/FilterValuesScope
+                group:
+                  type: integer
+                  minimum: 0
+                  maximum: 7
+                  default: 0
                 registry:
                   $ref: components/schemas/models.yaml#/ListTransportationsRequest
                 field:

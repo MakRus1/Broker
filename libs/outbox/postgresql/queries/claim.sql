@@ -1,7 +1,7 @@
 WITH candidate AS (
     SELECT id
     FROM outbox
-    WHERE topic = ANY($1::TEXT[])
+    WHERE topic = $1::TEXT
       AND available_at <= now()
     ORDER BY available_at, id
     FOR UPDATE SKIP LOCKED

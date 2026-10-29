@@ -68,6 +68,7 @@ SQL-запросы генерируются из `postgresql/queries`; `src/deps
 
 Структура сервиса: [docs/service-layout.md](docs/service-layout.md).
 Подключение БД, gRPC и библиотек: [docs/service-manifest.md](docs/service-manifest.md).
+Надёжная доставка сообщений: [подключение outbox и нового обработчика](docs/outbox.md).
 
 Поддерживаемый OpenAPI-контракт: [docs/codegen.md](docs/codegen.md).
 Логирование, метрики и трассировка: [docs/observability.md](docs/observability.md).

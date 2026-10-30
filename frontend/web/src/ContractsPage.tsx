@@ -559,19 +559,26 @@ export function ContractsPage({
   return (
     <section className="card contract-page">
       {confirmation}
-      <a className="link" href="#/contracts">
-        ← К договорам
-      </a>
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">ДОГОВОР</span>
-          <h1>{creating ? 'Новый договор' : (value?.number ?? 'Договор')}</h1>
+      <div className="contract-heading">
+        <a className="link contract-back" href="#/contracts">
+          ← К договорам
+        </a>
+        <div className="section-heading">
+          <div>
+            {!creating && <p className="eyebrow">ДОГОВОР</p>}
+            <h1>{creating ? 'Новый договор' : (value?.number ?? 'Договор')}</h1>
+            {value && !editing && (
+              <p className="contract-state">
+                {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
+              </p>
+            )}
+          </div>
+          {!editing && value && write && (
+            <a className="button primary" href={`#/contracts/${id}/edit`}>
+              Редактировать
+            </a>
+          )}
         </div>
-        {!editing && value && write && (
-          <a className="button primary" href={`#/contracts/${id}/edit`}>
-            Редактировать
-          </a>
-        )}
       </div>
       {failure && (
         <p className="error" role="alert">
@@ -727,9 +734,6 @@ export function ContractsPage({
         value &&
         !editing && (
           <>
-            <p className="hint">
-              {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
-            </p>
             <div className="contract-fields contract-summary">
               <div>
                 <span className="hint">Дата договора</span>

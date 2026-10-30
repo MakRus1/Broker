@@ -3184,3 +3184,26 @@ details[open] > .route-stage-summary::after {
   text-align: center;
   color: #75839a;
 }
+
+.contract-heading {
+  margin-bottom: 32px;
+}
+.contract-back {
+  display: inline-flex;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.contract-heading .section-heading {
+  margin-bottom: 0;
+  align-items: flex-start;
+}
+.contract-heading .eyebrow {
+  margin: 0 0 8px;
+  font-size: 10px;
+}
+.contract-heading .contract-state {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #75839a;
+}

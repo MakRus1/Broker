@@ -21,7 +21,7 @@ Response View::Handle(
         if (request.body.cursor.has_value() && request.body.cursor.value().scope != scope)
             throw ApiError{400, "invalid_cursor",
                 "Фильтры или сортировка изменились. Начните с первой страницы"};
-        const auto query = BuildRegistryQuery(request.body, organization);
+        const auto query = platform::registry::BuildPage(kRegistry, request.body, organization);
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         transaction.Execute(sql::kRegistryPlan);

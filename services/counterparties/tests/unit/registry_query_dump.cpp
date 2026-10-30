@@ -12,10 +12,10 @@ int main() {
         body, std::type_identity<counterparties::models::ListCounterpartiesRequest>{});
     const std::string organization = "00000000-0000-0000-0000-000000000001";
     const auto query = document.HasMember("facet")
-        ? counterparties::helpers::BuildRegistryValues(request, organization,
-              document["facet"].As<std::string>(),
+        ? platform::registry::BuildFilterValues(counterparties::helpers::kRegistry, request,
+              organization, document["facet"].As<std::string>(),
               document["query"].As<std::optional<std::string>>(),
               document["after"].As<std::optional<std::string>>(), 50)
-        : counterparties::helpers::BuildRegistryQuery(request, organization);
+        : platform::registry::BuildPage(counterparties::helpers::kRegistry, request, organization);
     std::cout << query.Statement.GetStatementView();
 }

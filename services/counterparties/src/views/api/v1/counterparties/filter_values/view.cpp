@@ -12,9 +12,8 @@ Response View::Handle(
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
         if (!request.body.field.has_value())
             return result;
-        const auto query = BuildRegistryValues(request.body.registry, organization,
-            request.body.field.value(), request.body.query, request.body.after, request.body.limit,
-            request.body.candidates);
+        const auto query =
+            platform::registry::BuildFilterValues(kRegistry, request.body, organization);
         const auto rows =
             deps.pg_cluster->Execute(
                                pg::ClusterHostType::kMaster, query.Statement, query.Parameters)

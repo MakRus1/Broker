@@ -78,3 +78,14 @@ export function restoreFinancialLabelQuery(raw: unknown): typeof initialFinancia
     descending: value.descending === true,
   };
 }
+
+export const initialInvoiceQuery = { ...initialContractQuery, sort: 'invoice_date' };
+export function restoreInvoiceQuery(raw: unknown): typeof initialInvoiceQuery {
+  const value = object(raw);
+  return {
+    filters: restoreColumnFilters(value.filters) ?? initialInvoiceQuery.filters,
+    sort: text(value.sort, 64) ?? initialInvoiceQuery.sort,
+    descending:
+      typeof value.descending === 'boolean' ? value.descending : initialInvoiceQuery.descending,
+  };
+}

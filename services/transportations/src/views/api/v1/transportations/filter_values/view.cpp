@@ -32,9 +32,7 @@ Response View::Handle(
                       registry::ApplyFilters(
                           builder, registry_fields::kFields, request.body.registry.filters);
                   })
-            : BuildRegistryValues(request.body.registry, organization, request.body.field.value(),
-                  request.body.query, request.body.after, request.body.limit,
-                  request.body.candidates);
+            : platform::registry::BuildFilterValues(kRegistry, request.body, organization);
         // Custom plan сохраняет селективность условий и вариантов связанной коллекции.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         transaction.Execute(sql::kRegistryPlan);

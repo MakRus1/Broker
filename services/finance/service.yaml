@@ -13,8 +13,16 @@ auth:
     /api/v1/financial-labels/get: finance.read_financial_labels
     /api/v1/financial-labels/list: finance.read_financial_labels
     /api/v1/financial-labels/filter-values: finance.read_financial_labels
-    /api/v1/financial-entries/save: finance.write_entries
-    /api/v1/financial-entries/list: finance.read_entries
+    /api/v1/service-charges/save: finance.write_service_charges
+    /api/v1/service-charges/list: finance.read_service_charges
+    /api/v1/invoices/save: finance.write_invoices
+    /api/v1/invoices/get: finance.read_invoices
+    /api/v1/invoices/list: finance.read_invoices
+    /api/v1/invoices/candidates: finance.read_invoices
+    /api/v1/invoices/filter-values: finance.read_invoices
+    /api/v1/invoices/add-service-charge: finance.write_invoices
+    /api/v1/service-charges/get: finance.read_service_charges
+    /api/v1/invoices/detach-service-charge: finance.write_invoices
   organization-access: true
 clients:
   shipments:

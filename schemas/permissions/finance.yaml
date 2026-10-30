@@ -9,19 +9,34 @@ finance.write_financial_labels:
   scope: organization
   requires:
   - finance.read_financial_labels
-finance.read_entries:
-  name: Просмотр начислений
+finance.read_service_charges:
+  name: Просмотр услуг
   group: Финансы
   scope: organization
   requires:
   - shipments.read
   - transportations.read
-finance.write_entries:
-  name: Изменение начислений
+finance.write_service_charges:
+  name: Изменение услуг
   group: Финансы
   scope: organization
   requires:
-  - finance.read_entries
+  - finance.read_service_charges
   - finance.read_financial_labels
   - contracts.read
   - counterparties.read
+finance.read_invoices:
+  name: Просмотр счетов
+  group: Счета
+  scope: organization
+  requires:
+  - finance.read_service_charges
+finance.write_invoices:
+  name: Изменение счетов
+  group: Счета
+  scope: organization
+  requires:
+  - finance.read_invoices
+  - contracts.read
+  - counterparties.read
+  - counterparties.read_bank_accounts

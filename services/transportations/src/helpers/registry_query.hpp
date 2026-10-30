@@ -1,7 +1,7 @@
 #pragma once
 #include <helpers/registry.hpp>
 #include <helpers/route_registry.hpp>
-#include <platform/registry_filters.hpp>
+#include <platform/registry_page.hpp>
 
 namespace transportations::helpers {
 namespace registry = platform::registry;
@@ -89,26 +89,7 @@ inline registry::QueryBuilder BuildRegistryFilters(
     return query;
 }
 
-// Страница реестра: общие условия + курсор + лимит с одной дополнительной записью.
-inline registry::BuiltQuery BuildRegistryQuery(
-    const models::ListTransportationsRequest& request, const std::string& organization) {
-    using namespace registry_fields;
-    auto query = BuildRegistryFilters(request, organization);
-    query.After(
-        request.cursor.has_value() ? std::optional{request.cursor.value().id} : request.after,
-        request.cursor.has_value() ? request.cursor.value().value : "");
-    return std::move(query).Build(request.limit + 1);
-}
+inline const registry::Definition kRegistry{
+    registry_fields::kFields, sql::kRegistryFilterValues, &BuildRegistryFilters};
 
-// Варианты одного фильтра: остальные условия сохраняются, собственное исключается.
-inline registry::BuiltQuery BuildRegistryValues(const models::ListTransportationsRequest& request,
-    const std::string& organization, const std::string& field,
-    const std::optional<std::string>& search, const std::optional<std::string>& after, int limit,
-    const std::optional<std::vector<std::string>>& candidates = std::nullopt) {
-    const auto& definition = registry::FindField(registry_fields::kFields, field);
-    auto builder = BuildRegistryFilters(request, organization, field);
-    registry::ApplyCandidates(builder, definition, candidates);
-    return registry::BuildValues(
-        std::move(builder), sql::kRegistryFilterValues, definition, search, after, limit + 1);
-}
 }  // namespace transportations::helpers

@@ -81,7 +81,7 @@ FINANCIAL_LABEL = {
 }
 
 
-FINANCIAL_ENTRY = {
+SERVICE_CHARGE = {
     'id': ID, 'shipment_id': ID, 'transportation_id': None, 'label_id': ID,
     'label_name': 'Фрахт', 'direction': 'income', 'unit': 'container',
     'counterparty_id': CUSTOMER, 'counterparty_name': 'Клиент',
@@ -91,18 +91,38 @@ FINANCIAL_ENTRY = {
     'net_minor': 15000, 'vat_minor': 3000, 'total_minor': 18000,
     'note': None, 'archived': False, 'revision': 1,
 }
-ENTRY_SAVE = {key:value for key,value in FINANCIAL_ENTRY.items()
+SERVICE_CHARGE_SAVE = {key:value for key,value in SERVICE_CHARGE.items()
               if key not in ('label_name','counterparty_name','contract_number','net_minor','vat_minor','total_minor','revision')}
-ENTRY_SAVE['expected_revision'] = 0
-ENTRY_SUMMARY = {'own':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}],
+SERVICE_CHARGE_SAVE['expected_revision'] = 0
+SERVICE_CHARGE_SUMMARY = {'own':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}],
                  'transportations':[], 'combined':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}]}
 
+
+INVOICE = {
+    'id':ID,'direction':'outgoing','number':'ИС-1','invoice_date':'2026-10-30',
+    'due_date':None,'own_company_id':ID,'own_company_name':'Своя компания',
+    'counterparty_id':CUSTOMER,'counterparty_name':'Клиент',
+    'own_bank_account_id':None,'counterparty_bank_account_id':None,
+    'contract_id':None,'contract_number':None,'currency':'RUB','note':None,
+    'archived':False,'revision':1,'net_minor':15000,'vat_minor':3000,'total_minor':18000,
+}
+INVOICE_SAVE={key:value for key,value in INVOICE.items() if key not in
+              ('own_company_name','counterparty_name','contract_number','revision','net_minor','vat_minor','total_minor')}
+INVOICE_SAVE.update(service_charge_ids=[ID],expected_revision=0)
 
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
-        ('financial-entries/save', ENTRY_SAVE, {'entry':FINANCIAL_ENTRY},200),
-        ('financial-entries/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[FINANCIAL_ENTRY],'next_after':None,'summary':ENTRY_SUMMARY},200),
+        ('invoices/save',INVOICE_SAVE,{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
+        ('invoices/detach-service-charge',{'invoice_id':ID,'service_charge_id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
+        ('invoices/add-service-charge',{'invoice_id':ID,'service_charge_id':ID,'expected_revision':1},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
+        ('service-charges/get',{'id':ID},{'charge':SERVICE_CHARGE},200),
+        ('invoices/filter-values',{'registry':{'direction':'incoming','sort':'id','descending':False,'limit':50}},{'fields':[],'values':[]},200),
+        ('invoices/get',{'id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
+        ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[INVOICE]},200),
+        ('invoices/candidates',{'direction':'outgoing','counterparty_id':CUSTOMER,'currency':'RUB','contract_id':None,'invoice_id':None,'after':None,'limit':50},{'items':[SERVICE_CHARGE],'next_after':None},200),
+        ('service-charges/save', SERVICE_CHARGE_SAVE, {'charge':SERVICE_CHARGE},200),
+        ('service-charges/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[SERVICE_CHARGE],'next_after':None,'summary':SERVICE_CHARGE_SUMMARY,'invoices':[]},200),
         ('financial-labels/get',{'id':ID},{'label':FINANCIAL_LABEL},200),
         ('financial-labels/list',{}, {'items':[FINANCIAL_LABEL]},200),
         ('financial-labels/save',{**{key:value for key,value in FINANCIAL_LABEL.items() if key!='revision'},'expected_revision':0},{'label':FINANCIAL_LABEL},200),

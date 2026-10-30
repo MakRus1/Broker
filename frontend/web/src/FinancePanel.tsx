@@ -1,8 +1,17 @@
+import { preferenceKey, useRegistryPreference } from './registryPreferences';
+import { Chevron } from './Select';
+import type { ServiceChargeInvoice } from './invoices';
+import {
+  ServiceInvoiceActions,
+  attachServiceInvoice,
+  type ServiceInvoiceSelection,
+} from './ServiceInvoiceActions';
+import { CalendarDate } from './CalendarDate';
 import { VatRateSelect } from './VatRateSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
-import { FinancialEntryLookup } from './FinancialEntryLookup';
+import { ServiceChargeLookup } from './ServiceChargeLookup';
 import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useDiscardConfirmation } from './components';
@@ -19,19 +28,19 @@ import {
   formatFixed,
   inputFixed,
   parseFixed,
-  type EntryScope,
-  type FinancialEntry,
-  type EntrySummary,
+  type ServiceChargeScope,
+  type ServiceCharge,
+  type ServiceChargeSummary,
   type CurrencyTotal,
-} from './financialEntries';
+} from './serviceCharges';
 
-type Draft = Omit<FinancialEntry, 'quantity_milli' | 'price_minor' | 'vat_rate_basis_points'> & {
+type Draft = Omit<ServiceCharge, 'quantity_milli' | 'price_minor' | 'vat_rate_basis_points'> & {
   quantity: string;
   price: string;
   rate: string;
 };
-const emptySummary: EntrySummary = { own: [], transportations: [], combined: [] };
-function draftOf(value: FinancialEntry): Draft {
+const emptySummary: ServiceChargeSummary = { own: [], transportations: [], combined: [] };
+function draftOf(value: ServiceCharge): Draft {
   const { quantity_milli, price_minor, vat_rate_basis_points, ...rest } = value;
   return {
     ...rest,
@@ -40,7 +49,7 @@ function draftOf(value: FinancialEntry): Draft {
     rate: formatVatRate(vat_rate_basis_points ?? 0),
   };
 }
-function newEntry(scope: EntryScope, direction: FinancialEntry['direction']): Draft {
+function newCharge(scope: ServiceChargeScope, direction: ServiceCharge['direction']): Draft {
   return draftOf({
     ...scope,
     id: crypto.randomUUID(),
@@ -71,7 +80,7 @@ function Totals({ title, items }: { title: string; items: CurrencyTotal[] }) {
     <section className="finance-totals">
       <h3>{title}</h3>
       {!items.length ? (
-        <p className="hint">Начислений нет</p>
+        <p className="hint">Услуг нет</p>
       ) : (
         <dl>
           {items.map((item) => (
@@ -98,29 +107,40 @@ function Totals({ title, items }: { title: string; items: CurrencyTotal[] }) {
     </section>
   );
 }
-export function FinancialEntries({
+export function ServiceCharges({
   scope,
   session,
   customers,
 }: {
-  scope: EntryScope;
+  scope: ServiceChargeScope;
   session: Session;
   customers: Counterparty[];
 }) {
-  const read = session.permissions.includes('finance.read_entries');
-  const write = session.permissions.includes('finance.write_entries');
-  const [items, setItems] = useState<FinancialEntry[]>([]);
+  const read = session.permissions.includes('finance.read_service_charges');
+  const write = session.permissions.includes('finance.write_service_charges');
+  const [items, setItems] = useState<ServiceCharge[]>([]);
+  const [invoices, setInvoices] = useState<ServiceChargeInvoice[]>([]);
   const [summary, setSummary] = useState(emptySummary);
+  const [summaryOpen, setSummaryOpen] = useRegistryPreference(
+    preferenceKey(
+      session.subject,
+      scope.transportation_id ? 'transportation-finances' : 'shipment-finances',
+      'summary-open',
+    ),
+    false,
+    (raw) => raw === true,
+  );
   const [after, setAfter] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState('');
   const [archived, setArchived] = useState(false);
   const [version, setVersion] = useState(0);
   const [draft, setDraft] = useState<Draft>();
+  const [invoiceSelection, setInvoiceSelection] = useState<ServiceInvoiceSelection>();
   const baseline = useRef('');
   const [busy, setBusy] = useState(false);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
-  const dirty = !!draft && JSON.stringify(draft) !== baseline.current;
+  const dirty = !!draft && (JSON.stringify(draft) !== baseline.current || !!invoiceSelection);
   useEffect(() => {
     if (!read) return;
     const controller = new AbortController();
@@ -129,8 +149,13 @@ export function FinancialEntries({
     setItems([]);
     setSummary(emptySummary);
     setAfter(null);
-    request<{ items: FinancialEntry[]; next_after: string | null; summary: EntrySummary }>(
-      '/api/v1/financial-entries/list',
+    request<{
+      items: ServiceCharge[];
+      next_after: string | null;
+      invoices: typeof invoices;
+      summary: ServiceChargeSummary;
+    }>(
+      '/api/v1/service-charges/list',
       session,
       { scope, after: null, limit: 50, include_archived: archived },
       controller.signal,
@@ -138,6 +163,7 @@ export function FinancialEntries({
       .then((result) => {
         if (!controller.signal.aborted) {
           setItems(result.items);
+          setInvoices(result.invoices);
           setSummary(result.summary);
           setAfter(result.next_after);
         }
@@ -160,7 +186,12 @@ export function FinancialEntries({
     window.addEventListener('beforeunload', leave);
     return () => window.removeEventListener('beforeunload', leave);
   }, [dirty, busy]);
+  useEffect(
+    () => setInvoiceSelection(undefined),
+    [draft?.counterparty_id, draft?.currency, draft?.contract_id],
+  );
   function edit(value: Draft) {
+    setInvoiceSelection(undefined);
     baseline.current = JSON.stringify(value);
     setDraft(value);
     setFailure('');
@@ -181,10 +212,11 @@ export function FinancialEntries({
     setFailure('');
     try {
       const result = await request<{
-        items: FinancialEntry[];
+        items: ServiceCharge[];
         next_after: string | null;
-        summary: EntrySummary;
-      }>('/api/v1/financial-entries/list', session, {
+        summary: ServiceChargeSummary;
+        invoices: typeof invoices;
+      }>('/api/v1/service-charges/list', session, {
         scope,
         after,
         limit: 50,
@@ -195,9 +227,15 @@ export function FinancialEntries({
         ...result.items.filter((item) => !old.some((existing) => existing.id === item.id)),
       ]);
       setAfter(result.next_after);
+      setInvoices((old) => [
+        ...old.filter(
+          (x) => !result.invoices.some((y) => y.service_charge_id === x.service_charge_id),
+        ),
+        ...result.invoices,
+      ]);
       setSummary(result.summary);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить начисления');
+      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить услуги');
     } finally {
       setLoading(false);
     }
@@ -221,28 +259,45 @@ export function FinancialEntries({
     setBusy(true);
     setFailure('');
     try {
-      await request('/api/v1/financial-entries/save', session, {
-        id: draft.id,
-        ...scope,
-        label_id: draft.label_id,
-        direction: draft.direction,
-        unit: draft.unit,
-        counterparty_id: draft.counterparty_id,
-        contract_id: draft.contract_id,
-        quantity_milli: quantity,
-        price_minor: price,
-        price_mode: draft.price_mode,
-        currency: draft.currency,
-        vat_mode: draft.vat_mode,
-        vat_rate_basis_points: rate,
-        note: draft.note,
-        archived: draft.archived,
-        expected_revision: draft.revision,
-      });
+      const saved = await request<{ charge: ServiceCharge }>(
+        '/api/v1/service-charges/save',
+        session,
+        {
+          id: draft.id,
+          ...scope,
+          label_id: draft.label_id,
+          direction: draft.direction,
+          unit: draft.unit,
+          counterparty_id: draft.counterparty_id,
+          contract_id: draft.contract_id,
+          quantity_milli: quantity,
+          price_minor: price,
+          price_mode: draft.price_mode,
+          currency: draft.currency,
+          vat_mode: draft.vat_mode,
+          vat_rate_basis_points: rate,
+          note: draft.note,
+          archived: draft.archived,
+          expected_revision: draft.revision,
+        },
+      );
+      if (invoiceSelection) {
+        try {
+          await attachServiceInvoice(saved.charge.id, invoiceSelection, session);
+        } catch (error) {
+          const persisted = draftOf(saved.charge);
+          setDraft(persisted);
+          baseline.current = JSON.stringify(persisted);
+          setVersion((v) => v + 1);
+          setFailure('Услуга сохранена, но счёт не привязан: ' + (error as Error).message);
+          return;
+        }
+      }
+      setInvoiceSelection(undefined);
       setDraft(undefined);
       setVersion((old) => old + 1);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить начисление');
+      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить услугу');
     } finally {
       setBusy(false);
     }
@@ -251,16 +306,16 @@ export function FinancialEntries({
   return (
     <section className="finance-section" aria-label="Финансы">
       {draft ? (
-        <form onSubmit={save} data-dirty={dirty} data-busy={busy} className="finance-entry-form">
+        <form onSubmit={save} data-dirty={dirty} data-busy={busy} className="finance-charge-form">
           <h2>
             {draft.revision
-              ? 'Редактирование начисления'
+              ? 'Редактирование услуги'
               : draft.direction === 'income'
                 ? 'Новый доход'
                 : 'Новый расход'}
           </h2>
           <fieldset disabled={busy} className="record-fields">
-            <FinancialEntryLookup<FinancialLabel>
+            <ServiceChargeLookup<FinancialLabel>
               session={session}
               kind="labels"
               label="Финансовая метка · обязательно"
@@ -295,7 +350,7 @@ export function FinancialEntries({
                 { value: 'income', label: 'Доход' },
                 { value: 'expense', label: 'Расход' },
               ]}
-              onChange={(value) => set('direction', value as FinancialEntry['direction'])}
+              onChange={(value) => set('direction', value as ServiceCharge['direction'])}
             />
             <CustomerSelect
               session={session}
@@ -312,7 +367,7 @@ export function FinancialEntries({
                 )
               }
             />
-            <FinancialEntryLookup<Contract>
+            <ServiceChargeLookup<Contract>
               session={session}
               kind="contracts"
               label="Договор"
@@ -333,6 +388,28 @@ export function FinancialEntries({
                 )
               }
             />
+            {session.permissions.includes('finance.write_invoices') && !draft.archived && (
+              <ServiceInvoiceActions
+                service={draft}
+                session={session}
+                selection={invoiceSelection}
+                current={invoices.find((x) => x.service_charge_id === draft.id)}
+                onSelect={async (selection) => {
+                  const previous = invoices.find((x) => x.service_charge_id === draft.id);
+                  if (previous) {
+                    if (selection)
+                      await attachServiceInvoice(draft.id, selection, session, previous.invoice_id);
+                    else
+                      await request('/api/v1/invoices/detach-service-charge', session, {
+                        invoice_id: previous.invoice_id,
+                        service_charge_id: draft.id,
+                      });
+                    setInvoiceSelection(undefined);
+                    setVersion((v) => v + 1);
+                  } else setInvoiceSelection(selection);
+                }}
+              />
+            )}
             <label>
               Количество · обязательно
               <input
@@ -359,7 +436,7 @@ export function FinancialEntries({
                 value,
                 label,
               }))}
-              onChange={(value) => set('unit', value as FinancialEntry['unit'])}
+              onChange={(value) => set('unit', value as ServiceCharge['unit'])}
             />
             <label>
               Цена · обязательно
@@ -398,7 +475,7 @@ export function FinancialEntries({
                 { value: 'net', label: 'Без НДС' },
                 { value: 'gross', label: 'С НДС' },
               ]}
-              onChange={(value) => set('price_mode', value as FinancialEntry['price_mode'])}
+              onChange={(value) => set('price_mode', value as ServiceCharge['price_mode'])}
             />
             <Select
               label="НДС"
@@ -407,7 +484,7 @@ export function FinancialEntries({
                 { value: 'exempt', label: 'Без НДС' },
                 { value: 'rate', label: 'Ставка НДС' },
               ]}
-              onChange={(value) => set('vat_mode', value as FinancialEntry['vat_mode'])}
+              onChange={(value) => set('vat_mode', value as ServiceCharge['vat_mode'])}
             />
             {draft.vat_mode === 'rate' && (
               <VatRateSelect
@@ -454,10 +531,12 @@ export function FinancialEntries({
             <div className="finance-actions">
               {write && (
                 <>
-                  <button className="primary" onClick={() => edit(newEntry(scope, 'income'))}>
-                    Добавить доход
+                  <button className="primary" onClick={() => edit(newCharge(scope, 'income'))}>
+                    Добавить доходную услугу
                   </button>
-                  <button onClick={() => edit(newEntry(scope, 'expense'))}>Добавить расход</button>
+                  <button onClick={() => edit(newCharge(scope, 'expense'))}>
+                    Добавить расходную услугу
+                  </button>
                 </>
               )}
               <button disabled={loading} onClick={() => setVersion((old) => old + 1)}>
@@ -466,27 +545,57 @@ export function FinancialEntries({
             </div>
           </div>
           {summary.combined.length > 0 && (
-            <div className="finance-summary">
-              <Totals
-                title={scope.transportation_id ? 'Перевозка' : 'Поставка'}
-                items={summary.own}
-              />
-              {!scope.transportation_id && (
-                <>
-                  <Totals title="Перевозки" items={summary.transportations} />
-                  <Totals title="Всего" items={summary.combined} />
-                </>
+            <section className="finance-summary-disclosure">
+              <button
+                type="button"
+                className="finance-summary-toggle"
+                aria-expanded={summaryOpen}
+                onClick={() => setSummaryOpen((old) => !old)}
+              >
+                <span className="finance-summary-caption">
+                  <Chevron />
+                  <strong>Сводка</strong>
+                </span>
+                <span className="finance-summary-compact">
+                  {summary.combined.map((item) => (
+                    <span key={item.currency}>
+                      <strong>{item.currency}</strong>
+                      <span>Доход {formatFixed(item.income_minor, 2)}</span>
+                      <span>Расход {formatFixed(item.expense_minor, 2)}</span>
+                      <span>
+                        Разница{' '}
+                        <strong>
+                          {formatFixed(BigInt(item.income_minor) - BigInt(item.expense_minor), 2)}
+                        </strong>
+                      </span>
+                    </span>
+                  ))}
+                </span>
+              </button>
+              {summaryOpen && (
+                <div className="finance-summary">
+                  <Totals
+                    title={scope.transportation_id ? 'Перевозка' : 'Поставка'}
+                    items={summary.own}
+                  />
+                  {!scope.transportation_id && (
+                    <>
+                      <Totals title="Перевозки" items={summary.transportations} />
+                      <Totals title="Всего" items={summary.combined} />
+                    </>
+                  )}
+                </div>
               )}
-            </div>
+            </section>
           )}
           {!scope.transportation_id && (
             <p className="hint">
-              Ниже — собственные строки поставки. Начисления перевозок редактируются в перевозках и
+              Ниже — собственные строки поставки. Услуги перевозок редактируются в перевозках и
               учитываются в сводке один раз.
             </p>
           )}
           <div className="finance-list-toolbar">
-            <h3>{scope.transportation_id ? 'Начисления' : 'Начисления поставки'}</h3>
+            <h3>{scope.transportation_id ? 'Услуги' : 'Услуги поставки'}</h3>
             <label className="bank-archive-toggle">
               <input
                 type="checkbox"
@@ -501,55 +610,120 @@ export function FinancialEntries({
               {failure}
             </p>
           )}
-          <div className="finance-entry-list">
-            {items.map((item) => (
-              <article key={item.id} className="finance-entry">
-                <div className="section-heading">
-                  <div>
-                    <h3>{item.label_name}</h3>
-                    <p className="hint">
-                      {item.direction === 'income' ? 'Доход' : 'Расход'}
-                      {item.archived ? ' · В архиве' : ''} · {item.counterparty_name}
-                      {item.contract_number ? ` · Договор ${item.contract_number}` : ''}
-                    </p>
-                  </div>
-                  {write && <button onClick={() => edit(draftOf(item))}>Редактировать</button>}
-                </div>
-                <dl className="finance-entry-values">
-                  <div>
-                    <dt>Количество × цена {item.price_mode === 'gross' ? 'с НДС' : 'без НДС'}</dt>
-                    <dd>
-                      {formatFixed(item.quantity_milli, 3)} {financialLabelUnits[item.unit]} ×{' '}
-                      {formatFixed(item.price_minor, 2)} {item.currency}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Без НДС</dt>
-                    <dd>
-                      {formatFixed(item.net_minor, 2)} {item.currency}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>НДС · {vatLabel(item)}</dt>
-                    <dd>
-                      {formatFixed(item.vat_minor, 2)} {item.currency}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Итого</dt>
-                    <dd>
-                      <strong>
-                        {formatFixed(item.total_minor, 2)} {item.currency}
-                      </strong>
-                    </dd>
-                  </div>
-                </dl>
-                {item.note && <p>{item.note}</p>}
-              </article>
-            ))}
+          <div className="finance-services-table-wrap">
+            <table className="finance-services-table">
+              <thead>
+                <tr>
+                  <th>Услуга / контрагент</th>
+                  <th>Направление</th>
+                  <th>Количество × цена</th>
+                  <th>Без НДС</th>
+                  <th>НДС</th>
+                  <th>Итого</th>
+                  <th>Счёт</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const invoice = invoices.find((x) => x.service_charge_id === item.id);
+                  return (
+                    <tr
+                      key={item.id}
+                      className={write ? 'service-row-openable' : undefined}
+                      tabIndex={write ? 0 : undefined}
+                      aria-label={write ? `Редактировать услугу «${item.label_name}»` : undefined}
+                      onClick={(event) => {
+                        if (
+                          !write ||
+                          (event.target as HTMLElement).closest(
+                            'a,button,input,select,textarea,summary,details,dialog,[role="button"],[role="combobox"]',
+                          ) ||
+                          window.getSelection()?.toString()
+                        )
+                          return;
+                        edit(draftOf(item));
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          write &&
+                          event.target === event.currentTarget &&
+                          event.key === 'Enter'
+                        ) {
+                          event.preventDefault();
+                          edit(draftOf(item));
+                        }
+                      }}
+                    >
+                      <td>
+                        <strong>{item.label_name}</strong>
+                        <span className="service-secondary">
+                          {item.counterparty_name}
+                          {item.contract_number ? ` · Договор ${item.contract_number}` : ''}
+                          {item.archived ? ' · В архиве' : ''}
+                        </span>
+                        {item.note && (
+                          <details className="service-note">
+                            <summary>Примечание</summary>
+                            <p>{item.note}</p>
+                          </details>
+                        )}
+                      </td>
+                      <td>{item.direction === 'income' ? 'Доход' : 'Расход'}</td>
+                      <td className="service-numeric">
+                        {formatFixed(item.quantity_milli, 3)} {financialLabelUnits[item.unit]}
+                        <span className="service-secondary">
+                          × {formatFixed(item.price_minor, 2)} {item.currency} ·{' '}
+                          {item.price_mode === 'gross' ? 'с НДС' : 'без НДС'}
+                        </span>
+                      </td>
+                      <td className="service-numeric">
+                        {formatFixed(item.net_minor, 2)}
+                        <span className="service-secondary">{item.currency}</span>
+                      </td>
+                      <td className="service-numeric">
+                        {formatFixed(item.vat_minor, 2)}
+                        <span className="service-secondary">{vatLabel(item)}</span>
+                      </td>
+                      <td className="service-numeric">
+                        <strong>{formatFixed(item.total_minor, 2)}</strong>
+                        <span className="service-secondary">{item.currency}</span>
+                      </td>
+                      <td>
+                        {invoice ? (
+                          <a
+                            className="link"
+                            href={`#/${invoice.direction}-invoices/${invoice.invoice_id}`}
+                          >
+                            № {invoice.number}
+                            <span className="service-secondary">
+                              от {CalendarDate.fromISO(invoice.invoice_date).toDisplayString()}
+                            </span>
+                          </a>
+                        ) : !item.archived &&
+                          session.permissions.includes('finance.write_invoices') ? (
+                          <ServiceInvoiceActions
+                            compact
+                            service={item}
+                            session={session}
+                            onSelect={async (selection) => {
+                              if (selection) {
+                                await attachServiceInvoice(item.id, selection, session);
+                                setVersion((v) => v + 1);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="hint">Не выбран</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
           {!loading && !items.length && !failure && (
-            <p className="empty-state">Начисления пока не добавлены</p>
+            <p className="empty-state">Услуги пока не добавлены</p>
           )}
           <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
         </>

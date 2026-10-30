@@ -23,7 +23,7 @@ Response View::Handle(
                 throw ApiError{
                     400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         }
-        const auto query = BuildRegistryQuery(body, organization);
+        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{

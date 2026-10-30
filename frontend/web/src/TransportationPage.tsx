@@ -1,4 +1,4 @@
-import { FinancialEntries } from './FinancePanel';
+import { ServiceCharges } from './FinancePanel';
 import { DateTimeInput } from './DateInput';
 import { RoadDetailsView } from './RoadFields';
 import { SharedRouteDetailsView } from './SharedRouteDetails';
@@ -261,7 +261,7 @@ export function TransportationPage({
               >
                 Маршрут и факты
               </button>
-              {session.permissions.includes('finance.read_entries') && (
+              {session.permissions.includes('finance.read_service_charges') && (
                 <button
                   aria-pressed={tab === 'finance'}
                   onClick={(event) => switchTab('finance', event.currentTarget)}
@@ -278,7 +278,7 @@ export function TransportationPage({
             </CardNavigation>
             <div className="panel-content">
               {tab === 'finance' ? (
-                <FinancialEntries
+                <ServiceCharges
                   scope={{ shipment_id: transportation.shipment_id, transportation_id: id }}
                   session={session}
                   customers={customers}

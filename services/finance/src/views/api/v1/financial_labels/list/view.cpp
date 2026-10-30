@@ -17,7 +17,7 @@ Response View::Handle(
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
             throw ApiError<400>{
                 "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        const auto query = BuildRegistryQuery(body, organization);
+        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
@@ -38,8 +38,6 @@ Response View::Handle(
         return Response200{.items = Convert(rows), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         return Response400{.error = "invalid_filter", .message = error.what()};
-    } catch (const ::finance::ApiError<400>& error) {
-        return Response400{.error = error.Code, .message = error.what()};
     }
 }
 }  // namespace finance::views::api::v1::financial_labels::list

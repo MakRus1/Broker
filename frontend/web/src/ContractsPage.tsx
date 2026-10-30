@@ -1,3 +1,4 @@
+import { BankAccountSelect } from './BankAccountSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
 import { CustomerSelect, type Counterparty } from './CustomerSelect';
@@ -63,76 +64,6 @@ function newContract(): Draft {
     archived: false,
     revision: 0,
   };
-}
-function BankSelect({
-  owner,
-  label,
-  value,
-  currency,
-  session,
-  onChange,
-}: {
-  owner: string;
-  label: string;
-  value: string | null;
-  currency: string;
-  session: Session;
-  onChange: (value: string | null) => void;
-}) {
-  const [items, setItems] = useState<BankAccount[]>([]);
-  const [failure, setFailure] = useState('');
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    setItems([]);
-    setFailure('');
-    if (!owner) return;
-    const controller = new AbortController();
-    setLoading(true);
-    request<{ items: BankAccount[] }>(
-      '/api/v1/counterparties/bank-accounts/list',
-      session,
-      { counterparty_id: owner },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted) setItems(result.items);
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [owner, session]);
-  return (
-    <>
-      <Select
-        label={label}
-        value={value ?? ''}
-        onChange={(id) => onChange(id || null)}
-        disabled={!owner || loading}
-        searchable
-        options={[
-          { value: '', label: loading ? 'Загружаем счета…' : 'Не выбран' },
-          ...items
-            .filter((item) => (item.currency === currency && !item.archived) || item.id === value)
-            .map((item) => ({
-              value: item.id,
-              label: `${item.name} · ${item.number} · ${item.currency}${item.archived ? ' · в архиве' : ''}`,
-            })),
-          ...(value && !items.some((item) => item.id === value)
-            ? [{ value, label: 'Выбранный счёт недоступен' }]
-            : []),
-        ]}
-      />
-      {failure && (
-        <span className="error" role="alert">
-          {failure}
-        </span>
-      )}
-    </>
-  );
 }
 function PartyDetails({
   id,
@@ -665,7 +596,7 @@ export function ContractsPage({
               />
             </label>
             <div>
-              <BankSelect
+              <BankAccountSelect
                 label="Наш банковский счёт"
                 session={session}
                 owner={draft.own_company_id}
@@ -675,7 +606,7 @@ export function ContractsPage({
               />
             </div>
             <div>
-              <BankSelect
+              <BankAccountSelect
                 label="Счёт контрагента"
                 session={session}
                 owner={draft.counterparty_id}

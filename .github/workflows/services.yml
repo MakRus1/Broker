@@ -26,7 +26,9 @@ concurrency:
 jobs:
   images:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Полная Release-сборка при изменении common/codegen занимает около 30 минут.
+    # Лимит включает публикацию всех образов, экспорт кэша и проверку манифестов.
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: read

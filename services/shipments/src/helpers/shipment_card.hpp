@@ -73,8 +73,8 @@ inline void ValidateShipmentDate(userver::utils::datetime::Date value) {
     using namespace std::chrono;
     if (!platform::IsCalendarDateInRange(
             value, year{1900} / January / 1, year{9999} / December / 31))
-        throw ApiError{
-            400, "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
+        throw ApiError<400>{
+            "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
 template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV3& row) {
@@ -109,8 +109,8 @@ template <typename Request> void ApplyCard(const Request& request, pgtypes::Ship
         std::set<std::string> ids;
         for (const auto& segment : request.route_segments.value()) {
             if (!ids.insert(segment.id).second)
-                throw ApiError{
-                    400, "duplicate_segment", "Идентификаторы участков должны быть уникальными"};
+                throw ApiError<400>{
+                    "duplicate_segment", "Идентификаторы участков должны быть уникальными"};
             row.RouteSegments.push_back(Convert(segment));
         }
     }
@@ -123,7 +123,7 @@ inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& setting
     if ((!previous.has_value() || previous.value().Status != row.Status) &&
         std::find(settings.Statuses.begin(), settings.Statuses.end(), row.Status) ==
             settings.Statuses.end())
-        throw ApiError{400, "invalid_status", "Статус недоступен для организации"};
+        throw ApiError<400>{"invalid_status", "Статус недоступен для организации"};
     for (const auto& segment : row.RouteSegments) {
         const bool unchanged = previous.has_value() &&
             std::any_of(previous.value().RouteSegments.begin(),
@@ -136,7 +136,7 @@ inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& setting
                     return ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
                         entry.Code == segment.Type;
                 })))
-            throw ApiError{400, "invalid_route_type", "Тип участка недоступен для организации"};
+            throw ApiError<400>{"invalid_route_type", "Тип участка недоступен для организации"};
     }
     const auto validate = [&](const std::optional<std::string>& value,
                               ShipmentDictionary dictionary, const std::string& message,
@@ -147,7 +147,7 @@ inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& setting
                 return ParseDictionary(entry.Dictionary) == dictionary &&
                     entry.Code == value.value();
             }))
-            throw ApiError{400, "invalid_" + std::string{DictionaryCode(dictionary)}, message};
+            throw ApiError<400>{"invalid_" + std::string{DictionaryCode(dictionary)}, message};
     };
     validate(row.Incoterms, ShipmentDictionary::kIncoterms, "Выберите Incoterms из справочника",
         previous.has_value() ? previous.value().Incoterms : std::nullopt);
@@ -172,7 +172,7 @@ inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
         {"{yy}", formatted.substr(2, 2)}, {"{mm}", formatted.substr(5, 2)},
         {"{dd}", formatted.substr(8, 2)}};
     if (result.find("{sequence}") == std::string::npos)
-        throw ApiError{400, "invalid_number_template", "Шаблон номера должен содержать {sequence}"};
+        throw ApiError<400>{"invalid_number_template", "Шаблон номера должен содержать {sequence}"};
     for (const auto& [token, value] : tokens) {
         std::size_t position = 0;
         while ((position = result.find(token, position)) != std::string::npos) {
@@ -181,7 +181,7 @@ inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
         }
     }
     if (result.empty() || result.size() > 128 || result.find_first_of("{}") != std::string::npos)
-        throw ApiError{400, "invalid_number_template", "Некорректный шаблон номера организации"};
+        throw ApiError<400>{"invalid_number_template", "Некорректный шаблон номера организации"};
     return result;
 }
 

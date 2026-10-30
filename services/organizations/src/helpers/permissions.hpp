@@ -47,14 +47,14 @@ inline void ValidatePermissions(userver::storages::postgres::Transaction& transa
             (std::none_of(
                  catalog.begin(), catalog.end(), [&](const auto& row) { return row.Id == code; }) &&
                 std::find(previous.begin(), previous.end(), code) == previous.end()))
-            throw ApiError{
-                400, "invalid_permission", "Неизвестное, неактивное или повторяющееся разрешение"};
+            throw ApiError<400>{
+                "invalid_permission", "Неизвестное, неактивное или повторяющееся разрешение"};
     }
     for (const auto& row : catalog)
         if (selected.contains(row.Id))
             for (const auto& dependency : row.Requires)
                 if (!selected.contains(dependency))
-                    throw ApiError{400, "read_permission_required",
+                    throw ApiError<400>{"read_permission_required",
                         "Не включено зависимое разрешение: " + dependency};
 }
 

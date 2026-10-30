@@ -14,8 +14,8 @@ Response View::Handle(
         RequirePlatformAdmin(identity);
         const auto scope = registry::CursorScope(request.body, "organizations");
         if (!registry::CursorMatches(request.body, scope, EnumValue(request.body.sort) == "id"))
-            throw ApiError{
-                400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+            throw ApiError<400>{
+                "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         const auto query = OrganizationQuery(request.body);
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
@@ -37,19 +37,6 @@ Response View::Handle(
             registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
         transaction.Commit();
         return Response200{.items = items, .next_cursor = next};
-    } catch (const ::organizations::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        default:
-            return Response503{.error = error.Code, .message = error.what()};
-        }
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "already_exists", .message = "Такая запись уже существует"};
     }

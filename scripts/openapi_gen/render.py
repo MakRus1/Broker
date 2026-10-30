@@ -304,7 +304,7 @@ public:
         if (response.status >= 400 and response.media == 'application/json' and response.body
                 and {field.name for field in response.body.fields} == {'error', 'message'}
                 and all(field.required and field.type.kind == 'string' and not field.optional for field in response.body.fields)):
-            error_catches.append(f'catch (const platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
+            error_catches.append(f'catch (const ::platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
     invoke = "View::Handle(std::move(request), context" + (", deps_" if deps else "") + ")"
     response_call = ('[&]() -> Response { try { return ' + invoke + '; } '
                      + ' '.join(error_catches) + ' }()') if error_catches else invoke

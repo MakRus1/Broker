@@ -20,22 +20,22 @@ inline auto FindEmployees(const Deps& deps, const userver::server::request::Requ
     return response.items;
 } catch (const platform::http::ApiError&) {
 
-    throw ApiError{503, "employee_directory_unavailable",
+    throw ApiError<503>{"employee_directory_unavailable",
         "Не удалось проверить сотрудника. Повторите сохранение позже"};
 } catch (const platform::http::CancelledError&) {
     throw;
 } catch (const platform::http::TransportError&) {
-    throw ApiError{503, "employee_directory_unavailable",
+    throw ApiError<503>{"employee_directory_unavailable",
         "Не удалось проверить сотрудника. Повторите сохранение позже"};
 } catch (const platform::http::ContractError&) {
-    throw ApiError{
-        503, "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
+    throw ApiError<503>{
+        "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
 }
 
 inline void ValidateLogist(const Deps& deps,
     const userver::server::request::RequestContext& context,
     const std::optional<std::string>& subject) {
     if (subject.has_value() && FindEmployees(deps, context, std::nullopt, subject, 1).empty())
-        throw ApiError{400, "invalid_logist", "Выберите действующего сотрудника организации"};
+        throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
 }
 }  // namespace counterparties::helpers

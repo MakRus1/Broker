@@ -1,14 +1,6 @@
 #pragma once
-#include <stdexcept>
-#include <string>
+#include <platform/handler_error.hpp>
 
 namespace transportations {
-struct ApiError : std::runtime_error {
-    int Status;
-    std::string Code;
-
-    ApiError(int status, std::string code, const std::string& message)
-        : std::runtime_error(message), Status(status), Code(std::move(code)) {}
-};
-
+template <int Status> using ApiError = platform::http::HandlerError<Status>;
 }  // namespace transportations

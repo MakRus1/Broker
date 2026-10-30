@@ -10,8 +10,8 @@ inline void ValidateDetails(models::TransportationType type,
     const std::optional<std::string>& container_number) {
     if (type != models::TransportationType::Container &&
         (container_type.has_value() || ownership.has_value() || container_number.has_value()))
-        throw ApiError{400, "unexpected_container",
-            "Контейнерные поля доступны только для контейнерной перевозки"};
+        throw ApiError<400>{
+            "unexpected_container", "Контейнерные поля доступны только для контейнерной перевозки"};
 }
 
 inline std::optional<std::string> CleanContainerNumber(const std::optional<std::string>& value) {

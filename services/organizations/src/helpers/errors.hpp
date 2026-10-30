@@ -1,14 +1,6 @@
 #pragma once
-#include <stdexcept>
-#include <string>
+#include <platform/handler_error.hpp>
 
 namespace organizations {
-class ApiError : public std::runtime_error {
-  public:
-    ApiError(int status, std::string code, std::string message)
-        : std::runtime_error(std::move(message)), Status(status), Code(std::move(code)) {}
-
-    int Status;
-    std::string Code;
-};
+template <int Status> using ApiError = platform::http::HandlerError<Status>;
 }  // namespace organizations

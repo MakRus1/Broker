@@ -26,7 +26,7 @@ models::CreationOperation RequestTransportations(
     // Блокировка защищает снимок позиции при создании операции.
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
-        throw ApiError{404, "not_found", "Позиция не найдена"};
+        throw ApiError<404>{"not_found", "Позиция не найдена"};
     const auto item = rows.AsSingleRow<pgtypes::ShipmentItemV1>();
     CheckRevision(item.Revision, request.expected_revision);
 

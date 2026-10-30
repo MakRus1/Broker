@@ -18,7 +18,7 @@ void ResolveStation(std::optional<models::RailwayStation>& station,
         station = previous;
         return;
     }
-    throw ApiError{400, "station_not_found", "Станция не найдена в справочнике станций"};
+    throw ApiError<400>{"station_not_found", "Станция не найдена в справочнике станций"};
 }
 }  // namespace
 

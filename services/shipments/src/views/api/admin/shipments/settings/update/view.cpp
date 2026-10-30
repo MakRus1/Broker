@@ -47,10 +47,6 @@ Response View::Handle(
     } catch (const platform::http::ContractError&) {
         return Response503{
             .error = "organizations_unavailable", .message = "Некорректный ответ проверки доступа"};
-    } catch (const ::shipments::ApiError& error) {
-        if (error.Status == 400)
-            return Response400{.error = error.Code, .message = error.what()};
-        return Response503{.error = error.Code, .message = error.what()};
     }
 }
 }  // namespace shipments::views::api::admin::shipments::settings::update

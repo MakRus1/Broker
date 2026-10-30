@@ -19,19 +19,6 @@ Response View::Handle(Request&&, userver::server::request::RequestContext& conte
             .managed_organization_ids = managed.AsContainer<std::vector<std::string>>(),
             .organizations = ConvertRows<pgtypes::OrganizationV1>(rows),
             .platform_admin = IsPlatformAdmin(identity)};
-    } catch (const ::organizations::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        default:
-            return Response503{.error = error.Code, .message = error.what()};
-        }
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "already_exists", .message = "Такая запись уже существует"};
     }

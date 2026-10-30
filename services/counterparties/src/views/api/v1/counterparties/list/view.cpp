@@ -16,10 +16,10 @@ Response View::Handle(
         const auto scope = platform::registry::CursorScope(body, organization);
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
         if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
-            throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
+            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
-            throw ApiError{
-                400, "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+            throw ApiError<400>{
+                "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
@@ -41,19 +41,6 @@ Response View::Handle(
         return Response200{.items = Convert(rows), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         return Response400{.error = "invalid_filter", .message = error.what()};
-    } catch (const ::counterparties::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        default:
-            throw;
-        }
     }
 }
 }  // namespace counterparties::views::api::v1::counterparties::list

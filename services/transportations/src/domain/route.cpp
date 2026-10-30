@@ -16,7 +16,7 @@ void CheckInterval(const std::optional<std::chrono::system_clock::time_point>& d
         return;
     const bool reversed = departure.value() > arrival.value();
     if (reversed)
-        throw transportations::ApiError{400, "invalid_request", "Отправление позже прибытия"};
+        throw transportations::ApiError<400>{"invalid_request", "Отправление позже прибытия"};
 }
 }  // namespace
 
@@ -26,13 +26,13 @@ void ValidateRoute(const models::SetRouteRequest& request) {
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
         if (!ids.insert(boost::uuids::string_generator{}(route_segment.id)).second)
-            throw ApiError{400, "invalid_request", "ID плеч должны отличаться"};
+            throw ApiError<400>{"invalid_request", "ID плеч должны отличаться"};
         CheckInterval(route_segment.planned_departure_at, route_segment.planned_arrival_at);
         if (!route_segment.rail.has_value())
             continue;
         if (route_segment.mode != models::TransportMode::Rail &&
             route_segment.mode != models::TransportMode::InternationalRail)
-            throw ApiError{400, "unexpected_rail_details",
+            throw ApiError<400>{"unexpected_rail_details",
                 "Детали ЖД доступны только для железнодорожных участков"};
         const auto& rail = route_segment.rail.value();
         const std::chrono::year_month_day minimum{
@@ -45,7 +45,7 @@ void ValidateRoute(const models::SetRouteRequest& request) {
         auto check = [&](const std::optional<userver::utils::datetime::Date>& value, bool actual) {
             if (value.has_value() &&
                 !platform::IsCalendarDateInRange(value.value(), minimum, actual ? today : maximum))
-                throw ApiError{400, "invalid_rail_date",
+                throw ApiError<400>{"invalid_rail_date",
                     actual ? "Фактическая дата должна быть от 01.01.1900 до сегодняшнего дня"
                            : "Укажите корректную календарную дату от 01.01.1900"};
         };
@@ -56,8 +56,8 @@ void ValidateRoute(const models::SetRouteRequest& request) {
         check(rail.unloading_date, true);
         auto interval = [](const auto& from, const auto& to) {
             if (from.has_value() && to.has_value() && from.value() > to.value())
-                throw ApiError{
-                    400, "invalid_rail_sequence", "Проверьте последовательность дат ЖД-участка"};
+                throw ApiError<400>{
+                    "invalid_rail_sequence", "Проверьте последовательность дат ЖД-участка"};
         };
         interval(rail.etd, rail.eta);
         interval(rail.departure_date, rail.arrival_date);

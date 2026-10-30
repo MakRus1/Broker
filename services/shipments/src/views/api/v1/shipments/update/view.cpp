@@ -26,7 +26,7 @@ Response View::Handle(
             const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
                 sql::kGetShipment, organization, request.body.shipment_id);
             if (rows.IsEmpty())
-                throw ApiError{404, "not_found", "Поставка не найдена"};
+                throw ApiError<404>{"not_found", "Поставка не найдена"};
             const auto previous = rows.AsSingleRow<pgtypes::ShipmentV4>();
             CheckRevision(previous.Revision, request.body.expected_revision);
             const auto locations =
@@ -43,7 +43,7 @@ Response View::Handle(
         const auto current =
             transaction.Execute(sql::kLockShipment, organization, request.body.shipment_id);
         if (current.IsEmpty())
-            throw ApiError{404, "not_found", "Поставка не найдена"};
+            throw ApiError<404>{"not_found", "Поставка не найдена"};
         const auto previous = current.AsSingleRow<pgtypes::ShipmentV4>();
         CheckRevision(previous.Revision, request.body.expected_revision);
         auto card = ConvertData(previous);
@@ -54,7 +54,7 @@ Response View::Handle(
         if (request.body.number.has_value()) {
             card.Number = userver::utils::text::Trim(request.body.number.value());
             if (card.Number.empty())
-                throw ApiError{400, "invalid_number", "Укажите номер поставки"};
+                throw ApiError<400>{"invalid_number", "Укажите номер поставки"};
         }
         ApplyCard(request.body, card);
         const auto dictionaries =
@@ -71,7 +71,7 @@ Response View::Handle(
                 [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
             if (before != previous.RouteSegments.end() &&
                 (after == card.RouteSegments.end() || after->Type != before->Type))
-                throw ApiError{409, "route_segment_in_use",
+                throw ApiError<409>{"route_segment_in_use",
                     "Нельзя удалить или изменить тип участка с данными перевозок"};
         }
         ValidateCard(card,
@@ -92,19 +92,6 @@ Response View::Handle(
         return Response200{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "number_exists", .message = "Номер поставки уже занят"};
-    } catch (const ::shipments::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 503:
-            return Response503{.error = error.Code, .message = error.what()};
-        default:
-            return Response409{.error = error.Code, .message = error.what()};
-        }
     }
 }
 }  // namespace shipments::views::api::v1::shipments::update

@@ -56,23 +56,23 @@ inline std::vector<models::Contract> Convert(const pg::ResultSet& rows) {
 
 inline pgtypes::ContractV1 Prepare(const models::SaveContractRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError{400, "invalid_revision", "Некорректная редакция договора"};
+        throw ApiError<400>{"invalid_revision", "Некорректная редакция договора"};
     const auto number = userver::utils::text::Trim(value.number);
     if (number.empty())
-        throw ApiError{400, "empty_number", "Укажите номер договора"};
+        throw ApiError<400>{"empty_number", "Укажите номер договора"};
     for (const auto& date : {std::optional{value.contract_date}, value.valid_until}) {
         if (date.has_value() &&
             !platform::IsCalendarDateInRange(
                 date.value(), std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
-            throw ApiError{400, "invalid_date", "Дата должна быть не раньше 01.01.1900"};
+            throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
     }
     if (value.valid_until.has_value() && value.valid_until.value() < value.contract_date)
-        throw ApiError{
-            400, "invalid_valid_until", "Срок действия не может быть раньше даты договора"};
+        throw ApiError<400>{
+            "invalid_valid_until", "Срок действия не может быть раньше даты договора"};
     const auto own = boost::uuids::string_generator{}(value.own_company_id);
     const auto counterparty = boost::uuids::string_generator{}(value.counterparty_id);
     if (own == counterparty)
-        throw ApiError{400, "same_parties", "Выберите разные стороны договора"};
+        throw ApiError<400>{"same_parties", "Выберите разные стороны договора"};
     auto note = value.note;
     if (note.has_value()) {
         note = userver::utils::text::Trim(note.value());
@@ -104,9 +104,9 @@ inline void ValidateParties(const Deps& deps,
                 deps.counterparties.ApiV1CounterpartiesGet({.body = {.id = id}}, token)
                     .counterparty;
             if (party.archived)
-                throw ApiError{409, "archived_party", "Выберите действующие стороны договора"};
+                throw ApiError<409>{"archived_party", "Выберите действующие стороны договора"};
             if (id == value.own_company_id && !party.own_company)
-                throw ApiError{400, "not_own_company", "Выберите собственное юридическое лицо"};
+                throw ApiError<400>{"not_own_company", "Выберите собственное юридическое лицо"};
             const auto account = id == value.own_company_id ? value.own_bank_account_id
                                                             : value.counterparty_bank_account_id;
             if (!account.has_value())
@@ -119,24 +119,24 @@ inline void ValidateParties(const Deps& deps,
                         boost::uuids::string_generator{}(account.value());
                 });
             if (found == accounts.items.end())
-                throw ApiError{400, "invalid_account", "Счёт не принадлежит выбранной стороне"};
+                throw ApiError<400>{"invalid_account", "Счёт не принадлежит выбранной стороне"};
             if (found->archived || found->currency != value.currency)
-                throw ApiError{
-                    400, "invalid_account", "Выберите действующий счёт в валюте договора"};
+                throw ApiError<400>{
+                    "invalid_account", "Выберите действующий счёт в валюте договора"};
         }
     } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError{403, "forbidden_party", "Нет доступа к сторонам или счетам договора"};
+        throw ApiError<403>{"forbidden_party", "Нет доступа к сторонам или счетам договора"};
     } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError{404, "party_not_found", "Сторона договора не найдена в организации"};
+        throw ApiError<404>{"party_not_found", "Сторона договора не найдена в организации"};
     } catch (const platform::http::ApiError&) {
-        throw ApiError{502, "counterparty_unavailable", "Не удалось проверить стороны договора"};
+        throw ApiError<502>{"counterparty_unavailable", "Не удалось проверить стороны договора"};
     } catch (const platform::http::CancelledError&) {
         throw;
     } catch (const platform::http::TransportError&) {
-        throw ApiError{502, "counterparty_unavailable", "Справочник контрагентов недоступен"};
+        throw ApiError<502>{"counterparty_unavailable", "Справочник контрагентов недоступен"};
     } catch (const platform::http::ContractError&) {
-        throw ApiError{
-            502, "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
+        throw ApiError<502>{
+            "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
     }
 }
 }  // namespace contracts::helpers

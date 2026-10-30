@@ -39,7 +39,7 @@ class CodegenTest(unittest.TestCase):
                            'message': {'type': 'string', 'maxLength': 1000}}}
         result = outputs('demo', parse_spec(data), {})
         source = result['src/views/items/by_id/create/handler.cpp']
-        self.assertIn('HandlerError<409>', source)
+        self.assertIn('const ::platform::http::HandlerError<409>&', source)
         self.assertIn('.error = error.Code', source)
         self.assertNotIn('HandlerError<404>', source)
         self.assertNotIn('catch (const std::exception&)', source.split('const auto response')[1])

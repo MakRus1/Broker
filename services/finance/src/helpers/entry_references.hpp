@@ -26,11 +26,11 @@ inline void ValidateEntryScope(const Deps& deps,
         } else {
             deps.shipments.ApiV1ShipmentsGet({.body = {.shipment_id = scope.shipment_id}}, token);
         }
-    } catch (const platform::http::ApiError& error) {
-        if (error.GetStatus() == 403)
-            throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
-        if (error.GetStatus() == 404)
-            throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+    } catch (const platform::http::Error403&) {
+        throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
+    } catch (const platform::http::Error404&) {
+        throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+    } catch (const platform::http::ApiError&) {
         throw ApiError{
             502, "reference_unavailable", "Не удалось проверить связанные данные начисления"};
     } catch (const platform::http::CancelledError&) {
@@ -73,11 +73,11 @@ inline EntryParties ValidateEntryParties(const Deps& deps,
             result.ContractNumber = contract.number;
         }
         return result;
-    } catch (const platform::http::ApiError& error) {
-        if (error.GetStatus() == 403)
-            throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
-        if (error.GetStatus() == 404)
-            throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+    } catch (const platform::http::Error403&) {
+        throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
+    } catch (const platform::http::Error404&) {
+        throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+    } catch (const platform::http::ApiError&) {
         throw ApiError{
             502, "reference_unavailable", "Не удалось проверить связанные данные начисления"};
     } catch (const platform::http::CancelledError&) {

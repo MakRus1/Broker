@@ -59,6 +59,31 @@ UTEST(ClientContract, CreatedConflictAndBody) {
     EXPECT_THROW(client.ItemsByIdCreate(request), platform::http::ContractError);
 }
 
+UTEST(ClientContract, SharedStatusErrorsKeepOperationTypes) {
+    static_assert(std::is_base_of_v<platform::http::Error409, api::ItemsByIdCreate::Error409>);
+    static_assert(std::is_base_of_v<platform::http::Error409, api::MultipleSuccesses::Error409>);
+    static_assert(std::is_base_of_v<platform::http::ApiError, platform::http::Error409>);
+    static_assert(!std::is_base_of_v<platform::http::Error404, api::ItemsByIdCreate::Error409>);
+    const platform::http::Response response{409, "application/json", R"({"id":42})"};
+    try {
+        api::ItemsByIdCreate::Decode(response);
+        FAIL() << "Ожидалась общая ошибка статуса";
+    } catch (const platform::http::Error409& error) {
+        EXPECT_EQ(error.GetStatus(), 409);
+        EXPECT_EQ(error.GetBody(), R"({"id":42})");
+        const auto* operation = dynamic_cast<const api::ItemsByIdCreate::Error409*>(&error);
+        ASSERT_NE(operation, nullptr);
+        EXPECT_EQ(operation->response.id, 42);
+    }
+    EXPECT_THROW(api::MultipleSuccesses::Decode(response), platform::http::Error409);
+    EXPECT_THROW(api::EmptyError::Decode({404, "", ""}), platform::http::Error404);
+    EXPECT_THROW(api::ItemsByIdCreate::Decode({409, "application/json", R"({"id":"bad"})"}),
+        platform::http::ContractError);
+    // Необъявленный статус остаётся нарушением контракта, а не ошибкой API.
+    EXPECT_THROW(api::ItemsByIdCreate::Decode({403, "application/json", "{}"}),
+        platform::http::ContractError);
+}
+
 UTEST(ClientContract, DefaultAndEnum) {
     api::Validated::Request request;
     EXPECT_EQ(request.limit, 10);

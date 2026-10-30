@@ -101,7 +101,28 @@ try {
 Несколько успешных статусов дают std::variant только успешных ResponseNNN;
 ответ без тела в таком варианте представлен пустым ResponseNNN.
 Объявленные 3xx/4xx/5xx выбрасываются как ErrorNNN с типизированным DTO в поле response.
-У всех ошибок API есть общий базовый тип platform::http::ApiError с GetStatus().
+Ошибки операций наследуются от `platform::http::ErrorByStatus<NNN>`, а тот — от
+`platform::http::ApiError`. Для стандартных статусов доступны короткие имена
+`platform::http::Error403`, `Error404`, `Error409` и т. д. Такой `catch` объединяет
+одинаковый статус разных операций и сервисов:
+
+```cpp
+try {
+    ValidateShipment();
+    ValidateTransportation();
+} catch (const platform::http::Error403&) {
+    DenyAccess();
+} catch (const platform::http::Error404&) {
+    ReportMissingReference();
+} catch (const platform::http::ApiError& error) {
+    ReportDependencyFailure(error.GetStatus());
+}
+```
+
+Конкретные исключения операций сохраняют поле `response`; для доступа к DTO ловите
+конкретный тип операции перед общей категорией статуса. `ApiError` сохраняет `GetStatus()`
+и `GetBody()`. Нестандартный объявленный статус поддерживается тем же шаблоном,
+например `platform::http::ErrorByStatus<499>`, без изменения библиотеки.
 Сообщение what() содержит только HTTP-статус, без бизнес-данных из тела.
 У операции, объявляющей только ошибки, возвращаемый тип void; любой объявленный
 ответ выбрасывает исключение, а необъявленный статус дает ContractError.
@@ -113,7 +134,8 @@ DTO клиента не содержат WasProvided и не зависят от
 Path/query кодируются, тело сериализуется в JSON, ответ проверяется по статусу,
 Content-Type, обязательности, типам и ограничениям полей. Ответ без тела не принимает тело.
 
-- platform::http::ApiError: общий тип объявленных ошибок API; конкретные ErrorNNN доступны в namespace операции.
+- platform::http::ErrorNNN: общая категория объявленного HTTP-статуса для всех клиентов.
+- platform::http::ApiError: общий тип всех объявленных ошибок API; конкретные ErrorNNN с DTO доступны в namespace операции.
 - platform::http::ContractError: неожиданный статус или нарушение контракта ответа.
 - platform::http::TimeoutError: штатный TimeoutException userver.
 - platform::http::CancelledError: штатный CancelException userver; не подавляйте отмену задачи.

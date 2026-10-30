@@ -43,6 +43,63 @@ class ApiError : public std::runtime_error {
     std::string body_;
 };
 
+// Общая категория статуса сохраняет ApiError и не зависит от DTO конкретной операции.
+template <int Status> class ErrorByStatus : public ApiError {
+    static_assert(Status >= 300 && Status <= 599);
+
+  public:
+    explicit ErrorByStatus(std::string body = {}) : ApiError(Status, std::move(body)) {}
+};
+
+using Error300 = ErrorByStatus<300>;
+using Error301 = ErrorByStatus<301>;
+using Error302 = ErrorByStatus<302>;
+using Error303 = ErrorByStatus<303>;
+using Error304 = ErrorByStatus<304>;
+using Error305 = ErrorByStatus<305>;
+using Error307 = ErrorByStatus<307>;
+using Error308 = ErrorByStatus<308>;
+using Error400 = ErrorByStatus<400>;
+using Error401 = ErrorByStatus<401>;
+using Error402 = ErrorByStatus<402>;
+using Error403 = ErrorByStatus<403>;
+using Error404 = ErrorByStatus<404>;
+using Error405 = ErrorByStatus<405>;
+using Error406 = ErrorByStatus<406>;
+using Error407 = ErrorByStatus<407>;
+using Error408 = ErrorByStatus<408>;
+using Error409 = ErrorByStatus<409>;
+using Error410 = ErrorByStatus<410>;
+using Error411 = ErrorByStatus<411>;
+using Error412 = ErrorByStatus<412>;
+using Error413 = ErrorByStatus<413>;
+using Error414 = ErrorByStatus<414>;
+using Error415 = ErrorByStatus<415>;
+using Error416 = ErrorByStatus<416>;
+using Error417 = ErrorByStatus<417>;
+using Error418 = ErrorByStatus<418>;
+using Error421 = ErrorByStatus<421>;
+using Error422 = ErrorByStatus<422>;
+using Error423 = ErrorByStatus<423>;
+using Error424 = ErrorByStatus<424>;
+using Error425 = ErrorByStatus<425>;
+using Error426 = ErrorByStatus<426>;
+using Error428 = ErrorByStatus<428>;
+using Error429 = ErrorByStatus<429>;
+using Error431 = ErrorByStatus<431>;
+using Error451 = ErrorByStatus<451>;
+using Error500 = ErrorByStatus<500>;
+using Error501 = ErrorByStatus<501>;
+using Error502 = ErrorByStatus<502>;
+using Error503 = ErrorByStatus<503>;
+using Error504 = ErrorByStatus<504>;
+using Error505 = ErrorByStatus<505>;
+using Error506 = ErrorByStatus<506>;
+using Error507 = ErrorByStatus<507>;
+using Error508 = ErrorByStatus<508>;
+using Error510 = ErrorByStatus<510>;
+using Error511 = ErrorByStatus<511>;
+
 class ContractError : public std::runtime_error {
   public:
     using std::runtime_error::runtime_error;

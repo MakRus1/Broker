@@ -27,6 +27,8 @@ def references(mockserver):
 
     @mockserver.json_handler('/api/v1/transportations/get')
     def transportation(request):
+        if state.get('transport_status', 200) != 200:
+            return mockserver.make_response(status=state['transport_status'], json={'error': 'unavailable', 'message': 'Недоступно'})
         return {'transportation': {
             'id': request.json['transportation_id'], 'shipment_id': state['shipment'], 'revision': 1,
             'container_number': 'ABCD1234567', 'container_type_code': '40HC', 'container_ownership': 'COC',
@@ -35,6 +37,8 @@ def references(mockserver):
 
     @mockserver.json_handler('/api/v1/counterparties/get')
     def counterparty(request):
+        if state.get('party_status', 200) != 200:
+            return mockserver.make_response(status=state['party_status'], json={'error': 'unavailable', 'message': 'Недоступно'})
         return {'counterparty': {
             'id': request.json['id'], 'name': 'Перевозчик', 'revision': 1, 'own_company': False,
             'archived': state['archived'], 'country_code': None, 'tax_id': None,
@@ -44,6 +48,8 @@ def references(mockserver):
 
     @mockserver.json_handler('/api/v1/contracts/get')
     def contract(request):
+        if state.get('contract_status', 200) != 200:
+            return mockserver.make_response(status=state['contract_status'], json={'error': 'unavailable', 'message': 'Недоступно'})
         return {'contract': {
             'id': request.json['id'], 'own_company_id': SHIPMENT, 'counterparty_id': state['party'],
             'number': 'Д-1', 'contract_date': '2026-10-30', 'valid_until': None,
@@ -180,3 +186,12 @@ async def test_dependency_errors_do_not_create_entry(api, entry, references, sco
     await api.post(BASE+'save', value, expected=502)
     references['status'] = 200
     assert (await listing(api, scope))['items'] == []
+
+
+@pytest.mark.parametrize('target', ['status', 'transport_status', 'party_status', 'contract_status'])
+@pytest.mark.parametrize('status,expected', [(403,403),(404,404),(503,502)])
+async def test_shared_http_status_errors(api, entry, references, target, status, expected):
+    value = await entry(**({'transportation_id': TRANSPORT} if target == 'transport_status' else {}))
+    references[target] = status
+    result = await api.post(BASE+'save', value, expected=expected)
+    assert result['error'] == {403:'forbidden_reference',404:'reference_not_found',502:'reference_unavailable'}[expected]

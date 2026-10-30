@@ -80,7 +80,8 @@ class ClientTest(unittest.TestCase):
         post = next(op for op in ops if op.name == 'ItemsByIdCreate')
         code = operation_code('::example::clients::api::ItemsByIdCreate', post)
         self.assertIn('using Response = Response201;', code)
-        self.assertIn('class Error409 final : public platform::http::ApiError', code)
+        self.assertIn('class Error409 final : public platform::http::ErrorByStatus<409>', code)
+        self.assertIn('platform::http::ErrorByStatus<409>(ToJson(value))', code)
         self.assertIn('throw Error409{std::move(value)};', code)
         self.assertIn('catch (const platform::http::ApiError&)', code)
         mixed = replace(post, responses=(post.responses[0], replace(post.responses[0], status=202), post.responses[1]))
@@ -89,3 +90,14 @@ class ClientTest(unittest.TestCase):
         self.assertNotIn('Response202, Response409', code)
         errors_only = replace(post, responses=(post.responses[1],))
         self.assertIn('using Response = void;', operation_code('::example::clients::api::ItemsByIdCreate', errors_only))
+
+    def test_shared_status_base_supports_custom_and_empty_errors(self):
+        from dataclasses import replace
+        ops = load(ROOT / 'tests/fixtures/contract_service')
+        post = next(op for op in ops if op.name == 'ItemsByIdCreate')
+        empty = replace(post, responses=(replace(post.responses[1], status=404, body=None, media=None),))
+        code = operation_code('::example::clients::api::EmptyError', empty)
+        self.assertIn('platform::http::ErrorByStatus<404>()', code)
+        custom = replace(empty, responses=tuple(replace(r, status=499) for r in empty.responses))
+        code = operation_code('::example::clients::api::CustomError', custom)
+        self.assertIn('class Error499 final : public platform::http::ErrorByStatus<499>', code)

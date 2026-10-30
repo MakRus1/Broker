@@ -1,6 +1,7 @@
 #pragma once
 #include <helpers/converters/contracts.hpp>
 #include <helpers/converters/counterparties.hpp>
+#include <helpers/converters/finance.hpp>
 #include <helpers/converters/locations.hpp>
 #include <helpers/converters/shipments.hpp>
 #include <helpers/converters/transportations.hpp>

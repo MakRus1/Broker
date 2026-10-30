@@ -64,3 +64,17 @@ export function restoreContractQuery(raw: unknown): typeof initialContractQuery 
       typeof value.descending === 'boolean' ? value.descending : initialContractQuery.descending,
   };
 }
+
+export const initialFinancialLabelQuery = {
+  filters: [{ field: 'archived', values: ['false'] }] as ColumnFilter[],
+  sort: 'name',
+  descending: false,
+};
+export function restoreFinancialLabelQuery(raw: unknown): typeof initialFinancialLabelQuery {
+  const value = object(raw);
+  return {
+    filters: restoreColumnFilters(value.filters) ?? initialFinancialLabelQuery.filters,
+    sort: text(value.sort, 64) ?? 'name',
+    descending: value.descending === true,
+  };
+}

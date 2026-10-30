@@ -6,6 +6,7 @@
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
+#include <clients/finance/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
@@ -28,6 +29,7 @@ struct Deps {
     platform::configs::Source configs;
     clients::contracts::Client contracts;
     clients::counterparties::Client counterparties;
+    clients::finance::Client finance;
     clients::organizations::Client organizations;
     clients::shipments::Client shipments;
     clients::transport_locations::Client transport_locations;
@@ -47,6 +49,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .contracts = component_context.FindComponent<clients::contracts::Component>().GetClient(),
         .counterparties =
             component_context.FindComponent<clients::counterparties::Component>().GetClient(),
+        .finance = component_context.FindComponent<clients::finance::Component>().GetClient(),
         .organizations =
             component_context.FindComponent<clients::organizations::Component>().GetClient(),
         .shipments = component_context.FindComponent<clients::shipments::Component>().GetClient(),

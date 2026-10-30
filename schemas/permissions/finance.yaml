@@ -1,0 +1,11 @@
+finance.read_financial_labels:
+  name: Просмотр финансовых меток
+  group: Финансовые метки
+  scope: organization
+  requires: []
+finance.write_financial_labels:
+  name: Изменение финансовых меток
+  group: Финансовые метки
+  scope: organization
+  requires:
+  - finance.read_financial_labels

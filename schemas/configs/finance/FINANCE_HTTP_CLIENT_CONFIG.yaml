@@ -1,0 +1,12 @@
+name: FINANCE_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /api/v1/financial-labels/filter-values
+- /api/v1/financial-labels/get
+- /api/v1/financial-labels/list
+- /api/v1/financial-labels/save
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

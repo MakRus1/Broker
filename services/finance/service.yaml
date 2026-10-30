@@ -1,0 +1,16 @@
+version: 1
+libraries:
+- common
+postgresql:
+  enabled: true
+  cluster: finance
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/financial-labels/save: finance.write_financial_labels
+    /api/v1/financial-labels/get: finance.read_financial_labels
+    /api/v1/financial-labels/list: finance.read_financial_labels
+    /api/v1/financial-labels/filter-values: finance.read_financial_labels
+  organization-access: true

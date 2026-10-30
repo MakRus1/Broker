@@ -1,0 +1,177 @@
+openapi: 3.0.3
+info:
+  title: Финансовые метки
+  version: '1'
+paths:
+  /api/v1/financial-labels/save:
+    post:
+      summary: Создать или изменить финансовую метку
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/finance/models.yaml#/SaveFinancialLabelRequest
+      responses:
+        '200':
+          description: Финансовые метки
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  label:
+                    $ref: components/schemas/finance/models.yaml#/FinancialLabel
+                required:
+                - label
+        '400':
+          description: Некорректные поля финансовой метки или фильтры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к финансовым меткам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Финансовая метка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Метка изменена другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/financial-labels/get:
+    post:
+      summary: Карточка финансовой метки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/finance/models.yaml#/GetFinancialLabelRequest
+      responses:
+        '200':
+          description: Финансовые метки
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  label:
+                    $ref: components/schemas/finance/models.yaml#/FinancialLabel
+                required:
+                - label
+        '400':
+          description: Некорректные поля финансовой метки или фильтры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к финансовым меткам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Финансовая метка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Метка изменена другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/financial-labels/list:
+    post:
+      summary: Реестр финансовых меток
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/finance/models.yaml#/ListFinancialLabelsRequest
+      responses:
+        '200':
+          description: Финансовые метки
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/finance/models.yaml#/FinancialLabel
+                  next_cursor:
+                    $ref: components/schemas/finance/models.yaml#/FinancialLabelRegistryCursor
+        '400':
+          description: Некорректные поля финансовой метки или фильтры
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к финансовым меткам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Финансовая метка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Метка изменена другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web_session

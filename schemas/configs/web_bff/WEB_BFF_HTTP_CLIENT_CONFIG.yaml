@@ -22,6 +22,10 @@ paths:
 - /api/v1/counterparties/lookup
 - /api/v1/counterparties/set-archived
 - /api/v1/counterparties/update
+- /api/v1/financial-labels/filter-values
+- /api/v1/financial-labels/get
+- /api/v1/financial-labels/list
+- /api/v1/financial-labels/save
 - /api/v1/shipment-items/add
 - /api/v1/shipment-items/list
 - /api/v1/shipment-items/update

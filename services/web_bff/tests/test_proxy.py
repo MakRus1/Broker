@@ -75,9 +75,18 @@ CONTRACT = {
 }
 
 
+FINANCIAL_LABEL = {
+    'id':ID,'name':'Фрахт','direction':'both','unit':'container','currency':'USD',
+    'vat_mode':'rate','vat_rate_basis_points':0,'note':None,'archived':False,'revision':1,
+}
+
+
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
+        ('financial-labels/get',{'id':ID},{'label':FINANCIAL_LABEL},200),
+        ('financial-labels/list',{}, {'items':[FINANCIAL_LABEL]},200),
+        ('financial-labels/save',{**{key:value for key,value in FINANCIAL_LABEL.items() if key!='revision'},'expected_revision':0},{'label':FINANCIAL_LABEL},200),
         ('contracts/get', {'id':ID}, {'contract':CONTRACT},200),
         ('contracts/list', {}, {'items':[CONTRACT]},200),
         ('contracts/save', {**{key:value for key,value in CONTRACT.items() if key != 'revision'},'expected_revision':0}, {'contract':CONTRACT},200),
@@ -563,11 +572,11 @@ async def test_registry_filters_and_typed_cursors(browser, mockserver, path, bod
     assert response.json()['next_cursor'] == cursor
 
 
-@pytest.mark.parametrize('service',['shipments','transportations','counterparties','contracts'])
+@pytest.mark.parametrize('service',['shipments','transportations','counterparties','contracts','financial-labels'])
 async def test_registry_filters_and_metadata_are_proxied(browser,mockserver,service):
     await browser.sign_in()
     path=f'/api/v1/{service}/filter-values'
-    field='name' if service=='counterparties' else 'number' if service in ('shipments','contracts') else 'container_number'
+    field='name' if service in ('counterparties','financial-labels') else 'number' if service in ('shipments','contracts') else 'container_number'
     result={'fields':[{'id':field,'label':'Номер','kind':'values','sortable':True,'case_insensitive':True}], 'values':[{'value':'abc2','label':'ABC2'}],'next_after':'abc2'}
     @mockserver.json_handler(path)
     def upstream(request):

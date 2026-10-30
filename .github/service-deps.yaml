@@ -6,6 +6,7 @@ libs:
     - configs
     - contracts
     - counterparties
+    - finance
     - organizations
     - shipments
     - transport_locations

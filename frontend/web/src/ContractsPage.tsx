@@ -509,7 +509,7 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card contract-page">
+      <section className="card record-page">
         <div className="section-heading">
           <h1>Договоры</h1>
           {write && (
@@ -557,10 +557,10 @@ export function ContractsPage({
       </section>
     );
   return (
-    <section className="card contract-page">
+    <section className="card record-page">
       {confirmation}
-      <div className="contract-heading">
-        <a className="link contract-back" href="#/contracts">
+      <div className="record-heading">
+        <a className="link record-back" href="#/contracts">
           ← К договорам
         </a>
         <div className="section-heading">
@@ -568,7 +568,7 @@ export function ContractsPage({
             {!creating && <p className="eyebrow">ДОГОВОР</p>}
             <h1>{creating ? 'Новый договор' : (value?.number ?? 'Договор')}</h1>
             {value && !editing && (
-              <p className="contract-state">
+              <p className="record-state">
                 {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
               </p>
             )}
@@ -596,7 +596,7 @@ export function ContractsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <div className="contract-fields">
+          <div className="record-fields">
             <label>
               Номер договора · обязательно
               <input
@@ -711,7 +711,7 @@ export function ContractsPage({
               />
               В архиве
             </label>
-            <label className="contract-note">
+            <label className="record-wide">
               Примечание
               <textarea
                 rows={3}
@@ -734,7 +734,7 @@ export function ContractsPage({
         value &&
         !editing && (
           <>
-            <div className="contract-fields contract-summary">
+            <div className="record-fields record-summary">
               <div>
                 <span className="hint">Дата договора</span>
                 <p>{date(value.contract_date)}</p>
@@ -767,7 +767,7 @@ export function ContractsPage({
                     : `${value.payment_delay_days} дн.`}
                 </p>
               </div>
-              <div className="contract-note">
+              <div className="record-wide">
                 <span className="hint">Примечание</span>
                 <p>{value.note || '—'}</p>
               </div>

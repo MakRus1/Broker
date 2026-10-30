@@ -11,26 +11,6 @@ inline bool SameId(const std::string& left, const std::string& right) {
     return boost::uuids::string_generator{}(left) == boost::uuids::string_generator{}(right);
 }
 
-// Вызывается только из catch: отмена запроса сохраняет стандартную семантику userver.
-[[noreturn]] inline void RethrowReferenceError() {
-    try {
-        throw;
-    } catch (const platform::http::ApiError& error) {
-        if (error.GetStatus() == 403)
-            throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
-        if (error.GetStatus() == 404)
-            throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
-        throw ApiError{
-            502, "reference_unavailable", "Не удалось проверить связанные данные начисления"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError{502, "reference_unavailable", "Сервис связанных данных недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError{502, "reference_unavailable", "Некорректный ответ сервиса связанных данных"};
-    }
-}
-
 inline void ValidateEntryScope(const Deps& deps,
     const userver::server::request::RequestContext& context, const models::EntryScope& scope) {
     const auto token = platform::auth::GetAccessToken(context);
@@ -46,8 +26,19 @@ inline void ValidateEntryScope(const Deps& deps,
         } else {
             deps.shipments.ApiV1ShipmentsGet({.body = {.shipment_id = scope.shipment_id}}, token);
         }
-    } catch (...) {
-        RethrowReferenceError();
+    } catch (const platform::http::ApiError& error) {
+        if (error.GetStatus() == 403)
+            throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
+        if (error.GetStatus() == 404)
+            throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+        throw ApiError{
+            502, "reference_unavailable", "Не удалось проверить связанные данные начисления"};
+    } catch (const platform::http::CancelledError&) {
+        throw;
+    } catch (const platform::http::TransportError&) {
+        throw ApiError{502, "reference_unavailable", "Сервис связанных данных недоступен"};
+    } catch (const platform::http::ContractError&) {
+        throw ApiError{502, "reference_unavailable", "Некорректный ответ сервиса связанных данных"};
     }
 }
 
@@ -82,8 +73,19 @@ inline EntryParties ValidateEntryParties(const Deps& deps,
             result.ContractNumber = contract.number;
         }
         return result;
-    } catch (...) {
-        RethrowReferenceError();
+    } catch (const platform::http::ApiError& error) {
+        if (error.GetStatus() == 403)
+            throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
+        if (error.GetStatus() == 404)
+            throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
+        throw ApiError{
+            502, "reference_unavailable", "Не удалось проверить связанные данные начисления"};
+    } catch (const platform::http::CancelledError&) {
+        throw;
+    } catch (const platform::http::TransportError&) {
+        throw ApiError{502, "reference_unavailable", "Сервис связанных данных недоступен"};
+    } catch (const platform::http::ContractError&) {
+        throw ApiError{502, "reference_unavailable", "Некорректный ответ сервиса связанных данных"};
     }
 }
 }  // namespace finance::helpers

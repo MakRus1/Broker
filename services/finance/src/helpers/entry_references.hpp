@@ -26,9 +26,9 @@ inline void ValidateEntryScope(const Deps& deps,
         } else {
             deps.shipments.ApiV1ShipmentsGet({.body = {.shipment_id = scope.shipment_id}}, token);
         }
-    } catch (const platform::http::Error403&) {
+    } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
-    } catch (const platform::http::Error404&) {
+    } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
     } catch (const platform::http::ApiError&) {
         throw ApiError{
@@ -73,9 +73,9 @@ inline EntryParties ValidateEntryParties(const Deps& deps,
             result.ContractNumber = contract.number;
         }
         return result;
-    } catch (const platform::http::Error403&) {
+    } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError{403, "forbidden_reference", "Нет доступа к связанным данным начисления"};
-    } catch (const platform::http::Error404&) {
+    } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError{404, "reference_not_found", "Связанный объект не найден в организации"};
     } catch (const platform::http::ApiError&) {
         throw ApiError{

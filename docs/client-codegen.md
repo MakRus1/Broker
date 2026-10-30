@@ -102,17 +102,16 @@ try {
 ответ без тела в таком варианте представлен пустым ResponseNNN.
 Объявленные 3xx/4xx/5xx выбрасываются как ErrorNNN с типизированным DTO в поле response.
 Ошибки операций наследуются от `platform::http::ErrorByStatus<NNN>`, а тот — от
-`platform::http::ApiError`. Для стандартных статусов доступны короткие имена
-`platform::http::Error403`, `Error404`, `Error409` и т. д. Такой `catch` объединяет
+`platform::http::ApiError`. Такой `catch` объединяет
 одинаковый статус разных операций и сервисов:
 
 ```cpp
 try {
     ValidateShipment();
     ValidateTransportation();
-} catch (const platform::http::Error403&) {
+} catch (const platform::http::ErrorByStatus<403>&) {
     DenyAccess();
-} catch (const platform::http::Error404&) {
+} catch (const platform::http::ErrorByStatus<404>&) {
     ReportMissingReference();
 } catch (const platform::http::ApiError& error) {
     ReportDependencyFailure(error.GetStatus());
@@ -134,7 +133,7 @@ DTO клиента не содержат WasProvided и не зависят от
 Path/query кодируются, тело сериализуется в JSON, ответ проверяется по статусу,
 Content-Type, обязательности, типам и ограничениям полей. Ответ без тела не принимает тело.
 
-- platform::http::ErrorNNN: общая категория объявленного HTTP-статуса для всех клиентов.
+- platform::http::ErrorByStatus<NNN>: общая категория объявленного HTTP-статуса для всех клиентов.
 - platform::http::ApiError: общий тип всех объявленных ошибок API; конкретные ErrorNNN с DTO доступны в namespace операции.
 - platform::http::ContractError: неожиданный статус или нарушение контракта ответа.
 - platform::http::TimeoutError: штатный TimeoutException userver.

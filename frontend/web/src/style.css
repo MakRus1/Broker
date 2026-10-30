@@ -3125,40 +3125,40 @@ details[open] > .route-stage-summary::after {
   font-size: 13px;
 }
 
-.contract-page {
+.record-page {
   padding: 32px;
 }
-.contract-fields {
+.record-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
-.contract-fields > label {
+.record-fields > label {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
 }
-.contract-fields > .bank-archive-toggle {
+.record-fields > .bank-archive-toggle {
   flex-direction: row;
   align-self: center;
 }
-.contract-note {
+.record-wide {
   grid-column: 1 / -1;
 }
-.contract-summary {
+.record-summary {
   margin-top: 28px;
 }
 @media (max-width: 760px) {
-  .contract-fields {
+  .record-fields {
     grid-template-columns: 1fr;
   }
-  .contract-page {
+  .record-page {
     padding: 20px;
   }
 }
 
-.contract-page a.button {
+.record-page a.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3167,7 +3167,7 @@ details[open] > .route-stage-summary::after {
   text-decoration: none;
   border: 1px solid transparent;
 }
-.contract-page .form-actions {
+.record-page .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -3185,25 +3185,35 @@ details[open] > .route-stage-summary::after {
   color: #75839a;
 }
 
-.contract-heading {
+.record-heading {
   margin-bottom: 32px;
 }
-.contract-back {
+.record-back {
   display: inline-flex;
   margin-bottom: 24px;
   font-size: 14px;
   font-weight: 500;
 }
-.contract-heading .section-heading {
+.record-heading .section-heading {
   margin-bottom: 0;
   align-items: flex-start;
 }
-.contract-heading .eyebrow {
+.record-heading .eyebrow {
   margin: 0 0 8px;
   font-size: 10px;
 }
-.contract-heading .contract-state {
+.record-heading .record-state {
   margin: 12px 0 0;
   font-size: 13px;
   color: #75839a;
+}
+
+.record-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.financial-label-page .bank-archive-toggle {
+  margin-top: 24px;
 }

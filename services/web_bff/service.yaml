@@ -22,6 +22,9 @@ clients:
   contracts:
     service: contracts
     transport: http
+  finance:
+    service: finance
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

@@ -1,0 +1,241 @@
+FinancialLabelDirection:
+  type: string
+  enum:
+  - income
+  - expense
+  - both
+FinancialLabelUnit:
+  type: string
+  enum:
+  - container
+  - transportation
+  - ton
+  - day
+  - piece
+VatMode:
+  type: string
+  enum:
+  - exempt
+  - rate
+FinancialLabel:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    direction:
+      $ref: '#/FinancialLabelDirection'
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    vat_mode:
+      $ref: '#/VatMode'
+    vat_rate_basis_points:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 10000
+      description: 'Сотые доли процента: 2250 означает 22,5%'
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    revision:
+      type: integer
+      minimum: 1
+  required:
+  - id
+  - name
+  - direction
+  - unit
+  - currency
+  - vat_mode
+  - vat_rate_basis_points
+  - note
+  - archived
+  - revision
+SaveFinancialLabelRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    direction:
+      $ref: '#/FinancialLabelDirection'
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    vat_mode:
+      $ref: '#/VatMode'
+    vat_rate_basis_points:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 10000
+      description: 'Сотые доли процента: 2250 означает 22,5%'
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    expected_revision:
+      type: integer
+      minimum: 0
+  required:
+  - id
+  - name
+  - direction
+  - unit
+  - currency
+  - vat_mode
+  - vat_rate_basis_points
+  - note
+  - archived
+  - expected_revision
+GetFinancialLabelRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+  required:
+  - id
+FinancialLabelError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+      maxLength: 128
+    message:
+      type: string
+      maxLength: 1000
+  required:
+  - error
+  - message
+RegistryField:
+  additionalProperties: false
+  properties:
+    case_insensitive:
+      type: boolean
+    id:
+      type: string
+    kind:
+      enum:
+      - values
+      - set
+      - date
+      - boolean
+      type: string
+    label:
+      type: string
+    lookup:
+      type: string
+    sortable:
+      type: boolean
+  required:
+  - id
+  - label
+  - kind
+  - sortable
+  - case_insensitive
+  type: object
+RegistryValue:
+  additionalProperties: false
+  properties:
+    label:
+      type: string
+    value:
+      type: string
+  required:
+  - value
+  - label
+  type: object
+RegistryFilter:
+  additionalProperties: false
+  properties:
+    date_from:
+      format: date
+      type: string
+    date_to:
+      format: date
+      type: string
+    empty:
+      type: boolean
+    field:
+      maxLength: 64
+      minLength: 1
+      type: string
+    query:
+      maxLength: 256
+      type: string
+    values:
+      items:
+        maxLength: 2000
+        type: string
+      maxItems: 200
+      type: array
+      uniqueItems: true
+  required:
+  - field
+  type: object
+FinancialLabelRegistryCursor:
+  additionalProperties: false
+  properties:
+    id:
+      format: uuid
+      type: string
+    scope:
+      pattern: ^[a-f0-9]{64}$
+      type: string
+    value:
+      maxLength: 1024
+      type: string
+  required:
+  - id
+  - scope
+  - value
+  type: object
+ListFinancialLabelsRequest:
+  additionalProperties: false
+  properties:
+    cursor:
+      $ref: '#/FinancialLabelRegistryCursor'
+    descending:
+      default: false
+      type: boolean
+    filters:
+      items:
+        $ref: '#/RegistryFilter'
+      maxItems: 32
+      type: array
+    limit:
+      default: 50
+      maximum: 100
+      minimum: 1
+      type: integer
+    sort:
+      default: id
+      maxLength: 64
+      minLength: 1
+      type: string
+  required: []
+  type: object

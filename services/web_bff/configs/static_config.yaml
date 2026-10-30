@@ -127,6 +127,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-financial_labels-filter_values:
+            path: /api/v1/financial-labels/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-financial_labels-get:
+            path: /api/v1/financial-labels/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-financial_labels-list:
+            path: /api/v1/financial-labels/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-financial_labels-save:
+            path: /api/v1/financial-labels/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipment_items-add:
             path: /api/v1/shipment-items/add
             method: POST
@@ -271,6 +295,8 @@ components_manager:
             base-url: $client-contracts-base-url
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-finance:
+            base-url: $client-finance-base-url
         client-organizations:
             base-url: $client-organizations-base-url
         client-shipments:

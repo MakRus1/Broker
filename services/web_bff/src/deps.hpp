@@ -4,6 +4,7 @@
 #include <platform/browser/sessions.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
+#include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
@@ -25,6 +26,7 @@ struct Deps {
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
+    clients::contracts::Client contracts;
     clients::counterparties::Client counterparties;
     clients::organizations::Client organizations;
     clients::shipments::Client shipments;
@@ -42,6 +44,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .configs =
             platform::configs::Source{
                 component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},
+        .contracts = component_context.FindComponent<clients::contracts::Component>().GetClient(),
         .counterparties =
             component_context.FindComponent<clients::counterparties::Component>().GetClient(),
         .organizations =

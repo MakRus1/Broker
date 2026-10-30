@@ -1,0 +1,189 @@
+components_manager:
+    task_processors:
+        main-task-processor:
+            worker_threads: $worker-threads
+        fs-task-processor:
+            worker_threads: $worker-fs-threads
+    default_task_processor: main-task-processor
+    components:
+        # OPENAPI_HANDLERS_BEGIN
+        handler-api-v1-contracts-filter_values:
+            path: /api/v1/contracts/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-get:
+            path: /api/v1/contracts/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-list:
+            path: /api/v1/contracts/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-save:
+            path: /api/v1/contracts/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        # OPENAPI_HANDLERS_END
+        # SERVICE_CONFIG_BEGIN
+        client-counterparties:
+            base-url: $client-counterparties-base-url
+        platform-readiness: {}
+        platform-http-readiness: {}
+        platform-config-delivery:
+            load-enabled: $config-updates-enabled
+        platform-config-readiness:
+            rules: []
+        postgres-contracts:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
+        platform-http-pipeline:
+            extra-middlewares:
+            - platform-auth
+        platform-auth:
+            issuer: $auth-issuer
+            audience: broker-logistics
+            roles-client: broker-logistics
+            jwks-url: $auth-jwks-url
+            protected-prefix: /api/
+            allow-http: $auth-allow-http
+            permissions:
+                /api/v1/contracts/filter-values: contracts.read
+                /api/v1/contracts/get: contracts.read
+                /api/v1/contracts/list: contracts.read
+                /api/v1/contracts/save: contracts.write
+            permission-dependencies:
+                contracts.read:
+                - counterparties.read
+                contracts.write:
+                - contracts.read
+                - counterparties.read_bank_accounts
+                counterparties.read_bank_accounts:
+                - counterparties.read
+            organization-url: $organization-access-url
+        auth-http-client:
+            wait-for-dynamic-configs: false
+        dynamic-config:
+            defaults:
+                HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
+                POSTGRES_DEFAULT_COMMAND_CONTROL:
+                    network_timeout_ms: 750
+                    statement_timeout_ms: 500
+            updates-enabled: $config-updates-enabled
+            fs-cache-path: $config-cache-path
+            fs-task-processor: fs-task-processor
+        dynamic-config-client:
+            load-enabled: $config-updates-enabled
+            config-url: $config-server-url
+            http-client: dynamic-config-http-client
+            service-name: contracts
+            get-configs-overrides-for-service: false
+            http-timeout: 1s
+            http-retries: 1
+        dynamic-config-client-updater:
+            load-enabled: $config-updates-enabled
+            config-settings: false
+            first-update-fail-ok: true
+            updates-sink: platform-config-delivery
+            update-types: only-full
+            deduplicate-update-types: none
+            update-interval: 1s
+        # SERVICE_CONFIG_END
+        platform-http-telemetry:
+            service-name: contracts
+            environment: $environment
+        server:
+            middleware-pipeline-builder: platform-http-pipeline
+            listener:
+                port: $server-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+            listener-monitor:
+                address: 127.0.0.1
+                port: $monitor-port
+                task_processor: main-task-processor
+                handler-defaults:
+                    request_body_size_log_limit: 0
+                    request_headers_size_log_limit: 0
+                    response_data_size_log_limit: 0
+        logging:
+            fs-task-processor: fs-task-processor
+            loggers:
+                default:
+                    file_path: '@stderr'
+                    level: $logger-level
+                    format: json
+                    overflow_behavior: discard
+        tracing-manager-locator:
+            incoming-format:
+            - opentelemetry
+            new-requests-format:
+            - opentelemetry
+            otel-trace-sampling-enabled: true
+        grpc-client-common:
+            blocking-task-processor: fs-task-processor
+        grpc-otlp-factory:
+            load-enabled: $otlp-enabled
+            middlewares:
+                grpc-client-logging:
+                    enabled: false
+        otlp-logger:
+            load-enabled: $otlp-enabled
+            endpoint: $otlp-endpoint
+            endpoint#env: OTEL_EXPORTER_OTLP_ENDPOINT
+            client-factory-name: grpc-otlp-factory
+            service-name: contracts
+            log-level: $logger-level
+            sinks:
+                logs: both
+                tracing: both
+            extra-attributes:
+                service.version: 0.1.0
+                deployment.environment.name: $environment
+        grpc-client-logging:
+            msg-log-level: none
+        handler-server-monitor:
+            path: /metrics
+            method: GET
+            task_processor: main-task-processor
+            format: prometheus
+            common-labels:
+                service: contracts
+                environment: $environment
+        handler-ping:
+            path: /ping
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        handler-ping-ready:
+            path: /ping/ready
+            method: GET
+            task_processor: main-task-processor
+            monitor-handler: true
+        testsuite-support: {}
+        congestion-control:
+            fake-mode: true
+        http-client: null
+        http-client-core:
+            fs-task-processor: fs-task-processor
+        dns-client:
+            fs-task-processor: fs-task-processor
+        tests-control:
+            load-enabled: $is-testing
+            path: /tests/{action}
+            method: POST
+            task_processor: main-task-processor

@@ -67,9 +67,20 @@ BANK_ACCOUNT = {
 }
 
 
+CONTRACT = {
+    'id': ID, 'own_company_id': ID, 'counterparty_id': CUSTOMER, 'number':'Д-1',
+    'contract_date':'2026-10-30','valid_until':None,'currency':'RUB',
+    'own_bank_account_id':None,'counterparty_bank_account_id':None,
+    'payment_delay_days':30,'note':None,'archived':False,'revision':1,
+}
+
+
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
+        ('contracts/get', {'id':ID}, {'contract':CONTRACT},200),
+        ('contracts/list', {}, {'items':[CONTRACT]},200),
+        ('contracts/save', {**{key:value for key,value in CONTRACT.items() if key != 'revision'},'expected_revision':0}, {'contract':CONTRACT},200),
         ('counterparties/bank-accounts/list', {'counterparty_id': ID}, {'items':[BANK_ACCOUNT]}, 200),
         ('counterparties/bank-accounts/save', {**{key:value for key,value in BANK_ACCOUNT.items() if key != 'revision'}, 'expected_revision':0}, {'account':BANK_ACCOUNT}, 200),
         (
@@ -552,11 +563,11 @@ async def test_registry_filters_and_typed_cursors(browser, mockserver, path, bod
     assert response.json()['next_cursor'] == cursor
 
 
-@pytest.mark.parametrize('service',['shipments','transportations','counterparties'])
+@pytest.mark.parametrize('service',['shipments','transportations','counterparties','contracts'])
 async def test_registry_filters_and_metadata_are_proxied(browser,mockserver,service):
     await browser.sign_in()
     path=f'/api/v1/{service}/filter-values'
-    field='name' if service=='counterparties' else 'number' if service=='shipments' else 'container_number'
+    field='name' if service=='counterparties' else 'number' if service in ('shipments','contracts') else 'container_number'
     result={'fields':[{'id':field,'label':'Номер','kind':'values','sortable':True,'case_insensitive':True}], 'values':[{'value':'abc2','label':'ABC2'}],'next_after':'abc2'}
     @mockserver.json_handler(path)
     def upstream(request):
@@ -586,3 +597,20 @@ async def test_route_filter_groups_and_metadata(browser, mockserver):
     response=await browser.post('/api/v1/transportations/filter-values',{'scope':'route','registry':{'route_filters':groups},'group':0,'field':'destination_station'})
     assert response.status==200
     assert response.json()['values']==[{'value':ID,'label':'Москва'}]
+
+
+async def test_contract_registry_dates_and_cursor(browser,mockserver):
+    await browser.sign_in()
+    cursor={'id':ID,'scope':'a'*64,'date_value':'2026-10-30'}
+    body={'sort':'valid_until','descending':True,'limit':10,'cursor':cursor,'filters':[
+        {'field':'own_company_id','values':[ID]},
+        {'field':'contract_date','date_from':'2026-10-01','date_to':'2026-10-31'},
+        {'field':'valid_until','empty':False},
+    ]}
+    @mockserver.json_handler('/api/v1/contracts/list')
+    def upstream(request):
+        assert request.json == body
+        return {'items':[],'next_cursor':cursor}
+    response=await browser.post('/api/v1/contracts/list',body)
+    assert response.status==200,response.text
+    assert response.json()['next_cursor']==cursor

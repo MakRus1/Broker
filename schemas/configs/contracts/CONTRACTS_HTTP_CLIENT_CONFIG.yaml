@@ -1,0 +1,12 @@
+name: CONTRACTS_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /api/v1/contracts/filter-values
+- /api/v1/contracts/get
+- /api/v1/contracts/list
+- /api/v1/contracts/save
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

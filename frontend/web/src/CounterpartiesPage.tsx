@@ -275,7 +275,9 @@ export function CounterpartiesPage({
             <>
               <div className="page-heading counterparty-heading">
                 <div>
-                  <p className="eyebrow">КОНТРАГЕНТ · ЮРИДИЧЕСКОЕ ЛИЦО</p>
+                  <p className="eyebrow">
+                    {item.own_company ? 'СОБСТВЕННОЕ ЮРЛИЦО' : 'КОНТРАГЕНТ · ЮРИДИЧЕСКОЕ ЛИЦО'}
+                  </p>
                   <h1>{item.name}</h1>
                   <p>
                     {item.archived ? 'В архиве' : 'Действующий'} · Редакция {item.revision}
@@ -338,15 +340,15 @@ export function CounterpartiesPage({
                 />
               ) : (
                 <>
-                  <div className="counterparty-roles">
-                    {item.own_company && <span className="badge">Собственное юрлицо</span>}
-                    {item.roles.map((value) => (
-                      <span className="badge" key={value}>
-                        {counterpartyRoles[value]}
-                      </span>
-                    ))}
-                    {!item.roles.length && <span className="hint">Роли пока не назначены</span>}
-                  </div>
+                  {item.roles.length > 0 && (
+                    <div className="counterparty-roles">
+                      {item.roles.map((value) => (
+                        <span className="badge" key={value}>
+                          {counterpartyRoles[value]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <dl className="counterparty-details">
                     {[
                       ['Юридическое наименование', item.legal_name],

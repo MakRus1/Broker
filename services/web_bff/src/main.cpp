@@ -27,6 +27,7 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
+#include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
@@ -73,6 +74,7 @@ int main(int argc, char* argv[]) {
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
     component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<web_bff::clients::contracts::Component>();
     component_list.Append<web_bff::clients::counterparties::Component>();
     component_list.Append<web_bff::clients::organizations::Component>();
     component_list.Append<web_bff::clients::shipments::Component>();

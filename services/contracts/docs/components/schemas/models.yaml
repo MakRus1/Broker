@@ -1,0 +1,258 @@
+Contract:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    own_company_id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    number:
+      type: string
+      maxLength: 128
+      minLength: 1
+    contract_date:
+      type: string
+      format: date
+    valid_until:
+      type: string
+      format: date
+      nullable: true
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    own_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    counterparty_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    payment_delay_days:
+      type: integer
+      minimum: 0
+      maximum: 36500
+      nullable: true
+    note:
+      type: string
+      maxLength: 4000
+      nullable: true
+    archived:
+      type: boolean
+    revision:
+      type: integer
+      minimum: 1
+  required:
+  - id
+  - own_company_id
+  - counterparty_id
+  - number
+  - contract_date
+  - valid_until
+  - currency
+  - own_bank_account_id
+  - counterparty_bank_account_id
+  - payment_delay_days
+  - note
+  - archived
+  - revision
+SaveContractRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    own_company_id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    number:
+      type: string
+      maxLength: 128
+      minLength: 1
+    contract_date:
+      type: string
+      format: date
+    valid_until:
+      type: string
+      format: date
+      nullable: true
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    own_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    counterparty_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    payment_delay_days:
+      type: integer
+      minimum: 0
+      maximum: 36500
+      nullable: true
+    note:
+      type: string
+      maxLength: 4000
+      nullable: true
+    archived:
+      type: boolean
+    expected_revision:
+      type: integer
+      minimum: 0
+  required:
+  - id
+  - own_company_id
+  - counterparty_id
+  - number
+  - contract_date
+  - valid_until
+  - currency
+  - own_bank_account_id
+  - counterparty_bank_account_id
+  - payment_delay_days
+  - note
+  - archived
+  - expected_revision
+GetContractRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+  required:
+  - id
+ListContractsRequest:
+  additionalProperties: false
+  properties:
+    cursor:
+      $ref: '#/ContractRegistryCursor'
+    descending:
+      default: false
+      type: boolean
+    filters:
+      items:
+        $ref: '#/RegistryFilter'
+      maxItems: 32
+      type: array
+    limit:
+      default: 50
+      maximum: 100
+      minimum: 1
+      type: integer
+    sort:
+      default: id
+      maxLength: 64
+      minLength: 1
+      type: string
+  required: []
+  type: object
+ContractError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+      maxLength: 128
+    message:
+      type: string
+      maxLength: 1000
+  required:
+  - error
+  - message
+RegistryField:
+  additionalProperties: false
+  properties:
+    case_insensitive:
+      type: boolean
+    id:
+      type: string
+    kind:
+      enum:
+      - values
+      - set
+      - date
+      - boolean
+      type: string
+    label:
+      type: string
+    lookup:
+      type: string
+    sortable:
+      type: boolean
+  required:
+  - id
+  - label
+  - kind
+  - sortable
+  - case_insensitive
+  type: object
+RegistryValue:
+  additionalProperties: false
+  properties:
+    label:
+      type: string
+    value:
+      type: string
+  required:
+  - value
+  - label
+  type: object
+RegistryFilter:
+  additionalProperties: false
+  properties:
+    date_from:
+      format: date
+      type: string
+    date_to:
+      format: date
+      type: string
+    empty:
+      type: boolean
+    field:
+      maxLength: 64
+      minLength: 1
+      type: string
+    query:
+      maxLength: 256
+      type: string
+    values:
+      items:
+        maxLength: 2000
+        type: string
+      maxItems: 200
+      type: array
+      uniqueItems: true
+  required:
+  - field
+  type: object
+ContractRegistryCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - scope
+  properties:
+    id:
+      type: string
+      format: uuid
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+    text_value:
+      type: string
+      maxLength: 2048
+    date_value:
+      type: string
+      format: date

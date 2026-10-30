@@ -13,6 +13,7 @@ export function CustomerSelect({
   label = 'Клиент',
   required = false,
   error = '',
+  ownCompany = false,
 }: {
   items: Counterparty[];
   value: string;
@@ -22,6 +23,7 @@ export function CustomerSelect({
   label?: string;
   required?: boolean;
   error?: string;
+  ownCompany?: boolean;
 }) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,6 +53,7 @@ export function CustomerSelect({
         {
           filters: [
             { field: 'archived', values: ['false'] },
+            ...(ownCompany ? [{ field: 'own_company', values: ['true'] }] : []),
             ...(query.trim() ? [{ field: 'search', query: query.trim() }] : []),
           ],
           limit: 100,
@@ -71,7 +74,7 @@ export function CustomerSelect({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, open, session]);
+  }, [query, open, session, ownCompany]);
   useEffect(() => {
     setSelected((old) => (old?.id === value ? old : undefined));
     if (!value || items.some((item) => item.id === value)) return;

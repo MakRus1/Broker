@@ -128,7 +128,9 @@ export function RegistryTable<T extends { id: string }>({
   filters,
   customFilters,
   filterSummary,
+  emptyMessage,
 }: {
+  emptyMessage?: ReactNode;
   filterSummary?: ReactNode;
   customFilters?: Record<
     string,
@@ -444,6 +446,11 @@ export function RegistryTable<T extends { id: string }>({
           </tbody>
         </table>
       </div>
+      {!items.length && emptyMessage && (
+        <div className="registry-empty" role="status">
+          {emptyMessage}
+        </div>
+      )}
     </>
   );
 }

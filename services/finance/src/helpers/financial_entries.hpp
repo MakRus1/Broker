@@ -48,12 +48,12 @@ inline std::vector<models::FinancialEntry> ConvertEntries(const pg::ResultSet& r
 inline pgtypes::FinancialEntryV1 PrepareEntry(const models::SaveFinancialEntryRequest& value,
     const models::FinancialLabel& label, const EntryParties& parties) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError{400, "invalid_revision", "Некорректная редакция начисления"};
+        throw ApiError<400>{"invalid_revision", "Некорректная редакция начисления"};
     if (label.archived && !value.archived)
-        throw ApiError{409, "archived_label", "Выберите действующую финансовую метку"};
+        throw ApiError<409>{"archived_label", "Выберите действующую финансовую метку"};
     if (label.direction != models::FinancialLabelDirection::Both &&
         models::EnumValue(label.direction) != models::EnumValue(value.direction))
-        throw ApiError{400, "wrong_direction", "Метка не подходит для выбранного направления"};
+        throw ApiError<400>{"wrong_direction", "Метка не подходит для выбранного направления"};
     const auto amounts = CalculateAmounts(value);
     auto note = value.note;
     if (note.has_value()) {

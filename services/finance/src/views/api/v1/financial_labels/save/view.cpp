@@ -18,25 +18,16 @@ Response View::Handle(
             : transaction.Execute(
                   sql::kUpdateFinancialLabel, organization, value, request.body.expected_revision);
         if (rows.IsEmpty())
-            throw ApiError{409, "revision_conflict", "Метка изменена. Обновите карточку"};
+            throw ApiError<409>{"revision_conflict", "Метка изменена. Обновите карточку"};
         const auto result = Convert(rows.AsSingleRow<pgtypes::FinancialLabelV1>());
         transaction.Execute(sql::kWriteHistory, organization, result.id, result.revision,
             identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
         transaction.Commit();
         return Response200{.label = result};
-    } catch (const ::finance::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        default:
-            throw;
-        }
+    } catch (const ::finance::ApiError<400>& error) {
+        return Response400{.error = error.Code, .message = error.what()};
+    } catch (const ::finance::ApiError<409>& error) {
+        return Response409{.error = error.Code, .message = error.what()};
     }
 }
 }  // namespace finance::views::api::v1::financial_labels::save

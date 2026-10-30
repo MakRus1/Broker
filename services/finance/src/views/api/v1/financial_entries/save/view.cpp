@@ -19,7 +19,7 @@ Response View::Handle(
         const auto labels =
             transaction.Execute(sql::kGetFinancialLabel, organization, request.body.label_id);
         if (labels.IsEmpty())
-            throw ApiError{404, "label_not_found", "Финансовая метка не найдена"};
+            throw ApiError<404>{"label_not_found", "Финансовая метка не найдена"};
         const auto value = PrepareEntry(
             request.body, Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>()), parties);
         const auto rows = request.body.expected_revision == 0
@@ -27,27 +27,22 @@ Response View::Handle(
             : transaction.Execute(
                   sql::kUpdateFinancialEntry, organization, value, request.body.expected_revision);
         if (rows.IsEmpty())
-            throw ApiError{409, "revision_conflict", "Начисление изменено. Обновите список"};
+            throw ApiError<409>{"revision_conflict", "Начисление изменено. Обновите список"};
         const auto result = Convert(rows.AsSingleRow<pgtypes::FinancialEntryV1>());
         transaction.Execute(sql::kWriteEntryHistory, organization, result.id, result.revision,
             identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
         transaction.Commit();
         return Response200{.entry = result};
-    } catch (const ::finance::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        case 502:
-            return Response502{.error = error.Code, .message = error.what()};
-        default:
-            throw;
-        }
+    } catch (const ::finance::ApiError<400>& error) {
+        return Response400{.error = error.Code, .message = error.what()};
+    } catch (const ::finance::ApiError<403>& error) {
+        return Response403{.error = error.Code, .message = error.what()};
+    } catch (const ::finance::ApiError<404>& error) {
+        return Response404{.error = error.Code, .message = error.what()};
+    } catch (const ::finance::ApiError<409>& error) {
+        return Response409{.error = error.Code, .message = error.what()};
+    } catch (const ::finance::ApiError<502>& error) {
+        return Response502{.error = error.Code, .message = error.what()};
     }
 }
 }  // namespace finance::views::api::v1::financial_entries::save

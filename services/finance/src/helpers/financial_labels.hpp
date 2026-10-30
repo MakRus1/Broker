@@ -30,14 +30,14 @@ inline models::FinancialLabel Convert(const pgtypes::FinancialLabelV1& value) {
 
 inline pgtypes::FinancialLabelV1 Prepare(const models::SaveFinancialLabelRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError{400, "invalid_revision", "Некорректная редакция финансовой метки"};
+        throw ApiError<400>{"invalid_revision", "Некорректная редакция финансовой метки"};
     const auto name = userver::utils::text::Trim(value.name);
     if (name.empty())
-        throw ApiError{400, "empty_name", "Укажите название финансовой метки"};
+        throw ApiError<400>{"empty_name", "Укажите название финансовой метки"};
     if (value.vat_mode == models::VatMode::Exempt && value.vat_rate_basis_points.has_value())
-        throw ApiError{400, "unexpected_vat_rate", "Для «Без НДС» ставка не указывается"};
+        throw ApiError<400>{"unexpected_vat_rate", "Для «Без НДС» ставка не указывается"};
     if (value.vat_mode == models::VatMode::Rate && !value.vat_rate_basis_points.has_value())
-        throw ApiError{400, "vat_rate_required", "Укажите ставку НДС, включая нулевую"};
+        throw ApiError<400>{"vat_rate_required", "Укажите ставку НДС, включая нулевую"};
     auto note = value.note;
     if (note.has_value()) {
         note = userver::utils::text::Trim(note.value());

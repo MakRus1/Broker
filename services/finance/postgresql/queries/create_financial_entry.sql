@@ -1,0 +1,56 @@
+INSERT INTO financial_entries (
+    organization_id,
+    id,
+    shipment_id,
+    transportation_id,
+    label_id,
+    label_name,
+    direction,
+    unit,
+    counterparty_id,
+    counterparty_name,
+    contract_id,
+    contract_number,
+    quantity_milli,
+    price_minor,
+    currency,
+    vat_mode,
+    vat_rate_basis_points,
+    net_minor,
+    vat_minor,
+    total_minor,
+    note,
+    archived,
+    revision,
+    price_mode
+)
+SELECT
+    $1::UUID,
+    value.*
+FROM (SELECT ($2::public.financial_entry_v1).*) AS value
+ON CONFLICT (organization_id, id) DO NOTHING
+RETURNING ROW(
+    id,
+    shipment_id,
+    transportation_id,
+    label_id,
+    label_name,
+    direction,
+    unit,
+    counterparty_id,
+    counterparty_name,
+    contract_id,
+    contract_number,
+    quantity_milli,
+    price_minor,
+    currency,
+    vat_mode,
+    vat_rate_basis_points,
+    net_minor,
+    vat_minor,
+    total_minor,
+    note,
+    archived,
+    revision,
+    price_mode
+)::public.financial_entry_v1;

@@ -94,10 +94,10 @@ def operation_code(scope, op):
         if response.media == 'application/json':
             text += f'inline std::string ToJson(const {name}& value) {{\n' + json_write(name, response.body.fields) + '\n}\n'
         if response.status >= 300:
-            text += f'''class Error{response.status} final : public platform::http::ApiError {{
+            text += f'''class Error{response.status} final : public platform::http::ErrorByStatus<{response.status}> {{
 public:
 explicit Error{response.status}(Response{response.status} value)
-: ApiError({response.status}{", ToJson(value)" if response.media == "application/json" else ""}), response(std::move(value)) {{}}
+: platform::http::ErrorByStatus<{response.status}>({"ToJson(value)" if response.media == "application/json" else "value.body" if response.media == "text/plain" else ""}), response(std::move(value)) {{}}
 Response{response.status} response;
 }};
 '''

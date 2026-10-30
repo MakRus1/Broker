@@ -81,9 +81,28 @@ FINANCIAL_LABEL = {
 }
 
 
+FINANCIAL_ENTRY = {
+    'id': ID, 'shipment_id': ID, 'transportation_id': None, 'label_id': ID,
+    'label_name': 'Фрахт', 'direction': 'income', 'unit': 'container',
+    'counterparty_id': CUSTOMER, 'counterparty_name': 'Клиент',
+    'contract_id': None, 'contract_number': None, 'quantity_milli': 1500,
+    'price_minor': 12000, 'price_mode': 'gross', 'currency': 'RUB',
+    'vat_mode': 'rate', 'vat_rate_basis_points': 2000,
+    'net_minor': 15000, 'vat_minor': 3000, 'total_minor': 18000,
+    'note': None, 'archived': False, 'revision': 1,
+}
+ENTRY_SAVE = {key:value for key,value in FINANCIAL_ENTRY.items()
+              if key not in ('label_name','counterparty_name','contract_number','net_minor','vat_minor','total_minor','revision')}
+ENTRY_SAVE['expected_revision'] = 0
+ENTRY_SUMMARY = {'own':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}],
+                 'transportations':[], 'combined':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}]}
+
+
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
+        ('financial-entries/save', ENTRY_SAVE, {'entry':FINANCIAL_ENTRY},200),
+        ('financial-entries/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[FINANCIAL_ENTRY],'next_after':None,'summary':ENTRY_SUMMARY},200),
         ('financial-labels/get',{'id':ID},{'label':FINANCIAL_LABEL},200),
         ('financial-labels/list',{}, {'items':[FINANCIAL_LABEL]},200),
         ('financial-labels/save',{**{key:value for key,value in FINANCIAL_LABEL.items() if key!='revision'},'expected_revision':0},{'label':FINANCIAL_LABEL},200),

@@ -124,11 +124,11 @@ inline void ValidateParties(const Deps& deps,
                 throw ApiError{
                     400, "invalid_account", "Выберите действующий счёт в валюте договора"};
         }
-    } catch (const platform::http::ApiError& error) {
-        if (error.GetStatus() == 403)
-            throw ApiError{403, "forbidden_party", "Нет доступа к сторонам или счетам договора"};
-        if (error.GetStatus() == 404)
-            throw ApiError{404, "party_not_found", "Сторона договора не найдена в организации"};
+    } catch (const platform::http::ErrorByStatus<403>&) {
+        throw ApiError{403, "forbidden_party", "Нет доступа к сторонам или счетам договора"};
+    } catch (const platform::http::ErrorByStatus<404>&) {
+        throw ApiError{404, "party_not_found", "Сторона договора не найдена в организации"};
+    } catch (const platform::http::ApiError&) {
         throw ApiError{502, "counterparty_unavailable", "Не удалось проверить стороны договора"};
     } catch (const platform::http::CancelledError&) {
         throw;

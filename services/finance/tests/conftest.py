@@ -37,6 +37,8 @@ def auth_key(tmp_path_factory):
 @pytest.fixture(scope='session')
 def configure_auth(mockserver_info):
     def patch(config, config_vars):
+        for name in ['shipments', 'transportations', 'counterparties', 'contracts']:
+            config_vars[f'client-{name}-base-url'] = mockserver_info.base_url
         component = config['components_manager']['components']['platform-auth']
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
@@ -67,7 +69,7 @@ def api(service_client, auth_key):
             roles = (
                 roles
                 if roles is not None
-                else ['finance.read_financial_labels', 'finance.write_financial_labels']
+                else ['finance.read_financial_labels', 'finance.write_financial_labels', 'finance.read_entries', 'finance.write_entries', 'shipments.read', 'transportations.read', 'contracts.read', 'counterparties.read', 'organizations.read_employees']
             )
             token = auth_key.token(
                 user,

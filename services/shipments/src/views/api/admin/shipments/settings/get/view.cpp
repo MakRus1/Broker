@@ -16,12 +16,11 @@ Response View::Handle(
             .planned_containers_allowed = result.planned_containers_allowed,
             .revision = result.revision,
             .rules = result.rules};
-    } catch (const platform::http::ApiError& error) {
-        if (error.GetStatus() == 403)
-            return Response403{
-                .error = "forbidden", .message = "Нет права управления организацией"};
-        if (error.GetStatus() == 404)
-            return Response404{.error = "not_found", .message = "Организация не найдена"};
+    } catch (const platform::http::ErrorByStatus<403>&) {
+        return Response403{.error = "forbidden", .message = "Нет права управления организацией"};
+    } catch (const platform::http::ErrorByStatus<404>&) {
+        return Response404{.error = "not_found", .message = "Организация не найдена"};
+    } catch (const platform::http::ApiError&) {
         return Response503{
             .error = "organizations_unavailable", .message = "Не удалось проверить доступ"};
     } catch (const platform::http::CancelledError&) {

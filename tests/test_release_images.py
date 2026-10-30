@@ -78,7 +78,7 @@ class ImageSelectionTest(unittest.TestCase):
             ('frontend/admin/src/App.tsx', {'admin_bff'}),
             (
                 'schemas/services/shipments/models.yaml',
-                {'shipments', 'configs', 'admin_bff', 'web_bff', 'transportations'},
+                {'shipments', 'configs', 'admin_bff', 'web_bff', 'transportations', 'finance'},
             ),
             ('libs/common/include/shared.hpp', set(self.services)),
             ('tools/deploy/Dockerfile', set(self.services)),

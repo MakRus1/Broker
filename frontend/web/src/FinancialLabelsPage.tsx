@@ -1,3 +1,4 @@
+import { VatRateSelect } from './VatRateSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
 import {
@@ -437,24 +438,11 @@ export function FinancialLabelsPage({
               ]}
             />
             {draft.vat_mode === 'rate' && (
-              <label>
-                Ставка НДС, % · обязательно
-                <input
-                  required
-                  name="vat_rate"
-                  inputMode="decimal"
-                  disabled={busy}
-                  value={draft.vatRate}
-                  onChange={(event) => setDraft({ ...draft, vatRate: event.target.value })}
-                  ref={(node) => {
-                    node?.setCustomValidity(
-                      parseVatRate(draft.vatRate) === undefined
-                        ? 'Укажите ставку от 0 до 100% с точностью до сотых'
-                        : '',
-                    );
-                  }}
-                />
-              </label>
+              <VatRateSelect
+                value={draft.vatRate}
+                disabled={busy}
+                onChange={(value) => setDraft({ ...draft, vatRate: value })}
+              />
             )}
             <label className="record-wide">
               Примечание

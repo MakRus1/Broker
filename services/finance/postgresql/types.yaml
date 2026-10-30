@@ -24,3 +24,56 @@ types:
       type: boolean
     - name: revision
       type: bigint
+  public.financial_entry_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: shipment_id
+      type: uuid
+    - name: transportation_id
+      type: uuid
+      nullable: true
+    - name: label_id
+      type: uuid
+    - name: label_name
+      type: text
+    - name: direction
+      type: text
+    - name: unit
+      type: text
+    - name: counterparty_id
+      type: uuid
+    - name: counterparty_name
+      type: text
+    - name: contract_id
+      type: uuid
+      nullable: true
+    - name: contract_number
+      type: text
+      nullable: true
+    - name: quantity_milli
+      type: bigint
+    - name: price_minor
+      type: bigint
+    - name: currency
+      type: text
+    - name: vat_mode
+      type: text
+    - name: vat_rate_basis_points
+      type: integer
+      nullable: true
+    - name: net_minor
+      type: bigint
+    - name: vat_minor
+      type: bigint
+    - name: total_minor
+      type: bigint
+    - name: note
+      type: text
+      nullable: true
+    - name: archived
+      type: boolean
+    - name: revision
+      type: bigint
+    - name: price_mode
+      type: text

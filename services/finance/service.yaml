@@ -13,4 +13,19 @@ auth:
     /api/v1/financial-labels/get: finance.read_financial_labels
     /api/v1/financial-labels/list: finance.read_financial_labels
     /api/v1/financial-labels/filter-values: finance.read_financial_labels
+    /api/v1/financial-entries/save: finance.write_entries
+    /api/v1/financial-entries/list: finance.read_entries
   organization-access: true
+clients:
+  shipments:
+    service: shipments
+    transport: http
+  transportations:
+    service: transportations
+    transport: http
+  counterparties:
+    service: counterparties
+    transport: http
+  contracts:
+    service: contracts
+    transport: http

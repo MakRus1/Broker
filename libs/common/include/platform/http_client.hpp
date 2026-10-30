@@ -43,6 +43,14 @@ class ApiError : public std::runtime_error {
     std::string body_;
 };
 
+// Общая категория статуса сохраняет ApiError и не зависит от DTO конкретной операции.
+template <int Status> class ErrorByStatus : public ApiError {
+    static_assert(Status >= 300 && Status <= 599);
+
+  public:
+    explicit ErrorByStatus(std::string body = {}) : ApiError(Status, std::move(body)) {}
+};
+
 class ContractError : public std::runtime_error {
   public:
     using std::runtime_error::runtime_error;

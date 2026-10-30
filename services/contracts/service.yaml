@@ -1,0 +1,20 @@
+version: 1
+libraries:
+- common
+postgresql:
+  enabled: true
+  cluster: contracts
+clients:
+  counterparties:
+    service: counterparties
+    transport: http
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/contracts/save: contracts.write
+    /api/v1/contracts/get: contracts.read
+    /api/v1/contracts/list: contracts.read
+    /api/v1/contracts/filter-values: contracts.read
+  organization-access: true

@@ -34,7 +34,7 @@ def client_variables(name):
     # Адреса объявленных клиентов берём из service.yaml, чтобы новые зависимости
     # не уходили на localhost внутри контейнера.
     ports = {'configs': 8090, 'broker': 8080, 'shipments': 8100,
-             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130, 'transport_locations': 8140}
+             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130, 'transport_locations': 8140, 'contracts': 8150}
     specification = yaml.safe_load((ROOT / f'services/{name}/service.yaml').read_text())
     result = {}
     for alias, client in specification.get('clients', {}).items():
@@ -143,7 +143,7 @@ def prepare():
             },
         }
     }
-    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132), ("transport_locations", 8140, 8142)]:
+    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132), ("transport_locations", 8140, 8142), ("contracts", 8150, 8152)]:
         variables = yaml.safe_load((ROOT / f"services/{name}/configs/config_vars.yaml").read_text())
         variables.update(
             {

@@ -43,6 +43,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-v1-contracts-filter_values:
+            path: /api/v1/contracts/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-get:
+            path: /api/v1/contracts/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-list:
+            path: /api/v1/contracts/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-contracts-save:
+            path: /api/v1/contracts/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparties-bank_accounts-list:
             path: /api/v1/counterparties/bank-accounts/list
             method: POST
@@ -243,6 +267,8 @@ components_manager:
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
+        client-contracts:
+            base-url: $client-contracts-base-url
         client-counterparties:
             base-url: $client-counterparties-base-url
         client-organizations:

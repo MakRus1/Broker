@@ -38,6 +38,7 @@ import { profileName } from './profile';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, request, type Session, type Shipment, type Transportation } from './api';
+import { ContractsPage } from './ContractsPage';
 import { CounterpartiesPage } from './CounterpartiesPage';
 import { type Counterparty } from './CustomerSelect';
 import { TransportationPage } from './TransportationPage';
@@ -46,7 +47,9 @@ import { TransportationTable } from './components';
 
 export function App() {
   const [session, setSession] = useState<Session | null>();
-  const [tab, setTab] = useState<'shipments' | 'transportations' | 'counterparties'>('shipments');
+  const [tab, setTab] = useState<'shipments' | 'transportations' | 'counterparties' | 'contracts'>(
+    'shipments',
+  );
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
@@ -181,7 +184,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|contracts)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -195,6 +198,7 @@ export function App() {
       const next = location.hash.slice(1) || '/shipments';
       setRoute(next);
       if (next.startsWith('/transportations')) setTab('transportations');
+      else if (next.startsWith('/contracts')) setTab('contracts');
       else if (next.startsWith('/counterparties')) setTab('counterparties');
       else setTab('shipments');
     }
@@ -286,7 +290,12 @@ export function App() {
   }, [error]);
   const load = useCallback(
     async (append = false) => {
-      if (!session || tab === 'counterparties' || !session.permissions.includes(tab + '.read'))
+      if (
+        !session ||
+        tab === 'counterparties' ||
+        tab === 'contracts' ||
+        !session.permissions.includes(tab + '.read')
+      )
         return;
       const currentRequest = ++requestNumber.current;
       if (!append) {
@@ -508,6 +517,19 @@ export function App() {
             </span>{' '}
             <span className="navigation-text">Контрагенты</span>
           </button>
+          <button
+            aria-label="Договоры"
+            title="Договоры"
+            aria-current={tab === 'contracts' ? 'page' : undefined}
+            onClick={() => {
+              location.hash = '/contracts';
+            }}
+          >
+            <span className="navigation-icon" aria-hidden="true">
+              ▧
+            </span>{' '}
+            <span className="navigation-text">Договоры</span>
+          </button>
         </nav>
         <div className="profile">
           <span className="avatar">
@@ -539,6 +561,7 @@ export function App() {
             className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
             hidden={
               tab === 'counterparties' ||
+              tab === 'contracts' ||
               creating ||
               Boolean(shipmentId) ||
               Boolean(transportationId) ||
@@ -648,7 +671,24 @@ export function App() {
                   else workspaceNodes.current.delete(entry.id);
                 }}
               >
-                {entry.route.startsWith('/counterparties') ? (
+                {entry.route.startsWith('/contracts') ? (
+                  <ContractsPage
+                    active={activeWorkspace === entry.id}
+                    route={entry.route}
+                    session={session}
+                    onError={error}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onCancelNew={() => {
+                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
+                      location.hash = '/contracts';
+                    }}
+                    onSaved={(value) => {
+                      const next = `/contracts/${value.id}`;
+                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
+                      location.hash = next;
+                    }}
+                  />
+                ) : entry.route.startsWith('/counterparties') ? (
                   <CounterpartiesPage
                     route={entry.route}
                     active={activeWorkspace === entry.id}

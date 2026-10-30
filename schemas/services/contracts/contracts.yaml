@@ -1,0 +1,194 @@
+openapi: 3.0.3
+info:
+  title: Договоры компаний
+  version: '1'
+paths:
+  /api/v1/contracts/save:
+    post:
+      summary: Создать или изменить договор
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/SaveContractRequest
+      responses:
+        '200':
+          description: Договоры
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  contract:
+                    $ref: components/schemas/models.yaml#/Contract
+                required:
+                - contract
+        '400':
+          description: Некорректные данные договора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '403':
+          description: Нет доступа к договорам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '404':
+          description: Договор или связанная компания не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '409':
+          description: Договор изменён или выбран архивный объект
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '502':
+          description: Справочник контрагентов недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+      security:
+      - bearerAuth: []
+  /api/v1/contracts/get:
+    post:
+      summary: Карточка договора
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/GetContractRequest
+      responses:
+        '200':
+          description: Договоры
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  contract:
+                    $ref: components/schemas/models.yaml#/Contract
+                required:
+                - contract
+        '400':
+          description: Некорректные данные договора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '403':
+          description: Нет доступа к договорам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '404':
+          description: Договор или связанная компания не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '409':
+          description: Договор изменён или выбран архивный объект
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '502':
+          description: Справочник контрагентов недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+      security:
+      - bearerAuth: []
+  /api/v1/contracts/list:
+    post:
+      summary: Реестр договоров
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/ListContractsRequest
+      responses:
+        '200':
+          description: Договоры
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/models.yaml#/Contract
+                  next_cursor:
+                    $ref: components/schemas/models.yaml#/ContractRegistryCursor
+                required:
+                - items
+        '400':
+          description: Некорректные данные договора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '403':
+          description: Нет доступа к договорам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '404':
+          description: Договор или связанная компания не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '409':
+          description: Договор изменён или выбран архивный объект
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+        '502':
+          description: Справочник контрагентов недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ContractError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

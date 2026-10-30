@@ -4,6 +4,7 @@ libs:
     - admin_bff
     - broker
     - configs
+    - contracts
     - counterparties
     - organizations
     - shipments

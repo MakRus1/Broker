@@ -1,0 +1,13 @@
+contracts.read:
+  name: Просмотр договоров
+  group: Договоры
+  scope: organization
+  requires:
+  - counterparties.read
+contracts.write:
+  name: Изменение договоров
+  group: Договоры
+  scope: organization
+  requires:
+  - contracts.read
+  - counterparties.read_bank_accounts

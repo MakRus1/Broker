@@ -4,6 +4,9 @@ export function workspaceId(route: string) {
 }
 export function workspaceTitle(route: string) {
   if (/^\/shipments\/new(?:\/|$)/.test(route)) return 'Новая поставка';
+  if (route === '/contracts') return 'Договоры';
+  if (route === '/contracts/new') return 'Новый договор';
+  if (route.startsWith('/contracts/')) return 'Договор';
   if (route === '/shipments') return 'Поставки';
   if (route.startsWith('/transportations/new/')) return 'Новая перевозка';
   if (route === '/transportations') return 'Перевозки';
@@ -57,7 +60,7 @@ export function restoreWorkspaces(raw: string | null, route: string): WorkspaceT
         !value ||
         typeof value.route !== 'string' ||
         typeof value.title !== 'string' ||
-        !/^\/(shipments|transportations|counterparties)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+        !/^\/(shipments|transportations|counterparties|contracts)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
           value.route,
         )
       )

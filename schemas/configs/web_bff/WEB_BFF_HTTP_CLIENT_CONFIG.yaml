@@ -8,6 +8,10 @@ paths:
 - /api/logout
 - /api/organizations/employees/list
 - /api/session
+- /api/v1/contracts/filter-values
+- /api/v1/contracts/get
+- /api/v1/contracts/list
+- /api/v1/contracts/save
 - /api/v1/counterparties/bank-accounts/list
 - /api/v1/counterparties/bank-accounts/save
 - /api/v1/counterparties/create

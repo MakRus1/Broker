@@ -1,4 +1,4 @@
-import { restoreColumnFilters } from './registryFilters';
+import { restoreColumnFilters, type ColumnFilter } from './registryFilters';
 import { initialShipmentQuery, type ShipmentRegistryQuery } from './shipmentRegistry';
 import { initialRegistryQuery, type RegistryQuery } from './transportationRegistry';
 import type { CounterpartyRegistryQuery } from './counterpartyRegistry';
@@ -47,5 +47,20 @@ export function restoreCounterpartyQuery(raw: unknown): CounterpartyRegistryQuer
     filters: restoreColumnFilters(value.filters) ?? initialCounterpartyQuery.filters,
     sort: text(value.sort, 64) ?? 'name',
     descending: value.descending === true,
+  };
+}
+
+export const initialContractQuery = {
+  filters: [{ field: 'archived', values: ['false'] }] as ColumnFilter[],
+  sort: 'contract_date',
+  descending: true,
+};
+export function restoreContractQuery(raw: unknown): typeof initialContractQuery {
+  const value = object(raw);
+  return {
+    filters: restoreColumnFilters(value.filters) ?? initialContractQuery.filters,
+    sort: text(value.sort, 64) ?? initialContractQuery.sort,
+    descending:
+      typeof value.descending === 'boolean' ? value.descending : initialContractQuery.descending,
   };
 }

@@ -3124,3 +3124,63 @@ details[open] > .route-stage-summary::after {
   margin-bottom: 6px;
   font-size: 13px;
 }
+
+.contract-page {
+  padding: 32px;
+}
+.contract-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.contract-fields > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.contract-fields > .bank-archive-toggle {
+  flex-direction: row;
+  align-self: center;
+}
+.contract-note {
+  grid-column: 1 / -1;
+}
+.contract-summary {
+  margin-top: 28px;
+}
+@media (max-width: 760px) {
+  .contract-fields {
+    grid-template-columns: 1fr;
+  }
+  .contract-page {
+    padding: 20px;
+  }
+}
+
+.contract-page a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+  border-radius: 7px;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.contract-page .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 16px 0;
+  border-top: 1px solid #e2e8f0;
+  z-index: 2;
+}
+
+.registry-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: #75839a;
+}

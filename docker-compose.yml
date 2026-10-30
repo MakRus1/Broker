@@ -118,3 +118,20 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
+  postgres-contracts:
+    image: postgres:16.8-alpine
+    environment:
+      POSTGRES_USER: testsuite
+      POSTGRES_PASSWORD: testsuite
+      POSTGRES_DB: contracts_db_1
+    ports:
+    - 127.0.0.1:15440:5432
+    volumes:
+    - ./services/contracts/postgresql/schemas/db_1:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U testsuite -d contracts_db_1
+      interval: 2s
+      timeout: 5s
+      retries: 10

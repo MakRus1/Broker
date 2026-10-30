@@ -773,12 +773,15 @@ ServiceChargeInvoice:
     invoice_date:
       type: string
       format: date
+    read_only:
+      type: boolean
   required:
   - service_charge_id
   - invoice_id
   - number
   - direction
   - invoice_date
+  - read_only
 InvoiceRegistryCursor:
   type: object
   additionalProperties: false
@@ -840,3 +843,334 @@ DetachInvoiceServiceChargeRequest:
   required:
   - invoice_id
   - service_charge_id
+PaymentKind:
+  type: string
+  enum:
+  - receipt
+  - disbursement
+Payment:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    number:
+      type: string
+      minLength: 1
+      maxLength: 100
+    own_company_id:
+      type: string
+      format: uuid
+    own_company_name:
+      type: string
+    counterparty_id:
+      type: string
+      format: uuid
+    counterparty_name:
+      type: string
+    own_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    counterparty_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    revision:
+      type: integer
+      minimum: 1
+    kind:
+      $ref: '#/PaymentKind'
+    payment_date:
+      type: string
+      format: date
+    amount_minor:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
+    purpose:
+      type: string
+      maxLength: 2000
+      nullable: true
+  required:
+  - id
+  - number
+  - own_company_id
+  - own_company_name
+  - counterparty_id
+  - counterparty_name
+  - own_bank_account_id
+  - counterparty_bank_account_id
+  - currency
+  - note
+  - archived
+  - revision
+  - kind
+  - payment_date
+  - amount_minor
+  - purpose
+PaymentAllocation:
+  type: object
+  additionalProperties: false
+  properties:
+    invoice_id:
+      type: string
+      format: uuid
+    amount_minor:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
+  required:
+  - invoice_id
+  - amount_minor
+PaymentInvoice:
+  type: object
+  additionalProperties: false
+  properties:
+    invoice:
+      $ref: '#/Invoice'
+    paid_minor:
+      type: integer
+      format: int64
+    outstanding_minor:
+      type: integer
+      format: int64
+    payments:
+      type: array
+      items:
+        $ref: '#/InvoicePayment'
+  required:
+  - invoice
+  - paid_minor
+  - outstanding_minor
+  - payments
+PaymentDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    payment:
+      $ref: '#/Payment'
+    allocations:
+      type: array
+      items:
+        $ref: '#/PaymentAllocation'
+    allocated_minor:
+      type: integer
+      format: int64
+    unallocated_minor:
+      type: integer
+      format: int64
+  required:
+  - payment
+  - allocations
+  - allocated_minor
+  - unallocated_minor
+SavePaymentRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    number:
+      type: string
+      minLength: 1
+      maxLength: 100
+    own_company_id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    own_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    counterparty_bank_account_id:
+      type: string
+      format: uuid
+      nullable: true
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    kind:
+      $ref: '#/PaymentKind'
+    payment_date:
+      type: string
+      format: date
+    amount_minor:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
+    purpose:
+      type: string
+      maxLength: 2000
+      nullable: true
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+    allocations:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/PaymentAllocation'
+  required:
+  - id
+  - number
+  - own_company_id
+  - counterparty_id
+  - own_bank_account_id
+  - counterparty_bank_account_id
+  - currency
+  - note
+  - archived
+  - kind
+  - payment_date
+  - amount_minor
+  - purpose
+  - expected_revision
+  - allocations
+ListPaymentsRequest:
+  additionalProperties: false
+  properties:
+    cursor:
+      $ref: '#/InvoiceRegistryCursor'
+    descending:
+      default: false
+      type: boolean
+    filters:
+      items:
+        $ref: '#/RegistryFilter'
+      maxItems: 32
+      type: array
+    limit:
+      default: 50
+      maximum: 100
+      minimum: 1
+      type: integer
+    sort:
+      default: id
+      maxLength: 64
+      minLength: 1
+      type: string
+    kind:
+      $ref: '#/PaymentKind'
+  required: []
+  type: object
+PaymentFilterValuesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - registry
+  properties:
+    registry:
+      $ref: '#/ListPaymentsRequest'
+    field:
+      type: string
+      maxLength: 64
+    query:
+      type: string
+      maxLength: 256
+    after:
+      type: string
+      maxLength: 2000
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+    candidates:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        maxLength: 2000
+PaymentInvoiceCandidatesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    kind:
+      $ref: '#/PaymentKind'
+    own_company_id:
+      type: string
+      format: uuid
+    counterparty_id:
+      type: string
+      format: uuid
+    currency:
+      type: string
+      minLength: 3
+      maxLength: 3
+    query:
+      type: string
+      maxLength: 200
+    after:
+      type: string
+      format: uuid
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    payment_id:
+      type: string
+      format: uuid
+  required:
+  - kind
+  - own_company_id
+  - counterparty_id
+  - currency
+  - limit
+InvoiceBalanceRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+  required:
+  - id
+PaymentAvailable:
+  type: object
+  additionalProperties: false
+  properties:
+    payment:
+      $ref: '#/Payment'
+    unallocated_minor:
+      type: integer
+      format: int64
+  required:
+  - payment
+  - unallocated_minor
+InvoicePayment:
+  type: object
+  additionalProperties: false
+  properties:
+    payment:
+      $ref: '#/Payment'
+    amount_minor:
+      type: integer
+      format: int64
+  required:
+  - payment
+  - amount_minor

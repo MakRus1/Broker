@@ -33,6 +33,13 @@ paths:
 - /api/v1/invoices/get
 - /api/v1/invoices/list
 - /api/v1/invoices/save
+- /api/v1/payments/filter-values
+- /api/v1/payments/get
+- /api/v1/payments/invoice-balance
+- /api/v1/payments/invoice-candidates
+- /api/v1/payments/list
+- /api/v1/payments/payment-candidates
+- /api/v1/payments/save
 - /api/v1/service-charges/get
 - /api/v1/service-charges/list
 - /api/v1/service-charges/save

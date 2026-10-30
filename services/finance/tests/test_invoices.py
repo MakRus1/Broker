@@ -175,7 +175,7 @@ async def test_service_list_exposes_invoice_number_and_date(api,charge,invoice_r
     _, item=await saved_entry(api,charge)
     value=invoice([item['id']]);await api.post(BASE+'save',value)
     rows=await api.post('/api/v1/service-charges/list',dict(scope=scope,after=None,limit=50,include_archived=False))
-    assert rows['invoices']==[dict(service_charge_id=item['id'],invoice_id=value['id'],number=value['number'],invoice_date=value['invoice_date'],direction='outgoing')]
+    assert rows['invoices']==[dict(service_charge_id=item['id'],invoice_id=value['id'],number=value['number'],invoice_date=value['invoice_date'],direction='outgoing',read_only=False)]
 
 async def test_edit_invoiced_service_updates_invoice_atomically(api,charge,invoice_references,pgsql):
     body,item=await saved_entry(api,charge)

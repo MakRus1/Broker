@@ -123,6 +123,7 @@ inline models::finance::ServiceChargeInvoice Convert(
         .invoice_date = value.invoice_date,
         .invoice_id = value.invoice_id,
         .number = value.number,
+        .read_only = value.read_only,
         .service_charge_id = value.service_charge_id};
 }
 }  // namespace web_bff

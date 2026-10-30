@@ -125,3 +125,41 @@ types:
       type: bigint
     - name: total_minor
       type: bigint
+  public.payment_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: kind
+      type: text
+    - name: number
+      type: text
+    - name: payment_date
+      type: date
+    - name: own_company_id
+      type: uuid
+    - name: own_company_name
+      type: text
+    - name: counterparty_id
+      type: uuid
+    - name: counterparty_name
+      type: text
+    - name: own_bank_account_id
+      type: uuid
+      nullable: true
+    - name: counterparty_bank_account_id
+      type: uuid
+      nullable: true
+    - name: currency
+      type: text
+    - name: amount_minor
+      type: bigint
+    - name: purpose
+      type: text
+      nullable: true
+    - name: note
+      type: text
+      nullable: true
+    - name: archived
+      type: boolean
+    - name: revision
+      type: bigint

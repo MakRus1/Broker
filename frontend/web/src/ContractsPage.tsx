@@ -440,7 +440,7 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card record-page">
+      <section className="card record-page contracts-page">
         <div className="section-heading">
           <h1>Договоры</h1>
           {write && (
@@ -448,9 +448,6 @@ export function ContractsPage({
               Новый договор
             </a>
           )}
-        </div>
-        <div className="registry-toolbar">
-          <RegistryColumnSettings {...columnState} />
         </div>
         {failure && (
           <p className="error" role="alert">
@@ -470,6 +467,11 @@ export function ContractsPage({
           }
           columns={columnState}
           filters={columnFilters}
+          filterSummary={
+            <div className="registry-column-actions">
+              <RegistryColumnSettings {...columnState} />
+            </div>
+          }
           sort={registryQuery.sort}
           descending={registryQuery.descending}
           onSort={(sort) =>

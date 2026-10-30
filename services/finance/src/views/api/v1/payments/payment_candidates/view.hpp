@@ -1,0 +1,13 @@
+#pragma once
+#include <deps.hpp>
+#include <userver/server/request/request_context.hpp>
+#include <views/api/v1/payments/payment_candidates/requests.hpp>
+#include <views/api/v1/payments/payment_candidates/responses.hpp>
+
+namespace finance::views::api::v1::payments::payment_candidates {
+class View {
+  public:
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps deps);
+};
+}  // namespace finance::views::api::v1::payments::payment_candidates

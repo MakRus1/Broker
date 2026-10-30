@@ -48,6 +48,7 @@ Response View::Handle(
     value.VatMinor += charge.VatMinor;
     value.TotalMinor += charge.TotalMinor;
     ++value.Revision;
+    ValidateInvoiceSettlement(transaction, organization, value);
     transaction.Execute(sql::kUpdateInvoice, organization, value, request.body.expected_revision);
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);

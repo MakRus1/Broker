@@ -40,3 +40,17 @@ finance.write_invoices:
   - contracts.read
   - counterparties.read
   - counterparties.read_bank_accounts
+finance.read_payments:
+  name: Просмотр поступлений и списаний
+  group: Платежи
+  scope: organization
+  requires:
+  - finance.read_invoices
+finance.write_payments:
+  name: Изменение поступлений и списаний
+  group: Платежи
+  scope: organization
+  requires:
+  - finance.read_payments
+  - counterparties.read
+  - counterparties.read_bank_accounts

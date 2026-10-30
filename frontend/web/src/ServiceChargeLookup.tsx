@@ -180,14 +180,11 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
         </div>
       )}
       {value && !required && (
-        <button
-          type="button"
-          className="text-button"
-          disabled={disabled}
-          onClick={() => onChange(null)}
-        >
-          Убрать выбор
-        </button>
+        <div className="counterparty-selected">
+          <button type="button" disabled={disabled} onClick={() => onChange(null)}>
+            Убрать выбор
+          </button>
+        </div>
       )}
     </div>
   );

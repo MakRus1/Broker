@@ -7,10 +7,10 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
     const auto result = deps.finance.ApiV1InvoicesAddServiceCharge(
-        {.body = {.service_charge_id = request.body.service_charge_id,
-             .expected_revision = request.body.expected_revision,
+        {.body = {.expected_revision = request.body.expected_revision,
              .invoice_id = request.body.invoice_id,
-             .previous_invoice_id = request.body.previous_invoice_id}},
+             .previous_invoice_id = request.body.previous_invoice_id,
+             .service_charge_id = request.body.service_charge_id}},
         session.Access);
     return Response200{.charges = Convert(result.charges), .invoice = Convert(result.invoice)};
 }

@@ -163,9 +163,6 @@ export function InvoiceRegistry({
           )}
         </div>
       </div>
-      <div className="registry-toolbar">
-        <RegistryColumnSettings {...columnState} />
-      </div>
       {failure && (
         <p className="error" role="alert">
           {failure}
@@ -176,6 +173,11 @@ export function InvoiceRegistry({
         columns={columnState}
         definitions={columns}
         filters={filters}
+        filterSummary={
+          <div className="registry-column-actions">
+            <RegistryColumnSettings {...columnState} />
+          </div>
+        }
         sort={query.sort}
         descending={query.descending}
         onSort={(sort) =>

@@ -12,3 +12,10 @@ auth-issuer: http://localhost:18888/realms/broker
 auth-jwks-url: http://localhost:18888/realms/broker/protocol/openid-connect/certs
 auth-allow-http: true
 organization-access-url: http://localhost:8130/api/organizations/access
+config-updates-enabled: false
+config-server-url: http://localhost:8090
+config-cache-path: ''
+client-contracts-base-url: http://localhost:8080
+client-counterparties-base-url: http://localhost:8080
+client-shipments-base-url: http://localhost:8080
+client-transportations-base-url: http://localhost:8080

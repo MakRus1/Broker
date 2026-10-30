@@ -239,3 +239,264 @@ ListFinancialLabelsRequest:
       type: string
   required: []
   type: object
+EntryDirection:
+  type: string
+  enum:
+  - income
+  - expense
+FinancialEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    shipment_id:
+      type: string
+      format: uuid
+    transportation_id:
+      type: string
+      format: uuid
+      nullable: true
+    label_id:
+      type: string
+      format: uuid
+    label_name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    direction:
+      $ref: '#/EntryDirection'
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    counterparty_id:
+      type: string
+      format: uuid
+    counterparty_name:
+      type: string
+    contract_id:
+      type: string
+      format: uuid
+      nullable: true
+    contract_number:
+      type: string
+      nullable: true
+    quantity_milli:
+      type: integer
+      minimum: 1
+      maximum: 10000000
+      description: Тысячные доли единицы расчёта
+    price_minor:
+      type: integer
+      minimum: 0
+      maximum: 100000000
+      description: Цена без НДС в сотых долях валюты
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    vat_mode:
+      $ref: '#/VatMode'
+    vat_rate_basis_points:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 10000
+    net_minor:
+      type: integer
+      minimum: 0
+    vat_minor:
+      type: integer
+      minimum: 0
+    total_minor:
+      type: integer
+      minimum: 0
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    revision:
+      type: integer
+      minimum: 1
+    price_mode:
+      $ref: '#/PriceMode'
+  required:
+  - id
+  - shipment_id
+  - transportation_id
+  - label_id
+  - label_name
+  - direction
+  - unit
+  - counterparty_id
+  - counterparty_name
+  - contract_id
+  - contract_number
+  - quantity_milli
+  - price_minor
+  - currency
+  - vat_mode
+  - vat_rate_basis_points
+  - net_minor
+  - vat_minor
+  - total_minor
+  - note
+  - archived
+  - revision
+  - price_mode
+SaveFinancialEntryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    shipment_id:
+      type: string
+      format: uuid
+    transportation_id:
+      type: string
+      format: uuid
+      nullable: true
+    label_id:
+      type: string
+      format: uuid
+    direction:
+      $ref: '#/EntryDirection'
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    counterparty_id:
+      type: string
+      format: uuid
+    contract_id:
+      type: string
+      format: uuid
+      nullable: true
+    quantity_milli:
+      type: integer
+      minimum: 1
+      maximum: 10000000
+      description: Тысячные доли единицы расчёта
+    price_minor:
+      type: integer
+      minimum: 0
+      maximum: 100000000
+      description: Цена без НДС в сотых долях валюты
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    vat_mode:
+      $ref: '#/VatMode'
+    vat_rate_basis_points:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 10000
+    note:
+      type: string
+      nullable: true
+      maxLength: 4000
+    archived:
+      type: boolean
+    price_mode:
+      $ref: '#/PriceMode'
+    expected_revision:
+      type: integer
+      minimum: 0
+  required:
+  - id
+  - shipment_id
+  - transportation_id
+  - label_id
+  - direction
+  - unit
+  - counterparty_id
+  - contract_id
+  - quantity_milli
+  - price_minor
+  - currency
+  - vat_mode
+  - vat_rate_basis_points
+  - note
+  - archived
+  - price_mode
+  - expected_revision
+EntryScope:
+  type: object
+  additionalProperties: false
+  properties:
+    shipment_id:
+      type: string
+      format: uuid
+    transportation_id:
+      type: string
+      format: uuid
+      nullable: true
+  required:
+  - shipment_id
+  - transportation_id
+ListFinancialEntriesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    scope:
+      $ref: '#/EntryScope'
+    after:
+      type: string
+      format: uuid
+      nullable: true
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    include_archived:
+      type: boolean
+      default: false
+  required:
+  - scope
+  - after
+  - limit
+  - include_archived
+CurrencyTotal:
+  type: object
+  additionalProperties: false
+  properties:
+    currency:
+      type: string
+    income_minor:
+      type: string
+      pattern: ^[0-9]+$
+    expense_minor:
+      type: string
+      pattern: ^[0-9]+$
+  required:
+  - currency
+  - income_minor
+  - expense_minor
+EntrySummary:
+  type: object
+  additionalProperties: false
+  properties:
+    own:
+      type: array
+      items:
+        $ref: '#/CurrencyTotal'
+    transportations:
+      type: array
+      items:
+        $ref: '#/CurrencyTotal'
+    combined:
+      type: array
+      items:
+        $ref: '#/CurrencyTotal'
+  required:
+  - own
+  - transportations
+  - combined
+PriceMode:
+  type: string
+  enum:
+  - net
+  - gross

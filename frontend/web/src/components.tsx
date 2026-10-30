@@ -127,28 +127,30 @@ export function CardNavigation({
   disabled = false,
 }: {
   children: ReactNode;
-  onRefresh: () => Promise<unknown>;
+  onRefresh?: () => Promise<unknown>;
   disabled?: boolean;
 }) {
   const [refreshing, setRefreshing] = useState(false);
   return (
     <div className="card-navigation">
       <div className="tabs">{children}</div>
-      <button
-        type="button"
-        className="card-refresh"
-        disabled={disabled || refreshing}
-        onClick={async () => {
-          setRefreshing(true);
-          try {
-            await onRefresh();
-          } finally {
-            setRefreshing(false);
-          }
-        }}
-      >
-        <span aria-hidden="true">↻</span> {refreshing ? 'Обновляем…' : 'Обновить'}
-      </button>
+      {onRefresh && (
+        <button
+          type="button"
+          className="card-refresh"
+          disabled={disabled || refreshing}
+          onClick={async () => {
+            setRefreshing(true);
+            try {
+              await onRefresh();
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+        >
+          <span aria-hidden="true">↻</span> {refreshing ? 'Обновляем…' : 'Обновить'}
+        </button>
+      )}
     </div>
   );
 }

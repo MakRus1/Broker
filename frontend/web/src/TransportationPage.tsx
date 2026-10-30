@@ -1,3 +1,4 @@
+import { FinancialEntries } from './FinancePanel';
 import { DateTimeInput } from './DateInput';
 import { RoadDetailsView } from './RoadFields';
 import { SharedRouteDetailsView } from './SharedRouteDetails';
@@ -16,7 +17,7 @@ import {
   type Transportation,
   type TransportationEvent,
 } from './api';
-import { CardNavigation, Dialog } from './components';
+import { CardNavigation, Dialog, useDiscardConfirmation } from './components';
 import type { Counterparty } from './CustomerSelect';
 import {
   routeSegment,
@@ -97,7 +98,13 @@ export function TransportationPage({
       document.title = `${transportationTitle(transportation)} · Broker`;
   }, [transportation?.container_number, transportation?.type, active]);
   const [failure, setFailure] = useState('');
-  const [tab, setTab] = useState<'route' | 'history'>('route');
+  const [tab, setTab] = useState<'route' | 'finance' | 'history'>('route');
+  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  function switchTab(next: typeof tab, button: HTMLElement) {
+    const section = button.closest('section');
+    if (section?.querySelector('form[data-busy="true"]')) return;
+    confirmDiscard(Boolean(section?.querySelector('form[data-dirty="true"]')), () => setTab(next));
+  }
   const [editingDetails, setEditingDetails] = useState(false);
   const [actual, setActual] = useState<{
     route_segment: RouteSegment;
@@ -245,16 +252,38 @@ export function TransportationPage({
           />
         ) : editingDetails ? null : (
           <>
-            <CardNavigation onRefresh={() => refresh().catch(onError)}>
-              <button aria-pressed={tab === 'route'} onClick={() => setTab('route')}>
+            <CardNavigation
+              onRefresh={tab === 'finance' ? undefined : () => refresh().catch(onError)}
+            >
+              <button
+                aria-pressed={tab === 'route'}
+                onClick={(event) => switchTab('route', event.currentTarget)}
+              >
                 Маршрут и факты
               </button>
-              <button aria-pressed={tab === 'history'} onClick={() => setTab('history')}>
+              {session.permissions.includes('finance.read_entries') && (
+                <button
+                  aria-pressed={tab === 'finance'}
+                  onClick={(event) => switchTab('finance', event.currentTarget)}
+                >
+                  Финансы
+                </button>
+              )}
+              <button
+                aria-pressed={tab === 'history'}
+                onClick={(event) => switchTab('history', event.currentTarget)}
+              >
                 История
               </button>
             </CardNavigation>
             <div className="panel-content">
-              {tab === 'history' ? (
+              {tab === 'finance' ? (
+                <FinancialEntries
+                  scope={{ shipment_id: transportation.shipment_id, transportation_id: id }}
+                  session={session}
+                  customers={customers}
+                />
+              ) : tab === 'history' ? (
                 <History
                   key={transportation.revision}
                   id={id}
@@ -294,6 +323,7 @@ export function TransportationPage({
           </>
         )}
       </section>
+      {confirmation}
       {actual && (
         <Dialog
           title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${routePoint(actual.route_segment, 'origin').name} → ${routePoint(actual.route_segment, 'destination').name}`}

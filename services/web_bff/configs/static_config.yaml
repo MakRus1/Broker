@@ -127,6 +127,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-financial_entries-list:
+            path: /api/v1/financial-entries/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-financial_entries-save:
+            path: /api/v1/financial-entries/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-financial_labels-filter_values:
             path: /api/v1/financial-labels/filter-values
             method: POST

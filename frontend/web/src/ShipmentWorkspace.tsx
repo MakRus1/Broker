@@ -1,3 +1,4 @@
+import { FinancialEntries } from './FinancePanel';
 import { IsoDateInput } from './DateInput';
 import { ShipmentRoute } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from './api';
@@ -382,6 +383,9 @@ function ShipmentCard({
     ['route', 'Маршрут'],
     ...(initial && settings?.planned_containers ? [['items', 'Плановые контейнеры']] : []),
     ...(initial ? [['transportations', 'Перевозки']] : []),
+    ...(initial && props.session.permissions.includes('finance.read_entries')
+      ? [['finance', 'Финансы']]
+      : []),
   ];
   return (
     <section className="shipment-editor surface">
@@ -419,8 +423,10 @@ function ShipmentCard({
             key={key}
             type="button"
             aria-pressed={tab === key}
-            onClick={() => {
+            onClick={(event) => {
               if (key === tab) return;
+              const section = event.currentTarget.closest('section');
+              if (section?.querySelector('form[data-busy="true"]')) return;
               const switchTab = () => {
                 if (initial && editing) {
                   setDraft(JSON.parse(baseline) as CardDraft);
@@ -430,8 +436,10 @@ function ShipmentCard({
                 }
                 setTab(key);
               };
-              if (initial && editing) confirmDiscard(dirty, switchTab);
-              else switchTab();
+              confirmDiscard(
+                dirty || Boolean(section?.querySelector('form[data-dirty="true"]')),
+                switchTab,
+              );
             }}
           >
             {label}
@@ -754,6 +762,15 @@ function ShipmentCard({
           </fieldset>
         </fieldset>
       </form>
+      {initial && tab === 'finance' && (
+        <div className="panel-content">
+          <FinancialEntries
+            scope={{ shipment_id: initial.id, transportation_id: null }}
+            session={props.session}
+            customers={props.customers}
+          />
+        </div>
+      )}
       {initial && (
         <div hidden={tab !== 'items' && tab !== 'transportations'}>
           <ShipmentPanel

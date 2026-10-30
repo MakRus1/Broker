@@ -3217,3 +3217,141 @@ details[open] > .route-stage-summary::after {
 .financial-label-page .bank-archive-toggle {
   margin-top: 24px;
 }
+
+.finance-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.finance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin: 24px 0;
+}
+.finance-totals {
+  border-top: 2px solid var(--border, #dce3ed);
+  padding: 16px 0;
+}
+.finance-totals h3 {
+  margin: 0 0 16px;
+}
+.finance-totals dl,
+.finance-entry-values {
+  margin: 0;
+}
+.finance-totals dl > div + div {
+  margin-top: 20px;
+}
+.finance-totals dt {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.finance-totals dd {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 6px 0;
+}
+.finance-totals dd span,
+.finance-entry-values dt {
+  color: var(--muted, #7e8ca3);
+}
+.finance-entry {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border, #dce3ed);
+}
+.finance-entry h3 {
+  margin: 0;
+}
+.finance-entry-values {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 20px;
+}
+.finance-entry-values dd {
+  margin: 8px 0 0;
+}
+.finance-entry-form > fieldset {
+  padding: 0;
+  border: 0;
+  margin: 24px 0;
+  min-width: 0;
+}
+.finance-section {
+  --finance-background: #fff;
+}
+.shipment-card .finance-section {
+  --finance-background: #f7f9fc;
+}
+.finance-entry-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--finance-background);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  margin-top: 24px;
+  border-top: 1px solid var(--border, #dce3ed);
+  z-index: 3;
+}
+.finance-list-toolbar .bank-archive-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin: 16px 0;
+}
+.finance-entry-form .bank-archive-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 800px) {
+  .finance-entry-values {
+    grid-template-columns: 1fr 1fr;
+  }
+  .finance-section .section-heading {
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+}
+
+.finance-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 24px 0 8px;
+}
+.finance-list-toolbar h3 {
+  margin: 0;
+}
+.finance-list-toolbar .bank-archive-toggle {
+  margin: 0;
+  white-space: nowrap;
+}
+.finance-section .empty-state {
+  padding: 28px 0;
+}
+
+.vat-rate-select {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+}
+.finance-entry-form .form-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-width: 1px;
+  border-style: solid;
+  line-height: 22px;
+  margin: 0;
+}

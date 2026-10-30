@@ -1,4 +1,4 @@
-import { FinancialEntries } from './FinancePanel';
+import { ServiceCharges } from './FinancePanel';
 import { IsoDateInput } from './DateInput';
 import { ShipmentRoute } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from './api';
@@ -383,7 +383,7 @@ function ShipmentCard({
     ['route', 'Маршрут'],
     ...(initial && settings?.planned_containers ? [['items', 'Плановые контейнеры']] : []),
     ...(initial ? [['transportations', 'Перевозки']] : []),
-    ...(initial && props.session.permissions.includes('finance.read_entries')
+    ...(initial && props.session.permissions.includes('finance.read_service_charges')
       ? [['finance', 'Финансы']]
       : []),
   ];
@@ -764,7 +764,7 @@ function ShipmentCard({
       </form>
       {initial && tab === 'finance' && (
         <div className="panel-content">
-          <FinancialEntries
+          <ServiceCharges
             scope={{ shipment_id: initial.id, transportation_id: null }}
             session={props.session}
             customers={props.customers}

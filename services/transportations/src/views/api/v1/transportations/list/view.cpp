@@ -17,11 +17,11 @@ Response View::Handle(
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, request.body.sort);
         if (request.body.after.has_value() &&
             (request.body.cursor.has_value() || !order.ById || request.body.descending))
-            throw ApiError{400, "invalid_cursor", "Для выбранной сортировки используйте cursor"};
+            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
         if (request.body.cursor.has_value() && request.body.cursor.value().scope != scope)
-            throw ApiError{400, "invalid_cursor",
-                "Фильтры или сортировка изменились. Начните с первой страницы"};
-        const auto query = BuildRegistryQuery(request.body, organization);
+            throw ApiError<400>{
+                "invalid_cursor", "Фильтры или сортировка изменились. Начните с первой страницы"};
+        const auto query = platform::registry::BuildPage(kRegistry, request.body, organization);
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
         transaction.Execute(sql::kRegistryPlan);
@@ -58,19 +58,6 @@ Response View::Handle(
         return Response200{.items = result, .next_cursor = next_cursor};
     } catch (const platform::registry::FilterError& error) {
         return Response400{.error = "invalid_filter", .message = error.what()};
-    } catch (const ::transportations::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 503:
-            return Response503{.error = error.Code, .message = error.what()};
-        default:
-            return Response409{.error = error.Code, .message = error.what()};
-        }
     }
 }
 }  // namespace transportations::views::api::v1::transportations::list

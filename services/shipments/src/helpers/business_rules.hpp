@@ -22,7 +22,7 @@ inline models::ShipmentBusinessRules Convert(const pgtypes::ShipmentBusinessRule
 
 inline void ValidateNumberTemplate(const std::string& value) {
     if (value.empty() || value.size() > 128 || value.find("{sequence}") == std::string::npos)
-        throw ApiError{400, "invalid_number_template",
+        throw ApiError<400>{"invalid_number_template",
             "Шаблон должен содержать {sequence} и быть не длиннее 128 символов"};
     auto rest = value;
     for (const auto token : {"{sequence}", "{yyyy}", "{yy}", "{mm}", "{dd}"}) {
@@ -31,7 +31,7 @@ inline void ValidateNumberTemplate(const std::string& value) {
             rest.erase(at, std::string_view{token}.size());
     }
     if (rest.find_first_of("{}") != std::string::npos)
-        throw ApiError{400, "invalid_number_template", "В шаблоне номера неизвестная переменная"};
+        throw ApiError<400>{"invalid_number_template", "В шаблоне номера неизвестная переменная"};
 }
 
 inline void ValidateBusinessRules(const Deps& deps, const std::string& organization,
@@ -42,14 +42,14 @@ inline void ValidateBusinessRules(const Deps& deps, const std::string& organizat
         std::set<std::string> seen;
         for (const auto& value : values)
             if (userver::utils::text::Trim(value).empty() || !seen.insert(value).second)
-                throw ApiError{
-                    400, "invalid_rules", "Значения не должны быть пустыми или повторяться"};
+                throw ApiError<400>{
+                    "invalid_rules", "Значения не должны быть пустыми или повторяться"};
     };
     unique(rules.Statuses);
     unique(rules.RouteTypes);
     unique(rules.ContainerTypes);
     if (rules.Statuses.empty())
-        throw ApiError{400, "invalid_statuses", "Нужен хотя бы один статус поставки"};
+        throw ApiError<400>{"invalid_statuses", "Нужен хотя бы один статус поставки"};
     const auto subset = [](const auto& values, const auto& allowed) {
         return std::all_of(values.begin(), values.end(), [&](const auto& value) {
             return std::find(allowed.begin(), allowed.end(), value) != allowed.end();
@@ -58,8 +58,8 @@ inline void ValidateBusinessRules(const Deps& deps, const std::string& organizat
     if (!subset(rules.RouteTypes, limits.RouteTypes) ||
         !subset(rules.ContainerTypes, limits.ContainerTypes) ||
         (rules.PlannedContainers && !limits.PlannedContainers))
-        throw ApiError{
-            400, "platform_limit", "Настройки выходят за доступные организации возможности"};
+        throw ApiError<400>{
+            "platform_limit", "Настройки выходят за доступные организации возможности"};
 }
 
 inline models::ShipmentBusinessSettings GetBusinessSettings(

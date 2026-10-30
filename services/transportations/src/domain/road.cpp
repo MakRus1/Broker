@@ -13,7 +13,7 @@ void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool 
         ? year_month_day{floor<days>(userver::utils::datetime::Now() + hours{3})}
         : year{9999} / December / 31;
     if (!platform::IsCalendarDateInRange(value.value(), year{1900} / January / 1, maximum))
-        throw ApiError{400, "invalid_road_date",
+        throw ApiError<400>{"invalid_road_date",
             actual ? "Фактическая дата должна быть от 01.01.1900 до сегодняшнего дня"
                    : "Укажите корректную календарную дату от 01.01.1900"};
 }
@@ -21,8 +21,8 @@ void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool 
 void CheckOrder(const std::optional<userver::utils::datetime::Date>& from,
     const std::optional<userver::utils::datetime::Date>& to) {
     if (from.has_value() && to.has_value() && from.value() > to.value())
-        throw ApiError{
-            400, "invalid_road_sequence", "Проверьте последовательность дат автоучастка"};
+        throw ApiError<400>{
+            "invalid_road_sequence", "Проверьте последовательность дат автоучастка"};
 }
 }  // namespace
 
@@ -30,7 +30,7 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
     for (const auto& segment : request.route_segments) {
         if (segment.international_road.has_value()) {
             if (segment.mode != models::TransportMode::InternationalRoad)
-                throw ApiError{400, "unexpected_road_details",
+                throw ApiError<400>{"unexpected_road_details",
                     "Поля международного авто доступны только соответствующему участку"};
             const auto& value = segment.international_road.value();
             CheckDate(value.planned_loading_date, false);
@@ -43,8 +43,8 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
         if (segment.pickup.has_value()) {
             if (segment.mode != models::TransportMode::Road &&
                 segment.mode != models::TransportMode::Pickup)
-                throw ApiError{
-                    400, "unexpected_pickup_details", "Поля вывоза доступны только участку вывоза"};
+                throw ApiError<400>{
+                    "unexpected_pickup_details", "Поля вывоза доступны только участку вывоза"};
             const auto& value = segment.pickup.value();
             CheckDate(value.planned_pickup_date, false);
             CheckDate(value.planned_delivery_date, false);

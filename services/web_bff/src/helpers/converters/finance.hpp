@@ -66,8 +66,8 @@ inline clients::finance::ApiV1FinancialLabelsList::RequestBody Convert(
         .sort = query.sort};
 }
 
-inline models::finance::FinancialEntry Convert(
-    const clients::finance::models::FinancialEntry& value) {
+inline models::finance::ServiceCharge Convert(
+    const clients::finance::models::ServiceCharge& value) {
     return {
         .archived = value.archived,
         .contract_id = value.contract_id,
@@ -77,7 +77,7 @@ inline models::finance::FinancialEntry Convert(
         .currency = value.currency,
         .direction =
             models::finance::ParseEnumScalar(clients::finance::models::EnumValue(value.direction),
-                models::finance::EntryDirection{}),
+                models::finance::ServiceChargeDirection{}),
         .id = value.id,
         .label_id = value.label_id,
         .label_name = value.label_name,
@@ -109,8 +109,9 @@ inline models::finance::CurrencyTotal Convert(
     };
 }
 
-inline models::finance::EntrySummary Convert(const clients::finance::models::EntrySummary& value) {
-    models::finance::EntrySummary result;
+inline models::finance::ServiceChargeSummary Convert(
+    const clients::finance::models::ServiceChargeSummary& value) {
+    models::finance::ServiceChargeSummary result;
     for (const auto& total : value.own)
         result.own.push_back(Convert(total));
     for (const auto& total : value.transportations)
@@ -120,8 +121,8 @@ inline models::finance::EntrySummary Convert(const clients::finance::models::Ent
     return result;
 }
 
-inline clients::finance::ApiV1FinancialEntriesSave::RequestBody Convert(
-    const models::finance::SaveFinancialEntryRequest& value) {
+inline clients::finance::ApiV1ServiceChargesSave::RequestBody Convert(
+    const models::finance::SaveServiceChargeRequest& value) {
     return {
         .archived = value.archived,
         .contract_id = value.contract_id,
@@ -129,7 +130,7 @@ inline clients::finance::ApiV1FinancialEntriesSave::RequestBody Convert(
         .currency = value.currency,
         .direction =
             clients::finance::models::ParseEnumScalar(models::finance::EnumValue(value.direction),
-                clients::finance::models::EntryDirection{}),
+                clients::finance::models::ServiceChargeDirection{}),
         .expected_revision = value.expected_revision,
         .id = value.id,
         .label_id = value.label_id,
@@ -148,14 +149,15 @@ inline clients::finance::ApiV1FinancialEntriesSave::RequestBody Convert(
     };
 }
 
-inline clients::finance::ApiV1FinancialEntriesList::RequestBody Convert(
-    const models::finance::ListFinancialEntriesRequest& value) {
+inline clients::finance::ApiV1ServiceChargesList::RequestBody Convert(
+    const models::finance::ListServiceChargesRequest& value) {
     return {
         .after = value.after,
         .include_archived = value.include_archived,
         .limit = value.limit,
-        .scope = clients::finance::models::EntryScope{.shipment_id = value.scope.shipment_id,
-            .transportation_id = value.scope.transportation_id},
+        .scope =
+            clients::finance::models::ServiceChargeScope{.shipment_id = value.scope.shipment_id,
+                .transportation_id = value.scope.transportation_id},
     };
 }
 }  // namespace web_bff

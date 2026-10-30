@@ -23,10 +23,10 @@ int main() {
         return 0;
     }
     const auto query = document.HasMember("facet")
-        ? transportations::helpers::BuildRegistryValues(request, organization,
-              document["facet"].As<std::string>(),
+        ? platform::registry::BuildFilterValues(transportations::helpers::kRegistry, request,
+              organization, document["facet"].As<std::string>(),
               document["query"].As<std::optional<std::string>>(),
               document["after"].As<std::optional<std::string>>(), 50)
-        : transportations::helpers::BuildRegistryQuery(request, organization);
+        : platform::registry::BuildPage(transportations::helpers::kRegistry, request, organization);
     std::cout << query.Statement.GetStatementView();
 }

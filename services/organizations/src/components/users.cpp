@@ -70,28 +70,28 @@ userver::formats::json::Value Users::Lookup(const std::string& username) const {
             .retry(1)
             .perform();
     if (response->status_code() != 200)
-        throw ApiError{503, "identity_provider_unavailable",
-            "Не удалось обратиться к провайдеру пользователей"};
+        throw ApiError<503>{
+            "identity_provider_unavailable", "Не удалось обратиться к провайдеру пользователей"};
     const auto items = userver::formats::json::FromString(response->body());
     if (items.GetSize() != 1)
-        throw ApiError{404, "user_not_found", "Пользователь с таким логином не найден"};
+        throw ApiError<404>{"user_not_found", "Пользователь с таким логином не найден"};
     return items[0];
 }
 
 User Users::Find(const std::string& username) const try {
     const auto value = Lookup(username);
     if (!value["enabled"].As<bool>(false) || !value["serviceAccountClientId"].IsMissing())
-        throw ApiError{
-            400, "invalid_user", "Нельзя добавить отключённую или служебную учётную запись"};
+        throw ApiError<400>{
+            "invalid_user", "Нельзя добавить отключённую или служебную учётную запись"};
     return Convert(value);
-} catch (const ApiError&) {
+} catch (const platform::http::HandlerErrorBase&) {
 
     throw;
 } catch (const std::bad_alloc&) {
     throw;
 } catch (const std::exception&) {
-    throw ApiError{
-        503, "identity_provider_unavailable", "Провайдер пользователей временно недоступен"};
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Провайдер пользователей временно недоступен"};
 }
 
 User Users::Create(const std::string& request_id, const std::string& username,
@@ -120,36 +120,36 @@ User Users::Create(const std::string& request_id, const std::string& username,
             .retry(0)
             .perform();
     if (response->status_code() != 201 && response->status_code() != 409)
-        throw ApiError{503, "identity_provider_unavailable",
+        throw ApiError<503>{"identity_provider_unavailable",
             "Создание пользователя не завершено. Повторите с тем же идентификатором запроса"};
     // Keycloak возвращает 201 без тела. Чтение также проверяет владельца запроса при 409.
     const auto value = Lookup(username);
     const auto provisioning = value["attributes"]["broker-provisioning-id"];
     if (provisioning.IsMissing() || provisioning.GetSize() != 1 ||
         provisioning[0].As<std::string>() != request_id)
-        throw ApiError{409, "username_taken",
-            "Логин уже занят. Используйте добавление существующего пользователя"};
+        throw ApiError<409>{
+            "username_taken", "Логин уже занят. Используйте добавление существующего пользователя"};
     return Convert(value);
-} catch (const ApiError&) {
+} catch (const platform::http::HandlerErrorBase&) {
 
     throw;
 } catch (const std::bad_alloc&) {
     throw;
 } catch (const std::exception&) {
-    throw ApiError{503, "identity_provider_unavailable",
-        "Создание пользователя не завершено. Повторите запрос"};
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Создание пользователя не завершено. Повторите запрос"};
 }
 
 User Users::UpdateProfile(const std::string& subject, const std::string& last_name,
     const std::string& first_name, const std::optional<std::string>& middle_name) const try {
     const auto response = MakeRequest().get(base_url_ + "/users/" + subject).retry(0).perform();
     if (response->status_code() == 404)
-        throw ApiError{404, "user_not_found", "Пользователь не найден"};
+        throw ApiError<404>{"user_not_found", "Пользователь не найден"};
     if (response->status_code() != 200)
         throw std::runtime_error("Не удалось прочитать профиль");
     const auto current = userver::formats::json::FromString(response->body());
     if (!current["serviceAccountClientId"].IsMissing())
-        throw ApiError{400, "invalid_user", "Нельзя менять профиль служебной учётной записи"};
+        throw ApiError<400>{"invalid_user", "Нельзя менять профиль служебной учётной записи"};
     userver::formats::json::ValueBuilder profile(current);
     profile["lastName"] = last_name;
     profile["firstName"] = first_name;
@@ -170,14 +170,14 @@ User Users::UpdateProfile(const std::string& subject, const std::string& last_na
     if (updated->status_code() != 204)
         throw std::runtime_error("Не удалось обновить профиль");
     return Convert(document);
-} catch (const ApiError&) {
+} catch (const platform::http::HandlerErrorBase&) {
 
     throw;
 } catch (const std::bad_alloc&) {
     throw;
 } catch (const std::exception&) {
-    throw ApiError{
-        503, "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
 }
 
 userver::yaml_config::Schema Users::GetStaticConfigSchema() {

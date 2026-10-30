@@ -50,13 +50,13 @@ inline domain::RouteLocations LoadRouteLocations(const Deps& deps,
 
     throw;
 } catch (const platform::http::ApiError&) {
-    throw ApiError{
-        503, "transport_locations_unavailable", "Не удалось проверить транспортные пункты"};
+    throw ApiError<503>{
+        "transport_locations_unavailable", "Не удалось проверить транспортные пункты"};
 } catch (const platform::http::TransportError&) {
-    throw ApiError{
-        503, "transport_locations_unavailable", "Справочник транспортных пунктов недоступен"};
+    throw ApiError<503>{
+        "transport_locations_unavailable", "Справочник транспортных пунктов недоступен"};
 } catch (const platform::http::ContractError&) {
-    throw ApiError{503, "transport_locations_unavailable",
-        "Некорректный ответ справочника транспортных пунктов"};
+    throw ApiError<503>{
+        "transport_locations_unavailable", "Некорректный ответ справочника транспортных пунктов"};
 }
 }  // namespace shipments::helpers

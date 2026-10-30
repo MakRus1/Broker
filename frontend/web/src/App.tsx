@@ -1,3 +1,4 @@
+import { InvoicesPage } from './InvoicesPage';
 import { useRouteRegistryFilters } from './RouteRegistryFilters';
 import { preferenceKey, useRegistryPreference } from './registryPreferences';
 import { restoreShipmentQuery, restoreTransportationQuery } from './registryQueryPreferences';
@@ -49,7 +50,13 @@ import { TransportationTable } from './components';
 export function App() {
   const [session, setSession] = useState<Session | null>();
   const [tab, setTab] = useState<
-    'shipments' | 'transportations' | 'counterparties' | 'contracts' | 'financial-labels'
+    | 'shipments'
+    | 'transportations'
+    | 'counterparties'
+    | 'contracts'
+    | 'financial-labels'
+    | 'incoming-invoices'
+    | 'outgoing-invoices'
   >('shipments');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -185,7 +192,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|contracts|financial-labels)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|contracts|financial-labels|incoming-invoices|outgoing-invoices)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -200,6 +207,8 @@ export function App() {
       setRoute(next);
       if (next.startsWith('/transportations')) setTab('transportations');
       else if (next.startsWith('/financial-labels')) setTab('financial-labels');
+      else if (next.startsWith('/incoming-invoices')) setTab('incoming-invoices');
+      else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
       else if (next.startsWith('/contracts')) setTab('contracts');
       else if (next.startsWith('/counterparties')) setTab('counterparties');
       else setTab('shipments');
@@ -295,6 +304,8 @@ export function App() {
       if (
         !session ||
         tab === 'counterparties' ||
+        tab === 'incoming-invoices' ||
+        tab === 'outgoing-invoices' ||
         tab === 'contracts' ||
         tab === 'financial-labels' ||
         !session.permissions.includes(tab + '.read')
@@ -533,6 +544,25 @@ export function App() {
             </span>{' '}
             <span className="navigation-text">Договоры</span>
           </button>
+          {session.permissions.includes('finance.read_invoices') &&
+            (['incoming', 'outgoing'] as const).map((direction) => (
+              <button
+                key={direction}
+                aria-label={direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
+                title={direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
+                aria-current={tab === `${direction}-invoices` ? 'page' : undefined}
+                onClick={() => {
+                  location.hash = `/${direction}-invoices`;
+                }}
+              >
+                <span className="navigation-icon" aria-hidden="true">
+                  {direction === 'incoming' ? '↙' : '↗'}
+                </span>
+                <span className="navigation-text">
+                  {direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
+                </span>
+              </button>
+            ))}
           <button
             aria-label="Финансовые метки"
             title="Финансовые метки"
@@ -577,6 +607,8 @@ export function App() {
             className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
             hidden={
               tab === 'counterparties' ||
+              tab === 'incoming-invoices' ||
+              tab === 'outgoing-invoices' ||
               tab === 'contracts' ||
               tab === 'financial-labels' ||
               creating ||
@@ -688,7 +720,25 @@ export function App() {
                   else workspaceNodes.current.delete(entry.id);
                 }}
               >
-                {entry.route.startsWith('/financial-labels') ? (
+                {entry.route.startsWith('/incoming-invoices') ||
+                entry.route.startsWith('/outgoing-invoices') ? (
+                  <InvoicesPage
+                    route={entry.route}
+                    active={activeWorkspace === entry.id}
+                    session={session}
+
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onCancelNew={() => {
+                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
+                      location.hash = entry.route.split('/').slice(0, 2).join('/');
+                    }}
+                    onSaved={(value) => {
+                      const next = `/${value.direction}-invoices/${value.id}`;
+                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
+                      location.hash = next;
+                    }}
+                  />
+                ) : entry.route.startsWith('/financial-labels') ? (
                   <FinancialLabelsPage
                     route={entry.route}
                     active={activeWorkspace === entry.id}

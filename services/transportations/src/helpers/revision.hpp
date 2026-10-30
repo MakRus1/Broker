@@ -5,7 +5,7 @@
 namespace transportations::helpers {
 inline void CheckRevision(std::int64_t actual, std::int64_t expected) {
     if (actual != expected)
-        throw ApiError{409, "revision_conflict",
-            "Перевозка изменилась. Обновите карточку и повторите сохранение"};
+        throw ApiError<409>{
+            "revision_conflict", "Перевозка изменилась. Обновите карточку и повторите сохранение"};
 }
 }  // namespace transportations::helpers

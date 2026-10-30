@@ -299,11 +299,21 @@ public:
     bad_request = next((response for response in op.responses if response.status == 400), None)
     if bad_request and bad_request.media == 'application/json' and bad_request.body and {field.name for field in bad_request.body.fields} == {'error', 'message'} and all(field.required and field.type.schema == {'type': 'string'} for field in bad_request.body.fields):
         parse_error = 'http.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest); http.GetHttpResponse().SetHeader(std::string_view{"Content-Type"}, "application/json"); return ToJson(Response400{.error = "invalid_request", .message = "Invalid request"});'
+    error_catches = []
+    for response in op.responses:
+        if (response.status >= 400 and response.media == 'application/json' and response.body
+                and {field.name for field in response.body.fields} == {'error', 'message'}
+                and all(field.required and field.type.kind == 'string' and not field.optional for field in response.body.fields)):
+            error_catches.append(f'catch (const ::platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
+    invoke = "View::Handle(std::move(request), context" + (", deps_" if deps else "") + ")"
+    response_call = ('[&]() -> Response { try { return ' + invoke + '; } '
+                     + ' '.join(error_catches) + ' }()') if error_catches else invoke
     auth_include = '#include <platform/auth/identity.hpp>\n' if op.authenticated else ''
     auth_check = '(void)::platform::auth::GetIdentity(context);' if op.authenticated else ''
     source = f'''{auth_include}#include <views/{op.rel}/handler.hpp>
 #include <views/{op.rel}/view.hpp>
 #include <openapi/runtime.hpp>
+#include <platform/handler_error.hpp>
 #include <utility>
 #include <new>
 #include <userver/server/handlers/exceptions.hpp>
@@ -320,7 +330,7 @@ std::string Handler::HandleRequestThrow(const userver::server::http::HttpRequest
     }} catch (const std::exception&) {{
         {parse_error}
     }}
-    const auto response = View::Handle(std::move(request), context{', deps_' if deps else ''});
+    const auto response = {response_call};
     return std::visit([&](const auto& body) -> std::string {{
         using T = std::decay_t<decltype(body)>;
         {' '.join(cases)}

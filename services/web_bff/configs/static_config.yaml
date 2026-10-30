@@ -127,18 +127,6 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-v1-financial_entries-list:
-            path: /api/v1/financial-entries/list
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
-        handler-api-v1-financial_entries-save:
-            path: /api/v1/financial-entries/save
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
         handler-api-v1-financial_labels-filter_values:
             path: /api/v1/financial-labels/filter-values
             method: POST
@@ -159,6 +147,66 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-financial_labels-save:
             path: /api/v1/financial-labels/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-add_service_charge:
+            path: /api/v1/invoices/add-service-charge
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-candidates:
+            path: /api/v1/invoices/candidates
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-detach_service_charge:
+            path: /api/v1/invoices/detach-service-charge
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-filter_values:
+            path: /api/v1/invoices/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-get:
+            path: /api/v1/invoices/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-list:
+            path: /api/v1/invoices/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-save:
+            path: /api/v1/invoices/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-get:
+            path: /api/v1/service-charges/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-list:
+            path: /api/v1/service-charges/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-save:
+            path: /api/v1/service-charges/save
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

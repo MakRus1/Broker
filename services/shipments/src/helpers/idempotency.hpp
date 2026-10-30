@@ -16,7 +16,7 @@ std::optional<Result> FindReplay(pg::Transaction& transaction, const std::string
         return std::nullopt;
     const auto saved = rows.template AsSingleRow<pgtypes::IdempotentResultV1>();
     if (saved.Request != Document(request))
-        throw ApiError{409, "idempotency_conflict", "Ключ уже использован с другим запросом"};
+        throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});
 }
 
@@ -31,7 +31,7 @@ std::optional<Result> FindSavedReplay(const Deps& deps, const std::string& organ
         return std::nullopt;
     const auto saved = rows.template AsSingleRow<pgtypes::IdempotentResultV1>();
     if (saved.Request != Document(request))
-        throw ApiError{409, "idempotency_conflict", "Ключ уже использован с другим запросом"};
+        throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});
 }
 

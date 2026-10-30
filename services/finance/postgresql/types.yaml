@@ -24,7 +24,7 @@ types:
       type: boolean
     - name: revision
       type: bigint
-  public.financial_entry_v1:
+  public.service_charge_v1:
     fields:
     - name: id
       type: uuid
@@ -77,3 +77,51 @@ types:
       type: bigint
     - name: price_mode
       type: text
+  public.invoice_v1:
+    fields:
+    - name: id
+      type: uuid
+    - name: direction
+      type: text
+    - name: number
+      type: text
+    - name: invoice_date
+      type: date
+    - name: due_date
+      type: date
+      nullable: true
+    - name: own_company_id
+      type: uuid
+    - name: own_company_name
+      type: text
+    - name: counterparty_id
+      type: uuid
+    - name: counterparty_name
+      type: text
+    - name: own_bank_account_id
+      type: uuid
+      nullable: true
+    - name: counterparty_bank_account_id
+      type: uuid
+      nullable: true
+    - name: contract_id
+      type: uuid
+      nullable: true
+    - name: contract_number
+      type: text
+      nullable: true
+    - name: currency
+      type: text
+    - name: note
+      type: text
+      nullable: true
+    - name: archived
+      type: boolean
+    - name: revision
+      type: bigint
+    - name: net_minor
+      type: bigint
+    - name: vat_minor
+      type: bigint
+    - name: total_minor
+      type: bigint

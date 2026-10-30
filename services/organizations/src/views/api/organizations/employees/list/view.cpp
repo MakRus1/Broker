@@ -8,21 +8,24 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
-    try {
-        if (IsPlatformAdmin(identity) && request.body.organization_id.has_value()) {
-            auto transaction =
-                deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+
+    if (IsPlatformAdmin(identity) && request.body.organization_id.has_value()) {
+        auto transaction =
+            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        try {
             RequireAdministrator(transaction, request.body.organization_id.value(), identity);
-            const auto rows =
-                transaction.Execute(sql::kListEmployees, request.body.organization_id.value(),
-                    request.body.subject, request.body.query, request.body.limit);
-            const auto items = ConvertRows<pgtypes::OrganizationEmployeeV1>(rows);
-            transaction.Commit();
-            return Response200{.items = items};
+        } catch (const ApiError<404>& error) {
+            // Справочник сотрудников не раскрывает наличие недоступной организации.
+            throw ApiError<403>{error.Code, "Нет доступа к сотрудникам организации"};
         }
-    } catch (const ::organizations::ApiError& error) {
-        return Response403{.error = error.Code, .message = "Нет доступа к сотрудникам организации"};
+        const auto rows =
+            transaction.Execute(sql::kListEmployees, request.body.organization_id.value(),
+                request.body.subject, request.body.query, request.body.limit);
+        const auto items = ConvertRows<pgtypes::OrganizationEmployeeV1>(rows);
+        transaction.Commit();
+        return Response200{.items = items};
     }
+
     const auto access = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kResolveAccess,
         identity.Issuer, identity.Subject, request.body.organization_id);
     if (access.Size() != 1)

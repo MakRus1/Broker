@@ -1,0 +1,12 @@
+ALTER TABLE financial_entries RENAME TO service_charges;
+ALTER TABLE financial_entry_history RENAME TO service_charge_history;
+ALTER TYPE public.financial_entry_v1 RENAME TO service_charge_v1;
+ALTER TABLE invoice_entries RENAME TO invoice_service_charges;
+ALTER TABLE invoice_service_charges RENAME COLUMN entry_id TO service_charge_id;
+ALTER TABLE service_charge_history RENAME COLUMN entry_id TO service_charge_id;
+ALTER INDEX financial_entries_scope RENAME TO service_charges_scope;
+ALTER INDEX financial_entries_invoice_candidates RENAME TO service_charges_invoice_candidates;
+ALTER INDEX invoice_entries_active RENAME TO invoice_service_charges_active;
+ALTER TABLE service_charges RENAME CONSTRAINT financial_entries_pkey TO service_charges_pkey;
+ALTER TABLE service_charge_history RENAME CONSTRAINT financial_entry_history_pkey TO service_charge_history_pkey;
+ALTER TABLE invoice_service_charges RENAME CONSTRAINT invoice_entries_pkey TO invoice_service_charges_pkey;

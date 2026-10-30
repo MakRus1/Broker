@@ -11,7 +11,8 @@ std::string Statement(const registry::BuiltQuery& query) {
 }
 
 UTEST(RegistryQuery, MissingFiltersProduceOnlyOrganizationAndLimit) {
-    const auto query = BuildRegistryQuery({}, kOrganization);
+    const models::ListTransportationsRequest request;
+    const auto query = platform::registry::BuildPage(kRegistry, request, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 2);
     EXPECT_NE(sql.find("WHERE transportations.organization_id = $1::UUID"), std::string::npos);
@@ -28,7 +29,7 @@ UTEST(RegistryQuery, ValuesNeverBecomeSqlText) {
         {.field = "hazardous", .values = std::vector<std::string>{"false"}},
         {.field = "container_type", .values = std::vector<std::string>{}},
     };
-    const auto query = BuildRegistryQuery(request, kOrganization);
+    const auto query = platform::registry::BuildPage(kRegistry, request, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 4);
     EXPECT_EQ(sql.find(unsafe), std::string::npos);
@@ -43,7 +44,7 @@ UTEST(RegistryQuery, DescendingCursorUsesSameExpressionAsOrdering) {
     request.sort = "container_number";
     request.descending = true;
     request.cursor = models::RegistryCursor{.id = kOrganization, .scope = "scope", .value = "mscu"};
-    const auto query = BuildRegistryQuery(request, kOrganization);
+    const auto query = platform::registry::BuildPage(kRegistry, request, kOrganization);
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 4);
     EXPECT_NE(sql.find("(lower(COALESCE(transportations.container_number, '')) COLLATE "

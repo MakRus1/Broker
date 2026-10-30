@@ -22,7 +22,7 @@ Response View::Handle(
                 middle_name.reset();
         }
         if (last_name.empty() || first_name.empty() || !platform::IsEmail(email))
-            throw ApiError{400, "invalid_profile", "Укажите фамилию, имя и корректный email"};
+            throw ApiError<400>{"invalid_profile", "Укажите фамилию, имя и корректный email"};
         const auto role = request.body.role;
         userver::formats::json::ValueBuilder intent;
         intent["username"] = request.body.username;
@@ -44,8 +44,8 @@ Response View::Handle(
                     .AsSingleRow<ProvisioningRow>(pg::kRowTag);
             if (organization != request.body.organization_id || actor != identity.ActorId() ||
                 saved != payload)
-                throw ApiError{409, "request_conflict",
-                    "Идентификатор запроса уже использован для других данных"};
+                throw ApiError<409>{
+                    "request_conflict", "Идентификатор запроса уже использован для других данных"};
             if (subject.has_value()) {
                 const auto member = Convert(transaction
                                                 .Execute(sql::kGetMembership, organization,
@@ -79,19 +79,6 @@ Response View::Handle(
         WriteAudit(transaction, organization, identity, "member.created", member);
         transaction.Commit();
         return Response201{.member = member};
-    } catch (const ::organizations::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 409:
-            return Response409{.error = error.Code, .message = error.what()};
-        default:
-            return Response503{.error = error.Code, .message = error.what()};
-        }
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "already_exists", .message = "Такая запись уже существует"};
     }

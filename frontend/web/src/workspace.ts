@@ -7,6 +7,10 @@ export function workspaceTitle(route: string) {
   if (route === '/financial-labels') return 'Финансовые метки';
   if (route === '/financial-labels/new') return 'Новая финансовая метка';
   if (route.startsWith('/financial-labels/')) return 'Финансовая метка';
+  if (route === '/incoming-invoices') return 'Входящие счета';
+  if (route === '/outgoing-invoices') return 'Исходящие счета';
+  if (/^\/(incoming|outgoing)-invoices\/new(?:\/|$)/.test(route)) return 'Новый счёт';
+  if (/^\/(incoming|outgoing)-invoices\//.test(route)) return 'Счёт';
   if (route === '/contracts') return 'Договоры';
   if (route === '/contracts/new') return 'Новый договор';
   if (route.startsWith('/contracts/')) return 'Договор';
@@ -63,7 +67,7 @@ export function restoreWorkspaces(raw: string | null, route: string): WorkspaceT
         !value ||
         typeof value.route !== 'string' ||
         typeof value.title !== 'string' ||
-        !/^\/(shipments|transportations|counterparties|contracts|financial-labels)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+        !/^\/(shipments|transportations|counterparties|contracts|financial-labels|incoming-invoices|outgoing-invoices)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
           value.route,
         )
       )

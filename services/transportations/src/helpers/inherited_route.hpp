@@ -35,7 +35,7 @@ inline std::vector<ShipmentContext> LoadShipmentContexts(const Deps& deps,
 
     throw;
 } catch (const std::exception&) {
-    throw ApiError{503, "shipment_unavailable", "Не удалось получить маршрут поставки"};
+    throw ApiError<503>{"shipment_unavailable", "Не удалось получить маршрут поставки"};
 }
 
 inline const ShipmentContext& FindShipmentContext(
@@ -43,7 +43,7 @@ inline const ShipmentContext& FindShipmentContext(
     const auto found = std::find_if(contexts.begin(), contexts.end(),
         [&](const auto& item) { return item.shipment_id == shipment_id; });
     if (found == contexts.end())
-        throw ApiError{404, "shipment_not_found", "Поставка не найдена"};
+        throw ApiError<404>{"shipment_not_found", "Поставка не найдена"};
     return *found;
 }
 
@@ -94,13 +94,13 @@ inline void RegisterRouteUsage(const Deps& deps,
         platform::auth::GetAccessToken(context));
 } catch (const clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage::Error409& error) {
 
-    throw ApiError{409, error.response.error, error.response.message};
+    throw ApiError<409>{error.response.error, error.response.message};
 } catch (const platform::http::ApiError&) {
-    throw ApiError{503, "shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
+    throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
 } catch (const platform::http::CancelledError&) {
     throw;
 } catch (const std::exception&) {
-    throw ApiError{503, "shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
+    throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
 }
 
 inline models::Transportation LoadLocalTransportation(const Deps& deps,

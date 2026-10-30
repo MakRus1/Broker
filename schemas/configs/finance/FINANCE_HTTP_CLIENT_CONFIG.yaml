@@ -2,12 +2,20 @@ name: FINANCE_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
-- /api/v1/financial-entries/list
-- /api/v1/financial-entries/save
 - /api/v1/financial-labels/filter-values
 - /api/v1/financial-labels/get
 - /api/v1/financial-labels/list
 - /api/v1/financial-labels/save
+- /api/v1/invoices/add-service-charge
+- /api/v1/invoices/candidates
+- /api/v1/invoices/detach-service-charge
+- /api/v1/invoices/filter-values
+- /api/v1/invoices/get
+- /api/v1/invoices/list
+- /api/v1/invoices/save
+- /api/v1/service-charges/get
+- /api/v1/service-charges/list
+- /api/v1/service-charges/save
 default:
   '**default**':
     timeout: 1000

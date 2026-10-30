@@ -15,7 +15,7 @@ void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool 
         ? year_month_day{floor<days>(userver::utils::datetime::Now() + hours{3})}
         : year{9999} / December / 31;
     if (!platform::IsCalendarDateInRange(value.value(), year{1900} / January / 1, maximum))
-        throw ApiError{400, "invalid_route_date",
+        throw ApiError<400>{"invalid_route_date",
             actual ? "Фактическая дата должна быть от 01.01.1900 до сегодняшнего дня"
                    : "Укажите корректную календарную дату от 01.01.1900"};
 }
@@ -23,7 +23,7 @@ void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool 
 void CheckOrder(const std::optional<userver::utils::datetime::Date>& from,
     const std::optional<userver::utils::datetime::Date>& to) {
     if (from.has_value() && to.has_value() && from.value() > to.value())
-        throw ApiError{400, "invalid_route_dates", "Отправление не может быть позже прибытия"};
+        throw ApiError<400>{"invalid_route_dates", "Отправление не может быть позже прибытия"};
 }
 
 void ResolveLocation(std::optional<models::TransportLocation>& value,
@@ -41,8 +41,8 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
         previous.value().country_code == value.value().country_code &&
         previous.value().code == value.value().code)
         return;
-    throw ApiError{
-        400, "route_location_not_found", "Выберите действующий порт или аэропорт из справочника"};
+    throw ApiError<400>{
+        "route_location_not_found", "Выберите действующий порт или аэропорт из справочника"};
 }
 }  // namespace
 
@@ -50,16 +50,16 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
     for (const auto& segment : segments) {
         if (segment.sea.has_value()) {
             if (segment.type != "sea")
-                throw ApiError{
-                    400, "unexpected_sea_details", "Морские поля доступны только участку «Море»"};
+                throw ApiError<400>{
+                    "unexpected_sea_details", "Морские поля доступны только участку «Море»"};
             const auto& sea = segment.sea.value();
             CheckDate(sea.eta, false);
             CheckDate(sea.departure_date, true);
         }
         if (segment.air.has_value()) {
             if (segment.type != "air")
-                throw ApiError{400, "unexpected_air_details",
-                    "Авиационные поля доступны только участку «Авиа»"};
+                throw ApiError<400>{
+                    "unexpected_air_details", "Авиационные поля доступны только участку «Авиа»"};
             const auto& air = segment.air.value();
             CheckDate(air.etd, false);
             CheckDate(air.eta, false);

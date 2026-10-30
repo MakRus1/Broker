@@ -30,21 +30,21 @@ inline void ValidateRouteCounterparties(const Deps& deps,
             const auto response = deps.counterparties.ApiV1CounterpartiesGet(
                 {.body = {.id = id}}, platform::auth::GetAccessToken(context));
             if (response.counterparty.archived)
-                throw ApiError{400, "invalid_route_counterparty",
-                    "Выберите действующего контрагента организации"};
+                throw ApiError<400>{
+                    "invalid_route_counterparty", "Выберите действующего контрагента организации"};
         } catch (const platform::http::ErrorByStatus<404>&) {
-            throw ApiError{400, "invalid_route_counterparty", "Контрагент не найден в организации"};
+            throw ApiError<400>{"invalid_route_counterparty", "Контрагент не найден в организации"};
         } catch (const platform::http::ApiError&) {
-            throw ApiError{
-                503, "counterparty_unavailable", "Не удалось проверить контрагента участка"};
+            throw ApiError<503>{
+                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
         } catch (const platform::http::CancelledError&) {
             throw;
         } catch (const platform::http::TransportError&) {
-            throw ApiError{
-                503, "counterparty_unavailable", "Не удалось проверить контрагента участка"};
+            throw ApiError<503>{
+                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
         } catch (const platform::http::ContractError&) {
-            throw ApiError{
-                503, "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
+            throw ApiError<503>{
+                "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
         }
     }
 }

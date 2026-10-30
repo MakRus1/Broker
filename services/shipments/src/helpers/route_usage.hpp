@@ -31,15 +31,15 @@ inline void CheckExistingRouteUsage(const Deps& deps,
         platform::auth::GetAccessToken(context));
     for (const auto& id : result.segment_ids)
         if (std::find(changed.begin(), changed.end(), id) != changed.end())
-            throw ApiError{409, "route_segment_in_use",
+            throw ApiError<409>{"route_segment_in_use",
                 "Нельзя удалить или изменить тип участка с данными перевозок"};
-} catch (const ApiError&) {
+} catch (const platform::http::HandlerErrorBase&) {
 
     throw;
 } catch (const platform::http::CancelledError&) {
     throw;
 } catch (const std::exception&) {
-    throw ApiError{
-        503, "transportations_unavailable", "Не удалось проверить данные участков перевозок"};
+    throw ApiError<503>{
+        "transportations_unavailable", "Не удалось проверить данные участков перевозок"};
 }
 }  // namespace shipments::helpers

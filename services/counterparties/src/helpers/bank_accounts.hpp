@@ -59,7 +59,7 @@ inline models::BankAccount Prepare(const models::SaveBankAccountRequest& input) 
     value.is_primary = input.is_primary;
     value.archived = input.archived;
     if (input.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError{400, "invalid_revision", "Некорректная редакция счёта"};
+        throw ApiError<400>{"invalid_revision", "Некорректная редакция счёта"};
     value.revision = input.expected_revision + 1;
     value.name = userver::utils::text::Trim(value.name);
     value.bank_name = userver::utils::text::Trim(value.bank_name);
@@ -81,9 +81,9 @@ inline models::BankAccount Prepare(const models::SaveBankAccountRequest& input) 
         uppercase(iban);
     }
     if (value.name.empty() || value.number.empty() || value.bank_name.empty())
-        throw ApiError{400, "empty_bank_requisites", "Укажите название счёта, номер и банк"};
+        throw ApiError<400>{"empty_bank_requisites", "Укажите название счёта, номер и банк"};
     if (value.archived && value.is_primary)
-        throw ApiError{400, "archived_primary", "Архивный счёт не может быть основным"};
+        throw ApiError<400>{"archived_primary", "Архивный счёт не может быть основным"};
     return value;
 }
 }  // namespace counterparties::helpers

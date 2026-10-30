@@ -19,7 +19,7 @@ Response View::Handle(
         const auto organization = platform::auth::GetOrganization(identity);
         if (transaction.Execute(sql::kGetShipment, organization, request.body.shipment_id)
                 .IsEmpty())
-            throw ApiError{404, "not_found", "Поставка не найдена"};
+            throw ApiError<404>{"not_found", "Поставка не найдена"};
         const auto rows =
             transaction.Execute(sql::kListItems, organization, request.body.shipment_id)
                 .AsContainer<std::vector<pgtypes::ShipmentItemV1>>();
@@ -54,17 +54,6 @@ Response View::Handle(
     } catch (const platform::http::ContractError&) {
         return Response503{.error = "container_fact_unavailable",
             .message = "Не удалось получить фактические перевозки. Повторите загрузку"};
-    } catch (const ::shipments::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        default:
-            return Response409{.error = error.Code, .message = error.what()};
-        }
     }
 }
 }  // namespace shipments::views::api::v1::shipment_items::list

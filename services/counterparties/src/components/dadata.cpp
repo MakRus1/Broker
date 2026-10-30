@@ -58,10 +58,10 @@ DaData::DaData(const userver::components::ComponentConfig& config,
 
 std::vector<models::RegistryParty> DaData::Lookup(const std::string& tax_id) const try {
     if (!IsInn(tax_id))
-        throw ApiError{
-            400, "invalid_inn", "Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой"};
+        throw ApiError<400>{
+            "invalid_inn", "Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой"};
     if (api_key_.empty())
-        throw ApiError{503, "registry_not_configured",
+        throw ApiError<503>{"registry_not_configured",
             "Поиск реквизитов пока не настроен. Заполните данные вручную"};
     userver::formats::json::ValueBuilder body;
     body["query"] = tax_id;
@@ -78,7 +78,7 @@ std::vector<models::RegistryParty> DaData::Lookup(const std::string& tax_id) con
             .SetLoggedUrl("dadata/find-party")
             .perform();
     if (response->status_code() != 200)
-        throw ApiError{503, "registry_unavailable",
+        throw ApiError<503>{"registry_unavailable",
             "DaData сейчас недоступна. Повторите поиск позже или заполните данные вручную"};
     const auto document = userver::formats::json::FromString(response->body());
     const auto& items = document["suggestions"];
@@ -92,14 +92,14 @@ std::vector<models::RegistryParty> DaData::Lookup(const std::string& tax_id) con
         result.push_back(std::move(value));
     }
     return result;
-} catch (const ApiError&) {
+} catch (const platform::http::HandlerErrorBase&) {
 
     throw;
 } catch (const std::bad_alloc&) {
     throw;
 } catch (const std::exception&) {
     // Текст внешних ошибок не переносим в ответ: он может содержать настройки клиента.
-    throw ApiError{503, "registry_unavailable",
+    throw ApiError<503>{"registry_unavailable",
         "Не удалось получить реквизиты из DaData. Повторите позже или заполните вручную"};
 }
 

@@ -14,20 +14,20 @@ std::size_t ApplyActual(models::Transportation& transportation, const std::strin
             return boost::uuids::string_generator{}(route_segment.id) == requested;
         });
     if (found == transportation.route_segments.end())
-        throw ApiError{404, "not_found", "Плечо не найдено"};
+        throw ApiError<404>{"not_found", "Плечо не найдено"};
     if (found->mode == models::TransportMode::Sea || found->mode == models::TransportMode::Air)
-        throw ApiError{400, "shipment_route_owned", "Даты моря и авиа изменяются в поставке"};
+        throw ApiError<400>{"shipment_route_owned", "Даты моря и авиа изменяются в поставке"};
     if (found->international_road.has_value() || found->pickup.has_value())
-        throw ApiError{
-            400, "road_calendar_dates", "Даты автоучастка изменяются в его деталях без времени"};
+        throw ApiError<400>{
+            "road_calendar_dates", "Даты автоучастка изменяются в его деталях без времени"};
     if (found->rail.has_value())
-        throw ApiError{
-            400, "rail_calendar_dates", "Даты ЖД-участка изменяются в его деталях без времени"};
+        throw ApiError<400>{
+            "rail_calendar_dates", "Даты ЖД-участка изменяются в его деталях без времени"};
     auto& value = event == models::EventKind::Departure ? found->actual_departure_at
                                                         : found->actual_arrival_at;
     const bool correction = change == ActualChange::Correction;
     if (value.has_value() != correction)
-        throw ApiError{409, "actual_conflict",
+        throw ApiError<409>{"actual_conflict",
             correction ? "Исправляемый факт отсутствует"
                        : "Факт уже записан; используйте команду исправления"};
     value = occurred_at;

@@ -57,7 +57,7 @@ Response View::Handle(
             ? userver::utils::text::Trim(request.body.number.value())
             : GenerateShipmentNumber(transaction, organization, card.ShipmentDate, settings);
         if (card.Number.empty())
-            throw ApiError{400, "invalid_number", "Укажите номер поставки"};
+            throw ApiError<400>{"invalid_number", "Укажите номер поставки"};
         const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
                              .AsSingleRow<pgtypes::ShipmentV4>();
         RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
@@ -70,19 +70,6 @@ Response View::Handle(
         return Response201{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "number_exists", .message = "Номер поставки уже занят"};
-    } catch (const ::shipments::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        case 503:
-            return Response503{.error = error.Code, .message = error.what()};
-        default:
-            return Response409{.error = error.Code, .message = error.what()};
-        }
     }
 }
 }  // namespace shipments::views::api::v1::shipments::create

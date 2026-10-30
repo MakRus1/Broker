@@ -7,22 +7,10 @@
 namespace shipments::views::api::v1::transportation_operations::create {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    try {
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-        const auto result = ::shipments::operations::RequestTransportations(
-            deps.pg_cluster, platform::auth::GetIdentity(context), request.body);
-        return Response202{.operation = result};
-    } catch (const ::shipments::ApiError& error) {
-        switch (error.Status) {
-        case 400:
-            return Response400{.error = error.Code, .message = error.what()};
-        case 403:
-            return Response403{.error = error.Code, .message = error.what()};
-        case 404:
-            return Response404{.error = error.Code, .message = error.what()};
-        default:
-            return Response409{.error = error.Code, .message = error.what()};
-        }
-    }
+
+    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+    const auto result = ::shipments::operations::RequestTransportations(
+        deps.pg_cluster, platform::auth::GetIdentity(context), request.body);
+    return Response202{.operation = result};
 }
 }  // namespace shipments::views::api::v1::transportation_operations::create

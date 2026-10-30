@@ -30,6 +30,20 @@ def spec():
 
 
 class CodegenTest(unittest.TestCase):
+    def test_handler_maps_only_declared_error_contracts(self):
+        data = spec()
+        responses = data['paths']['/items/{id}/create']['post']['responses']
+        responses['409']['content']['application/json']['schema'] = {
+            'type': 'object', 'required': ['error', 'message'],
+            'properties': {'error': {'type': 'string', 'maxLength': 128},
+                           'message': {'type': 'string', 'maxLength': 1000}}}
+        result = outputs('demo', parse_spec(data), {})
+        source = result['src/views/items/by_id/create/handler.cpp']
+        self.assertIn('const ::platform::http::HandlerError<409>&', source)
+        self.assertIn('.error = error.Code', source)
+        self.assertNotIn('HandlerError<404>', source)
+        self.assertNotIn('catch (const std::exception&)', source.split('const auto response')[1])
+
     def test_unrelated_permission_does_not_change_generated_header_or_lock(self):
         from unittest.mock import patch
         import generate

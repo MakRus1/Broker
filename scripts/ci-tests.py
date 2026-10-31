@@ -82,7 +82,7 @@ def select_checks(paths, services):
         for name, bff in [('admin', 'admin_bff'), ('web', 'web_bff')]
         if paths is None
         or bff in services
-        or any(path.startswith(f'frontend/{name}/') for path in paths)
+        or any(path.startswith((f'frontend/{name}/', 'frontend/shared/')) for path in paths)
     ]
     smoke = (
         paths is None

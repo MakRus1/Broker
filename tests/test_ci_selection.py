@@ -41,6 +41,11 @@ class CiSelectionTest(unittest.TestCase):
         self.assertFalse(plan['smoke'])
         self.assertEqual(plan['build_services'], [])
 
+    def test_shared_frontend(self):
+        plan = ci.select_checks(['frontend/shared/currencies.ts'], [])
+        self.assertEqual(plan['frontends'], ['admin', 'web'])
+        self.assertEqual(plan['build_services'], [])
+
     def test_generator_and_build_changes_enable_scaffolds(self):
         for path in [
             'scripts/openapi_gen/features.py',

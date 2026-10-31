@@ -88,7 +88,7 @@ it('показывает номер и дату выбранного счёта 
         counterparty_name: 'Клиент',
         contract_id: null,
         contract_number: null,
-        currency: 'RUB',
+        invoice_currency: 'RUB',
       }}
       session={session}
       selection={selected}
@@ -108,7 +108,7 @@ it('не предлагает уходить из услуги в другой �
         counterparty_name: 'Клиент',
         contract_id: null,
         contract_number: null,
-        currency: 'RUB',
+        invoice_currency: 'RUB',
       }}
       session={session}
       onSelect={() => {}}
@@ -137,7 +137,7 @@ it('показывает отвязку и единое поле для уже �
         counterparty_name: 'Клиент',
         contract_id: null,
         contract_number: null,
-        currency: 'RUB',
+        invoice_currency: 'RUB',
       }}
       session={session}
       current={{ invoice_id: 'invoice', number: 'ИС-7', invoice_date: '2026-10-30' }}

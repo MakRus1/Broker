@@ -12,6 +12,8 @@ fi
 # Установленные зависимости и pnpm store сохраняются между сборками.
 find "$cache/work" -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf -- {} +
 tar --exclude=node_modules --exclude=dist --exclude=coverage -C "frontend/$app" -cf - . | tar -C "$cache/work" -xf -
+mkdir -p "$cache/shared"
+cp -R frontend/shared/. "$cache/shared/"
 manager="$cache/tooling/node_modules/.bin/pnpm"
 "$manager" --dir "$cache/work" install --frozen-lockfile --store-dir "$cache/store"
 "$manager" --dir "$cache/work" build

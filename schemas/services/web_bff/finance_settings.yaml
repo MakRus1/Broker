@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Валюты и настройки финансов
+  version: '1.0'
+paths:
+  /api/v1/exchange-rates/get:
+    post:
+      summary: Курс пересчёта валют на дату услуги
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                from_currency:
+                  type: string
+                to_currency:
+                  type: string
+                date:
+                  type: string
+                  format: date
+              required:
+              - from_currency
+              - to_currency
+              - date
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/ExchangeRate
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/finance/settings/get:
+    post:
+      summary: Валюта пересчёта организации
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinanceSettings
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web_session

@@ -21,7 +21,15 @@ SELECT ROW(
     note,
     archived,
     revision,
-    price_mode
+    price_mode,
+    service_date,
+    invoice_currency,
+    invoice_rate_millionths,
+    invoice_rate_date,
+    invoice_rate_source,
+    invoice_net_minor,
+    invoice_vat_minor,
+    invoice_total_minor
 )::public.service_charge_v1
 FROM service_charges
 WHERE organization_id = $1::UUID

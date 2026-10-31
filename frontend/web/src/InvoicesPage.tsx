@@ -136,7 +136,7 @@ export function InvoicesPage({
             throw new Error('Услуга не подходит для этого счёта');
           d.counterparty_id = charge.counterparty_id;
           d.counterparty_name = charge.counterparty_name;
-          d.currency = charge.currency;
+          d.currency = charge.invoice_currency;
           d.contract_id = charge.contract_id;
           d.contract_number = charge.contract_number;
           services = [charge];
@@ -526,7 +526,7 @@ export function InvoicesPage({
                       <span>{charge.counterparty_name}</span>
                     </div>
                     <span>
-                      {formatFixed(charge.total_minor, 2)} {charge.currency}
+                      {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
                     </span>
                     <button
                       type="button"
@@ -555,7 +555,7 @@ export function InvoicesPage({
                           </small>
                         </span>
                         <span>
-                          {formatFixed(charge.total_minor, 2)} {charge.currency}
+                          {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
                         </span>
                       </label>
                     ))}
@@ -577,7 +577,7 @@ export function InvoicesPage({
                   Итого с НДС:{' '}
                   <strong>
                     {formatFixed(
-                      selected.reduce((n, x) => n + BigInt(x.total_minor), 0n),
+                      selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
                       2,
                     )}{' '}
                     {draft.currency}
@@ -679,11 +679,11 @@ export function InvoicesPage({
                                 {charge.transportation_id ? 'К перевозке' : 'К поставке'}
                               </a>
                             </td>
-                            <td>{formatFixed(charge.net_minor, 2)}</td>
-                            <td>{formatFixed(charge.vat_minor, 2)}</td>
+                            <td>{formatFixed(charge.invoice_net_minor, 2)}</td>
+                            <td>{formatFixed(charge.invoice_vat_minor, 2)}</td>
                             <td>
                               <strong>
-                                {formatFixed(charge.total_minor, 2)} {value.currency}
+                                {formatFixed(charge.invoice_total_minor, 2)} {value.currency}
                               </strong>
                             </td>
                           </tr>

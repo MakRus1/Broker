@@ -91,9 +91,13 @@ SERVICE_CHARGE = {
     'net_minor': 15000, 'vat_minor': 3000, 'total_minor': 18000,
     'note': None, 'archived': False, 'revision': 1,
 }
+SERVICE_CHARGE.update(service_date='2026-10-30',invoice_currency='RUB',
+    invoice_rate={'date':'2026-10-30','rate_millionths':1000000,'source':'identity'},
+    invoice_net_minor=15000,invoice_vat_minor=3000,invoice_total_minor=18000)
 SERVICE_CHARGE_SAVE = {key:value for key,value in SERVICE_CHARGE.items()
-              if key not in ('label_name','counterparty_name','contract_number','net_minor','vat_minor','total_minor','revision')}
+              if key not in ('label_name','counterparty_name','contract_number','net_minor','vat_minor','total_minor','revision','invoice_rate','invoice_net_minor','invoice_vat_minor','invoice_total_minor')}
 SERVICE_CHARGE_SAVE['expected_revision'] = 0
+SERVICE_CHARGE_SAVE['manual_invoice_rate_millionths'] = None
 SERVICE_CHARGE_SUMMARY = {'own':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}],
                  'transportations':[], 'combined':[{'currency':'RUB','income_minor':'18000','expense_minor':'0'}]}
 
@@ -135,7 +139,9 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[{'invoice':INVOICE,'paid_minor':0,'outstanding_minor':INVOICE['total_minor'],'payment_status':'unpaid','overdue_days':0}]},200),
         ('invoices/candidates',{'direction':'outgoing','counterparty_id':CUSTOMER,'currency':'RUB','contract_id':None,'invoice_id':None,'after':None,'limit':50},{'items':[SERVICE_CHARGE],'next_after':None},200),
         ('service-charges/save', SERVICE_CHARGE_SAVE, {'charge':SERVICE_CHARGE},200),
-        ('service-charges/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[SERVICE_CHARGE],'next_after':None,'summary':SERVICE_CHARGE_SUMMARY,'invoices':[]},200),
+        ('service-charges/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[SERVICE_CHARGE],'next_after':None,'summary':SERVICE_CHARGE_SUMMARY,'invoices':[],'reporting':{'currency':'RUB','summary':SERVICE_CHARGE_SUMMARY,'missing_rates':[]}},200),
+        ('exchange-rates/get',{'from_currency':'USD','to_currency':'RUB','date':'2026-10-30'},{'date':'2026-10-30','rate_millionths':90000000,'source':'cbr'},200),
+        ('finance/settings/get',{}, {'reporting_currency':'USD','revision':1},200),
         ('financial-labels/get',{'id':ID},{'label':FINANCIAL_LABEL},200),
         ('financial-labels/list',{}, {'items':[FINANCIAL_LABEL]},200),
         ('financial-labels/save',{**{key:value for key,value in FINANCIAL_LABEL.items() if key!='revision'},'expected_revision':0},{'label':FINANCIAL_LABEL},200),

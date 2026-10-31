@@ -11,17 +11,19 @@ FROM ${NODE_IMAGE} AS frontend-toolchain
 RUN npm install --global pnpm@11.25.0
 
 FROM frontend-toolchain AS frontend-admin
-WORKDIR /frontend
+WORKDIR /frontend/admin
 COPY frontend/admin/package.json frontend/admin/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/admin/ ./
+COPY frontend/shared/ ../shared/
 RUN pnpm build && mkdir -p /assets/web && mv dist /assets/admin
 
 FROM frontend-toolchain AS frontend-web
-WORKDIR /frontend
+WORKDIR /frontend/web
 COPY frontend/web/package.json frontend/web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/web/ ./
+COPY frontend/shared/ ../shared/
 RUN pnpm build && mkdir -p /assets/admin && mv dist /assets/web
 
 FROM ${ASSETS_STAGE} AS assets

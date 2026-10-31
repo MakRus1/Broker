@@ -3,6 +3,7 @@ import { request, type Session } from '../api';
 import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
 import { RegistryFilters, RegistryMore, SortHeading, EnabledFilter } from './Registry';
 import { Select } from './Select';
+import { FinanceSettings } from './organizations/FinanceSettings';
 import { ShipmentSettings } from './organizations/ShipmentSettings';
 import { EditorPanel } from './organizations/EditorPanel';
 import { MemberEditor } from './organizations/MemberEditor';
@@ -53,7 +54,7 @@ export function Organizations({
   const [selected, setSelected] = useState<Organization | undefined>(
     access.platform_admin ? undefined : ownOrganizations[0],
   );
-  const [tab, setTab] = useState<'members' | 'roles' | 'shipments'>('members');
+  const [tab, setTab] = useState<'members' | 'roles' | 'shipments' | 'finance'>('members');
   const memberList = useRegistry<Member>(
     '/api/admin/organizations/members/list',
     session,
@@ -428,8 +429,13 @@ export function Organizations({
             >
               Правила поставок
             </button>
+            <button role="tab" aria-selected={tab === 'finance'} onClick={() => setTab('finance')}>
+              Финансы
+            </button>
           </div>
-          {tab === 'shipments' ? (
+          {tab === 'finance' ? (
+            <FinanceSettings key={selected.id} session={session} organization={selected.id} />
+          ) : tab === 'shipments' ? (
             <ShipmentSettings key={selected.id} session={session} organization={selected.id} />
           ) : (
             <section className="organization-content" role="tabpanel">

@@ -126,3 +126,22 @@ async def test_registry_proxy_preserves_filters_and_cursor(browser,mockserver,pa
     response=await browser.post(path,body)
     assert response.status==200,response.text
     assert response.json()=={'items':[],'next_cursor':cursor}
+
+@pytest.mark.parametrize('action', ['get', 'update'])
+async def test_finance_settings_proxy_preserves_csrf(browser, mockserver, action):
+    path='/api/admin/finance/settings/'+action
+    body={'organization_id':ORG}
+    if action=='update': body.update(reporting_currency='USD',expected_revision=0)
+    result={'reporting_currency':'USD','revision':1}
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json==body
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return result
+    await browser.sign_in()
+    denied=await browser.post(path,body,headers={'X-CSRF-Token':'invalid'})
+    assert denied.status==403
+    assert upstream.times_called==0
+    response=await browser.post(path,body)
+    assert response.status==200,response.text
+    assert response.json()==result

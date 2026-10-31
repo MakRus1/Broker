@@ -321,6 +321,23 @@ ServiceCharge:
       minimum: 1
     price_mode:
       $ref: '#/PriceMode'
+    service_date:
+      type: string
+      format: date
+    invoice_currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    invoice_rate:
+      $ref: '#/ExchangeRate'
+    invoice_net_minor:
+      type: integer
+      format: int64
+    invoice_vat_minor:
+      type: integer
+      format: int64
+    invoice_total_minor:
+      type: integer
+      format: int64
   required:
   - id
   - shipment_id
@@ -345,6 +362,12 @@ ServiceCharge:
   - archived
   - revision
   - price_mode
+  - service_date
+  - invoice_currency
+  - invoice_rate
+  - invoice_net_minor
+  - invoice_vat_minor
+  - invoice_total_minor
 SaveServiceChargeRequest:
   type: object
   additionalProperties: false
@@ -404,6 +427,18 @@ SaveServiceChargeRequest:
     expected_revision:
       type: integer
       minimum: 0
+    service_date:
+      type: string
+      format: date
+    invoice_currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    manual_invoice_rate_millionths:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 1000000000000
+      nullable: true
   required:
   - id
   - shipment_id
@@ -422,6 +457,9 @@ SaveServiceChargeRequest:
   - archived
   - price_mode
   - expected_revision
+  - service_date
+  - invoice_currency
+  - manual_invoice_rate_millionths
 ServiceChargeScope:
   type: object
   additionalProperties: false
@@ -1203,3 +1241,64 @@ InvoiceRegistryItem:
   - outstanding_minor
   - payment_status
   - overdue_days
+ExchangeRate:
+  type: object
+  additionalProperties: false
+  properties:
+    rate_millionths:
+      type: integer
+      format: int64
+    date:
+      type: string
+      format: date
+    source:
+      type: string
+      enum:
+      - identity
+      - cbr
+      - manual
+  required:
+  - rate_millionths
+  - date
+  - source
+FinanceSettings:
+  type: object
+  additionalProperties: false
+  properties:
+    reporting_currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    revision:
+      type: integer
+      format: int64
+  required:
+  - reporting_currency
+  - revision
+ReportingSummary:
+  type: object
+  additionalProperties: false
+  properties:
+    currency:
+      type: string
+    summary:
+      $ref: '#/ServiceChargeSummary'
+    missing_rates:
+      type: array
+      items:
+        $ref: '#/MissingExchangeRate'
+  required:
+  - currency
+  - summary
+  - missing_rates
+MissingExchangeRate:
+  type: object
+  additionalProperties: false
+  properties:
+    currency:
+      type: string
+    date:
+      type: string
+      format: date
+  required:
+  - currency
+  - date

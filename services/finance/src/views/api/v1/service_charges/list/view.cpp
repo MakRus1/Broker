@@ -1,3 +1,4 @@
+#include <helpers/reporting.hpp>
 #include <helpers/service_charges.hpp>
 #include <permissions/permissions.hpp>
 #include <views/api/v1/service_charges/list/view.hpp>
@@ -66,7 +67,12 @@ Response View::Handle(
             throw std::runtime_error("Неизвестная группа финансовой сводки");
         }
     }
+    const auto reporting_rows = transaction.Execute(
+        sql::kReportingServiceCharges, organization, scope.shipment_id, scope.transportation_id);
     transaction.Commit();
+    const auto settings = GetFinanceSettings(deps, organization);
+    response.reporting = BuildReporting(
+        deps, settings.reporting_currency, reporting_rows, scope.transportation_id.has_value());
     return response;
 }
 }  // namespace finance::views::api::v1::service_charges::list

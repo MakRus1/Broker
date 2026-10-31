@@ -7,6 +7,18 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-finance-settings-get:
+            path: /api/admin/finance/settings/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-finance-settings-update:
+            path: /api/admin/finance/settings/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-admin-organizations-create:
             path: /api/admin/organizations/create
             method: POST
@@ -221,6 +233,8 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-config_admin:
             base-url: $client-config_admin-base-url
+        client-finance:
+            base-url: $client-finance-base-url
         client-organizations:
             base-url: $client-organizations-base-url
         client-shipments:

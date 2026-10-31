@@ -13,6 +13,17 @@ Response View::Handle(
         {.shipment_id = request.body.shipment_id,
             .transportation_id = request.body.transportation_id});
     const auto parties = ValidateServiceChargeParties(deps, context, request.body);
+    const auto& body = request.body;
+    ValidateCurrency(body.currency);
+    ValidateCurrency(body.invoice_currency);
+    const Rate exchange_rate = body.manual_invoice_rate_millionths.has_value()
+        ? Rate{.Millionths = body.manual_invoice_rate_millionths.value(),
+              .Date = body.service_date,
+              .Source = "manual"}
+        : deps.exchange_rates.Get(body.currency, body.invoice_currency, body.service_date);
+    if (body.currency == body.invoice_currency && exchange_rate.Millionths != 1000000)
+        throw ApiError<400>{
+            "identity_exchange_rate", "Для одинаковых валют курс должен быть равен 1"};
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Тот же порядок блокировок, что при включении услуги: услуга, затем счёт.
@@ -23,8 +34,8 @@ Response View::Handle(
         transaction.Execute(sql::kGetFinancialLabel, organization, request.body.label_id);
     if (labels.IsEmpty())
         throw ApiError<404>{"label_not_found", "Финансовая метка не найдена"};
-    const auto value = PrepareServiceCharge(
-        request.body, Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>()), parties);
+    const auto value = PrepareServiceCharge(request.body,
+        Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>()), parties, exchange_rate);
     const auto rows = request.body.expected_revision == 0
         ? transaction.Execute(sql::kCreateServiceCharge, organization, value)
         : transaction.Execute(
@@ -55,9 +66,9 @@ Response View::Handle(
         invoice.TotalMinor = 0;
         for (const auto& line : previous.AsSetOf<pgtypes::ServiceChargeV1>()) {
             const auto& current = line.Id == value.Id ? value : line;
-            invoice.NetMinor += current.NetMinor;
-            invoice.VatMinor += current.VatMinor;
-            invoice.TotalMinor += current.TotalMinor;
+            invoice.NetMinor += current.InvoiceNetMinor;
+            invoice.VatMinor += current.InvoiceVatMinor;
+            invoice.TotalMinor += current.InvoiceTotalMinor;
         }
         const auto revision = invoice.Revision++;
         transaction.Execute(

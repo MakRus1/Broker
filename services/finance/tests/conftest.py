@@ -37,8 +37,11 @@ def auth_key(tmp_path_factory):
 @pytest.fixture(scope='session')
 def configure_auth(mockserver_info):
     def patch(config, config_vars):
-        for name in ['shipments', 'transportations', 'counterparties', 'contracts']:
+        for name in ['shipments', 'transportations', 'counterparties', 'contracts', 'organizations']:
             config_vars[f'client-{name}-base-url'] = mockserver_info.base_url
+        rates=config['components_manager']['components']['exchange-rates']
+        rates['endpoint']=mockserver_info.url('/cbr')
+        rates['allow-http']=True
         component = config['components_manager']['components']['platform-auth']
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
@@ -90,3 +93,16 @@ def api(service_client, auth_key):
             return {'message': response.text}
 
     return Client()
+
+
+@pytest.fixture(autouse=True)
+def cbr(mockserver):
+    from datetime import datetime
+    state = {'status': 200, 'date': None, 'rates': {'USD': (1, '90,0000'), 'CNY': (1, '10,0000'), 'JPY': (100, '60,0000')}}
+    @mockserver.handler('/cbr')
+    def rates(request):
+        day = state['date'] or datetime.strptime(request.query['date_req'], '%d/%m/%Y').strftime('%d.%m.%Y')
+        values = ''.join(f'<Valute><CharCode>{code}</CharCode><Nominal>{nominal}</Nominal><Value>{value}</Value></Valute>' for code,(nominal,value) in state['rates'].items())
+        return mockserver.make_response(f'<ValCurs Date="{day}">{values}</ValCurs>', status=state['status'], headers={'Content-Type':'application/xml'})
+    state['handler']=rates
+    return state

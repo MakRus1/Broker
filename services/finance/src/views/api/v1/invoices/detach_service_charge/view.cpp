@@ -19,7 +19,7 @@ Response View::Handle(
     CheckInvoiceAssignment(
         transaction, organization, charge.Id, std::optional{request.body.invoice_id});
     RemoveInvoiceServiceCharge(transaction, organization,
-        boost::uuids::string_generator{}(request.body.invoice_id), charge.Id, identity.ActorId());
+        boost::uuids::string_generator{}(request.body.invoice_id), charge.Id, identity);
     const auto result = LoadInvoice(transaction, organization, request.body.invoice_id);
     transaction.Commit();
     return Response200{.charges = result.charges, .invoice = result.invoice};

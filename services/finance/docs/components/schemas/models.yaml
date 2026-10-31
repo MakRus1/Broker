@@ -1519,3 +1519,119 @@ InvoicePrintData:
   - charges
   - supplier
   - customer
+FinancialHistorySource:
+  type: string
+  enum:
+  - service_charge
+  - invoice
+  - payment
+FinancialHistoryFormat:
+  type: string
+  enum:
+  - text
+  - date
+  - money
+  - quantity
+  - percent
+  - rate
+FinancialHistoryValue:
+  type: object
+  additionalProperties: false
+  required:
+  - value
+  - format
+  properties:
+    value:
+      type: string
+    format:
+      $ref: '#/FinancialHistoryFormat'
+    currency:
+      type: string
+FinancialHistoryChange:
+  type: object
+  additionalProperties: false
+  required:
+  - field
+  - label
+  properties:
+    field:
+      type: string
+    label:
+      type: string
+    before:
+      $ref: '#/FinancialHistoryValue'
+    after:
+      $ref: '#/FinancialHistoryValue'
+FinancialHistoryCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - occurred_at
+  - source
+  - entity_id
+  - revision
+  properties:
+    occurred_at:
+      type: string
+      format: date-time
+    source:
+      $ref: '#/FinancialHistorySource'
+    entity_id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+FinancialHistoryEvent:
+  type: object
+  additionalProperties: false
+  required:
+  - cursor
+  - actor
+  - title
+  - has_previous
+  - changes
+  properties:
+    cursor:
+      $ref: '#/FinancialHistoryCursor'
+    actor:
+      type: string
+    actor_name:
+      type: string
+    title:
+      type: string
+    has_previous:
+      type: boolean
+    changes:
+      type: array
+      items:
+        $ref: '#/FinancialHistoryChange'
+FinancialHistoryRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - limit
+  properties:
+    id:
+      type: string
+      format: uuid
+    before:
+      $ref: '#/FinancialHistoryCursor'
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 50
+FinancialHistoryResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - items
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/FinancialHistoryEvent'
+    next_before:
+      $ref: '#/FinancialHistoryCursor'

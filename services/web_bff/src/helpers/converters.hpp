@@ -2,6 +2,7 @@
 #include <helpers/converters/contracts.hpp>
 #include <helpers/converters/counterparties.hpp>
 #include <helpers/converters/finance.hpp>
+#include <helpers/converters/financial_history.hpp>
 #include <helpers/converters/invoices.hpp>
 #include <helpers/converters/locations.hpp>
 #include <helpers/converters/payments.hpp>

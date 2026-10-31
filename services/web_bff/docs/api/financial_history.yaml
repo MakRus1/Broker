@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: История финансовых документов
+  version: '1'
+paths:
+  /api/v1/service-charges/history:
+    post:
+      summary: История изменений услуги
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryRequest
+      responses:
+        '200':
+          description: История изменений
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryResponse
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к истории
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Документ не найден в организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/invoices/history:
+    post:
+      summary: История изменений счёта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryRequest
+      responses:
+        '200':
+          description: История изменений
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryResponse
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к истории
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Документ не найден в организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/payments/history:
+    post:
+      summary: История изменений платежа
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryRequest
+      responses:
+        '200':
+          description: История изменений
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialHistoryResponse
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к истории
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Документ не найден в организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_session

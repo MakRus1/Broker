@@ -38,6 +38,9 @@ auth:
     /api/v1/finance/settings/get: finance.read_service_charges
     /api/v1/counterparty-settlements/get: finance.read_invoices
     /api/v1/invoices/print-data: finance.read_invoices
+    /api/v1/service-charges/history: finance.read_service_charges
+    /api/v1/invoices/history: finance.read_invoices
+    /api/v1/payments/history: finance.read_payments
   organization-access: true
 clients:
   shipments:

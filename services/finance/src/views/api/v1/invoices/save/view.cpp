@@ -29,7 +29,7 @@ Response View::Handle(
             transaction, organization, ids.front(), request.body.previous_invoice_id);
         RemoveInvoiceServiceCharge(transaction, organization,
             boost::uuids::string_generator{}(request.body.previous_invoice_id.value()), ids.front(),
-            identity.ActorId());
+            identity);
     }
     if (!transaction.Execute(sql::kConflictingInvoiceServiceCharges, organization, ids, value.Id)
              .IsEmpty())
@@ -58,7 +58,7 @@ Response View::Handle(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
     const auto result = LoadInvoice(transaction, organization, request.body.id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
+        identity.ActorId(), HistorySnapshot(result, identity));
     transaction.Commit();
     return Response200{.charges = result.charges, .invoice = result.invoice};
 }

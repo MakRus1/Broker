@@ -1,3 +1,5 @@
+import { FinancialHistory } from '../history/FinancialHistory';
+import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { InvoicePdfButton } from './print/InvoicePdfButton';
 import { serviceChargeRow } from '../services/serviceChargeRow';
 import { ServiceChargeEditor, newCharge } from '../services/ServiceChargeEditor';
@@ -99,6 +101,8 @@ export function InvoicesPage({
   const write = session.permissions.includes('finance.write_invoices');
   const [paidReadOnly, setPaidReadOnly] = useState<boolean>();
   const [newService, setNewService] = useState<ServiceCharge | ReturnType<typeof newCharge>>();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => setHistoryOpen(false), [route]);
   const [details, setDetails] = useState<InvoiceDetails>();
   const [draft, setDraft] = useState<Draft>();
   const [selected, setSelected] = useState<ServiceCharge[]>([]);
@@ -390,7 +394,33 @@ export function InvoicesPage({
               </div>
             </div>
           </div>
-          {draft ? (
+          {value && !draft && (
+            <CardNavigation className="financial-card-navigation">
+              <button
+                type="button"
+                aria-pressed={!historyOpen}
+                onClick={() => setHistoryOpen(false)}
+              >
+                Основное
+              </button>
+              <button
+                type="button"
+                aria-pressed={historyOpen}
+                disabled={!!newService}
+                onClick={() => setHistoryOpen(true)}
+              >
+                История
+              </button>
+            </CardNavigation>
+          )}
+          {historyOpen && value && !draft ? (
+            <FinancialHistory
+              kind="invoices"
+              id={value.id}
+              revision={value.revision}
+              session={session}
+            />
+          ) : draft ? (
             <form
               data-dirty={dirty}
               data-busy={busy}

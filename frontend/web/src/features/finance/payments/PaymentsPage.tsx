@@ -1,3 +1,5 @@
+import { FinancialHistory } from '../history/FinancialHistory';
+import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -82,6 +84,8 @@ export function PaymentsPage({
   const id = route.slice(base.length + 1);
   const creating = id === 'new';
   const registry = route === base;
+  const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => setHistoryOpen(false), [route]);
   const [value, setValue] = useState<PaymentDetails>();
   const [draft, setDraft] = useState<Draft>();
   const [allocations, setAllocations] = useState<Record<string, string>>({});
@@ -351,7 +355,24 @@ export function PaymentsPage({
           {failure}
         </p>
       )}
-      {draft ? (
+      {value && !draft && (
+        <CardNavigation className="financial-card-navigation">
+          <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
+            Основное
+          </button>
+          <button type="button" aria-pressed={historyOpen} onClick={() => setHistoryOpen(true)}>
+            История
+          </button>
+        </CardNavigation>
+      )}
+      {historyOpen && value && !draft ? (
+        <FinancialHistory
+          kind="payments"
+          id={value.payment.id}
+          revision={value.payment.revision}
+          session={session}
+        />
+      ) : draft ? (
         <form
           className="payment-form"
           onSubmit={save}

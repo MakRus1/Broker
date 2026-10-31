@@ -16,7 +16,7 @@ Response View::Handle(
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<pgtypes::ServiceChargeV1>();
-    const auto result = IncludeServiceCharge(transaction, organization, identity.ActorId(), charge,
+    const auto result = IncludeServiceCharge(transaction, organization, identity, charge,
         request.body.invoice_id, request.body.expected_revision, request.body.previous_invoice_id);
     transaction.Commit();
     return Response200{.charges = result.charges, .invoice = result.invoice};

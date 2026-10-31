@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { request } from '../api/http';
 import { type Session } from '../api/session';
 
-export function EmployeeName({ subject, session }: { subject?: string | null; session: Session }) {
+export function EmployeeName({
+  subject,
+  session,
+  fallback,
+}: {
+  subject?: string | null;
+  session: Session;
+  fallback?: string;
+}) {
   const [name, setName] = useState('');
   useEffect(() => {
     setName('');
@@ -15,12 +23,13 @@ export function EmployeeName({ subject, session }: { subject?: string | null; se
       controller.signal,
     )
       .then(({ items }) => {
-        if (!controller.signal.aborted) setName(items[0]?.display_name ?? 'Сотрудник недоступен');
+        if (!controller.signal.aborted)
+          setName(items[0]?.display_name ?? fallback ?? 'Сотрудник недоступен');
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName('Не удалось загрузить сотрудника');
+        if (!controller.signal.aborted) setName(fallback ?? 'Не удалось загрузить сотрудника');
       });
     return () => controller.abort();
-  }, [subject, session]);
+  }, [subject, session, fallback]);
   return <>{subject ? name || 'Загрузка…' : 'Не назначен'}</>;
 }

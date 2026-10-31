@@ -66,7 +66,7 @@ Response View::Handle(
         transaction.Execute(sql::kCreatePaymentAllocation, organization, value.Id, id, amount);
     const auto result = LoadPayment(transaction, organization, body.id);
     transaction.Execute(sql::kWritePaymentHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
+        identity.ActorId(), HistorySnapshot(result, identity));
     transaction.Commit();
     return Response200{.allocated_minor = result.allocated_minor,
         .allocations = result.allocations,

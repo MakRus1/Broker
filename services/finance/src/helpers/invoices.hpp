@@ -1,5 +1,6 @@
 #pragma once
 #include <helpers/document_parties.hpp>
+#include <helpers/history/snapshot.hpp>
 #include <helpers/service_charges.hpp>
 #include <platform/date_validation.hpp>
 #include <set>
@@ -128,7 +129,7 @@ inline models::InvoiceDetails LoadInvoice(
 
 inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const std::string& organization, const boost::uuids::uuid& invoice_id,
-    const boost::uuids::uuid& service_charge_id, const std::string& actor) {
+    const boost::uuids::uuid& service_charge_id, const platform::auth::Identity& identity) {
     auto invoice = transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id})
                        .AsSingleRow<pgtypes::InvoiceV1>();
     if (invoice.Archived || invoice.Revision == std::numeric_limits<std::int64_t>::max())
@@ -152,7 +153,7 @@ inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const auto details =
         LoadInvoice(transaction, organization, boost::uuids::to_string(invoice_id));
     transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-        actor, userver::formats::json::ValueBuilder(details).ExtractValue());
+        identity.ActorId(), HistorySnapshot(details, identity));
 }
 
 inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::string& organization,
@@ -170,7 +171,7 @@ inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::stri
 }
 
 inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
-    const std::string& organization, const std::string& actor,
+    const std::string& organization, const platform::auth::Identity& identity,
     const pgtypes::ServiceChargeV1& charge, const std::string& invoice_id,
     std::int64_t expected_revision,
     const std::optional<std::string>& previous_invoice_id = std::nullopt) {
@@ -196,7 +197,7 @@ inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
         if (SameId(previous_invoice_id.value(), invoice_id))
             throw ApiError<400>{"same_invoice", "Выберите другой счёт"};
         RemoveInvoiceServiceCharge(transaction, organization,
-            boost::uuids::string_generator{}(previous_invoice_id.value()), charge.Id, actor);
+            boost::uuids::string_generator{}(previous_invoice_id.value()), charge.Id, identity);
     }
     value.NetMinor += charge.InvoiceNetMinor;
     value.VatMinor += charge.InvoiceVatMinor;
@@ -207,8 +208,8 @@ inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
     const auto result = LoadInvoice(transaction, organization, invoice_id);
-    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision, actor,
-        userver::formats::json::ValueBuilder(result).ExtractValue());
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
+        identity.ActorId(), HistorySnapshot(result, identity));
     return result;
 }
 }  // namespace finance::helpers

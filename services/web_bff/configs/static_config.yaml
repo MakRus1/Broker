@@ -199,6 +199,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-invoices-history:
+            path: /api/v1/invoices/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-invoices-list:
             path: /api/v1/invoices/list
             method: POST
@@ -225,6 +231,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-payments-get:
             path: /api/v1/payments/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-history:
+            path: /api/v1/payments/history
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -267,6 +279,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-service_charges-get:
             path: /api/v1/service-charges/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-history:
+            path: /api/v1/service-charges/history
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

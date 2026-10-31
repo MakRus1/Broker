@@ -34,11 +34,13 @@ paths:
 - /api/v1/invoices/detach-service-charge
 - /api/v1/invoices/filter-values
 - /api/v1/invoices/get
+- /api/v1/invoices/history
 - /api/v1/invoices/list
 - /api/v1/invoices/print-data
 - /api/v1/invoices/save
 - /api/v1/payments/filter-values
 - /api/v1/payments/get
+- /api/v1/payments/history
 - /api/v1/payments/invoice-balance
 - /api/v1/payments/invoice-candidates
 - /api/v1/payments/list
@@ -46,6 +48,7 @@ paths:
 - /api/v1/payments/save
 - /api/v1/service-charges/filter-values
 - /api/v1/service-charges/get
+- /api/v1/service-charges/history
 - /api/v1/service-charges/list
 - /api/v1/service-charges/registry
 - /api/v1/service-charges/save

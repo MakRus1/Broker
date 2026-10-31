@@ -1,3 +1,5 @@
+import { FinancialHistory } from '../history/FinancialHistory';
+import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import type { Invoice, ServiceChargeInvoice } from '../invoices/invoices';
 import {
@@ -105,6 +107,7 @@ export function ServiceChargeEditor({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(() =>
     'quantity' in initial ? initial : draftOf(initial),
   );
@@ -210,7 +213,31 @@ export function ServiceChargeEditor({
   }
   return (
     <>
-      <form onSubmit={save} data-dirty={dirty} data-busy={busy} className="finance-charge-form">
+      {initial.revision > 0 && (
+        <CardNavigation className="financial-card-navigation">
+          <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
+            Услуга
+          </button>
+          <button type="button" aria-pressed={historyOpen} onClick={() => setHistoryOpen(true)}>
+            История
+          </button>
+        </CardNavigation>
+      )}
+      {historyOpen && (
+        <FinancialHistory
+          kind="service-charges"
+          id={initial.id}
+          revision={initial.revision}
+          session={session}
+        />
+      )}
+      <form
+        hidden={historyOpen}
+        onSubmit={save}
+        data-dirty={dirty}
+        data-busy={busy}
+        className="finance-charge-form"
+      >
         <h2>
           {readOnly
             ? 'Просмотр услуги'

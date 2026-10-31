@@ -44,7 +44,7 @@ Response View::Handle(
         throw ApiError<409>{"revision_conflict", "Услуга изменена. Обновите список"};
     const auto result = Convert(rows.AsSingleRow<pgtypes::ServiceChargeV1>());
     transaction.Execute(sql::kWriteServiceChargeHistory, organization, result.id, result.revision,
-        identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
+        identity.ActorId(), HistorySnapshot(result, identity));
     const auto assignment =
         transaction.Execute(sql::kServiceChargeInvoiceAssignment, organization, value.Id);
     if (!assignment.IsEmpty()) {
@@ -78,14 +78,14 @@ Response View::Handle(
         const auto details =
             LoadInvoice(transaction, organization, boost::uuids::to_string(invoice_id));
         transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-            identity.ActorId(), userver::formats::json::ValueBuilder(details).ExtractValue());
+            identity.ActorId(), HistorySnapshot(details, identity));
     }
     if (body.target_invoice_id.has_value()) {
         platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
         if (body.expected_revision != 0 || !body.target_invoice_revision.has_value())
             throw ApiError<400>{
                 "invalid_invoice_target", "Создавать услугу из счёта можно только с его редакцией"};
-        IncludeServiceCharge(transaction, organization, identity.ActorId(), value,
+        IncludeServiceCharge(transaction, organization, identity, value,
             body.target_invoice_id.value(), body.target_invoice_revision.value());
     } else if (body.target_invoice_revision.has_value())
         throw ApiError<400>{"invalid_invoice_target", "Укажите счёт для новой услуги"};

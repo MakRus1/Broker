@@ -115,3 +115,33 @@ async def test_payment_selection_from_invoice_uses_free_balance(api, charge, inv
     assert balance['payments'][0]['amount_minor']==1000
     result=await api.post(BASE+'payment-candidates',{'invoice_id':document['id']})
     assert result['items'][0]['unallocated_minor']==19000
+
+async def test_disbursement_pays_only_incoming_invoices(api, charge, invoice_references):
+    _, expense = await saved_entry(api, charge, direction='expense')
+    incoming = {**invoice([expense['id']]), 'direction': 'incoming', 'number': 'ВС-1'}
+    await api.post('/api/v1/invoices/save', incoming)
+    outgoing, _, _ = await billed(api, charge)
+    body = payment(kind='disbursement', number='СП-1')
+    receipt = payment(number='ПП-2')
+    await api.post(BASE+'save', body)
+    await api.post(BASE+'save', receipt)
+    candidates = await api.post(BASE+'invoice-candidates', dict(
+        kind='disbursement', own_company_id=SHIPMENT, counterparty_id=PARTY, currency='RUB', limit=40))
+    assert [item['invoice']['id'] for item in candidates['items']] == [incoming['id']]
+    available = await api.post(BASE+'payment-candidates', {'invoice_id': incoming['id']})
+    assert [item['payment']['id'] for item in available['items']] == [body['id']]
+    await api.post(BASE+'save', {**body, 'expected_revision': 1,
+        'allocations': [allocation(outgoing['id'], 100)]}, expected=400)
+    await api.post(BASE+'save', {**body, 'expected_revision': 1,
+        'allocations': [allocation(incoming['id'], 100)]})
+    balance = await api.post(BASE+'invoice-balance', {'id': incoming['id']})
+    assert balance['paid_minor'] == 100
+    assert balance['payments'][0]['payment']['kind'] == 'disbursement'
+    await api.post('/api/v1/invoices/save', {**incoming, 'expected_revision': 1}, expected=409)
+    for kind, document in [('receipt', receipt), ('disbursement', body)]:
+        rows = await api.post(BASE+'list', {'kind': kind})
+        assert [item['id'] for item in rows['items']] == [document['id']]
+    await api.post(BASE+'save', {**body, 'expected_revision': 2, 'archived': True,
+        'allocations': [allocation(incoming['id'], 100)]})
+    balance = await api.post(BASE+'invoice-balance', {'id': incoming['id']})
+    assert balance['paid_minor'] == 0

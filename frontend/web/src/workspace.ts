@@ -11,6 +11,9 @@ export function workspaceTitle(route: string) {
   if (route === '/outgoing-invoices') return 'Исходящие счета';
   if (/^\/(incoming|outgoing)-invoices\/new(?:\/|$)/.test(route)) return 'Новый счёт';
   if (/^\/(incoming|outgoing)-invoices\//.test(route)) return 'Счёт';
+  if (route === '/disbursements') return 'Списания';
+  if (route === '/disbursements/new') return 'Новое списание';
+  if (route.startsWith('/disbursements/')) return 'Списание';
   if (route === '/receipts') return 'Поступления';
   if (route === '/receipts/new') return 'Новое поступление';
   if (route.startsWith('/receipts/')) return 'Поступление';

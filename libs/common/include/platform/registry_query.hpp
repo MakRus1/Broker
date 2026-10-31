@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <fmt/format.h>
 #include <optional>
 #include <platform/registry.hpp>
@@ -19,11 +20,14 @@ namespace pg = userver::storages::postgres;
 
 // Описание полей и сортировки
 
-enum class CursorKeyType { Text, Date };
+enum class CursorKeyType { Text, Date, Int32, Int64 };
 
 template <typename T>
 inline constexpr CursorKeyType kCursorKeyType =
-    std::is_same_v<T, userver::utils::datetime::Date> ? CursorKeyType::Date : CursorKeyType::Text;
+    std::is_same_v<T, userver::utils::datetime::Date> ? CursorKeyType::Date
+    : std::is_same_v<T, std::int32_t>                 ? CursorKeyType::Int32
+    : std::is_same_v<T, std::int64_t>                 ? CursorKeyType::Int64
+                                                      : CursorKeyType::Text;
 
 // SQL-выражения задаёт разработчик. Значения запроса всегда идут через ParameterStore.
 struct FieldDefinition {

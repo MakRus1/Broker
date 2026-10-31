@@ -1,7 +1,24 @@
 #pragma once
+#include <charconv>
+#include <limits>
+#include <platform/handler_error.hpp>
 #include <platform/registry_filters.hpp>
 
 namespace platform::registry {
+// Числа передаются в JSON-курсоре строкой, но проверяются по C++-типу ключа.
+inline void ValidateCursorKey(CursorKeyType type, std::string_view value) {
+    if (type != CursorKeyType::Int32 && type != CursorKeyType::Int64)
+        return;
+    std::int64_t number{};
+    const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), number);
+    if (error != std::errc{} || end != value.data() + value.size() ||
+        (type == CursorKeyType::Int32 &&
+            (number < std::numeric_limits<std::int32_t>::min() ||
+                number > std::numeric_limits<std::int32_t>::max())))
+        throw platform::http::HandlerError<400>{
+            "invalid_cursor", "Некорректное числовое значение курсора"};
+}
+
 // Каталог и ограничения области остаются в сервисе. Курсор и границы страницы — общие.
 template <typename Request>
 BuiltQuery BuildPage(
@@ -19,11 +36,18 @@ BuiltQuery BuildPage(
         const auto order = RegistryOrderBy(fields, request.sort);
         if (after.has_value() && order.CursorType == CursorKeyType::Date)
             builder.After(after, request.cursor.value().date_value.value());
-        else
-            builder.After(after,
-                request.cursor.has_value() ? request.cursor.value().text_value.value_or("") : "");
+        else {
+            const auto key =
+                request.cursor.has_value() ? request.cursor.value().text_value.value_or("") : "";
+            if (after.has_value())
+                ValidateCursorKey(order.CursorType, key);
+            builder.After(after, key);
+        }
     } else {
-        builder.After(after, request.cursor.has_value() ? request.cursor.value().value : "");
+        const auto key = request.cursor.has_value() ? request.cursor.value().value : "";
+        if (after.has_value())
+            ValidateCursorKey(RegistryOrderBy(fields, request.sort).CursorType, key);
+        builder.After(after, key);
     }
     return std::move(builder).Build(request.limit + 1);
 }

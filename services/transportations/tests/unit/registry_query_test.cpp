@@ -200,3 +200,20 @@ UTEST(RegistryQuery, CursorInheritsTheSortCollation) {
         std::string::npos);
     EXPECT_EQ(sql.find("COLLATE \"C\""), std::string::npos);
 }
+
+UTEST(RegistryCursor, NumericTypesAndBounds) {
+    using namespace platform::registry;
+    static_assert(kCursorKeyType<std::int32_t> == CursorKeyType::Int32);
+    static_assert(kCursorKeyType<std::int64_t> == CursorKeyType::Int64);
+    EXPECT_NO_THROW(ValidateCursorKey(CursorKeyType::Int32, "2147483647"));
+    EXPECT_NO_THROW(ValidateCursorKey(CursorKeyType::Int32, "-2147483648"));
+    EXPECT_NO_THROW(ValidateCursorKey(CursorKeyType::Int64, "9223372036854775807"));
+    EXPECT_NO_THROW(ValidateCursorKey(CursorKeyType::Int64, "-9223372036854775808"));
+    EXPECT_NO_THROW(ValidateCursorKey(CursorKeyType::Text, "arbitrary text"));
+    for (const auto value : {"", "12x", "1.5", " 12", "9223372036854775808"})
+        EXPECT_THROW(
+            ValidateCursorKey(CursorKeyType::Int64, value), platform::http::HandlerError<400>);
+    for (const auto value : {"2147483648", "-2147483649"})
+        EXPECT_THROW(
+            ValidateCursorKey(CursorKeyType::Int32, value), platform::http::HandlerError<400>);
+}

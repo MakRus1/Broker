@@ -54,3 +54,12 @@ async def test_invoice_filter_and_facets(api,charge,invoice_references):
     assert (await api.post(BASE+'filter-values',{'registry':query,'field':'direction'},user='other'))['values']==[]
     catalog=await api.post(BASE+'filter-values',{'registry':{}})
     assert {'service_date','counterparty_id','invoice_number','shipment_id','transportation_id'} <= {f['id'] for f in catalog['fields']}
+
+@pytest.mark.parametrize('value', ['12x', '1.5', '9223372036854775808'])
+async def test_numeric_cursor_is_rejected_before_query(api, charge, value):
+    await seed(api, charge)
+    query = {'sort': 'total_minor', 'limit': 1}
+    page = await api.post(BASE + 'registry', query)
+    cursor = {**page['next_cursor'], 'text_value': value}
+    response = await api.post(BASE + 'registry', {**query, 'cursor': cursor}, expected=400)
+    assert response['error'] == 'invalid_cursor'

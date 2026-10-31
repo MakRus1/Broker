@@ -1,6 +1,4 @@
-#include <charconv>
 #include <helpers/service_charge_registry.hpp>
-#include <limits>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/service_charges/registry/view.hpp>
@@ -24,15 +22,6 @@ Response View::Handle(
                 date_sort == cursor.text_value.has_value())
                 throw ApiError<400>{
                     "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
-        if (body.cursor.has_value() && (order.PgType == "BIGINT" || order.PgType == "INTEGER")) {
-            const auto& text = body.cursor.value().text_value.value();
-            std::int64_t number{};
-            const auto [end, error] =
-                std::from_chars(text.data(), text.data() + text.size(), number);
-            if (error != std::errc{} || end != text.data() + text.size() || number < 0 ||
-                (order.PgType == "INTEGER" && number > std::numeric_limits<int>::max()))
-                throw ApiError<400>{"invalid_cursor", "Некорректное числовое значение курсора"};
         }
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.

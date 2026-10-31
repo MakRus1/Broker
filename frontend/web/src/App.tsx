@@ -59,6 +59,7 @@ export function App() {
     | 'incoming-invoices'
     | 'outgoing-invoices'
     | 'receipts'
+    | 'disbursements'
   >('shipments');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -194,7 +195,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|contracts|financial-labels|incoming-invoices|outgoing-invoices|receipts)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|contracts|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -210,6 +211,7 @@ export function App() {
       if (next.startsWith('/transportations')) setTab('transportations');
       else if (next.startsWith('/financial-labels')) setTab('financial-labels');
       else if (next.startsWith('/incoming-invoices')) setTab('incoming-invoices');
+      else if (next.startsWith('/disbursements')) setTab('disbursements');
       else if (next.startsWith('/receipts')) setTab('receipts');
       else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
       else if (next.startsWith('/contracts')) setTab('contracts');
@@ -307,6 +309,7 @@ export function App() {
       if (
         !session ||
         tab === 'receipts' ||
+        tab === 'disbursements' ||
         tab === 'counterparties' ||
         tab === 'incoming-invoices' ||
         tab === 'outgoing-invoices' ||
@@ -548,21 +551,25 @@ export function App() {
             </span>{' '}
             <span className="navigation-text">Договоры</span>
           </button>
-          {session.permissions.includes('finance.read_payments') && (
-            <button
-              aria-label="Поступления"
-              title="Поступления"
-              aria-current={tab === 'receipts' ? 'page' : undefined}
-              onClick={() => {
-                location.hash = '/receipts';
-              }}
-            >
-              <span className="navigation-icon" aria-hidden="true">
-                ↓
-              </span>
-              <span className="navigation-text">Поступления</span>
-            </button>
-          )}
+          {session.permissions.includes('finance.read_payments') &&
+            (['receipts', 'disbursements'] as const).map((section) => (
+              <button
+                key={section}
+                aria-label={section === 'receipts' ? 'Поступления' : 'Списания'}
+                title={section === 'receipts' ? 'Поступления' : 'Списания'}
+                aria-current={tab === section ? 'page' : undefined}
+                onClick={() => {
+                  location.hash = `/${section}`;
+                }}
+              >
+                <span className="navigation-icon" aria-hidden="true">
+                  {section === 'receipts' ? '↓' : '↑'}
+                </span>
+                <span className="navigation-text">
+                  {section === 'receipts' ? 'Поступления' : 'Списания'}
+                </span>
+              </button>
+            ))}
           {session.permissions.includes('finance.read_invoices') &&
             (['incoming', 'outgoing'] as const).map((direction) => (
               <button
@@ -626,6 +633,7 @@ export function App() {
             className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
             hidden={
               tab === 'receipts' ||
+              tab === 'disbursements' ||
               tab === 'counterparties' ||
               tab === 'incoming-invoices' ||
               tab === 'outgoing-invoices' ||
@@ -740,7 +748,7 @@ export function App() {
                   else workspaceNodes.current.delete(entry.id);
                 }}
               >
-                {entry.route.startsWith('/receipts') ? (
+                {entry.route.startsWith('/receipts') || entry.route.startsWith('/disbursements') ? (
                   <PaymentsPage
                     route={entry.route}
                     active={activeWorkspace === entry.id}
@@ -748,10 +756,10 @@ export function App() {
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCancelNew={() => {
                       setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = '/receipts';
+                      location.hash = entry.route.split('/').slice(0, 2).join('/');
                     }}
                     onSaved={(value) => {
-                      const next = `/receipts/${value.id}`;
+                      const next = `/${value.kind === 'receipt' ? 'receipts' : 'disbursements'}/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
                     }}

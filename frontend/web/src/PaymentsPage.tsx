@@ -11,7 +11,13 @@ import { useDiscardConfirmation } from './components';
 import { AutoLoadMore } from './AutoLoadMore';
 import { PaymentRegistry } from './PaymentRegistry';
 import { formatFixed, parseFixed } from './serviceCharges';
-import { paymentBase, type Payment, type PaymentDetails, type InvoiceBalance } from './payments';
+import {
+  paymentBase,
+  type PaymentKind,
+  type Payment,
+  type PaymentDetails,
+  type InvoiceBalance,
+} from './payments';
 const parties: Counterparty[] = [];
 const today = () => {
   const d = new Date();
@@ -32,10 +38,10 @@ const draftOf = (p: Payment): Draft => {
     amount: formatFixed(amount_minor, 2).replace(/\s/g, ''),
   };
 };
-function empty(): Draft {
+function empty(kind: PaymentKind): Draft {
   return {
     id: crypto.randomUUID(),
-    kind: 'receipt',
+    kind,
     number: '',
     payment_date: today(),
     own_company_id: '',
@@ -67,7 +73,10 @@ export function PaymentsPage({
   onSaved: (p: Payment) => void;
   onCancelNew: () => void;
 }) {
-  const base = '/receipts';
+  const kind: PaymentKind = route.startsWith('/disbursements') ? 'disbursement' : 'receipt';
+  const base = paymentBase(kind);
+  const receipt = kind === 'receipt';
+  const title = receipt ? 'Поступление' : 'Списание';
   const id = route.slice(base.length + 1);
   const creating = id === 'new';
   const registry = route === base;
@@ -108,7 +117,7 @@ export function PaymentsPage({
     setValue(undefined);
     setInvoiceMap({});
     if (creating) {
-      const d = empty();
+      const d = empty(kind);
       setDraft(d);
       setAllocations({});
       original.current = JSON.stringify({ draft: d, allocations: {} });
@@ -118,6 +127,7 @@ export function PaymentsPage({
     request<PaymentDetails>('/api/v1/payments/get', session, { id })
       .then(async (r) => {
         if (cancelled) return;
+        if (r.payment.kind !== kind) throw new Error('Платёж не найден в этом разделе');
         setValue(r);
         onTitle(r.payment.number);
         const items = await Promise.all(
@@ -139,7 +149,7 @@ export function PaymentsPage({
       cancelled = true;
     };
     // Workspace title changes must not reload a document being edited.
-  }, [id, creating, registry, active, session]);
+  }, [id, creating, registry, active, session, kind]);
   useEffect(() => {
     if (!draft?.own_company_id || !draft.counterparty_id) return;
     const controller = new AbortController();
@@ -181,7 +191,14 @@ export function PaymentsPage({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [draft?.own_company_id, draft?.counterparty_id, draft?.currency, search, session]);
+  }, [
+    draft?.kind,
+    draft?.own_company_id,
+    draft?.counterparty_id,
+    draft?.currency,
+    search,
+    session,
+  ]);
   async function more() {
     if (!draft || !after || loading) return;
     setLoading(true);
@@ -284,7 +301,7 @@ export function PaymentsPage({
       setBusy(false);
     }
   }
-  if (registry) return <PaymentRegistry kind="receipt" active={active} session={session} />;
+  if (registry) return <PaymentRegistry kind={kind} active={active} session={session} />;
   const write = session.permissions.includes('finance.write_payments');
   const amount = draft
     ? (parseFixed(draft.amount, 2, 9000000000000000) ?? 0)
@@ -300,11 +317,15 @@ export function PaymentsPage({
       {confirmation}
       <div className="payment-heading">
         <div>
-          <a className="link record-back" href="#/receipts">
-            ← К поступлениям
+          <a className="link record-back" href={`#${base}`}>
+            ← {receipt ? 'К поступлениям' : 'К списаниям'}
           </a>
-          <p className="eyebrow">Поступление</p>
-          <h1>{creating ? 'Новое поступление' : (value?.payment.number ?? 'Поступление')}</h1>
+          <p className="eyebrow">{title}</p>
+          <h1>
+            {creating
+              ? `Новое ${receipt ? 'поступление' : 'списание'}`
+              : (value?.payment.number ?? title)}
+          </h1>
           {value && (
             <p className="record-state">
               {value.payment.archived ? 'В архиве' : 'Действующее'} · Редакция{' '}
@@ -365,7 +386,7 @@ export function PaymentsPage({
             />
             <CustomerSelect
               required
-              label="Плательщик"
+              label={receipt ? 'Плательщик' : 'Получатель'}
               items={parties}
               disabled={busy}
               value={draft.counterparty_id}
@@ -406,7 +427,7 @@ export function PaymentsPage({
             />
             <BankAccountSelect
               owner={draft.counterparty_id}
-              label="Счёт плательщика"
+              label={receipt ? 'Счёт плательщика' : 'Счёт получателя'}
               value={draft.counterparty_bank_account_id}
               currency={draft.currency}
               session={session}
@@ -513,7 +534,7 @@ export function PaymentsPage({
                 <table className="payment-allocation-table">
                   <thead>
                     <tr>
-                      <th>Исходящий счёт</th>
+                      <th>{receipt ? 'Исходящий счёт' : 'Входящий счёт'}</th>
                       <th>Сумма</th>
                       <th>Осталось оплатить</th>
                       <th />
@@ -562,7 +583,8 @@ export function PaymentsPage({
               </>
             ) : (
               <p className="hint">
-                Выберите стороны платежа. Сохранить поступление можно без распределения.
+                Выберите стороны платежа. Сохранить {receipt ? 'поступление' : 'списание'} можно без
+                распределения.
               </p>
             )}
           </section>
@@ -579,7 +601,7 @@ export function PaymentsPage({
         <>
           <dl className="payment-amounts">
             <div>
-              <dt>Сумма поступления</dt>
+              <dt>{receipt ? 'Сумма поступления' : 'Сумма списания'}</dt>
               <dd>
                 {formatFixed(amount, 2)} <span>{value.payment.currency}</span>
               </dd>
@@ -607,7 +629,7 @@ export function PaymentsPage({
               <dd>{value.payment.own_company_name}</dd>
             </div>
             <div>
-              <dt>Плательщик</dt>
+              <dt>{receipt ? 'Плательщик' : 'Получатель'}</dt>
               <dd>{value.payment.counterparty_name}</dd>
             </div>
             {value.payment.purpose && (
@@ -635,7 +657,10 @@ export function PaymentsPage({
               {value.allocations.map((a) => (
                 <tr key={a.invoice_id}>
                   <td>
-                    <a className="link" href={`#/outgoing-invoices/${a.invoice_id}`}>
+                    <a
+                      className="link"
+                      href={`#/${receipt ? 'outgoing' : 'incoming'}-invoices/${a.invoice_id}`}
+                    >
                       {invoiceMap[a.invoice_id]
                         ? `№ ${invoiceMap[a.invoice_id].invoice.number} от ${displayDate(invoiceMap[a.invoice_id].invoice.invoice_date)}`
                         : 'Открыть счёт'}
@@ -648,9 +673,7 @@ export function PaymentsPage({
               ))}
             </tbody>
           </table>
-          {!value.allocations.length && (
-            <p className="empty-state">Поступление пока не распределено</p>
-          )}
+          {!value.allocations.length && <p className="empty-state">{title} пока не распределено</p>}
         </>
       ) : loading ? (
         <p>Загрузка…</p>

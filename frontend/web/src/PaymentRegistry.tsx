@@ -156,7 +156,7 @@ export function PaymentRegistry({
           <button onClick={() => setVersion((v) => v + 1)}>Обновить</button>
           {session.permissions.includes('finance.write_payments') && (
             <a className="button primary" href={`#${base}/new`}>
-              Добавить поступление
+              {kind === 'receipt' ? 'Добавить поступление' : 'Добавить списание'}
             </a>
           )}
         </div>

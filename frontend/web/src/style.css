@@ -4110,12 +4110,13 @@ details[open] > .route-stage-summary::after {
   }
 }
 
-.service-charge-registry .page-heading > .actions {
+:is(.service-charge-registry, .invoice-registry) .page-heading > .actions {
   align-items: center;
   flex-wrap: wrap;
 }
-.service-charge-registry .page-heading > .actions > button,
-.service-charge-registry .page-heading .registry-column-settings > button {
+:is(.service-charge-registry, .invoice-registry) .page-heading > .actions > button,
+:is(.service-charge-registry, .invoice-registry) .page-heading > .actions > a.button,
+:is(.service-charge-registry, .invoice-registry) .page-heading .registry-column-settings > button {
   box-sizing: border-box;
   height: 40px;
   min-height: 40px;

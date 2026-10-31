@@ -12,6 +12,27 @@ import uuid
 K3S_IMAGE = 'rancher/k3s:v1.36.5-k3s1@sha256:057cfd5a9d51b89f1f0ee139c28d5d5fdd5aa7ddeac2742a0ba90c6dbc0329bb'
 
 
+def wait_for_runtime_node(command, timeout=120):
+    # /readyz подтверждает готовность API, но kubelet регистрируется позже.
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        nodes = subprocess.run(
+            [*command, 'get', 'nodes', '-o', 'name'], capture_output=True, text=True
+        )
+        if nodes.returncode == 0 and nodes.stdout.strip():
+            remaining = max(1, int(deadline - time.monotonic()))
+            subprocess.run(
+                [
+                    *command, 'wait', '--for=condition=Ready', 'node', '--all',
+                    f'--timeout={remaining}s',
+                ],
+                check=True,
+            )
+            return
+        time.sleep(min(2, max(0, deadline - time.monotonic())))
+    raise RuntimeError('Узел временного K3s не зарегистрировался за отведённое время')
+
+
 def check(directory, runtime=False):
     name = 'broker-schema-' + uuid.uuid4().hex[:12]
     try:
@@ -49,10 +70,7 @@ def check(directory, runtime=False):
         else:
             raise RuntimeError('Временный K3s не запустился')
         if runtime:
-            subprocess.run(
-                [*command, 'wait', '--for=condition=Ready', 'node', '--all', '--timeout=120s'],
-                check=True,
-            )
+            wait_for_runtime_node(command)
         plan = json.loads((directory / 'plan.json').read_text())
         version = subprocess.run(
             [*command, 'version', '-o', 'json'], check=True, text=True, capture_output=True

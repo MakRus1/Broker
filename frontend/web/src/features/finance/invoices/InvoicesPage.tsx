@@ -1,3 +1,4 @@
+import { InvoicePdfButton } from './print/InvoicePdfButton';
 import { serviceChargeRow } from '../services/serviceChargeRow';
 import { ServiceChargeEditor, newCharge } from '../services/ServiceChargeEditor';
 import { InvoiceSettlement } from './InvoiceSettlement';
@@ -367,21 +368,26 @@ export function InvoicesPage({
                   </p>
                 )}
               </div>
-              {value && !draft && write && (
-                <button
-                  className="primary"
-                  disabled={paidReadOnly !== false}
-                  title={paidReadOnly ? 'Счёт оплачен и доступен только для чтения' : undefined}
-                  onClick={() => {
-                    const d = draftOf(value);
-                    setDraft(d);
-                    setSelected(details.charges);
-                    setBaseline(d, details.charges);
-                  }}
-                >
-                  Редактировать
-                </button>
-              )}
+              <div className="actions invoice-heading-actions">
+                {value && !draft && direction === 'outgoing' && (
+                  <InvoicePdfButton invoice={value} session={session} />
+                )}
+                {value && !draft && write && (
+                  <button
+                    className="primary"
+                    disabled={paidReadOnly !== false}
+                    title={paidReadOnly ? 'Счёт оплачен и доступен только для чтения' : undefined}
+                    onClick={() => {
+                      const d = draftOf(value);
+                      setDraft(d);
+                      setSelected(details.charges);
+                      setBaseline(d, details.charges);
+                    }}
+                  >
+                    Редактировать
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           {draft ? (

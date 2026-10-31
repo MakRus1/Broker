@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Печатная форма исходящего счёта
+  version: '1'
+paths:
+  /api/v1/invoices/print-data:
+    post:
+      summary: Получить и зафиксировать реквизиты печатной формы редакции счёта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/InvoicePrintRequest
+      responses:
+        '200':
+          description: Снимок печатной формы для редакции счёта
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/InvoicePrintData
+        '400':
+          description: Печатная форма доступна только для исходящего счёта
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к счёту или его реквизитам
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Счёт или связанные реквизиты не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция счёта изменилась или банковские реквизиты несовместимы
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '502':
+          description: Сервис реквизитов недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

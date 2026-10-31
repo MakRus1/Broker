@@ -20,7 +20,7 @@ RUN pnpm build && mkdir -p /assets/web && mv dist /assets/admin
 
 FROM frontend-toolchain AS frontend-web
 WORKDIR /frontend/web
-COPY frontend/web/package.json frontend/web/pnpm-lock.yaml ./
+COPY frontend/web/package.json frontend/web/pnpm-lock.yaml frontend/web/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/web/ ./
 COPY frontend/shared/ ../shared/

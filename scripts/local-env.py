@@ -501,7 +501,7 @@ def prepare():
         service["mem_limit"] = (
             "4g"
             if name == "prepare"
-            else ("1g" if name in {"broker", "configs", "admin_bff", "admin-ui-build", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
+            else ("1g" if name in {"broker", "configs", "admin_bff", "admin-ui-build", "web-ui-build", "diagnostics", "tempo", "loki", "keycloak"} else "512m")
         )
     write_monitoring_targets(STATE, services)
     services['prometheus']['volumes'].append(f"{STATE}/monitoring:/etc/broker-local:ro")

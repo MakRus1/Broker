@@ -8,9 +8,22 @@ FinanceSettings:
     revision:
       type: integer
       format: int64
+    outgoing_number_template:
+      type: string
+      minLength: 1
+      maxLength: 100
+    incoming_number_template:
+      type: string
+      minLength: 1
+      maxLength: 100
+    reset_numbers_yearly:
+      type: boolean
   required:
   - reporting_currency
   - revision
+  - outgoing_number_template
+  - incoming_number_template
+  - reset_numbers_yearly
 FinancialLabelError:
   type: object
   additionalProperties: false

@@ -2602,14 +2602,16 @@ details[open] > .route-stage-summary::after {
   background: #2861d7;
 }
 .registry-column-settings {
-  position: static;
+  position: relative;
 }
 .registry-column-panel {
   position: absolute;
   right: 0;
-  top: calc(100% - 12px);
+  top: calc(100% + 8px);
   z-index: 20;
-  width: min(390px, 100%);
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(560px, 60vh);
+  overflow-y: auto;
   padding: 20px;
   background: white;
   border: 1px solid #d6dfeb;
@@ -3281,6 +3283,41 @@ details[open] > .route-stage-summary::after {
 .finance-section {
   --finance-background: #fff;
 }
+.service-charges-page {
+  padding: 28px 32px;
+}
+.service-charges-page > .section-heading {
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.service-charges-page > .section-heading h2 {
+  margin: 0;
+  font-size: 25px;
+}
+.service-charges-page .finance-list-toolbar {
+  margin: 24px 0 0;
+}
+.service-charges-page .finance-services-table th,
+.service-charges-page .finance-services-table td {
+  padding: 12px 16px;
+}
+.service-charges-page .finance-services-table th:first-child,
+.service-charges-page .finance-services-table td:first-child {
+  padding-left: 16px;
+}
+.service-charges-page .finance-services-table td:last-child {
+  padding-right: 16px;
+}
+.service-charges-page .finance-charge-form > h2 {
+  margin: 0 0 28px;
+  font-size: 25px;
+}
+@media (max-width: 700px) {
+  .service-charges-page {
+    padding: 20px 16px;
+  }
+}
 .shipment-card .finance-section {
   --finance-background: #f7f9fc;
 }
@@ -3758,13 +3795,13 @@ details[open] > .route-stage-summary::after {
     gap: 10px 12px;
   }
 }
-.finance-services-table .service-row-openable {
+.service-row-openable {
   cursor: pointer;
 }
-.finance-services-table .service-row-openable:hover {
+.service-row-openable:hover {
   background: #eef3fa;
 }
-.finance-services-table .service-row-openable:focus-visible {
+.service-row-openable:focus-visible {
   outline: 2px solid #7aaaff;
   outline-offset: -2px;
 }
@@ -4048,4 +4085,44 @@ details[open] > .route-stage-summary::after {
   background: transparent;
   color: #255bcc;
   font-size: inherit;
+}
+
+.service-charge-registry {
+  padding: 28px 32px;
+}
+.service-charge-registry .page-heading {
+  padding: 0 0 22px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+.service-charge-registry .page-heading h1 {
+  font-size: 25px;
+  margin-bottom: 7px;
+}
+.service-charge-registry .registry-filter-toolbar {
+  padding: 12px 0;
+}
+@media (max-width: 700px) {
+  .service-charge-registry {
+    padding: 20px 16px;
+  }
+}
+
+.service-charge-registry .page-heading > .actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.service-charge-registry .page-heading > .actions > button,
+.service-charge-registry .page-heading .registry-column-settings > button {
+  box-sizing: border-box;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  line-height: 20px;
 }

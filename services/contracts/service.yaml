@@ -8,6 +8,9 @@ clients:
   counterparties:
     service: counterparties
     transport: http
+  organizations:
+    service: organizations
+    transport: http
 auth:
   audience: broker-logistics
   roles-client: broker-logistics
@@ -17,4 +20,6 @@ auth:
     /api/v1/contracts/get: contracts.read
     /api/v1/contracts/list: contracts.read
     /api/v1/contracts/filter-values: contracts.read
+    /api/admin/contracts/numbering/get: authenticated
+    /api/admin/contracts/numbering/update: authenticated
   organization-access: true

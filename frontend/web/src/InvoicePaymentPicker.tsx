@@ -1,3 +1,4 @@
+import { DecimalInput } from './DecimalInput';
 import { useEffect, useState } from 'react';
 import { request, type Session } from './api';
 import { Dialog } from './components';
@@ -193,9 +194,9 @@ export function InvoicePaymentPicker({
         {selected && (
           <label>
             Сумма оплаты · обязательно
-            <input
+            <DecimalInput
               required
-              inputMode="decimal"
+              precision={2}
               value={amount}
               disabled={busy}
               onChange={(e) => setAmount(e.target.value)}

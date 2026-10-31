@@ -78,6 +78,7 @@ SaveContractRequest:
       type: string
       maxLength: 128
       minLength: 1
+      nullable: true
     contract_date:
       type: string
       format: date
@@ -256,3 +257,20 @@ ContractRegistryCursor:
     date_value:
       type: string
       format: date
+ContractNumbering:
+  type: object
+  additionalProperties: false
+  properties:
+    number_template:
+      type: string
+      minLength: 1
+      maxLength: 128
+    reset_number_yearly:
+      type: boolean
+    revision:
+      type: integer
+      format: int64
+  required:
+  - number_template
+  - reset_number_yearly
+  - revision

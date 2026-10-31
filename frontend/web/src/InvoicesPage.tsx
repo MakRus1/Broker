@@ -1,3 +1,5 @@
+import { serviceChargeRow } from './serviceChargeRow';
+import { ServiceChargeEditor, newCharge } from './ServiceChargeEditor';
 import { InvoiceSettlement } from './InvoiceSettlement';
 import { InvoiceRegistry } from './InvoiceRegistry';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -94,6 +96,7 @@ export function InvoicesPage({
   const read = session.permissions.includes('finance.read_invoices');
   const write = session.permissions.includes('finance.write_invoices');
   const [paidReadOnly, setPaidReadOnly] = useState<boolean>();
+  const [newService, setNewService] = useState<ServiceCharge | ReturnType<typeof newCharge>>();
   const [details, setDetails] = useState<InvoiceDetails>();
   const [draft, setDraft] = useState<Draft>();
   const [selected, setSelected] = useState<ServiceCharge[]>([]);
@@ -298,10 +301,6 @@ export function InvoicesPage({
       e.currentTarget.reportValidity();
       return;
     }
-    if (!selected.length) {
-      setFailure('Выберите хотя бы одну услугу');
-      return;
-    }
     setBusy(true);
     setFailure('');
     try {
@@ -317,6 +316,7 @@ export function InvoicesPage({
       } = draft;
       const r = await request<InvoiceDetails>('/api/v1/invoices/save', session, {
         ...body,
+        number: creating && !draft.number.trim() ? null : draft.number,
         invoice_date: draft.invoice_date?.toString(),
         due_date: draft.due_date?.toString() ?? null,
         expected_revision: revision,
@@ -333,6 +333,13 @@ export function InvoicesPage({
   }
   if (!read) return <p className="hint">Нет доступа к счетам</p>;
   const value = details?.invoice;
+  const canEditServices =
+    paidReadOnly === false &&
+    !value?.archived &&
+    write &&
+    session.permissions.includes('finance.write_service_charges');
+  const canOpenServiceEditor =
+    session.permissions.includes('finance.read_service_charges') && !newService;
   return (
     <section className="invoices-page" data-dirty={dirty} data-busy={busy}>
       {confirmation}
@@ -389,9 +396,10 @@ export function InvoicesPage({
             >
               <div className="form-grid">
                 <label>
-                  Номер счёта · обязательно
+                  Номер счёта
                   <input
-                    required
+                    required={!creating}
+                    placeholder={creating ? 'Автоматически при сохранении' : undefined}
                     maxLength={100}
                     value={draft.number}
                     onChange={(e) => setDraft({ ...draft, number: e.target.value })}
@@ -651,7 +659,49 @@ export function InvoicesPage({
                   </div>
                 </dl>
                 <section className="invoice-lines">
-                  <h2>Услуги</h2>
+                  <div className="section-heading">
+                    <h2>Услуги</h2>
+                    {canEditServices && !newService && (
+                      <button
+                        onClick={() =>
+                          setNewService({
+                            ...newCharge(
+                              { shipment_id: null, transportation_id: null },
+                              value.direction === 'outgoing' ? 'income' : 'expense',
+                            ),
+                            counterparty_id: value.counterparty_id,
+                            counterparty_name: value.counterparty_name,
+                            contract_id: value.contract_id,
+                            contract_number: value.contract_number,
+                            currency: value.currency,
+                            invoice_currency: value.currency,
+                          })
+                        }
+                      >
+                        Добавить новую услугу
+                      </button>
+                    )}
+                  </div>
+                  {newService && (
+                    <ServiceChargeEditor
+                      initial={newService}
+                      readOnly={!canEditServices}
+                      session={session}
+                      customers={emptyParties}
+                      invoice={value}
+                      onCancel={() => {
+                        setNewService(undefined);
+                        setVersion((v) => v + 1);
+                      }}
+                      onSaved={() => {
+                        setNewService(undefined);
+                        setVersion((v) => v + 1);
+                      }}
+                    />
+                  )}
+                  {!details.charges.length && !newService && (
+                    <p className="empty-state">Услуги пока не добавлены</p>
+                  )}
                   <div className="invoice-services-table-wrap">
                     <table className="invoice-services-table">
                       <thead>
@@ -664,20 +714,29 @@ export function InvoicesPage({
                       </thead>
                       <tbody>
                         {details.charges.map((charge) => (
-                          <tr key={charge.id}>
+                          <tr
+                            key={charge.id}
+                            {...serviceChargeRow(
+                              charge,
+                              canOpenServiceEditor ? setNewService : undefined,
+                              !canEditServices,
+                            )}
+                          >
                             <td>
                               <strong>{charge.label_name}</strong>
-                              <a
-                                className="link service-secondary"
-                                href={
-                                  '#/' +
-                                  (charge.transportation_id
-                                    ? 'transportations/' + charge.transportation_id
-                                    : 'shipments/' + charge.shipment_id)
-                                }
-                              >
-                                {charge.transportation_id ? 'К перевозке' : 'К поставке'}
-                              </a>
+                              {(charge.transportation_id || charge.shipment_id) && (
+                                <a
+                                  className="link service-secondary"
+                                  href={
+                                    '#/' +
+                                    (charge.transportation_id
+                                      ? 'transportations/' + charge.transportation_id
+                                      : 'shipments/' + charge.shipment_id)
+                                  }
+                                >
+                                  {charge.transportation_id ? 'К перевозке' : 'К поставке'}
+                                </a>
+                              )}
                             </td>
                             <td>{formatFixed(charge.invoice_net_minor, 2)}</td>
                             <td>{formatFixed(charge.invoice_vat_minor, 2)}</td>

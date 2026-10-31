@@ -6,6 +6,11 @@ from test_invoices import invoice, invoice_references
 
 RATES='/api/v1/exchange-rates/get'
 SETTINGS='/api/admin/finance/settings/'
+NUMBERING = {
+    'outgoing_number_template': 'ИС-{sequence}/{yyyy}',
+    'incoming_number_template': 'ВС-{sequence}/{yyyy}',
+    'reset_numbers_yearly': False,
+}
 
 @pytest.fixture
 def finance_admin(mockserver):
@@ -67,11 +72,11 @@ async def test_manual_rate_without_cbr_and_rounding(api,charge,invoice_reference
 
 async def test_reporting_currency_permissions_cas_and_no_double_count(api,charge,invoice_references,finance_admin,scope):
     before=await api.post(SETTINGS+'get',{'organization_id':ORGANIZATION})
-    assert before=={'reporting_currency':'RUB','revision':0}
-    await api.post(SETTINGS+'update',{'organization_id':ORGANIZATION,'reporting_currency':'USD','expected_revision':9},expected=409)
-    configured=await api.post(SETTINGS+'update',{'organization_id':ORGANIZATION,'reporting_currency':'USD','expected_revision':0})
+    assert before=={**NUMBERING,'reporting_currency':'RUB','revision':0}
+    await api.post(SETTINGS+'update',{**NUMBERING,'organization_id':ORGANIZATION,'reporting_currency':'USD','expected_revision':9},expected=409)
+    configured=await api.post(SETTINGS+'update',{**NUMBERING,'organization_id':ORGANIZATION,'reporting_currency':'USD','expected_revision':0})
     assert configured['revision']==1
-    await api.post(SETTINGS+'update',{'organization_id':ORGANIZATION,'reporting_currency':'CNY','expected_revision':0},expected=409)
+    await api.post(SETTINGS+'update',{**NUMBERING,'organization_id':ORGANIZATION,'reporting_currency':'CNY','expected_revision':0},expected=409)
     body=await charge(currency='USD',invoice_currency='RUB')
     await api.post('/api/v1/service-charges/save',body)
     rows=await api.post('/api/v1/service-charges/list',{'scope':scope,'after':None,'limit':50,'include_archived':False})
@@ -79,11 +84,11 @@ async def test_reporting_currency_permissions_cas_and_no_double_count(api,charge
     assert rows['reporting']['missing_rates']==[]
     assert rows['reporting']['summary']['combined']==[{'currency':'USD','income_minor':'12000','expense_minor':'0'}]
     finance_admin['allowed']=False
-    await api.post(SETTINGS+'update',{'organization_id':OTHER_ORGANIZATION,'reporting_currency':'USD','expected_revision':0},expected=403)
+    await api.post(SETTINGS+'update',{**NUMBERING,'organization_id':OTHER_ORGANIZATION,'reporting_currency':'USD','expected_revision':0},expected=403)
     await api.post(SETTINGS+'get',{'organization_id':OTHER_ORGANIZATION},expected=403)
 
 async def test_reporting_missing_rate_is_explicit(api,charge,invoice_references,finance_admin,cbr,scope):
-    await api.post(SETTINGS+'update',{'organization_id':ORGANIZATION,'reporting_currency':'XYZ','expected_revision':0})
+    await api.post(SETTINGS+'update',{**NUMBERING,'organization_id':ORGANIZATION,'reporting_currency':'XYZ','expected_revision':0})
     body=await charge()
     await api.post('/api/v1/service-charges/save',body)
     rows=await api.post('/api/v1/service-charges/list',{'scope':scope,'after':None,'limit':50,'include_archived':False})

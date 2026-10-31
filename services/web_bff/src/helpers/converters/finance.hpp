@@ -166,6 +166,8 @@ inline clients::finance::ApiV1ServiceChargesSave::RequestBody Convert(
         .quantity_milli = value.quantity_milli,
         .service_date = value.service_date,
         .shipment_id = value.shipment_id,
+        .target_invoice_id = value.target_invoice_id,
+        .target_invoice_revision = value.target_invoice_revision,
         .transportation_id = value.transportation_id,
         .unit = clients::finance::models::ParseEnumScalar(
             models::finance::EnumValue(value.unit), clients::finance::models::FinancialLabelUnit{}),
@@ -185,5 +187,45 @@ inline clients::finance::ApiV1ServiceChargesList::RequestBody Convert(
             clients::finance::models::ServiceChargeScope{.shipment_id = value.scope.shipment_id,
                 .transportation_id = value.scope.transportation_id},
     };
+}
+
+inline clients::finance::models::ServiceChargeRegistryRequest ConvertRegistry(
+    const models::finance::ServiceChargeRegistryRequest& value) {
+    clients::finance::models::ServiceChargeRegistryRequest result;
+    result.sort = value.sort;
+    result.descending = value.descending;
+    result.limit = value.limit;
+    result.filters =
+        ConvertRegistryFilters<clients::finance::models::RegistryFilter>(value.filters);
+    if (value.cursor.has_value())
+        result.cursor = clients::finance::models::ServiceChargeRegistryCursor{
+            .date_value = value.cursor.value().date_value,
+            .id = value.cursor.value().id,
+            .scope = value.cursor.value().scope,
+            .text_value = value.cursor.value().text_value};
+    return result;
+}
+
+inline clients::finance::ApiV1ServiceChargesRegistry::RequestBody Convert(
+    const models::finance::ServiceChargeRegistryRequest& value) {
+    const auto query = ConvertRegistry(value);
+    return {.cursor = query.cursor,
+        .descending = query.descending,
+        .filters = query.filters,
+        .limit = query.limit,
+        .sort = query.sort};
+}
+
+inline models::finance::ServiceChargeRegistryCursor Convert(
+    const clients::finance::models::ServiceChargeRegistryCursor& value) {
+    return {.date_value = value.date_value,
+        .id = value.id,
+        .scope = value.scope,
+        .text_value = value.text_value};
+}
+
+inline std::optional<models::finance::ServiceChargeRegistryCursor> Convert(
+    const std::optional<clients::finance::models::ServiceChargeRegistryCursor>& value) {
+    return value.has_value() ? std::optional{Convert(value.value())} : std::nullopt;
 }
 }  // namespace web_bff

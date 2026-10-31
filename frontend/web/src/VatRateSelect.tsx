@@ -1,3 +1,4 @@
+import { DecimalInput } from './DecimalInput';
 import { useState } from 'react';
 import { Select } from './Select';
 import { formatVatRate, parseVatRate } from './financialLabels';
@@ -8,36 +9,47 @@ export function VatRateSelect({
   value,
   onChange,
   disabled = false,
+  mode,
+  onMode,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  mode?: 'exempt' | 'rate';
+  onMode?: (mode: 'exempt' | 'rate') => void;
 }) {
   const rate = parseVatRate(value);
-  const [custom, setCustom] = useState(rate === undefined || !rates.includes(rate));
+  const [editingCustom, setCustom] = useState(false);
+  const custom = editingCustom || rate === undefined || !rates.includes(rate);
   const current = rate === undefined ? '' : String(rate);
   return (
     <div className="vat-rate-select">
       <Select
-        label="Ставка НДС"
-        value={custom ? 'custom' : current}
+        label={mode ? 'НДС' : 'Ставка НДС'}
+        value={mode === 'exempt' ? 'exempt' : custom ? 'custom' : current}
         disabled={disabled}
         options={[
+          ...(mode ? [{ value: 'exempt', label: 'Без НДС' }] : []),
           ...rates.map((rate) => ({ value: String(rate), label: `${formatVatRate(rate)}%` })),
           { value: 'custom', label: 'Другая ставка' },
         ]}
         onChange={(next) => {
+          if (next === 'exempt') {
+            onMode?.('exempt');
+            return;
+          }
+          onMode?.('rate');
           setCustom(next === 'custom');
           if (next !== 'custom') onChange(formatVatRate(Number(next)));
         }}
       />
-      {custom && (
+      {custom && mode !== 'exempt' && (
         <label>
           Ставка НДС, % · обязательно
-          <input
+          <DecimalInput
             name="vat_rate"
             required
-            inputMode="decimal"
+            precision={2}
             disabled={disabled}
             value={value}
             onChange={(event) => onChange(event.target.value)}

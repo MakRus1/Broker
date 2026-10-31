@@ -42,8 +42,10 @@ paths:
 - /api/v1/payments/list
 - /api/v1/payments/payment-candidates
 - /api/v1/payments/save
+- /api/v1/service-charges/filter-values
 - /api/v1/service-charges/get
 - /api/v1/service-charges/list
+- /api/v1/service-charges/registry
 - /api/v1/service-charges/save
 - /api/v1/shipment-items/add
 - /api/v1/shipment-items/list

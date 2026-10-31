@@ -48,8 +48,8 @@ inline pgtypes::InvoiceV1 PrepareInvoice(const Deps& deps,
     const models::SaveInvoiceRequest& body) {
     if (body.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция счёта"};
-    const auto number = userver::utils::text::Trim(body.number);
-    if (number.empty())
+    const auto number = userver::utils::text::Trim(body.number.value_or(""));
+    if (number.empty() && (body.number.has_value() || body.expected_revision != 0))
         throw ApiError<400>{"empty_number", "Укажите номер счёта"};
     for (const auto& date : {std::optional{body.invoice_date}, body.due_date})
         if (date.has_value() &&
@@ -167,5 +167,48 @@ inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::stri
                 "assignment_changed", "Привязка услуги изменилась. Обновите список"};
     } else if (!assignment.IsEmpty())
         throw ApiError<409>{"service_charge_invoiced", "Услуга уже включена в счёт"};
+}
+
+inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
+    const std::string& organization, const std::string& actor,
+    const pgtypes::ServiceChargeV1& charge, const std::string& invoice_id,
+    std::int64_t expected_revision,
+    const std::optional<std::string>& previous_invoice_id = std::nullopt) {
+    CheckInvoiceAssignment(transaction, organization, charge.Id, previous_invoice_id);
+    std::vector<boost::uuids::uuid> invoice_ids{boost::uuids::string_generator{}(invoice_id)};
+    if (previous_invoice_id.has_value())
+        invoice_ids.push_back(boost::uuids::string_generator{}(previous_invoice_id.value()));
+    transaction.Execute(sql::kLockInvoices, organization, invoice_ids);
+    const auto invoices = transaction.Execute(sql::kGetInvoice, organization, invoice_id);
+    if (invoices.IsEmpty())
+        throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
+    auto value = invoices.AsSingleRow<pgtypes::InvoiceV1>();
+    if (value.Archived)
+        throw ApiError<409>{"archived_invoice", "Выберите действующий счёт"};
+    if (value.Revision != expected_revision ||
+        value.Revision == std::numeric_limits<std::int64_t>::max())
+        throw ApiError<409>{"revision_conflict", "Счёт изменён. Обновите список"};
+    if (transaction.Execute(sql::kGetInvoiceServiceCharges, organization, value.Id).Size() >= 500)
+        throw ApiError<400>{
+            "too_many_service_charges", "В одном счёте может быть не больше 500 услуг"};
+    ValidateInvoiceServiceCharge(charge, value);
+    if (previous_invoice_id.has_value()) {
+        if (SameId(previous_invoice_id.value(), invoice_id))
+            throw ApiError<400>{"same_invoice", "Выберите другой счёт"};
+        RemoveInvoiceServiceCharge(transaction, organization,
+            boost::uuids::string_generator{}(previous_invoice_id.value()), charge.Id, actor);
+    }
+    value.NetMinor += charge.InvoiceNetMinor;
+    value.VatMinor += charge.InvoiceVatMinor;
+    value.TotalMinor += charge.InvoiceTotalMinor;
+    ++value.Revision;
+    ValidateInvoiceSettlement(transaction, organization, value);
+    transaction.Execute(sql::kUpdateInvoice, organization, value, expected_revision);
+    transaction.Execute(
+        sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
+    const auto result = LoadInvoice(transaction, organization, invoice_id);
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision, actor,
+        userver::formats::json::ValueBuilder(result).ExtractValue());
+    return result;
 }
 }  // namespace finance::helpers

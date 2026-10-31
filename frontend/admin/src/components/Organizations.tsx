@@ -1,3 +1,4 @@
+import { ContractNumberingSettings } from './organizations/ContractNumberingSettings';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { request, type Session } from '../api';
 import { useRegistry, type RegistryQuery } from '../hooks/useRegistry';
@@ -434,7 +435,14 @@ export function Organizations({
             </button>
           </div>
           {tab === 'finance' ? (
-            <FinanceSettings key={selected.id} session={session} organization={selected.id} />
+            <>
+              <FinanceSettings key={selected.id} session={session} organization={selected.id} />
+              <ContractNumberingSettings
+                key={'contracts-' + selected.id}
+                session={session}
+                organization={selected.id}
+              />
+            </>
           ) : tab === 'shipments' ? (
             <ShipmentSettings key={selected.id} session={session} organization={selected.id} />
           ) : (

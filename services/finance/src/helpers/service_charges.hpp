@@ -10,7 +10,9 @@ namespace finance::helpers {
 inline models::ServiceCharge Convert(const pgtypes::ServiceChargeV1& value) {
     models::ServiceCharge result;
     result.id = boost::uuids::to_string(value.Id);
-    result.shipment_id = boost::uuids::to_string(value.ShipmentId);
+    result.shipment_id = value.ShipmentId.has_value()
+        ? std::optional{boost::uuids::to_string(value.ShipmentId.value())}
+        : std::nullopt;
     result.transportation_id = value.TransportationId.has_value()
         ? std::optional{boost::uuids::to_string(value.TransportationId.value())}
         : std::nullopt;
@@ -81,7 +83,9 @@ inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceCh
     }
     return {
         .Id = boost::uuids::string_generator{}(value.id),
-        .ShipmentId = boost::uuids::string_generator{}(value.shipment_id),
+        .ShipmentId = value.shipment_id.has_value()
+            ? std::optional{boost::uuids::string_generator{}(value.shipment_id.value())}
+            : std::nullopt,
         .TransportationId = value.transportation_id.has_value()
             ? std::optional{boost::uuids::string_generator{}(value.transportation_id.value())}
             : std::nullopt,
@@ -118,5 +122,29 @@ inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceCh
         .InvoiceVatMinor = invoice_total - invoice_net,
         .InvoiceTotalMinor = invoice_total,
     };
+}
+
+inline std::vector<models::ServiceChargeInvoice> LoadServiceChargeInvoices(
+    pg::Transaction& transaction, const std::string& organization,
+    const std::vector<models::ServiceCharge>& items) {
+    std::vector<models::ServiceChargeInvoice> result;
+    std::vector<boost::uuids::uuid> service_charge_ids;
+    for (const auto& charge : items)
+        service_charge_ids.push_back(boost::uuids::string_generator{}(charge.id));
+    const auto invoices =
+        transaction.Execute(sql::kListServiceChargeInvoices, organization, service_charge_ids);
+    for (const auto& row : invoices) {
+        const auto [service_charge_id, invoice_id, number, direction, invoice_date, read_only] =
+            row.As<boost::uuids::uuid, boost::uuids::uuid, std::string, std::string,
+                userver::utils::datetime::Date, bool>();
+        result.push_back(models::ServiceChargeInvoice{
+            .direction = models::ParseEnumScalar(direction, models::InvoiceDirection{}),
+            .invoice_date = invoice_date,
+            .invoice_id = boost::uuids::to_string(invoice_id),
+            .number = number,
+            .read_only = read_only,
+            .service_charge_id = boost::uuids::to_string(service_charge_id)});
+    }
+    return result;
 }
 }  // namespace finance::helpers

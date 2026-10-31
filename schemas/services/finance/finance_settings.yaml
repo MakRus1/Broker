@@ -199,10 +199,23 @@ paths:
                 expected_revision:
                   type: integer
                   format: int64
+                outgoing_number_template:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                incoming_number_template:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                reset_numbers_yearly:
+                  type: boolean
               required:
               - organization_id
               - reporting_currency
               - expected_revision
+              - outgoing_number_template
+              - incoming_number_template
+              - reset_numbers_yearly
       responses:
         '200':
           description: Результат

@@ -144,6 +144,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-filter_values:
+            path: /api/v1/service-charges/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-service_charges-get:
             path: /api/v1/service-charges/get
             method: POST
@@ -152,6 +158,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-service_charges-list:
             path: /api/v1/service-charges/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-service_charges-registry:
+            path: /api/v1/service-charges/registry
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -220,8 +232,10 @@ components_manager:
                 /api/v1/payments/list: finance.read_payments
                 /api/v1/payments/payment-candidates: finance.read_payments
                 /api/v1/payments/save: finance.write_payments
+                /api/v1/service-charges/filter-values: finance.read_service_charges
                 /api/v1/service-charges/get: finance.read_service_charges
                 /api/v1/service-charges/list: finance.read_service_charges
+                /api/v1/service-charges/registry: finance.read_service_charges
                 /api/v1/service-charges/save: finance.write_service_charges
             permission-dependencies:
                 contracts.read:

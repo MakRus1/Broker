@@ -254,6 +254,7 @@ ServiceCharge:
     shipment_id:
       type: string
       format: uuid
+      nullable: true
     transportation_id:
       type: string
       format: uuid
@@ -375,9 +376,17 @@ SaveServiceChargeRequest:
     id:
       type: string
       format: uuid
+    target_invoice_id:
+      type: string
+      format: uuid
+    target_invoice_revision:
+      type: integer
+      format: int64
+      minimum: 0
     shipment_id:
       type: string
       format: uuid
+      nullable: true
     transportation_id:
       type: string
       format: uuid
@@ -467,6 +476,7 @@ ServiceChargeScope:
     shipment_id:
       type: string
       format: uuid
+      nullable: true
     transportation_id:
       type: string
       format: uuid
@@ -653,6 +663,7 @@ SaveInvoiceRequest:
       type: string
       minLength: 1
       maxLength: 100
+      nullable: true
     invoice_date:
       type: string
       format: date
@@ -689,7 +700,7 @@ SaveInvoiceRequest:
       type: boolean
     service_charge_ids:
       type: array
-      minItems: 1
+      minItems: 0
       maxItems: 500
       uniqueItems: true
       items:
@@ -1271,9 +1282,22 @@ FinanceSettings:
     revision:
       type: integer
       format: int64
+    outgoing_number_template:
+      type: string
+      minLength: 1
+      maxLength: 100
+    incoming_number_template:
+      type: string
+      minLength: 1
+      maxLength: 100
+    reset_numbers_yearly:
+      type: boolean
   required:
   - reporting_currency
   - revision
+  - outgoing_number_template
+  - incoming_number_template
+  - reset_numbers_yearly
 ReportingSummary:
   type: object
   additionalProperties: false
@@ -1302,3 +1326,47 @@ MissingExchangeRate:
   required:
   - currency
   - date
+ServiceChargeRegistryCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - scope
+  properties:
+    id:
+      type: string
+      format: uuid
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+    text_value:
+      type: string
+      maxLength: 2048
+    date_value:
+      type: string
+      format: date
+ServiceChargeRegistryRequest:
+  additionalProperties: false
+  properties:
+    cursor:
+      $ref: '#/ServiceChargeRegistryCursor'
+    descending:
+      default: true
+      type: boolean
+    filters:
+      items:
+        $ref: '#/RegistryFilter'
+      maxItems: 32
+      type: array
+    limit:
+      default: 50
+      maximum: 100
+      minimum: 1
+      type: integer
+    sort:
+      default: service_date
+      maxLength: 64
+      minLength: 1
+      type: string
+  required: []
+  type: object

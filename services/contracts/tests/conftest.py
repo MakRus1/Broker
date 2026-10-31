@@ -43,6 +43,7 @@ def configure_auth(mockserver_info):
         component['allow-http'] = True
         component['organization-url'] = mockserver_info.url('/organizations/access')
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url
+        config_vars['client-organizations-base-url'] = mockserver_info.base_url
 
     return patch
 

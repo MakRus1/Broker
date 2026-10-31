@@ -20,6 +20,7 @@
 
 // SERVICE_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
+#include <clients/organizations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/auth/component.hpp>
 #include <platform/configs/components.hpp>
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<contracts::clients::counterparties::Component>();
+    component_list.Append<contracts::clients::organizations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-contracts");
     // SERVICE_REGISTRATION_END
 

@@ -7,6 +7,18 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-contracts-numbering-get:
+            path: /api/admin/contracts/numbering/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-contracts-numbering-update:
+            path: /api/admin/contracts/numbering/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-contracts-filter_values:
             path: /api/v1/contracts/filter-values
             method: POST
@@ -35,6 +47,8 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-organizations:
+            base-url: $client-organizations-base-url
         platform-readiness: {}
         platform-http-readiness: {}
         platform-config-delivery:
@@ -59,6 +73,8 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/admin/contracts/numbering/get: authenticated
+                /api/admin/contracts/numbering/update: authenticated
                 /api/v1/contracts/filter-values: contracts.read
                 /api/v1/contracts/get: contracts.read
                 /api/v1/contracts/list: contracts.read

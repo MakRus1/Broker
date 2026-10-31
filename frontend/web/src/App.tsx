@@ -1,3 +1,4 @@
+import { ServiceCharges } from './FinancePanel';
 import { PaymentsPage } from './PaymentsPage';
 import { InvoicesPage } from './InvoicesPage';
 import { useRouteRegistryFilters } from './RouteRegistryFilters';
@@ -55,6 +56,7 @@ export function App() {
     | 'transportations'
     | 'counterparties'
     | 'contracts'
+    | 'service-charges'
     | 'financial-labels'
     | 'incoming-invoices'
     | 'outgoing-invoices'
@@ -195,7 +197,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|contracts|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -209,6 +211,7 @@ export function App() {
       const next = location.hash.slice(1) || '/shipments';
       setRoute(next);
       if (next.startsWith('/transportations')) setTab('transportations');
+      else if (next.startsWith('/service-charges')) setTab('service-charges');
       else if (next.startsWith('/financial-labels')) setTab('financial-labels');
       else if (next.startsWith('/incoming-invoices')) setTab('incoming-invoices');
       else if (next.startsWith('/disbursements')) setTab('disbursements');
@@ -315,6 +318,7 @@ export function App() {
         tab === 'outgoing-invoices' ||
         tab === 'contracts' ||
         tab === 'financial-labels' ||
+        tab === 'service-charges' ||
         !session.permissions.includes(tab + '.read')
       )
         return;
@@ -589,6 +593,21 @@ export function App() {
                 </span>
               </button>
             ))}
+          {session.permissions.includes('finance.read_service_charges') && (
+            <button
+              aria-label="Услуги"
+              title="Услуги"
+              aria-current={tab === 'service-charges' ? 'page' : undefined}
+              onClick={() => {
+                location.hash = '/service-charges';
+              }}
+            >
+              <span className="navigation-icon" aria-hidden="true">
+                ≡
+              </span>
+              <span className="navigation-text">Услуги</span>
+            </button>
+          )}
           <button
             aria-label="Финансовые метки"
             title="Финансовые метки"
@@ -639,6 +658,7 @@ export function App() {
               tab === 'outgoing-invoices' ||
               tab === 'contracts' ||
               tab === 'financial-labels' ||
+              tab === 'service-charges' ||
               creating ||
               Boolean(shipmentId) ||
               Boolean(transportationId) ||
@@ -781,6 +801,12 @@ export function App() {
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
                     }}
+                  />
+                ) : entry.route.startsWith('/service-charges') ? (
+                  <ServiceCharges
+                    scope={{ shipment_id: null, transportation_id: null }}
+                    session={session}
+                    customers={customers}
                   />
                 ) : entry.route.startsWith('/financial-labels') ? (
                   <FinancialLabelsPage

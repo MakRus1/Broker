@@ -3,7 +3,7 @@ import {
   RegistryFilterEditor,
   type ColumnFilterController,
 } from './RegistryColumnFilters';
-import { useEffect, useRef, useState, useId, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useId, type HTMLAttributes, type ReactNode } from 'react';
 import {
   preferenceKey,
   restoreColumns,
@@ -129,7 +129,9 @@ export function RegistryTable<T extends { id: string }>({
   customFilters,
   filterSummary,
   emptyMessage,
+  rowAttributes,
 }: {
+  rowAttributes?: (item: T) => HTMLAttributes<HTMLTableRowElement>;
   emptyMessage?: ReactNode;
   filterSummary?: ReactNode;
   customFilters?: Record<
@@ -432,7 +434,12 @@ export function RegistryTable<T extends { id: string }>({
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="clickable" onClick={() => onOpen(item)}>
+              <tr
+                key={item.id}
+                {...(rowAttributes
+                  ? rowAttributes(item)
+                  : { className: 'clickable', onClick: () => onOpen(item) })}
+              >
                 {visible.map((column) => (
                   <td
                     key={column.id}

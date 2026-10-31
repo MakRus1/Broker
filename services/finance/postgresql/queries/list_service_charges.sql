@@ -33,8 +33,8 @@ SELECT ROW(
 )::public.service_charge_v1
 FROM service_charges
 WHERE organization_id = $1::UUID
-    AND shipment_id = $2::UUID
-    AND transportation_id IS NOT DISTINCT FROM $3::UUID
+    AND ($2::UUID IS NULL OR shipment_id = $2::UUID)
+    AND ($2::UUID IS NULL OR transportation_id IS NOT DISTINCT FROM $3::UUID)
     AND ($4::UUID IS NULL OR id > $4::UUID)
     AND ($5::BOOLEAN OR NOT archived)
 ORDER BY id

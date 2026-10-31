@@ -1,3 +1,4 @@
+import { DecimalInput } from './DecimalInput';
 import { useFieldValidation } from './fieldValidation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
@@ -397,9 +398,9 @@ export function PaymentsPage({
             />
             <label>
               Сумма · обязательно
-              <input
+              <DecimalInput
                 required
-                inputMode="decimal"
+                precision={2}
                 value={draft.amount}
                 onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
               />
@@ -491,10 +492,10 @@ export function PaymentsPage({
                           : id}
                       </td>
                       <td>
-                        <input
+                        <DecimalInput
                           aria-label={`Оплата счёта ${invoiceMap[id]?.invoice.number ?? id}`}
                           required
-                          inputMode="decimal"
+                          precision={2}
                           value={allocations[id]}
                           onChange={(e) => setAllocations({ ...allocations, [id]: e.target.value })}
                         />

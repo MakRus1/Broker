@@ -41,6 +41,7 @@ export interface ColumnDefinition {
   label: string;
   width: number;
   required?: boolean;
+  defaultVisible?: boolean;
 }
 export interface ColumnPreference {
   id: string;
@@ -67,7 +68,11 @@ export function restoreColumns(
   }
   for (const definition of definitions) {
     if (!result.some((column) => column.id === definition.id))
-      result.push({ id: definition.id, visible: true, width: definition.width });
+      result.push({
+        id: definition.id,
+        visible: definition.required || definition.defaultVisible !== false,
+        width: definition.width,
+      });
   }
   return result;
 }

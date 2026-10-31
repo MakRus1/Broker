@@ -138,3 +138,26 @@ inline models::finance::ServiceChargeInvoice Convert(
         .service_charge_id = value.service_charge_id};
 }
 }  // namespace web_bff
+
+namespace web_bff {
+inline models::finance::InvoicePrintParty Convert(
+    const clients::finance::models::InvoicePrintParty& value) {
+    return {.kpp = value.kpp,
+        .legal_address = value.legal_address,
+        .name = value.name,
+        .registration_id = value.registration_id,
+        .tax_id = value.tax_id};
+}
+
+inline models::finance::InvoicePrintBank Convert(
+    const clients::finance::models::InvoicePrintBank& value) {
+    return {.bic = value.bic,
+        .correspondent_account = value.correspondent_account,
+        .currency = value.currency,
+        .iban = value.iban,
+        .name = value.name,
+        .number = value.number,
+        .swift = value.swift};
+}
+
+}  // namespace web_bff

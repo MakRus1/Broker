@@ -205,6 +205,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-invoices-print_data:
+            path: /api/v1/invoices/print-data
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-invoices-save:
             path: /api/v1/invoices/save
             method: POST

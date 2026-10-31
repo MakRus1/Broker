@@ -17,6 +17,7 @@ paths:
 - /api/v1/invoices/filter-values
 - /api/v1/invoices/get
 - /api/v1/invoices/list
+- /api/v1/invoices/print-data
 - /api/v1/invoices/save
 - /api/v1/payments/filter-values
 - /api/v1/payments/get

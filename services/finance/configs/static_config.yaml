@@ -102,6 +102,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-invoices-print_data:
+            path: /api/v1/invoices/print-data
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-invoices-save:
             path: /api/v1/invoices/save
             method: POST
@@ -231,6 +237,7 @@ components_manager:
                 /api/v1/invoices/filter-values: finance.read_invoices
                 /api/v1/invoices/get: finance.read_invoices
                 /api/v1/invoices/list: finance.read_invoices
+                /api/v1/invoices/print-data: finance.read_invoices
                 /api/v1/invoices/save: finance.write_invoices
                 /api/v1/payments/filter-values: finance.read_payments
                 /api/v1/payments/get: finance.read_payments

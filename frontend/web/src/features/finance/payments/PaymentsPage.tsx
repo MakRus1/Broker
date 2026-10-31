@@ -303,7 +303,12 @@ export function PaymentsPage({
       setBusy(false);
     }
   }
-  if (registry) return <PaymentRegistry kind={kind} active={active} session={session} />;
+  if (registry)
+    return (
+      <section className="payment-page">
+        <PaymentRegistry kind={kind} active={active} session={session} />
+      </section>
+    );
   const write = session.permissions.includes('finance.write_payments');
   const amount = draft
     ? (parseFixed(draft.amount, 2, 9000000000000000) ?? 0)

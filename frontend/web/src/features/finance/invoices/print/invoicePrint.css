@@ -1,0 +1,13 @@
+.invoice-heading-actions {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+.invoice-heading-actions button {
+  box-sizing: border-box;
+  height: 38px;
+  white-space: nowrap;
+}
+.invoice-heading-actions .error {
+  max-width: 300px;
+}

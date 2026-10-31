@@ -138,6 +138,7 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ('service-charges/registry',{'sort':'service_date','descending':True,'limit':50,'filters':[]},{'items':[SERVICE_CHARGE],'invoices':[]},200),
         ('invoices/filter-values',{'registry':{'direction':'incoming','sort':'id','descending':False,'limit':50}},{'fields':[],'values':[]},200),
         ('invoices/get',{'id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
+        ('invoices/print-data',{'id':ID,'revision':1},{'invoice':INVOICE,'charges':[SERVICE_CHARGE],'supplier':{'name':'Компания','tax_id':None,'kpp':None,'registration_id':None,'legal_address':None},'customer':{'name':'Компания','tax_id':None,'kpp':None,'registration_id':None,'legal_address':None}},200),
         ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[{'invoice':INVOICE,'paid_minor':0,'outstanding_minor':INVOICE['total_minor'],'payment_status':'unpaid','overdue_days':0}]},200),
         ('invoices/candidates',{'direction':'outgoing','counterparty_id':CUSTOMER,'currency':'RUB','contract_id':None,'invoice_id':None,'after':None,'limit':50},{'items':[SERVICE_CHARGE],'next_after':None},200),
         ('service-charges/save', SERVICE_CHARGE_SAVE, {'charge':SERVICE_CHARGE},200),

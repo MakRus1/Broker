@@ -106,6 +106,8 @@ export function InvoicesPage({
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
   const baseline = useRef('');
+  const paymentDelay = useRef<number | null>(null);
+  const automaticDue = useRef(creating);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const dirty =
     !!draft && JSON.stringify({ draft, selected: selected.map((x) => x.id) }) !== baseline.current;
@@ -145,6 +147,9 @@ export function InvoicesPage({
               { id: charge.contract_id },
               controller.signal,
             );
+            paymentDelay.current = contract.payment_delay_days;
+            if (contract.payment_delay_days !== null && d.invoice_date)
+              d.due_date = d.invoice_date.addDays(contract.payment_delay_days);
             d.own_company_id = contract.own_company_id;
             d.own_bank_account_id = contract.own_bank_account_id;
             d.counterparty_bank_account_id = contract.counterparty_bank_account_id;
@@ -172,6 +177,7 @@ export function InvoicesPage({
         .then((r) => {
           if (!controller.signal.aborted) {
             setDetails(r);
+            automaticDue.current = false;
             setDraft(undefined);
             onTitle(r.invoice.number);
           }
@@ -272,6 +278,10 @@ export function InvoicesPage({
   }
   function changeParties(changes: Partial<Draft>) {
     if (!draft) return;
+    if (changes.contract_id === null) {
+      paymentDelay.current = null;
+      if (automaticDue.current) changes = { ...changes, due_date: null };
+    }
     setDraft({ ...draft, ...changes });
     if (
       (changes.counterparty_id !== undefined &&
@@ -392,7 +402,16 @@ export function InvoicesPage({
                   <DateInput
                     required
                     value={draft.invoice_date}
-                    onChange={(invoice_date) => setDraft({ ...draft, invoice_date })}
+                    onChange={(invoice_date) =>
+                      setDraft({
+                        ...draft,
+                        invoice_date,
+                        due_date:
+                          automaticDue.current && paymentDelay.current !== null
+                            ? (invoice_date?.addDays(paymentDelay.current) ?? null)
+                            : draft.due_date,
+                      })
+                    }
                   />
                 </label>
                 <CustomerSelect
@@ -444,8 +463,17 @@ export function InvoicesPage({
                   session={session}
                   counterparty={draft.counterparty_id}
                   disabled={busy || !draft.counterparty_id}
-                  onChange={(contract) =>
+                  onChange={(contract) => {
+                    paymentDelay.current = contract?.payment_delay_days ?? null;
                     changeParties({
+                      ...(automaticDue.current
+                        ? {
+                            due_date:
+                              paymentDelay.current !== null
+                                ? (draft.invoice_date?.addDays(paymentDelay.current) ?? null)
+                                : null,
+                          }
+                        : {}),
                       contract_id: contract?.id ?? null,
                       contract_number: contract?.number ?? null,
                       ...(contract
@@ -456,8 +484,8 @@ export function InvoicesPage({
                             counterparty_bank_account_id: contract.counterparty_bank_account_id,
                           }
                         : {}),
-                    })
-                  }
+                    });
+                  }}
                 />
                 <BankAccountSelect
                   label="Счёт своего юрлица"
@@ -481,7 +509,10 @@ export function InvoicesPage({
                   Плановая дата оплаты
                   <DateInput
                     value={draft.due_date}
-                    onChange={(due_date) => setDraft({ ...draft, due_date })}
+                    onChange={(due_date) => {
+                      automaticDue.current = false;
+                      setDraft({ ...draft, due_date });
+                    }}
                   />
                 </label>
               </div>

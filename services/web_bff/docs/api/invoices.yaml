@@ -132,7 +132,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: ../components/schemas/finance/models.yaml#/Invoice
+                      $ref: ../components/schemas/finance/models.yaml#/InvoiceRegistryItem
                   next_cursor:
                     $ref: ../components/schemas/finance/models.yaml#/InvoiceRegistryCursor
                 required:

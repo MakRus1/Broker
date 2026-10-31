@@ -8,15 +8,24 @@ namespace registry = platform::registry;
 
 struct RegistryRow {
     pgtypes::InvoiceV1 Invoice;
+    std::int64_t PaidMinor;
+    std::int64_t OutstandingMinor;
+    std::string PaymentStatus;
+    int OverdueDays;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };
 
-inline std::vector<models::Invoice> Convert(const std::vector<RegistryRow>& rows) {
-    std::vector<models::Invoice> result;
+inline std::vector<models::InvoiceRegistryItem> Convert(const std::vector<RegistryRow>& rows) {
+    std::vector<models::InvoiceRegistryItem> result;
     result.reserve(rows.size());
     for (const auto& row : rows)
-        result.push_back(::finance::helpers::Convert(row.Invoice));
+        result.push_back({.invoice = ::finance::helpers::Convert(row.Invoice),
+            .outstanding_minor = row.OutstandingMinor,
+            .overdue_days = row.OverdueDays,
+            .paid_minor = row.PaidMinor,
+            .payment_status =
+                models::ParseEnumScalar(row.PaymentStatus, models::InvoicePaymentStatus{})});
     return result;
 }
 
@@ -42,7 +51,19 @@ inline constexpr registry::Field<std::string> kDirection{"direction", "direction
 inline constexpr registry::Field<std::string> kCurrency{"currency", "currency"};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
     "(CASE WHEN archived THEN '1' ELSE '0' END) COLLATE \"C\"");
-inline constexpr std::array<registry::RegistryField, 9> kFields{{
+inline constexpr registry::Field<std::int64_t> kTotal{
+    "total_minor", "invoice.total_minor", "BIGINT"};
+inline constexpr registry::Field<std::int64_t> kPaid{
+    "paid_minor", "payment_total.paid_minor", "BIGINT"};
+inline constexpr registry::Field<std::int64_t> kOutstanding{
+    "outstanding_minor", "settlement.outstanding_minor", "BIGINT"};
+inline constexpr registry::Field<std::string> kPaymentStatus{
+    "payment_status", "settlement.payment_status"};
+inline constexpr registry::Field<bool> kOverdue{
+    "overdue", "(settlement.overdue_days > 0)", "BOOLEAN"};
+inline constexpr registry::Field<int> kOverdueDays{
+    "overdue_days", "settlement.overdue_days", "INTEGER"};
+inline constexpr std::array<registry::RegistryField, 15> kFields{{
     {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
     {.Field = kNumber, .Label = "Номер счёта", .ValueSql = "number", .FoldValues = true},
     {.Field = kOwnCompany,
@@ -64,6 +85,24 @@ inline constexpr std::array<registry::RegistryField, 9> kFields{{
         .Visible = false},
     {.Field = kCurrency, .Label = "Валюта", .ValueSql = "currency"},
     {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
+    {.Field = kTotal, .Label = "Сумма с НДС", .ValueSql = "invoice.total_minor", .Visible = false},
+    {.Field = kPaid, .Label = "Оплачено", .ValueSql = "payment_total.paid_minor", .Visible = false},
+    {.Field = kOutstanding,
+        .Label = "Осталось оплатить",
+        .ValueSql = "settlement.outstanding_minor",
+        .Visible = false},
+    {.Field = kPaymentStatus,
+        .Label = "Оплата",
+        .ValueSql = "CASE settlement.payment_status WHEN 'paid' THEN 'Оплачен' WHEN 'partial' THEN "
+                    "'Частично оплачен' ELSE 'Не оплачен' END"},
+    {.Field = kOverdueDays,
+        .Label = "Дни просрочки",
+        .ValueSql = "settlement.overdue_days",
+        .Visible = false},
+    {.Field = kOverdue,
+        .Label = "Просрочен",
+        .ValueSql = "(settlement.overdue_days > 0)",
+        .Sortable = false},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields

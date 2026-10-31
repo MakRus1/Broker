@@ -13,3 +13,12 @@ it.each(['2026-02-29', '2026-04-31', '0000-01-01', '25.10.2026', '2026-10-25T00:
     expect(() => CalendarDate.fromISO(value)).toThrow();
   },
 );
+
+it.each([
+  ['2026-12-31', 1, '2027-01-01'],
+  ['2024-02-28', 2, '2024-03-01'],
+  ['2026-10-31', 0, '2026-10-31'],
+  ['2026-03-01', -1, '2026-02-28'],
+])('добавляет календарные дни %s + %s', (date, days, expected) => {
+  expect(CalendarDate.fromISO(date).addDays(days).toString()).toBe(expected);
+});

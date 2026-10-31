@@ -13,7 +13,19 @@ import {
   type RegistryColumn,
 } from './RegistryTable';
 import { formatFixed } from './serviceCharges';
-import { invoiceRegistry, invoiceTitle, type Invoice, type InvoiceDirection } from './invoices';
+import {
+  invoiceRegistry,
+  invoiceTitle,
+  type Invoice,
+  type InvoiceDirection,
+  type InvoiceRegistryItem,
+  invoicePaymentStatusLabel,
+} from './invoices';
+type InvoiceRow = Invoice & Omit<InvoiceRegistryItem, 'invoice'>;
+const flatten = ({ invoice, ...settlement }: InvoiceRegistryItem): InvoiceRow => ({
+  ...invoice,
+  ...settlement,
+});
 type Cursor = { id: string; scope: string; text_value?: string; date_value?: string };
 const date = (value: string | null) =>
   value ? CalendarDate.fromISO(value).toDisplayString() : '—';
@@ -26,7 +38,7 @@ export function InvoiceRegistry({
   active: boolean;
   session: Session;
 }) {
-  const [items, setItems] = useState<Invoice[]>([]);
+  const [items, setItems] = useState<InvoiceRow[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState('');
@@ -52,7 +64,7 @@ export function InvoiceRegistry({
     setFailure('');
     setItems([]);
     setCursor(undefined);
-    request<{ items: Invoice[]; next_cursor?: Cursor }>(
+    request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
       '/api/v1/invoices/list',
       session,
       { ...query, direction, filters: filterRequest(query.filters), limit: 50 },
@@ -60,7 +72,7 @@ export function InvoiceRegistry({
     )
       .then((r) => {
         if (!controller.signal.aborted) {
-          setItems(r.items);
+          setItems(r.items.map(flatten));
           setCursor(r.next_cursor);
         }
       })
@@ -77,12 +89,12 @@ export function InvoiceRegistry({
     setLoading(true);
     setFailure('');
     try {
-      const r = await request<{ items: Invoice[]; next_cursor?: Cursor }>(
+      const r = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
         '/api/v1/invoices/list',
         session,
         { ...query, direction, filters: filterRequest(query.filters), limit: 50, cursor },
       );
-      setItems((old) => [...old, ...r.items]);
+      setItems((old) => [...old, ...r.items.map(flatten)]);
       setCursor(r.next_cursor);
     } catch (e) {
       setFailure((e as Error).message);
@@ -90,7 +102,7 @@ export function InvoiceRegistry({
       setLoading(false);
     }
   }
-  const columns: RegistryColumn<Invoice>[] = [
+  const columns: RegistryColumn<InvoiceRow>[] = [
     {
       id: 'number',
       label: 'Счёт',
@@ -136,7 +148,44 @@ export function InvoiceRegistry({
       label: 'Сумма с НДС',
       width: 200,
       filterFields: ['currency'],
+      sort: 'total_minor',
       render: (item) => `${formatFixed(item.total_minor, 2)} ${item.currency}`,
+    },
+    {
+      id: 'paid_minor',
+      label: 'Оплачено',
+      width: 180,
+      sort: 'paid_minor',
+      filterFields: [],
+      render: (item) => `${formatFixed(item.paid_minor, 2)} ${item.currency}`,
+    },
+    {
+      id: 'outstanding_minor',
+      label: 'Осталось оплатить',
+      width: 190,
+      sort: 'outstanding_minor',
+      filterFields: [],
+      render: (item) => `${formatFixed(item.outstanding_minor, 2)} ${item.currency}`,
+    },
+    {
+      id: 'payment_status',
+      label: 'Оплата',
+      width: 210,
+      sort: 'payment_status',
+      render: (item) => invoicePaymentStatusLabel[item.payment_status],
+    },
+    {
+      id: 'overdue',
+      label: 'Просрочка',
+      width: 160,
+      sort: 'overdue_days',
+      filterFields: ['overdue'],
+      render: (item) =>
+        item.overdue_days > 0 ? (
+          <span className="invoice-overdue">{item.overdue_days} дн.</span>
+        ) : (
+          '—'
+        ),
     },
     {
       id: 'archived',

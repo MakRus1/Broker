@@ -132,7 +132,7 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ('service-charges/get',{'id':ID},{'charge':SERVICE_CHARGE},200),
         ('invoices/filter-values',{'registry':{'direction':'incoming','sort':'id','descending':False,'limit':50}},{'fields':[],'values':[]},200),
         ('invoices/get',{'id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
-        ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[INVOICE]},200),
+        ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[{'invoice':INVOICE,'paid_minor':0,'outstanding_minor':INVOICE['total_minor'],'payment_status':'unpaid','overdue_days':0}]},200),
         ('invoices/candidates',{'direction':'outgoing','counterparty_id':CUSTOMER,'currency':'RUB','contract_id':None,'invoice_id':None,'after':None,'limit':50},{'items':[SERVICE_CHARGE],'next_after':None},200),
         ('service-charges/save', SERVICE_CHARGE_SAVE, {'charge':SERVICE_CHARGE},200),
         ('service-charges/list', {'scope':{'shipment_id':ID,'transportation_id':None},'after':None,'limit':50,'include_archived':False}, {'items':[SERVICE_CHARGE],'next_after':None,'summary':SERVICE_CHARGE_SUMMARY,'invoices':[]},200),

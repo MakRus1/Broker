@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
 import { Dialog } from './components';
 import { Chevron } from './Select';
@@ -12,6 +12,7 @@ import { formatFixed, type ServiceCharge } from './serviceCharges';
 import {
   type Invoice,
   type InvoiceDetails,
+  type InvoiceRegistryItem,
   type InvoiceDirection,
   type ServiceChargeInvoice,
 } from './invoices';
@@ -99,6 +100,12 @@ function CreateInvoice({
   const [number, setNumber] = useState('');
   const [date, setDate] = useState<CalendarDate | null>(today);
   const [due, setDue] = useState<CalendarDate | null>(null);
+  const [paymentDelay, setPaymentDelay] = useState<number | null>(null);
+  const automaticDue = useRef(true);
+  useEffect(() => {
+    if (automaticDue.current)
+      setDue(paymentDelay !== null && date ? date.addDays(paymentDelay) : null);
+  }, [date, paymentDelay]);
   const [own, setOwn] = useState('');
   const [ownAccount, setOwnAccount] = useState<string | null>(null);
   const [partyAccount, setPartyAccount] = useState<string | null>(null);
@@ -118,6 +125,7 @@ function CreateInvoice({
     )
       .then(({ contract }) => {
         if (!controller.signal.aborted) {
+          setPaymentDelay(contract.payment_delay_days);
           setOwn(contract.own_company_id);
           setOwnAccount(contract.own_bank_account_id);
           setPartyAccount(contract.counterparty_bank_account_id);
@@ -199,7 +207,14 @@ function CreateInvoice({
         />
         <label>
           Плановая дата оплаты
-          <DateInput value={due} onChange={setDue} disabled={busy} />
+          <DateInput
+            value={due}
+            onChange={(value) => {
+              automaticDue.current = false;
+              setDue(value);
+            }}
+            disabled={busy}
+          />
         </label>
         <BankAccountSelect
           owner={own}
@@ -279,7 +294,7 @@ export function ServiceInvoiceActions({
     setItems([]);
     setCursor(undefined);
     const timer = setTimeout(() => {
-      request<{ items: Invoice[]; next_cursor?: Cursor }>(
+      request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
         '/api/v1/invoices/list',
         session,
         { direction, filters, sort: 'invoice_date', descending: true, limit: 40 },
@@ -287,7 +302,7 @@ export function ServiceInvoiceActions({
       )
         .then((r) => {
           if (!controller.signal.aborted) {
-            setItems(r.items);
+            setItems(r.items.map((item) => item.invoice));
             setCursor(r.next_cursor);
           }
         })
@@ -315,12 +330,12 @@ export function ServiceInvoiceActions({
     if (!cursor || loading) return;
     setLoading(true);
     try {
-      const r = await request<{ items: Invoice[]; next_cursor?: Cursor }>(
+      const r = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
         '/api/v1/invoices/list',
         session,
         { direction, filters, sort: 'invoice_date', descending: true, limit: 40, cursor },
       );
-      setItems((old) => [...old, ...r.items]);
+      setItems((old) => [...old, ...r.items.map((item) => item.invoice)]);
       setCursor(r.next_cursor);
     } catch (e) {
       setFailure((e as Error).message);

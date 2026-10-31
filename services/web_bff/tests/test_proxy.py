@@ -110,9 +110,22 @@ INVOICE_SAVE={key:value for key,value in INVOICE.items() if key not in
               ('own_company_name','counterparty_name','contract_number','revision','net_minor','vat_minor','total_minor')}
 INVOICE_SAVE.update(service_charge_ids=[ID],expected_revision=0)
 
+PAYMENT = {key: value for key,value in INVOICE.items() if key in ('id','number','own_company_id','own_company_name','counterparty_id','counterparty_name','own_bank_account_id','counterparty_bank_account_id','currency','note','archived','revision')}
+PAYMENT.update(kind='receipt',payment_date='2026-10-30',amount_minor=20000,purpose='Оплата услуг')
+PAYMENT_SAVE={key:value for key,value in PAYMENT.items() if key not in ('revision','own_company_name','counterparty_name')}
+PAYMENT_SAVE.update(expected_revision=0,allocations=[{'invoice_id':ID,'amount_minor':18000}])
+PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'allocated_minor':18000,'unallocated_minor':2000}
+
 @pytest.mark.parametrize(
     'path,body,result,status',
     [
+        ('payments/payment-candidates',{'invoice_id':ID,'limit':40},{'items':[{'payment':PAYMENT,'unallocated_minor':2000}],'next_after':None},200),
+        ('payments/save',PAYMENT_SAVE,PAYMENT_DETAILS,200),
+        ('payments/get',{'id':ID},PAYMENT_DETAILS,200),
+        ('payments/list',{'kind':'receipt','sort':'payment_date','descending':True,'filters':[],'limit':50},{'items':[PAYMENT]},200),
+        ('payments/invoice-balance',{'id':ID},{'invoice':INVOICE,'paid_minor':10000,'outstanding_minor':8000,'payments':[]},200),
+        ('payments/invoice-candidates',{'kind':'receipt','own_company_id':ID,'counterparty_id':CUSTOMER,'currency':'RUB','limit':40},{'items':[{'invoice':INVOICE,'paid_minor':10000,'outstanding_minor':8000,'payments':[]}],'next_after':None},200),
+        ('payments/filter-values',{'registry':{'kind':'receipt','sort':'id','descending':False,'limit':50}},{'fields':[],'values':[]},200),
         ('invoices/save',INVOICE_SAVE,{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
         ('invoices/detach-service-charge',{'invoice_id':ID,'service_charge_id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
         ('invoices/add-service-charge',{'invoice_id':ID,'service_charge_id':ID,'expected_revision':1},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),

@@ -40,6 +40,9 @@ Response View::Handle(
         value.VatMinor += charge.VatMinor;
         value.TotalMinor += charge.TotalMinor;
     }
+    if (request.body.expected_revision != 0)
+        transaction.Execute(sql::kLockInvoices, organization, std::vector{value.Id});
+    ValidateInvoiceSettlement(transaction, organization, value);
     const auto saved = request.body.expected_revision == 0
         ? transaction.Execute(sql::kCreateInvoice, organization, value)
         : transaction.Execute(

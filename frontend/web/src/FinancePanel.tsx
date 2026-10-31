@@ -560,10 +560,12 @@ export function ServiceCharges({
                   {summary.combined.map((item) => (
                     <span key={item.currency}>
                       <strong>{item.currency}</strong>
-                      <span>Доход {formatFixed(item.income_minor, 2)}</span>
-                      <span>Расход {formatFixed(item.expense_minor, 2)}</span>
+                      <span>Доход</span>
+                      <span>{formatFixed(item.income_minor, 2)}</span>
+                      <span>Расход</span>
+                      <span>{formatFixed(item.expense_minor, 2)}</span>
+                      <span>Разница</span>
                       <span>
-                        Разница{' '}
                         <strong>
                           {formatFixed(BigInt(item.income_minor) - BigInt(item.expense_minor), 2)}
                         </strong>
@@ -626,15 +628,27 @@ export function ServiceCharges({
               <tbody>
                 {items.map((item) => {
                   const invoice = invoices.find((x) => x.service_charge_id === item.id);
+                  const editable = write && !invoice?.read_only;
                   return (
                     <tr
                       key={item.id}
-                      className={write ? 'service-row-openable' : undefined}
-                      tabIndex={write ? 0 : undefined}
-                      aria-label={write ? `Редактировать услугу «${item.label_name}»` : undefined}
+                      className={editable ? 'service-row-openable' : undefined}
+                      tabIndex={editable ? 0 : undefined}
+                      aria-label={
+                        editable
+                          ? `Редактировать услугу «${item.label_name}»`
+                          : invoice?.read_only
+                            ? `Услуга «${item.label_name}»: счёт оплачен, только чтение`
+                            : undefined
+                      }
+                      title={
+                        invoice?.read_only
+                          ? 'Счёт оплачен. Услуга доступна только для чтения'
+                          : undefined
+                      }
                       onClick={(event) => {
                         if (
-                          !write ||
+                          !editable ||
                           (event.target as HTMLElement).closest(
                             'a,button,input,select,textarea,summary,details,dialog,[role="button"],[role="combobox"]',
                           ) ||
@@ -645,7 +659,7 @@ export function ServiceCharges({
                       }}
                       onKeyDown={(event) => {
                         if (
-                          write &&
+                          editable &&
                           event.target === event.currentTarget &&
                           event.key === 'Enter'
                         ) {
@@ -714,6 +728,9 @@ export function ServiceCharges({
                           />
                         ) : (
                           <span className="hint">Не выбран</span>
+                        )}
+                        {invoice?.read_only && (
+                          <span className="service-secondary">Оплачен · только чтение</span>
                         )}
                       </td>
                     </tr>

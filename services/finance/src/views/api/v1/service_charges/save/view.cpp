@@ -62,6 +62,7 @@ Response View::Handle(
         const auto revision = invoice.Revision++;
         transaction.Execute(
             sql::kUpdateInvoiceServiceCharge, organization, invoice_id, value.Id, value);
+        ValidateInvoiceSettlement(transaction, organization, invoice);
         transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
         const auto details =
             LoadInvoice(transaction, organization, boost::uuids::to_string(invoice_id));

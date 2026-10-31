@@ -73,6 +73,48 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-payments-filter_values:
+            path: /api/v1/payments/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-get:
+            path: /api/v1/payments/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-invoice_balance:
+            path: /api/v1/payments/invoice-balance
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-invoice_candidates:
+            path: /api/v1/payments/invoice-candidates
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-list:
+            path: /api/v1/payments/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-payment_candidates:
+            path: /api/v1/payments/payment-candidates
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-payments-save:
+            path: /api/v1/payments/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-service_charges-get:
             path: /api/v1/service-charges/get
             method: POST
@@ -136,6 +178,13 @@ components_manager:
                 /api/v1/invoices/get: finance.read_invoices
                 /api/v1/invoices/list: finance.read_invoices
                 /api/v1/invoices/save: finance.write_invoices
+                /api/v1/payments/filter-values: finance.read_payments
+                /api/v1/payments/get: finance.read_payments
+                /api/v1/payments/invoice-balance: finance.read_invoices
+                /api/v1/payments/invoice-candidates: finance.read_payments
+                /api/v1/payments/list: finance.read_payments
+                /api/v1/payments/payment-candidates: finance.read_payments
+                /api/v1/payments/save: finance.write_payments
                 /api/v1/service-charges/get: finance.read_service_charges
                 /api/v1/service-charges/list: finance.read_service_charges
                 /api/v1/service-charges/save: finance.write_service_charges
@@ -146,6 +195,8 @@ components_manager:
                 - counterparties.read
                 finance.read_invoices:
                 - finance.read_service_charges
+                finance.read_payments:
+                - finance.read_invoices
                 finance.read_service_charges:
                 - shipments.read
                 - transportations.read
@@ -154,6 +205,10 @@ components_manager:
                 finance.write_invoices:
                 - finance.read_invoices
                 - contracts.read
+                - counterparties.read
+                - counterparties.read_bank_accounts
+                finance.write_payments:
+                - finance.read_payments
                 - counterparties.read
                 - counterparties.read_bank_accounts
                 finance.write_service_charges:

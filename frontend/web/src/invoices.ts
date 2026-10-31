@@ -31,6 +31,7 @@ export const invoiceTitle = (direction: InvoiceDirection) =>
   direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета';
 
 export interface ServiceChargeInvoice {
+  read_only: boolean;
   service_charge_id: string;
   invoice_id: string;
   number: string;

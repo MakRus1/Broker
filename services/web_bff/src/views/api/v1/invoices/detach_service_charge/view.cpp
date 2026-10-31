@@ -7,8 +7,8 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
     const auto result = deps.finance.ApiV1InvoicesDetachServiceCharge(
-        {.body = {.service_charge_id = request.body.service_charge_id,
-             .invoice_id = request.body.invoice_id}},
+        {.body = {.invoice_id = request.body.invoice_id,
+             .service_charge_id = request.body.service_charge_id}},
         session.Access);
     return Response200{.charges = Convert(result.charges), .invoice = Convert(result.invoice)};
 }

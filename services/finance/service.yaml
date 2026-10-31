@@ -23,6 +23,13 @@ auth:
     /api/v1/invoices/add-service-charge: finance.write_invoices
     /api/v1/service-charges/get: finance.read_service_charges
     /api/v1/invoices/detach-service-charge: finance.write_invoices
+    /api/v1/payments/save: finance.write_payments
+    /api/v1/payments/get: finance.read_payments
+    /api/v1/payments/list: finance.read_payments
+    /api/v1/payments/filter-values: finance.read_payments
+    /api/v1/payments/invoice-candidates: finance.read_payments
+    /api/v1/payments/invoice-balance: finance.read_invoices
+    /api/v1/payments/payment-candidates: finance.read_payments
   organization-access: true
 clients:
   shipments:

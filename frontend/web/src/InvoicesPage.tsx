@@ -1,3 +1,4 @@
+import { InvoiceSettlement } from './InvoiceSettlement';
 import { InvoiceRegistry } from './InvoiceRegistry';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request, type Session } from './api';
@@ -92,6 +93,7 @@ export function InvoicesPage({
   const registry = !id;
   const read = session.permissions.includes('finance.read_invoices');
   const write = session.permissions.includes('finance.write_invoices');
+  const [paidReadOnly, setPaidReadOnly] = useState<boolean>();
   const [details, setDetails] = useState<InvoiceDetails>();
   const [draft, setDraft] = useState<Draft>();
   const [selected, setSelected] = useState<ServiceCharge[]>([]);
@@ -343,12 +345,15 @@ export function InvoicesPage({
                 {value && !draft && (
                   <p className="record-state">
                     {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
+                    {paidReadOnly ? ' · Оплачен: только чтение' : ''}
                   </p>
                 )}
               </div>
               {value && !draft && write && (
                 <button
                   className="primary"
+                  disabled={paidReadOnly !== false}
+                  title={paidReadOnly ? 'Счёт оплачен и доступен только для чтения' : undefined}
                   onClick={() => {
                     const d = draftOf(value);
                     setDraft(d);
@@ -581,6 +586,13 @@ export function InvoicesPage({
           ) : (
             value && (
               <>
+                <InvoiceSettlement
+                  onReadOnly={setPaidReadOnly}
+                  id={value.id}
+                  revision={value.revision}
+                  active={active}
+                  session={session}
+                />
                 <dl className="invoice-details">
                   <div>
                     <dt>Своё юрлицо</dt>
@@ -609,28 +621,45 @@ export function InvoicesPage({
                 </dl>
                 <section className="invoice-lines">
                   <h2>Услуги</h2>
-                  {details.charges.map((charge) => (
-                    <div className="invoice-charge" key={charge.id}>
-                      <div>
-                        <strong>{charge.label_name}</strong>
-                        <a
-                          href={
-                            '#/' +
-                            (charge.transportation_id
-                              ? 'transportations/' + charge.transportation_id
-                              : 'shipments/' + charge.shipment_id)
-                          }
-                        >
-                          {charge.transportation_id ? 'К перевозке' : 'К поставке'}
-                        </a>
-                      </div>
-                      <span>Без НДС: {formatFixed(charge.net_minor, 2)}</span>
-                      <span>НДС: {formatFixed(charge.vat_minor, 2)}</span>
-                      <strong>
-                        {formatFixed(charge.total_minor, 2)} {value.currency}
-                      </strong>
-                    </div>
-                  ))}
+                  <div className="invoice-services-table-wrap">
+                    <table className="invoice-services-table">
+                      <thead>
+                        <tr>
+                          <th>Услуга</th>
+                          <th>Без НДС</th>
+                          <th>НДС</th>
+                          <th>Итого</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {details.charges.map((charge) => (
+                          <tr key={charge.id}>
+                            <td>
+                              <strong>{charge.label_name}</strong>
+                              <a
+                                className="link service-secondary"
+                                href={
+                                  '#/' +
+                                  (charge.transportation_id
+                                    ? 'transportations/' + charge.transportation_id
+                                    : 'shipments/' + charge.shipment_id)
+                                }
+                              >
+                                {charge.transportation_id ? 'К перевозке' : 'К поставке'}
+                              </a>
+                            </td>
+                            <td>{formatFixed(charge.net_minor, 2)}</td>
+                            <td>{formatFixed(charge.vat_minor, 2)}</td>
+                            <td>
+                              <strong>
+                                {formatFixed(charge.total_minor, 2)} {value.currency}
+                              </strong>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   <div className="invoice-total">
                     Без НДС: {formatFixed(value.net_minor, 2)} · НДС:{' '}
                     {formatFixed(value.vat_minor, 2)}

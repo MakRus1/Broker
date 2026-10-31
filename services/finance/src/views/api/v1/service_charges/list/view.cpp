@@ -34,14 +34,15 @@ Response View::Handle(
     const auto invoices =
         transaction.Execute(sql::kListServiceChargeInvoices, organization, service_charge_ids);
     for (const auto& row : invoices) {
-        const auto [service_charge_id, invoice_id, number, direction, invoice_date] =
+        const auto [service_charge_id, invoice_id, number, direction, invoice_date, read_only] =
             row.As<boost::uuids::uuid, boost::uuids::uuid, std::string, std::string,
-                userver::utils::datetime::Date>();
+                userver::utils::datetime::Date, bool>();
         response.invoices.push_back(models::ServiceChargeInvoice{
             .direction = models::ParseEnumScalar(direction, models::InvoiceDirection{}),
             .invoice_date = invoice_date,
             .invoice_id = boost::uuids::to_string(invoice_id),
             .number = number,
+            .read_only = read_only,
             .service_charge_id = boost::uuids::to_string(service_charge_id)});
     }
     const auto totals = transaction.Execute(

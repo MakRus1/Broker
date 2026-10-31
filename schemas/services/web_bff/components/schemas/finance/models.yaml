@@ -1174,3 +1174,32 @@ InvoicePayment:
   required:
   - payment
   - amount_minor
+InvoicePaymentStatus:
+  type: string
+  enum:
+  - unpaid
+  - partial
+  - paid
+InvoiceRegistryItem:
+  type: object
+  additionalProperties: false
+  properties:
+    invoice:
+      $ref: '#/Invoice'
+    paid_minor:
+      type: integer
+      format: int64
+    outstanding_minor:
+      type: integer
+      format: int64
+    payment_status:
+      $ref: '#/InvoicePaymentStatus'
+    overdue_days:
+      type: integer
+      minimum: 0
+  required:
+  - invoice
+  - paid_minor
+  - outstanding_minor
+  - payment_status
+  - overdue_days

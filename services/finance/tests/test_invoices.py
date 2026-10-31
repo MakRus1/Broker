@@ -134,7 +134,7 @@ async def test_registry_filters_and_bound_cursor(api, charge, invoice_references
     items=[];cursor=None
     for _ in range(3):
         result=await api.post(BASE+'list',{**query,**({'cursor':cursor} if cursor else {})})
-        items.extend(row['number'] for row in result['items']);cursor=result.get('next_cursor')
+        items.extend(row['invoice']['number'] for row in result['items']);cursor=result.get('next_cursor')
     assert items==['S-1','S-2','S-10']
     result=await api.post(BASE+'list',query)
     await api.post(BASE+'list',{**query,'direction':'incoming','cursor':result['next_cursor']},expected=400)

@@ -4011,3 +4011,9 @@ details[open] > .route-stage-summary::after {
   font-size: 13px;
   color: #78869c;
 }
+
+.invoice-overdue {
+  color: #b13743;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

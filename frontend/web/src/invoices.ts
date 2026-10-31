@@ -22,6 +22,19 @@ export interface Invoice {
   vat_minor: number;
   total_minor: number;
 }
+export type InvoicePaymentStatus = 'unpaid' | 'partial' | 'paid';
+export const invoicePaymentStatusLabel: Record<InvoicePaymentStatus, string> = {
+  unpaid: 'Не оплачен',
+  partial: 'Частично оплачен',
+  paid: 'Оплачен',
+};
+export interface InvoiceRegistryItem {
+  invoice: Invoice;
+  paid_minor: number;
+  outstanding_minor: number;
+  payment_status: InvoicePaymentStatus;
+  overdue_days: number;
+}
 export interface InvoiceDetails {
   invoice: Invoice;
   charges: ServiceCharge[];

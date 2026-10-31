@@ -15,6 +15,16 @@ export class CalendarDate {
     return new CalendarDate(year, month, day);
   }
 
+  addDays(days: number): CalendarDate {
+    if (!Number.isSafeInteger(days)) throw new Error('Некорректное количество дней');
+    const value = new Date(0);
+    value.setUTCFullYear(this.year, this.month - 1, this.day);
+    value.setUTCDate(value.getUTCDate() + days);
+    return CalendarDate.fromISO(
+      `${String(value.getUTCFullYear()).padStart(4, '0')}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`,
+    );
+  }
+
   toString(): string {
     return `${String(this.year).padStart(4, '0')}-${String(this.month).padStart(2, '0')}-${String(this.day).padStart(2, '0')}`;
   }

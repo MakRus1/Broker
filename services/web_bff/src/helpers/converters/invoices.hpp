@@ -28,6 +28,17 @@ inline models::finance::Invoice Convert(const clients::finance::models::Invoice&
     return result;
 }
 
+inline models::finance::InvoiceRegistryItem Convert(
+    const clients::finance::models::InvoiceRegistryItem& value) {
+    return {.invoice = Convert(value.invoice),
+        .outstanding_minor = value.outstanding_minor,
+        .overdue_days = value.overdue_days,
+        .paid_minor = value.paid_minor,
+        .payment_status = models::finance::ParseEnumScalar(
+            clients::finance::models::EnumValue(value.payment_status),
+            models::finance::InvoicePaymentStatus{})};
+}
+
 inline clients::finance::ApiV1InvoicesSave::RequestBody Convert(
     const models::finance::SaveInvoiceRequest& value) {
     clients::finance::ApiV1InvoicesSave::RequestBody result;

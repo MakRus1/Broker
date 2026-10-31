@@ -39,7 +39,13 @@ inline constexpr registry::Field<std::string> kKind{"kind", "kind"};
 inline constexpr registry::Field<std::string> kCurrency{"currency", "currency"};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
     "(CASE WHEN archived THEN '1' ELSE '0' END) COLLATE \"C\"");
-inline constexpr std::array<registry::RegistryField, 7> kFields{{
+inline constexpr registry::Field<bool> kHasUnallocated{"has_unallocated",
+    "(invoice.amount_minor > (SELECT COALESCE(SUM(allocation.amount_minor), 0) "
+    "FROM payment_allocations AS allocation "
+    "WHERE allocation.organization_id = invoice.organization_id "
+    "AND allocation.payment_id = invoice.id))",
+    "BOOLEAN"};
+inline constexpr std::array<registry::RegistryField, 8> kFields{{
     {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
     {.Field = kNumber, .Label = "Номер платежа", .ValueSql = "number", .FoldValues = true},
     {.Field = kOwnCompany,
@@ -55,6 +61,11 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
     {.Field = kDate, .Label = "Дата платежа", .ValueSql = "payment_date"},
     {.Field = kCurrency, .Label = "Валюта", .ValueSql = "currency"},
     {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
+    {.Field = kHasUnallocated,
+        .Label = "Есть нераспределённый остаток",
+        .ValueSql = kHasUnallocated.Expression,
+        .Sortable = false,
+        .Visible = false},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields

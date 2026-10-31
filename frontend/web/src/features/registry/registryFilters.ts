@@ -79,3 +79,13 @@ export function splitFilterValues(text: string): string[] {
 export function replaceFilters(current: ColumnFilter[], fields: string[], next: ColumnFilter[]) {
   return [...current.filter((filter) => !fields.includes(filter.field)), ...next];
 }
+
+/** Ограничение вложенного реестра: его поля нельзя снять локальными фильтрами. */
+export type RegistryScope = { key: string; filters: ColumnFilter[] };
+export function scopedFilters(filters: ColumnFilter[] | undefined, scope?: RegistryScope) {
+  const fields = new Set(scope?.filters.map((filter) => filter.field));
+  return [
+    ...(filters ?? []).filter((filter) => !fields.has(filter.field)),
+    ...(scope?.filters ?? []),
+  ];
+}

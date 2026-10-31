@@ -1,3 +1,4 @@
+import { CounterpartySettlements } from '../finance/settlements/CounterpartySettlements';
 import { BankAccounts } from './BankAccounts';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { preferenceKey, useRegistryPreference } from '../registry/registryPreferences';
@@ -98,10 +99,10 @@ export function CounterpartiesPage({
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = route === '/counterparties/new';
   const editing = creating || route.endsWith('/edit');
-  const [tab, setTab] = useState<'details' | 'history' | 'accounts'>('details');
+  const [tab, setTab] = useState<'details' | 'history' | 'accounts' | 'settlements'>('details');
   const [accountsDirty, setAccountsDirty] = useState(false);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
-  function switchTab(next: 'details' | 'history' | 'accounts') {
+  function switchTab(next: 'details' | 'history' | 'accounts' | 'settlements') {
     confirmDiscard(accountsDirty, () => setTab(next));
   }
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -321,12 +322,28 @@ export function CounterpartiesPage({
                     Банковские счета
                   </button>
                 )}
+                {session.permissions.includes('finance.read_invoices') &&
+                  session.permissions.includes('finance.read_payments') && (
+                    <button
+                      aria-pressed={tab === 'settlements'}
+                      onClick={() => switchTab('settlements')}
+                    >
+                      Взаиморасчёты
+                    </button>
+                  )}
                 <button aria-pressed={tab === 'history'} onClick={() => switchTab('history')}>
                   История
                 </button>
               </CardNavigation>
               {confirmation}
-              {tab === 'accounts' ? (
+              {tab === 'settlements' ? (
+                <CounterpartySettlements
+                  key={item.id}
+                  counterpartyId={item.id}
+                  session={session}
+                  version={historyVersion}
+                />
+              ) : tab === 'accounts' ? (
                 <BankAccounts
                   counterpartyId={item.id}
                   session={session}

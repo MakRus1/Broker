@@ -26,6 +26,7 @@ export function Select({
   onChange,
   disabled = false,
   searchable = false,
+  selectedLabel,
 }: {
   label: string;
   value: string;
@@ -33,6 +34,7 @@ export function Select({
   onChange: (value: string) => void;
   disabled?: boolean;
   searchable?: boolean;
+  selectedLabel?: string;
 }) {
   const id = useId();
   const popup = useRef<HTMLDivElement>(null);
@@ -139,7 +141,9 @@ export function Select({
         }}
         onKeyDown={keyDown}
       >
-        <span>{options.find((item) => item.value === value)?.label ?? 'Не выбрано'}</span>
+        <span title={options.find((item) => item.value === value)?.label}>
+          {selectedLabel ?? options.find((item) => item.value === value)?.label ?? 'Не выбрано'}
+        </span>
         <Chevron />
       </button>
       {open &&

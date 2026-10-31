@@ -4,6 +4,7 @@ generated: true
 paths:
 - /api/admin/finance/settings/get
 - /api/admin/finance/settings/update
+- /api/v1/counterparty-settlements/get
 - /api/v1/exchange-rates/get
 - /api/v1/finance/settings/get
 - /api/v1/financial-labels/filter-values

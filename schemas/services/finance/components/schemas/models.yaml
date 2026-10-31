@@ -1370,3 +1370,63 @@ ServiceChargeRegistryRequest:
       type: string
   required: []
   type: object
+CounterpartySettlementsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    counterparty_id:
+      type: string
+      format: uuid
+    own_company_id:
+      type: string
+      format: uuid
+    contract_id:
+      type: string
+      format: uuid
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+  required:
+  - counterparty_id
+SettlementCurrencyTotal:
+  type: object
+  additionalProperties: false
+  properties:
+    currency:
+      type: string
+    receivable_minor:
+      type: string
+      pattern: ^[0-9]+$
+    payable_minor:
+      type: string
+      pattern: ^[0-9]+$
+    overdue_receivable_minor:
+      type: string
+      pattern: ^[0-9]+$
+    overdue_payable_minor:
+      type: string
+      pattern: ^[0-9]+$
+    unallocated_receipts_minor:
+      type: string
+      pattern: ^[0-9]+$
+    unallocated_disbursements_minor:
+      type: string
+      pattern: ^[0-9]+$
+  required:
+  - currency
+  - receivable_minor
+  - payable_minor
+  - overdue_receivable_minor
+  - overdue_payable_minor
+  - unallocated_receipts_minor
+  - unallocated_disbursements_minor
+CounterpartySettlementsResponse:
+  type: object
+  additionalProperties: false
+  properties:
+    totals:
+      type: array
+      items:
+        $ref: '#/SettlementCurrencyTotal'
+  required:
+  - totals

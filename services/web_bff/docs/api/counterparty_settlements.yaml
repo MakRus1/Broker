@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Взаиморасчёты с контрагентами
+  version: '1'
+paths:
+  /api/v1/counterparty-settlements/get:
+    post:
+      summary: Задолженность, просрочка и нераспределённые платежи контрагента
+      description: Долг ограничен выбранным договором. Нераспределённые платежи не
+        привязаны к договору и ограничиваются только организацией, контрагентом, собственным
+        юрлицом и валютой. Архивные документы не учитываются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/finance/models.yaml#/CounterpartySettlementsRequest
+      responses:
+        '200':
+          description: Суммы по валютам на текущую дату
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/CounterpartySettlementsResponse
+        '400':
+          description: Некорректный идентификатор или валюта
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет прав на просмотр счетов и платежей организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_session

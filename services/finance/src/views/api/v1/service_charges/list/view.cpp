@@ -29,22 +29,13 @@ Response View::Handle(
         response.items.pop_back();
         response.next_after = response.items.back().id;
     }
-    std::vector<boost::uuids::uuid> service_charge_ids;
-    for (const auto& charge : response.items)
-        service_charge_ids.push_back(boost::uuids::string_generator{}(charge.id));
-    const auto invoices =
-        transaction.Execute(sql::kListServiceChargeInvoices, organization, service_charge_ids);
-    for (const auto& row : invoices) {
-        const auto [service_charge_id, invoice_id, number, direction, invoice_date, read_only] =
-            row.As<boost::uuids::uuid, boost::uuids::uuid, std::string, std::string,
-                userver::utils::datetime::Date, bool>();
-        response.invoices.push_back(models::ServiceChargeInvoice{
-            .direction = models::ParseEnumScalar(direction, models::InvoiceDirection{}),
-            .invoice_date = invoice_date,
-            .invoice_id = boost::uuids::to_string(invoice_id),
-            .number = number,
-            .read_only = read_only,
-            .service_charge_id = boost::uuids::to_string(service_charge_id)});
+    response.invoices = LoadServiceChargeInvoices(transaction, organization, response.items);
+    if (!scope.shipment_id.has_value()) {
+        transaction.Commit();
+        const auto settings = GetFinanceSettings(deps, organization);
+        response.reporting = {
+            .currency = settings.reporting_currency, .missing_rates = {}, .summary = {}};
+        return response;
     }
     const auto totals = transaction.Execute(
         sql::kServiceChargeTotals, organization, scope.shipment_id, scope.transportation_id);

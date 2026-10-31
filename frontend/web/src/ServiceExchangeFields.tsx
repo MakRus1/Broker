@@ -1,3 +1,4 @@
+import { DecimalInput } from './DecimalInput';
 import { useEffect, useState } from 'react';
 import { request, type Session } from './api';
 import { CalendarDate } from './CalendarDate';
@@ -12,6 +13,7 @@ export function ServiceExchangeFields({
   date,
   currency,
   invoiceCurrency,
+  invoiceCurrencyLocked = false,
   manual,
   rate,
   onDate,
@@ -25,6 +27,7 @@ export function ServiceExchangeFields({
   date: CalendarDate | null;
   currency: string;
   invoiceCurrency: string;
+  invoiceCurrencyLocked?: boolean;
   manual: boolean;
   rate: string;
   onDate: (value: CalendarDate | null) => void;
@@ -98,7 +101,7 @@ export function ServiceExchangeFields({
             onRate('1');
           }
         }}
-        disabled={disabled}
+        disabled={disabled || invoiceCurrencyLocked}
       />
       <div className="service-exchange-rate">
         <span className="field-label">
@@ -121,10 +124,10 @@ export function ServiceExchangeFields({
               Указать вручную
             </label>
             {manual ? (
-              <input
+              <DecimalInput
                 aria-label="Курс вручную"
                 required
-                inputMode="decimal"
+                precision={6}
                 value={rate}
                 disabled={disabled}
                 onChange={(event) => onRate(event.target.value)}

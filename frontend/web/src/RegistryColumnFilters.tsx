@@ -73,6 +73,33 @@ export function useColumnFilters({
       const endpoint = `/api/v1/${registry}/filter-values`;
       const source = field.lookup;
       const sourceRequest = async (ids?: string[], cursor?: unknown) => {
+        if (source === 'transportations') {
+          const result = await request<{
+            items: { id: string; container_number: string | null }[];
+            next_cursor?: unknown;
+          }>(
+            '/api/v1/transportations/list',
+            session ?? undefined,
+            {
+              limit: 40,
+              sort: 'container_number',
+              filters: ids
+                ? [{ field: 'id', values: ids }]
+                : search
+                  ? [{ field: 'container_number', query: search }]
+                  : undefined,
+              ...(cursor ? { cursor } : {}),
+            },
+            signal,
+          );
+          return {
+            items: result.items.map((item) => ({
+              id: item.id,
+              number: item.container_number || 'Без номера',
+            })),
+            next_cursor: result.next_cursor,
+          };
+        }
         if (source === 'shipments')
           return request<{ items: { id: string; number: string }[]; next_cursor?: unknown }>(
             '/api/v1/shipments/list',

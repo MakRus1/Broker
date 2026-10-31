@@ -8,7 +8,10 @@ Response View::Handle(
     const auto& body = request.body;
     const auto result = deps.finance.ApiAdminFinanceSettingsGet(
         {.body = {.organization_id = body.organization_id}}, session.Access);
-    return Response200{
-        .reporting_currency = result.reporting_currency, .revision = result.revision};
+    return Response200{.incoming_number_template = result.incoming_number_template,
+        .outgoing_number_template = result.outgoing_number_template,
+        .reporting_currency = result.reporting_currency,
+        .reset_numbers_yearly = result.reset_numbers_yearly,
+        .revision = result.revision};
 }
 }  // namespace admin_bff::views::api::admin::finance::settings::get

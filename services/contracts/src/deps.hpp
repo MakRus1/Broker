@@ -3,6 +3,7 @@
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
+#include <clients/organizations/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
@@ -21,6 +22,7 @@ struct Deps {
     platform::Readiness* readiness;
     platform::configs::Source configs;
     clients::counterparties::Client counterparties;
+    clients::organizations::Client organizations;
     userver::storages::postgres::ClusterPtr pg_cluster;
     // SERVICE_DEPS_FIELDS_END
 };
@@ -34,6 +36,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
                 component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},
         .counterparties =
             component_context.FindComponent<clients::counterparties::Component>().GetClient(),
+        .organizations =
+            component_context.FindComponent<clients::organizations::Component>().GetClient(),
         .pg_cluster =
             component_context.FindComponent<userver::components::Postgres>("postgres-contracts")
                 .GetCluster(),

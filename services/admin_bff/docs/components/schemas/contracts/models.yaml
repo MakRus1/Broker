@@ -1,0 +1,17 @@
+ContractNumbering:
+  type: object
+  additionalProperties: false
+  properties:
+    number_template:
+      type: string
+      minLength: 1
+      maxLength: 128
+    reset_number_yearly:
+      type: boolean
+    revision:
+      type: integer
+      format: int64
+  required:
+  - number_template
+  - reset_number_yearly
+  - revision

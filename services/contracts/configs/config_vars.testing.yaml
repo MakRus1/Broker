@@ -16,3 +16,4 @@ config-server-url: http://localhost:8090
 config-cache-path: ''
 client-counterparties-base-url: http://localhost:8080
 organization-access-url: http://localhost:8130/api/organizations/access
+client-organizations-base-url: http://localhost:8080

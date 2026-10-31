@@ -80,6 +80,15 @@ Response View::Handle(
         transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
             identity.ActorId(), userver::formats::json::ValueBuilder(details).ExtractValue());
     }
+    if (body.target_invoice_id.has_value()) {
+        platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
+        if (body.expected_revision != 0 || !body.target_invoice_revision.has_value())
+            throw ApiError<400>{
+                "invalid_invoice_target", "Создавать услугу из счёта можно только с его редакцией"};
+        IncludeServiceCharge(transaction, organization, identity.ActorId(), value,
+            body.target_invoice_id.value(), body.target_invoice_revision.value());
+    } else if (body.target_invoice_revision.has_value())
+        throw ApiError<400>{"invalid_invoice_target", "Укажите счёт для новой услуги"};
     transaction.Commit();
     return Response200{.charge = result};
 }

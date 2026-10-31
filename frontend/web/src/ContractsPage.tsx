@@ -247,10 +247,12 @@ export function ContractsPage({
     return () => controller.abort();
   }, [id, creating, session, read, version]);
   useEffect(() => {
+    // Сохранённый номер вкладки остаётся видимым, пока карточка загружается.
+    if (!creating && id && (!value || value.id !== id)) return;
     titleCallback.current(
       creating ? 'Новый договор' : (value?.number ?? (id ? 'Договор' : 'Договоры')),
     );
-  }, [creating, value?.number]);
+  }, [creating, id, value?.id, value?.number]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
     const controller = new AbortController();
@@ -390,12 +392,17 @@ export function ContractsPage({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!draft || busy) return;
+    if (draft.own_company_id === draft.counterparty_id) {
+      setFailure('Выберите разные стороны договора');
+      return;
+    }
     setBusy(true);
     setFailure('');
     try {
       const { revision, ...body } = draft;
       const result = await request<{ contract: Contract }>('/api/v1/contracts/save', session, {
         ...body,
+        number: creating && !draft.number.trim() ? null : draft.number,
         expected_revision: revision,
       });
       setValue(result.contract);
@@ -531,10 +538,11 @@ export function ContractsPage({
         >
           <div className="record-fields">
             <label>
-              Номер договора · обязательно
+              Номер договора
               <input
-                required
+                required={!creating}
                 name="number"
+                placeholder={creating ? 'Автоматически при сохранении' : undefined}
                 maxLength={128}
                 value={draft.number}
                 onChange={(event) => setDraft({ ...draft, number: event.target.value })}
@@ -557,6 +565,7 @@ export function ContractsPage({
               ownCompany
               session={session}
               disabled={busy}
+              excludeId={draft.counterparty_id}
               value={draft.own_company_id}
               onChange={(own_company_id) =>
                 setDraft({ ...draft, own_company_id, own_bank_account_id: null })
@@ -568,6 +577,7 @@ export function ContractsPage({
               required
               session={session}
               disabled={busy}
+              excludeId={draft.own_company_id}
               value={draft.counterparty_id}
               onChange={(counterparty_id) =>
                 setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })

@@ -57,8 +57,8 @@ inline std::vector<models::Contract> Convert(const pg::ResultSet& rows) {
 inline pgtypes::ContractV1 Prepare(const models::SaveContractRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция договора"};
-    const auto number = userver::utils::text::Trim(value.number);
-    if (number.empty())
+    const auto number = userver::utils::text::Trim(value.number.value_or(""));
+    if (number.empty() && (value.number.has_value() || value.expected_revision != 0))
         throw ApiError<400>{"empty_number", "Укажите номер договора"};
     for (const auto& date : {std::optional{value.contract_date}, value.valid_until}) {
         if (date.has_value() &&

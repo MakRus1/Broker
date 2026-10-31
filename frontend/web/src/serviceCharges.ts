@@ -1,6 +1,6 @@
 import type { FinancialLabel, VatMode } from './financialLabels';
 export interface ServiceChargeScope {
-  shipment_id: string;
+  shipment_id: string | null;
   transportation_id: string | null;
 }
 export interface ServiceCharge extends ServiceChargeScope {

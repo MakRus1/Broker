@@ -8,10 +8,16 @@ Response View::Handle(
     const auto& body = request.body;
     const auto result = deps.finance.ApiAdminFinanceSettingsUpdate(
         {.body = {.expected_revision = body.expected_revision,
+             .incoming_number_template = body.incoming_number_template,
              .organization_id = body.organization_id,
-             .reporting_currency = body.reporting_currency}},
+             .outgoing_number_template = body.outgoing_number_template,
+             .reporting_currency = body.reporting_currency,
+             .reset_numbers_yearly = body.reset_numbers_yearly}},
         session.Access);
-    return Response200{
-        .reporting_currency = result.reporting_currency, .revision = result.revision};
+    return Response200{.incoming_number_template = result.incoming_number_template,
+        .outgoing_number_template = result.outgoing_number_template,
+        .reporting_currency = result.reporting_currency,
+        .reset_numbers_yearly = result.reset_numbers_yearly,
+        .revision = result.revision};
 }
 }  // namespace admin_bff::views::api::admin::finance::settings::update

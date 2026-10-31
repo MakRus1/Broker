@@ -3,7 +3,13 @@ import { request, type Session } from '../../api';
 import { Select } from '../Select';
 import { EditorPanel } from './EditorPanel';
 import { currenciesWithCurrent } from '../../../../shared/currencies';
-type Settings = { reporting_currency: string; revision: number };
+type Settings = {
+  reporting_currency: string;
+  revision: number;
+  outgoing_number_template: string;
+  incoming_number_template: string;
+  reset_numbers_yearly: boolean;
+};
 export function FinanceSettings({
   session,
   organization,
@@ -12,7 +18,7 @@ export function FinanceSettings({
   organization: string;
 }) {
   const [settings, setSettings] = useState<Settings>();
-  const [draft, setDraft] = useState<string>();
+  const [draft, setDraft] = useState<Settings>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -44,12 +50,15 @@ export function FinanceSettings({
     try {
       const saved = await request<Settings>('/api/admin/finance/settings/update', session, {
         organization_id: organization,
-        reporting_currency: draft,
+        reporting_currency: draft.reporting_currency,
+        outgoing_number_template: draft.outgoing_number_template,
+        incoming_number_template: draft.incoming_number_template,
+        reset_numbers_yearly: draft.reset_numbers_yearly,
         expected_revision: settings.revision,
       });
       setSettings(saved);
       setDraft(undefined);
-      setNotice('Валюта пересчёта сохранена');
+      setNotice('Настройки финансов сохранены');
     } catch (failure) {
       setError((failure as Error).message);
     } finally {
@@ -60,11 +69,11 @@ export function FinanceSettings({
     <section className="organization-content" role="tabpanel">
       <div className="organization-content-heading">
         <h2>Финансы</h2>
-        <button disabled={!settings} onClick={() => setDraft(settings!.reporting_currency)}>
+        <button disabled={!settings} onClick={() => setDraft(settings!)}>
           Редактировать
         </button>
       </div>
-      {error && (
+      {!draft && error && (
         <p className="error" role="alert">
           {error}
         </p>
@@ -88,6 +97,18 @@ export function FinanceSettings({
               }
             </dd>
           </div>
+          <div>
+            <dt>Исходящие счета</dt>
+            <dd>{settings.outgoing_number_template}</dd>
+          </div>
+          <div>
+            <dt>Входящие счета</dt>
+            <dd>{settings.incoming_number_template}</dd>
+          </div>
+          <div>
+            <dt>Сброс счётчиков</dt>
+            <dd>{settings.reset_numbers_yearly ? 'Каждый год' : 'Не сбрасываются'}</dd>
+          </div>
         </dl>
       )}
       <p className="hint">
@@ -96,7 +117,7 @@ export function FinanceSettings({
       {draft !== undefined && (
         <EditorPanel
           title="Настройки финансов"
-          dirty={draft !== settings?.reporting_currency}
+          dirty={JSON.stringify(draft) !== JSON.stringify(settings)}
           busy={busy}
           close={() => setDraft(undefined)}
         >
@@ -104,11 +125,46 @@ export function FinanceSettings({
             <fieldset disabled={busy} className="organization-editor-fields">
               <Select
                 label="Валюта пересчёта"
-                value={draft}
-                options={currenciesWithCurrent(draft)}
-                onChange={setDraft}
+                value={draft.reporting_currency}
+                options={currenciesWithCurrent(draft.reporting_currency)}
+                onChange={(reporting_currency) => setDraft({ ...draft, reporting_currency })}
               />
+              <label>
+                Маска исходящих счетов
+                <input
+                  required
+                  maxLength={100}
+                  value={draft.outgoing_number_template}
+                  onChange={(e) => setDraft({ ...draft, outgoing_number_template: e.target.value })}
+                />
+              </label>
+              <label>
+                Маска входящих счетов
+                <input
+                  required
+                  maxLength={100}
+                  value={draft.incoming_number_template}
+                  onChange={(e) => setDraft({ ...draft, incoming_number_template: e.target.value })}
+                />
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={draft.reset_numbers_yearly}
+                  onChange={(e) => setDraft({ ...draft, reset_numbers_yearly: e.target.checked })}
+                />
+                Начинать счётчики заново каждый год
+              </label>
+              <p className="hint">
+                Обязательная переменная — {'{sequence}'}. Дата документа: {'{yyyy}'}, {'{yy}'},{' '}
+                {'{mm}'}, {'{dd}'}. Номер можно ввести вручную.
+              </p>
             </fieldset>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
             <div className="actions">
               <button type="button" disabled={busy} onClick={() => setDraft(undefined)}>
                 Отменить

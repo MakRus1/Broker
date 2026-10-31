@@ -15,6 +15,8 @@ auth:
     /api/v1/financial-labels/filter-values: finance.read_financial_labels
     /api/v1/service-charges/save: finance.write_service_charges
     /api/v1/service-charges/list: finance.read_service_charges
+    /api/v1/service-charges/registry: finance.read_service_charges
+    /api/v1/service-charges/filter-values: finance.read_service_charges
     /api/v1/invoices/save: finance.write_invoices
     /api/v1/invoices/get: finance.read_invoices
     /api/v1/invoices/list: finance.read_invoices

@@ -1,3 +1,4 @@
+#include <helpers/finance_settings.hpp>
 #include <helpers/invoices.hpp>
 #include <permissions/permissions.hpp>
 #include <views/api/v1/invoices/save/view.hpp>
@@ -13,6 +14,8 @@ Response View::Handle(
     const auto ids = InvoiceServiceChargeIds(request.body);
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    if (value.Number.empty())
+        value.Number = GenerateInvoiceNumber(transaction, organization, value);
     // Общий порядок блокировок защищает от одновременного редактирования и включения услуг в
     // счета.
     const auto charges = transaction.Execute(sql::kLockServiceCharges, organization, ids);

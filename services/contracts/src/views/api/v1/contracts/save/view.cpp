@@ -1,4 +1,4 @@
-#include <helpers/contracts.hpp>
+#include <helpers/numbering.hpp>
 #include <permissions/permissions.hpp>
 #include <views/api/v1/contracts/save/view.hpp>
 
@@ -10,10 +10,12 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     platform::auth::CheckPermission(context, permissions::CONTRACTS_WRITE);
     const auto organization = platform::auth::GetOrganization(identity);
-    const auto value = Prepare(request.body);
+    auto value = Prepare(request.body);
     ValidateParties(deps, context, request.body);
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    if (value.Number.empty())
+        value.Number = GenerateContractNumber(transaction, organization, value.ContractDate);
     const auto rows = request.body.expected_revision == 0
         ? transaction.Execute(sql::kCreateContract, organization, value)
         : transaction.Execute(

@@ -10,6 +10,7 @@
 #include <openapi/models.hpp>
 #include <platform/calendar_date.hpp>
 #include <platform/date_validation.hpp>
+#include <platform/document_number.hpp>
 #include <postgresql/types.hpp>
 #include <set>
 #include <userver/utils/datetime.hpp>
@@ -160,28 +161,12 @@ inline void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& setting
 
 inline std::string GenerateShipmentNumber(pg::Transaction& transaction,
     const std::string& organization, userver::utils::datetime::Date date, const auto& settings) {
-    const auto formatted = platform::FormatCalendarDate(date);
-    const std::chrono::year_month_day calendar{
-        std::chrono::floor<std::chrono::days>(date.GetSysDays())};
-    const auto period = settings.ResetNumberYearly ? static_cast<int>(calendar.year()) : 0;
+    const auto period = platform::DocumentNumberPeriod(date, settings.ResetNumberYearly);
     const auto sequence = transaction.Execute(sql::kNextShipmentNumber, organization, period)
                               .template AsSingleRow<std::int64_t>();
-    std::string result = settings.NumberTemplate;
-    const std::vector<std::pair<std::string, std::string>> tokens{
-        {"{sequence}", std::to_string(sequence)}, {"{yyyy}", formatted.substr(0, 4)},
-        {"{yy}", formatted.substr(2, 2)}, {"{mm}", formatted.substr(5, 2)},
-        {"{dd}", formatted.substr(8, 2)}};
-    if (result.find("{sequence}") == std::string::npos)
-        throw ApiError<400>{"invalid_number_template", "Шаблон номера должен содержать {sequence}"};
-    for (const auto& [token, value] : tokens) {
-        std::size_t position = 0;
-        while ((position = result.find(token, position)) != std::string::npos) {
-            result.replace(position, token.size(), value);
-            position += value.size();
-        }
-    }
-    if (result.empty() || result.size() > 128 || result.find_first_of("{}") != std::string::npos)
-        throw ApiError<400>{"invalid_number_template", "Некорректный шаблон номера организации"};
+    const auto result = platform::FormatDocumentNumber(settings.NumberTemplate, date, sequence);
+    if (result.size() > 128)
+        throw ApiError<400>{"invalid_number_template", "Слишком длинный номер поставки"};
     return result;
 }
 

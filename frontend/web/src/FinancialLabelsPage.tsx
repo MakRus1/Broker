@@ -421,29 +421,13 @@ export function FinancialLabelsPage({
               onChange={(currency) => setDraft({ ...draft, currency })}
               options={currenciesWithCurrent(draft.currency)}
             />
-            <Select
-              label="НДС по умолчанию"
-              value={draft.vat_mode}
+            <VatRateSelect
+              value={draft.vatRate}
+              mode={draft.vat_mode}
               disabled={busy}
-              onChange={(vat_mode) =>
-                setDraft({
-                  ...draft,
-                  vat_mode: vat_mode as FinancialLabel['vat_mode'],
-                  vatRate: draft.vatRate || '0',
-                })
-              }
-              options={[
-                { value: 'exempt', label: 'Без НДС' },
-                { value: 'rate', label: 'Ставка НДС' },
-              ]}
+              onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
+              onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
             />
-            {draft.vat_mode === 'rate' && (
-              <VatRateSelect
-                value={draft.vatRate}
-                disabled={busy}
-                onChange={(value) => setDraft({ ...draft, vatRate: value })}
-              />
-            )}
             <label className="record-wide">
               Примечание
               <textarea

@@ -29,7 +29,7 @@ type ServiceContext = Pick<
 type Creation = {
   id: string;
   direction: InvoiceDirection;
-  number: string;
+  number: string | null;
   invoice_date: string;
   due_date: string | null;
   own_company_id: string;
@@ -142,7 +142,7 @@ function CreateInvoice({
   async function choose(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     e.stopPropagation();
-    if (!date || !number.trim() || !own) return;
+    if (!date || !own) return;
     setBusy(true);
     setFailure('');
     try {
@@ -151,7 +151,7 @@ function CreateInvoice({
         body: {
           id,
           direction: service.direction === 'income' ? 'outgoing' : 'incoming',
-          number: number.trim(),
+          number: number.trim() || null,
           invoice_date: date.toString(),
           due_date: due?.toString() ?? null,
           own_company_id: own,
@@ -179,9 +179,9 @@ function CreateInvoice({
     >
       <div className="form-grid">
         <label>
-          Номер счёта · обязательно
+          Номер счёта
           <input
-            required
+            placeholder="Автоматически при сохранении"
             maxLength={100}
             value={number}
             onChange={(e) => setNumber(e.target.value)}
@@ -368,7 +368,7 @@ export function ServiceInvoiceActions({
         disabled={busy || !service.counterparty_id || !service.invoice_currency}
         aria-label={
           chosen
-            ? `Счёт № ${chosen.number} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
+            ? `${chosen.number ? 'Счёт № ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
             : 'Выберите или создайте счёт'
         }
         onClick={() => {
@@ -378,7 +378,7 @@ export function ServiceInvoiceActions({
       >
         <span className={chosen ? '' : 'service-invoice-placeholder'}>
           {chosen
-            ? `№ ${chosen.number} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
+            ? `${chosen.number ? '№ ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
             : compact
               ? 'Выбрать / создать'
               : 'Выберите или создайте счёт'}

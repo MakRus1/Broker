@@ -30,6 +30,7 @@ types:
       type: uuid
     - name: shipment_id
       type: uuid
+      nullable: true
     - name: transportation_id
       type: uuid
       nullable: true

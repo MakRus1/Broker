@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Реестр услуг
+  version: '1'
+paths:
+  /api/v1/service-charges/registry:
+    post:
+      summary: Реестр услуг организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/finance/models.yaml#/ServiceChargeRegistryRequest
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/finance/models.yaml#/ServiceCharge
+                  next_cursor:
+                    $ref: components/schemas/finance/models.yaml#/ServiceChargeRegistryCursor
+                  invoices:
+                    type: array
+                    items:
+                      $ref: components/schemas/finance/models.yaml#/ServiceChargeInvoice
+                required:
+                - items
+                - invoices
+        '400':
+          description: Некорректные поля счёта
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет доступа к счетам организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '404':
+          description: Счёт или связанный объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '409':
+          description: Конфликт редакции или начисление уже включено в счёт
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '502':
+          description: Не удалось проверить стороны или договор
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+  /api/v1/service-charges/filter-values:
+    post:
+      summary: Поля реестра и значения фильтра с учётом остальных условий
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - registry
+              properties:
+                registry:
+                  $ref: components/schemas/finance/models.yaml#/ServiceChargeRegistryRequest
+                field:
+                  type: string
+                  maxLength: 64
+                query:
+                  type: string
+                  maxLength: 256
+                after:
+                  type: string
+                  maxLength: 2000
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 40
+                candidates:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: string
+                    maxLength: 2000
+      responses:
+        '200':
+          description: Каталог полей и очередная страница значений
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - fields
+                - values
+                properties:
+                  fields:
+                    type: array
+                    items:
+                      $ref: components/schemas/finance/models.yaml#/RegistryField
+                  values:
+                    type: array
+                    items:
+                      $ref: components/schemas/finance/models.yaml#/RegistryValue
+                  next_after:
+                    type: string
+        '400':
+          description: Некорректные фильтры или неизвестное поле
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_session

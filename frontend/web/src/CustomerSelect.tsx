@@ -14,6 +14,7 @@ export function CustomerSelect({
   required = false,
   error = '',
   ownCompany = false,
+  excludeId,
 }: {
   items: Counterparty[];
   value: string;
@@ -24,6 +25,7 @@ export function CustomerSelect({
   required?: boolean;
   error?: string;
   ownCompany?: boolean;
+  excludeId?: string;
 }) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +63,8 @@ export function CustomerSelect({
         controller.signal,
       )
         .then((result) => {
-          if (!controller.signal.aborted) setResults(result.items);
+          if (!controller.signal.aborted)
+            setResults(result.items.filter((item) => item.id !== excludeId));
         })
         .catch((error) => {
           if (!controller.signal.aborted) setFailure(error.message);
@@ -74,7 +77,7 @@ export function CustomerSelect({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, open, session, ownCompany]);
+  }, [query, open, session, ownCompany, excludeId]);
   useEffect(() => {
     setSelected((old) => (old?.id === value ? old : undefined));
     if (!value || items.some((item) => item.id === value)) return;

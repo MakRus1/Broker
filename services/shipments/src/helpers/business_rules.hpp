@@ -20,23 +20,9 @@ inline models::ShipmentBusinessRules Convert(const pgtypes::ShipmentBusinessRule
         .statuses = value.Statuses};
 }
 
-inline void ValidateNumberTemplate(const std::string& value) {
-    if (value.empty() || value.size() > 128 || value.find("{sequence}") == std::string::npos)
-        throw ApiError<400>{"invalid_number_template",
-            "Шаблон должен содержать {sequence} и быть не длиннее 128 символов"};
-    auto rest = value;
-    for (const auto token : {"{sequence}", "{yyyy}", "{yy}", "{mm}", "{dd}"}) {
-        std::size_t at;
-        while ((at = rest.find(token)) != std::string::npos)
-            rest.erase(at, std::string_view{token}.size());
-    }
-    if (rest.find_first_of("{}") != std::string::npos)
-        throw ApiError<400>{"invalid_number_template", "В шаблоне номера неизвестная переменная"};
-}
-
 inline void ValidateBusinessRules(const Deps& deps, const std::string& organization,
     const pgtypes::ShipmentBusinessRulesV1& rules) {
-    ValidateNumberTemplate(rules.NumberTemplate);
+    platform::ValidateNumberTemplate(rules.NumberTemplate);
     const auto limits = GetPlatformShipmentSettings(deps, organization);
     const auto unique = [](const auto& values) {
         std::set<std::string> seen;

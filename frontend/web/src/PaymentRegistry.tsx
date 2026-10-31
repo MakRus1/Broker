@@ -153,12 +153,13 @@ export function PaymentRegistry({
           <p className="hint">Загружено: {items.length}</p>
         </div>
         <div className="actions">
-          <button onClick={() => setVersion((v) => v + 1)}>Обновить</button>
           {session.permissions.includes('finance.write_payments') && (
             <a className="button primary" href={`#${base}/new`}>
               {kind === 'receipt' ? 'Добавить поступление' : 'Добавить списание'}
             </a>
           )}
+          <RegistryColumnSettings {...columnState} />
+          <button onClick={() => setVersion((v) => v + 1)}>Обновить</button>
         </div>
       </div>
       {failure && (
@@ -171,11 +172,6 @@ export function PaymentRegistry({
         columns={columnState}
         definitions={columns}
         filters={filters}
-        filterSummary={
-          <div className="registry-column-actions">
-            <RegistryColumnSettings {...columnState} />
-          </div>
-        }
         sort={query.sort}
         descending={query.descending}
         onSort={(sort) =>

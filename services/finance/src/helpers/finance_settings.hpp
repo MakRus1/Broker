@@ -4,21 +4,52 @@
 #include <helpers/exchange_amounts.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/organization_admin.hpp>
+#include <platform/document_number.hpp>
+#include <postgresql/types.hpp>
 #include <tuple>
 #include <userver/storages/postgres/transaction.hpp>
 
 namespace finance::helpers {
 namespace pg = userver::storages::postgres;
 
+inline models::FinanceSettings ConvertFinanceSettings(const pg::ResultSet& rows) {
+    if (rows.IsEmpty())
+        return {.incoming_number_template = "ВС-{sequence}/{yyyy}",
+            .outgoing_number_template = "ИС-{sequence}/{yyyy}",
+            .reporting_currency = "RUB",
+            .reset_numbers_yearly = false,
+            .revision = 0};
+    const auto [currency, revision, outgoing, incoming, yearly] =
+        rows.AsSingleRow<std::tuple<std::string, std::int64_t, std::string, std::string, bool>>(
+            pg::kRowTag);
+    return {.incoming_number_template = incoming,
+        .outgoing_number_template = outgoing,
+        .reporting_currency = currency,
+        .reset_numbers_yearly = yearly,
+        .revision = revision};
+}
+
 inline models::FinanceSettings GetFinanceSettings(
     const Deps& deps, const std::string& organization) {
-    const auto rows = deps.pg_cluster->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetFinanceSettings, organization);
-    if (rows.IsEmpty())
-        return {.reporting_currency = "RUB", .revision = 0};
-    const auto [currency, revision] =
-        rows.AsSingleRow<std::tuple<std::string, std::int64_t>>(pg::kRowTag);
-    return {.reporting_currency = currency, .revision = revision};
+    return ConvertFinanceSettings(deps.pg_cluster->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetFinanceSettings, organization));
+}
+
+inline std::string GenerateInvoiceNumber(pg::Transaction& transaction,
+    const std::string& organization, const pgtypes::InvoiceV1& invoice) {
+    const auto settings =
+        ConvertFinanceSettings(transaction.Execute(sql::kGetFinanceSettings, organization));
+    const auto& mask = invoice.Direction == "outgoing" ? settings.outgoing_number_template
+                                                       : settings.incoming_number_template;
+    const auto period =
+        platform::DocumentNumberPeriod(invoice.InvoiceDate, settings.reset_numbers_yearly);
+    const auto sequence =
+        transaction.Execute(sql::kNextDocumentNumber, organization, invoice.Direction, period)
+            .AsSingleRow<std::int64_t>();
+    const auto number = platform::FormatDocumentNumber(mask, invoice.InvoiceDate, sequence);
+    if (number.size() > 100)
+        throw ApiError<400>{"number_too_long", "Номер счёта длиннее 100 символов"};
+    return number;
 }
 
 inline void RequireFinanceAdministrator(const Deps& deps,

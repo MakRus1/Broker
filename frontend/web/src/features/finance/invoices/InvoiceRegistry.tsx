@@ -5,7 +5,7 @@ import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { useColumnFilters } from '../../registry/RegistryColumnFilters';
-import { filterRequest } from '../../registry/registryFilters';
+import { filterRequest, scopedFilters, type RegistryScope } from '../../registry/registryFilters';
 import { preferenceKey, useRegistryPreference } from '../../registry/registryPreferences';
 import { initialInvoiceQuery, restoreInvoiceQuery } from '../../registry/registryQueryPreferences';
 import {
@@ -35,10 +35,14 @@ export function InvoiceRegistry({
   direction,
   active,
   session,
+  scope,
+  refreshVersion = 0,
 }: {
   direction: InvoiceDirection;
   active: boolean;
   session: Session;
+  scope?: RegistryScope;
+  refreshVersion?: number;
 }) {
   const [items, setItems] = useState<InvoiceRow[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
@@ -47,11 +51,11 @@ export function InvoiceRegistry({
   const [version, setVersion] = useState(0);
   const base = invoiceRegistry(direction);
   const [query, setQuery] = useRegistryPreference(
-    preferenceKey(session.subject, `${direction}-invoices`, 'query'),
+    preferenceKey(session.subject, `${direction}-invoices${scope ? `:${scope.key}` : ''}`, 'query'),
     initialInvoiceQuery,
     restoreInvoiceQuery,
   );
-  const registryRequest = { ...query, direction };
+  const registryRequest = { ...query, direction, filters: scopedFilters(query.filters, scope) };
   const filters = useColumnFilters({
     registry: 'invoices',
     session,
@@ -59,6 +63,12 @@ export function InvoiceRegistry({
     onChange: (filters) => setQuery((old) => ({ ...old, filters })),
     onSort: (sort, descending) => setQuery((old) => ({ ...old, sort, descending })),
   });
+  const scopedFields = new Set(scope?.filters.map((filter) => filter.field));
+  const visibleFilters = {
+    ...filters,
+    fields: filters.fields.filter((field) => !scopedFields.has(field.id)),
+    filters: filters.filters.filter((filter) => !scopedFields.has(filter.field)),
+  };
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -69,7 +79,7 @@ export function InvoiceRegistry({
     request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
       '/api/v1/invoices/list',
       session,
-      { ...query, direction, filters: filterRequest(query.filters), limit: 50 },
+      { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50 },
       controller.signal,
     )
       .then((r) => {
@@ -85,7 +95,7 @@ export function InvoiceRegistry({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [active, direction, query, session, version]);
+  }, [active, direction, query, session, version, scope, refreshVersion]);
   async function more() {
     if (!cursor || loading) return;
     setLoading(true);
@@ -94,7 +104,7 @@ export function InvoiceRegistry({
       const r = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
         '/api/v1/invoices/list',
         session,
-        { ...query, direction, filters: filterRequest(query.filters), limit: 50, cursor },
+        { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50, cursor },
       );
       setItems((old) => [...old, ...r.items.map(flatten)]);
       setCursor(r.next_cursor);
@@ -201,11 +211,11 @@ export function InvoiceRegistry({
   return (
     <section className="invoice-registry">
       <RegistryHeading
-        title={invoiceTitle(direction)}
+        title={scope ? undefined : invoiceTitle(direction)}
         count={items.length}
         onRefresh={() => setVersion((v) => v + 1)}
       >
-        {session.permissions.includes('finance.write_invoices') && (
+        {!scope && session.permissions.includes('finance.write_invoices') && (
           <a className="button primary" href={`#${base}/new`}>
             Добавить счёт
           </a>
@@ -221,7 +231,7 @@ export function InvoiceRegistry({
         items={items}
         columns={columnState}
         definitions={columns}
-        filters={filters}
+        filters={visibleFilters}
         sort={query.sort}
         descending={query.descending}
         onSort={(sort) =>

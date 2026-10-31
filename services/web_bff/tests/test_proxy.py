@@ -683,3 +683,21 @@ async def test_contract_registry_dates_and_cursor(browser,mockserver):
     response=await browser.post('/api/v1/contracts/list',body)
     assert response.status==200,response.text
     assert response.json()['next_cursor']==cursor
+
+async def test_counterparty_settlements_proxy(browser, mockserver):
+    await browser.sign_in()
+    body = {'counterparty_id': CUSTOMER, 'own_company_id': ID, 'currency': 'RUB'}
+    result = {'totals': [{
+        'currency': 'RUB', 'receivable_minor': '9007199254740993', 'payable_minor': '0',
+        'overdue_receivable_minor': '100', 'overdue_payable_minor': '0',
+        'unallocated_receipts_minor': '200', 'unallocated_disbursements_minor': '0',
+    }]}
+
+    @mockserver.json_handler('/api/v1/counterparty-settlements/get')
+    def upstream(request):
+        assert request.json == body
+        return result
+
+    response = await browser.post('/api/v1/counterparty-settlements/get', body)
+    assert response.status == 200
+    assert response.json() == result

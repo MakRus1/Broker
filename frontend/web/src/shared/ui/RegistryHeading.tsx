@@ -7,7 +7,7 @@ export function RegistryHeading({
   children,
   onRefresh,
 }: {
-  title: string;
+  title?: string;
   count: number;
   children?: ReactNode;
   onRefresh: () => void;
@@ -15,7 +15,7 @@ export function RegistryHeading({
   return (
     <div className="page-heading registry-heading">
       <div>
-        <h1>{title}</h1>
+        {title && <h1>{title}</h1>}
         <p className="hint">Загружено: {count}</p>
       </div>
       <div className="actions">

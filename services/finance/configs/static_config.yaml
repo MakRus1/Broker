@@ -24,6 +24,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-counterparty_settlements-get:
+            path: /api/v1/counterparty-settlements/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-exchange_rates-get:
             path: /api/v1/exchange-rates/get
             method: POST
@@ -212,6 +218,7 @@ components_manager:
             permissions:
                 /api/admin/finance/settings/get: authenticated
                 /api/admin/finance/settings/update: authenticated
+                /api/v1/counterparty-settlements/get: finance.read_invoices
                 /api/v1/exchange-rates/get: finance.read_service_charges
                 /api/v1/finance/settings/get: finance.read_service_charges
                 /api/v1/financial-labels/filter-values: finance.read_financial_labels

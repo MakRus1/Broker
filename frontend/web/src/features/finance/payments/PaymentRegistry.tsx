@@ -5,7 +5,7 @@ import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { useColumnFilters } from '../../registry/RegistryColumnFilters';
-import { filterRequest } from '../../registry/registryFilters';
+import { filterRequest, scopedFilters, type RegistryScope } from '../../registry/registryFilters';
 import { preferenceKey, useRegistryPreference } from '../../registry/registryPreferences';
 import { initialInvoiceQuery, restoreInvoiceQuery } from '../../registry/registryQueryPreferences';
 import {
@@ -28,10 +28,14 @@ export function PaymentRegistry({
   kind,
   active,
   session,
+  scope,
+  refreshVersion = 0,
 }: {
   kind: PaymentKind;
   active: boolean;
   session: Session;
+  scope?: RegistryScope;
+  refreshVersion?: number;
 }) {
   const [items, setItems] = useState<Payment[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
@@ -40,11 +44,11 @@ export function PaymentRegistry({
   const [version, setVersion] = useState(0);
   const base = paymentBase(kind);
   const [query, setQuery] = useRegistryPreference(
-    preferenceKey(session.subject, `${kind}-payments`, 'query'),
+    preferenceKey(session.subject, `${kind}-payments${scope ? `:${scope.key}` : ''}`, 'query'),
     initialPaymentQuery,
     restorePaymentQuery,
   );
-  const registryRequest = { ...query, kind };
+  const registryRequest = { ...query, kind, filters: scopedFilters(query.filters, scope) };
   const filters = useColumnFilters({
     registry: 'payments',
     session,
@@ -52,6 +56,12 @@ export function PaymentRegistry({
     onChange: (filters) => setQuery((old) => ({ ...old, filters })),
     onSort: (sort, descending) => setQuery((old) => ({ ...old, sort, descending })),
   });
+  const scopedFields = new Set(scope?.filters.map((filter) => filter.field));
+  const visibleFilters = {
+    ...filters,
+    fields: filters.fields.filter((field) => !scopedFields.has(field.id)),
+    filters: filters.filters.filter((filter) => !scopedFields.has(filter.field)),
+  };
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -62,7 +72,7 @@ export function PaymentRegistry({
     request<{ items: Payment[]; next_cursor?: Cursor }>(
       '/api/v1/payments/list',
       session,
-      { ...query, kind, filters: filterRequest(query.filters), limit: 50 },
+      { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50 },
       controller.signal,
     )
       .then((r) => {
@@ -78,7 +88,7 @@ export function PaymentRegistry({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [active, kind, query, session, version]);
+  }, [active, kind, query, session, version, scope, refreshVersion]);
   async function more() {
     if (!cursor || loading) return;
     setLoading(true);
@@ -87,7 +97,7 @@ export function PaymentRegistry({
       const r = await request<{ items: Payment[]; next_cursor?: Cursor }>(
         '/api/v1/payments/list',
         session,
-        { ...query, kind, filters: filterRequest(query.filters), limit: 50, cursor },
+        { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50, cursor },
       );
       setItems((old) => [...old, ...r.items]);
       setCursor(r.next_cursor);
@@ -150,11 +160,11 @@ export function PaymentRegistry({
   return (
     <section className="invoice-registry">
       <RegistryHeading
-        title={kind === 'receipt' ? 'Поступления' : 'Списания'}
+        title={scope ? undefined : kind === 'receipt' ? 'Поступления' : 'Списания'}
         count={items.length}
         onRefresh={() => setVersion((v) => v + 1)}
       >
-        {session.permissions.includes('finance.write_payments') && (
+        {!scope && session.permissions.includes('finance.write_payments') && (
           <a className="button primary" href={`#${base}/new`}>
             {kind === 'receipt' ? 'Добавить поступление' : 'Добавить списание'}
           </a>
@@ -170,7 +180,7 @@ export function PaymentRegistry({
         items={items}
         columns={columnState}
         definitions={columns}
-        filters={filters}
+        filters={visibleFilters}
         sort={query.sort}
         descending={query.descending}
         onSort={(sort) =>

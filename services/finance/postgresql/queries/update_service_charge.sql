@@ -19,7 +19,15 @@ SET
     note = value.note,
     archived = value.archived,
     revision = value.revision,
-    price_mode = value.price_mode
+    price_mode = value.price_mode,
+    service_date = value.service_date,
+    invoice_currency = value.invoice_currency,
+    invoice_rate_millionths = value.invoice_rate_millionths,
+    invoice_rate_date = value.invoice_rate_date,
+    invoice_rate_source = value.invoice_rate_source,
+    invoice_net_minor = value.invoice_net_minor,
+    invoice_vat_minor = value.invoice_vat_minor,
+    invoice_total_minor = value.invoice_total_minor
 FROM (SELECT ($2::public.service_charge_v1).*) AS value
 WHERE charge.organization_id = $1::UUID
     AND charge.id = value.id
@@ -49,5 +57,13 @@ RETURNING ROW(
     charge.note,
     charge.archived,
     charge.revision,
-    charge.price_mode
+    charge.price_mode,
+    charge.service_date,
+    charge.invoice_currency,
+    charge.invoice_rate_millionths,
+    charge.invoice_rate_date,
+    charge.invoice_rate_source,
+    charge.invoice_net_minor,
+    charge.invoice_vat_minor,
+    charge.invoice_total_minor
 )::public.service_charge_v1;

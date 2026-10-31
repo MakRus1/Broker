@@ -77,6 +77,22 @@ types:
       type: bigint
     - name: price_mode
       type: text
+    - name: service_date
+      type: date
+    - name: invoice_currency
+      type: text
+    - name: invoice_rate_millionths
+      type: bigint
+    - name: invoice_rate_date
+      type: date
+    - name: invoice_rate_source
+      type: text
+    - name: invoice_net_minor
+      type: bigint
+    - name: invoice_vat_minor
+      type: bigint
+    - name: invoice_total_minor
+      type: bigint
   public.invoice_v1:
     fields:
     - name: id

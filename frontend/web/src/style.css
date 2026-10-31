@@ -4017,3 +4017,35 @@ details[open] > .route-stage-summary::after {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.service-exchange-rate {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.service-exchange-rate .inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.service-exchange-rate .inline-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.service-exchange-rate .field-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.service-exchange-rate p {
+  margin: 0;
+}
+.service-exchange-rate .field-error button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #255bcc;
+  font-size: inherit;
+}

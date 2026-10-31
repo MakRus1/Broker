@@ -6,6 +6,7 @@ import {
   attachServiceInvoice,
   type ServiceInvoiceSelection,
 } from './ServiceInvoiceActions';
+import { ServiceExchangeFields } from './ServiceExchangeFields';
 import { CalendarDate } from './CalendarDate';
 import { VatRateSelect } from './VatRateSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -15,7 +16,6 @@ import { ServiceChargeLookup } from './ServiceChargeLookup';
 import { Select } from './Select';
 import { AutoLoadMore } from './AutoLoadMore';
 import { useDiscardConfirmation } from './components';
-import { currenciesWithCurrent } from './currencies';
 import {
   financialLabelUnits,
   parseVatRate,
@@ -32,9 +32,16 @@ import {
   type ServiceCharge,
   type ServiceChargeSummary,
   type CurrencyTotal,
+  type ReportingSummary,
 } from './serviceCharges';
 
-type Draft = Omit<ServiceCharge, 'quantity_milli' | 'price_minor' | 'vat_rate_basis_points'> & {
+type Draft = Omit<
+  ServiceCharge,
+  'quantity_milli' | 'price_minor' | 'vat_rate_basis_points' | 'service_date'
+> & {
+  service_date: CalendarDate | null;
+  manualExchange: boolean;
+  exchangeValue: string;
   quantity: string;
   price: string;
   rate: string;
@@ -44,12 +51,17 @@ function draftOf(value: ServiceCharge): Draft {
   const { quantity_milli, price_minor, vat_rate_basis_points, ...rest } = value;
   return {
     ...rest,
+    service_date: CalendarDate.fromISO(value.service_date),
+    manualExchange: value.invoice_rate.source === 'manual',
+    exchangeValue: inputFixed(value.invoice_rate.rate_millionths, 6),
     quantity: inputFixed(quantity_milli, 3),
     price: inputFixed(price_minor, 2),
     rate: formatVatRate(vat_rate_basis_points ?? 0),
   };
 }
 function newCharge(scope: ServiceChargeScope, direction: ServiceCharge['direction']): Draft {
+  const now = new Date();
+  const serviceDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return draftOf({
     ...scope,
     id: crypto.randomUUID(),
@@ -65,6 +77,12 @@ function newCharge(scope: ServiceChargeScope, direction: ServiceCharge['directio
     price_minor: 0,
     price_mode: 'net',
     currency: 'RUB',
+    service_date: serviceDate,
+    invoice_currency: 'RUB',
+    invoice_rate: { date: serviceDate, rate_millionths: 1000000, source: 'identity' },
+    invoice_net_minor: 0,
+    invoice_vat_minor: 0,
+    invoice_total_minor: 0,
     vat_mode: 'exempt',
     vat_rate_basis_points: null,
     net_minor: 0,
@@ -121,6 +139,8 @@ export function ServiceCharges({
   const [items, setItems] = useState<ServiceCharge[]>([]);
   const [invoices, setInvoices] = useState<ServiceChargeInvoice[]>([]);
   const [summary, setSummary] = useState(emptySummary);
+  const [reporting, setReporting] = useState<ReportingSummary>();
+  const displaySummary = reporting && !reporting.missing_rates.length ? reporting.summary : summary;
   const [summaryOpen, setSummaryOpen] = useRegistryPreference(
     preferenceKey(
       session.subject,
@@ -148,12 +168,14 @@ export function ServiceCharges({
     setFailure('');
     setItems([]);
     setSummary(emptySummary);
+    setReporting(undefined);
     setAfter(null);
     request<{
       items: ServiceCharge[];
       next_after: string | null;
       invoices: typeof invoices;
       summary: ServiceChargeSummary;
+      reporting: ReportingSummary;
     }>(
       '/api/v1/service-charges/list',
       session,
@@ -165,6 +187,7 @@ export function ServiceCharges({
           setItems(result.items);
           setInvoices(result.invoices);
           setSummary(result.summary);
+          setReporting(result.reporting);
           setAfter(result.next_after);
         }
       })
@@ -215,6 +238,7 @@ export function ServiceCharges({
         items: ServiceCharge[];
         next_after: string | null;
         summary: ServiceChargeSummary;
+        reporting: ReportingSummary;
         invoices: typeof invoices;
       }>('/api/v1/service-charges/list', session, {
         scope,
@@ -234,6 +258,7 @@ export function ServiceCharges({
         ...result.invoices,
       ]);
       setSummary(result.summary);
+      setReporting(result.reporting);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : 'Не удалось загрузить услуги');
     } finally {
@@ -250,10 +275,12 @@ export function ServiceCharges({
       !quantity ||
       price === undefined ||
       rate === undefined ||
+      !draft.service_date ||
+      (draft.manualExchange && !parseFixed(draft.exchangeValue, 6, 1000000000000)) ||
       !draft.label_id ||
       !draft.counterparty_id
     ) {
-      setFailure('Проверьте метку, контрагента, количество, цену и ставку НДС');
+      setFailure('Проверьте метку, контрагента, дату услуги, количество, цену, курс и ставку НДС');
       return;
     }
     setBusy(true);
@@ -274,6 +301,11 @@ export function ServiceCharges({
           price_minor: price,
           price_mode: draft.price_mode,
           currency: draft.currency,
+          service_date: draft.service_date?.toString(),
+          invoice_currency: draft.invoice_currency,
+          manual_invoice_rate_millionths: draft.manualExchange
+            ? parseFixed(draft.exchangeValue, 6, 1000000000000)
+            : null,
           vat_mode: draft.vat_mode,
           vat_rate_basis_points: rate,
           note: draft.note,
@@ -382,7 +414,7 @@ export function ServiceCharges({
                         ...old,
                         contract_id: contract?.id ?? null,
                         contract_number: contract?.number ?? null,
-                        ...(contract ? { currency: contract.currency } : {}),
+                        ...(contract ? { invoice_currency: contract.currency } : {}),
                       }
                     : old,
                 )
@@ -457,16 +489,25 @@ export function ServiceCharges({
                 }
               />
             </label>
-            <Select
-              label="Валюта"
-              value={draft.currency}
-              options={currenciesWithCurrent(draft.currency)}
-              searchable
-              onChange={(value) =>
+            <ServiceExchangeFields
+              session={session}
+              disabled={busy}
+              date={draft.service_date}
+              currency={draft.currency}
+              invoiceCurrency={draft.invoice_currency}
+              manual={draft.manualExchange}
+              rate={draft.exchangeValue}
+              onDate={(value) => set('service_date', value)}
+              onCurrency={(value) => set('currency', value)}
+              onInvoiceCurrency={(value) =>
                 setDraft((old) =>
-                  old ? { ...old, currency: value, contract_id: null, contract_number: null } : old,
+                  old
+                    ? { ...old, invoice_currency: value, contract_id: null, contract_number: null }
+                    : old,
                 )
               }
+              onManual={(value) => set('manualExchange', value)}
+              onRate={(value) => set('exchangeValue', value)}
             />
             <Select
               label="Цена указана"
@@ -544,7 +585,14 @@ export function ServiceCharges({
               </button>
             </div>
           </div>
-          {summary.combined.length > 0 && (
+          {reporting && (
+            <p className={reporting.missing_rates.length ? 'error' : 'hint'}>
+              {reporting.missing_rates.length
+                ? `Пересчёт в ${reporting.currency} недоступен: нет курсов для ${reporting.missing_rates.map((item) => `${item.currency} на ${CalendarDate.fromISO(item.date).toDisplayString()}`).join(', ')}. Показаны суммы по валютам услуг.`
+                : `Сводка в ${reporting.currency} · пересчёт на даты услуг`}
+            </p>
+          )}
+          {displaySummary.combined.length > 0 && (
             <section className="finance-summary-disclosure">
               <button
                 type="button"
@@ -557,7 +605,7 @@ export function ServiceCharges({
                   <strong>Сводка</strong>
                 </span>
                 <span className="finance-summary-compact">
-                  {summary.combined.map((item) => (
+                  {displaySummary.combined.map((item) => (
                     <span key={item.currency}>
                       <strong>{item.currency}</strong>
                       <span>Доход</span>
@@ -578,12 +626,12 @@ export function ServiceCharges({
                 <div className="finance-summary">
                   <Totals
                     title={scope.transportation_id ? 'Перевозка' : 'Поставка'}
-                    items={summary.own}
+                    items={displaySummary.own}
                   />
                   {!scope.transportation_id && (
                     <>
-                      <Totals title="Перевозки" items={summary.transportations} />
-                      <Totals title="Всего" items={summary.combined} />
+                      <Totals title="Перевозки" items={displaySummary.transportations} />
+                      <Totals title="Всего" items={displaySummary.combined} />
                     </>
                   )}
                 </div>
@@ -701,6 +749,16 @@ export function ServiceCharges({
                       <td className="service-numeric">
                         <strong>{formatFixed(item.total_minor, 2)}</strong>
                         <span className="service-secondary">{item.currency}</span>
+                        {item.invoice_currency !== item.currency && (
+                          <span className="service-secondary">
+                            В счёте: {formatFixed(item.invoice_total_minor, 2)}{' '}
+                            {item.invoice_currency}
+                            <br />
+                            Курс {formatFixed(item.invoice_rate.rate_millionths, 6)} ·{' '}
+                            {item.invoice_rate.source === 'manual' ? 'вручную' : 'ЦБ'} на{' '}
+                            {CalendarDate.fromISO(item.invoice_rate.date).toDisplayString()}
+                          </span>
+                        )}
                       </td>
                       <td>
                         {invoice ? (

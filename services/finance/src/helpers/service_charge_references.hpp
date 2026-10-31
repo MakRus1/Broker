@@ -66,9 +66,9 @@ inline ServiceChargeParties ValidateServiceChargeParties(const Deps& deps,
                     .contract;
             if (!SameId(contract.counterparty_id, value.counterparty_id))
                 throw ApiError<400>{"wrong_contract", "Договор относится к другому контрагенту"};
-            if (contract.currency != value.currency)
+            if (contract.currency != value.invoice_currency)
                 throw ApiError<400>{
-                    "contract_currency", "Валюта услуги должна совпадать с валютой договора"};
+                    "contract_currency", "Валюта счёта должна совпадать с валютой договора"};
             if (contract.archived && !value.archived)
                 throw ApiError<409>{"archived_contract", "Выберите действующий договор"};
             result.ContractNumber = contract.number;

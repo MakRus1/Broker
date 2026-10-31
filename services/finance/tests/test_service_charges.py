@@ -74,6 +74,8 @@ def charge(api, references, scope):
             'unit': 'transportation', 'counterparty_id': PARTY, 'contract_id': CONTRACT,
             'quantity_milli': 1000, 'price_minor': 10000, 'price_mode': 'net', 'currency': 'RUB',
             'vat_mode': 'rate', 'vat_rate_basis_points': 2000, 'note': None,
+            'service_date':'2026-10-30', 'invoice_currency':changes.get('invoice_currency',changes.get('currency','RUB')),
+            'manual_invoice_rate_millionths':None,
             'archived': False, 'expected_revision': 0, **changes,
         }
     return create

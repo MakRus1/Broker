@@ -66,6 +66,14 @@ inline clients::finance::ApiV1FinancialLabelsList::RequestBody Convert(
         .sort = query.sort};
 }
 
+inline models::finance::ExchangeRate Convert(const clients::finance::models::ExchangeRate& value) {
+    return {.date = value.date,
+        .rate_millionths = value.rate_millionths,
+        .source =
+            models::finance::ParseEnumScalar(clients::finance::models::EnumValue(value.source),
+                models::finance::ExchangeRate_source{})};
+}
+
 inline models::finance::ServiceCharge Convert(
     const clients::finance::models::ServiceCharge& value) {
     return {
@@ -79,6 +87,11 @@ inline models::finance::ServiceCharge Convert(
             models::finance::ParseEnumScalar(clients::finance::models::EnumValue(value.direction),
                 models::finance::ServiceChargeDirection{}),
         .id = value.id,
+        .invoice_currency = value.invoice_currency,
+        .invoice_net_minor = value.invoice_net_minor,
+        .invoice_rate = Convert(value.invoice_rate),
+        .invoice_total_minor = value.invoice_total_minor,
+        .invoice_vat_minor = value.invoice_vat_minor,
         .label_id = value.label_id,
         .label_name = value.label_name,
         .net_minor = value.net_minor,
@@ -88,6 +101,7 @@ inline models::finance::ServiceCharge Convert(
             clients::finance::models::EnumValue(value.price_mode), models::finance::PriceMode{}),
         .quantity_milli = value.quantity_milli,
         .revision = value.revision,
+        .service_date = value.service_date,
         .shipment_id = value.shipment_id,
         .total_minor = value.total_minor,
         .transportation_id = value.transportation_id,
@@ -121,6 +135,15 @@ inline models::finance::ServiceChargeSummary Convert(
     return result;
 }
 
+inline models::finance::ReportingSummary Convert(
+    const clients::finance::models::ReportingSummary& value) {
+    models::finance::ReportingSummary result{
+        .currency = value.currency, .missing_rates = {}, .summary = Convert(value.summary)};
+    for (const auto& missing : value.missing_rates)
+        result.missing_rates.push_back({.currency = missing.currency, .date = missing.date});
+    return result;
+}
+
 inline clients::finance::ApiV1ServiceChargesSave::RequestBody Convert(
     const models::finance::SaveServiceChargeRequest& value) {
     return {
@@ -133,12 +156,15 @@ inline clients::finance::ApiV1ServiceChargesSave::RequestBody Convert(
                 clients::finance::models::ServiceChargeDirection{}),
         .expected_revision = value.expected_revision,
         .id = value.id,
+        .invoice_currency = value.invoice_currency,
         .label_id = value.label_id,
+        .manual_invoice_rate_millionths = value.manual_invoice_rate_millionths,
         .note = value.note,
         .price_minor = value.price_minor,
         .price_mode = clients::finance::models::ParseEnumScalar(
             models::finance::EnumValue(value.price_mode), clients::finance::models::PriceMode{}),
         .quantity_milli = value.quantity_milli,
+        .service_date = value.service_date,
         .shipment_id = value.shipment_id,
         .transportation_id = value.transportation_id,
         .unit = clients::finance::models::ParseEnumScalar(

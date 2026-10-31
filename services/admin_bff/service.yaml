@@ -19,6 +19,9 @@ clients:
   transport_locations:
     service: transport_locations
     transport: http
+  finance:
+    service: finance
+    transport: http
 dashboard:
   title: Broker · Административный BFF
   tags:

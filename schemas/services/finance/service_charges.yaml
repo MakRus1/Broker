@@ -95,11 +95,14 @@ paths:
                     type: array
                     items:
                       $ref: components/schemas/models.yaml#/ServiceChargeInvoice
+                  reporting:
+                    $ref: components/schemas/models.yaml#/ReportingSummary
                 required:
                 - items
                 - next_after
                 - summary
                 - invoices
+                - reporting
         '400':
           description: Некорректные поля начисления
           content:

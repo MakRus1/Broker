@@ -15,6 +15,33 @@ spec.loader.exec_module(module)
 
 
 class ClusterCheckTest(unittest.TestCase):
+    def test_waits_for_registration_before_waiting_for_ready(self):
+        command = ['kubectl']
+        results = [
+            subprocess.CompletedProcess([], 0, stdout=''),
+            subprocess.CompletedProcess([], 0, stdout='node/test\n'),
+            subprocess.CompletedProcess([], 0),
+        ]
+        with (
+            patch.object(module.subprocess, 'run', side_effect=results) as run,
+            patch.object(module.time, 'sleep') as sleep,
+            patch.object(module.time, 'monotonic', side_effect=[0, 0, 1, 2, 3]),
+        ):
+            module.wait_for_runtime_node(command)
+        self.assertEqual(run.call_args_list[0].args[0], ['kubectl', 'get', 'nodes', '-o', 'name'])
+        self.assertEqual(run.call_args_list[1].args[0], ['kubectl', 'get', 'nodes', '-o', 'name'])
+        self.assertIn('--timeout=117s', run.call_args_list[2].args[0])
+        sleep.assert_called_once()
+
+    def test_missing_node_has_bounded_wait(self):
+        with (
+            patch.object(module.subprocess, 'run') as run,
+            patch.object(module.time, 'monotonic', side_effect=[0, 121]),
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'не зарегистрировался'):
+                module.wait_for_runtime_node(['kubectl'])
+        run.assert_not_called()
+
     def test_runtime_waits_for_ready_node_before_applying_manifests(self):
         calls = []
 
@@ -23,6 +50,8 @@ class ClusterCheckTest(unittest.TestCase):
             output = (
                 json.dumps({'serverVersion': {'gitVersion': 'v-test'}}) if 'version' in args else ''
             )
+            if 'nodes' in args:
+                output = 'node/test\n'
             return subprocess.CompletedProcess(args, 0, stdout=output)
 
         with TemporaryDirectory() as temporary:

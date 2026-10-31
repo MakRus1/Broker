@@ -24,7 +24,7 @@ type ServiceContext = Pick<
   | 'counterparty_name'
   | 'contract_id'
   | 'contract_number'
-  | 'currency'
+  | 'invoice_currency'
 >;
 type Creation = {
   id: string;
@@ -159,7 +159,7 @@ function CreateInvoice({
           own_bank_account_id: ownAccount,
           counterparty_bank_account_id: partyAccount,
           contract_id: service.contract_id,
-          currency: service.currency,
+          currency: service.invoice_currency,
           note: null,
           archived: false,
         },
@@ -220,7 +220,7 @@ function CreateInvoice({
           owner={own}
           label="Счёт своего юрлица"
           value={ownAccount}
-          currency={service.currency}
+          currency={service.invoice_currency}
           session={session}
           onChange={setOwnAccount}
         />
@@ -228,13 +228,13 @@ function CreateInvoice({
           owner={service.counterparty_id}
           label="Счёт контрагента"
           value={partyAccount}
-          currency={service.currency}
+          currency={service.invoice_currency}
           session={session}
           onChange={setPartyAccount}
         />
       </div>
       <p className="hint">
-        {service.counterparty_name || 'Выбранный контрагент'} · {service.currency}
+        {service.counterparty_name || 'Выбранный контрагент'} · {service.invoice_currency}
         {service.contract_number ? ` · Договор ${service.contract_number}` : ''}
       </p>
       {failure && (
@@ -280,7 +280,7 @@ export function ServiceInvoiceActions({
   const filters = [
     { field: 'archived', values: ['false'] },
     { field: 'counterparty_id', values: [service.counterparty_id] },
-    { field: 'currency', values: [service.currency] },
+    { field: 'currency', values: [service.invoice_currency] },
     service.contract_id
       ? { field: 'contract_id', values: [service.contract_id] }
       : { field: 'contract_id', empty: true },
@@ -322,7 +322,7 @@ export function ServiceInvoiceActions({
     creating,
     query,
     service.counterparty_id,
-    service.currency,
+    service.invoice_currency,
     service.contract_id,
     session,
   ]);
@@ -365,7 +365,7 @@ export function ServiceInvoiceActions({
       <button
         type="button"
         className={compact ? 'service-invoice-trigger compact' : 'service-invoice-trigger'}
-        disabled={busy || !service.counterparty_id || !service.currency}
+        disabled={busy || !service.counterparty_id || !service.invoice_currency}
         aria-label={
           chosen
             ? `Счёт № ${chosen.number} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
@@ -432,7 +432,7 @@ export function ServiceInvoiceActions({
             <>
               <div className="section-heading">
                 <p className="hint">
-                  {service.counterparty_name || 'Выбранный контрагент'} · {service.currency}
+                  {service.counterparty_name || 'Выбранный контрагент'} · {service.invoice_currency}
                 </p>
                 <button className="primary" type="button" onClick={() => setCreating(true)}>
                   Создать счёт

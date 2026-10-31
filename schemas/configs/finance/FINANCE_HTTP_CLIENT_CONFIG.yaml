@@ -2,6 +2,10 @@ name: FINANCE_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/admin/finance/settings/get
+- /api/admin/finance/settings/update
+- /api/v1/exchange-rates/get
+- /api/v1/finance/settings/get
 - /api/v1/financial-labels/filter-values
 - /api/v1/financial-labels/get
 - /api/v1/financial-labels/list

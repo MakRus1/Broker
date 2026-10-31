@@ -1,0 +1,255 @@
+openapi: 3.0.3
+info:
+  title: Валюты и настройки финансов
+  version: '1.0'
+paths:
+  /api/v1/exchange-rates/get:
+    post:
+      summary: Курс пересчёта валют на дату услуги
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                from_currency:
+                  type: string
+                to_currency:
+                  type: string
+                date:
+                  type: string
+                  format: date
+              required:
+              - from_currency
+              - to_currency
+              - date
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ExchangeRate
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+  /api/v1/finance/settings/get:
+    post:
+      summary: Валюта пересчёта организации
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinanceSettings
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+  /api/admin/finance/settings/get:
+    post:
+      summary: Настройки финансов организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+              required:
+              - organization_id
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinanceSettings
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+  /api/admin/finance/settings/update:
+    post:
+      summary: Изменить валюту пересчёта организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                reporting_currency:
+                  type: string
+                  pattern: ^[A-Z]{3}$
+                expected_revision:
+                  type: integer
+                  format: int64
+              required:
+              - organization_id
+              - reporting_currency
+              - expected_revision
+      responses:
+        '200':
+          description: Результат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinanceSettings
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Редакция изменилась
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Курс или сервис временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

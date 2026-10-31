@@ -6,7 +6,36 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        cbr-http-client: {}
+        exchange-rates:
+            endpoint: https://www.cbr.ru/scripts/XML_daily.asp
+            timeout-ms: 2000
+            allow-http: false
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-finance-settings-get:
+            path: /api/admin/finance/settings/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-finance-settings-update:
+            path: /api/admin/finance/settings/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-exchange_rates-get:
+            path: /api/v1/exchange-rates/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-finance-settings-get:
+            path: /api/v1/finance/settings/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-financial_labels-filter_values:
             path: /api/v1/financial-labels/filter-values
             method: POST
@@ -139,6 +168,8 @@ components_manager:
             base-url: $client-contracts-base-url
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-organizations:
+            base-url: $client-organizations-base-url
         client-shipments:
             base-url: $client-shipments-base-url
         client-transportations:
@@ -167,6 +198,10 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/admin/finance/settings/get: authenticated
+                /api/admin/finance/settings/update: authenticated
+                /api/v1/exchange-rates/get: finance.read_service_charges
+                /api/v1/finance/settings/get: finance.read_service_charges
                 /api/v1/financial-labels/filter-values: finance.read_financial_labels
                 /api/v1/financial-labels/get: finance.read_financial_labels
                 /api/v1/financial-labels/list: finance.read_financial_labels

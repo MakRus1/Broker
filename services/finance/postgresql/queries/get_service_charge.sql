@@ -21,7 +21,15 @@ SELECT ROW(
     charge.note,
     charge.archived,
     charge.revision,
-    charge.price_mode
+    charge.price_mode,
+    charge.service_date,
+    charge.invoice_currency,
+    charge.invoice_rate_millionths,
+    charge.invoice_rate_date,
+    charge.invoice_rate_source,
+    charge.invoice_net_minor,
+    charge.invoice_vat_minor,
+    charge.invoice_total_minor
 )::public.service_charge_v1
 FROM service_charges AS charge
 WHERE organization_id = $1::UUID AND id = $2::UUID;

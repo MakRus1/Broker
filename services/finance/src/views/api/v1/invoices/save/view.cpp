@@ -36,9 +36,9 @@ Response View::Handle(
     for (const auto& charge : charges.AsSetOf<pgtypes::ServiceChargeV1>()) {
         ValidateInvoiceServiceCharge(charge, value);
         snapshots.push_back(charge);
-        value.NetMinor += charge.NetMinor;
-        value.VatMinor += charge.VatMinor;
-        value.TotalMinor += charge.TotalMinor;
+        value.NetMinor += charge.InvoiceNetMinor;
+        value.VatMinor += charge.InvoiceVatMinor;
+        value.TotalMinor += charge.InvoiceTotalMinor;
     }
     if (request.body.expected_revision != 0)
         transaction.Execute(sql::kLockInvoices, organization, std::vector{value.Id});

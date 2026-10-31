@@ -12,6 +12,7 @@ Response View::Handle(
     return Response200{.invoices = Convert(result.invoices),
         .items = Convert(result.items),
         .next_after = result.next_after,
+        .reporting = Convert(result.reporting),
         .summary = Convert(result.summary)};
 }
 }  // namespace web_bff::views::api::v1::service_charges::list

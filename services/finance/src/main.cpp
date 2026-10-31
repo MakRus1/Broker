@@ -16,11 +16,13 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
+#include <components/exchange_rates.hpp>
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
 #include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
+#include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <configs/keys.hpp>
@@ -61,10 +63,13 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<finance::clients::contracts::Component>();
     component_list.Append<finance::clients::counterparties::Component>();
+    component_list.Append<finance::clients::organizations::Component>();
     component_list.Append<finance::clients::shipments::Component>();
     component_list.Append<finance::clients::transportations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-finance");
     // SERVICE_REGISTRATION_END
+    component_list.Append<userver::components::HttpClient>("cbr-http-client");
+    component_list.Append<finance::ExchangeRates>();
 
     component_list = finance::openapi::AppendGeneratedHandlers(component_list);
 

@@ -22,7 +22,15 @@ INSERT INTO service_charges (
     note,
     archived,
     revision,
-    price_mode
+    price_mode,
+    service_date,
+    invoice_currency,
+    invoice_rate_millionths,
+    invoice_rate_date,
+    invoice_rate_source,
+    invoice_net_minor,
+    invoice_vat_minor,
+    invoice_total_minor
 )
 SELECT
     $1::UUID,
@@ -52,5 +60,13 @@ RETURNING ROW(
     note,
     archived,
     revision,
-    price_mode
+    price_mode,
+    service_date,
+    invoice_currency,
+    invoice_rate_millionths,
+    invoice_rate_date,
+    invoice_rate_source,
+    invoice_net_minor,
+    invoice_vat_minor,
+    invoice_total_minor
 )::public.service_charge_v1;

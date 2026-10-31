@@ -101,8 +101,8 @@ inline void ValidateInvoiceServiceCharge(
     const pgtypes::ServiceChargeV1& charge, const pgtypes::InvoiceV1& invoice) {
     if (charge.Archived ||
         charge.Direction != (invoice.Direction == "outgoing" ? "income" : "expense") ||
-        charge.CounterpartyId != invoice.CounterpartyId || charge.Currency != invoice.Currency ||
-        charge.ContractId != invoice.ContractId)
+        charge.CounterpartyId != invoice.CounterpartyId ||
+        charge.InvoiceCurrency != invoice.Currency || charge.ContractId != invoice.ContractId)
         throw ApiError<400>{"wrong_service_charge",
             "Услуга не соответствует сторонам, договору, валюте или направлению счёта"};
 }
@@ -140,9 +140,9 @@ inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     for (const auto& line : rows.AsSetOf<pgtypes::ServiceChargeV1>()) {
         if (line.Id == service_charge_id)
             continue;
-        invoice.NetMinor += line.NetMinor;
-        invoice.VatMinor += line.VatMinor;
-        invoice.TotalMinor += line.TotalMinor;
+        invoice.NetMinor += line.InvoiceNetMinor;
+        invoice.VatMinor += line.InvoiceVatMinor;
+        invoice.TotalMinor += line.InvoiceTotalMinor;
     }
     transaction.Execute(sql::kDeleteInvoiceServiceCharges, organization, invoice_id,
         std::optional{service_charge_id});

@@ -17,6 +17,12 @@ export interface ServiceCharge extends ServiceChargeScope {
   price_minor: number;
   price_mode: 'net' | 'gross';
   currency: string;
+  service_date: string;
+  invoice_currency: string;
+  invoice_rate: ExchangeRate;
+  invoice_net_minor: number;
+  invoice_vat_minor: number;
+  invoice_total_minor: number;
   vat_mode: VatMode;
   vat_rate_basis_points: number | null;
   net_minor: number;
@@ -53,3 +59,14 @@ export function inputFixed(value: number, digits: number): string {
     String(value % 10 ** digits).padStart(digits, '0')
   );
 }
+
+export type ExchangeRate = {
+  rate_millionths: number;
+  date: string;
+  source: 'identity' | 'cbr' | 'manual';
+};
+export type ReportingSummary = {
+  currency: string;
+  summary: ServiceChargeSummary;
+  missing_rates: { currency: string; date: string }[];
+};

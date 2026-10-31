@@ -1,8 +1,10 @@
 #pragma once
+#include <helpers/exchange_amounts.hpp>
 #include <helpers/financial_labels.hpp>
 #include <helpers/service_charge_amounts.hpp>
 #include <helpers/service_charge_references.hpp>
 #include <limits>
+#include <platform/date_validation.hpp>
 
 namespace finance::helpers {
 inline models::ServiceCharge Convert(const pgtypes::ServiceChargeV1& value) {
@@ -25,6 +27,14 @@ inline models::ServiceCharge Convert(const pgtypes::ServiceChargeV1& value) {
     result.quantity_milli = value.QuantityMilli;
     result.price_minor = value.PriceMinor;
     result.currency = value.Currency;
+    result.service_date = value.ServiceDate;
+    result.invoice_currency = value.InvoiceCurrency;
+    result.invoice_rate = {.date = value.InvoiceRateDate,
+        .rate_millionths = value.InvoiceRateMillionths,
+        .source = models::ParseEnumScalar(value.InvoiceRateSource, models::ExchangeRate_source{})};
+    result.invoice_net_minor = value.InvoiceNetMinor;
+    result.invoice_vat_minor = value.InvoiceVatMinor;
+    result.invoice_total_minor = value.InvoiceTotalMinor;
     result.vat_mode = models::ParseEnumScalar(value.VatMode, models::VatMode{});
     result.vat_rate_basis_points = value.VatRateBasisPoints;
     result.net_minor = value.NetMinor;
@@ -46,7 +56,8 @@ inline std::vector<models::ServiceCharge> ConvertServiceCharges(const pg::Result
 }
 
 inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceChargeRequest& value,
-    const models::FinancialLabel& label, const ServiceChargeParties& parties) {
+    const models::FinancialLabel& label, const ServiceChargeParties& parties,
+    const Rate& exchange_rate) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция услуги"};
     if (label.archived && !value.archived)
@@ -54,7 +65,14 @@ inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceCh
     if (label.direction != models::FinancialLabelDirection::Both &&
         models::EnumValue(label.direction) != models::EnumValue(value.direction))
         throw ApiError<400>{"wrong_direction", "Метка не подходит для выбранного направления"};
+    if (!platform::IsCalendarDateInRange(
+            value.service_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
+        throw ApiError<400>{"invalid_service_date", "Укажите дату услуги не раньше 01.01.1900"};
+    ValidateCurrency(value.currency);
+    ValidateCurrency(value.invoice_currency);
     const auto amounts = CalculateAmounts(value);
+    const auto invoice_net = ConvertAmount(amounts.Net, exchange_rate.Millionths);
+    const auto invoice_total = ConvertAmount(amounts.Total, exchange_rate.Millionths);
     auto note = value.note;
     if (note.has_value()) {
         note = userver::utils::text::Trim(note.value());
@@ -91,6 +109,14 @@ inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceCh
         .Archived = value.archived,
         .Revision = value.expected_revision + 1,
         .PriceMode = models::EnumValue(value.price_mode),
+        .ServiceDate = value.service_date,
+        .InvoiceCurrency = value.invoice_currency,
+        .InvoiceRateMillionths = exchange_rate.Millionths,
+        .InvoiceRateDate = exchange_rate.Date,
+        .InvoiceRateSource = exchange_rate.Source,
+        .InvoiceNetMinor = invoice_net,
+        .InvoiceVatMinor = invoice_total - invoice_net,
+        .InvoiceTotalMinor = invoice_total,
     };
 }
 }  // namespace finance::helpers

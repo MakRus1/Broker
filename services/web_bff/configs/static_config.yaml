@@ -127,6 +127,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-exchange_rates-get:
+            path: /api/v1/exchange-rates/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-finance-settings-get:
+            path: /api/v1/finance/settings/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-financial_labels-filter_values:
             path: /api/v1/financial-labels/filter-values
             method: POST

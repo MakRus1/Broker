@@ -21,13 +21,21 @@ SELECT ROW(
     charge.note,
     charge.archived,
     charge.revision,
-    charge.price_mode
+    charge.price_mode,
+    charge.service_date,
+    charge.invoice_currency,
+    charge.invoice_rate_millionths,
+    charge.invoice_rate_date,
+    charge.invoice_rate_source,
+    charge.invoice_net_minor,
+    charge.invoice_vat_minor,
+    charge.invoice_total_minor
 )::public.service_charge_v1
 FROM service_charges AS charge
 WHERE organization_id = $1::UUID
     AND direction = $2::TEXT
     AND counterparty_id = $3::UUID
-    AND currency = $4::TEXT
+    AND invoice_currency = $4::TEXT
     AND contract_id IS NOT DISTINCT FROM $5::UUID
     AND NOT archived
     AND ($7::UUID IS NULL OR id > $7::UUID)

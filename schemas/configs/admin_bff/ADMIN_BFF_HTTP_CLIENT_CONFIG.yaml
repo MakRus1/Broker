@@ -2,6 +2,8 @@ name: ADMIN_BFF_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/admin/finance/settings/get
+- /api/admin/finance/settings/update
 - /api/admin/organizations/create
 - /api/admin/organizations/list
 - /api/admin/organizations/members/add

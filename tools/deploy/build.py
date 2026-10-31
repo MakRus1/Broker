@@ -59,7 +59,7 @@ def selected_services(revision, services, base):
     )
     reasons = impact['reasons']
     for app, service in [('admin', 'admin_bff'), ('web', 'web_bff')]:
-        if any(path.startswith(f'frontend/{app}/') for path in paths):
+        if any(path.startswith((f'frontend/{app}/', 'frontend/shared/')) for path in paths):
             reasons.setdefault(service, []).append(f'Изменён фронтенд {app}')
     for service in services:
         if service not in base['images']:

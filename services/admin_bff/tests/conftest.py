@@ -32,6 +32,7 @@ def configure_admin(mockserver_info, service_source_dir):
         config_vars['admin-assets-dir'] = str(service_source_dir / 'tests/static')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-config_admin-base-url'] = mockserver_info.base_url.rstrip('/')
+        config_vars['client-finance-base-url'] = mockserver_info.base_url
         config_vars['client-shipments-base-url'] = mockserver_info.base_url
         config_vars['client-transport_locations-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-transportations-base-url'] = mockserver_info.base_url.rstrip('/')

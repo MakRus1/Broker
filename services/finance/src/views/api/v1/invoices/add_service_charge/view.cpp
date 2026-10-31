@@ -44,9 +44,9 @@ Response View::Handle(
             boost::uuids::string_generator{}(request.body.previous_invoice_id.value()), charge.Id,
             identity.ActorId());
     }
-    value.NetMinor += charge.NetMinor;
-    value.VatMinor += charge.VatMinor;
-    value.TotalMinor += charge.TotalMinor;
+    value.NetMinor += charge.InvoiceNetMinor;
+    value.VatMinor += charge.InvoiceVatMinor;
+    value.TotalMinor += charge.InvoiceTotalMinor;
     ++value.Revision;
     ValidateInvoiceSettlement(transaction, organization, value);
     transaction.Execute(sql::kUpdateInvoice, organization, value, request.body.expected_revision);

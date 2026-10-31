@@ -189,7 +189,7 @@ async def test_edit_invoiced_service_updates_invoice_atomically(api,charge,invoi
     assert saved['invoice']['vat_minor']==updated['vat_minor']+other['vat_minor']
     assert next(row for row in saved['charges'] if row['id']==item['id'])==updated
     await api.post('/api/v1/service-charges/save',{**body,'expected_revision':1,'price_minor':1},expected=409)
-    await api.post('/api/v1/service-charges/save',{**body,'expected_revision':2,'currency':'USD'},expected=400)
+    await api.post('/api/v1/service-charges/save',{**body,'expected_revision':2,'invoice_currency':'USD'},expected=400)
     assert await api.post(BASE+'get',{'id':document['id']})==saved
     await api.post(BASE+'save',{**document,'expected_revision':1},expected=409)
 

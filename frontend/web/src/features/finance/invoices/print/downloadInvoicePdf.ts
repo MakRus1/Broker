@@ -11,14 +11,20 @@ async function font(url: string): Promise<string> {
   return btoa(binary);
 }
 let fonts: Promise<{ regular: string; bold: string }> | undefined;
-export async function downloadInvoicePdf(data: InvoicePrintData) {
+export async function invoicePdfDocument(data: InvoicePrintData) {
   fonts ??= Promise.all([font(regularUrl), font(boldUrl)])
     .then(([regular, bold]) => ({ regular, bold }))
     .catch((error) => {
       fonts = undefined;
       throw error;
     });
-  const doc = createInvoicePdf(data, await fonts);
+  return createInvoicePdf(data, await fonts);
+}
+export function invoicePdfFilename(data: Pick<InvoicePrintData, 'invoice'>) {
   const number = data.invoice.number.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 100);
-  doc.save(`Счёт_${number}_${data.invoice.invoice_date}.pdf`);
+  return `Счёт_${number}_${data.invoice.invoice_date}.pdf`;
+}
+export async function downloadInvoicePdf(data: InvoicePrintData) {
+  const doc = await invoicePdfDocument(data);
+  doc.save(invoicePdfFilename(data));
 }

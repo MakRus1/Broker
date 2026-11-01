@@ -1,7 +1,7 @@
 import { useRowSelection } from '../../registry/useRowSelection';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { InvoicePaymentPicker } from './InvoicePaymentPicker';
-import { invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
+import { invoicePaymentLabels, invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
 import '../services/bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useState } from 'react';
@@ -59,7 +59,7 @@ export function InvoiceRegistry({
   const [paying, setPaying] = useState<PaymentTarget[]>();
   const [menu, setMenu] = useState<{ x: number; y: number }>();
   const [notice, setNotice] = useState('');
-  const canPay = direction === 'outgoing' && session.permissions.includes('finance.write_payments');
+  const canPay = session.permissions.includes('finance.write_payments');
   const problem = invoicePaymentProblem(targets);
   function distribute() {
     if (problem) return;
@@ -256,7 +256,7 @@ export function InvoiceRegistry({
         <RegistrySelectionActions
           count={chosen.length}
           problem={problem}
-          actions={[{ label: 'Распределить поступление', onClick: distribute }]}
+          actions={[{ label: invoicePaymentLabels[direction].action, onClick: distribute }]}
           onClear={selection.clear}
           menu={menu}
           onCloseMenu={() => setMenu(undefined)}
@@ -272,7 +272,7 @@ export function InvoiceRegistry({
             setPaying(undefined);
             selection.clear();
             setVersion((old) => old + 1);
-            setNotice('Распределение поступления сохранено');
+            setNotice(invoicePaymentLabels[direction].success);
           }}
         />
       )}

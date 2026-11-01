@@ -7,6 +7,7 @@ import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { formatFixed, parseFixed } from '../services/serviceCharges';
 import {
+  invoicePaymentLabels,
   automaticInvoiceAmounts,
   invoicePaymentAdditions,
   saveInvoicePayments,
@@ -32,6 +33,7 @@ export function InvoicePaymentPicker({
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Available>();
   const targets = balances ?? [balance];
+  const labels = invoicePaymentLabels[balance.invoice.direction];
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [details, setDetails] = useState<PaymentDetails>();
   const [selecting, setSelecting] = useState(false);
@@ -111,8 +113,7 @@ export function InvoicePaymentPicker({
       const value = await request<PaymentDetails>('/api/v1/payments/get', session, {
         id: item.payment.id,
       });
-      if (value.payment.archived)
-        throw new Error('Платёж отправлен в архив. Выберите другое поступление');
+      if (value.payment.archived) throw new Error(labels.archived);
       setDetails(value);
       setSelected(item);
       setAmounts(automaticInvoiceAmounts(targets, value.unallocated_minor));
@@ -137,7 +138,7 @@ export function InvoicePaymentPicker({
     }
   }
   return (
-    <Dialog title="Распределить оплату" onClose={onClose} className="invoice-payment-dialog">
+    <Dialog title={labels.action} onClose={onClose} className="invoice-payment-dialog">
       <form
         data-busy={busy}
         onSubmit={(e) => {
@@ -265,7 +266,7 @@ export function InvoicePaymentPicker({
               <strong>
                 {formatFixed(total, 2)} {details.payment.currency}
               </strong>{' '}
-              · Останется в поступлении:{' '}
+              · {labels.remainder}:{' '}
               <strong>
                 {formatFixed(BigInt(details.unallocated_minor) - total, 2)}{' '}
                 {details.payment.currency}

@@ -9,7 +9,7 @@ export function RegistrySelectionActions({
 }: {
   count: number;
   problem?: string;
-  actions: { label: string; onClick: () => void }[];
+  actions: { label: string; onClick: () => void; problem?: string }[];
   onClear: () => void;
   menu?: { x: number; y: number };
   onCloseMenu: () => void;
@@ -30,6 +30,16 @@ export function RegistrySelectionActions({
     };
   }, [menu, onCloseMenu]);
   if (!count) return null;
+  const issues = [
+    ...new Set(
+      [
+        problem,
+        ...actions.map((action) =>
+          action.problem ? `${action.label}: ${action.problem}` : undefined,
+        ),
+      ].filter(Boolean),
+    ),
+  ];
   return (
     <>
       <div className="bulk-services-toolbar" role="region" aria-label="Групповые действия">
@@ -38,14 +48,19 @@ export function RegistrySelectionActions({
           <button
             key={action.label}
             className={index === 0 ? 'primary' : undefined}
-            disabled={!!problem}
+            disabled={!!(action.problem ?? problem)}
+            title={action.problem ?? problem}
             onClick={action.onClick}
           >
             {action.label}
           </button>
         ))}
         <button onClick={onClear}>Снять выделение</button>
-        {problem && <span role="status">{problem}</span>}
+        {issues.map((issue) => (
+          <span role="status" key={issue}>
+            {issue}
+          </span>
+        ))}
       </div>
       {menu && (
         <div
@@ -59,13 +74,16 @@ export function RegistrySelectionActions({
             <button
               role="menuitem"
               key={action.label}
-              disabled={!!problem}
+              disabled={!!(action.problem ?? problem)}
+              title={action.problem ?? problem}
               onClick={action.onClick}
             >
               {action.label}
             </button>
           ))}
-          {problem && <small>{problem}</small>}
+          {issues.map((issue) => (
+            <small key={issue}>{issue}</small>
+          ))}
         </div>
       )}
     </>

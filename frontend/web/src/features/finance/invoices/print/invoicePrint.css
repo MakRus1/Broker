@@ -11,3 +11,17 @@
 .invoice-heading-actions .error {
   max-width: 300px;
 }
+.invoice-archive-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+.invoice-archive-dialog progress {
+  width: 100%;
+}
+.invoice-archive-errors {
+  max-height: 35vh;
+  overflow-y: auto;
+  padding-left: 24px;
+}
+.invoice-archive-errors li {
+  padding-block: 8px;
+}

@@ -1,3 +1,4 @@
+import { InvoicePdfArchiveDialog } from './print/InvoicePdfArchiveDialog';
 import { useRowSelection } from '../../registry/useRowSelection';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { InvoicePaymentPicker } from './InvoicePaymentPicker';
@@ -60,6 +61,11 @@ export function InvoiceRegistry({
   const [menu, setMenu] = useState<{ x: number; y: number }>();
   const [notice, setNotice] = useState('');
   const canPay = session.permissions.includes('finance.write_payments');
+  const canDownload =
+    direction === 'outgoing' && session.permissions.includes('finance.read_invoices');
+  const canSelect = canPay || canDownload;
+  const [pdfInvoices, setPdfInvoices] = useState<Invoice[]>();
+  const archiveProblem = chosen.length > 100 ? 'Выберите не больше 100 счетов' : undefined;
   const problem = invoicePaymentProblem(targets);
   function distribute() {
     if (problem) return;
@@ -252,14 +258,36 @@ export function InvoiceRegistry({
           {notice}
         </p>
       )}
-      {canPay && (
+      {canSelect && (
         <RegistrySelectionActions
           count={chosen.length}
-          problem={problem}
-          actions={[{ label: invoicePaymentLabels[direction].action, onClick: distribute }]}
+          actions={[
+            ...(canPay
+              ? [{ label: invoicePaymentLabels[direction].action, onClick: distribute, problem }]
+              : []),
+            ...(canDownload
+              ? [
+                  {
+                    label: 'Скачать PDF в ZIP',
+                    problem: archiveProblem,
+                    onClick: () => {
+                      setMenu(undefined);
+                      setPdfInvoices([...chosen]);
+                    },
+                  },
+                ]
+              : []),
+          ]}
           onClear={selection.clear}
           menu={menu}
           onCloseMenu={() => setMenu(undefined)}
+        />
+      )}
+      {pdfInvoices && (
+        <InvoicePdfArchiveDialog
+          invoices={pdfInvoices}
+          session={session}
+          onClose={() => setPdfInvoices(undefined)}
         />
       )}
       {paying && (
@@ -283,7 +311,7 @@ export function InvoiceRegistry({
       )}
       <RegistryTable
         selectionColumn={
-          canPay
+          canSelect
             ? {
                 header: (
                   <input
@@ -336,7 +364,7 @@ export function InvoiceRegistry({
               location.hash = `${base}/${item.id}`;
             }
           },
-          onContextMenu: canPay
+          onContextMenu: canSelect
             ? (event) => {
                 if ((event.target as HTMLElement).closest('a,button,input')) return;
                 event.preventDefault();

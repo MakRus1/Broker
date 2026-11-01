@@ -35,3 +35,13 @@ ci-results/
 
 # Секреты и сгенерированные манифесты личного staging.
 .staging/
+
+# Отчёты тестов, которые Docker/CTest могут записать в корень.
+/pytest-*.xml
+/results.json
+/finance.log
+/finance.xml
+/transportations.log
+/transportations.xml
+/web_bff.log
+/web_bff.xml

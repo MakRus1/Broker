@@ -1,3 +1,7 @@
+import { useRowSelection } from '../../registry/useRowSelection';
+import { ServiceInvoiceActions } from '../invoices/ServiceInvoiceActions';
+import { attachBulkInvoice, bulkInvoiceProblem } from '../invoices/bulkInvoices';
+import './bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useMemo, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -55,6 +59,33 @@ export function ServiceChargeRegistry({
   onCreate: (direction: 'income' | 'expense') => void;
 }) {
   const [items, setItems] = useState<Row[]>([]);
+  const selection = useRowSelection(items.map((item) => item.id));
+  const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] }>();
+  const [bulk, setBulk] = useState<{ mode: 'new' | 'existing'; items: Row[] }>();
+  const [notice, setNotice] = useState('');
+  const selectedItems = items.filter((item) => selection.selected.has(item.id));
+  const canInvoice = session.permissions.includes('finance.write_invoices');
+  const problem = bulkInvoiceProblem(selectedItems);
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(undefined);
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', key);
+    };
+  }, [menu]);
+  function openBulk(mode: 'new' | 'existing', chosen = selectedItems) {
+    if (bulkInvoiceProblem(chosen)) return;
+    setMenu(undefined);
+    setBulk({ mode, items: chosen });
+  }
   const [references, setReferences] = useState<Record<string, string>>({});
   const referenceIds = useMemo(
     () => ({
@@ -114,6 +145,10 @@ export function ServiceChargeRegistry({
     initial,
     restore,
   );
+  useEffect(() => {
+    selection.clear();
+    setMenu(undefined);
+  }, [query, session, version, refresh]);
   const filters = useColumnFilters({
     registry: 'service-charges',
     session,
@@ -326,12 +361,125 @@ export function ServiceChargeRegistry({
         )}
         <RegistryColumnSettings {...state} />
       </RegistryHeading>
+      {notice && (
+        <p role="status" className="hint">
+          {notice}
+        </p>
+      )}
+      {canInvoice && selectedItems.length > 0 && (
+        <div className="bulk-services-toolbar" role="region" aria-label="Групповые действия">
+          <strong>Выбрано: {selectedItems.length}</strong>
+          <button className="primary" disabled={!!problem} onClick={() => openBulk('new')}>
+            Создать счёт
+          </button>
+          <button disabled={!!problem} onClick={() => openBulk('existing')}>
+            Добавить в счёт
+          </button>
+          <button onClick={selection.clear}>Снять выделение</button>
+          {problem && <span role="status">{problem}</span>}
+        </div>
+      )}
+      {menu &&
+        (() => {
+          const chosen = items.filter((item) => menu.ids.includes(item.id));
+          const reason = bulkInvoiceProblem(chosen);
+          return (
+            <div
+              className="bulk-services-menu"
+              role="menu"
+              style={{ left: menu.x, top: menu.y }}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <span>Выбрано: {chosen.length}</span>
+              <button role="menuitem" disabled={!!reason} onClick={() => openBulk('new', chosen)}>
+                Создать счёт
+              </button>
+              <button
+                role="menuitem"
+                disabled={!!reason}
+                onClick={() => openBulk('existing', chosen)}
+              >
+                Добавить в счёт
+              </button>
+              {reason && <small>{reason}</small>}
+            </div>
+          );
+        })()}
+      {bulk && (
+        <ServiceInvoiceActions
+          service={bulk.items[0]}
+          session={session}
+          initialMode={bulk.mode}
+          onClose={() => setBulk(undefined)}
+          summary={
+            <p className="hint">
+              Услуг: {bulk.items.length} · {bulk.items[0].counterparty_name} · Итого:{' '}
+              {formatFixed(
+                bulk.items.reduce((sum, item) => sum + BigInt(item.invoice_total_minor), 0n),
+                2,
+              )}{' '}
+              {bulk.items[0].invoice_currency}
+            </p>
+          }
+          onSelect={async (value) => {
+            if (!value) return;
+            const saved = await attachBulkInvoice(
+              bulk.items.map((item) => item.id),
+              value,
+              session,
+            );
+            setNotice(`Счёт № ${saved.invoice.number}: включено услуг — ${bulk.items.length}`);
+            selection.clear();
+            setRefresh((old) => old + 1);
+          }}
+        />
+      )}
       {failure && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
       <RegistryTable
+        selectionColumn={
+          canInvoice
+            ? {
+                header: (
+                  <input
+                    type="checkbox"
+                    aria-label="Выбрать все загруженные услуги"
+                    ref={(node) => {
+                      if (node)
+                        node.indeterminate =
+                          selectedItems.length > 0 && selectedItems.length < items.length;
+                    }}
+                    checked={items.length > 0 && selectedItems.length === items.length}
+                    onChange={(event) =>
+                      selection.setSelected(
+                        event.target.checked ? new Set(items.map((item) => item.id)) : new Set(),
+                      )
+                    }
+                  />
+                ),
+                render: (item) => (
+                  <input
+                    type="checkbox"
+                    aria-label={`Выбрать услугу «${item.label_name}»`}
+                    checked={selection.selected.has(item.id)}
+                    onPointerDown={(event) => selection.start(event, item.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (
+                        event.detail === 0 ||
+                        (event.nativeEvent as PointerEvent).pointerType === 'touch'
+                      )
+                        selection.toggle(item.id, !selection.selected.has(item.id), event.shiftKey);
+                    }}
+                    onChange={() => {}}
+                  />
+                ),
+              }
+            : undefined
+        }
         items={items}
         columns={state}
         definitions={columns}
@@ -346,13 +494,28 @@ export function ServiceChargeRegistry({
           }))
         }
         onOpen={(item) => onEdit(item, item.invoice)}
-        rowAttributes={(item) =>
-          serviceChargeRow(
+        rowAttributes={(item) => ({
+          ...serviceChargeRow(
             item,
             () => onEdit(item, item.invoice),
             !write || item.invoice?.read_only === true,
-          )
-        }
+          ),
+          'data-selection-row': item.id,
+          'aria-selected': selection.selected.has(item.id),
+          onContextMenu: canInvoice
+            ? (event) => {
+                if ((event.target as HTMLElement).closest('a,input,button')) return;
+                event.preventDefault();
+                const ids = selection.selected.has(item.id) ? [...selection.selected] : [item.id];
+                if (!selection.selected.has(item.id)) selection.setSelected(new Set(ids));
+                setMenu({
+                  x: Math.max(8, Math.min(event.clientX, innerWidth - 320)),
+                  y: Math.max(8, Math.min(event.clientY, innerHeight - 240)),
+                  ids,
+                });
+              }
+            : undefined,
+        })}
         emptyMessage={loading ? 'Загружаем услуги…' : failure ? undefined : 'Услуги не найдены'}
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />

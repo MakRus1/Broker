@@ -1,3 +1,4 @@
+import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
 import { PaymentsPage } from '../features/finance/payments/PaymentsPage';
 import { InvoicesPage } from '../features/finance/invoices/InvoicesPage';
@@ -806,6 +807,17 @@ export function App() {
                       const next = `/${value.direction}-invoices/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
+                    }}
+                  />
+                ) : entry.route.startsWith('/service-charges/') ? (
+                  <ServiceChargePage
+                    id={entry.route.split('/')[2]}
+                    session={session}
+                    customers={customers}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onClose={() => {
+                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
+                      location.hash = '/service-charges';
                     }}
                   />
                 ) : entry.route.startsWith('/service-charges') ? (

@@ -216,3 +216,26 @@ async def test_reassign_into_new_invoice_is_atomic(api,charge,invoice_references
     await api.post(BASE+'save',new)
     assert not (await api.post(BASE+'get',{'id':old['id']}))['charges']
     await api.post(BASE+'detach-service-charge',{'service_charge_id':item['id'],'invoice_id':new['id']},user='other',expected=404)
+
+async def test_bulk_invoice_add_preserves_existing_services(api, charge, invoice_references):
+    services = [(await saved_entry(api, charge))[1] for _ in range(3)]
+    value = invoice([services[0]['id']])
+    await api.post(BASE + 'save', value)
+    combined = await api.post(BASE + 'save', {
+        **value, 'expected_revision': 1,
+        'service_charge_ids': [item['id'] for item in services],
+    })
+    assert {item['id'] for item in combined['charges']} == {item['id'] for item in services}
+    assert combined['invoice']['total_minor'] == sum(item['invoice_total_minor'] for item in services)
+    assert combined['invoice']['revision'] == 2
+
+
+async def test_bulk_invoice_invalid_service_rolls_back_whole_selection(api, charge, invoice_references):
+    _, first = await saved_entry(api, charge)
+    _, incompatible = await saved_entry(api, charge, direction='expense')
+    value = invoice([first['id'], incompatible['id']])
+    await api.post(BASE + 'save', value, expected=400)
+    await api.post(BASE + 'get', {'id': value['id']}, expected=404)
+    # Первая услуга не должна остаться привязанной после ошибки второй.
+    saved = await api.post(BASE + 'save', invoice([first['id']]))
+    assert saved['charges'] == [first]

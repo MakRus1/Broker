@@ -130,7 +130,9 @@ export function RegistryTable<T extends { id: string }>({
   filterSummary,
   emptyMessage,
   rowAttributes,
+  selectionColumn,
 }: {
+  selectionColumn?: { header: ReactNode; render: (item: T) => ReactNode };
   rowAttributes?: (item: T) => HTMLAttributes<HTMLTableRowElement>;
   emptyMessage?: ReactNode;
   filterSummary?: ReactNode;
@@ -283,15 +285,21 @@ export function RegistryTable<T extends { id: string }>({
       >
         <table
           className="personal-registry-table"
-          style={{ width: visible.reduce((sum, column) => sum + column.width, 0) }}
+          style={{
+            width: visible.reduce((sum, column) => sum + column.width, selectionColumn ? 48 : 0),
+          }}
         >
           <colgroup>
+            {selectionColumn && <col style={{ width: 48 }} />}
             {visible.map((column) => (
               <col key={column.id} style={{ width: column.width }} />
             ))}
           </colgroup>
           <thead>
             <tr>
+              {selectionColumn && (
+                <th className="registry-selection-cell">{selectionColumn.header}</th>
+              )}
               {visible.map((column) => {
                 const definition = definitions.find((entry) => entry.id === column.id)!;
                 const filterFields =
@@ -440,6 +448,9 @@ export function RegistryTable<T extends { id: string }>({
                   ? rowAttributes(item)
                   : { className: 'clickable', onClick: () => onOpen(item) })}
               >
+                {selectionColumn && (
+                  <td className="registry-selection-cell">{selectionColumn.render(item)}</td>
+                )}
                 {visible.map((column) => (
                   <td
                     key={column.id}

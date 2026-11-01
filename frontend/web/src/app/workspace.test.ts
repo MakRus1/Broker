@@ -77,3 +77,11 @@ describe('Порядок рабочих вкладок', () => {
     ).toEqual([tabs[1], tabs[0]]);
   });
 });
+
+it('открывает каждую услугу в отдельной вкладке и повторно использует её', () => {
+  const route = '/service-charges/11111111-1111-4111-8111-111111111111';
+  const tabs = openWorkspace(openWorkspace([], '/service-charges'), route);
+  expect(tabs.map((tab) => tab.title)).toEqual(['Услуги', 'Услуга']);
+  expect(openWorkspace(tabs, route)).toHaveLength(2);
+  expect(restoreWorkspaces(JSON.stringify(tabs), route)).toEqual(tabs);
+});

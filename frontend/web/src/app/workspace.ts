@@ -5,6 +5,7 @@ export function workspaceId(route: string) {
 export function workspaceTitle(route: string) {
   if (/^\/shipments\/new(?:\/|$)/.test(route)) return 'Новая поставка';
   if (route === '/service-charges') return 'Услуги';
+  if (route.startsWith('/service-charges/')) return 'Услуга';
   if (route === '/financial-labels') return 'Финансовые метки';
   if (route === '/financial-labels/new') return 'Новая финансовая метка';
   if (route.startsWith('/financial-labels/')) return 'Финансовая метка';

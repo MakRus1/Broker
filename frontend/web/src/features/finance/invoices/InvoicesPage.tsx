@@ -1,3 +1,4 @@
+import { openServiceCharge } from '../services/ServiceChargePage';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { InvoicePdfButton } from './print/InvoicePdfButton';
@@ -121,6 +122,13 @@ export function InvoicesPage({
   const dirty =
     !!draft && JSON.stringify({ draft, selected: selected.map((x) => x.id) }) !== baseline.current;
   const validation = useFieldValidation();
+  useEffect(() => {
+    const refresh = () => {
+      if (!dirty && !newService) setVersion((old) => old + 1);
+    };
+    window.addEventListener('finance-charges-changed', refresh);
+    return () => window.removeEventListener('finance-charges-changed', refresh);
+  }, [dirty, newService]);
   const setBaseline = (d: Draft, charges: ServiceCharge[]) => {
     baseline.current = JSON.stringify({ draft: d, selected: charges.map((x) => x.id) });
   };
@@ -755,7 +763,7 @@ export function InvoicesPage({
                             key={charge.id}
                             {...serviceChargeRow(
                               charge,
-                              canOpenServiceEditor ? setNewService : undefined,
+                              canOpenServiceEditor ? openServiceCharge : undefined,
                               !canEditServices,
                             )}
                           >

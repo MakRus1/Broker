@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { Dialog } from '../../../shared/ui/Dialog';
@@ -261,7 +261,13 @@ export function ServiceInvoiceActions({
   onSelect,
   compact = false,
   current,
+  initialMode,
+  onClose,
+  summary,
 }: {
+  initialMode?: 'new' | 'existing';
+  onClose?: () => void;
+  summary?: ReactNode;
   service: ServiceContext;
   session: Session;
   compact?: boolean;
@@ -269,8 +275,8 @@ export function ServiceInvoiceActions({
   selection?: ServiceInvoiceSelection;
   onSelect: (selection: ServiceInvoiceSelection | undefined) => Promise<void> | void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState(!!initialMode);
+  const [creating, setCreating] = useState(initialMode === 'new');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Invoice[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
@@ -352,6 +358,7 @@ export function ServiceInvoiceActions({
       await onSelect(value);
       setOpen(false);
       setCreating(false);
+      onClose?.();
     } catch (e) {
       setFailure((e as Error).message);
       throw e;
@@ -361,67 +368,83 @@ export function ServiceInvoiceActions({
   }
   const chosen = selection?.kind === 'existing' ? selection.invoice : (selection?.body ?? current);
   return (
-    <div className={compact ? 'service-invoice-field compact' : 'service-invoice-field'}>
-      {!compact && <span className="service-invoice-label">Счёт</span>}
-      <button
-        type="button"
-        className={compact ? 'service-invoice-trigger compact' : 'service-invoice-trigger'}
-        disabled={busy || !service.counterparty_id || !service.invoice_currency}
-        aria-label={
-          chosen
-            ? `${chosen.number ? 'Счёт № ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
-            : 'Выберите или создайте счёт'
-        }
-        onClick={() => {
-          setCreating(false);
-          setOpen(true);
-        }}
-      >
-        <span className={chosen ? '' : 'service-invoice-placeholder'}>
-          {chosen
-            ? `${chosen.number ? '№ ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
-            : compact
-              ? 'Выбрать / создать'
-              : 'Выберите или создайте счёт'}
-        </span>
-        {!compact && <Chevron />}
-      </button>
-      {selection?.kind === 'new' && (
-        <span className="service-secondary">Будет создан при сохранении услуги</span>
-      )}
-      {chosen && (
-        <button
-          className="service-invoice-clear"
-          disabled={busy}
-          type="button"
-          onClick={async () => {
-            setBusy(true);
-            setFailure('');
-            try {
-              await onSelect(undefined);
-            } catch (e) {
-              setFailure((e as Error).message);
-            } finally {
-              setBusy(false);
+    <div
+      className={
+        initialMode
+          ? 'bulk-invoice-picker'
+          : compact
+            ? 'service-invoice-field compact'
+            : 'service-invoice-field'
+      }
+    >
+      {!initialMode && (
+        <>
+          {!compact && <span className="service-invoice-label">Счёт</span>}
+          <button
+            type="button"
+            className={compact ? 'service-invoice-trigger compact' : 'service-invoice-trigger'}
+            disabled={busy || !service.counterparty_id || !service.invoice_currency}
+            aria-label={
+              chosen
+                ? `${chosen.number ? 'Счёт № ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
+                : 'Выберите или создайте счёт'
             }
-          }}
-        >
-          {current ? 'Отвязать' : 'Убрать выбор'}
-        </button>
-      )}
-      {!open && failure && (
-        <p className="error" role="alert">
-          {failure}
-        </p>
+            onClick={() => {
+              setCreating(false);
+              setOpen(true);
+            }}
+          >
+            <span className={chosen ? '' : 'service-invoice-placeholder'}>
+              {chosen
+                ? `${chosen.number ? '№ ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
+                : compact
+                  ? 'Выбрать / создать'
+                  : 'Выберите или создайте счёт'}
+            </span>
+            {!compact && <Chevron />}
+          </button>
+          {selection?.kind === 'new' && (
+            <span className="service-secondary">Будет создан при сохранении услуги</span>
+          )}
+          {chosen && (
+            <button
+              className="service-invoice-clear"
+              disabled={busy}
+              type="button"
+              onClick={async () => {
+                setBusy(true);
+                setFailure('');
+                try {
+                  await onSelect(undefined);
+                } catch (e) {
+                  setFailure((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {current ? 'Отвязать' : 'Убрать выбор'}
+            </button>
+          )}
+          {!open && failure && (
+            <p className="error" role="alert">
+              {failure}
+            </p>
+          )}
+        </>
       )}
       {open && (
         <Dialog
-          title={creating ? 'Новый счёт' : 'Счёт услуги'}
+          title={creating ? 'Новый счёт' : initialMode ? 'Счёт выбранных услуг' : 'Счёт услуги'}
           onClose={() => {
-            if (!busy) setOpen(false);
+            if (!busy) {
+              setOpen(false);
+              onClose?.();
+            }
           }}
           className="service-invoice-dialog"
         >
+          {summary}
           {creating ? (
             <CreateInvoice
               service={service}

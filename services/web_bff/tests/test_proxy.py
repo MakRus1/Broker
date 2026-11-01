@@ -705,3 +705,18 @@ async def test_counterparty_settlements_proxy(browser, mockserver):
     response = await browser.post('/api/v1/counterparty-settlements/get', body)
     assert response.status == 200
     assert response.json() == result
+
+
+async def test_reconciliation_proxy(browser, mockserver):
+    await browser.sign_in()
+    body = {'counterparty_id': CUSTOMER, 'date_from': '2026-01-01', 'date_to': '2026-10-31'}
+    result = {'totals': [{'currency': 'RUB', 'opening_minor': '9007199254740993', 'debit_minor': '100', 'credit_minor': '200', 'closing_minor': '9007199254740893'}], 'operations': []}
+
+    @mockserver.json_handler('/api/v1/counterparty-reconciliation/get')
+    def upstream(request):
+        assert request.json == body
+        return result
+
+    response = await browser.post('/api/v1/counterparty-reconciliation/get', body)
+    assert response.status == 200
+    assert response.json() == result

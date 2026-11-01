@@ -127,6 +127,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-counterparty_reconciliation-get:
+            path: /api/v1/counterparty-reconciliation/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-counterparty_settlements-get:
             path: /api/v1/counterparty-settlements/get
             method: POST

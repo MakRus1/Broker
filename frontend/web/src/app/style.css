@@ -373,12 +373,21 @@ small {
 }
 .card-navigation {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 0 24px;
   padding: 0 32px;
   background: white;
   border-bottom: 1px solid #dfe5ed;
+}
+.card-navigation > .tabs {
+  flex: 1 1 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.card-navigation > .tabs button {
+  flex-shrink: 0;
 }
 .tabs {
   display: flex;
@@ -404,7 +413,7 @@ small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 10px 0;
+  margin: 10px 0 10px auto;
   padding: 8px 12px;
   font-size: 12px;
 }
@@ -649,7 +658,7 @@ textarea {
   .card-navigation {
     padding: 0 18px;
     gap: 12px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
   .tabs {
     gap: 20px;

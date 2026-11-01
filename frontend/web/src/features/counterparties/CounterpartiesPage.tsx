@@ -340,6 +340,7 @@ export function CounterpartiesPage({
                 <CounterpartySettlements
                   key={item.id}
                   counterpartyId={item.id}
+                  counterpartyName={item.name}
                   session={session}
                   version={historyVersion}
                 />

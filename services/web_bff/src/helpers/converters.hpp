@@ -6,6 +6,7 @@
 #include <helpers/converters/invoices.hpp>
 #include <helpers/converters/locations.hpp>
 #include <helpers/converters/payments.hpp>
+#include <helpers/converters/reconciliation.hpp>
 #include <helpers/converters/shipments.hpp>
 #include <helpers/converters/transportations.hpp>
 #include <utility>

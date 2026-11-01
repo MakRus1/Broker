@@ -1,3 +1,8 @@
+import { useRowSelection } from '../../registry/useRowSelection';
+import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
+import { InvoicePaymentPicker } from './InvoicePaymentPicker';
+import { invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
+import '../services/bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -45,6 +50,22 @@ export function InvoiceRegistry({
   refreshVersion?: number;
 }) {
   const [items, setItems] = useState<InvoiceRow[]>([]);
+  const selection = useRowSelection(items.map((item) => item.id));
+  const chosen = items.filter((item) => selection.selected.has(item.id));
+  const targets = chosen.map((item) => ({
+    invoice: item,
+    outstanding_minor: item.outstanding_minor,
+  }));
+  const [paying, setPaying] = useState<PaymentTarget[]>();
+  const [menu, setMenu] = useState<{ x: number; y: number }>();
+  const [notice, setNotice] = useState('');
+  const canPay = direction === 'outgoing' && session.permissions.includes('finance.write_payments');
+  const problem = invoicePaymentProblem(targets);
+  function distribute() {
+    if (problem) return;
+    setMenu(undefined);
+    setPaying(targets);
+  }
   const [cursor, setCursor] = useState<Cursor>();
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState('');
@@ -55,6 +76,10 @@ export function InvoiceRegistry({
     initialInvoiceQuery,
     restoreInvoiceQuery,
   );
+  useEffect(() => {
+    selection.clear();
+    setMenu(undefined);
+  }, [query, session, direction, version, refreshVersion]);
   const registryRequest = { ...query, direction, filters: scopedFilters(query.filters, scope) };
   const filters = useColumnFilters({
     registry: 'invoices',
@@ -222,12 +247,107 @@ export function InvoiceRegistry({
         )}
         <RegistryColumnSettings {...columnState} />
       </RegistryHeading>
+      {notice && (
+        <p className="hint" role="status">
+          {notice}
+        </p>
+      )}
+      {canPay && (
+        <RegistrySelectionActions
+          count={chosen.length}
+          problem={problem}
+          actions={[{ label: 'Распределить поступление', onClick: distribute }]}
+          onClear={selection.clear}
+          menu={menu}
+          onCloseMenu={() => setMenu(undefined)}
+        />
+      )}
+      {paying && (
+        <InvoicePaymentPicker
+          balance={paying[0]}
+          balances={paying}
+          session={session}
+          onClose={() => setPaying(undefined)}
+          onSaved={() => {
+            setPaying(undefined);
+            selection.clear();
+            setVersion((old) => old + 1);
+            setNotice('Распределение поступления сохранено');
+          }}
+        />
+      )}
       {failure && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
       <RegistryTable
+        selectionColumn={
+          canPay
+            ? {
+                header: (
+                  <input
+                    type="checkbox"
+                    aria-label="Выбрать все загруженные счета"
+                    checked={items.length > 0 && chosen.length === items.length}
+                    ref={(node) => {
+                      if (node)
+                        node.indeterminate = chosen.length > 0 && chosen.length < items.length;
+                    }}
+                    onChange={(event) =>
+                      selection.setSelected(
+                        event.target.checked ? new Set(items.map((item) => item.id)) : new Set(),
+                      )
+                    }
+                  />
+                ),
+                render: (item) => (
+                  <input
+                    type="checkbox"
+                    aria-label={`Выбрать счёт № ${item.number}`}
+                    checked={selection.selected.has(item.id)}
+                    onPointerDown={(event) => selection.start(event, item.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (
+                        event.detail === 0 ||
+                        (event.nativeEvent as PointerEvent).pointerType === 'touch'
+                      )
+                        selection.toggle(item.id, !selection.selected.has(item.id), event.shiftKey);
+                    }}
+                    onChange={() => {}}
+                  />
+                ),
+              }
+            : undefined
+        }
+        rowAttributes={(item) => ({
+          className: 'clickable',
+          tabIndex: 0,
+          'data-selection-row': item.id,
+          'aria-selected': selection.selected.has(item.id),
+          onClick: (event) => {
+            if (!(event.target as HTMLElement).closest('a,button,input'))
+              location.hash = `${base}/${item.id}`;
+          },
+          onKeyDown: (event) => {
+            if (event.target === event.currentTarget && event.key === 'Enter') {
+              event.preventDefault();
+              location.hash = `${base}/${item.id}`;
+            }
+          },
+          onContextMenu: canPay
+            ? (event) => {
+                if ((event.target as HTMLElement).closest('a,button,input')) return;
+                event.preventDefault();
+                if (!selection.selected.has(item.id)) selection.setSelected(new Set([item.id]));
+                setMenu({
+                  x: Math.max(8, Math.min(event.clientX, innerWidth - 320)),
+                  y: Math.max(8, Math.min(event.clientY, innerHeight - 240)),
+                });
+              }
+            : undefined,
+        })}
         items={items}
         columns={columnState}
         definitions={columns}

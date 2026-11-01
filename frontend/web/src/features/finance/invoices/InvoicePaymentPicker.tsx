@@ -6,15 +6,23 @@ import { Dialog } from '../../../shared/ui/Dialog';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { formatFixed, parseFixed } from '../services/serviceCharges';
-import type { InvoiceBalance, Payment, PaymentDetails } from '../payments/payments';
+import {
+  automaticInvoiceAmounts,
+  invoicePaymentAdditions,
+  saveInvoicePayments,
+  type PaymentTarget,
+} from './invoicePayments';
+import type { Payment, PaymentDetails } from '../payments/payments';
 type Available = { payment: Payment; unallocated_minor: number };
 export function InvoicePaymentPicker({
   balance,
+  balances,
   session,
   onClose,
   onSaved,
 }: {
-  balance: InvoiceBalance;
+  balance: PaymentTarget;
+  balances?: PaymentTarget[];
   session: Session;
   onClose: () => void;
   onSaved: () => void;
@@ -23,12 +31,33 @@ export function InvoicePaymentPicker({
   const [after, setAfter] = useState<string | null>();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Available>();
-  const [amount, setAmount] = useState('');
+  const targets = balances ?? [balance];
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [details, setDetails] = useState<PaymentDetails>();
+  const [selecting, setSelecting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState('');
+  let allocationProblem: string | undefined;
+  let total = 0n;
+  if (details) {
+    try {
+      const additions = invoicePaymentAdditions(targets, amounts, details.unallocated_minor);
+      total = additions.reduce((sum, item) => sum + BigInt(item.amount_minor), 0n);
+    } catch (error) {
+      allocationProblem = (error as Error).message;
+      total = Object.values(amounts).reduce(
+        (sum, amount) => sum + BigInt(parseFixed(amount, 2, Number.MAX_SAFE_INTEGER) ?? 0),
+        0n,
+      );
+    }
+  }
+
   useEffect(() => {
     const controller = new AbortController();
+    setItems([]);
+    setAfter(undefined);
+    setLoading(true);
     const timer = setTimeout(() => {
       setLoading(true);
       setFailure('');
@@ -73,49 +102,36 @@ export function InvoicePaymentPicker({
       setLoading(false);
     }
   }
-  async function save() {
-    if (!selected) return;
-    const minor = parseFixed(
-      amount,
-      2,
-      Math.min(selected.unallocated_minor, balance.outstanding_minor),
-    );
-    if (!minor) {
-      setFailure('Укажите положительную сумму в пределах остатка платежа и счёта');
-      return;
+  async function choose(item: Available) {
+    setSelecting(true);
+    setFailure('');
+    setSelected(undefined);
+    setDetails(undefined);
+    try {
+      const value = await request<PaymentDetails>('/api/v1/payments/get', session, {
+        id: item.payment.id,
+      });
+      if (value.payment.archived)
+        throw new Error('Платёж отправлен в архив. Выберите другое поступление');
+      setDetails(value);
+      setSelected(item);
+      setAmounts(automaticInvoiceAmounts(targets, value.unallocated_minor));
+    } catch (error) {
+      setFailure((error as Error).message);
+    } finally {
+      setSelecting(false);
     }
-    setBusy(true);
+  }
+  async function save() {
+    if (!details || busy) return;
     setFailure('');
     try {
-      const details = await request<PaymentDetails>('/api/v1/payments/get', session, {
-        id: selected.payment.id,
-      });
-      const current =
-        details.allocations.find((a) => a.invoice_id === balance.invoice.id)?.amount_minor ?? 0;
-      const p = details.payment;
-      await request('/api/v1/payments/save', session, {
-        id: p.id,
-        kind: p.kind,
-        number: p.number,
-        payment_date: p.payment_date,
-        own_company_id: p.own_company_id,
-        counterparty_id: p.counterparty_id,
-        own_bank_account_id: p.own_bank_account_id,
-        counterparty_bank_account_id: p.counterparty_bank_account_id,
-        currency: p.currency,
-        amount_minor: p.amount_minor,
-        purpose: p.purpose,
-        note: p.note,
-        archived: p.archived,
-        expected_revision: p.revision,
-        allocations: [
-          ...details.allocations.filter((a) => a.invoice_id !== balance.invoice.id),
-          { invoice_id: balance.invoice.id, amount_minor: current + minor },
-        ],
-      });
+      const additions = invoicePaymentAdditions(targets, amounts, details.unallocated_minor);
+      setBusy(true);
+      await saveInvoicePayments(details, additions, session);
       onSaved();
-    } catch (e) {
-      setFailure((e as Error).message);
+    } catch (error) {
+      setFailure((error as Error).message);
     } finally {
       setBusy(false);
     }
@@ -130,7 +146,8 @@ export function InvoicePaymentPicker({
         }}
       >
         <p className="hint">
-          Осталось оплатить: {formatFixed(balance.outstanding_minor, 2)} {balance.invoice.currency}
+          Счетов: {targets.length} · Валюта: {balance.invoice.currency} ·{' '}
+          {balance.invoice.own_company_name} · {balance.invoice.counterparty_name}
         </p>
         <label>
           Поиск по номеру платежа
@@ -138,7 +155,7 @@ export function InvoicePaymentPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Часть номера…"
-            disabled={busy}
+            disabled={busy || selecting}
           />
         </label>
         {failure && (
@@ -169,16 +186,10 @@ export function InvoicePaymentPicker({
                 <td>
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || selecting}
                     aria-pressed={selected?.payment.id === item.payment.id}
                     onClick={() => {
-                      setSelected(item);
-                      setAmount(
-                        formatFixed(
-                          Math.min(item.unallocated_minor, balance.outstanding_minor),
-                          2,
-                        ).replace(/\s/g, ''),
-                      );
+                      void choose(item);
                     }}
                   >
                     {selected?.payment.id === item.payment.id ? 'Выбрано' : 'Выбрать'}
@@ -192,23 +203,89 @@ export function InvoicePaymentPicker({
           <p className="empty-state">Платежи со свободным остатком не найдены</p>
         )}
         <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
-        {selected && (
-          <label>
-            Сумма оплаты · обязательно
-            <DecimalInput
-              required
-              precision={2}
-              value={amount}
-              disabled={busy}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </label>
+        {details && (
+          <section className="bulk-payment-preview">
+            <div className="section-heading">
+              <h3>Распределение</h3>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  setAmounts(automaticInvoiceAmounts(targets, details.unallocated_minor))
+                }
+              >
+                Заполнить по порядку строк
+              </button>
+            </div>
+            <p className="hint">
+              Свободно в платеже: {formatFixed(details.unallocated_minor, 2)}{' '}
+              {details.payment.currency}. Суммы добавятся к существующим оплатам.
+            </p>
+            <div className="invoice-services-table-wrap">
+              <table className="payment-allocation-table">
+                <thead>
+                  <tr>
+                    <th>Счёт</th>
+                    <th>Осталось оплатить</th>
+                    <th>Распределить</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targets.map(({ invoice, outstanding_minor }) => (
+                    <tr key={invoice.id}>
+                      <td>
+                        № {invoice.number}
+                        <span className="service-secondary">
+                          от {CalendarDate.fromISO(invoice.invoice_date).toDisplayString()}
+                        </span>
+                      </td>
+                      <td>
+                        {formatFixed(outstanding_minor, 2)} {invoice.currency}
+                      </td>
+                      <td>
+                        <DecimalInput
+                          aria-label={`Распределить на счёт № ${invoice.number}`}
+                          required
+                          precision={2}
+                          value={amounts[invoice.id] ?? ''}
+                          disabled={busy}
+                          onChange={(event) =>
+                            setAmounts((old) => ({ ...old, [invoice.id]: event.target.value }))
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="hint">Можно указать ноль, чтобы пока не оплачивать отдельный счёт.</p>
+            <p>
+              Распределить:{' '}
+              <strong>
+                {formatFixed(total, 2)} {details.payment.currency}
+              </strong>{' '}
+              · Останется в поступлении:{' '}
+              <strong>
+                {formatFixed(BigInt(details.unallocated_minor) - total, 2)}{' '}
+                {details.payment.currency}
+              </strong>
+            </p>
+            {allocationProblem && (
+              <p className="error" role="alert">
+                {allocationProblem}
+              </p>
+            )}
+          </section>
         )}
         <div className="confirmation-actions">
-          <button type="button" disabled={busy} onClick={onClose}>
+          <button type="button" disabled={busy || selecting} onClick={onClose}>
             Отменить
           </button>
-          <button className="primary" disabled={busy || !selected}>
+          <button
+            className="primary"
+            disabled={busy || selecting || !details || !!allocationProblem}
+          >
             Распределить
           </button>
         </div>

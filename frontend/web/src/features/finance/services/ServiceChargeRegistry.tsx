@@ -1,3 +1,4 @@
+import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { useRowSelection } from '../../registry/useRowSelection';
 import { ServiceInvoiceActions } from '../invoices/ServiceInvoiceActions';
 import { attachBulkInvoice, bulkInvoiceProblem } from '../invoices/bulkInvoices';
@@ -66,21 +67,6 @@ export function ServiceChargeRegistry({
   const selectedItems = items.filter((item) => selection.selected.has(item.id));
   const canInvoice = session.permissions.includes('finance.write_invoices');
   const problem = bulkInvoiceProblem(selectedItems);
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(undefined);
-    const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('pointerdown', close);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', key);
-    return () => {
-      window.removeEventListener('pointerdown', close);
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', key);
-    };
-  }, [menu]);
   function openBulk(mode: 'new' | 'existing', chosen = selectedItems) {
     if (bulkInvoiceProblem(chosen)) return;
     setMenu(undefined);
@@ -366,45 +352,19 @@ export function ServiceChargeRegistry({
           {notice}
         </p>
       )}
-      {canInvoice && selectedItems.length > 0 && (
-        <div className="bulk-services-toolbar" role="region" aria-label="Групповые действия">
-          <strong>Выбрано: {selectedItems.length}</strong>
-          <button className="primary" disabled={!!problem} onClick={() => openBulk('new')}>
-            Создать счёт
-          </button>
-          <button disabled={!!problem} onClick={() => openBulk('existing')}>
-            Добавить в счёт
-          </button>
-          <button onClick={selection.clear}>Снять выделение</button>
-          {problem && <span role="status">{problem}</span>}
-        </div>
+      {canInvoice && (
+        <RegistrySelectionActions
+          count={selectedItems.length}
+          problem={problem}
+          actions={[
+            { label: 'Создать счёт', onClick: () => openBulk('new') },
+            { label: 'Добавить в счёт', onClick: () => openBulk('existing') },
+          ]}
+          onClear={selection.clear}
+          menu={menu}
+          onCloseMenu={() => setMenu(undefined)}
+        />
       )}
-      {menu &&
-        (() => {
-          const chosen = items.filter((item) => menu.ids.includes(item.id));
-          const reason = bulkInvoiceProblem(chosen);
-          return (
-            <div
-              className="bulk-services-menu"
-              role="menu"
-              style={{ left: menu.x, top: menu.y }}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <span>Выбрано: {chosen.length}</span>
-              <button role="menuitem" disabled={!!reason} onClick={() => openBulk('new', chosen)}>
-                Создать счёт
-              </button>
-              <button
-                role="menuitem"
-                disabled={!!reason}
-                onClick={() => openBulk('existing', chosen)}
-              >
-                Добавить в счёт
-              </button>
-              {reason && <small>{reason}</small>}
-            </div>
-          );
-        })()}
       {bulk && (
         <ServiceInvoiceActions
           service={bulk.items[0]}

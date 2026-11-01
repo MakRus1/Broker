@@ -42,6 +42,7 @@ GENERATOR_TESTS = {
     'test_cmake',
     'test_selected_services',
     'test_codegen',
+    'test_codegen_update',
     'test_configs',
     'test_dashboards',
     'test_documents',

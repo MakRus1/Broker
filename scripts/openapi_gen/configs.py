@@ -1,5 +1,8 @@
 """Типизированные конфиги, контексты и автоматически создаваемые HTTP-настройки."""
 from dataclasses import replace
+from contextlib import contextmanager
+from contextvars import ContextVar
+from copy import deepcopy
 from pathlib import Path
 import json
 import hashlib
@@ -28,7 +31,32 @@ def http_name(service):
     return service.upper() + '_HTTP_CLIENT_CONFIG'
 
 
+_http_catalog_cache = ContextVar('http_catalog_cache', default=None)
+
+
+@contextmanager
+def cached_http_catalog():
+    """Один снимок API на проход генерации, сбрасываемый после экспорта."""
+    values = {}
+    token = _http_catalog_cache.set(values)
+    try:
+        yield values.clear
+    finally:
+        _http_catalog_cache.reset(token)
+
+
 def automatic(root, loader):
+    cache = _http_catalog_cache.get()
+    if cache is None:
+        return automatic_from_disk(root, loader)
+    key = (root, loader)
+    if key not in cache:
+        cache[key] = automatic_from_disk(root, loader)
+    # catalog() дополняет результат пользовательскими конфигами.
+    return deepcopy(cache[key])
+
+
+def automatic_from_disk(root, loader):
     result = {}
     for service in sorted((root / 'services').iterdir()):
         if not (service / 'service.yaml').is_file():

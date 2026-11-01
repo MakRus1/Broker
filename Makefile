@@ -24,8 +24,7 @@ help:
 	@echo 'make local-update SERVICE=shipments | doctor | gen | check-gen-all | test-tools | cmake-debug | test-debug | docker-pull | docker-image | docker-test-debug | lock-images'
 
 gen:
-	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/export_clients.py --service-dir "services/$(SERVICE)"
-	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)"
+	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/update.py --service-dir "services/$(SERVICE)"
 check-gen:
 	@PYTHON=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh); "$$PYTHON" scripts/openapi_gen/generate.py --service-dir "services/$(SERVICE)" --check
 check-gen-all:

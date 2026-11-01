@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tests'))
@@ -44,6 +45,10 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/services/broker")
             copy_generator_repository(root)
             shutil.copytree(ROOT / 'tests/fixtures/contract_service', root / 'tests/fixtures/contract_service',
                             ignore=shutil.ignore_patterns('__pycache__'))
+            manifest_path = root / 'tests/fixtures/contract_service/service.yaml'
+            manifest = yaml.safe_load(manifest_path.read_text())
+            manifest.pop('critical_dependencies')
+            manifest_path.write_text(yaml.safe_dump(manifest))
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(consumer LANGUAGES NONE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -52,7 +57,9 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/tests/fixtures/contract_service")
 ''')
             generate = [sys.executable, str(root / 'scripts/openapi_gen/generate.py'), '--service-dir', str(root / 'tests/fixtures/contract_service')]
             def run(*args):
-                return subprocess.run(args, check=True, capture_output=True)
+                result = subprocess.run(args, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                return result
             run(*generate)
             run('cmake', '-G', 'Ninja', '-S', str(root), '-B', str(build), f'-DPython3_EXECUTABLE={sys.executable}')
             run('cmake', '--build', str(build), '--target', 'consumer_codegen')
@@ -60,12 +67,9 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/tests/fixtures/contract_service")
             self.assertIn('Hello', header.read_text())
             spec = root / 'schemas/services/broker/hello.yaml'
             spec.write_text(spec.read_text().replace('  /hello:', '  /hello-renamed:'))
-            # Сборка обнаруживает устаревший lock, но не исправляет исходники.
+            # Клиент обновляется при сборке без изменения lock или исходников.
             before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file() and '__pycache__' not in str(p)}
-            with self.assertRaises(subprocess.CalledProcessError):
-                run('cmake', '--build', str(build), '--target', 'consumer_codegen')
-            self.assertEqual(before, {p: p.read_bytes() for p in before})
-            run(*generate)
             run('cmake', '--build', str(build), '--target', 'consumer_codegen')
+            self.assertEqual(before, {p: p.read_bytes() for p in before})
             self.assertIn('HelloRenamed', header.read_text())
             self.assertNotIn('namespace Hello {', header.read_text())

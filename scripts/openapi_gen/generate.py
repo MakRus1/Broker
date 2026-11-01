@@ -12,7 +12,7 @@ from model import identifier
 from documents import Documents, read_files, EXTENSIONS
 from render import config_block, outputs, view
 from features import prepare
-from clients import client_outputs, client_specs
+from clients import client_outputs
 import configs
 import pg_types
 import permissions
@@ -33,6 +33,10 @@ def unique_mapping(loader, node, deep=False):
 
 
 UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
+
+class StaleGeneration(ValueError):
+    """Входы валидны, но отслеживаемые результаты нужно обновить."""
+
 
 BEGIN = '# OPENAPI_HANDLERS_BEGIN'
 END = '# OPENAPI_HANDLERS_END'
@@ -78,13 +82,15 @@ def digest(service, ops, additions=None):
         h.update(path.relative_to(service).as_posix().encode() + b'\0' + path.read_bytes())
     for p, content in sorted(specification_files(service, additions).items()):
         h.update((('public/' + p.relative_to(public_schema_dir(service)).as_posix()) if p.is_relative_to(public_schema_dir(service)) else ('internal/' + p.relative_to(service / 'docs').as_posix())).encode() + b'\0' + content.encode())
-    for alias, provider in client_specs(service, UniqueLoader):
-        h.update(alias.encode())
-        for p, content in sorted(specification_files(provider, public_only=True).items()):
-            h.update(p.relative_to(public_schema_dir(provider)).as_posix().encode() + b"\0" + content.encode())
+    # Клиентские DTO находятся только в build-каталоге. CMake отслеживает
+    # публичные схемы поставщиков; их изменения не требуют правки lock в Git.
     contexts, catalog, entries = configs.selected(service, UniqueLoader)
     for entry in sorted(entries):
         spec = catalog[entry]
+        if spec['mode'] == 'http-client' and service.name != 'configs':
+            # Список URL нужен runtime-клиенту, который пересобирается из схем.
+            # Полный каталог URL проверяется и сохраняется владельцем Configs.
+            spec = {key: value for key, value in spec.items() if key != 'paths'}
         h.update(json.dumps(spec, sort_keys=True).encode())
         if spec['mode'] == 'conditional':
             h.update(json.dumps(contexts[spec['context']], sort_keys=True).encode())
@@ -113,14 +119,10 @@ def run(service, check=False, output=None):
              if not path.exists() or path.read_text() != content]
     if check or output is not None:
         if stale:
-            raise ValueError('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
+            raise StaleGeneration('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
     ops = load(service, feature_files)
     manifest = service / 'service.yaml'
     auth.validate(yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}, ops)
-    generated_clients = client_outputs(service, UniqueLoader, load)
-    generated_clients.update(configs.outputs(service, UniqueLoader))
-    generated_clients.update(pg_types.outputs(service, UniqueLoader))
-    generated_clients.update(permissions.outputs(service, UniqueLoader))
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
@@ -137,9 +139,13 @@ def run(service, check=False, output=None):
                 if not (service / 'src/views' / op.rel / name).is_file():
                     errors.append(f'Missing src/views/{op.rel}/{name}; run make gen')
         if errors:
-            raise ValueError('\n'.join(errors))
+            raise StaleGeneration('\n'.join(errors))
         return
     if output is not None:
+        generated_clients = client_outputs(service, UniqueLoader, load)
+        generated_clients.update(configs.outputs(service, UniqueLoader))
+        generated_clients.update(pg_types.outputs(service, UniqueLoader))
+        generated_clients.update(permissions.outputs(service, UniqueLoader))
         generated = outputs(service.name, ops, dependencies)
         generated.update(generated_clients)
         # Удаляем только файлы, ранее созданные этим генератором.

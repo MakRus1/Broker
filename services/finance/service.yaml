@@ -36,6 +36,7 @@ auth:
     /api/admin/finance/settings/update: authenticated
     /api/v1/exchange-rates/get: finance.read_service_charges
     /api/v1/finance/settings/get: finance.read_service_charges
+    /api/v1/counterparty-reconciliation/get: finance.read_invoices
     /api/v1/counterparty-settlements/get: finance.read_invoices
     /api/v1/invoices/print-data: finance.read_invoices
     /api/v1/service-charges/history: finance.read_service_charges

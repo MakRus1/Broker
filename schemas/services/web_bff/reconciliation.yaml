@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Акт сверки
+  version: '1'
+paths:
+  /api/v1/counterparty-reconciliation/get:
+    post:
+      summary: Акт сверки с контрагентом за период
+      description: Счета и платежи учитываются по их датам; архивные документы исключены.
+        Без договора платёж учитывается целиком, с договором — только распределение
+        на его счета. Положительное сальдо — долг контрагента перед нами. Максимум
+        10000 операций; превышение возвращает ошибку без частичного отчёта. Используется
+        текущее состояние документов, а не исторический снимок.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/finance/models.yaml#/ReconciliationRequest
+      responses:
+        '200':
+          description: Начальное и конечное сальдо, обороты и операции по валютам
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/ReconciliationResponse
+        '400':
+          description: Некорректный период или больше 10000 операций
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
+        '403':
+          description: Нет прав на просмотр счетов и платежей организации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/finance/models.yaml#/FinancialLabelError

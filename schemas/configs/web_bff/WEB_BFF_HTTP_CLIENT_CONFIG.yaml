@@ -22,6 +22,7 @@ paths:
 - /api/v1/counterparties/lookup
 - /api/v1/counterparties/set-archived
 - /api/v1/counterparties/update
+- /api/v1/counterparty-reconciliation/get
 - /api/v1/counterparty-settlements/get
 - /api/v1/exchange-rates/get
 - /api/v1/finance/settings/get

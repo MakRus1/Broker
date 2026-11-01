@@ -1,0 +1,63 @@
+.reconciliation-result {
+  display: grid;
+  gap: 16px;
+}
+.reconciliation-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.reconciliation-actions button {
+  height: 42px;
+  box-sizing: border-box;
+}
+.reconciliation-table-wrap {
+  overflow-x: auto;
+}
+.reconciliation-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.reconciliation-table-wrap th,
+.reconciliation-table-wrap td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e1e7ef;
+  text-align: left;
+}
+.reconciliation-table-wrap thead {
+  background: #f7f9fc;
+  color: #718198;
+}
+.reconciliation-totals td,
+.reconciliation-operations td:nth-child(n + 5) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.reconciliation-totals th + th {
+  text-align: right;
+}
+.reconciliation-operations td:first-child {
+  white-space: nowrap;
+}
+.counterparty-settlements .reconciliation-filters {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(160px, 0.6fr);
+}
+.counterparty-settlements > .tabs {
+  margin-bottom: 24px;
+}
+@media (max-width: 760px) {
+  .counterparty-settlements .reconciliation-filters {
+    grid-template-columns: 1fr;
+  }
+}
+.reconciliation-operations {
+  min-width: 980px;
+}
+.reconciliation-operations th:nth-child(2) {
+  width: 250px;
+}
+.reconciliation-operations th:nth-child(3) {
+  width: 200px;
+}

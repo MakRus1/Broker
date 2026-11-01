@@ -6,10 +6,10 @@ import {
 } from '../src/features/finance/invoices/print/invoicePdf';
 const fonts = {
   regular: readFileSync(
-    new URL('../src/features/finance/invoices/print/fonts/NotoSans-Regular.ttf', import.meta.url),
+    new URL('../src/shared/printing/fonts/NotoSans-Regular.ttf', import.meta.url),
   ).toString('base64'),
   bold: readFileSync(
-    new URL('../src/features/finance/invoices/print/fonts/NotoSans-Bold.ttf', import.meta.url),
+    new URL('../src/shared/printing/fonts/NotoSans-Bold.ttf', import.meta.url),
   ).toString('base64'),
 };
 function fixture(count: number): InvoicePrintData {

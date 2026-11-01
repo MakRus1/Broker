@@ -1635,3 +1635,107 @@ FinancialHistoryResponse:
         $ref: '#/FinancialHistoryEvent'
     next_before:
       $ref: '#/FinancialHistoryCursor'
+ReconciliationKind:
+  type: string
+  enum:
+  - outgoing_invoice
+  - incoming_invoice
+  - receipt
+  - disbursement
+ReconciliationRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    counterparty_id:
+      type: string
+      format: uuid
+    own_company_id:
+      type: string
+      format: uuid
+    contract_id:
+      type: string
+      format: uuid
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+    date_from:
+      type: string
+      format: date
+    date_to:
+      type: string
+      format: date
+  required:
+  - counterparty_id
+  - date_from
+  - date_to
+ReconciliationTotal:
+  type: object
+  additionalProperties: false
+  properties:
+    currency:
+      type: string
+    opening_minor:
+      type: string
+      description: Начальное сальдо; положительное — долг контрагента перед нами
+    debit_minor:
+      type: string
+    credit_minor:
+      type: string
+    closing_minor:
+      type: string
+  required:
+  - currency
+  - opening_minor
+  - debit_minor
+  - credit_minor
+  - closing_minor
+ReconciliationOperation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/ReconciliationKind'
+    date:
+      type: string
+      format: date
+    number:
+      type: string
+    own_company_name:
+      type: string
+    currency:
+      type: string
+    debit_minor:
+      type: string
+    credit_minor:
+      type: string
+    balance_minor:
+      type: string
+  required:
+  - id
+  - kind
+  - date
+  - number
+  - own_company_name
+  - currency
+  - debit_minor
+  - credit_minor
+  - balance_minor
+ReconciliationResponse:
+  type: object
+  additionalProperties: false
+  properties:
+    totals:
+      type: array
+      items:
+        $ref: '#/ReconciliationTotal'
+    operations:
+      type: array
+      maxItems: 10000
+      items:
+        $ref: '#/ReconciliationOperation'
+  required:
+  - totals
+  - operations

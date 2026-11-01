@@ -51,7 +51,8 @@
   border-radius: 12px;
   box-shadow: 0 6px 24px #23334e20;
 }
-.service-charge-registry:has(.bulk-services-toolbar) {
+.service-charge-registry:has(.bulk-services-toolbar),
+.invoice-registry:has(.bulk-services-toolbar) {
   padding-bottom: 160px;
 }
 @media (max-width: 600px) {

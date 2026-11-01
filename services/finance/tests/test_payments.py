@@ -145,3 +145,35 @@ async def test_disbursement_pays_only_incoming_invoices(api, charge, invoice_ref
         'allocations': [allocation(incoming['id'], 100)]})
     balance = await api.post(BASE+'invoice-balance', {'id': incoming['id']})
     assert balance['paid_minor'] == 0
+
+async def test_bulk_allocation_conflict_rolls_back_every_invoice(api, charge, invoice_references):
+    first, _, _ = await billed(api, charge)
+    second, _, _ = await billed(api, charge)
+    original = payment()
+    before = await api.post(BASE + 'save', original)
+    # Второй счёт уже оплачен другим поступлением после открытия формы.
+    await api.post(BASE + 'save', payment([allocation(second['id'], 12000)]))
+    await api.post(BASE + 'save', {
+        **original, 'expected_revision': 1,
+        'allocations': [allocation(first['id'], 5000), allocation(second['id'], 5000)],
+    }, expected=409)
+    assert await api.post(BASE + 'get', {'id': original['id']}) == before
+    first_balance = await api.post(BASE + 'invoice-balance', {'id': first['id']})
+    assert first_balance['paid_minor'] == 0
+
+
+async def test_bulk_allocation_stale_payment_preserves_prior_distribution(api, charge, invoice_references):
+    first, _, _ = await billed(api, charge)
+    second, _, _ = await billed(api, charge)
+    original = payment([allocation(first['id'], 1000)])
+    await api.post(BASE + 'save', original)
+    changed = await api.post(BASE + 'save', {
+        **original, 'expected_revision': 1,
+        'allocations': [allocation(first['id'], 2000)],
+    })
+    await api.post(BASE + 'save', {
+        **original, 'expected_revision': 1,
+        'allocations': [allocation(first['id'], 1000), allocation(second['id'], 5000)],
+    }, expected=409)
+    assert await api.post(BASE + 'get', {'id': original['id']}) == changed
+    assert (await api.post(BASE + 'invoice-balance', {'id': second['id']}))['paid_minor'] == 0

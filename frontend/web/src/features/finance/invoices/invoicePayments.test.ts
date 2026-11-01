@@ -122,3 +122,33 @@ it('отсекает больше 100 выбранных счетов до от�
     ),
   ).toContain('100');
 });
+
+it('распределяет списание по входящим счетам с теми же проверками', async () => {
+  const targets = [first, second].map((target) => ({
+    ...target,
+    invoice: { ...target.invoice, direction: 'incoming' as const },
+  }));
+  expect(invoicePaymentProblem(targets)).toBeUndefined();
+  const additions = invoicePaymentAdditions(
+    targets,
+    automaticInvoiceAmounts(targets, 15000),
+    15000,
+  );
+  const details = {
+    payment: { id: 'disbursement', kind: 'disbursement', revision: 2 },
+    allocations: [],
+  } as unknown as PaymentDetails;
+  await saveInvoicePayments(details, additions, {} as Session);
+  expect(request).toHaveBeenCalledExactlyOnceWith(
+    '/api/v1/payments/save',
+    {},
+    expect.objectContaining({
+      kind: 'disbursement',
+      expected_revision: 2,
+      allocations: [
+        { invoice_id: 'a', amount_minor: 12000 },
+        { invoice_id: 'b', amount_minor: 3000 },
+      ],
+    }),
+  );
+});

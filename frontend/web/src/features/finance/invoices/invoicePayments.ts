@@ -1,7 +1,25 @@
 import { request } from '../../../shared/api/http';
+import type { InvoiceDirection } from './invoices';
 import type { Session } from '../../../shared/api/session';
 import type { Allocation, InvoiceBalance, PaymentDetails } from '../payments/payments';
 import { parseFixed, inputFixed } from '../services/serviceCharges';
+export const invoicePaymentLabels: Record<
+  InvoiceDirection,
+  { action: string; success: string; remainder: string; archived: string }
+> = {
+  outgoing: {
+    action: 'Распределить поступление',
+    success: 'Распределение поступления сохранено',
+    remainder: 'Останется в поступлении',
+    archived: 'Платёж отправлен в архив. Выберите другое поступление',
+  },
+  incoming: {
+    action: 'Распределить списание',
+    success: 'Распределение списания сохранено',
+    remainder: 'Останется в списании',
+    archived: 'Платёж отправлен в архив. Выберите другое списание',
+  },
+};
 export type PaymentTarget = Pick<InvoiceBalance, 'invoice' | 'outstanding_minor'>;
 export function invoicePaymentProblem(targets: PaymentTarget[]): string | undefined {
   if (!targets.length) return 'Выберите счета';

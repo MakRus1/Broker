@@ -14,8 +14,8 @@ def payment(allocations=(), **changes):
 
 def allocation(id, amount): return {'invoice_id':id,'amount_minor':amount}
 
-async def billed(api, charge, **changes):
-    body,item=await saved_entry(api,charge)
+async def billed(api, charge, charge_direction='income', **changes):
+    body,item=await saved_entry(api,charge,direction=charge_direction)
     document={**invoice([item['id']]),**changes}
     result=await api.post('/api/v1/invoices/save',document)
     return document,body,result['invoice']
@@ -146,13 +146,16 @@ async def test_disbursement_pays_only_incoming_invoices(api, charge, invoice_ref
     balance = await api.post(BASE+'invoice-balance', {'id': incoming['id']})
     assert balance['paid_minor'] == 0
 
-async def test_bulk_allocation_conflict_rolls_back_every_invoice(api, charge, invoice_references):
-    first, _, _ = await billed(api, charge)
-    second, _, _ = await billed(api, charge)
-    original = payment()
+@pytest.mark.parametrize('kind', ['receipt', 'disbursement'])
+async def test_bulk_allocation_conflict_rolls_back_every_invoice(api, charge, invoice_references, kind):
+    direction = 'outgoing' if kind == 'receipt' else 'incoming'
+    charge_direction = 'income' if kind == 'receipt' else 'expense'
+    first, _, _ = await billed(api, charge, charge_direction=charge_direction, direction=direction)
+    second, _, _ = await billed(api, charge, charge_direction=charge_direction, direction=direction)
+    original = payment(kind=kind)
     before = await api.post(BASE + 'save', original)
     # Второй счёт уже оплачен другим поступлением после открытия формы.
-    await api.post(BASE + 'save', payment([allocation(second['id'], 12000)]))
+    await api.post(BASE + 'save', payment([allocation(second['id'], 12000)], kind=kind))
     await api.post(BASE + 'save', {
         **original, 'expected_revision': 1,
         'allocations': [allocation(first['id'], 5000), allocation(second['id'], 5000)],
@@ -162,10 +165,13 @@ async def test_bulk_allocation_conflict_rolls_back_every_invoice(api, charge, in
     assert first_balance['paid_minor'] == 0
 
 
-async def test_bulk_allocation_stale_payment_preserves_prior_distribution(api, charge, invoice_references):
-    first, _, _ = await billed(api, charge)
-    second, _, _ = await billed(api, charge)
-    original = payment([allocation(first['id'], 1000)])
+@pytest.mark.parametrize('kind', ['receipt', 'disbursement'])
+async def test_bulk_allocation_stale_payment_preserves_prior_distribution(api, charge, invoice_references, kind):
+    direction = 'outgoing' if kind == 'receipt' else 'incoming'
+    charge_direction = 'income' if kind == 'receipt' else 'expense'
+    first, _, _ = await billed(api, charge, charge_direction=charge_direction, direction=direction)
+    second, _, _ = await billed(api, charge, charge_direction=charge_direction, direction=direction)
+    original = payment([allocation(first['id'], 1000)], kind=kind)
     await api.post(BASE + 'save', original)
     changed = await api.post(BASE + 'save', {
         **original, 'expected_revision': 1,
@@ -177,3 +183,22 @@ async def test_bulk_allocation_stale_payment_preserves_prior_distribution(api, c
     }, expected=409)
     assert await api.post(BASE + 'get', {'id': original['id']}) == changed
     assert (await api.post(BASE + 'invoice-balance', {'id': second['id']}))['paid_minor'] == 0
+
+async def test_one_disbursement_adds_many_invoices_preserving_existing_allocations(api, charge, invoice_references):
+    documents = [
+        (await billed(api, charge, charge_direction='expense', direction='incoming'))[0]
+        for _ in range(3)
+    ]
+    body = payment([allocation(documents[0]['id'], 1000)], kind='disbursement')
+    await api.post(BASE + 'save', body)
+    amounts = [1000, 5000, 3000]
+    result = await api.post(BASE + 'save', {
+        **body, 'expected_revision': 1,
+        'allocations': [allocation(document['id'], amount) for document, amount in zip(documents, amounts)],
+    })
+    assert result['allocated_minor'] == 9000
+    assert result['unallocated_minor'] == 11000
+    for document, amount in zip(documents, amounts):
+        balance = await api.post(BASE + 'invoice-balance', {'id': document['id']})
+        assert balance['paid_minor'] == amount
+        assert balance['payments'][0]['payment']['kind'] == 'disbursement'

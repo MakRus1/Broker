@@ -1,3 +1,4 @@
+import { openServiceCharge } from './services/ServiceChargePage';
 import { ServiceChargeRegistry } from './services/ServiceChargeRegistry';
 import { serviceChargeRow } from './services/serviceChargeRow';
 import { ServiceChargeEditor, newCharge } from './services/ServiceChargeEditor';
@@ -85,8 +86,12 @@ export function ServiceCharges({
   const [archived, setArchived] = useState(false);
   const [version, setVersion] = useState(0);
   const [editing, setEditing] = useState<ServiceCharge | ReturnType<typeof newCharge>>();
-  const [editingInvoice, setEditingInvoice] = useState<ServiceChargeInvoice>();
   const edit = setEditing;
+  useEffect(() => {
+    const refresh = () => setVersion((old) => old + 1);
+    window.addEventListener('finance-charges-changed', refresh);
+    return () => window.removeEventListener('finance-charges-changed', refresh);
+  }, []);
   useEffect(() => {
     if (!read || !scope.shipment_id) return;
     const controller = new AbortController();
@@ -168,13 +173,9 @@ export function ServiceCharges({
         session={session}
         version={version}
         onCreate={(direction) => {
-          setEditingInvoice(undefined);
           edit(newCharge(scope, direction));
         }}
-        onEdit={(charge, invoice) => {
-          setEditingInvoice(invoice);
-          edit(charge);
-        }}
+        onEdit={openServiceCharge}
       />
     );
   return (
@@ -189,14 +190,12 @@ export function ServiceCharges({
             !write ||
             (scope.shipment_id
               ? invoices.find((x) => x.service_charge_id === editing.id)?.read_only
-              : editingInvoice?.read_only) === true
+              : undefined) === true
           }
           session={session}
           customers={customers}
           currentInvoice={
-            scope.shipment_id
-              ? invoices.find((x) => x.service_charge_id === editing.id)
-              : editingInvoice
+            scope.shipment_id ? invoices.find((x) => x.service_charge_id === editing.id) : undefined
           }
           onCancel={() => setEditing(undefined)}
           onSaved={() => {
@@ -329,7 +328,7 @@ export function ServiceCharges({
                   return (
                     <tr
                       key={item.id}
-                      {...serviceChargeRow(item, edit, !editable)}
+                      {...serviceChargeRow(item, openServiceCharge, !editable)}
                       title={
                         invoice?.read_only
                           ? 'Счёт оплачен. Услуга доступна только для чтения'

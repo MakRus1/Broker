@@ -10,6 +10,7 @@ Response View::Handle(Request&&, userver::server::request::RequestContext& conte
     return Response200{.actor = session.User.ActorId(),
         .csrf_token = session.Csrf,
         .display_name = session.User.DisplayName,
+        .organization_id = access.organization_id,
         .permissions = access.permissions,
         .subject = session.User.Subject};
 }

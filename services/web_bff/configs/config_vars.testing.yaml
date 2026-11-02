@@ -33,3 +33,4 @@ client-organizations-base-url: http://localhost:8130
 client-transport_locations-base-url: http://localhost:8080
 client-contracts-base-url: http://localhost:8080
 client-finance-base-url: http://localhost:8080
+client-user_preferences-base-url: http://localhost:8080

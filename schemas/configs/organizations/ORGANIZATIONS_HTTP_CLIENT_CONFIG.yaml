@@ -19,6 +19,7 @@ paths:
 - /api/organizations/administration/check
 - /api/organizations/employees/list
 - /api/organizations/me
+- /api/organizations/membership/get
 - /api/platform/access
 default:
   '**default**':

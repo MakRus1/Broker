@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: Собственное членство в организации
+  version: '1'
+paths:
+  /api/organizations/membership/get:
+    post:
+      summary: Проверить собственное членство в организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - organization_id
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - organization_id
+                properties:
+                  organization_id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации или операции
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '404':
+          description: Организация или сотрудник не найдены
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '409':
+          description: Конфликт версии, имени или последнего администратора
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+        '503':
+          description: Провайдер пользователей временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/organizations.yaml#/ApiError
+      description: Проверяет действующее членство пользователя из токена. Не проверяет
+        права на бизнесовые операции и не заменяет /api/organizations/access.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- BearerAuth: []

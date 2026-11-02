@@ -617,11 +617,21 @@ textarea {
   .sidebar .brand > span {
     display: none;
   }
-  nav {
-    display: flex;
-    margin-left: auto;
+  .sidebar-heading {
+    flex: 0 0 auto;
   }
-  nav button {
+  .sidebar nav {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    margin-left: 0;
+  }
+  .sidebar nav button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    align-items: center;
     padding: 8px;
   }
   nav button span {
@@ -4422,4 +4432,40 @@ details[open] > .route-stage-summary::after {
 .workspace-context-menu > button:focus-visible {
   background: #eef3fc;
   color: #2456bb;
+}
+
+.preference-notice {
+  position: fixed;
+  z-index: 120;
+  top: 12px;
+  right: 16px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 16px;
+  background: #fff8e8;
+  border: 1px solid #ead6a2;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px #15263c15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.registry-column-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: #275fce;
+}
+.registry-column-new {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #edf3fd;
+  color: #275fce;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { moveColumn, placeColumn, preferenceKey, restoreColumns } from './registryPreferences';
+import {
+  moveColumn,
+  placeColumn,
+  preferenceKey,
+  restoreColumns,
+  restoreKnownColumns,
+  newColumnIds,
+} from './registryPreferences';
 import {
   restoreShipmentQuery,
   restoreTransportationQuery,
@@ -158,4 +165,30 @@ it('сохраняет группы участков независимо от �
   expect(
     restoreTransportationQuery({ route_filters: [{ filters: [] }] }).route_filters,
   ).toBeUndefined();
+});
+
+describe('новые столбцы реестра', () => {
+  it('не объявляет весь реестр новым при первом открытии', () => {
+    expect(newColumnIds(restoreKnownColumns(undefined), definitions)).toEqual([]);
+    expect(restoreKnownColumns([null])).toBeNull();
+  });
+  it('замечает новые поля, включая скрытые по умолчанию', () => {
+    const updated = [
+      ...definitions,
+      { id: 'new', label: 'Новое поле', width: 180, defaultVisible: false },
+    ];
+    expect(newColumnIds(['name', 'country'], updated)).toEqual(['tax', 'new']);
+    const columns = restoreColumns([{ id: 'name', visible: true, width: 240 }], updated);
+    expect(columns.find((column) => column.id === 'tax')?.visible).toBe(true);
+    expect(columns.find((column) => column.id === 'new')?.visible).toBe(false);
+  });
+  it('не считает перестановку, переименование и удаление добавлением поля', () => {
+    expect(newColumnIds(['tax', 'country', 'name', 'removed'], definitions)).toEqual([]);
+    expect(
+      newColumnIds(
+        definitions.map((column) => column.id),
+        definitions,
+      ),
+    ).toEqual([]);
+  });
 });

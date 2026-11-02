@@ -4,6 +4,7 @@ import { Commands } from './commands';
 import { type Session } from './session';
 const session: Session = {
   actor: 'issuer#user',
+  organization_id: '11111111-1111-4111-8111-111111111111',
   subject: 'user',
   display_name: 'Логист',
   csrf_token: 'csrf',

@@ -78,7 +78,13 @@ describe('фильтры заголовков реестра', () => {
       <RegistryTable
         items={[]}
         definitions={definitions}
-        columns={{ columns, definitions, setColumns: () => {} }}
+        columns={{
+          columns,
+          definitions,
+          setColumns: () => {},
+          newColumns: [],
+          acknowledgeColumns: () => {},
+        }}
         sort={query.sort}
         descending={query.descending}
         onSort={() => {}}

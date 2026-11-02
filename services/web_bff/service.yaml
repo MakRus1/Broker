@@ -25,6 +25,9 @@ clients:
   finance:
     service: finance
     transport: http
+  user_preferences:
+    service: user_preferences
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:
@@ -34,3 +37,4 @@ http_logging:
   - /auth/**
   - /api/session
   - /api/logout
+  - /api/preferences/**

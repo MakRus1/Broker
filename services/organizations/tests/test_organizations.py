@@ -528,3 +528,48 @@ async def test_platform_admin_can_search_employees_in_selected_organization(api)
     result = await api.call('/api/organizations/employees/list', {'organization_id': ORGANIZATION}, user='platform')
     assert any(item['subject'] == 'org-admin' for item in result['items'])
     await api.call('/api/organizations/employees/list', {'organization_id': str(uuid4())}, user='platform', expected=403)
+
+
+async def test_membership_check_does_not_replace_permission_check(api):
+    membership = await api.call(
+        '/api/organizations/membership/get', {'organization_id': ORGANIZATION}, user='viewer'
+    )
+    assert membership == {'organization_id': ORGANIZATION}
+    await api.call(
+        '/api/organizations/access',
+        {'organization_id': ORGANIZATION},
+        user='viewer',
+        expected=400,
+    )
+    await api.call(
+        '/api/organizations/access',
+        {'organization_id': ORGANIZATION, 'permission': 'shipments.write'},
+        user='viewer',
+        expected=403,
+    )
+    await api.call(
+        '/api/organizations/membership/get',
+        {'organization_id': ORGANIZATION},
+        user='other-admin',
+        expected=403,
+    )
+
+
+async def test_disabled_member_cannot_read_personal_preferences(api):
+    await api.call(
+        ADMIN + '/members/update',
+        {
+            'organization_id': ORGANIZATION,
+            'subject': 'viewer',
+            'role': 'viewer',
+            'enabled': False,
+            'expected_revision': 1,
+        },
+        user='org-admin',
+    )
+    await api.call(
+        '/api/organizations/membership/get',
+        {'organization_id': ORGANIZATION},
+        user='viewer',
+        expected=403,
+    )

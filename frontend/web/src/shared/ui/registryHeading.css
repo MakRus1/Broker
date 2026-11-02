@@ -34,3 +34,18 @@
   padding: 0 16px;
   line-height: 20px;
 }
+
+.workspace-content .registry-page {
+  padding: 26px 28px;
+}
+.workspace-content .registry-page .registry-heading.page-heading {
+  padding: 0 0 24px;
+}
+.workspace-content .registry-page .registry-filter-toolbar {
+  padding: 12px 0;
+}
+@media (max-width: 760px) {
+  .workspace-content .registry-page {
+    padding: 20px 16px;
+  }
+}

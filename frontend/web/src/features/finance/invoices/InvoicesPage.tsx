@@ -355,7 +355,11 @@ export function InvoicesPage({
   const canOpenServiceEditor =
     session.permissions.includes('finance.read_service_charges') && !newService;
   return (
-    <section className="invoices-page" data-dirty={dirty} data-busy={busy}>
+    <section
+      className={`invoices-page${registry ? ' registry-page' : ''}`}
+      data-dirty={dirty}
+      data-busy={busy}
+    >
       {confirmation}
       {registry ? (
         <InvoiceRegistry direction={direction} active={active} session={session} />

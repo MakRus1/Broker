@@ -194,7 +194,7 @@ export function FinancialLabelsPage({
   const columns: RegistryColumn<FinancialLabel>[] = [
     {
       id: 'name',
-      label: 'Наименование',
+      labelKey: 'registryField.name',
       width: 320,
       required: true,
       sort: 'name',
@@ -210,35 +210,35 @@ export function FinancialLabelsPage({
     },
     {
       id: 'direction',
-      label: 'Направление',
+      labelKey: 'registryField.direction',
       width: 200,
       sort: 'direction',
       render: (item) => registryValueLabel('direction', item.direction, locale),
     },
     {
       id: 'unit',
-      label: 'Единица расчёта',
+      labelKey: 'registryField.unit',
       width: 200,
       sort: 'unit',
       render: (item) => registryValueLabel('unit', item.unit, locale),
     },
     {
       id: 'currency',
-      label: 'Валюта',
+      labelKey: 'registryField.currency',
       width: 140,
       sort: 'currency',
       render: (item) => item.currency,
     },
     {
       id: 'vat',
-      label: 'НДС',
+      labelKey: 'registryField.vat_minor',
       width: 160,
       filterFields: ['vat_mode'],
       render: (item) => vatLabel(item, locale),
     },
     {
       id: 'archived',
-      label: 'Состояние',
+      labelKey: 'registryField.archived',
       width: 180,
       sort: 'archived',
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
@@ -307,7 +307,7 @@ export function FinancialLabelsPage({
     );
   if (!id && !creating)
     return (
-      <section className="record-page financial-label-page">
+      <section className="record-page registry-page financial-label-page">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.financialLabels')}

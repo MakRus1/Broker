@@ -287,7 +287,7 @@ export function ContractsPage({
   const columns: RegistryColumn<Contract>[] = [
     {
       id: 'number',
-      label: 'Договор',
+      labelKey: 'entity.contract',
       width: 240,
       required: true,
       sort: 'number',
@@ -304,20 +304,20 @@ export function ContractsPage({
     {
       id: 'contract_date',
       sort: 'contract_date',
-      label: 'Дата договора',
+      labelKey: 'registryField.contract_date',
       width: 180,
       render: (item) => date(item.contract_date),
     },
     {
       id: 'valid_until',
       sort: 'valid_until',
-      label: 'Действует до',
+      labelKey: 'registryField.valid_until',
       width: 180,
       render: (item) => date(item.valid_until),
     },
     {
       id: 'own_company',
-      label: 'Собственное юрлицо',
+      labelKey: 'registryField.own_company',
       width: 280,
       filterFields: ['own_company_id'],
       render: (item) =>
@@ -325,7 +325,7 @@ export function ContractsPage({
     },
     {
       id: 'counterparty',
-      label: 'Контрагент',
+      labelKey: 'registryField.counterparty_id',
       width: 280,
       filterFields: ['counterparty_id'],
       render: (item) =>
@@ -333,21 +333,21 @@ export function ContractsPage({
     },
     {
       id: 'currency',
-      label: 'Валюта',
+      labelKey: 'registryField.currency',
       width: 140,
       sort: 'currency',
       render: (item) => item.currency,
     },
     {
       id: 'archived',
-      label: 'Состояние',
+      labelKey: 'registryField.archived',
       width: 180,
       sort: 'archived',
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
     {
       id: 'payment_delay_days',
-      label: 'Отсрочка, дней',
+      labelKey: 'registryField.paymentDelay',
       width: 180,
       render: (item) => item.payment_delay_days ?? translate('routeFilter.pointNotSet'),
     },
@@ -448,7 +448,7 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card record-page contracts-page">
+      <section className="card record-page registry-page contracts-page">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.contracts')}

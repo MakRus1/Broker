@@ -23,7 +23,6 @@ template <typename Out, typename In> Out ConvertRegistryField(const In& field) {
     Out result;
     result.id = field.id;
     result.case_insensitive = field.case_insensitive;
-    result.label = field.label;
     result.lookup = field.lookup;
     result.sortable = field.sortable;
     result.kind = ParseEnumScalar(EnumValue(field.kind), decltype(result.kind){});

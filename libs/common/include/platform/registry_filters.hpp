@@ -12,7 +12,6 @@ class FilterError : public std::invalid_argument {
 
 struct RegistryField {
     FieldDefinition Field;
-    std::string_view Label;
     std::string_view ValueSql;
     bool Sortable = true;
     bool FoldValues = false;
@@ -167,7 +166,6 @@ template <typename Model> std::vector<Model> DescribeFields(std::span<const Regi
             continue;
         Model value;
         value.id = field.Field.Name;
-        value.label = field.Label;
         value.kind = ParseEnumScalar(std::string{field.Kind()}, decltype(value.kind){});
         value.sortable = field.Sortable;
         value.case_insensitive = field.FoldValues;

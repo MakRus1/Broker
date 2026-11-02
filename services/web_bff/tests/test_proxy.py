@@ -641,7 +641,16 @@ async def test_registry_filters_and_metadata_are_proxied(browser,mockserver,serv
     await browser.sign_in()
     path=f'/api/v1/{service}/filter-values'
     field='name' if service in ('counterparties','financial-labels') else 'number' if service in ('shipments','contracts') else 'container_number'
-    result={'fields':[{'id':field,'label':'Номер','kind':'values','sortable':True,'case_insensitive':True}], 'values':[{'value':'abc2','label':'ABC2'}],'next_after':'abc2'}
+    result = {
+        'fields': [{
+            'id': field,
+            'kind': 'values',
+            'sortable': True,
+            'case_insensitive': True,
+        }],
+        'values': [{'value': 'abc2', 'label': 'ABC2'}],
+        'next_after': 'abc2',
+    }
     @mockserver.json_handler(path)
     def upstream(request):
         assert request.json['registry']['filters']==[{'field':field,'values':['ABC2','ABC10']}]
@@ -666,7 +675,16 @@ async def test_route_filter_groups_and_metadata(browser, mockserver):
         assert request.json['registry']['route_filters']==groups
         assert request.json['group']==0
         assert request.json['scope']=='route'
-        return {'fields':[{'id':'destination_station','label':'Станция назначения','kind':'values','sortable':False,'case_insensitive':False,'lookup':'route_locations'}], 'values':[{'value':ID,'label':'Москва'}]}
+        return {
+            'fields': [{
+                'id': 'destination_station',
+                'kind': 'values',
+                'sortable': False,
+                'case_insensitive': False,
+                'lookup': 'route_locations',
+            }],
+            'values': [{'value': ID, 'label': 'Москва'}],
+        }
     response=await browser.post('/api/v1/transportations/filter-values',{'scope':'route','registry':{'route_filters':groups},'group':0,'field':'destination_station'})
     assert response.status==200
     assert response.json()['values']==[{'value':ID,'label':'Москва'}]

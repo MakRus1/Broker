@@ -315,4 +315,9 @@ export const en = {
     "Select service charges with the same direction, counterparty, contract and invoice currency",
   "bulk.chargeCount": "Service charges: {count}",
   "bulk.invoiceSaved": "Invoice #{number}: {count} service charges added",
+  "registryField.shipmentNumber": "Shipment number",
+  "registryField.contractNumber": "Contract number",
+  "registryField.invoiceNumber": "Invoice number",
+  "registryField.paymentNumber": "Payment number",
+  "registryField.payment": "Payment",
 } satisfies Record<MessageKey, string>;

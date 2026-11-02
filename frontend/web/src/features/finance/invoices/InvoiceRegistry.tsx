@@ -148,7 +148,7 @@ export function InvoiceRegistry({
   const columns: RegistryColumn<InvoiceRow>[] = [
     {
       id: 'number',
-      label: 'Счёт',
+      labelKey: 'entity.invoice',
       width: 220,
       required: true,
       sort: 'number',
@@ -160,28 +160,28 @@ export function InvoiceRegistry({
     },
     {
       id: 'counterparty',
-      label: 'Контрагент',
+      labelKey: 'registryField.counterparty_id',
       width: 260,
       filterFields: ['counterparty_id'],
       render: (item) => item.counterparty_name,
     },
     {
       id: 'own_company',
-      label: 'Своё юрлицо',
+      labelKey: 'registryField.own_company',
       width: 260,
       filterFields: ['own_company_id'],
       render: (item) => item.own_company_name,
     },
     {
       id: 'invoice_date',
-      label: 'Дата счёта',
+      labelKey: 'registryField.invoice_date',
       width: 180,
       sort: 'invoice_date',
       render: (item) => date(item.invoice_date),
     },
     {
       id: 'due_date',
-      label: 'Плановая оплата',
+      labelKey: 'registryField.due_date',
       width: 180,
       sort: 'due_date',
       render: (item) => date(item.due_date),
@@ -189,7 +189,6 @@ export function InvoiceRegistry({
     {
       id: 'total',
       labelKey: 'registryField.totalWithVat',
-      label: 'Сумма с НДС',
       width: 200,
       filterFields: ['currency'],
       sort: 'total_minor',
@@ -197,7 +196,7 @@ export function InvoiceRegistry({
     },
     {
       id: 'paid_minor',
-      label: 'Оплачено',
+      labelKey: 'registryField.paid_minor',
       width: 180,
       sort: 'paid_minor',
       filterFields: [],
@@ -205,7 +204,7 @@ export function InvoiceRegistry({
     },
     {
       id: 'outstanding_minor',
-      label: 'Осталось оплатить',
+      labelKey: 'registryField.outstanding_minor',
       width: 190,
       sort: 'outstanding_minor',
       filterFields: [],
@@ -213,14 +212,14 @@ export function InvoiceRegistry({
     },
     {
       id: 'payment_status',
-      label: 'Оплата',
+      labelKey: 'registryField.payment_status',
       width: 210,
       sort: 'payment_status',
       render: (item) => registryValueLabel('payment_status', item.payment_status, locale),
     },
     {
       id: 'overdue',
-      label: 'Просрочка',
+      labelKey: 'registryField.overdue',
       width: 160,
       sort: 'overdue_days',
       filterFields: ['overdue'],
@@ -235,7 +234,7 @@ export function InvoiceRegistry({
     },
     {
       id: 'archived',
-      label: 'Состояние',
+      labelKey: 'registryField.archived',
       width: 170,
       sort: 'archived',
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),

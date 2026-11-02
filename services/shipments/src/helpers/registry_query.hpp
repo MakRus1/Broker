@@ -29,21 +29,14 @@ inline constexpr auto kStatus =
 
 inline constexpr registry::Field<Date> kDate{"shipment_date", "shipment_date", "DATE"};
 
-// Каталог API: подписи, доступные операции и источники отображаемых значений.
+// Каталог API: доступные операции и источники отображаемых значений.
 inline constexpr std::array<registry::RegistryField, 6> kFields{{
-    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
-    {.Field = kNumber, .Label = "Номер поставки", .ValueSql = "number", .FoldValues = true},
-    {.Field = kCargo,
-        .Label = "Груз",
-        .ValueSql = "COALESCE(cargo_description, '')",
-        .FoldValues = true},
-    {.Field = kCustomer,
-        .Label = "Клиент",
-        .ValueSql = "customer_id",
-        .Sortable = false,
-        .Lookup = "counterparties"},
-    {.Field = kStatus, .Label = "Статус", .ValueSql = "status"},
-    {.Field = kDate, .Label = "Дата поставки", .ValueSql = "shipment_date"},
+    {.Field = kId, .ValueSql = "id", .Visible = false},
+    {.Field = kNumber, .ValueSql = "number", .FoldValues = true},
+    {.Field = kCargo, .ValueSql = "COALESCE(cargo_description, '')", .FoldValues = true},
+    {.Field = kCustomer, .ValueSql = "customer_id", .Sortable = false, .Lookup = "counterparties"},
+    {.Field = kStatus, .ValueSql = "status"},
+    {.Field = kDate, .ValueSql = "shipment_date"},
 }};
 
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);

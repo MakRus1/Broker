@@ -45,6 +45,7 @@ async def test_array_facet_uses_same_other_conditions(api, records):
             "field": "roles",
         },
     )
+    assert all("label" not in field for field in result["fields"])
     assert {item["value"] for item in result["values"]} == {
         "customer",
         "carrier",

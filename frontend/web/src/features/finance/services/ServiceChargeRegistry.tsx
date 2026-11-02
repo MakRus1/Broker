@@ -194,7 +194,6 @@ export function ServiceChargeRegistry({
     {
       id: 'label_name',
       labelKey: 'entity.serviceCharge',
-      label: 'Услуга',
       width: 190,
       required: true,
       sort: 'label_name',
@@ -202,26 +201,26 @@ export function ServiceChargeRegistry({
     },
     {
       id: 'counterparty_id',
-      label: 'Контрагент',
+      labelKey: 'registryField.counterparty_id',
       width: 200,
       render: (item) => item.counterparty_name,
     },
     {
       id: 'direction',
-      label: 'Направление',
+      labelKey: 'registryField.direction',
       width: 160,
       render: (item) => registryValueLabel('direction', item.direction, locale),
     },
     {
       id: 'service_date',
-      label: 'Дата услуги',
+      labelKey: 'registryField.service_date',
       width: 150,
       render: (item) => CalendarDate.fromISO(item.service_date).toDisplayString(),
     },
     {
       id: 'quantity',
       defaultVisible: false,
-      label: 'Количество × цена',
+      labelKey: 'registryField.quantityPrice',
       width: 240,
       filterFields: [],
       render: (item) => (
@@ -236,7 +235,7 @@ export function ServiceChargeRegistry({
     {
       id: 'net_minor',
       defaultVisible: false,
-      label: translate('ui.noVat'),
+      labelKey: 'ui.noVat',
       width: 170,
       sort: 'net_minor',
       filterFields: ['currency'],
@@ -245,7 +244,7 @@ export function ServiceChargeRegistry({
     {
       id: 'vat_minor',
       defaultVisible: false,
-      label: 'НДС',
+      labelKey: 'registryField.vat_minor',
       width: 140,
       sort: 'vat_minor',
       filterFields: [],
@@ -258,7 +257,7 @@ export function ServiceChargeRegistry({
     },
     {
       id: 'total_minor',
-      label: 'Итого',
+      labelKey: 'registryField.total_minor',
       width: 150,
       sort: 'total_minor',
       filterFields: ['currency'],
@@ -270,7 +269,7 @@ export function ServiceChargeRegistry({
     },
     {
       id: 'invoice_number',
-      label: 'Счёт',
+      labelKey: 'registryField.invoice_number',
       width: 200,
       render: (item) =>
         item.invoice ? (
@@ -292,7 +291,7 @@ export function ServiceChargeRegistry({
     {
       id: 'shipment_id',
       defaultVisible: false,
-      label: 'Поставка',
+      labelKey: 'registryField.shipment_id',
       width: 170,
       render: (item) =>
         item.shipment_id ? (
@@ -310,7 +309,7 @@ export function ServiceChargeRegistry({
     {
       id: 'transportation_id',
       defaultVisible: false,
-      label: 'Перевозка',
+      labelKey: 'registryField.transportation_id',
       width: 170,
       render: (item) =>
         item.transportation_id ? (
@@ -328,14 +327,14 @@ export function ServiceChargeRegistry({
     {
       id: 'archived',
       defaultVisible: false,
-      label: 'Состояние',
+      labelKey: 'registryField.archived',
       width: 160,
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
   const state = useRegistryColumns(session.subject, 'service-charges', columns);
   return (
-    <section className="service-charge-registry">
+    <section className="service-charge-registry registry-page">
       <RegistryHeading
         columns={state}
         title={translate('nav.serviceCharges')}

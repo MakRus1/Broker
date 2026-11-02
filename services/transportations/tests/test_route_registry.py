@@ -334,6 +334,7 @@ async def test_location_values_catalogue(api, routes, field, key, label):
 async def test_shared_endpoint_distinguishes_catalogues(api):
     root = await api.post(VALUES, {"registry": {}})
     route = await api.post(VALUES, {"registry": {}, "scope": "route"})
+    assert all("label" not in field for field in root["fields"] + route["fields"])
     assert "container_number" in {field["id"] for field in root["fields"]}
     assert "mode" not in {field["id"] for field in root["fields"]}
     assert "mode" in {field["id"] for field in route["fields"]}

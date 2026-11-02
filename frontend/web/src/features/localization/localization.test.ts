@@ -1,6 +1,10 @@
 import { invoicePaymentProblem } from '../finance/invoices/invoicePayments';
 import { bulkInvoiceProblem } from '../finance/invoices/bulkInvoices';
-import { registryFieldLabel, registryValueLabel } from '../registry/registryLabels';
+import {
+  localizeRegistryFields,
+  registryFieldLabel,
+  registryValueLabel,
+} from '../registry/registryLabels';
 import { filterLabel } from '../registry/RegistryColumnFilters';
 import { describe, expect, it } from 'vitest';
 import { resolveLocale, restoreLanguage, translate } from '../../../../shared/i18n/catalog';
@@ -32,10 +36,19 @@ describe('локализация', () => {
     expect(bulkInvoiceProblem([], 'en')).toBe('Select service charges');
     expect(invoicePaymentProblem([])).toBe('Выберите счета');
   });
+  it('строит подписи без label в API и не меняет метаданные', () => {
+    const fields = [{ id: 'number', kind: 'values', sortable: true } as const];
+    expect(localizeRegistryFields(fields, 'ru', 'shipments')[0].label).toBe('Номер поставки');
+    expect(localizeRegistryFields(fields, 'en', 'contracts')[0].label).toBe('Contract number');
+    expect(
+      localizeRegistryFields([{ id: 'new_field', kind: 'date', sortable: false }], 'en')[0].label,
+    ).toBe('new_field');
+    expect(fields[0]).not.toHaveProperty('label');
+  });
   it('переводит идентификаторы полей и системные значения, сохраняя неизвестные подписи', () => {
-    expect(registryFieldLabel('shipment_date', 'Дата поставки', 'en')).toBe('Shipment date');
-    expect(registryFieldLabel('custom_field', 'Моё поле', 'en')).toBe('Моё поле');
-    expect(registryFieldLabel('number', 'Номер договора', 'ru')).toBe('Номер договора');
+    expect(registryFieldLabel('shipment_date', 'en')).toBe('Shipment date');
+    expect(registryFieldLabel('custom_field', 'en')).toBeUndefined();
+    expect(registryFieldLabel('number', 'ru', 'contracts')).toBe('Номер договора');
     expect(registryValueLabel('type', 'container', 'en')).toBe('Container');
     expect(registryValueLabel('name', 'container', 'en')).toBeUndefined();
   });

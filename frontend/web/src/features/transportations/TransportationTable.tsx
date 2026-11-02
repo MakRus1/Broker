@@ -18,7 +18,6 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
     labelKey: 'entity.transportation',
     filterFields: ['container_number', 'type', 'hazardous', 'shipment_id'],
     cellClassName: 'transportation-number-cell',
-    label: 'Перевозка',
     width: 250,
     required: true,
     sort: 'container_number',
@@ -29,7 +28,6 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
     labelKey: 'registryField.container',
     filterFields: ['container_type', 'container_ownership'],
     cellClassName: 'transportation-container-cell',
-    label: 'Контейнер',
     width: 180,
     sort: 'container_type',
     render: (item) => (
@@ -49,7 +47,6 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
     id: 'route',
     labelKey: 'routeFilter.route',
     filterFields: false,
-    label: 'Маршрут',
     width: 480,
     render: (item) => <RouteRegistrySummary item={item} />,
   },

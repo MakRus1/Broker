@@ -1937,11 +1937,6 @@ main > header {
   background: var(--surface);
 }
 
-.transportation-registry .page-heading,
-.shipment-registry .page-heading,
-.counterparty-registry .page-heading {
-  padding: 26px 28px 24px;
-}
 .registry-count {
   color: var(--text-secondary);
   font-size: 12px;
@@ -2020,9 +2015,6 @@ main > header {
   font-size: 11px;
 }
 @media (max-width: 480px) {
-  .transportation-registry .page-heading {
-    padding: 22px 18px;
-  }
   .transportation-table th,
   .transportation-table td {
     padding-inline: 12px;
@@ -4011,12 +4003,6 @@ details[open] > .route-stage-summary::after {
     font-size: 26px;
   }
 }
-.invoice-registry .registry-filter-toolbar {
-  padding: 12px 0;
-}
-.contracts-page .registry-filter-toolbar {
-  padding: 12px 0;
-}
 .invoice-payment-dialog {
   width: min(820px, calc(100vw - 40px));
 }
@@ -4075,18 +4061,6 @@ details[open] > .route-stage-summary::after {
   background: transparent;
   color: var(--accent-text);
   font-size: inherit;
-}
-
-.service-charge-registry {
-  padding: 28px 32px;
-}
-.service-charge-registry .registry-filter-toolbar {
-  padding: 12px 0;
-}
-@media (max-width: 700px) {
-  .service-charge-registry {
-    padding: 20px 16px;
-  }
 }
 
 .finance-charge-form .form-actions,

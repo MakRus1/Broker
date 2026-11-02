@@ -75,6 +75,7 @@ INFRASTRUCTURE = (
     'services/*/configs/*',
 )
 INFRA_TESTS = {
+    'test_service_catalog',
     'test_deploy_cluster',
     'test_deployment',
     'test_platform_resources',

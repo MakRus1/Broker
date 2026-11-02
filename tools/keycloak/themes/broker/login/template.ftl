@@ -31,7 +31,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="color-scheme" content="light">
+    <meta name="color-scheme" content="light dark">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <#if properties.meta?has_content>
@@ -45,6 +45,7 @@
     <#else>
         <link rel="icon" href="${url.resourcesPath}/img/favicon.ico" />
     </#if>
+    <script src="${url.resourcesPath}/js/theme.js"></script>
     <link href="${url.resourcesPath}/css/broker.css" rel="stylesheet" />
     <script type="importmap">
         {
@@ -53,27 +54,6 @@
             }
         }
     </script>
-    <#if false>
-      <script type="module" async blocking="render">
-          <#outputformat "JavaScript">
-          const DARK_MODE_CLASS = ${properties.kcDarkModeClass?c};
-          const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-          updateDarkMode(mediaQuery.matches);
-          mediaQuery.addEventListener("change", (event) => updateDarkMode(event.matches));
-
-          function updateDarkMode(isEnabled) {
-            const { classList } = document.documentElement;
-
-            if (isEnabled) {
-              classList.add(DARK_MODE_CLASS);
-            } else {
-              classList.remove(DARK_MODE_CLASS);
-            }
-          }
-          </#outputformat>
-      </script>
-    </#if>
     <#if themeResources?? && themeResources.scripts?has_content>
         <@themeResourceTags.renderScripts themeResources.scripts url.resourcesPath "text/javascript" />
     <#elseif properties.scripts?has_content>

@@ -4,11 +4,11 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 0;
-  border-block: 1px solid #e0e6ef;
+  border-block: 1px solid var(--divider);
 }
 .bulk-services-toolbar > span {
   flex-basis: 100%;
-  color: #68788e;
+  color: var(--text-secondary);
 }
 .registry-selection-cell {
   width: 48px;
@@ -21,7 +21,7 @@
   cursor: pointer;
 }
 .personal-registry-table tr[aria-selected='true'] {
-  background: #edf3ff;
+  background: var(--accent-soft);
 }
 .bulk-services-menu {
   position: fixed;
@@ -30,13 +30,13 @@
   padding: 12px;
   display: grid;
   gap: 8px;
-  background: white;
-  border: 1px solid #dae2ee;
+  background: var(--surface);
+  border: 1px solid var(--divider);
   border-radius: 10px;
-  box-shadow: 0 8px 32px #23334e26;
+  box-shadow: 0 8px 32px var(--shadow);
 }
 .bulk-services-menu small {
-  color: #68788e;
+  color: var(--text-secondary);
 }
 /* Панель не сдвигает строки под указателем во время выделения диапазона. */
 .bulk-services-toolbar {
@@ -45,11 +45,11 @@
   left: 96px;
   right: 24px;
   z-index: 40;
-  background: #fff;
+  background: var(--surface);
   padding: 16px 20px;
-  border: 1px solid #dae2ee;
+  border: 1px solid var(--divider);
   border-radius: 12px;
-  box-shadow: 0 6px 24px #23334e20;
+  box-shadow: 0 6px 24px var(--shadow);
 }
 .service-charge-registry:has(.bulk-services-toolbar),
 .invoice-registry:has(.bulk-services-toolbar) {

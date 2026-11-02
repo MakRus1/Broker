@@ -59,6 +59,9 @@ import { TransportationTable } from '../features/transportations/TransportationT
 
 import { usePreferencesSession } from '../features/preferences/UserPreferences';
 
+import { initialThemePreference } from '../shared/theme/theme';
+import { ThemeControl } from '../features/appearance/ThemeControl';
+
 export function App() {
   const [session, setSession] = usePreferencesSession();
   const [tab, setTab] = useState<
@@ -477,7 +480,7 @@ export function App() {
         <p>Поставки, позиции и перевозки в одном рабочем пространстве.</p>
         <a
           className="primary"
-          href="/auth/login"
+          href={`/auth/login?theme=${initialThemePreference()}`}
           onClick={() => {
             try {
               sessionStorage.setItem('broker:login-return', location.hash.slice(1));
@@ -663,7 +666,10 @@ export function App() {
       <main>
         <header>
           <span>Операционный учёт</span>
-          <span className="environment">Broker / Рабочее пространство</span>
+          <div className="header-tools">
+            <span className="environment">Broker / Рабочее пространство</span>
+            <ThemeControl />
+          </div>
         </header>
         <WorkspaceTabs
           tabs={workspaces}

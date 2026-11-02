@@ -22,12 +22,12 @@
 .reconciliation-table-wrap th,
 .reconciliation-table-wrap td {
   padding: 14px 16px;
-  border-bottom: 1px solid #e1e7ef;
+  border-bottom: 1px solid var(--divider);
   text-align: left;
 }
 .reconciliation-table-wrap thead {
-  background: #f7f9fc;
-  color: #718198;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 .reconciliation-totals td,
 .reconciliation-operations td:nth-child(n + 5) {

@@ -6,7 +6,7 @@
   margin-top: 24px;
 }
 .financial-history-event {
-  border-top: 1px solid #e2e7ef;
+  border-top: 1px solid var(--divider);
   padding: 16px 0;
 }
 .financial-history-event > summary {
@@ -33,11 +33,11 @@
 }
 .financial-history-actor {
   overflow-wrap: anywhere;
-  color: #75839a;
+  color: var(--text-secondary);
 }
 .financial-history-event time {
   font-size: 13px;
-  color: #75839a;
+  color: var(--text-secondary);
 }
 .financial-history-diff {
   margin-top: 16px;
@@ -50,11 +50,11 @@
   text-align: left;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  border-bottom: 1px solid #e9edf3;
+  border-bottom: 1px solid var(--divider);
 }
 .financial-history-diff thead {
-  background: #f7f9fc;
-  color: #75839a;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 .financial-history-diff tbody th {
   font-weight: 500;

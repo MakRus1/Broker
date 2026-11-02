@@ -9,6 +9,8 @@ import { Catalog } from '../features/configs/Catalog';
 import { ConfigDrawer } from '../features/configs/ConfigDrawer';
 import { Notifications } from './Notifications';
 
+import { ThemeControl } from '../features/appearance/ThemeControl';
+
 export function App() {
   const workspace = useWorkspace();
   const [section, setSection] = useState<'configs' | 'organizations' | 'stations' | 'locations'>(
@@ -44,6 +46,7 @@ export function App() {
           B<span>Broker</span>
         </div>
         <div className="account">
+          <ThemeControl />
           <span title={session.actor}>{session.display_name ?? session.subject}</span>
           <button disabled={busy} onClick={() => run(logout)}>
             Выйти

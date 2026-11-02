@@ -55,7 +55,7 @@ textarea::placeholder {
   padding: 10px;
   font-size: 14px;
 }
-.theme-menu button[aria-pressed='true'] {
+.theme-menu button[aria-pressed="true"] {
   color: var(--accent-text);
   background: var(--accent-soft);
 }

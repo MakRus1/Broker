@@ -1,5 +1,7 @@
 import type { Workspace } from './useWorkspace';
 
+import { initialThemePreference } from '../../../shared/theme/theme';
+
 export function LoginScreen({ workspace }: { workspace: Workspace }) {
   const { loginRequired, error } = workspace;
   return (
@@ -15,7 +17,7 @@ export function LoginScreen({ workspace }: { workspace: Workspace }) {
       </h1>
       <p>Управляйте организациями, сотрудниками и конфигурацией Broker.</p>
       {loginRequired ? (
-        <a className="primary link" href="/auth/login">
+        <a className="primary link" href={`/auth/login?theme=${initialThemePreference()}`}>
           Войти →
         </a>
       ) : (

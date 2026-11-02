@@ -59,7 +59,7 @@ import { TransportationTable } from '../features/transportations/TransportationT
 
 import { usePreferencesSession } from '../features/preferences/UserPreferences';
 
-import { initialThemePreference } from '../shared/theme/theme';
+import { initialThemePreference } from '../../../shared/theme/theme';
 import { ThemeControl } from '../features/appearance/ThemeControl';
 
 export function App() {

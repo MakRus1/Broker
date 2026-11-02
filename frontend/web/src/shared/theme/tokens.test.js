@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-const tokens = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
+const tokens = readFileSync(
+  new URL('../../../../shared/theme/tokens.css', import.meta.url),
+  'utf8',
+);
 
 function luminance(color) {
   const channels = [1, 3, 5]

@@ -39,7 +39,7 @@ class PostgresTest(unittest.TestCase):
                 and obj['metadata']['name'].startswith('finance-vars')
             )
             self.assertIn(
-                'finance-postgres-rw',
+                'finance-postgres-rw.broker-staging.svc.cluster.local',
                 base64.b64decode(vars['data']['config_vars.yaml']).decode(),
             )
             for cluster in clusters:

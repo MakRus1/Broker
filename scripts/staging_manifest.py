@@ -410,7 +410,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'admin-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
                 'admin-revoke-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/revoke',
                 'admin-secure-cookie': False,
-                'pg-connection': f'postgresql://broker:{database_passwords.get(name, "")}@{staging_postgres.host(name)}:5432/{name}',
+                'pg-connection': (
+                    f'postgresql://broker:{database_passwords.get(name, "")}@'
+                    f'{staging_postgres.host(name)}.{namespace}.svc.{settings["cluster_domain"]}:5432/{name}'
+                ),
             }
         )
         if lan:

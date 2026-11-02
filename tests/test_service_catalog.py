@@ -36,6 +36,7 @@ class CatalogTest(unittest.TestCase):
                 ROOT / 'services', root / 'services', ignore=shutil.ignore_patterns('__pycache__')
             )
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
+            shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
             shutil.copy(ROOT / 'tools/container-images.json', root / 'tools/container-images.json')
             shutil.copy(ROOT / 'platform.yaml', root / 'platform.yaml')
@@ -92,6 +93,17 @@ class CatalogTest(unittest.TestCase):
                 if obj['kind'] == 'ConfigMap'
                 and obj['metadata']['labels']['broker/service'] == 'new_service'
             )
-            self.assertIn('CREATE DATABASE new_service', migration['data']['migrate.sql'])
-            self.assertIn('\\connect new_service\n', migration['data']['migrate.sql'])
-            self.assertNotIn('\\\\connect', migration['data']['migrate.sql'])
+            cluster = next(
+                obj for obj in phases['databases']
+                if obj['kind'] == 'Cluster' and obj['metadata']['labels']['broker/database'] == 'new_service'
+            )
+            self.assertEqual(cluster['spec']['bootstrap']['initdb']['database'], 'new_service')
+            self.assertEqual(cluster['metadata']['name'], 'new-service-postgres')
+            self.assertNotIn('CREATE DATABASE', migration['data']['migrate.sql'])
+            job = next(
+                obj for obj in phases['migrations']
+                if obj['kind'] == 'Job' and obj['metadata']['labels']['broker/service'] == 'new_service'
+            )
+            command = job['spec']['template']['spec']['containers'][0]['command']
+            self.assertEqual(command[command.index('-h') + 1], 'new-service-postgres-rw')
+            self.assertEqual(command[command.index('-d') + 1], 'new_service')

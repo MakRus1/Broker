@@ -29,15 +29,24 @@ class BackupTest(unittest.TestCase):
             def dump(command, **kwargs):
                 kwargs['stdout'].write(b'PGDMP')
 
-            with patch(
-                'staging_backup.subprocess.check_output',
-                side_effect=['broker\nconfigs\nkeycloak\nnew_service\n', 'pg_dump 16\n'],
-            ), patch('staging_backup.subprocess.run', side_effect=dump):
+            with (
+                patch(
+                    'staging_backup.subprocess.check_output',
+                    side_effect=[
+                        '{"items": [{"metadata": {"name": "postgres-0"}, "status": {"phase": "Running"}}]}',
+                        'broker\nconfigs\nkeycloak\nnew_service\n',
+                        'pg_dump 16\n',
+                    ],
+                ),
+                patch('staging_backup.subprocess.run', side_effect=dump),
+            ):
                 staging_backup.backup(output, 'ctx')
             self.assertTrue((output / 'new_service.dump').is_file())
             with patch('staging_backup.subprocess.run') as run:
                 staging_backup.verify_cluster(output, 'ctx', 'ns', 'image')
-            restores = [call.args[0] for call in run.call_args_list if 'pg_restore' in call.args[0]]
+            restores = [
+                call.args[0] for call in run.call_args_list if 'pg_restore' in call.args[0]
+            ]
             self.assertEqual(len(restores), 4)
             self.assertTrue(any('new_service' in command for command in restores))
 
@@ -101,11 +110,18 @@ class BackupTest(unittest.TestCase):
     def test_failed_dump_does_not_publish_partial_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'copy'
-            with patch(
-                'staging_backup.subprocess.check_output', return_value='broker\nconfigs\nkeycloak\n'
-            ), patch(
-                'staging_backup.subprocess.run',
-                side_effect=subprocess.CalledProcessError(1, 'pg_dump'),
+            with (
+                patch(
+                    'staging_backup.subprocess.check_output',
+                    side_effect=[
+                        '{"items": [{"metadata": {"name": "postgres-0"}, "status": {"phase": "Running"}}]}',
+                        'broker\nconfigs\nkeycloak\n',
+                    ],
+                ),
+                patch(
+                    'staging_backup.subprocess.run',
+                    side_effect=subprocess.CalledProcessError(1, 'pg_dump'),
+                ),
             ):
                 with self.assertRaises(subprocess.CalledProcessError):
                     staging_backup.backup(output, 'default')
@@ -120,9 +136,16 @@ class BackupTest(unittest.TestCase):
                 commands.append(command)
                 kwargs['stdout'].write(b'PGDMP\x00\xff\r\n')
 
-            with patch('staging_backup.subprocess.run', side_effect=dump), patch(
-                'staging_backup.subprocess.check_output',
-                side_effect=['broker\nconfigs\nkeycloak\n', 'pg_dump 16\n'],
+            with (
+                patch('staging_backup.subprocess.run', side_effect=dump),
+                patch(
+                    'staging_backup.subprocess.check_output',
+                    side_effect=[
+                        '{"items": [{"metadata": {"name": "postgres-0"}, "status": {"phase": "Running"}}]}',
+                        'broker\nconfigs\nkeycloak\n',
+                        'pg_dump 16\n',
+                    ],
+                ),
             ):
                 staging_backup.backup(output, 'default', host='broker-staging')
             staging_backup.validate(output)
@@ -146,3 +169,71 @@ class BackupTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     staging_backup.verify(root)
                 run.assert_not_called()
+
+
+class ClusterBackupTest(unittest.TestCase):
+    def pod(self, owner, role='primary'):
+        return {
+            'metadata': {
+                'name': owner + '-postgres-1',
+                'labels': {
+                    'cnpg.io/cluster': owner + '-postgres',
+                    'cnpg.io/instanceRole': role,
+                },
+            },
+            'status': {'conditions': [{'type': 'Ready', 'status': 'True'}]},
+        }
+
+    def test_each_database_is_read_from_its_primary(self):
+        pods = {'items': [self.pod('finance'), self.pod('organizations')]}
+        clusters = {
+            'items': [
+                {'metadata': {'name': owner + '-postgres'}}
+                for owner in ('finance', 'organizations')
+            ]
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'backup'
+            commands = []
+
+            def dump(command, **kwargs):
+                commands.append(command)
+                kwargs['stdout'].write(b'PGDMP')
+
+            with (
+                patch(
+                    'staging_backup.subprocess.check_output',
+                    side_effect=[json.dumps(pods), json.dumps(clusters), 'pg_dump 16'],
+                ),
+                patch('staging_backup.subprocess.run', side_effect=dump),
+            ):
+                staging_backup.backup(output, 'test')
+            self.assertEqual(
+                {path.name for path in output.glob('*.dump')},
+                {'finance.dump', 'organizations.dump'},
+            )
+            self.assertTrue(
+                all(
+                    '-U' in command and command[command.index('-U') + 1] == 'postgres'
+                    for command in commands
+                )
+            )
+            self.assertEqual(
+                {command[command.index('exec') + 1] for command in commands},
+                {'finance-postgres-1', 'organizations-postgres-1'},
+            )
+
+    def test_cluster_without_primary_never_publishes_partial_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'backup'
+            with (
+                patch(
+                    'staging_backup.subprocess.check_output',
+                    return_value=json.dumps({'items': [self.pod('finance', 'replica')]}),
+                ),
+                patch('staging_backup.subprocess.run') as run,
+            ):
+                with self.assertRaisesRegex(ValueError, 'primary'):
+                    staging_backup.backup(output, 'test')
+            run.assert_not_called()
+            self.assertEqual(list(Path(directory).iterdir()), [])

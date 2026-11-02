@@ -42,6 +42,7 @@ class DeployTest(unittest.TestCase):
                 {
                     'staging_deploy.py',
                     'staging_backup.py',
+                    'staging_postgres.py',
                     'staging_network.py',
                     'service_catalog.py',
                     'service_history.py',

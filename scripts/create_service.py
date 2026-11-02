@@ -48,6 +48,13 @@ def _create(name, postgres=False, grpc=False):
                 for index, token in enumerate(shared):
                     text = text.replace(f'@PLATFORM_{index}@', token)
                 p.write_text(text)
+        profile = {'application': {'replicas': 1, 'resources': {
+            'requests': {'cpu': '100m', 'memory': '128Mi'}, 'limits': {'memory': '512Mi'}}}}
+        if postgres:
+            profile['postgres'] = {'instances': 1, 'storage': '10Gi', 'resources': {
+                'requests': {'cpu': '100m', 'memory': '128Mi'}, 'limits': {'memory': '512Mi'}}}
+        (stage / 'platform.yaml').write_text(yaml.safe_dump({
+            'defaults': profile, 'environments': {'staging': {}}}, sort_keys=False))
         (stage / 'service.yaml').write_text(yaml.safe_dump({
             'version': 1, 'libraries': ['common'], 'postgresql': {'enabled': postgres}, 'grpc': {'enabled': grpc},
         }, sort_keys=False))

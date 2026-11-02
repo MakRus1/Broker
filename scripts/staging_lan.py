@@ -19,12 +19,21 @@ def settings(platform, directory):
     if not (directory / 'lan/enabled').exists():
         return None
     value = platform.get('lan', {})
-    if set(value) != {'admin_host', 'web_host', 'auth_host', 'grafana_host', 'telemetry_storage'}:
+    if set(value) != {
+        'admin_host',
+        'web_host',
+        'auth_host',
+        'grafana_host',
+        'telemetry_storage',
+    }:
         raise ValueError('platform.yaml: неверные поля lan')
     for key in ('admin_host', 'web_host', 'auth_host', 'grafana_host'):
         if not re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)+', value[key]):
             raise ValueError(f'Неверное имя lan.{key}')
-    if len({value[key] for key in ('admin_host', 'web_host', 'auth_host', 'grafana_host')}) != 4:
+    if (
+        len({value[key] for key in ('admin_host', 'web_host', 'auth_host', 'grafana_host')})
+        != 4
+    ):
         raise ValueError('LAN-имена должны различаться')
     if not re.fullmatch(r'[1-9][0-9]*Gi', value['telemetry_storage']):
         raise ValueError('lan.telemetry_storage ожидает Gi')
@@ -135,19 +144,22 @@ def ensure_tls(folder, hosts):
         path.chmod(0o600)
     for host in hosts:
         subprocess.run(
-            ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)], check=True
+            ['openssl', 'verify', '-CAfile', str(ca), '-verify_hostname', host, str(cert)],
+            check=True,
         )
     subprocess.run(['openssl', 'verify', '-CAfile', str(ca), str(cert)], check=True)
     return ca, cert, leaf_key
 
 
-def initialize(root, directory, context):
+def initialize(root, directory, context, *, environment='staging'):
     from staging_manifest import document, private_write, read_yaml
 
-    cfg = read_yaml(root / 'platform.yaml')['environments']['staging']
+    cfg = read_yaml(root / 'platform.yaml')['environments'][environment]
     ns = cfg['namespace']
     folder = directory / 'lan'
-    hosts = [cfg['lan'][name] for name in ('admin_host', 'web_host', 'auth_host', 'grafana_host')]
+    hosts = [
+        cfg['lan'][name] for name in ('admin_host', 'web_host', 'auth_host', 'grafana_host')
+    ]
     hosts.append(f'keycloak.{ns}.svc.{cfg["cluster_domain"]}')
     ca, cert, leaf_key = ensure_tls(folder, hosts)
     password_path = folder / 'grafana-password'
@@ -201,9 +213,11 @@ def initialize(root, directory, context):
     print(f'LAN подготовлен. Публичный CA: {ca}. Пароль Grafana: {password_path}')
 
 
-def render(root, ns, platform, lan):
+def render(root, ns, platform, lan, *, environment='staging'):
     from staging_manifest import document, hashed, port, read_yaml, service, workload
+    from platform_resources import infrastructure, memory_budget
 
+    deployments = infrastructure(root, environment)
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
     configs = {}
     prometheus = read_yaml(root / 'tools/local/prometheus.yaml')
@@ -213,7 +227,7 @@ def render(root, ns, platform, lan):
         targets.append(
             {
                 'targets': [f'{name.replace("_", "-")}:{variables["monitor-port"]}'],
-                'labels': {'environment': 'staging', 'service': name},
+                'labels': {'environment': environment, 'service': name},
             }
         )
     prometheus['global']['scrape_interval'] = '15s'
@@ -225,6 +239,10 @@ def render(root, ns, platform, lan):
             'static_configs': targets,
         }
     ]
+    import staging_resource_monitoring as resources
+
+    owners = [*discover_services(root), 'keycloak']
+    prometheus['scrape_configs'] += resources.scrape_configs(ns, owners, environment)
     configs['prometheus'] = {'config.yaml': yaml.safe_dump(prometheus)}
     configs['loki'] = {'config.yaml': (root / 'tools/local/loki.yaml').read_text()}
     configs['tempo'] = {'config.yaml': (root / 'tools/local/tempo.yaml').read_text()}
@@ -242,9 +260,11 @@ def render(root, ns, platform, lan):
         receiver['retry_on_failure'] = {'enabled': True, 'max_elapsed_time': '0s'}
         receiver['operators'].insert(0, {'type': 'container', 'id': 'container-parser'})
         collector['receivers']['filelog/' + name] = receiver
-    collector['processors']['resource/local']['attributes'][0]['value'] = 'staging'
+    collector['processors']['resource/local']['attributes'][0]['value'] = environment
     collector['processors']['memory_limiter'].update({'limit_mib': 384, 'spike_limit_mib': 64})
-    collector['processors']['batch'].update({'send_batch_size': 256, 'send_batch_max_size': 256})
+    collector['processors']['batch'].update(
+        {'send_batch_size': 256, 'send_batch_max_size': 256}
+    )
     collector['exporters']['otlp_http/loki']['sending_queue'] = {
         'num_consumers': 1,
         'queue_size': 64,
@@ -261,13 +281,25 @@ def render(root, ns, platform, lan):
         f'{name}.json': (root / f'services/{name}/monitoring/grafana.json').read_text()
         for name in discover_services(root)
     }
+    for name, text in list(dashboards.items()):
+        owner = name.removesuffix('.json')
+        manifest = read_yaml(root / f'services/{owner}/service.yaml')
+        dashboards[name] = resources.dashboard(
+            text, postgres=manifest.get('postgresql', {}).get('enabled', False)
+        )
     provider = read_yaml(root / 'tools/local/grafana/dashboards/provider.yaml')
     provider['providers'][0]['name'] = 'Broker staging'
     dashboards['provider.yaml'] = yaml.safe_dump(provider)
-    objects = []
+    objects = resources.objects(root, ns, environment)
     dashboard_name = hashed('grafana-dashboards', dashboards)
     objects.append(document('ConfigMap', dashboard_name, ns, data=dashboards))
-    ports = {'grafana': 3000, 'prometheus': 9090, 'loki': 3100, 'tempo': 3200, 'collector': 4317}
+    ports = {
+        'grafana': 3000,
+        'prometheus': 9090,
+        'loki': 3100,
+        'tempo': 3200,
+        'collector': 4317,
+    }
     paths = {
         'grafana': '/var/lib/grafana',
         'prometheus': '/prometheus',
@@ -301,10 +333,7 @@ def render(root, ns, platform, lan):
         container = {
             'name': name,
             'image': images[name],
-            'resources': {
-                'requests': {'cpu': '50m', 'memory': '128Mi'},
-                'limits': {'memory': '512Mi'},
-            },
+            'resources': deployments[name]['application']['resources'],
             'ports': [{'containerPort': ports[name]}],
             'volumeMounts': [
                 {'name': 'data', 'mountPath': paths[name]},
@@ -368,9 +397,8 @@ def render(root, ns, platform, lan):
             container['args'] = flags[name]
         if name == 'tempo':
             # Компактация трасс требует запаса сверх Go heap.
-            container['resources']['requests']['memory'] = '256Mi'
-            container['resources']['limits']['memory'] = '1Gi'
-            container['env'] = [{'name': 'GOMEMLIMIT', 'value': '768MiB'}]
+            budget = memory_budget(container['resources'], 0.75)
+            container['env'] = [{'name': 'GOMEMLIMIT', 'value': f'{budget}MiB'}]
         if name == 'collector':
             container['securityContext'] = {'runAsUser': 0}
             container['volumeMounts'].append(
@@ -392,6 +420,10 @@ def render(root, ns, platform, lan):
             'periodSeconds': 5,
         }
         deployment = workload('Deployment', name, ns, container, volumes=volumes)
+        if name == 'prometheus':
+            deployment['spec']['template']['spec'].update(
+                serviceAccountName='prometheus', automountServiceAccountToken=True
+            )
         deployment['spec']['strategy'] = {'type': 'Recreate'}
         # local-path создаёт каталог от root; fsGroup обеспечивает запись сервисному UID.
         deployment['spec']['template']['spec']['securityContext'] = {
@@ -430,7 +462,10 @@ def render(root, ns, platform, lan):
                                         'path': '/',
                                         'pathType': 'Prefix',
                                         'backend': {
-                                            'service': {'name': backend, 'port': {'number': number}}
+                                            'service': {
+                                                'name': backend,
+                                                'port': {'number': number},
+                                            }
                                         },
                                     }
                                 ]

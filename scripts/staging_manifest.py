@@ -15,7 +15,8 @@ import yaml
 import staging_lan
 
 sys.path.insert(0, str(Path(__file__).parent / 'openapi_gen'))
-from deployment import merge
+from platform_resources import infrastructure, memory_budget, load as load_platform
+import staging_postgres
 from generate import UniqueLoader
 from migrations import discover, render as migration_sql
 
@@ -75,7 +76,7 @@ def document(kind, name, namespace, **fields):
 
 def hashed(name, data):
     digest = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:12]
-    return f"{name.replace('_', '-')}-{digest}"
+    return f'{name.replace("_", "-")}-{digest}'
 
 
 def service(name, namespace, ports, headless=False):
@@ -137,15 +138,13 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         'kubernetes_version',
         'storage_class',
         'cluster_domain',
-        'database_storage',
         'admin_origin',
         'web_origin',
         'auth_origin',
-        'defaults',
-        'services',
     }
-    if set(settings) - {'lan'} != allowed or set(settings['services']) - set(services):
+    if set(settings) - {'lan'} != allowed:
         raise ValueError('platform.yaml: неверные поля окружения или состав сервисов')
+    infrastructure_deployments = infrastructure(root, environment)
     namespace = settings['namespace']
     if not re.fullmatch(r'[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?', namespace):
         raise ValueError('platform.yaml: неверный namespace')
@@ -172,19 +171,22 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     deployments = {}
     for name in services:
         manifest = read_yaml(root / f'services/{name}/service.yaml')
-        deployments[name] = merge(
-            settings['defaults'], manifest.get('deployment', {}), settings['services'].get(name, {})
+        if 'deployment' in manifest:
+            raise ValueError(f'{name}: перенесите deployment в platform.yaml → application')
+        profile = load_platform(
+            root / f'services/{name}/platform.yaml',
+            environment,
+            postgres=manifest.get('postgresql', {}).get('enabled', False),
         )
+        deployments[name] = profile['application']
         # Сессии BFF пока хранятся в памяти одного процесса.
         if name in ('admin_bff', 'web_bff') and deployments[name]['replicas'] != 1:
             raise ValueError(f'{name}: несколько реплик требуют общего хранилища сессий')
     if not re.fullmatch(r'[a-z0-9]+(?:[.-][a-z0-9]+)*', settings['cluster_domain']):
         raise ValueError('platform.yaml: неверный cluster_domain')
-    if not re.fullmatch(r'[1-9][0-9]*(?:Mi|Gi)', settings['database_storage']):
-        raise ValueError('platform.yaml: database_storage ожидает размер в Mi/Gi')
     addresses = {
-        name: f"{name.replace('_', '-')}.{namespace}.svc.{settings['cluster_domain']}"
-        for name in ('postgres', 'configs', 'keycloak', *services)
+        name: f'{name.replace("_", "-")}.{namespace}.svc.{settings["cluster_domain"]}'
+        for name in ('configs', 'keycloak', *services)
     }
     from openapi_gen.service_accounts import (
         load as load_accounts,
@@ -204,15 +206,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     images = json.loads((root / 'tools/local/images.json').read_text())['images']
     ns = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': namespace}}
     infra = []
-    infra.append(
-        document(
-            'Secret',
-            'database',
-            namespace,
-            type='Opaque',
-            stringData={'password': values['postgres-password']},
-        )
-    )
     databases = [
         name
         for name in services
@@ -220,69 +213,46 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         .get('postgresql', {})
         .get('enabled', False)
     ]
-    init_sql = ''.join(f'CREATE DATABASE {name};\n' for name in [*databases, 'keycloak'])
-    infra.append(document('ConfigMap', 'database-init', namespace, data={'init.sql': init_sql}))
-    infra.append(
-        document(
-            'PersistentVolumeClaim',
-            'database',
-            namespace,
-            spec={
-                'accessModes': ['ReadWriteOnce'],
-                'storageClassName': settings['storage_class'],
-                'resources': {'requests': {'storage': settings['database_storage']}},
-            },
-        )
-    )
-    pg = {
-        'name': 'postgres',
-        'image': images['postgres'],
-        'env': [
-            {'name': 'POSTGRES_USER', 'value': 'broker'},
-            {'name': 'POSTGRES_DB', 'value': 'postgres'},
-            secret_env('POSTGRES_PASSWORD', 'database', 'password'),
-            {'name': 'PGDATA', 'value': '/var/lib/postgresql/data/pgdata'},
-        ],
-        'ports': [{'containerPort': 5432}],
-        'resources': {
-            'requests': {'cpu': '100m', 'memory': '128Mi'},
-            'limits': {'memory': '512Mi'},
-        },
-        'volumeMounts': [
-            {'name': 'data', 'mountPath': '/var/lib/postgresql/data'},
-            {'name': 'init', 'mountPath': '/docker-entrypoint-initdb.d', 'readOnly': True},
-        ],
-        'readinessProbe': {
-            'exec': {'command': ['pg_isready', '-h', '127.0.0.1', '-U', 'broker']},
-            'periodSeconds': 5,
-        },
-        'startupProbe': {
-            'exec': {'command': ['pg_isready', '-h', '127.0.0.1', '-U', 'broker']},
-            'periodSeconds': 5,
-            'failureThreshold': 60,
-        },
+    database_owners = [*databases, 'keycloak']
+    database_profiles = {
+        name: load_platform(
+            root / f'services/{name}/platform.yaml', environment, postgres=True
+        )['postgres']
+        for name in databases
     }
-    infra += [
-        service('postgres', namespace, [port('postgres', 5432)], True),
-        workload(
-            'StatefulSet',
-            'postgres',
-            namespace,
-            pg,
-            volumes=[
-                {'name': 'data', 'persistentVolumeClaim': {'claimName': 'database'}},
-                {'name': 'init', 'configMap': {'name': 'database-init'}},
-            ],
-        ),
+    database_profiles['keycloak'] = infrastructure_deployments['keycloak']['postgres']
+    pg_image = json.loads((root / 'tools/deploy/postgres/operator.json').read_text())[
+        'postgres_image'
     ]
+    database_objects = []
+    database_passwords = {}
+    for owner in database_owners:
+        path = directory / (owner + '-postgres-password')
+        if not path.exists():
+            private_write(path, secrets.token_urlsafe(32))
+        password = path.read_text().strip()
+        if not re.fullmatch(r'[A-Za-z0-9_-]{32,}', password):
+            raise ValueError(f'{owner}: неверный пароль PostgreSQL')
+        database_passwords[owner] = password
+        database_objects += staging_postgres.render(
+            owner,
+            database_profiles[owner],
+            namespace,
+            settings['storage_class'],
+            pg_image,
+            password,
+        )
     # В staging импортируются только браузерные пользователи, без тестовых service accounts.
     realm = json.loads((root / 'tools/local/keycloak/realm.template.json').read_text())
     realm['clients'] = [
         client
         for client in realm['clients']
-        if client['clientId'] in ('configs-admin', 'broker-admin', 'broker-logistics', 'broker-web')
+        if client['clientId']
+        in ('configs-admin', 'broker-admin', 'broker-logistics', 'broker-web')
     ]
-    realm['users'] = [user for user in realm['users'] if user['username'] in ('author', 'reviewer')]
+    realm['users'] = [
+        user for user in realm['users'] if user['username'] in ('author', 'reviewer')
+    ]
     for client_id, origin in (
         ('broker-admin', settings['admin_origin']),
         ('broker-web', settings['web_origin']),
@@ -325,6 +295,8 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     }
     theme_name = hashed('keycloak-theme', theme_files)
     infra.append(document('ConfigMap', theme_name, namespace, data=theme_files))
+    keycloak_memory = infrastructure_deployments['keycloak']['application']['resources']
+    keycloak_heap = memory_budget(keycloak_memory, 0.5)
     keycloak = {
         'name': 'keycloak',
         'image': images['keycloak'],
@@ -333,24 +305,30 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             {'name': 'KC_DB', 'value': 'postgres'},
             {
                 'name': 'KC_DB_URL',
-                'value': f"jdbc:postgresql://{addresses['postgres']}:5432/keycloak",
+                'value': f'jdbc:postgresql://{staging_postgres.host("keycloak")}:5432/keycloak',
             },
             {'name': 'KC_DB_USERNAME', 'value': 'broker'},
-            secret_env('KC_DB_PASSWORD', 'database', 'password'),
+            secret_env('KC_DB_PASSWORD', 'keycloak-postgres-credentials', 'password'),
             {'name': 'KC_BOOTSTRAP_ADMIN_USERNAME', 'value': 'admin'},
             secret_env('KC_BOOTSTRAP_ADMIN_PASSWORD', 'keycloak-admin', 'password'),
             {'name': 'KC_HOSTNAME', 'value': settings['auth_origin']},
             {'name': 'KC_HTTP_ENABLED', 'value': 'true'},
             {'name': 'KC_HEALTH_ENABLED', 'value': 'true'},
-            {'name': 'JAVA_OPTS_KC_HEAP', 'value': '-Xms128m -Xmx512m'},
+            {
+                'name': 'JAVA_OPTS_KC_HEAP',
+                'value': f'-Xms{min(128, keycloak_heap)}m -Xmx{keycloak_heap}m',
+            },
         ],
         'ports': [{'containerPort': 8080}, {'containerPort': 9000}],
-        'resources': {'requests': {'cpu': '250m', 'memory': '512Mi'}, 'limits': {'memory': '1Gi'}},
+        'resources': infrastructure_deployments['keycloak']['application']['resources'],
         'volumeMounts': [
             {'name': 'realm', 'mountPath': '/opt/keycloak/data/import', 'readOnly': True},
             {'name': 'theme', 'mountPath': '/opt/keycloak/themes/broker', 'readOnly': True},
         ],
-        'readinessProbe': {'httpGet': {'path': '/health/ready', 'port': 9000}, 'periodSeconds': 5},
+        'readinessProbe': {
+            'httpGet': {'path': '/health/ready', 'port': 9000},
+            'periodSeconds': 5,
+        },
         'startupProbe': {
             'httpGet': {'path': '/health/started', 'port': 9000},
             'periodSeconds': 5,
@@ -376,7 +354,9 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'name': 'theme',
                 'configMap': {
                     'name': theme_name,
-                    'items': [{'key': key, 'path': key.replace('__', '/')} for key in theme_files],
+                    'items': [
+                        {'key': key, 'path': key.replace('__', '/')} for key in theme_files
+                    ],
                 },
             },
         ],
@@ -401,40 +381,40 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'is-testing': False,
                 'worker-threads': 2,
                 'worker-fs-threads': 1,
-                'config-server-url': f"http://{addresses['configs']}:8090",
+                'config-server-url': f'http://{addresses["configs"]}:8090',
                 'config-updates-enabled': name != 'configs',
                 'config-cache-path': '',
                 'otlp-enabled': False,
                 'admin-assets-dir': '/app/assets',
                 'web-assets-dir': '/app/web-assets',
                 'web-origin': settings['web_origin'],
-                'web-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
-                'web-revoke-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/revoke",
+                'web-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
+                'web-revoke-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/revoke',
                 'web-secure-cookie': False,
-                'client-transport_locations-base-url': f"http://{addresses['transport_locations']}:8080",
-                'client-contracts-base-url': f"http://{addresses['contracts']}:8080",
-                'client-finance-base-url': f"http://{addresses['finance']}:8080",
+                'client-transport_locations-base-url': f'http://{addresses["transport_locations"]}:8080',
+                'client-contracts-base-url': f'http://{addresses["contracts"]}:8080',
+                'client-finance-base-url': f'http://{addresses["finance"]}:8080',
                 'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
-                'client-shipments-base-url': f"http://{addresses['shipments']}:8080",
-                'client-transportations-base-url': f"http://{addresses['transportations']}:8080",
-                'client-organizations-base-url': f"http://{addresses['organizations']}:8080",
-                'organization-access-url': f"http://{addresses['organizations']}:8080/api/organizations/access",
-                'platform-access-url': f"http://{addresses['organizations']}:8080/api/platform/access",
-                'users-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
-                'users-admin-url': f"http://{addresses['keycloak']}:8080/admin/realms/broker",
-                'client-config_admin-base-url': f"http://{addresses['configs']}:8092",
+                'client-shipments-base-url': f'http://{addresses["shipments"]}:8080',
+                'client-transportations-base-url': f'http://{addresses["transportations"]}:8080',
+                'client-organizations-base-url': f'http://{addresses["organizations"]}:8080',
+                'organization-access-url': f'http://{addresses["organizations"]}:8080/api/organizations/access',
+                'platform-access-url': f'http://{addresses["organizations"]}:8080/api/platform/access',
+                'users-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
+                'users-admin-url': f'http://{addresses["keycloak"]}:8080/admin/realms/broker',
+                'client-config_admin-base-url': f'http://{addresses["configs"]}:8092',
                 'auth-issuer': settings['auth_origin'] + '/realms/broker',
-                'auth-jwks-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/certs",
+                'auth-jwks-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/certs',
                 'auth-allow-http': True,
                 'admin-origin': settings['admin_origin'],
-                'admin-token-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/token",
-                'admin-revoke-url': f"http://{addresses['keycloak']}:8080/realms/broker/protocol/openid-connect/revoke",
+                'admin-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
+                'admin-revoke-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/revoke',
                 'admin-secure-cookie': False,
-                'pg-connection': f"postgresql://broker:{values['postgres-password']}@{addresses['postgres']}:5432/{name}",
+                'pg-connection': f'postgresql://broker:{database_passwords.get(name, "")}@{staging_postgres.host(name)}:5432/{name}',
             }
         )
         if lan:
-            internal_auth = f"https://{addresses['keycloak']}:8443"
+            internal_auth = f'https://{addresses["keycloak"]}:8443'
             variables.update(
                 {
                     'users-token-url': internal_auth
@@ -442,11 +422,13 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     'users-admin-url': internal_auth + '/admin/realms/broker',
                     'admin-secure-cookie': True,
                     'web-secure-cookie': True,
-                    'web-token-url': internal_auth + '/realms/broker/protocol/openid-connect/token',
+                    'web-token-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/token',
                     'web-revoke-url': internal_auth
                     + '/realms/broker/protocol/openid-connect/revoke',
                     'auth-allow-http': False,
-                    'auth-jwks-url': internal_auth + '/realms/broker/protocol/openid-connect/certs',
+                    'auth-jwks-url': internal_auth
+                    + '/realms/broker/protocol/openid-connect/certs',
                     'admin-token-url': internal_auth
                     + '/realms/broker/protocol/openid-connect/token',
                     'admin-revoke-url': internal_auth
@@ -455,7 +437,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                     'otlp-endpoint': f'collector.{namespace}.svc.{settings["cluster_domain"]}.:4317',
                 }
             )
-        token_base = internal_auth if lan else f"http://{addresses['keycloak']}:8080"
+        token_base = internal_auth if lan else f'http://{addresses["keycloak"]}:8080'
         variables.update(
             account_variables(
                 accounts,
@@ -471,13 +453,19 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         components['server']['listener-monitor']['address'] = '0.0.0.0'
         config_data = {'static_config.yaml': yaml.safe_dump(static, sort_keys=False)}
         vars_data = {'config_vars.yaml': yaml.safe_dump(variables, sort_keys=False)}
-        config_name, vars_name = hashed(name + '-config', config_data), hashed(
-            name + '-vars', vars_data
+        config_name, vars_name = (
+            hashed(name + '-config', config_data),
+            hashed(name + '-vars', vars_data),
         )
         apps += [
             document('ConfigMap', config_name, namespace, data=config_data, immutable=True),
             document(
-                'Secret', vars_name, namespace, type='Opaque', stringData=vars_data, immutable=True
+                'Secret',
+                vars_name,
+                namespace,
+                type='Opaque',
+                stringData=vars_data,
+                immutable=True,
             ),
         ]
         container = {
@@ -558,12 +546,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         schema = root / f'services/{name}/postgresql/schemas/db_1'
         if name in databases:
             sql = migration_sql(discover(schema)) if schema.exists() else ''
-            # initdb выполняется только на пустом томе; новый сервис создаёт БД перед миграцией.
-            sql = (
-                f"SELECT 'CREATE DATABASE {name}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{name}')\n"
-                "\\gexec\n"
-                f"\\connect {name}\n" + sql
-            )
             migration_name = hashed(name + '-migrate', [sql, images['postgres']])
             migrations.append(
                 document(
@@ -593,17 +575,24 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                                     'command': [
                                         'psql',
                                         '-h',
-                                        'postgres',
+                                        staging_postgres.host(name),
                                         '-U',
                                         'broker',
                                         '-d',
-                                        'postgres',
+                                        name,
                                         '-v',
                                         'ON_ERROR_STOP=1',
                                         '-f',
                                         '/sql/migrate.sql',
                                     ],
-                                    'env': [secret_env('PGPASSWORD', 'database', 'password')],
+                                    'env': [
+                                        secret_env(
+                                            'PGPASSWORD',
+                                            staging_postgres.cluster_name(name)
+                                            + '-credentials',
+                                            'password',
+                                        )
+                                    ],
                                     'resources': {
                                         'requests': {'cpu': '50m', 'memory': '32Mi'},
                                         'limits': {'memory': '128Mi'},
@@ -628,11 +617,14 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     phases = {
         'namespace': [ns],
         'infrastructure': infra,
+        'databases': database_objects,
         'migrations': migrations,
         'services': apps,
     }
     if lan:
-        phases['monitoring'] = staging_lan.render(root, namespace, settings, lan)
+        phases['monitoring'] = staging_lan.render(
+            root, namespace, settings, lan, environment=environment
+        )
     for phase, objects in phases.items():
         private_write(directory / f'{phase}.yaml', yaml.safe_dump_all(objects, sort_keys=False))
     private_write(
@@ -640,8 +632,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         json.dumps(
             {
                 'namespace': namespace,
+                'environment': environment,
                 'revision': release['revision'],
                 'jobs': jobs,
+                'database_owners': database_owners,
                 'kubernetes_version': settings['kubernetes_version'],
                 'lan': bool(lan),
                 'admin_origin': settings['admin_origin'],

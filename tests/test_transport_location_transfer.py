@@ -10,6 +10,11 @@ import transport_location_transfer as transfer
 
 
 class TransferTest(unittest.TestCase):
+    def setUp(self):
+        primary = patch('staging_postgres.primary', return_value='transport-locations-postgres-1')
+        primary.start()
+        self.addCleanup(primary.stop)
+
     def test_completed_does_not_read_or_write_sources(self):
         calls = []
         with patch.object(transfer, 'query', return_value=transfer.NAME + '\n') as query:
@@ -38,6 +43,11 @@ class TransferTest(unittest.TestCase):
 
 
 class TransferRecoveryTest(unittest.TestCase):
+    def setUp(self):
+        primary = patch('staging_postgres.primary', return_value='transport-locations-postgres-1')
+        primary.start()
+        self.addCleanup(primary.stop)
+
     def test_old_writers_resume_only_when_transfer_has_not_committed(self):
         consumers = ['transport_locations', 'shipments', 'transportations', 'admin_bff', 'web_bff']
         for committed in (False, True):

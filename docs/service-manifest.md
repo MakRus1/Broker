@@ -171,9 +171,10 @@ http_logging:
 
 ## Развёртывание
 
-Необязательная секция `deployment` задаёт `replicas` и Kubernetes `resources`
-(`requests`/`limits`, CPU и memory). При генерации эти поля валидируются. Настройки
-окружения и порядок переопределений описаны в [гайде staging](staging.md).
+Ресурсы, реплики приложения и PostgreSQL описываются в отдельном
+`services/<имя>/platform.yaml`. `service.yaml` описывает возможности сервиса,
+а профиль развёртывания — ресурсы по окружениям. Формат и перенос существующего
+staging описаны в [гайде staging](staging.md).
 
 
 ## Авторизация Bearer API

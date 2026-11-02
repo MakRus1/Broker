@@ -77,12 +77,14 @@ def transfer(command):
 def configure_cluster(kubectl, namespace, services):
     prefix = [*kubectl, '-n', namespace]
 
+    from staging_postgres import primary
+
     def command(database):
         return [
             *prefix,
             'exec',
             '-i',
-            'statefulset/postgres',
+            primary(prefix, database),
             '--',
             'psql',
             '-X',
@@ -90,7 +92,7 @@ def configure_cluster(kubectl, namespace, services):
             '-v',
             'ON_ERROR_STOP=1',
             '-U',
-            'broker',
+            'postgres',
             '-d',
             database,
         ]
@@ -153,6 +155,8 @@ def configure_cluster(kubectl, namespace, services):
 
 
 if __name__ == '__main__':
+
+    from staging_postgres import primary
 
     def command(database):
         return [

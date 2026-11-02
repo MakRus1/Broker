@@ -129,7 +129,7 @@ class DeploymentTest(unittest.TestCase):
                 if obj['kind'] == 'Secret' and obj['metadata']['name'].startswith('configs-vars')
             )
             self.assertIn(
-                'postgres.broker-staging.svc.cluster.local',
+                'configs-postgres-rw',
                 base64.b64decode(variables['data']['config_vars.yaml']).decode(),
             )
 
@@ -190,11 +190,14 @@ class DeploymentTest(unittest.TestCase):
                 ROOT / 'services', root / 'services', ignore=shutil.ignore_patterns('__pycache__')
             )
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
+            shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
             path = Path(directory) / 'state'
             first = staging.render(RELEASE, path, root=root)
-            manifest = root / 'services/configs/service.yaml'
-            manifest.write_text(manifest.read_text() + '\ndeployment:\n  replicas: 2\n')
+            manifest = root / 'services/configs/platform.yaml'
+            config = yaml.safe_load(manifest.read_text())
+            config['environments']['staging'] = {'application': {'replicas': 2}}
+            manifest.write_text(yaml.safe_dump(config))
             second = staging.render(RELEASE, path, root=root)
             deployment = next(
                 obj
@@ -207,8 +210,10 @@ class DeploymentTest(unittest.TestCase):
                 [obj['metadata']['name'] for obj in first['services']],
                 [obj['metadata']['name'] for obj in second['services']],
             )
-            bff = root / 'services/admin_bff/service.yaml'
-            bff.write_text(bff.read_text() + '\ndeployment:\n  replicas: 2\n')
+            bff = root / 'services/admin_bff/platform.yaml'
+            config = yaml.safe_load(bff.read_text())
+            config['environments']['staging'] = {'application': {'replicas': 2}}
+            bff.write_text(yaml.safe_dump(config))
             with self.assertRaisesRegex(ValueError, 'сессий'):
                 staging.render(RELEASE, path, root=root)
 

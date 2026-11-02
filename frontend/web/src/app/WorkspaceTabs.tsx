@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { moveWorkspace, workspaceTitle, type WorkspaceTab } from './workspace';
 
 function Chevron({ direction }: { direction: 'left' | 'right' | 'down' }) {
@@ -30,6 +31,46 @@ export function WorkspaceTabs({
   const [query, setQuery] = useState('');
   const [edges, setEdges] = useState({ before: false, after: false });
   const dragging = useRef<string | null>(null);
+  const contextNode = useRef<HTMLDivElement>(null);
+  const contextOrigin = useRef<HTMLElement | null>(null);
+  const [context, setContext] = useState<{ x: number; y: number } | null>(null);
+  function openContext(x: number, y: number, origin: HTMLElement) {
+    setListOpen(false);
+    setBusy(Boolean(document.querySelector('.workspace-content form[data-busy="true"]')));
+    contextOrigin.current = origin.querySelector<HTMLButtonElement>('button[role="tab"]') ?? origin;
+    setContext({
+      x: Math.max(8, Math.min(x, window.innerWidth - 232)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 56)),
+    });
+  }
+  useEffect(() => {
+    if (!context) return;
+    const element = contextNode.current;
+    (element?.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? element)?.focus({
+      preventScroll: true,
+    });
+    function outside(event: PointerEvent) {
+      if (!contextNode.current?.contains(event.target as Node)) setContext(null);
+    }
+    function key(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setContext(null);
+        contextOrigin.current?.focus({ preventScroll: true });
+      } else if (event.key === 'Tab') setContext(null);
+    }
+    const close = () => setContext(null);
+    document.addEventListener('pointerdown', outside);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      document.removeEventListener('keydown', key);
+    };
+  }, [context]);
   useEffect(() => {
     const element = strip.current;
     if (!element) return;
@@ -148,6 +189,10 @@ export function WorkspaceTabs({
               className={`workspace-tab${active === entry.id ? ' selected' : ''}${source === entry.id ? ' dragging' : ''}`}
               data-drop-side={drop?.id === entry.id ? drop.side : undefined}
               draggable
+              onContextMenu={(event) => {
+                event.preventDefault();
+                openContext(event.clientX, event.clientY, event.currentTarget);
+              }}
               onDragStart={(event) => {
                 if ((event.target as HTMLElement).closest('.workspace-close')) {
                   event.preventDefault();
@@ -192,6 +237,12 @@ export function WorkspaceTabs({
                 title={`${entry.title} · Перетащите для изменения порядка. С клавиатуры: Alt + ← / →`}
                 aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                 onKeyDown={(event) => {
+                  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                    event.preventDefault();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    openContext(rect.left, rect.bottom, event.currentTarget);
+                    return;
+                  }
                   if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight'))
                     return;
                   event.preventDefault();
@@ -260,6 +311,7 @@ export function WorkspaceTabs({
             aria-controls="workspace-open-list"
             onClick={() => {
               setQuery('');
+              setContext(null);
               setBusy(Boolean(document.querySelector('.workspace-content form[data-busy="true"]')));
               setListOpen((old) => !old);
             }}
@@ -339,6 +391,31 @@ export function WorkspaceTabs({
           )}
         </div>
       </div>
+      {context &&
+        createPortal(
+          <div
+            ref={contextNode}
+            className="workspace-context-menu"
+            role="menu"
+            aria-label="Действия с вкладками"
+            tabIndex={-1}
+            style={{ left: context.x, top: context.y }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              title={busy ? 'Дождитесь завершения сохранения' : undefined}
+              onClick={() => {
+                setContext(null);
+                onCloseAll();
+              }}
+            >
+              Закрыть все вкладки
+            </button>
+          </div>,
+          document.body,
+        )}
       <span className="visually-hidden" role="status">
         {announcement}
       </span>

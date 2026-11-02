@@ -1,4 +1,15 @@
 export type WorkspaceTab = { id: string; route: string; title: string };
+export function isWorkspaceRoute(route: string): boolean {
+  return /^\/(shipments|transportations|counterparties|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+    route,
+  );
+}
+
+export function initialWorkspaceRoute(current: string, saved: string | null): string {
+  if (current && current !== '/') return current;
+  return saved && isWorkspaceRoute(saved) ? saved : '/';
+}
+
 export function workspaceId(route: string) {
   return route.replace(/\/(edit|route)$/, '');
 }
@@ -32,6 +43,7 @@ export function workspaceTitle(route: string) {
   return 'Контрагент';
 }
 export function openWorkspace(tabs: WorkspaceTab[], route: string): WorkspaceTab[] {
+  if (route === '/' || !route) return tabs;
   const id = workspaceId(route);
   const existing = tabs.find((tab) => tab.id === id);
   if (existing) return tabs.map((tab) => (tab.id === id ? { ...tab, route } : tab));
@@ -75,9 +87,7 @@ export function restoreWorkspaces(raw: string | null, route: string): WorkspaceT
         !value ||
         typeof value.route !== 'string' ||
         typeof value.title !== 'string' ||
-        !/^\/(shipments|transportations|counterparties|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
-          value.route,
-        )
+        !isWorkspaceRoute(value.route)
       )
         continue;
       const id = workspaceId(value.route);

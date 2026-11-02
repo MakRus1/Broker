@@ -1,3 +1,4 @@
+import { WorkspaceHome } from './WorkspaceHome';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
 import { PaymentsPage } from '../features/finance/payments/PaymentsPage';
@@ -36,6 +37,7 @@ import {
   workspaceId,
   moveWorkspace,
   restoreWorkspaces,
+  initialWorkspaceRoute,
   type WorkspaceTab,
 } from './workspace';
 import { WorkspaceTabs } from './WorkspaceTabs';
@@ -59,6 +61,7 @@ import { TransportationTable } from '../features/transportations/TransportationT
 export function App() {
   const [session, setSession] = useState<Session | null>();
   const [tab, setTab] = useState<
+    | 'home'
     | 'shipments'
     | 'transportations'
     | 'counterparties'
@@ -69,7 +72,7 @@ export function App() {
     | 'outgoing-invoices'
     | 'receipts'
     | 'disbursements'
-  >('shipments');
+  >('home');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
@@ -131,7 +134,7 @@ export function App() {
     'transportations',
     transportationColumns,
   );
-  const [route, setRoute] = useState(() => location.hash.slice(1) || '/shipments');
+  const [route, setRoute] = useState(() => location.hash.slice(1) || '/');
   const creating = /^\/shipments\/new(?:\/|$)/.test(route);
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
   const activeWorkspace = workspaceId(route);
@@ -140,22 +143,27 @@ export function App() {
   useEffect(() => {
     if (!storageKey) return;
     let saved: string | null = null;
+    let savedRoute: string | null = null;
     try {
       saved = sessionStorage.getItem(storageKey);
+      savedRoute = sessionStorage.getItem(storageKey + ':active');
     } catch {
       /* Вкладки работают без хранилища. */
     }
-    setWorkspaces(restoreWorkspaces(saved, location.hash.slice(1) || '/shipments'));
+    const next = initialWorkspaceRoute(location.hash.slice(1), savedRoute);
+    setWorkspaces(restoreWorkspaces(saved, next));
+    if (next !== (location.hash.slice(1) || '/')) location.replace('#' + next);
     setRestoredFor(storageKey);
   }, [storageKey]);
   useEffect(() => {
     if (!storageKey || restoredFor !== storageKey) return;
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(workspaces));
+      sessionStorage.setItem(storageKey + ':active', route);
     } catch {
       /* Недоступность хранилища не мешает менять порядок вкладок. */
     }
-  }, [storageKey, restoredFor, workspaces]);
+  }, [storageKey, restoredFor, workspaces, route]);
   const workspaceNodes = useRef(new Map<string, HTMLDivElement>());
   const workspaceScroll = useRef(new Map<string, number>());
   const lastWorkspace = useRef(activeWorkspace);
@@ -189,9 +197,26 @@ export function App() {
       });
       const index = workspaces.findIndex((tab) => tab.id === id);
       const remaining = workspaces.filter((tab) => tab.id !== id);
-      setWorkspaces(remaining.length ? remaining : openWorkspace([], '/shipments'));
-      if (activeWorkspace === id)
-        location.hash = remaining[Math.max(0, index - 1)]?.route ?? '/shipments';
+      setWorkspaces(remaining);
+      if (activeWorkspace === id) location.hash = remaining[Math.max(0, index - 1)]?.route ?? '/';
+    });
+  }
+  function closeAllWorkspaces() {
+    const nodes = [...workspaceNodes.current.values()];
+    if (nodes.some((node) => node.querySelector('form[data-busy="true"]'))) return;
+    const dirty = nodes.some((node) => node.querySelector('form[data-dirty="true"]'));
+    confirmDiscard(dirty, () => {
+      for (const node of nodes) {
+        node.querySelectorAll<HTMLElement>('[data-draft-key]').forEach((form) => {
+          try {
+            sessionStorage.removeItem(form.dataset.draftKey!);
+          } catch {
+            /* Закрытие формы не зависит от хранилища. */
+          }
+        });
+      }
+      setWorkspaces([]);
+      location.hash = '/';
     });
   }
   const transportationId = /^\/transportations\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
@@ -215,7 +240,7 @@ export function App() {
           /* При недоступном хранилище вход открывает реестр. */
         }
       }
-      const next = location.hash.slice(1) || '/shipments';
+      const next = location.hash.slice(1) || '/';
       setRoute(next);
       if (next.startsWith('/transportations')) setTab('transportations');
       else if (next.startsWith('/service-charges')) setTab('service-charges');
@@ -226,7 +251,8 @@ export function App() {
       else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
       else if (next.startsWith('/contracts')) setTab('contracts');
       else if (next.startsWith('/counterparties')) setTab('counterparties');
-      else setTab('shipments');
+      else if (next.startsWith('/shipments')) setTab('shipments');
+      else setTab('home');
     }
     changed();
     window.addEventListener('hashchange', changed);
@@ -318,6 +344,7 @@ export function App() {
     async (append = false) => {
       if (
         !session ||
+        tab === 'home' ||
         tab === 'receipts' ||
         tab === 'disbursements' ||
         tab === 'counterparties' ||
@@ -653,11 +680,16 @@ export function App() {
             setWorkspaces((old) => moveWorkspace(old, source, target, side))
           }
           onClose={closeWorkspace}
+          onCloseAll={closeAllWorkspaces}
         />
-        <div className="workspace-content">
+        <div
+          className={`workspace-content${workspaces.length ? '' : ' without-tabs'}${route === '/' ? ' home-screen' : ''}`}
+        >
+          {route === '/' && <WorkspaceHome permissions={session.permissions} />}
           <div
             className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
             hidden={
+              tab === 'home' ||
               tab === 'receipts' ||
               tab === 'disbursements' ||
               tab === 'counterparties' ||

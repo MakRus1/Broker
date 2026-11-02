@@ -5,6 +5,7 @@ import {
   workspaceId,
   moveWorkspace,
   restoreWorkspaces,
+  initialWorkspaceRoute,
 } from './workspace';
 describe('Рабочие вкладки', () => {
   it('сохраняет реестр при открытии карточки', () => {
@@ -84,4 +85,25 @@ it('открывает каждую услугу в отдельной вкла�
   expect(tabs.map((tab) => tab.title)).toEqual(['Услуги', 'Услуга']);
   expect(openWorkspace(tabs, route)).toHaveLength(2);
   expect(restoreWorkspaces(JSON.stringify(tabs), route)).toEqual(tabs);
+});
+
+it('начинает с пустого пространства и не создаёт обязательный реестр', () => {
+  expect(openWorkspace([], '/')).toEqual([]);
+  expect(restoreWorkspaces(null, '/')).toEqual([]);
+  expect(restoreWorkspaces('broken', '/')).toEqual([]);
+  const tabs = openWorkspace([], '/counterparties');
+  expect(openWorkspace(tabs, '/')).toBe(tabs);
+  expect(restoreWorkspaces(JSON.stringify(tabs), '/')).toEqual(tabs);
+});
+
+it('восстанавливает поступления и списания вместе с остальными формами', () => {
+  const tabs = openWorkspace(openWorkspace([], '/receipts'), '/disbursements');
+  expect(restoreWorkspaces(JSON.stringify(tabs), '/')).toEqual(tabs);
+});
+
+it('восстанавливает активную форму, сохраняя приоритет прямой ссылки', () => {
+  expect(initialWorkspaceRoute('', '/contracts')).toBe('/contracts');
+  expect(initialWorkspaceRoute('/shipments', '/contracts')).toBe('/shipments');
+  expect(initialWorkspaceRoute('', '/')).toBe('/');
+  expect(initialWorkspaceRoute('', 'https://example.com')).toBe('/');
 });

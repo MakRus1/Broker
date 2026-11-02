@@ -40,17 +40,17 @@
 .settlement-totals td {
   padding: 12px 16px;
   text-align: right;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--divider);
   white-space: nowrap;
 }
 .settlement-totals thead th {
-  background: #f8faff;
-  color: #69788f;
+  background: var(--accent-soft);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
 }
 .settlement-totals .settlement-groups th {
-  color: #35445b;
+  color: var(--text);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -71,7 +71,7 @@
   margin: 0;
 }
 .settlement-zero {
-  color: #8995a7;
+  color: var(--text-muted);
 }
 .counterparty-settlements .settlement-explanation {
   margin: 10px 0 0;
@@ -138,7 +138,7 @@
 
 .settlement-detail-heading {
   justify-content: space-between;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--divider);
   margin: 24px 0 14px;
   gap: 12px;
 }
@@ -168,5 +168,5 @@
 .settlement-totals thead tr:nth-child(2) th:nth-child(5),
 .settlement-totals tbody td:nth-child(4),
 .settlement-totals tbody td:nth-child(6) {
-  border-left: 1px solid #e2e8f0;
+  border-left: 1px solid var(--divider);
 }

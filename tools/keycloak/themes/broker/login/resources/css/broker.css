@@ -1,9 +1,24 @@
 /* Собственная вёрстка без стилей PatternFly. Общие поля обслуживают все шаги входа. */
 :root {
-  color-scheme: light;
+  --login-text: light-dark(#243247, #e3e8ef);
+  --login-canvas: light-dark(#f4f6f9, #151a22);
+  --login-surface: light-dark(#ffffff, #1d2530);
+  --login-surface-muted: light-dark(#f7f9fc, #222b38);
+  --login-border: light-dark(#cfd8e5, #455268);
+  --login-muted: light-dark(#637188, #b3bece);
+  --login-accent: light-dark(#275fce, #3e73d6);
+  --login-accent-text: light-dark(#275fce, #9bbcf5);
+  --login-accent-hover: light-dark(#1d50b4, #4b80e0);
+  --login-accent-soft: light-dark(#edf3fd, #273955);
+  --login-on-accent: light-dark(#ffffff, #ffffff);
+  --login-focus: light-dark(#7aaaff, #8db3f5);
+  --login-danger: light-dark(#b13743, #ec9ba3);
+  --login-danger-soft: light-dark(#fdf0f1, #402b33);
+  --login-shadow: light-dark(#15263c10, #00000045);
+  color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #243247;
-  background: #f3f5fa;
+  color: var(--login-text);
+  background: var(--login-canvas);
   font-size: 15px;
 }
 * {
@@ -13,7 +28,7 @@ body {
   margin: 0;
 }
 a {
-  color: #315ed6;
+  color: var(--login-accent-text);
   text-decoration: none;
 }
 a:hover {
@@ -36,21 +51,21 @@ a:hover {
   font-size: 23px;
   font-weight: 750;
   letter-spacing: -0.7px;
-  color: #315ed6;
+  color: var(--login-accent-text);
 }
 main {
   position: relative;
   padding: 40px;
-  background: white;
-  border: 1px solid #dfe5ee;
+  background: var(--login-surface);
+  border: 1px solid var(--login-border);
   border-radius: 18px;
-  box-shadow: 0 12px 40px #24324708;
+  box-shadow: 0 12px 40px var(--login-shadow);
 }
 .pf-v5-c-login__main-header {
   margin-bottom: 28px;
 }
 .broker-subtitle {
-  color: #728096;
+  color: var(--login-muted);
   font-size: 14px;
   margin: 8px 0 0;
 }
@@ -87,25 +102,25 @@ select,
 textarea {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #cbd5e4;
+  border: 1px solid var(--login-border);
   border-radius: 8px;
-  background: white;
-  color: #243247;
+  background: var(--login-surface);
+  color: var(--login-text);
   padding: 10px 12px;
   font: inherit;
 }
 input[readonly] {
-  background: #f5f7fb !important;
+  background: var(--login-surface-muted) !important;
 }
 input:focus-visible,
 select:focus-visible,
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #a9bfff;
+  outline: 3px solid var(--login-focus);
   outline-offset: 2px;
 }
 input[aria-invalid="true"] {
-  border-color: #c43838 !important;
+  border-color: var(--login-danger) !important;
 }
 .pf-v5-c-input-group {
   display: flex;
@@ -130,11 +145,11 @@ button,
 input[type="submit"],
 .pf-v5-c-button {
   min-height: 44px;
-  border: 1px solid #cbd5e4;
+  border: 1px solid var(--login-border);
   border-radius: 8px;
   padding: 10px 14px;
-  background: #f5f7fb;
-  color: #243247;
+  background: var(--login-surface-muted);
+  color: var(--login-text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -142,14 +157,14 @@ input[type="submit"],
 #kc-login,
 input[type="submit"].pf-m-primary,
 button.pf-m-primary {
-  background: #3564df;
-  color: white;
-  border-color: #3564df;
+  background: var(--login-accent);
+  color: var(--login-on-accent);
+  border-color: var(--login-accent);
   width: 100%;
 }
 #kc-login:hover,
 .pf-m-primary:hover {
-  background: #2854c6;
+  background: var(--login-accent-hover);
 }
 #kc-form-buttons {
   margin-top: 24px;
@@ -159,7 +174,7 @@ button.pf-m-primary {
   padding: 3px 6px;
   width: 86px;
   font-size: 12px;
-  color: #728096;
+  color: var(--login-muted);
   border: 0;
   background: transparent;
 }
@@ -179,7 +194,7 @@ button[data-password-toggle] {
   border: 0;
   background: transparent;
   font-size: 0;
-  color: #728096;
+  color: var(--login-muted);
 }
 button[data-password-toggle]::after {
   content: "";
@@ -200,17 +215,17 @@ button[data-password-toggle]::after {
 .pf-v5-c-alert {
   padding: 12px 14px;
   border-radius: 8px;
-  background: #edf3ff;
+  background: var(--login-accent-soft);
   margin-bottom: 20px;
   line-height: 1.5;
 }
 .pf-v5-c-alert.pf-m-danger {
-  color: #a82424;
-  background: #fff0f0;
+  color: var(--login-danger);
+  background: var(--login-danger-soft);
 }
 .pf-m-error,
 [id^="input-error-"] {
-  color: #b72d2d;
+  color: var(--login-danger);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -248,4 +263,11 @@ ul {
   .pf-v5-c-login__main-header {
     flex-wrap: wrap;
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }

@@ -12,7 +12,10 @@ Login::Login(const userver::components::ComponentConfig& config,
 
 std::string Login::HandleRequestThrow(
     const Http& http, userver::server::request::RequestContext&) const {
-    const auto [state, url] = sessions_.Begin();
+    auto [state, url] = sessions_.Begin();
+    const auto& theme = http.GetArg("theme");
+    if (theme == "light" || theme == "dark" || theme == "system")
+        url += "&broker_theme=" + theme;
     http.GetHttpResponse().SetCookie(sessions_.Cookie(sessions_.LoginCookie, state, 300));
     return detail::Redirect(http, url);
 }

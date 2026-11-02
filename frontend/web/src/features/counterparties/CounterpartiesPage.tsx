@@ -469,7 +469,7 @@ export function CounterpartiesPage({
       </section>
     );
   return (
-    <div className="counterparty-registry">
+    <div className="counterparty-registry registry-page">
       <RegistryHeading
         columns={columnState}
         title={translate('nav.counterparties')}

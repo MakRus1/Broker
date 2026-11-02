@@ -334,7 +334,7 @@ export function ServiceChargeRegistry({
   ];
   const state = useRegistryColumns(session.subject, 'service-charges', columns);
   return (
-    <section className="service-charge-registry">
+    <section className="service-charge-registry registry-page">
       <RegistryHeading
         columns={state}
         title={translate('nav.serviceCharges')}

@@ -716,7 +716,7 @@ export function App() {
         >
           {route === '/' && <WorkspaceHome permissions={session.permissions} />}
           <div
-            className={tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}
+            className={`registry-page ${tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}`}
             hidden={
               tab === 'home' ||
               tab === 'receipts' ||

@@ -448,7 +448,7 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card record-page record-registry contracts-page">
+      <section className="card record-page registry-page contracts-page">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.contracts')}

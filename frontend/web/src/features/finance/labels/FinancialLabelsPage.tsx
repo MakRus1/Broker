@@ -307,7 +307,7 @@ export function FinancialLabelsPage({
     );
   if (!id && !creating)
     return (
-      <section className="record-page record-registry financial-label-page">
+      <section className="record-page registry-page financial-label-page">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.financialLabels')}

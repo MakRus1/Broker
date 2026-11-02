@@ -309,7 +309,7 @@ export function PaymentsPage({
   }
   if (registry)
     return (
-      <section className="payment-page">
+      <section className="payment-page registry-page">
         <PaymentRegistry kind={kind} active={active} session={session} />
       </section>
     );

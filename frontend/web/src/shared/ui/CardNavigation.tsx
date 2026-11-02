@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { useState, type ReactNode } from 'react';
 export function CardNavigation({
   children,
@@ -10,6 +11,7 @@ export function CardNavigation({
   disabled?: boolean;
   className?: string;
 }) {
+  const { translate } = useLocalization();
   const [refreshing, setRefreshing] = useState(false);
   return (
     <div className={`card-navigation ${className}`}>
@@ -28,7 +30,8 @@ export function CardNavigation({
             }
           }}
         >
-          <span aria-hidden="true">↻</span> {refreshing ? 'Обновляем…' : 'Обновить'}
+          <span aria-hidden="true">↻</span>{' '}
+          {refreshing ? translate('ui.refreshing') : translate('action.refresh')}
         </button>
       )}
     </div>

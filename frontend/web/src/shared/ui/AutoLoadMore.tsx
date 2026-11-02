@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useRef } from 'react';
 
 export function AutoLoadMore({
@@ -11,6 +12,7 @@ export function AutoLoadMore({
   failed?: boolean;
   onLoad: () => Promise<void>;
 }) {
+  const { translate } = useLocalization();
   const marker = useRef<HTMLDivElement>(null);
   const pending = useRef(false);
   useEffect(() => {
@@ -32,10 +34,10 @@ export function AutoLoadMore({
   if (!enabled && !loading) return null;
   return (
     <div className="auto-load" ref={marker}>
-      {loading && <span role="status">Загружаем записи…</span>}
+      {loading && <span role="status">{translate('ui.loadingRecords')}</span>}
       {enabled && failed && (
         <button disabled={loading} onClick={() => void onLoad()}>
-          Повторить загрузку
+          {translate('ui.retryLoad')}
         </button>
       )}
     </div>

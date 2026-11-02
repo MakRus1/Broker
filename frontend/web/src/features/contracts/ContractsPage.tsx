@@ -1,3 +1,5 @@
+import { RegistryHeading } from '../../shared/ui/RegistryHeading';
+import { useLocalization } from '../localization/Localization';
 import { BankAccountSelect } from '../counterparties/BankAccountSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
@@ -15,12 +17,7 @@ import { DateInput } from '../../shared/dates/DateInput';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
-import {
-  RegistryTable,
-  RegistryColumnSettings,
-  useRegistryColumns,
-  type RegistryColumn,
-} from '../registry/RegistryTable';
+import { RegistryTable, useRegistryColumns, type RegistryColumn } from '../registry/RegistryTable';
 
 const emptyParties: Counterparty[] = [];
 type Cursor = { id: string; scope: string; text_value?: string; date_value?: string };
@@ -150,6 +147,7 @@ export function ContractsPage({
   onSaved: (value: Contract) => void;
   onCancelNew: () => void;
 }) {
+  const { translate } = useLocalization();
   const titleCallback = useRef(onTitle);
   titleCallback.current = onTitle;
   const id = /^\/contracts\/([0-9a-f-]{36})/i.exec(route)?.[1];
@@ -251,7 +249,9 @@ export function ContractsPage({
     // Сохранённый номер вкладки остаётся видимым, пока карточка загружается.
     if (!creating && id && (!value || value.id !== id)) return;
     titleCallback.current(
-      creating ? 'Новый договор' : (value?.number ?? (id ? 'Договор' : 'Договоры')),
+      creating
+        ? translate('entity.newContract')
+        : (value?.number ?? (id ? 'Договор' : translate('nav.contracts'))),
     );
   }, [creating, id, value?.id, value?.number]);
   useEffect(() => {
@@ -343,13 +343,13 @@ export function ContractsPage({
       label: 'Состояние',
       width: 180,
       sort: 'archived',
-      render: (item) => (item.archived ? 'В архиве' : 'Действующий'),
+      render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
     {
       id: 'payment_delay_days',
       label: 'Отсрочка, дней',
       width: 180,
-      render: (item) => item.payment_delay_days ?? 'Не указана',
+      render: (item) => item.payment_delay_days ?? translate('routeFilter.pointNotSet'),
     },
   ];
   const columnState = useRegistryColumns(session.subject, 'contracts', columns);
@@ -371,7 +371,7 @@ export function ContractsPage({
   if (!read)
     return (
       <section className="card">
-        <h1>Договоры</h1>
+        <h1>{translate('nav.contracts')}</h1>
         <p>Нет права на просмотр договоров.</p>
       </section>
     );
@@ -449,14 +449,19 @@ export function ContractsPage({
   if (!id && !creating)
     return (
       <section className="card record-page contracts-page">
-        <div className="section-heading">
-          <h1>Договоры</h1>
+        <RegistryHeading
+          columns={columnState}
+          title={translate('nav.contracts')}
+          count={items.length}
+          loading={loading}
+          onRefresh={() => setVersion((value) => value + 1)}
+        >
           {write && (
             <a className="button primary" href="#/contracts/new">
-              Новый договор
+              {translate('entity.newContract')}
             </a>
           )}
-        </div>
+        </RegistryHeading>
         {failure && (
           <p className="error" role="alert">
             {failure}
@@ -466,20 +471,15 @@ export function ContractsPage({
           items={items}
           emptyMessage={
             loading
-              ? 'Загружаем договоры…'
+              ? translate('common.loading')
               : failure
                 ? undefined
                 : registryQuery.filters.length > 1
-                  ? 'Нет договоров по выбранным условиям'
-                  : 'Пока нет договоров'
+                  ? translate('registryPage.noMatchingContracts')
+                  : translate('registryPage.noContracts')
           }
           columns={columnState}
           filters={columnFilters}
-          filterSummary={
-            <div className="registry-column-actions">
-              <RegistryColumnSettings {...columnState} />
-            </div>
-          }
           sort={registryQuery.sort}
           descending={registryQuery.descending}
           onSort={(sort) =>
@@ -507,10 +507,11 @@ export function ContractsPage({
         <div className="section-heading">
           <div>
             {!creating && <p className="eyebrow">ДОГОВОР</p>}
-            <h1>{creating ? 'Новый договор' : (value?.number ?? 'Договор')}</h1>
+            <h1>{creating ? translate('entity.newContract') : (value?.number ?? 'Договор')}</h1>
             {value && !editing && (
               <p className="record-state">
-                {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
+                {value.archived ? translate('filter.archived') : translate('filter.active')} ·
+                Редакция {value.revision}
               </p>
             )}
           </div>

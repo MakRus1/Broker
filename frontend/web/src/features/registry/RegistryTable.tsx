@@ -1,3 +1,4 @@
+import { registryFieldLabel } from './registryLabels';
 import { useLocalization } from '../localization/Localization';
 import {
   RegistryFilterToolbar,
@@ -48,7 +49,11 @@ export function RegistryColumnSettings({
   newColumns,
   acknowledgeColumns,
 }: RegistryColumns) {
-  const { translate } = useLocalization();
+  const { translate, locale } = useLocalization();
+  const displayLabel = (definition: ColumnDefinition) =>
+    definition.labelKey
+      ? translate(definition.labelKey)
+      : registryFieldLabel(definition.id, definition.label, locale);
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -118,14 +123,14 @@ export function RegistryColumnSettings({
                       )
                     }
                   />
-                  {definition.label}
+                  {displayLabel(definition)}
                   {highlighted.includes(column.id) && (
                     <span className="registry-column-new">{translate('registry.new')}</span>
                   )}
                 </label>
                 <button
                   type="button"
-                  aria-label={`Переместить «${definition.label}» влево`}
+                  aria-label={translate('filter.moveLeft', { field: displayLabel(definition) })}
                   disabled={index === 0}
                   onClick={() => setColumns((old) => moveColumn(old, column.id, -1))}
                 >
@@ -133,7 +138,7 @@ export function RegistryColumnSettings({
                 </button>
                 <button
                   type="button"
-                  aria-label={`Переместить «${definition.label}» вправо`}
+                  aria-label={translate('filter.moveRight', { field: displayLabel(definition) })}
                   disabled={index === columns.length - 1}
                   onClick={() => setColumns((old) => moveColumn(old, column.id, 1))}
                 >
@@ -188,6 +193,11 @@ export function RegistryTable<T extends { id: string }>({
   onSort?: (field: string) => void;
   onOpen: (item: T) => void;
 }) {
+  const { translate, locale } = useLocalization();
+  const displayLabel = (definition: ColumnDefinition) =>
+    definition.labelKey
+      ? translate(definition.labelKey)
+      : registryFieldLabel(definition.id, definition.label, locale);
   const [filterEditor, setFilterEditor] = useState<{
     fields: string[];
     anchor: HTMLElement;
@@ -279,7 +289,11 @@ export function RegistryTable<T extends { id: string }>({
           hidden={hidden}
           extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => ({
             id,
-            label: definitions.find((column) => column.id === id)?.label ?? id,
+            label: registryFieldLabel(
+              id,
+              definitions.find((column) => column.id === id)?.label ?? id,
+              locale,
+            ),
             onOpen: value.onOpen,
           }))}
           children={filterSummary}
@@ -360,7 +374,7 @@ export function RegistryTable<T extends { id: string }>({
                       drop?.id === column.id && drop.id !== source ? drop.side : undefined
                     }
                     draggable
-                    title="Перетащите заголовок для изменения порядка столбцов"
+                    title={translate('filter.drag')}
                     onDragStart={(event) => {
                       if (
                         drag.current ||
@@ -392,13 +406,13 @@ export function RegistryTable<T extends { id: string }>({
                             if (Date.now() >= ignoreClickUntil.current) onSort(sortField);
                           }}
                         >
-                          <span className="registry-column-name">{definition.label}</span>
+                          <span className="registry-column-name">{displayLabel(definition)}</span>
                           {sortField === sort && (
                             <span className="registry-column-order">{descending ? '↓' : '↑'}</span>
                           )}
                         </button>
                       ) : (
-                        definition.label
+                        displayLabel(definition)
                       )}
                       {(customFilter || (filters && filterFields.length > 0)) && (
                         <button
@@ -411,7 +425,9 @@ export function RegistryTable<T extends { id: string }>({
                             ) ||
                             undefined
                           }
-                          aria-label={`Фильтр «${definition.label}»`}
+                          aria-label={translate('filter.field', {
+                            field: displayLabel(definition),
+                          })}
                           aria-expanded={
                             customFilter
                               ? customFilter.expanded
@@ -444,7 +460,7 @@ export function RegistryTable<T extends { id: string }>({
                     </div>
                     <span
                       role="separator"
-                      aria-label={`Ширина столбца «${definition.label}»`}
+                      aria-label={translate('filter.width', { field: displayLabel(definition) })}
                       aria-orientation="vertical"
                       aria-valuemin={120}
                       aria-valuemax={900}

@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -10,7 +11,6 @@ import { preferenceKey, useRegistryPreference } from '../../registry/registryPre
 import { initialInvoiceQuery, restoreInvoiceQuery } from '../../registry/registryQueryPreferences';
 import {
   RegistryTable,
-  RegistryColumnSettings,
   useRegistryColumns,
   type RegistryColumn,
 } from '../../registry/RegistryTable';
@@ -37,6 +37,7 @@ export function PaymentRegistry({
   scope?: RegistryScope;
   refreshVersion?: number;
 }) {
+  const { translate } = useLocalization();
   const [items, setItems] = useState<Payment[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
   const [loading, setLoading] = useState(false);
@@ -153,23 +154,32 @@ export function PaymentRegistry({
       label: 'Состояние',
       width: 170,
       sort: 'archived',
-      render: (item) => (item.archived ? 'В архиве' : 'Действующий'),
+      render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
   const columnState = useRegistryColumns(session.subject, `${kind}-payments`, columns);
   return (
     <section className="invoice-registry">
       <RegistryHeading
-        title={scope ? undefined : kind === 'receipt' ? 'Поступления' : 'Списания'}
+        columns={columnState}
+        title={
+          scope
+            ? undefined
+            : kind === 'receipt'
+              ? translate('nav.receipts')
+              : translate('nav.disbursements')
+        }
         count={items.length}
+        loading={loading}
         onRefresh={() => setVersion((v) => v + 1)}
       >
         {!scope && session.permissions.includes('finance.write_payments') && (
           <a className="button primary" href={`#${base}/new`}>
-            {kind === 'receipt' ? 'Добавить поступление' : 'Добавить списание'}
+            {kind === 'receipt'
+              ? translate('registryPage.addReceipt')
+              : translate('registryPage.addDisbursement')}
           </a>
         )}
-        <RegistryColumnSettings {...columnState} />
       </RegistryHeading>
       {failure && (
         <p className="error" role="alert">
@@ -193,7 +203,13 @@ export function PaymentRegistry({
         onOpen={(item) => {
           location.hash = `${base}/${item.id}`;
         }}
-        emptyMessage={loading ? 'Загружаем платежи…' : failure ? undefined : 'Платежи не найдены'}
+        emptyMessage={
+          loading
+            ? translate('common.loading')
+            : failure
+              ? undefined
+              : translate('registryPage.noPayments')
+        }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
     </section>

@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
 import type { ServiceCharge } from '../services/serviceCharges';
@@ -5,11 +6,14 @@ import type { InvoiceDetails, ServiceChargeInvoice } from './invoices';
 import type { ServiceInvoiceSelection } from './ServiceInvoiceActions';
 
 export type SelectableCharge = ServiceCharge & { invoice?: ServiceChargeInvoice };
-export function bulkInvoiceProblem(items: SelectableCharge[]): string | undefined {
-  if (!items.length) return 'Выберите услуги';
-  if (items.length > 500) return 'В один счёт можно включить не больше 500 услуг';
+export function bulkInvoiceProblem(
+  items: SelectableCharge[],
+  locale: Locale = 'ru',
+): string | undefined {
+  if (!items.length) return translate(locale, 'bulk.selectCharges');
+  if (items.length > 500) return translate(locale, 'bulk.chargeLimit');
   if (items.some((item) => item.archived || item.invoice))
-    return 'Выберите действующие услуги, ещё не включённые в счёт';
+    return translate(locale, 'bulk.uninvoicedCharges');
   const first = items[0];
   if (
     items.some(
@@ -20,7 +24,7 @@ export function bulkInvoiceProblem(items: SelectableCharge[]): string | undefine
         item.invoice_currency !== first.invoice_currency,
     )
   )
-    return 'Для общего счёта выберите услуги одного направления, контрагента, договора и валюты счёта';
+    return translate(locale, 'bulk.sameChargeParties');
 }
 
 // Один save проверяет все услуги и редакцию счёта в одной серверной транзакции.

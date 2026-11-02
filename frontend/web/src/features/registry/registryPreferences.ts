@@ -1,3 +1,4 @@
+import type { MessageKey } from '../../../../shared/i18n/catalog';
 import { useEffect, useState, useMemo, useSyncExternalStore, type SetStateAction } from 'react';
 
 import { usePreferences } from '../preferences/UserPreferences';
@@ -59,6 +60,7 @@ export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: 
 export interface ColumnDefinition {
   id: string;
   label: string;
+  labelKey?: MessageKey;
   width: number;
   required?: boolean;
   defaultVisible?: boolean;

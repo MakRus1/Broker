@@ -1941,14 +1941,6 @@ main > header {
 .shipment-registry .page-heading,
 .counterparty-registry .page-heading {
   padding: 26px 28px 24px;
-  flex-direction: row;
-  align-items: center;
-}
-.transportation-registry .page-heading h1,
-.shipment-registry .page-heading h1,
-.counterparty-registry .page-heading h1 {
-  font-size: 25px;
-  margin-bottom: 7px;
 }
 .registry-count {
   color: var(--text-secondary);
@@ -2673,18 +2665,6 @@ details[open] > .route-stage-summary::after {
 }
 .registry-column-option button {
   padding: 4px 10px;
-}
-.transportation-registry .page-heading,
-.shipment-registry .page-heading,
-.counterparty-registry .page-heading {
-  position: relative;
-  flex-wrap: wrap;
-}
-.transportation-registry .page-heading > .actions,
-.shipment-registry .page-heading > .actions,
-.counterparty-registry .page-heading > .actions {
-  align-items: center;
-  flex-wrap: wrap;
 }
 .registry-column-settings > button {
   white-space: nowrap;
@@ -3564,15 +3544,6 @@ details[open] > .route-stage-summary::after {
 .invoice-service-picker[open] > summary {
   margin-bottom: 12px;
 }
-.invoice-registry .page-heading {
-  padding-top: 0;
-}
-.invoice-registry .page-heading .hint {
-  margin: 12px 0 0;
-}
-.invoice-registry .page-heading h1 {
-  color: var(--text);
-}
 .invoice-link-search {
   margin-top: 24px;
 }
@@ -4040,17 +4011,8 @@ details[open] > .route-stage-summary::after {
     font-size: 26px;
   }
 }
-.invoice-registry .page-heading {
-  padding: 28px 0 22px;
-}
 .invoice-registry .registry-filter-toolbar {
   padding: 12px 0;
-}
-.registry-column-actions {
-  margin-left: auto;
-}
-.invoice-registry .registry-column-actions > details > summary {
-  font-size: 13px;
 }
 .contracts-page .registry-filter-toolbar {
   padding: 12px 0;
@@ -4118,17 +4080,6 @@ details[open] > .route-stage-summary::after {
 .service-charge-registry {
   padding: 28px 32px;
 }
-.service-charge-registry .page-heading {
-  padding: 0 0 22px;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 20px;
-}
-.service-charge-registry .page-heading h1 {
-  font-size: 25px;
-  margin-bottom: 7px;
-}
 .service-charge-registry .registry-filter-toolbar {
   padding: 12px 0;
 }
@@ -4138,23 +4089,6 @@ details[open] > .route-stage-summary::after {
   }
 }
 
-.registry-heading > .actions {
-  align-items: center;
-  flex-wrap: wrap;
-}
-.registry-heading > .actions > button,
-.registry-heading > .actions > a.button,
-.registry-heading .registry-column-settings > button {
-  box-sizing: border-box;
-  height: 40px;
-  min-height: 40px;
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  line-height: 20px;
-}
 .finance-charge-form .form-actions,
 .invoices-page .form-actions,
 .payment-form .form-actions {

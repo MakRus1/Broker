@@ -1,3 +1,6 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { RegistryHeading } from '../../shared/ui/RegistryHeading';
+import { useLocalization } from '../localization/Localization';
 import { CounterpartySettlements } from '../finance/settlements/CounterpartySettlements';
 import { BankAccounts } from './BankAccounts';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
@@ -8,12 +11,7 @@ import {
 } from '../registry/registryQueryPreferences';
 import { useColumnFilters } from '../registry/RegistryColumnFilters';
 import { filterRequest } from '../registry/registryFilters';
-import {
-  RegistryTable,
-  RegistryColumnSettings,
-  useRegistryColumns,
-  type RegistryColumn,
-} from '../registry/RegistryTable';
+import { RegistryTable, useRegistryColumns, type RegistryColumn } from '../registry/RegistryTable';
 import type { CounterpartyRegistryCursor, CounterpartySort } from './counterpartyRegistry';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
@@ -44,6 +42,7 @@ export function CounterpartiesPage({
   onTitle,
   active = true,
 }: Props) {
+  const { translate, locale } = useLocalization();
   const columns: RegistryColumn<Counterparty>[] = [
     {
       id: 'name',
@@ -79,20 +78,22 @@ export function CounterpartiesPage({
       id: 'roles',
       label: 'Роли',
       width: 280,
-      render: (value) => value.roles.map((role) => counterpartyRoles[role]).join(', ') || '—',
+      render: (value) =>
+        value.roles.map((role) => registryValueLabel('roles', role, locale)).join(', ') || '—',
     },
     {
       id: 'own_company',
       label: 'Собственное юрлицо',
       width: 180,
-      render: (value) => (value.own_company ? 'Да' : 'Нет'),
+      render: (value) => (value.own_company ? translate('filter.yes') : translate('filter.no')),
     },
     {
       id: 'archived',
       label: 'Состояние',
       width: 180,
       sort: 'archived',
-      render: (value) => (value.archived ? 'В архиве' : 'Действующий'),
+      render: (value) =>
+        value.archived ? translate('filter.archived') : translate('filter.active'),
     },
   ];
   const columnState = useRegistryColumns(session.subject, 'counterparties', columns);
@@ -218,7 +219,7 @@ export function CounterpartiesPage({
   }, [id, read, refresh, onError]);
   useEffect(() => {
     if (active)
-      document.title = `${creating ? 'Новый контрагент' : item?.name || 'Контрагенты'} · Broker`;
+      document.title = `${creating ? 'Новый контрагент' : item?.name || translate('nav.counterparties')} · Broker`;
   }, [creating, item?.name]);
   async function archive() {
     if (!item) return;
@@ -243,7 +244,7 @@ export function CounterpartiesPage({
   if (!read)
     return (
       <section className="creation-page surface">
-        <h1>Контрагенты</h1>
+        <h1>{translate('nav.counterparties')}</h1>
         <p>Нет права на просмотр справочника.</p>
       </section>
     );
@@ -286,7 +287,8 @@ export function CounterpartiesPage({
                   </p>
                   <h1>{item.name}</h1>
                   <p>
-                    {item.archived ? 'В архиве' : 'Действующий'} · Редакция {item.revision}
+                    {item.archived ? translate('filter.archived') : translate('filter.active')} ·
+                    Редакция {item.revision}
                   </p>
                 </div>
                 <div className="actions">
@@ -468,25 +470,19 @@ export function CounterpartiesPage({
     );
   return (
     <div className="counterparty-registry">
-      <div className="page-heading">
-        <div>
-          <h1>Контрагенты</h1>
-          <span className="registry-count" role="status">
-            {loading ? 'Загрузка…' : `Загружено: ${items.length}`}
-          </span>
-        </div>
-        <div className="actions">
-          <RegistryColumnSettings {...columnState} />
-          <button disabled={loading} onClick={() => void load()}>
-            Обновить
-          </button>
-          {write && (
-            <a className="primary" href="#/counterparties/new">
-              ＋ Новый контрагент
-            </a>
-          )}
-        </div>
-      </div>
+      <RegistryHeading
+        columns={columnState}
+        title={translate('nav.counterparties')}
+        count={items.length}
+        loading={loading}
+        onRefresh={() => void load()}
+      >
+        {write && (
+          <a className="button primary" href="#/counterparties/new">
+            {translate('registryPage.newCounterparty')}
+          </a>
+        )}
+      </RegistryHeading>
       <section className="surface counterparty-list" aria-busy={loading}>
         {failure && (
           <p className="error" role="alert">
@@ -516,7 +512,7 @@ export function CounterpartiesPage({
         )}
         {!items.length && !loading && (
           <div className="empty">
-            <h2>Контрагенты не найдены</h2>
+            <h2>{translate('registryPage.noCounterparties')}</h2>
             <p>Измените поиск или создайте новую карточку.</p>
           </div>
         )}

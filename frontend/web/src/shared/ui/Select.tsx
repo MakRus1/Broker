@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -36,6 +37,7 @@ export function Select({
   searchable?: boolean;
   selectedLabel?: string;
 }) {
+  const { translate } = useLocalization();
   const id = useId();
   const popup = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
@@ -142,7 +144,9 @@ export function Select({
         onKeyDown={keyDown}
       >
         <span title={options.find((item) => item.value === value)?.label}>
-          {selectedLabel ?? options.find((item) => item.value === value)?.label ?? 'Не выбрано'}
+          {selectedLabel ??
+            options.find((item) => item.value === value)?.label ??
+            translate('ui.notSelected')}
         </span>
         <Chevron />
       </button>
@@ -160,8 +164,8 @@ export function Select({
               <input
                 className="select-search"
                 ref={search}
-                aria-label={`Поиск: ${label}`}
-                placeholder="Код или название"
+                aria-label={translate('ui.search', { label })}
+                placeholder={translate('ui.codeName')}
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);
@@ -170,7 +174,7 @@ export function Select({
                 onKeyDown={keyDown}
               />
             )}
-            {searchable && !choices.length && <p className="hint">Совпадений нет</p>}
+            {searchable && !choices.length && <p className="hint">{translate('ui.noMatches')}</p>}
             {choices.map((item, index) => (
               <button
                 type="button"

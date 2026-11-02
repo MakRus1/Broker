@@ -118,7 +118,7 @@ def migrate(directory, context, backup_root):
     state['phase'] = 'imported'
     private_write(directory / 'postgres-migration.json', json.dumps(state, indent=2) + '\n')
     print(
-        'Базы импортированы; исходный PVC сохранён. Выполните Deploy all для переключения приложений. При ошибке приложения остаются остановлены; состояние в postgres-migration.json.'
+        'Базы импортированы; исходный PVC сохранён. Выполните Deploy all с включённой инфраструктурой для переключения приложений. При ошибке приложения остаются остановлены; состояние в postgres-migration.json.'
     )
 
 

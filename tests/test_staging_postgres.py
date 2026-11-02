@@ -155,3 +155,18 @@ class MigrationSafetyTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'уже существуют'):
                     migration.migrate(root, 'test', root / 'backups')
             run.assert_not_called()
+
+
+class MigrationIdentityTest(unittest.TestCase):
+    def test_connection_change_creates_new_job_instead_of_mutating_old_one(self):
+        import staging_manifest
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            first = render(RELEASE, path)
+            with patch.object(staging_manifest.staging_postgres, 'host', side_effect=lambda owner: owner + '-different-primary'):
+                second = render(RELEASE, path)
+            def jobs(phases):
+                return {obj['metadata']['labels']['broker/service']: obj['metadata']['name']
+                    for obj in phases['migrations'] if obj['kind'] == 'Job'}
+            self.assertEqual(jobs(first).keys(), jobs(second).keys())
+            self.assertTrue(all(jobs(first)[owner] != jobs(second)[owner] for owner in jobs(first)))

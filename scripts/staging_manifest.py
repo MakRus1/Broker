@@ -546,7 +546,11 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         schema = root / f'services/{name}/postgresql/schemas/db_1'
         if name in databases:
             sql = migration_sql(discover(schema)) if schema.exists() else ''
-            migration_name = hashed(name + '-migrate', [sql, images['postgres']])
+            migration_name = hashed(
+                name + '-migrate',
+                [sql, images['postgres'], staging_postgres.host(name), name,
+                 staging_postgres.cluster_name(name) + '-credentials'],
+            )
             migrations.append(
                 document(
                     'ConfigMap',

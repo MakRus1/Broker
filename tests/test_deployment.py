@@ -303,3 +303,28 @@ class DeploymentTest(unittest.TestCase):
             ):
                 staging.apply(path, 'staging-test')
             self.assertFalse(any('apply' in args for args in calls))
+
+
+class MigrationRolloutTest(unittest.TestCase):
+    def test_first_rollout_requires_all_services_and_infrastructure(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            staging.render(RELEASE, path)
+            state = path / 'postgres-migration.json'
+            state.write_text('{"phase": "imported", "replicas": {"keycloak": 1}}')
+            for selected, infrastructure in [(list(RELEASE['images']), False), (['configs'], True), ([], True)]:
+                with self.subTest(selected=selected), patch('staging._apply') as apply:
+                    with self.assertRaisesRegex(ValueError, 'включённой инфраструктурой'):
+                        staging.apply(path, 'ctx', selected, infrastructure)
+                    apply.assert_not_called()
+            with patch('staging._apply', side_effect=ValueError('failure')):
+                with self.assertRaises(ValueError):
+                    staging.apply(path, 'ctx', list(RELEASE['images']), True)
+            self.assertEqual(json.loads(state.read_text())['phase'], 'imported')
+            with patch('staging._apply'):
+                staging.apply(path, 'ctx', list(RELEASE['images']), True)
+            self.assertEqual(json.loads(state.read_text())['phase'], 'activated')
+            with patch('staging._apply') as apply:
+                staging.apply(path, 'ctx', ['configs'], False)
+                apply.assert_called_once()

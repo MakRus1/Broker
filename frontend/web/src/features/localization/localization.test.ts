@@ -1,3 +1,5 @@
+import { registryFieldLabel, registryValueLabel } from '../registry/registryLabels';
+import { filterLabel } from '../registry/RegistryColumnFilters';
 import { describe, expect, it } from 'vitest';
 import { resolveLocale, restoreLanguage, translate } from '../../../../shared/i18n/catalog';
 import { ru } from '../../../../shared/i18n/ru';
@@ -22,6 +24,27 @@ describe('локализация', () => {
   it('подставляет параметры как обычный текст', () => {
     expect(translate('en', 'common.loaded', { count: 42 })).toBe('Loaded: 42');
     expect(translate('ru', 'tabs.close', { title: '<script>' })).toBe('Закрыть вкладку <script>');
+  });
+  it('переводит идентификаторы полей и системные значения, сохраняя неизвестные подписи', () => {
+    expect(registryFieldLabel('shipment_date', 'Дата поставки', 'en')).toBe('Shipment date');
+    expect(registryFieldLabel('custom_field', 'Моё поле', 'en')).toBe('Моё поле');
+    expect(registryFieldLabel('number', 'Номер договора', 'ru')).toBe('Номер договора');
+    expect(registryValueLabel('type', 'container', 'en')).toBe('Container');
+    expect(registryValueLabel('name', 'container', 'en')).toBeUndefined();
+  });
+  it('переводит условия фильтра без изменения пользовательских значений', () => {
+    expect(filterLabel(undefined, { field: 'name', query: 'ООО Тест' }, 'en')).toBe(
+      'contains “ООО Тест”',
+    );
+    expect(filterLabel(undefined, { field: 'name', empty: true }, 'en')).toBe('Not filled in');
+    expect(
+      filterLabel(
+        { id: 'archived', label: 'Состояние', kind: 'boolean', sortable: true },
+        { field: 'archived', values: ['false'] },
+        'en',
+      ),
+    ).toBe('Active');
+    expect(filterLabel(undefined, { field: 'name', values: ['S-42'] }, 'en')).toBe('S-42');
   });
   it('переводит служебные вкладки и сохраняет номера объектов', () => {
     expect(workspaceTitle('/shipments', 'en')).toBe('Shipments');

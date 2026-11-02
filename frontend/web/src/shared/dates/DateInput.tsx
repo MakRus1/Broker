@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { CalendarDate } from './CalendarDate';
 import { useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes } from 'react';
 import { displayDateInput, parseDateInput, maskDateInput } from './dateText';
@@ -23,6 +24,7 @@ function DateTextControl({
   max,
   ...props
 }: TextProps) {
+  const { translate } = useLocalization();
   const [text, setText] = useState(() => displayDateInput(value));
   const [touched, setTouched] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -30,14 +32,15 @@ function DateTextControl({
   const picker = useRef<HTMLInputElement>(null);
   const emitted = useRef(value);
   const withTime = type === 'datetime-local';
+  const format = translate(withTime ? 'date.formatTime' : 'date.format');
   const parsed = parseDateInput(text, withTime);
   const failure =
     parsed === undefined
-      ? `Введите дату в формате ${withTime ? 'ДД.ММ.ГГГГ ЧЧ:ММ' : 'ДД.ММ.ГГГГ'}`
+      ? translate('date.invalid', { format })
       : parsed && min && parsed < min
-        ? `Дата должна быть не раньше ${displayDateInput(min)}`
+        ? translate('date.min', { date: displayDateInput(min) })
         : parsed && max && parsed > max
-          ? `Дата должна быть не позже ${displayDateInput(max)}`
+          ? translate('date.max', { date: displayDateInput(max) })
           : '';
   useEffect(() => {
     if (value !== emitted.current) {
@@ -69,7 +72,7 @@ function DateTextControl({
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        placeholder={withTime ? 'ДД.ММ.ГГГГ ЧЧ:ММ' : 'ДД.ММ.ГГГГ'}
+        placeholder={format}
         value={text}
         aria-invalid={Boolean(touched && text && failure) || props['aria-invalid'] || undefined}
         onChange={(event) => {
@@ -116,7 +119,7 @@ function DateTextControl({
       <button
         type="button"
         className="date-input-calendar"
-        aria-label="Открыть календарь"
+        aria-label={translate('date.open')}
         disabled={props.disabled}
         onClick={() => picker.current?.showPicker()}
       >

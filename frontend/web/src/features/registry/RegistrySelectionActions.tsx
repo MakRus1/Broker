@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect } from 'react';
 export function RegistrySelectionActions({
   count,
@@ -14,6 +15,7 @@ export function RegistrySelectionActions({
   menu?: { x: number; y: number };
   onCloseMenu: () => void;
 }) {
+  const { translate } = useLocalization();
   useEffect(() => {
     if (!menu) return;
     const close = () => onCloseMenu();
@@ -42,8 +44,8 @@ export function RegistrySelectionActions({
   ];
   return (
     <>
-      <div className="bulk-services-toolbar" role="region" aria-label="Групповые действия">
-        <strong>Выбрано: {count}</strong>
+      <div className="bulk-services-toolbar" role="region" aria-label={translate('filter.bulk')}>
+        <strong>{translate('filter.selected', { count })}</strong>
         {actions.map((action, index) => (
           <button
             key={action.label}
@@ -55,7 +57,7 @@ export function RegistrySelectionActions({
             {action.label}
           </button>
         ))}
-        <button onClick={onClear}>Снять выделение</button>
+        <button onClick={onClear}>{translate('filter.deselect')}</button>
         {issues.map((issue) => (
           <span role="status" key={issue}>
             {issue}
@@ -69,7 +71,7 @@ export function RegistrySelectionActions({
           style={{ left: menu.x, top: menu.y }}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <span>Выбрано: {count}</span>
+          <span>{translate('filter.selected', { count })}</span>
           {actions.map((action) => (
             <button
               role="menuitem"

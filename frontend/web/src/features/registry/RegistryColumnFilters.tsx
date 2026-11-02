@@ -1,3 +1,6 @@
+import { registryFieldLabel, registryValueLabel } from './registryLabels';
+import { useLocalization } from '../localization/Localization';
+import { translate as translateMessage, type Locale } from '../../../../shared/i18n/catalog';
 import {
   useCallback,
   useEffect,
@@ -9,9 +12,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { request } from '../../shared/api/http';
-import { transportationTypes, modes } from '../routes/logisticsLabels';
 import { type Session } from '../../shared/api/session';
-import { counterpartyRoles } from '../counterparties/counterparties';
 import { DateInput } from '../../shared/dates/DateInput';
 import {
   filterRequest,
@@ -51,6 +52,7 @@ export function useColumnFilters({
   onChange: (filters: ColumnFilter[]) => void;
   onSort: (field: string, descending: boolean) => void;
 }): ColumnFilterController {
+  const { translate, locale } = useLocalization();
   const [fields, setFields] = useState<RegistryField[]>([]);
   const [failure, setFailure] = useState('');
   useEffect(() => {
@@ -97,7 +99,7 @@ export function useColumnFilters({
           return {
             items: result.items.map((item) => ({
               id: item.id,
-              number: item.container_number || 'Без номера',
+              number: item.container_number || translate('filter.noNumber'),
             })),
             next_cursor: result.next_cursor,
           };
@@ -174,16 +176,19 @@ export function useColumnFilters({
           ...response,
           values: response.values.map((value) => ({
             ...value,
-            label: labels[value.value] ?? 'Недоступная запись',
+            label: labels[value.value] ?? translate('filter.unavailable'),
           })),
         };
       }
       return response;
     },
-    [query, registry, session],
+    [query, registry, session, locale],
   );
   return {
-    fields,
+    fields: fields.map((field) => ({
+      ...field,
+      label: registryFieldLabel(field.id, field.label, locale),
+    })),
     filters: query.filters ?? [],
     sort: query.sort,
     descending: query.descending,
@@ -193,27 +198,34 @@ export function useColumnFilters({
     values: load,
   };
 }
-function valueLabel(field: RegistryField, value: string, label?: string) {
-  if (!value) return 'Не заполнено';
-  if (field.id === 'archived') return value === 'true' ? 'В архиве' : 'Действующий';
-  if (field.kind === 'boolean') return value === 'true' ? 'Да' : 'Нет';
-  if (field.id === 'type')
-    return transportationTypes[value as keyof typeof transportationTypes] ?? label ?? value;
-  if (field.id === 'mode') return modes[value as keyof typeof modes] ?? label ?? value;
-  if (field.id === 'roles')
-    return counterpartyRoles[value as keyof typeof counterpartyRoles] ?? label ?? value;
+function valueLabel(field: RegistryField, value: string, label?: string, locale: Locale = 'ru') {
+  const translate = (key: Parameters<typeof translateMessage>[1]) => translateMessage(locale, key);
+  if (!value) return translate('filter.empty');
+  if (field.id === 'archived')
+    return value === 'true' ? translate('filter.archived') : translate('filter.active');
+  if (field.kind === 'boolean')
+    return value === 'true' ? translate('filter.yes') : translate('filter.no');
+  const translated = registryValueLabel(field.id, value, locale);
+  if (translated) return translated;
   return label || value;
 }
-export function filterLabel(field: RegistryField | undefined, filter: ColumnFilter) {
-  if (filter.empty !== undefined) return filter.empty ? 'Не заполнено' : 'Заполнено';
-  if (filter.query !== undefined) return `содержит «${filter.query}»`;
+export function filterLabel(
+  field: RegistryField | undefined,
+  filter: ColumnFilter,
+  locale: Locale = 'ru',
+) {
+  const translate = (key: Parameters<typeof translateMessage>[1]) => translateMessage(locale, key);
+  if (filter.empty !== undefined)
+    return filter.empty ? translate('filter.empty') : translate('filter.filled');
+  if (filter.query !== undefined)
+    return translateMessage(locale, 'filter.query', { query: filter.query });
   if (filter.date_from || filter.date_to)
     return `${filter.date_from?.toDisplayString() ?? '…'} — ${filter.date_to?.toDisplayString() ?? '…'}`;
   return (
     filter.values
       ?.map((value) =>
         field
-          ? valueLabel(field, value, filter.labels?.[value])
+          ? valueLabel(field, value, filter.labels?.[value], locale)
           : (filter.labels?.[value] ?? value),
       )
       .join(', ') ?? ''
@@ -232,12 +244,14 @@ export function RegistryFilterToolbar({
   onOpen: (fields: string[], anchor: HTMLElement) => void;
   hidden: Set<string>;
 }) {
+  const { translate, locale } = useLocalization();
   const [picker, setPicker] = useState(false);
   return (
     <div className="registry-filter-toolbar">
       <div className="registry-filter-picker">
         <button type="button" aria-expanded={picker} onClick={() => setPicker(!picker)}>
-          Фильтры{controller.filters.length ? ` · ${controller.filters.length}` : ''}
+          {translate('filter.filters')}
+          {controller.filters.length ? ` · ${controller.filters.length}` : ''}
         </button>
         {picker && (
           <div className="registry-field-picker">
@@ -280,6 +294,7 @@ export function RegistryFilterToolbar({
             title={filterLabel(
               controller.fields.find((field) => field.id === filter.field),
               filter,
+              locale,
             )}
             onClick={(event) => onOpen([filter.field], event.currentTarget)}
           >
@@ -287,12 +302,16 @@ export function RegistryFilterToolbar({
             {filterLabel(
               controller.fields.find((field) => field.id === filter.field),
               filter,
+              locale,
             )}
-            {hidden.has(filter.field) ? ' · скрытый столбец' : ''}
+            {hidden.has(filter.field) ? translate('filter.hidden') : ''}
           </button>
           <button
             type="button"
-            aria-label={`Сбросить фильтр «${controller.fields.find((field) => field.id === filter.field)?.label ?? filter.field}»`}
+            aria-label={translate('filter.resetOne', {
+              field:
+                controller.fields.find((field) => field.id === filter.field)?.label ?? filter.field,
+            })}
             onClick={() =>
               controller.change(controller.filters.filter((value) => value.field !== filter.field))
             }
@@ -304,14 +323,15 @@ export function RegistryFilterToolbar({
       {children}
       {controller.fields.some((field) => field.id === controller.sort) && (
         <span className="registry-sort-summary">
-          Порядок: {controller.fields.find((field) => field.id === controller.sort)?.label}{' '}
+          {translate('filter.order')}{' '}
+          {controller.fields.find((field) => field.id === controller.sort)?.label}{' '}
           {controller.descending ? '↓' : '↑'}
-          {hidden.has(controller.sort) ? ' · скрытый столбец' : ''}
+          {hidden.has(controller.sort) ? translate('filter.hidden') : ''}
         </span>
       )}
       {controller.filters.length > 0 && (
         <button type="button" className="link" onClick={() => controller.change([])}>
-          Сбросить фильтры
+          {translate('filter.reset')}
         </button>
       )}
       {controller.failure && (
@@ -339,6 +359,7 @@ export function RegistryFilterEditor({
   onDraftChange?: (filters: ColumnFilter[]) => void;
   titleOverride?: string;
 }) {
+  const { translate } = useLocalization();
   const ref = useRef<HTMLDivElement>(null);
   const title = useId();
   const [draft, setDraft] = useState(
@@ -401,9 +422,9 @@ export function RegistryFilterEditor({
     >
       <div className="registry-filter-title">
         <h2 id={title}>
-          {titleOverride ?? (selected.length === 1 ? selected[0].label : 'Фильтры столбца')}
+          {titleOverride ?? (selected.length === 1 ? selected[0].label : translate('filter.title'))}
         </h2>
-        <button type="button" aria-label="Закрыть фильтр" onClick={onClose}>
+        <button type="button" aria-label={translate('filter.close')} onClick={onClose}>
           ×
         </button>
       </div>
@@ -411,7 +432,7 @@ export function RegistryFilterEditor({
         onSubmit={(event) => {
           event.preventDefault();
           if (draft.some((filter) => (filter.values?.length ?? 0) > 200)) {
-            setFailure('Можно выбрать до 200 значений одного поля');
+            setFailure(translate('filter.limit'));
             return;
           }
           if (
@@ -422,7 +443,7 @@ export function RegistryFilterEditor({
                 filter.date_from.toString() > filter.date_to.toString(),
             )
           ) {
-            setFailure('Начало периода позже окончания');
+            setFailure(translate('filter.range'));
             return;
           }
           controller.change(
@@ -473,10 +494,10 @@ export function RegistryFilterEditor({
               onDraftChange?.([]);
             }}
           >
-            Очистить
+            {translate('filter.clear')}
           </button>
           <button className="primary" type="submit">
-            Применить
+            {translate('filter.apply')}
           </button>
         </div>
       </form>
@@ -499,6 +520,7 @@ function FilterSection({
   value?: ColumnFilter;
   onChange: (value?: ColumnFilter) => void;
 }) {
+  const { locale } = useLocalization();
   const [expanded, setExpanded] = useState(primary);
   if (!grouped)
     return <FieldEditor controller={controller} field={field} value={value} onChange={onChange} />;
@@ -521,7 +543,11 @@ function FilterSection({
           <path d="m7 4 6 6-6 6" />
         </svg>
         <span>{field.label}</span>
-        {value && <small title={filterLabel(field, value)}>{filterLabel(field, value)}</small>}
+        {value && (
+          <small title={filterLabel(field, value, locale)}>
+            {filterLabel(field, value, locale)}
+          </small>
+        )}
       </summary>
       {expanded && (
         <FieldEditor controller={controller} field={field} value={value} onChange={onChange} />
@@ -540,6 +566,7 @@ function FieldEditor({
   value?: ColumnFilter;
   onChange: (value?: ColumnFilter) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [mode, setMode] = useState(
     value?.query !== undefined ? 'contains' : value?.empty !== undefined ? 'empty' : 'values',
   );
@@ -574,7 +601,7 @@ function FieldEditor({
       }));
     } catch (error) {
       if (!signal?.aborted)
-        setFailure(error instanceof Error ? error.message : 'Не удалось загрузить значения');
+        setFailure(error instanceof Error ? error.message : translate('filter.loadError'));
     } finally {
       if (!signal?.aborted) setBusy(false);
     }
@@ -616,20 +643,20 @@ function FieldEditor({
     <fieldset className="registry-field-editor" aria-label={field.label}>
       {field.sortable && (
         <div className="registry-filter-sort">
-          <span>Сортировка</span>
+          <span>{translate('filter.sort')}</span>
           <button
             type="button"
             onClick={() => controller.order(field.id, false)}
             aria-pressed={controller.sort === field.id && !controller.descending}
           >
-            По возрастанию ↑
+            {translate('filter.asc')}
           </button>
           <button
             type="button"
             onClick={() => controller.order(field.id, true)}
             aria-pressed={controller.sort === field.id && controller.descending}
           >
-            По убыванию ↓
+            {translate('filter.desc')}
           </button>
         </div>
       )}
@@ -643,7 +670,7 @@ function FieldEditor({
               onChange(undefined);
             }}
           >
-            Выбрать значения
+            {translate('filter.values')}
           </button>
           <button
             type="button"
@@ -653,16 +680,16 @@ function FieldEditor({
               onChange({ field: field.id, query: '' });
             }}
           >
-            По вхождению
+            {translate('filter.containsMode')}
           </button>
         </div>
       )}
       {value?.empty === true ? (
-        <p className="muted">Только записи без значения</p>
+        <p className="muted">{translate('filter.onlyEmpty')}</p>
       ) : field.kind === 'date' ? (
         <div className="registry-date-range">
           <label>
-            С
+            {translate('filter.from')}
             <DateInput
               value={value?.date_from ?? null}
               onChange={(date) =>
@@ -676,7 +703,7 @@ function FieldEditor({
             />
           </label>
           <label>
-            По
+            {translate('filter.to')}
             <DateInput
               value={value?.date_to ?? null}
               onChange={(date) =>
@@ -692,7 +719,7 @@ function FieldEditor({
         </div>
       ) : mode === 'contains' ? (
         <label>
-          Содержит
+          {translate('filter.contains')}
           <input
             type="search"
             maxLength={256}
@@ -708,10 +735,10 @@ function FieldEditor({
         <>
           {field.kind !== 'boolean' && (
             <label>
-              Поиск значений
+              {translate('filter.search')}
               <input
                 type="search"
-                placeholder="Начните вводить…"
+                placeholder={translate('filter.placeholder')}
                 value={search}
                 maxLength={256}
                 onChange={(event) => setSearch(event.target.value)}
@@ -726,7 +753,7 @@ function FieldEditor({
                   type="button"
                   onClick={() => setValues(chosen.filter((value) => value !== option))}
                 >
-                  {valueLabel(field, option, labels[option])} ×
+                  {valueLabel(field, option, labels[option], locale)} ×
                 </button>
               ))}
             </div>
@@ -739,36 +766,36 @@ function FieldEditor({
                   checked={chosen.includes(option.value)}
                   onChange={() => toggle(option)}
                 />
-                <span>{valueLabel(field, option.value, option.label)}</span>
+                <span>{valueLabel(field, option.value, option.label, locale)}</span>
               </label>
             ))}
           </div>
           {busy && (
             <p className="hint" role="status">
-              Загрузка…
+              {translate('filter.loading')}
             </p>
           )}
           {!busy && !values.length && !failure && (
-            <p className="hint">Нет значений для выбранных условий</p>
+            <p className="hint">{translate('filter.noValues')}</p>
           )}
           {failure && (
             <p className="error" role="alert">
               {failure}{' '}
               <button type="button" onClick={() => void load()}>
-                Повторить
+                {translate('filter.retry')}
               </button>
             </p>
           )}
           {next && (
             <button type="button" disabled={busy} onClick={() => void load(next)}>
-              Ещё значения
+              {translate('filter.more')}
             </button>
           )}
           {field.kind === 'values' && !field.lookup && (
             <details>
-              <summary>Вставить список</summary>
+              <summary>{translate('filter.paste')}</summary>
               <label>
-                По одному значению в строке или из Excel
+                {translate('filter.pasteHint')}
                 <textarea
                   rows={3}
                   value={paste}
@@ -782,7 +809,7 @@ function FieldEditor({
                   setPaste('');
                 }}
               >
-                Добавить значения
+                {translate('filter.addValues')}
               </button>
             </details>
           )}
@@ -799,7 +826,7 @@ function FieldEditor({
                 onChange(event.target.checked ? { field: field.id, empty: true } : undefined);
               }}
             />
-            Не заполнено
+            {translate('filter.empty')}
           </label>
         )}
       {value && (
@@ -811,7 +838,7 @@ function FieldEditor({
             setMode('values');
           }}
         >
-          Убрать условие
+          {translate('filter.remove')}
         </button>
       )}
     </fieldset>

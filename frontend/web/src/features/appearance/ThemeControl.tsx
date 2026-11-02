@@ -1,8 +1,8 @@
-import './appearance.css';
+import '../../../../shared/theme/controls.css';
 import { useEffect, useRef, useState } from 'react';
 import { preferenceKey, useRegistryPreference } from '../registry/registryPreferences';
 import { usePreferencesSession } from '../preferences/UserPreferences';
-import { restoreTheme, resolveTheme, type ThemePreference } from '../../shared/theme/theme';
+import { restoreTheme, resolveTheme, type ThemePreference } from '../../../../shared/theme/theme';
 
 export function ThemeControl() {
   const [session] = usePreferencesSession();

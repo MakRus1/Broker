@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { restoreTheme, resolveTheme } from './theme';
+import { restoreTheme, resolveTheme } from '../../../../shared/theme/theme';
 
 describe('тема оформления', () => {
   it('использует системную тему для отсутствующей или неизвестной настройки', () => {

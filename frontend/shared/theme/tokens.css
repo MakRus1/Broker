@@ -34,7 +34,7 @@
   --navigation-muted: #9dacc0;
   --navigation-accent: #8cb2f5;
 }
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   color-scheme: dark;
   --canvas: #151a22;
   --surface: #1d2530;

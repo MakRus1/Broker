@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Личные настройки
+  version: '1'
+paths:
+  /api/v1/preferences/list:
+    post:
+      summary: Личные настройки текущего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+              required:
+              - organization_id
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - preferences
+                properties:
+                  preferences:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/preferences.yaml#/Preference
+        '400':
+          description: Некорректная настройка
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '409':
+          description: Настройка изменена на другом устройстве
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '502':
+          description: Сервис организаций недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+      security:
+      - bearerAuth: []
+  /api/v1/preferences/save:
+    post:
+      summary: Сохранить личную настройку
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/preferences.yaml#/SavePreferenceRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - preference
+                properties:
+                  preference:
+                    $ref: ../components/schemas/preferences.yaml#/Preference
+        '400':
+          description: Некорректная настройка
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '409':
+          description: Настройка изменена на другом устройстве
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+        '502':
+          description: Сервис организаций недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/preferences.yaml#/ApiError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

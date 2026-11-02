@@ -11,6 +11,7 @@
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
 #include <clients/transportations/client.hpp>
+#include <clients/user_preferences/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
@@ -34,6 +35,7 @@ struct Deps {
     clients::shipments::Client shipments;
     clients::transport_locations::Client transport_locations;
     clients::transportations::Client transportations;
+    clients::user_preferences::Client user_preferences;
     // SERVICE_DEPS_FIELDS_END
     platform::browser::Sessions* sessions;
 };
@@ -57,6 +59,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
             component_context.FindComponent<clients::transport_locations::Component>().GetClient(),
         .transportations =
             component_context.FindComponent<clients::transportations::Component>().GetClient(),
+        .user_preferences =
+            component_context.FindComponent<clients::user_preferences::Component>().GetClient(),
         // SERVICE_DEPS_INIT_END
         .sessions = &component_context.FindComponent<platform::browser::Sessions>(),
     };

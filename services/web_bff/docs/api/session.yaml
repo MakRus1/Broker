@@ -17,12 +17,16 @@ paths:
                 required:
                 - actor
                 - subject
+                - organization_id
                 - display_name
                 - csrf_token
                 - permissions
                 properties:
                   actor:
                     type: string
+                  organization_id:
+                    type: string
+                    format: uuid
                   subject:
                     type: string
                   display_name:

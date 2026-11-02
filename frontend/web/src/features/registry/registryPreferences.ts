@@ -1,4 +1,6 @@
-import { useEffect, useState, type SetStateAction } from 'react';
+import { useEffect, useState, useMemo, useSyncExternalStore, type SetStateAction } from 'react';
+
+import { usePreferences } from '../preferences/UserPreferences';
 
 export function preferenceKey(subject: string, registry: string, kind: string): string {
   return subject ? `broker:registry:${encodeURIComponent(subject)}:${registry}:${kind}:v1` : '';
@@ -6,7 +8,16 @@ export function preferenceKey(subject: string, registry: string, kind: string): 
 
 // Ошибка/запрет хранилища не мешает работе реестра. Данные из него всегда проверяются.
 export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: unknown) => T) {
+  const store = usePreferences();
+  const version = useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    store ? () => JSON.stringify(store.read(key)) : () => undefined,
+  );
   function read(): T {
+    if (store) {
+      const value = store.read(key);
+      return value === undefined ? initial : decode(value);
+    }
     try {
       const saved = key && localStorage.getItem(key);
       return saved ? decode(JSON.parse(saved)) : initial;
@@ -15,19 +26,28 @@ export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: 
     }
   }
   const [state, setState] = useState(() => ({ key, value: read() }));
-  const value = state.key === key ? state.value : read();
+  const storedValue = useMemo(() => read(), [key, store, version]);
+  const value = store ? storedValue : state.key === key ? state.value : read();
   // Смена пользователя не должна ни записать его предшественника, ни запустить
   // загрузку с прежними фильтрами. React повторит render до commit эффектов.
   if (state.key !== key) setState({ key, value });
   useEffect(() => {
+    if (store) {
+      store.import(key);
+      return;
+    }
     if (state.key !== key) return;
     try {
       if (key) localStorage.setItem(key, JSON.stringify(state.value));
     } catch {
       /* Личные настройки работают в памяти, если браузер запретил сохранение. */
     }
-  }, [key, state]);
+  }, [key, state, store, version]);
   function update(next: SetStateAction<T>) {
+    if (store) {
+      store.set(key, typeof next === 'function' ? (next as (value: T) => T)(read()) : next);
+      return;
+    }
     setState((old) => {
       const current = old.key === key ? old.value : read();
       return { key, value: typeof next === 'function' ? (next as (value: T) => T)(current) : next };
@@ -47,6 +67,18 @@ export interface ColumnPreference {
   id: string;
   visible: boolean;
   width: number;
+}
+// Отсутствие списка означает первое знакомство с реестром, а не новые поля.
+export function restoreKnownColumns(raw: unknown): string[] | null {
+  return Array.isArray(raw) && raw.every((id) => typeof id === 'string') ? [...new Set(raw)] : null;
+}
+export function newColumnIds(
+  known: readonly string[] | null,
+  definitions: readonly ColumnDefinition[],
+): string[] {
+  return known === null
+    ? []
+    : definitions.filter((column) => !known.includes(column.id)).map((column) => column.id);
 }
 export function restoreColumns(
   raw: unknown,

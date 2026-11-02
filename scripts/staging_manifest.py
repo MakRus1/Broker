@@ -393,6 +393,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'web-secure-cookie': False,
                 'client-transport_locations-base-url': f'http://{addresses["transport_locations"]}:8080',
                 'client-contracts-base-url': f'http://{addresses["contracts"]}:8080',
+                'client-user_preferences-base-url': f'http://{addresses["user_preferences"]}:8080',
                 'client-finance-base-url': f'http://{addresses["finance"]}:8080',
                 'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
                 'client-shipments-base-url': f'http://{addresses["shipments"]}:8080',

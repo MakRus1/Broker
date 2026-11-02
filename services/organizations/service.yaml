@@ -27,6 +27,7 @@ auth:
     /api/admin/organizations/members/update-profile: authenticated
     /api/organizations/employees/list: authenticated
     /api/organizations/administration/check: authenticated
+    /api/organizations/membership/get: authenticated
 http_logging:
   exclude_paths:
   - /api/admin/organizations/members/create

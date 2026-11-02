@@ -7,6 +7,8 @@ import { useEffect, useRef, useState, useId, type HTMLAttributes, type ReactNode
 import {
   preferenceKey,
   restoreColumns,
+  restoreKnownColumns,
+  newColumnIds,
   moveColumn,
   placeColumn,
   useRegistryPreference,
@@ -23,13 +25,32 @@ export function useRegistryColumns(
     restoreColumns(null, definitions),
     (raw) => restoreColumns(raw, definitions),
   );
-  return { columns, setColumns, definitions };
+  const [knownColumns, setKnownColumns] = useRegistryPreference<string[] | null>(
+    preferenceKey(subject, registry, 'known-columns'),
+    null,
+    restoreKnownColumns,
+  );
+  const definitionIds = definitions.map((column) => column.id);
+  const definitionSignature = definitionIds.join('|');
+  useEffect(() => {
+    if (subject && knownColumns === null) setKnownColumns(definitionIds);
+  }, [subject, knownColumns, definitionSignature]);
+  const newColumns = newColumnIds(knownColumns, definitions);
+  const acknowledgeColumns = () => setKnownColumns(definitions.map((column) => column.id));
+  return { columns, setColumns, definitions, newColumns, acknowledgeColumns };
 }
 export type RegistryColumns = ReturnType<typeof useRegistryColumns>;
-export function RegistryColumnSettings({ columns, setColumns, definitions }: RegistryColumns) {
+export function RegistryColumnSettings({
+  columns,
+  setColumns,
+  definitions,
+  newColumns,
+  acknowledgeColumns,
+}: RegistryColumns) {
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState<string[]>([]);
   const panelId = useId();
   useEffect(() => {
     function outside(event: PointerEvent) {
@@ -55,9 +76,18 @@ export function RegistryColumnSettings({ columns, setColumns, definitions }: Reg
         ref={trigger}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) {
+            setHighlighted(newColumns);
+            if (newColumns.length) acknowledgeColumns();
+          }
+          setOpen(!open);
+        }}
       >
         Столбцы
+        {newColumns.length > 0 && (
+          <span className="registry-column-indicator" role="img" aria-label="Есть новые столбцы" />
+        )}
       </button>
       {open && (
         <div id={panelId} className="registry-column-panel">
@@ -83,6 +113,9 @@ export function RegistryColumnSettings({ columns, setColumns, definitions }: Reg
                     }
                   />
                   {definition.label}
+                  {highlighted.includes(column.id) && (
+                    <span className="registry-column-new">Новое</span>
+                  )}
                 </label>
                 <button
                   type="button"

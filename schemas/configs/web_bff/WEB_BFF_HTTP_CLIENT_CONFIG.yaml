@@ -7,6 +7,8 @@ paths:
 - /api/geography/route-locations
 - /api/logout
 - /api/organizations/employees/list
+- /api/preferences/list
+- /api/preferences/save
 - /api/session
 - /api/v1/contracts/filter-values
 - /api/v1/contracts/get

@@ -27,7 +27,13 @@ it('сохраняет соответствие заголовков и ячее
     <RegistryTable
       items={[{ id: '1', name: 'Компания', country: 'RU' }]}
       definitions={definitions}
-      columns={{ columns, definitions, setColumns: () => {} }}
+      columns={{
+        columns,
+        definitions,
+        setColumns: () => {},
+        newColumns: [],
+        acknowledgeColumns: () => {},
+      }}
       sort="name"
       descending={true}
       onSort={() => {}}

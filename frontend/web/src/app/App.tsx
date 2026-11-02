@@ -47,7 +47,6 @@ import { profileName } from '../shared/profile/profile';
 import { AutoLoadMore } from '../shared/ui/AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, request } from '../shared/api/http';
-import { type Session } from '../shared/api/session';
 import { type Shipment } from '../features/shipments/types';
 import { type Transportation } from '../features/transportations/types';
 import { FinancialLabelsPage } from '../features/finance/labels/FinancialLabelsPage';
@@ -58,8 +57,10 @@ import { TransportationPage } from '../features/transportations/TransportationPa
 import { NewTransportation } from '../features/transportations/TransportationDetailsForm';
 import { TransportationTable } from '../features/transportations/TransportationTable';
 
+import { usePreferencesSession } from '../features/preferences/UserPreferences';
+
 export function App() {
-  const [session, setSession] = useState<Session | null>();
+  const [session, setSession] = usePreferencesSession();
   const [tab, setTab] = useState<
     | 'home'
     | 'shipments'
@@ -319,27 +320,18 @@ export function App() {
   const updateShipment = useCallback((value: Shipment) => {
     setShipments((old) => old.map((item) => (item.id === value.id ? value : item)));
   }, []);
-  const error = useCallback((value: unknown) => {
-    if (value instanceof ApiError && value.status === 401) setSession(null);
-    setNotice(
-      value instanceof Error
-        ? value.message +
-            (value instanceof ApiError && value.traceId ? ` · Трейс: ${value.traceId}` : '')
-        : 'Ошибка запроса',
-    );
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    request<Session>('/api/session', undefined, undefined, controller.signal)
-      .then(setSession)
-      .catch((value) => {
-        if (!controller.signal.aborted) {
-          setSession(null);
-          if (!(value instanceof ApiError && value.status === 401)) error(value);
-        }
-      });
-    return () => controller.abort();
-  }, [error]);
+  const error = useCallback(
+    (value: unknown) => {
+      if (value instanceof ApiError && value.status === 401) setSession(null);
+      setNotice(
+        value instanceof Error
+          ? value.message +
+              (value instanceof ApiError && value.traceId ? ` · Трейс: ${value.traceId}` : '')
+          : 'Ошибка запроса',
+      );
+    },
+    [setSession],
+  );
   const load = useCallback(
     async (append = false) => {
       if (

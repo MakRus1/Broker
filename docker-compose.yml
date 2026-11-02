@@ -152,3 +152,20 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
+  postgres-user_preferences:
+    image: postgres:16.8-alpine
+    environment:
+      POSTGRES_USER: testsuite
+      POSTGRES_PASSWORD: testsuite
+      POSTGRES_DB: user_preferences_db_1
+    ports:
+    - 127.0.0.1:15442:5432
+    volumes:
+    - ./services/user_preferences/postgresql/schemas/db_1:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U testsuite -d user_preferences_db_1
+      interval: 2s
+      timeout: 5s
+      retries: 10

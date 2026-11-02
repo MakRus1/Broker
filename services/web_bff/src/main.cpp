@@ -34,6 +34,7 @@
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
 #include <clients/transportations/client.hpp>
+#include <clients/user_preferences/client.hpp>
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
@@ -82,6 +83,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<web_bff::clients::shipments::Component>();
     component_list.Append<web_bff::clients::transport_locations::Component>();
     component_list.Append<web_bff::clients::transportations::Component>();
+    component_list.Append<web_bff::clients::user_preferences::Component>();
     // SERVICE_REGISTRATION_END
 
     component_list.Append<userver::components::HttpClient>("cities-http-client");

@@ -1,0 +1,10 @@
+name: USER_PREFERENCES_HTTP_CLIENT_CONFIG
+mode: http-client
+generated: true
+paths:
+- /api/v1/preferences/list
+- /api/v1/preferences/save
+default:
+  '**default**':
+    timeout: 1000
+    max_retries: 0

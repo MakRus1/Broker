@@ -1,0 +1,53 @@
+Preference:
+  type: object
+  additionalProperties: false
+  required:
+  - key
+  - value
+  - revision
+  properties:
+    key:
+      type: string
+      minLength: 1
+      maxLength: 200
+      pattern: ^[a-zA-Z0-9_.:/-]+$
+    value:
+      type: object
+      additionalProperties: true
+    revision:
+      type: integer
+      minimum: 1
+ApiError:
+  type: object
+  additionalProperties: false
+  required:
+  - error
+  - message
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+SavePreferenceRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - key
+  - value
+  - expected_revision
+  - organization_id
+  properties:
+    key:
+      type: string
+      minLength: 1
+      maxLength: 200
+      pattern: ^[a-zA-Z0-9_.:/-]+$
+    value:
+      type: object
+      additionalProperties: true
+    expected_revision:
+      type: integer
+      minimum: 0
+    organization_id:
+      type: string
+      format: uuid

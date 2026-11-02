@@ -1,3 +1,4 @@
+import { RegistryHeading } from '../shared/ui/RegistryHeading';
 import { WorkspaceHome } from './WorkspaceHome';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
@@ -12,7 +13,6 @@ import {
 import { useColumnFilters } from '../features/registry/RegistryColumnFilters';
 import {
   RegistryTable,
-  RegistryColumnSettings,
   useRegistryColumns,
   type RegistryColumn,
 } from '../features/registry/RegistryTable';
@@ -733,40 +733,24 @@ export function App() {
               route.startsWith('/transportations/new/')
             }
           >
-            <div className="page-heading">
-              <div>
-                <h1>
-                  {tab === 'shipments'
-                    ? translate('nav.shipments')
-                    : translate('nav.transportations')}
-                </h1>
-                <span className="registry-count" role="status">
-                  {loading
-                    ? translate('common.loading')
-                    : translate('common.loaded', {
-                        count: tab === 'shipments' ? shipments.length : transportations.length,
-                      })}
-                </span>
-              </div>
-              <div className="actions">
-                <RegistryColumnSettings
-                  {...(tab === 'shipments' ? shipmentColumnState : transportationColumnState)}
-                />
-                <button disabled={loading} onClick={() => void load()}>
-                  {translate('action.refresh')}
+            <RegistryHeading
+              columns={tab === 'shipments' ? shipmentColumnState : transportationColumnState}
+              title={translate(tab === 'shipments' ? 'nav.shipments' : 'nav.transportations')}
+              count={tab === 'shipments' ? shipments.length : transportations.length}
+              loading={loading}
+              onRefresh={() => void load()}
+            >
+              {tab === 'shipments' && write && (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    location.hash = '/shipments/new/' + crypto.randomUUID();
+                  }}
+                >
+                  {translate('action.createShipment')}
                 </button>
-                {tab === 'shipments' && write && (
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      location.hash = '/shipments/new/' + crypto.randomUUID();
-                    }}
-                  >
-                    {translate('action.createShipment')}
-                  </button>
-                )}
-              </div>
-            </div>
+              )}
+            </RegistryHeading>
             <section className="surface" aria-busy={loading}>
               {tab === 'shipments' ? (
                 <RegistryTable

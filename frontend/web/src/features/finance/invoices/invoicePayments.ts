@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import { request } from '../../../shared/api/http';
 import type { InvoiceDirection } from './invoices';
 import type { Session } from '../../../shared/api/session';
@@ -21,11 +22,14 @@ export const invoicePaymentLabels: Record<
   },
 };
 export type PaymentTarget = Pick<InvoiceBalance, 'invoice' | 'outstanding_minor'>;
-export function invoicePaymentProblem(targets: PaymentTarget[]): string | undefined {
-  if (!targets.length) return 'Выберите счета';
-  if (targets.length > 100) return 'За один раз можно оплатить не больше 100 счетов';
+export function invoicePaymentProblem(
+  targets: PaymentTarget[],
+  locale: Locale = 'ru',
+): string | undefined {
+  if (!targets.length) return translate(locale, 'bulk.selectInvoices');
+  if (targets.length > 100) return translate(locale, 'bulk.invoiceLimit');
   if (targets.some(({ invoice, outstanding_minor }) => invoice.archived || outstanding_minor <= 0))
-    return 'Выберите действующие счета с остатком к оплате';
+    return translate(locale, 'bulk.openInvoices');
   const first = targets[0].invoice;
   if (
     targets.some(
@@ -36,7 +40,7 @@ export function invoicePaymentProblem(targets: PaymentTarget[]): string | undefi
         invoice.currency !== first.currency,
     )
   )
-    return 'Выберите счета с одним своим юрлицом, контрагентом, валютой и направлением';
+    return translate(locale, 'bulk.sameInvoiceParties');
 }
 export function automaticInvoiceAmounts(
   targets: PaymentTarget[],

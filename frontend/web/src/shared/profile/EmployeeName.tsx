@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useState } from 'react';
 import { request } from '../api/http';
 import { type Session } from '../api/session';
@@ -11,6 +12,7 @@ export function EmployeeName({
   session: Session;
   fallback?: string;
 }) {
+  const { translate } = useLocalization();
   const [name, setName] = useState('');
   useEffect(() => {
     setName('');
@@ -24,12 +26,12 @@ export function EmployeeName({
     )
       .then(({ items }) => {
         if (!controller.signal.aborted)
-          setName(items[0]?.display_name ?? fallback ?? 'Сотрудник недоступен');
+          setName(items[0]?.display_name ?? fallback ?? translate('ui.employeeUnavailable'));
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName(fallback ?? 'Не удалось загрузить сотрудника');
+        if (!controller.signal.aborted) setName(fallback ?? translate('ui.employeeLoadError'));
       });
     return () => controller.abort();
   }, [subject, session, fallback]);
-  return <>{subject ? name || 'Загрузка…' : 'Не назначен'}</>;
+  return <>{subject ? name || translate('common.loading') : translate('ui.notAssigned')}</>;
 }

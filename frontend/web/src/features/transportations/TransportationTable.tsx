@@ -1,3 +1,5 @@
+import { useLocalization } from '../localization/Localization';
+import { registryValueLabel } from '../registry/registryLabels';
 import type { ColumnFilterController } from '../registry/RegistryColumnFilters';
 import {
   RegistryTable,
@@ -8,34 +10,23 @@ import {
 import type { RegistrySort } from './transportationRegistry';
 import { routePoint } from './transportation';
 import type { ReactNode } from 'react';
-import { modes, ownership, transportationTypes } from '../routes/logisticsLabels';
+import { ownership } from '../routes/logisticsLabels';
 import { type Transportation } from './types';
 export const transportationColumns: RegistryColumn<Transportation>[] = [
   {
     id: 'container_number',
+    labelKey: 'entity.transportation',
     filterFields: ['container_number', 'type', 'hazardous', 'shipment_id'],
     cellClassName: 'transportation-number-cell',
     label: 'Перевозка',
     width: 250,
     required: true,
     sort: 'container_number',
-    render: (item) => (
-      <>
-        <a
-          className="link"
-          href={`#/transportations/${item.id}`}
-          title={item.container_number || 'Без номера'}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {item.container_number || 'Без номера'}
-        </a>
-        <span className="registry-secondary">{transportationTypes[item.type]}</span>
-        {item.hazardous && <span className="registry-hazard">Опасный груз</span>}
-      </>
-    ),
+    render: (item) => <TransportationIdentity item={item} />,
   },
   {
     id: 'container_type',
+    labelKey: 'registryField.container',
     filterFields: ['container_type', 'container_ownership'],
     cellClassName: 'transportation-container-cell',
     label: 'Контейнер',
@@ -56,37 +47,46 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
   },
   {
     id: 'route',
+    labelKey: 'routeFilter.route',
     filterFields: false,
     label: 'Маршрут',
     width: 480,
-    render: (item) => (
-      <>
-        {item.route_segments.length ? (
-          <div className="registry-route">
-            {item.route_segments.slice(0, 2).map((stage) => (
-              <div className="registry-route-stage" key={stage.id}>
-                <span className="registry-route-mode">{modes[stage.mode]}</span>
-                {(routePoint(stage, 'origin').name || routePoint(stage, 'destination').name) && (
-                  <span>
-                    {routePoint(stage, 'origin').name || 'Не указан'} →{' '}
-                    {routePoint(stage, 'destination').name || 'Не указан'}
-                  </span>
-                )}
-              </div>
-            ))}
-            {item.route_segments.length > 2 && (
-              <span className="registry-secondary">
-                Ещё участков: {item.route_segments.length - 2}
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="registry-muted">Не задан</span>
-        )}
-      </>
-    ),
+    render: (item) => <RouteRegistrySummary item={item} />,
   },
 ];
+
+function RouteRegistrySummary({ item }: { item: Transportation }) {
+  const { translate, locale } = useLocalization();
+  return (
+    <>
+      {item.route_segments.length ? (
+        <div className="registry-route">
+          {item.route_segments.slice(0, 2).map((stage) => (
+            <div className="registry-route-stage" key={stage.id}>
+              <span className="registry-route-mode">
+                {registryValueLabel('mode', stage.mode, locale)}
+              </span>
+              {(routePoint(stage, 'origin').name || routePoint(stage, 'destination').name) && (
+                <span>
+                  {routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} →{' '}
+                  {routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}
+                </span>
+              )}
+            </div>
+          ))}
+          {item.route_segments.length > 2 && (
+            <span className="registry-secondary">
+              {translate('routeFilter.more', { count: item.route_segments.length - 2 })}
+            </span>
+          )}
+        </div>
+      ) : (
+        <span className="registry-muted">{translate('routeFilter.notSet')}</span>
+      )}
+    </>
+  );
+}
+
 export function TransportationTable({
   items,
   sort,
@@ -122,5 +122,25 @@ export function TransportationTable({
         location.hash = `/transportations/${item.id}`;
       }}
     />
+  );
+}
+
+function TransportationIdentity({ item }: { item: Transportation }) {
+  const { translate, locale } = useLocalization();
+  return (
+    <>
+      <a
+        className="link"
+        href={`#/transportations/${item.id}`}
+        title={item.container_number || translate('filter.noNumber')}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {item.container_number || translate('filter.noNumber')}
+      </a>
+      <span className="registry-secondary">{registryValueLabel('type', item.type, locale)}</span>
+      {item.hazardous && (
+        <span className="registry-hazard">{translate('registryField.hazardous')}</span>
+      )}
+    </>
   );
 }

@@ -1,3 +1,5 @@
+import { invoicePaymentProblem } from '../finance/invoices/invoicePayments';
+import { bulkInvoiceProblem } from '../finance/invoices/bulkInvoices';
 import { registryFieldLabel, registryValueLabel } from '../registry/registryLabels';
 import { filterLabel } from '../registry/RegistryColumnFilters';
 import { describe, expect, it } from 'vitest';
@@ -24,6 +26,11 @@ describe('локализация', () => {
   it('подставляет параметры как обычный текст', () => {
     expect(translate('en', 'common.loaded', { count: 42 })).toBe('Loaded: 42');
     expect(translate('ru', 'tabs.close', { title: '<script>' })).toBe('Закрыть вкладку <script>');
+  });
+  it('переводит ограничения групповых операций без изменения правил', () => {
+    expect(invoicePaymentProblem([], 'en')).toBe('Select invoices');
+    expect(bulkInvoiceProblem([], 'en')).toBe('Select service charges');
+    expect(invoicePaymentProblem([])).toBe('Выберите счета');
   });
   it('переводит идентификаторы полей и системные значения, сохраняя неизвестные подписи', () => {
     expect(registryFieldLabel('shipment_date', 'Дата поставки', 'en')).toBe('Shipment date');

@@ -1,8 +1,10 @@
+import { registryValueLabel } from '../../registry/registryLabels';
+import { useLocalization } from '../../localization/Localization';
 import { InvoicePdfArchiveDialog } from './print/InvoicePdfArchiveDialog';
 import { useRowSelection } from '../../registry/useRowSelection';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { InvoicePaymentPicker } from './InvoicePaymentPicker';
-import { invoicePaymentLabels, invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
+import { invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
 import '../services/bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useState } from 'react';
@@ -16,18 +18,15 @@ import { preferenceKey, useRegistryPreference } from '../../registry/registryPre
 import { initialInvoiceQuery, restoreInvoiceQuery } from '../../registry/registryQueryPreferences';
 import {
   RegistryTable,
-  RegistryColumnSettings,
   useRegistryColumns,
   type RegistryColumn,
 } from '../../registry/RegistryTable';
 import { formatFixed } from '../services/serviceCharges';
 import {
   invoiceRegistry,
-  invoiceTitle,
   type Invoice,
   type InvoiceDirection,
   type InvoiceRegistryItem,
-  invoicePaymentStatusLabel,
 } from './invoices';
 type InvoiceRow = Invoice & Omit<InvoiceRegistryItem, 'invoice'>;
 const flatten = ({ invoice, ...settlement }: InvoiceRegistryItem): InvoiceRow => ({
@@ -50,6 +49,7 @@ export function InvoiceRegistry({
   scope?: RegistryScope;
   refreshVersion?: number;
 }) {
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<InvoiceRow[]>([]);
   const selection = useRowSelection(items.map((item) => item.id));
   const chosen = items.filter((item) => selection.selected.has(item.id));
@@ -65,8 +65,8 @@ export function InvoiceRegistry({
     direction === 'outgoing' && session.permissions.includes('finance.read_invoices');
   const canSelect = canPay || canDownload;
   const [pdfInvoices, setPdfInvoices] = useState<Invoice[]>();
-  const archiveProblem = chosen.length > 100 ? 'Выберите не больше 100 счетов' : undefined;
-  const problem = invoicePaymentProblem(targets);
+  const archiveProblem = chosen.length > 100 ? translate('ui.maxInvoices') : undefined;
+  const problem = invoicePaymentProblem(targets, locale);
   function distribute() {
     if (problem) return;
     setMenu(undefined);
@@ -188,6 +188,7 @@ export function InvoiceRegistry({
     },
     {
       id: 'total',
+      labelKey: 'registryField.totalWithVat',
       label: 'Сумма с НДС',
       width: 200,
       filterFields: ['currency'],
@@ -215,7 +216,7 @@ export function InvoiceRegistry({
       label: 'Оплата',
       width: 210,
       sort: 'payment_status',
-      render: (item) => invoicePaymentStatusLabel[item.payment_status],
+      render: (item) => registryValueLabel('payment_status', item.payment_status, locale),
     },
     {
       id: 'overdue',
@@ -225,7 +226,9 @@ export function InvoiceRegistry({
       filterFields: ['overdue'],
       render: (item) =>
         item.overdue_days > 0 ? (
-          <span className="invoice-overdue">{item.overdue_days} дн.</span>
+          <span className="invoice-overdue">
+            {translate('ui.days', { count: item.overdue_days })}
+          </span>
         ) : (
           '—'
         ),
@@ -235,23 +238,28 @@ export function InvoiceRegistry({
       label: 'Состояние',
       width: 170,
       sort: 'archived',
-      render: (item) => (item.archived ? 'В архиве' : 'Действующий'),
+      render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
   const columnState = useRegistryColumns(session.subject, `${direction}-invoices`, columns);
   return (
     <section className="invoice-registry">
       <RegistryHeading
-        title={scope ? undefined : invoiceTitle(direction)}
+        columns={columnState}
+        title={
+          scope
+            ? undefined
+            : translate(direction === 'incoming' ? 'nav.incomingInvoices' : 'nav.outgoingInvoices')
+        }
         count={items.length}
+        loading={loading}
         onRefresh={() => setVersion((v) => v + 1)}
       >
         {!scope && session.permissions.includes('finance.write_invoices') && (
           <a className="button primary" href={`#${base}/new`}>
-            Добавить счёт
+            {translate('registryPage.addInvoice')}
           </a>
         )}
-        <RegistryColumnSettings {...columnState} />
       </RegistryHeading>
       {notice && (
         <p className="hint" role="status">
@@ -263,12 +271,22 @@ export function InvoiceRegistry({
           count={chosen.length}
           actions={[
             ...(canPay
-              ? [{ label: invoicePaymentLabels[direction].action, onClick: distribute, problem }]
+              ? [
+                  {
+                    label: translate(
+                      direction === 'outgoing'
+                        ? 'bulk.allocateReceipt'
+                        : 'bulk.allocateDisbursement',
+                    ),
+                    onClick: distribute,
+                    problem,
+                  },
+                ]
               : []),
             ...(canDownload
               ? [
                   {
-                    label: 'Скачать PDF в ZIP',
+                    label: translate('ui.downloadZip'),
                     problem: archiveProblem,
                     onClick: () => {
                       setMenu(undefined);
@@ -300,7 +318,9 @@ export function InvoiceRegistry({
             setPaying(undefined);
             selection.clear();
             setVersion((old) => old + 1);
-            setNotice(invoicePaymentLabels[direction].success);
+            setNotice(
+              translate(direction === 'outgoing' ? 'bulk.receiptSaved' : 'bulk.disbursementSaved'),
+            );
           }}
         />
       )}
@@ -316,7 +336,7 @@ export function InvoiceRegistry({
                 header: (
                   <input
                     type="checkbox"
-                    aria-label="Выбрать все загруженные счета"
+                    aria-label={translate('ui.selectInvoices')}
                     checked={items.length > 0 && chosen.length === items.length}
                     ref={(node) => {
                       if (node)
@@ -332,7 +352,7 @@ export function InvoiceRegistry({
                 render: (item) => (
                   <input
                     type="checkbox"
-                    aria-label={`Выбрать счёт № ${item.number}`}
+                    aria-label={translate('ui.selectInvoice', { number: item.number })}
                     checked={selection.selected.has(item.id)}
                     onPointerDown={(event) => selection.start(event, item.id)}
                     onClick={(event) => {
@@ -392,7 +412,13 @@ export function InvoiceRegistry({
         onOpen={(item) => {
           location.hash = `${base}/${item.id}`;
         }}
-        emptyMessage={loading ? 'Загружаем счета…' : failure ? undefined : 'Счета не найдены'}
+        emptyMessage={
+          loading
+            ? translate('common.loading')
+            : failure
+              ? undefined
+              : translate('registryPage.noInvoices')
+        }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
     </section>

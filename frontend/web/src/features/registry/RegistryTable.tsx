@@ -51,7 +51,9 @@ export function RegistryColumnSettings({
 }: RegistryColumns) {
   const { translate, locale } = useLocalization();
   const displayLabel = (definition: ColumnDefinition) =>
-    registryFieldLabel(definition.id, definition.label, locale);
+    definition.labelKey
+      ? translate(definition.labelKey)
+      : registryFieldLabel(definition.id, definition.label, locale);
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -193,7 +195,9 @@ export function RegistryTable<T extends { id: string }>({
 }) {
   const { translate, locale } = useLocalization();
   const displayLabel = (definition: ColumnDefinition) =>
-    registryFieldLabel(definition.id, definition.label, locale);
+    definition.labelKey
+      ? translate(definition.labelKey)
+      : registryFieldLabel(definition.id, definition.label, locale);
   const [filterEditor, setFilterEditor] = useState<{
     fields: string[];
     anchor: HTMLElement;
@@ -285,7 +289,11 @@ export function RegistryTable<T extends { id: string }>({
           hidden={hidden}
           extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => ({
             id,
-            label: definitions.find((column) => column.id === id)?.label ?? id,
+            label: registryFieldLabel(
+              id,
+              definitions.find((column) => column.id === id)?.label ?? id,
+              locale,
+            ),
             onOpen: value.onOpen,
           }))}
           children={filterSummary}

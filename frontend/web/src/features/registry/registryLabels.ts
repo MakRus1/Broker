@@ -1,6 +1,23 @@
 import { translate, type Locale, type MessageKey } from '../../../../shared/i18n/catalog';
 
 const fieldKeys: Readonly<Record<string, MessageKey>> = {
+  payment_delay_days: 'registryField.paymentDelay',
+
+  vat: 'registryField.vat_minor',
+  quantity: 'registryField.quantityPrice',
+
+  counterparty: 'registryField.counterparty_id',
+  total: 'registryField.amount',
+
+  route: 'registryField.route',
+  mode: 'registryField.mode',
+  origin_station: 'registryField.origin_station',
+  destination_station: 'registryField.destination_station',
+  pol: 'registryField.pol',
+  pod: 'registryField.pod',
+  origin_airport: 'registryField.origin_airport',
+  destination_airport: 'registryField.destination_airport',
+
   own_company_id: 'registryField.own_company_id',
   counterparty_id: 'registryField.counterparty_id',
   payment_date: 'registryField.payment_date',
@@ -58,6 +75,25 @@ export function registryFieldLabel(id: string, fallback: string, locale: Locale)
 }
 
 const valueKeys: Readonly<Record<string, Readonly<Record<string, MessageKey>>>> = {
+  direction: {
+    income: 'registryValue.direction.income',
+    expense: 'registryValue.direction.expense',
+    both: 'registryValue.direction.both',
+  },
+  unit: {
+    container: 'registryValue.unit.container',
+    transportation: 'registryValue.unit.transportation',
+    ton: 'registryValue.unit.ton',
+    day: 'registryValue.unit.day',
+    piece: 'registryValue.unit.piece',
+  },
+  payment_status: {
+    unpaid: 'registryValue.payment_status.unpaid',
+    partial: 'registryValue.payment_status.partial',
+    paid: 'registryValue.payment_status.paid',
+  },
+  vat_mode: { exempt: 'registryValue.vat_mode.exempt', rate: 'registryValue.vat_mode.rate' },
+
   type: {
     consolidated: 'registryValue.type.consolidated',
     container: 'registryValue.type.container',

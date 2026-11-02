@@ -1,3 +1,4 @@
+import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 export function Dialog({
@@ -11,6 +12,7 @@ export function Dialog({
   children: ReactNode;
   className?: string;
 }) {
+  const { translate } = useLocalization();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const startedOnBackdrop = useRef(false);
@@ -65,7 +67,7 @@ export function Dialog({
         >
           <div className="dialog-heading">
             <h2 id={titleId}>{title}</h2>
-            <button type="button" aria-label="Закрыть" onClick={close}>
+            <button type="button" aria-label={translate('ui.close')} onClick={close}>
               ×
             </button>
           </div>
@@ -79,6 +81,7 @@ export function Dialog({
 }
 
 export function useDiscardConfirmation() {
+  const { translate } = useLocalization();
   const [pending, setPending] = useState<(() => void) | null>(null);
   function confirmDiscard(dirty: boolean, discard: () => void) {
     if (dirty) setPending(() => discard);
@@ -87,13 +90,13 @@ export function useDiscardConfirmation() {
   const confirmation = pending && (
     <Dialog
       className="discard-dialog"
-      title="Не сохранять изменения?"
+      title={translate('ui.discardTitle')}
       onClose={() => setPending(null)}
     >
-      <p className="confirmation-copy">При выходе изменения в этой форме будут потеряны.</p>
+      <p className="confirmation-copy">{translate('ui.discardHint')}</p>
       <div className="confirmation-actions">
         <button type="button" data-autofocus onClick={() => setPending(null)}>
-          Остаться
+          {translate('ui.stay')}
         </button>
         <button
           type="button"
@@ -103,7 +106,7 @@ export function useDiscardConfirmation() {
             pending();
           }}
         >
-          Не сохранять
+          {translate('ui.discard')}
         </button>
       </div>
     </Dialog>

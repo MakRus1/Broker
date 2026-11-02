@@ -1,3 +1,6 @@
+import { registryValueLabel } from '../../registry/registryLabels';
+import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
+import { useLocalization } from '../../localization/Localization';
 import { VatRateSelect } from '../services/VatRateSelect';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../../shared/api/http';
@@ -24,7 +27,6 @@ import {
 } from '../../registry/registryQueryPreferences';
 import {
   RegistryTable,
-  RegistryColumnSettings,
   useRegistryColumns,
   type RegistryColumn,
 } from '../../registry/RegistryTable';
@@ -69,6 +71,7 @@ export function FinancialLabelsPage({
   onSaved: (value: FinancialLabel) => void;
   onCancelNew: () => void;
 }) {
+  const { translate, locale } = useLocalization();
   const id = /^\/financial-labels\/([0-9a-f-]{36})/i.exec(route)?.[1];
   const creating = route === '/financial-labels/new';
   const editing = creating || route.endsWith('/edit');
@@ -118,7 +121,7 @@ export function FinancialLabelsPage({
     title.current(
       creating
         ? 'Новая финансовая метка'
-        : (value?.name ?? (id ? 'Финансовая метка' : 'Финансовые метки')),
+        : (value?.name ?? (id ? 'Финансовая метка' : translate('nav.financialLabels'))),
     );
   }, [creating, id, value?.name]);
   useEffect(() => {
@@ -210,14 +213,14 @@ export function FinancialLabelsPage({
       label: 'Направление',
       width: 200,
       sort: 'direction',
-      render: (item) => financialLabelDirections[item.direction],
+      render: (item) => registryValueLabel('direction', item.direction, locale),
     },
     {
       id: 'unit',
       label: 'Единица расчёта',
       width: 200,
       sort: 'unit',
-      render: (item) => financialLabelUnits[item.unit],
+      render: (item) => registryValueLabel('unit', item.unit, locale),
     },
     {
       id: 'currency',
@@ -226,13 +229,19 @@ export function FinancialLabelsPage({
       sort: 'currency',
       render: (item) => item.currency,
     },
-    { id: 'vat', label: 'НДС', width: 160, filterFields: ['vat_mode'], render: vatLabel },
+    {
+      id: 'vat',
+      label: 'НДС',
+      width: 160,
+      filterFields: ['vat_mode'],
+      render: (item) => vatLabel(item, locale),
+    },
     {
       id: 'archived',
       label: 'Состояние',
       width: 180,
       sort: 'archived',
-      render: (item) => (item.archived ? 'В архиве' : 'Действующая'),
+      render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
   const columnState = useRegistryColumns(session.subject, 'financial_labels', columns);
@@ -292,27 +301,26 @@ export function FinancialLabelsPage({
   if (!read)
     return (
       <section className="record-page financial-label-page">
-        <h1>Финансовые метки</h1>
+        <h1>{translate('nav.financialLabels')}</h1>
         <p>Нет права на просмотр финансовых меток.</p>
       </section>
     );
   if (!id && !creating)
     return (
       <section className="record-page financial-label-page">
-        <div className="section-heading">
-          <h1>Финансовые метки</h1>
+        <RegistryHeading
+          columns={columnState}
+          title={translate('nav.financialLabels')}
+          count={items.length}
+          loading={loading}
+          onRefresh={() => setVersion((value) => value + 1)}
+        >
           {write && (
             <a className="button primary" href="#/financial-labels/new">
-              Новая метка
+              {translate('registryPage.newLabel')}
             </a>
           )}
-        </div>
-        <div className="record-toolbar">
-          <RegistryColumnSettings {...columnState} />
-          <button disabled={loading} onClick={() => setVersion((value) => value + 1)}>
-            Обновить
-          </button>
-        </div>
+        </RegistryHeading>
         {failure && (
           <p className="error" role="alert">
             {failure}
@@ -336,7 +344,11 @@ export function FinancialLabelsPage({
             location.hash = `/financial-labels/${item.id}`;
           }}
           emptyMessage={
-            loading ? 'Загружаем метки…' : failure ? undefined : 'Финансовые метки не найдены'
+            loading
+              ? translate('common.loading')
+              : failure
+                ? undefined
+                : translate('registryPage.noLabels')
           }
         />
         <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
@@ -355,7 +367,8 @@ export function FinancialLabelsPage({
             <h1>{creating ? 'Новая финансовая метка' : (value?.name ?? 'Финансовая метка')}</h1>
             {value && !editing && (
               <p className="record-state">
-                {value.archived ? 'В архиве' : 'Действующая'} · Редакция {value.revision}
+                {value.archived ? translate('filter.archived') : translate('filter.active')} ·
+                Редакция {value.revision}
               </p>
             )}
           </div>

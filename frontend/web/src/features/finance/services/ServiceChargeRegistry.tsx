@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../../registry/registryLabels';
+import { useLocalization } from '../../localization/Localization';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { useRowSelection } from '../../registry/useRowSelection';
 import { ServiceInvoiceActions } from '../invoices/ServiceInvoiceActions';
@@ -18,14 +20,13 @@ import {
 import { preferenceKey, useRegistryPreference } from '../../registry/registryPreferences';
 import {
   RegistryTable,
-  RegistryColumnSettings,
   useRegistryColumns,
   type RegistryColumn,
 } from '../../registry/RegistryTable';
 import { formatFixed, type ServiceCharge } from './serviceCharges';
 import type { ServiceChargeInvoice } from '../invoices/invoices';
 import { serviceChargeRow } from './serviceChargeRow';
-import { financialLabelUnits, vatLabel } from '../labels/financialLabels';
+import { vatLabel } from '../labels/financialLabels';
 
 type Cursor = { id: string; scope: string; text_value?: string; date_value?: string };
 type Page = { items: ServiceCharge[]; invoices: ServiceChargeInvoice[]; next_cursor?: Cursor };
@@ -59,6 +60,7 @@ export function ServiceChargeRegistry({
   onEdit: (charge: ServiceCharge, invoice?: ServiceChargeInvoice) => void;
   onCreate: (direction: 'income' | 'expense') => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<Row[]>([]);
   const selection = useRowSelection(items.map((item) => item.id));
   const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] }>();
@@ -66,9 +68,9 @@ export function ServiceChargeRegistry({
   const [notice, setNotice] = useState('');
   const selectedItems = items.filter((item) => selection.selected.has(item.id));
   const canInvoice = session.permissions.includes('finance.write_invoices');
-  const problem = bulkInvoiceProblem(selectedItems);
+  const problem = bulkInvoiceProblem(selectedItems, locale);
   function openBulk(mode: 'new' | 'existing', chosen = selectedItems) {
-    if (bulkInvoiceProblem(chosen)) return;
+    if (bulkInvoiceProblem(chosen, locale)) return;
     setMenu(undefined);
     setBulk({ mode, items: chosen });
   }
@@ -191,6 +193,7 @@ export function ServiceChargeRegistry({
   const columns: RegistryColumn<Row>[] = [
     {
       id: 'label_name',
+      labelKey: 'entity.serviceCharge',
       label: 'Услуга',
       width: 190,
       required: true,
@@ -207,7 +210,7 @@ export function ServiceChargeRegistry({
       id: 'direction',
       label: 'Направление',
       width: 160,
-      render: (item) => (item.direction === 'income' ? 'Доход' : 'Расход'),
+      render: (item) => registryValueLabel('direction', item.direction, locale),
     },
     {
       id: 'service_date',
@@ -223,7 +226,7 @@ export function ServiceChargeRegistry({
       filterFields: [],
       render: (item) => (
         <>
-          {formatFixed(item.quantity_milli, 3)} {financialLabelUnits[item.unit]}
+          {formatFixed(item.quantity_milli, 3)} {registryValueLabel('unit', item.unit, locale)}
           <span className="service-secondary">
             × {formatFixed(item.price_minor, 2)} {item.currency}
           </span>
@@ -233,7 +236,7 @@ export function ServiceChargeRegistry({
     {
       id: 'net_minor',
       defaultVisible: false,
-      label: 'Без НДС',
+      label: translate('ui.noVat'),
       width: 170,
       sort: 'net_minor',
       filterFields: ['currency'],
@@ -249,7 +252,7 @@ export function ServiceChargeRegistry({
       render: (item) => (
         <>
           {formatFixed(item.vat_minor, 2)}
-          <span className="service-secondary">{vatLabel(item)}</span>
+          <span className="service-secondary">{vatLabel(item, locale)}</span>
         </>
       ),
     },
@@ -278,11 +281,12 @@ export function ServiceChargeRegistry({
           >
             № {item.invoice.number}
             <span className="service-secondary">
-              от {CalendarDate.fromISO(item.invoice.invoice_date).toDisplayString()}
+              {translate('ui.datePrefix')}{' '}
+              {CalendarDate.fromISO(item.invoice.invoice_date).toDisplayString()}
             </span>
           </a>
         ) : (
-          'Не выбран'
+          translate('ui.notChosen')
         ),
     },
     {
@@ -326,26 +330,29 @@ export function ServiceChargeRegistry({
       defaultVisible: false,
       label: 'Состояние',
       width: 160,
-      render: (item) => (item.archived ? 'В архиве' : 'Действующая'),
+      render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
   const state = useRegistryColumns(session.subject, 'service-charges', columns);
   return (
     <section className="service-charge-registry">
       <RegistryHeading
-        title={'Услуги'}
+        columns={state}
+        title={translate('nav.serviceCharges')}
         count={items.length}
+        loading={loading}
         onRefresh={() => setRefresh((v) => v + 1)}
       >
         {write && (
           <>
             <button className="primary" onClick={() => onCreate('income')}>
-              Добавить доходную услугу
+              {translate('registryPage.addIncome')}
             </button>
-            <button onClick={() => onCreate('expense')}>Добавить расходную услугу</button>
+            <button onClick={() => onCreate('expense')}>
+              {translate('registryPage.addExpense')}
+            </button>
           </>
         )}
-        <RegistryColumnSettings {...state} />
       </RegistryHeading>
       {notice && (
         <p role="status" className="hint">
@@ -357,8 +364,8 @@ export function ServiceChargeRegistry({
           count={selectedItems.length}
           problem={problem}
           actions={[
-            { label: 'Создать счёт', onClick: () => openBulk('new') },
-            { label: 'Добавить в счёт', onClick: () => openBulk('existing') },
+            { label: translate('ui.createInvoice'), onClick: () => openBulk('new') },
+            { label: translate('ui.addToInvoice'), onClick: () => openBulk('existing') },
           ]}
           onClear={selection.clear}
           menu={menu}
@@ -373,7 +380,8 @@ export function ServiceChargeRegistry({
           onClose={() => setBulk(undefined)}
           summary={
             <p className="hint">
-              Услуг: {bulk.items.length} · {bulk.items[0].counterparty_name} · Итого:{' '}
+              {translate('bulk.chargeCount', { count: bulk.items.length })} ·{' '}
+              {bulk.items[0].counterparty_name} · {translate('registryField.total_minor')}:{' '}
               {formatFixed(
                 bulk.items.reduce((sum, item) => sum + BigInt(item.invoice_total_minor), 0n),
                 2,
@@ -388,7 +396,12 @@ export function ServiceChargeRegistry({
               value,
               session,
             );
-            setNotice(`Счёт № ${saved.invoice.number}: включено услуг — ${bulk.items.length}`);
+            setNotice(
+              translate('bulk.invoiceSaved', {
+                number: saved.invoice.number,
+                count: bulk.items.length,
+              }),
+            );
             selection.clear();
             setRefresh((old) => old + 1);
           }}
@@ -406,7 +419,7 @@ export function ServiceChargeRegistry({
                 header: (
                   <input
                     type="checkbox"
-                    aria-label="Выбрать все загруженные услуги"
+                    aria-label={translate('ui.selectCharges')}
                     ref={(node) => {
                       if (node)
                         node.indeterminate =
@@ -423,7 +436,7 @@ export function ServiceChargeRegistry({
                 render: (item) => (
                   <input
                     type="checkbox"
-                    aria-label={`Выбрать услугу «${item.label_name}»`}
+                    aria-label={translate('ui.selectCharge', { name: item.label_name })}
                     checked={selection.selected.has(item.id)}
                     onPointerDown={(event) => selection.start(event, item.id)}
                     onClick={(event) => {
@@ -476,7 +489,13 @@ export function ServiceChargeRegistry({
               }
             : undefined,
         })}
-        emptyMessage={loading ? 'Загружаем услуги…' : failure ? undefined : 'Услуги не найдены'}
+        emptyMessage={
+          loading
+            ? translate('common.loading')
+            : failure
+              ? undefined
+              : translate('registryPage.noCharges')
+        }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
     </section>

@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 export const financialLabelDirections = {
   income: 'Доход',
   expense: 'Расход',
@@ -36,10 +37,13 @@ export function formatVatRate(value: number): string {
     .replace(/0+$/, '');
   return `${Math.floor(value / 100)}${fraction ? ',' + fraction : ''}`;
 }
-export function vatLabel(value: Pick<FinancialLabel, 'vat_mode' | 'vat_rate_basis_points'>) {
+export function vatLabel(
+  value: Pick<FinancialLabel, 'vat_mode' | 'vat_rate_basis_points'>,
+  locale: Locale = 'ru',
+) {
   return value.vat_mode === 'exempt'
-    ? 'Без НДС'
+    ? translate(locale, 'ui.noVat')
     : value.vat_rate_basis_points === null
-      ? 'Ставка не указана'
+      ? translate(locale, 'ui.vatMissing')
       : `${formatVatRate(value.vat_rate_basis_points)}%`;
 }

@@ -1,0 +1,36 @@
+.registry-heading.page-heading {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 0 24px;
+}
+.registry-heading.page-heading h1 {
+  color: var(--text);
+  font-size: 25px;
+  margin: 0;
+}
+.registry-heading.page-heading .hint {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.registry-heading > .actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.registry-heading > .actions > button,
+.registry-heading > .actions > a.button,
+.registry-heading .registry-column-settings > button {
+  box-sizing: border-box;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  line-height: 20px;
+}

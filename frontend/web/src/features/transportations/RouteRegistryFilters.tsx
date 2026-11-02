@@ -1,3 +1,5 @@
+import { useLocalization } from '../localization/Localization';
+import { registryFieldLabel } from '../registry/registryLabels';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -19,7 +21,12 @@ export function useRouteRegistryFilters(
   query: RegistryQuery,
   onChange: (groups: RouteFilterGroup[]) => void,
 ) {
-  const [fields, setFields] = useState<RegistryField[]>([]);
+  const { translate, locale } = useLocalization();
+  const [rawFields, setFields] = useState<RegistryField[]>([]);
+  const fields = rawFields.map((field) => ({
+    ...field,
+    label: registryFieldLabel(field.id, field.label, locale),
+  }));
   const [failure, setFailure] = useState('');
   const [anchor, setAnchor] = useState<HTMLElement>();
   useEffect(() => {
@@ -56,24 +63,26 @@ export function useRouteRegistryFilters(
                   filterLabel(
                     fields.find((field) => field.id === value.field),
                     value,
+                    locale,
                   ),
                 )
                 .join('; ')}
             >
-              Участок {index + 1}:{' '}
+              {translate('routeFilter.segment', { number: index + 1 })}:{' '}
               {group.filters
                 .map(
                   (value) =>
                     `${fields.find((field) => field.id === value.field)?.label ?? value.field}: ${filterLabel(
                       fields.find((field) => field.id === value.field),
                       value,
+                      locale,
                     )}`,
                 )
                 .join('; ')}
             </button>
             <button
               type="button"
-              aria-label={`Убрать условия участка ${index + 1}`}
+              aria-label={translate('routeFilter.removeSegment', { number: index + 1 })}
               onClick={() => onChange(groups.filter((_, i) => i !== index))}
             >
               ×
@@ -82,7 +91,7 @@ export function useRouteRegistryFilters(
         ))}
         {groups.length > 0 && (
           <button type="button" className="link" onClick={() => onChange([])}>
-            Сбросить маршрут
+            {translate('routeFilter.reset')}
           </button>
         )}
         {failure && (
@@ -120,6 +129,7 @@ function RouteEditor({
   onClose: () => void;
   onChange: (groups: RouteFilterGroup[]) => void;
 }) {
+  const { translate } = useLocalization();
   const [groups, setGroups] = useState<RouteFilterGroup[]>(
     query.route_filters?.length ? query.route_filters : [{ filters: [] }],
   );
@@ -180,11 +190,11 @@ function RouteEditor({
       fields={fields.map((value) => value.id)}
       anchor={anchor}
       onClose={onClose}
-      titleOverride="Фильтр маршрута"
+      titleOverride={translate('routeFilter.title')}
       onDraftChange={update}
       header={
         <div className="route-filter-groups">
-          <p>Все условия группы — на одном участке. Между группами — «и».</p>
+          <p>{translate('routeFilter.hint')}</p>
           <div>
             {groups.map((group, index) => (
               <button
@@ -193,7 +203,7 @@ function RouteEditor({
                 aria-pressed={index === selected}
                 onClick={() => setSelected(index)}
               >
-                Участок {index + 1}
+                {translate('routeFilter.segment', { number: index + 1 })}
                 {group.filters.length ? ` · ${group.filters.length}` : ''}
               </button>
             ))}
@@ -205,7 +215,7 @@ function RouteEditor({
                   setSelected(groups.length);
                 }}
               >
-                ＋ Участок
+                {translate('routeFilter.add')}
               </button>
             )}
             {groups.length > 1 && (
@@ -216,7 +226,7 @@ function RouteEditor({
                   setSelected(Math.max(0, selected - 1));
                 }}
               >
-                Убрать группу
+                {translate('routeFilter.removeGroup')}
               </button>
             )}
           </div>

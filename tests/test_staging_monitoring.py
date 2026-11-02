@@ -84,3 +84,22 @@ class MonitoringTest(unittest.TestCase):
 
         monitoring.wait_for_telemetry(fetch, 'a' * 32)
         self.assertEqual(calls, ['tempo', 'loki'])
+
+    def test_store_connection_failure_is_retried_with_a_deadline(self):
+        for failed in ('tempo', 'loki'):
+            calls = []
+            def fetch(name, port, path):
+                calls.append(name)
+                if name == failed and calls.count(name) == 1:
+                    raise monitoring.URLError(ConnectionRefusedError('restart'))
+                return {'data': {'result': [{}]}}
+            with self.subTest(failed=failed), patch.object(monitoring.time, 'sleep'):
+                monitoring.wait_for_telemetry(fetch, 'a' * 32)
+            self.assertEqual(calls, ['tempo', 'loki', 'tempo', 'loki'])
+
+    def test_store_connection_failure_does_not_hide_a_permanent_outage(self):
+        def fetch(name, port, path):
+            raise monitoring.URLError(ConnectionRefusedError('unavailable'))
+        with patch.object(monitoring.time, 'monotonic', side_effect=[0, 61]):
+            with self.assertRaisesRegex(ValueError, 'Tempo, Loki'):
+                monitoring.wait_for_telemetry(fetch, 'a' * 32)

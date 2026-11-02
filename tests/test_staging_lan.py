@@ -105,6 +105,11 @@ class LanTest(unittest.TestCase):
                 static['components_manager']['components']['otlp-logger']['sinks']['logs'],
                 'default',
             )
+            tempo = next(obj for obj in monitoring
+                         if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'tempo')
+            tempo_container = tempo['spec']['template']['spec']['containers'][0]
+            self.assertEqual(tempo_container['resources']['limits']['memory'], '1Gi')
+            self.assertEqual(tempo_container['env'], [{'name': 'GOMEMLIMIT', 'value': '768MiB'}])
             grafana = next(
                 obj
                 for obj in monitoring

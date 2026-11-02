@@ -49,24 +49,33 @@ def wait_for_telemetry(fetch, trace, *, timeout=60):
             fetch('tempo', 3200, '/api/traces/' + trace)
             trace_found = True
         except HTTPError as exc:
-            if exc.code != 404:
+            if exc.code not in (404, 502, 503, 504):
                 raise
             exc.close()
+        except (URLError, TimeoutError, ConnectionError):
+            pass
         query = '{service_name="broker",level=~".+"} |= "' + trace + '"'
-        logs = fetch(
-            'loki',
-            3100,
-            '/loki/api/v1/query_range?'
-            + urlencode(
-                {
-                    'query': query,
-                    'start': time.time_ns() - 300_000_000_000,
-                    'end': time.time_ns(),
-                    'limit': 10,
-                }
-            ),
-        )
-        logs_found = bool(logs['data']['result'])
+        try:
+            logs = fetch(
+                'loki',
+                3100,
+                '/loki/api/v1/query_range?'
+                + urlencode(
+                    {
+                        'query': query,
+                        'start': time.time_ns() - 300_000_000_000,
+                        'end': time.time_ns(),
+                        'limit': 10,
+                    }
+                ),
+            )
+            logs_found = bool(logs['data']['result'])
+        except HTTPError as exc:
+            if exc.code not in (502, 503, 504):
+                raise
+            exc.close()
+        except (URLError, TimeoutError, ConnectionError):
+            pass
         if trace_found and logs_found:
             break
         if time.monotonic() > deadline:

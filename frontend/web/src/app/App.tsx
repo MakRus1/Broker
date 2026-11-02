@@ -537,7 +537,7 @@ export function App() {
             </svg>
           </button>
         </div>
-        <span className="nav-label">РАБОЧЕЕ ПРОСТРАНСТВО</span>
+        <span className="nav-label">{translate('workspace.title')}</span>
         <nav aria-label={translate('workspace.sections')}>
           <button
             aria-label={translate('nav.shipments')}

@@ -139,7 +139,17 @@ export function createInvoicePdf(data: InvoicePrintData, fonts: PdfFonts): jsPDF
       formatFixed(charge.invoice_total_minor, 2),
     ]),
     showHead: 'everyPage',
-    theme: 'striped',
+    theme: 'grid',
+    tableLineColor: [205, 214, 226],
+    tableLineWidth: 0.2,
+    bodyStyles: { lineColor: [205, 214, 226], lineWidth: 0.2 },
+    headStyles: {
+      fillColor: [235, 240, 248],
+      textColor: [30, 42, 60],
+      fontStyle: 'bold',
+      lineColor: [205, 214, 226],
+      lineWidth: 0.2,
+    },
     columnStyles: {
       0: { cellWidth: 12 },
       1: { cellWidth: 54 },

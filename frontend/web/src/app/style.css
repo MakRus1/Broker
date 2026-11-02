@@ -3331,9 +3331,10 @@ details[open] > .route-stage-summary::after {
   --finance-background: #f7f9fc;
 }
 .finance-charge-form .form-actions {
+  isolation: isolate;
   position: sticky;
   bottom: 0;
-  background: var(--finance-background);
+  background: var(--finance-background, #fff);
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -4135,4 +4136,16 @@ details[open] > .route-stage-summary::after {
   justify-content: center;
   padding: 0 16px;
   line-height: 20px;
+}
+.finance-charge-form .form-actions,
+.invoices-page .form-actions,
+.payment-form .form-actions {
+  flex-wrap: wrap;
+}
+.form-actions .form-action-error {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.invoice-service-create-dialog {
+  width: min(1000px, calc(100vw - 48px));
 }

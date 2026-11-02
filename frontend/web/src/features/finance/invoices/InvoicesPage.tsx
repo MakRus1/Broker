@@ -17,7 +17,7 @@ import { DateInput } from '../../../shared/dates/DateInput';
 import { Select } from '../../../shared/ui/Select';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { ServiceChargeLookup } from './ServiceChargeLookup';
-import { useDiscardConfirmation } from '../../../shared/ui/Dialog';
+import { Dialog, useDiscardConfirmation } from '../../../shared/ui/Dialog';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
 import { currenciesWithCurrent } from '../currencies';
 import { formatFixed, type ServiceCharge } from '../services/serviceCharges';
@@ -570,7 +570,31 @@ export function InvoicesPage({
                 </label>
               </div>
               <section className="invoice-lines">
-                <h2>Услуги</h2>
+                <div className="section-heading">
+                  <h2>Услуги</h2>
+                  {session.permissions.includes('finance.write_service_charges') && (
+                    <button
+                      type="button"
+                      disabled={busy || !!newService || !draft.counterparty_id}
+                      onClick={() =>
+                        setNewService({
+                          ...newCharge(
+                            { shipment_id: null, transportation_id: null },
+                            draft.direction === 'outgoing' ? 'income' : 'expense',
+                          ),
+                          counterparty_id: draft.counterparty_id,
+                          counterparty_name: draft.counterparty_name,
+                          contract_id: draft.contract_id,
+                          contract_number: draft.contract_number,
+                          currency: draft.currency,
+                          invoice_currency: draft.currency,
+                        })
+                      }
+                    >
+                      Создать услугу
+                    </button>
+                  )}
+                </div>
                 <p className="hint">Услуги выбранного контрагента, договора и валюты.</p>
                 {selected.map((charge) => (
                   <div className="invoice-charge" key={charge.id}>
@@ -653,16 +677,16 @@ export function InvoicesPage({
                 />
                 В архиве
               </label>
-              {failure && (
-                <p className="error" role="alert">
-                  {failure}
-                </p>
-              )}
               <div className="form-actions">
+                {failure && (
+                  <p className="error form-action-error" role="alert">
+                    {failure}
+                  </p>
+                )}
                 <button type="button" disabled={busy} onClick={cancel}>
                   Отменить
                 </button>
-                <button type="submit" className="primary" disabled={busy}>
+                <button type="submit" className="primary" disabled={busy || !!newService}>
                   {busy ? 'Сохраняем…' : 'Сохранить'}
                 </button>
               </div>
@@ -815,6 +839,25 @@ export function InvoicesPage({
         <p className="error" role="alert">
           {failure}
         </p>
+      )}
+      {draft && newService && (
+        <Dialog
+          title="Новая услуга для счёта"
+          onClose={() => setNewService(undefined)}
+          className="invoice-service-create-dialog"
+        >
+          <ServiceChargeEditor
+            initial={newService}
+            allowInvoiceSelection={false}
+            session={session}
+            customers={emptyParties}
+            onCancel={() => setNewService(undefined)}
+            onSaved={(charge) => {
+              setSelected((old) => [...old.filter((item) => item.id !== charge.id), charge]);
+              setNewService(undefined);
+            }}
+          />
+        </Dialog>
       )}
       {loading && <p className="hint">Загружаем…</p>}
     </section>

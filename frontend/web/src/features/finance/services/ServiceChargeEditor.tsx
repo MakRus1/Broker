@@ -95,6 +95,7 @@ export function ServiceChargeEditor({
   currentInvoice,
   readOnly = false,
   invoice,
+  allowInvoiceSelection = true,
   onSaved,
   onCancel,
 }: {
@@ -104,7 +105,8 @@ export function ServiceChargeEditor({
   currentInvoice?: ServiceChargeInvoice;
   readOnly?: boolean;
   invoice?: Invoice;
-  onSaved: () => void;
+  allowInvoiceSelection?: boolean;
+  onSaved: (charge: ServiceCharge) => void;
   onCancel: () => void;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -141,6 +143,7 @@ export function ServiceChargeEditor({
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    event.stopPropagation();
     if (!draft || busy || readOnly) return;
     const quantity = parseFixed(draft.quantity, 3, 10000000);
     const price = parseFixed(draft.price, 2, 100000000);
@@ -198,13 +201,12 @@ export function ServiceChargeEditor({
           const persisted = draftOf(saved.charge);
           setDraft(persisted);
           baseline.current = JSON.stringify(persisted);
-
           setFailure('Услуга сохранена, но счёт не привязан: ' + (error as Error).message);
           return;
         }
       }
       setInvoiceSelection(undefined);
-      onSaved();
+      onSaved(saved.charge);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : 'Не удалось сохранить услугу');
     } finally {
@@ -324,7 +326,8 @@ export function ServiceChargeEditor({
               )
             }
           />
-          {!invoice &&
+          {allowInvoiceSelection &&
+            !invoice &&
             session.permissions.includes('finance.write_invoices') &&
             !draft.archived && (
               <ServiceInvoiceActions
@@ -463,12 +466,12 @@ export function ServiceChargeEditor({
             В архиве
           </label>
         </fieldset>
-        {failure && (
-          <p className="error" role="alert">
-            {failure}
-          </p>
-        )}
         <div className="form-actions">
+          {failure && (
+            <p className="error form-action-error" role="alert">
+              {failure}
+            </p>
+          )}
           <button type="button" disabled={busy} onClick={cancel}>
             {readOnly ? 'Закрыть' : 'Отменить'}
           </button>

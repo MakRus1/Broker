@@ -16,6 +16,9 @@ std::string Login::HandleRequestThrow(
     const auto& theme = http.GetArg("theme");
     if (theme == "light" || theme == "dark" || theme == "system")
         url += "&broker_theme=" + theme;
+    const auto& language = http.GetArg("language");
+    if (language == "ru" || language == "en")
+        url += "&ui_locales=" + language;
     http.GetHttpResponse().SetCookie(sessions_.Cookie(sessions_.LoginCookie, state, 300));
     return detail::Redirect(http, url);
 }

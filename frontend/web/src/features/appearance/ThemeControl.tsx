@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import '../../../../shared/theme/controls.css';
 import { useEffect, useRef, useState } from 'react';
 import { preferenceKey, useRegistryPreference } from '../registry/registryPreferences';
@@ -5,6 +6,7 @@ import { usePreferencesSession } from '../preferences/UserPreferences';
 import { restoreTheme, resolveTheme, type ThemePreference } from '../../../../shared/theme/theme';
 
 export function ThemeControl() {
+  const { translate } = useLocalization();
   const [session] = usePreferencesSession();
   const [theme, setTheme] = useRegistryPreference(
     preferenceKey(session?.subject ?? '', 'appearance', 'theme'),
@@ -50,8 +52,8 @@ export function ThemeControl() {
         type="button"
         className="theme-trigger"
         ref={trigger}
-        aria-label="Тема оформления"
-        title="Тема оформления"
+        aria-label={translate('theme.title')}
+        title={translate('theme.title')}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
@@ -69,13 +71,13 @@ export function ThemeControl() {
         </svg>
       </button>
       {open && (
-        <div className="theme-menu" role="group" aria-label="Тема оформления">
-          <span className="theme-menu-title">Тема оформления</span>
+        <div className="theme-menu" role="group" aria-label={translate('theme.title')}>
+          <span className="theme-menu-title">{translate('theme.title')}</span>
           {(
             [
-              { value: 'light', label: 'Светлая' },
-              { value: 'dark', label: 'Тёмная' },
-              { value: 'system', label: 'Как в системе' },
+              { value: 'light', label: translate('theme.light') },
+              { value: 'dark', label: translate('theme.dark') },
+              { value: 'system', label: translate('theme.system') },
             ] as const
           ).map((item) => (
             <button

@@ -1,82 +1,85 @@
 const groups = [
   {
-    title: 'Логистика',
+    title: 'home.logistics',
     items: [
       {
         route: '/shipments',
-        title: 'Поставки',
-        description: 'Груз, маршрут и план перевозок',
+        title: 'nav.shipments',
+        description: 'home.shipments',
         permission: 'shipments.read',
       },
       {
         route: '/transportations',
-        title: 'Перевозки',
-        description: 'Контейнеры и участки маршрута',
+        title: 'nav.transportations',
+        description: 'home.transportations',
         permission: 'transportations.read',
       },
     ],
   },
   {
-    title: 'Финансы',
+    title: 'home.finance',
     items: [
       {
         route: '/service-charges',
-        title: 'Услуги',
-        description: 'Доходы и расходы',
+        title: 'nav.serviceCharges',
+        description: 'home.serviceCharges',
         permission: 'finance.read_service_charges',
       },
       {
         route: '/outgoing-invoices',
-        title: 'Исходящие счета',
-        description: 'Счета клиентам',
+        title: 'nav.outgoingInvoices',
+        description: 'home.outgoingInvoices',
         permission: 'finance.read_invoices',
       },
       {
         route: '/incoming-invoices',
-        title: 'Входящие счета',
-        description: 'Счета поставщиков',
+        title: 'nav.incomingInvoices',
+        description: 'home.incomingInvoices',
         permission: 'finance.read_invoices',
       },
       {
         route: '/receipts',
-        title: 'Поступления',
-        description: 'Входящие платежи',
+        title: 'nav.receipts',
+        description: 'home.receipts',
         permission: 'finance.read_payments',
       },
       {
         route: '/disbursements',
-        title: 'Списания',
-        description: 'Исходящие платежи',
+        title: 'nav.disbursements',
+        description: 'home.disbursements',
         permission: 'finance.read_payments',
       },
     ],
   },
   {
-    title: 'Справочники',
+    title: 'home.directories',
     items: [
       {
         route: '/counterparties',
-        title: 'Контрагенты',
-        description: 'Компании, реквизиты и счета',
+        title: 'nav.counterparties',
+        description: 'home.counterparties',
         permission: 'counterparties.read',
       },
       {
         route: '/contracts',
-        title: 'Договоры',
-        description: 'Условия работы с контрагентами',
+        title: 'nav.contracts',
+        description: 'home.contracts',
         permission: 'contracts.read',
       },
       {
         route: '/financial-labels',
-        title: 'Финансовые метки',
-        description: 'Виды услуг и единицы расчёта',
+        title: 'nav.financialLabels',
+        description: 'home.financialLabels',
         permission: 'finance.read_financial_labels',
       },
     ],
   },
-];
+] as const;
+
+import { useLocalization } from '../features/localization/Localization';
 
 export function WorkspaceHome({ permissions }: { permissions: string[] }) {
+  const { translate } = useLocalization();
   const visible = groups
     .map((group) => ({
       ...group,
@@ -85,17 +88,17 @@ export function WorkspaceHome({ permissions }: { permissions: string[] }) {
     .filter((group) => group.items.length);
   return (
     <section className="workspace-home" aria-labelledby="workspace-home-title">
-      <h1 id="workspace-home-title">Начало работы</h1>
-      <p>Откройте нужный раздел — каждая форма останется под рукой во вкладках.</p>
+      <h1 id="workspace-home-title">{translate('home.title')}</h1>
+      <p>{translate('home.hint')}</p>
       <div className="workspace-shortcuts">
         {visible.map((group) => (
-          <section key={group.title} aria-label={group.title}>
-            <h2>{group.title}</h2>
+          <section key={group.title} aria-label={translate(group.title)}>
+            <h2>{translate(group.title)}</h2>
             {group.items.map((item) => (
               <a key={item.route} href={'#' + item.route}>
                 <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.description}</small>
+                  <strong>{translate(item.title)}</strong>
+                  <small>{translate(item.description)}</small>
                 </span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 5 7 7-7 7" />
@@ -105,7 +108,7 @@ export function WorkspaceHome({ permissions }: { permissions: string[] }) {
           </section>
         ))}
       </div>
-      {!visible.length && <p>Доступные разделы появятся после назначения прав администратором.</p>}
+      {!visible.length && <p>{translate('home.noAccess')}</p>}
     </section>
   );
 }

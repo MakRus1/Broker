@@ -160,7 +160,6 @@ UTEST(RegistryQuery, RelatedCollectionReusesParametersAndNativeDates) {
     using Date = userver::utils::datetime::Date;
     constexpr registry::RegistryField eta{
         .Field = registry::Field<Date>{"eta", "(segment.document #>> '{rail,eta}')::DATE", "DATE"},
-        .Label = "ETA",
         .ValueSql = "(segment.document #>> '{rail,eta}')::DATE",
         .Sortable = false};
     const std::array fields{eta};

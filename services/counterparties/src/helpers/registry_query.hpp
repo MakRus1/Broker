@@ -32,20 +32,16 @@ inline constexpr registry::Field<std::string> kRoles{"roles", "roles"};
 
 inline constexpr registry::Field<bool> kOwnCompany{"own_company", "own_company", "BOOLEAN"};
 
-// Каталог API: подписи, доступные операции и источники отображаемых значений.
+// Каталог API: доступные операции и источники отображаемых значений.
 inline constexpr std::array<registry::RegistryField, 8> kFields{{
-    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
-    {.Field = kName, .Label = "Наименование", .ValueSql = "name", .FoldValues = true},
-    {.Field = kCountry, .Label = "Страна", .ValueSql = "COALESCE(country_code, '')"},
-    {.Field = kTaxId, .Label = "Налоговый номер", .ValueSql = "COALESCE(tax_id, '')"},
-    {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
-    {.Field = kOwnCompany,
-        .Label = "Собственное юрлицо",
-        .ValueSql = "own_company",
-        .Sortable = false},
-    {.Field = kRoles, .Label = "Роли", .ValueSql = "roles", .Sortable = false, .Array = true},
+    {.Field = kId, .ValueSql = "id", .Visible = false},
+    {.Field = kName, .ValueSql = "name", .FoldValues = true},
+    {.Field = kCountry, .ValueSql = "COALESCE(country_code, '')"},
+    {.Field = kTaxId, .ValueSql = "COALESCE(tax_id, '')"},
+    {.Field = kArchived, .ValueSql = "archived"},
+    {.Field = kOwnCompany, .ValueSql = "own_company", .Sortable = false},
+    {.Field = kRoles, .ValueSql = "roles", .Sortable = false, .Array = true},
     {.Field = kSearch,
-        .Label = "Поиск контрагента",
         .ValueSql = kSearch.Expression,
         .Sortable = false,
         .FoldValues = true,

@@ -56,8 +56,8 @@ describe('фильтры заголовков реестра', () => {
   });
   it('скрытие столбца не сбрасывает фильтр или сортировку и оставляет видимый индикатор', () => {
     const definitions = [
-      { id: 'number', label: 'Поставка', width: 180, render: () => '' },
-      { id: 'status', label: 'Статус', width: 180, render: () => '' },
+      { id: 'number', labelKey: 'field.shipment' as const, width: 180, render: () => '' },
+      { id: 'status', labelKey: 'field.status' as const, width: 180, render: () => '' },
     ];
     const query = {
       sort: 'number',

@@ -46,7 +46,7 @@ export function CounterpartiesPage({
   const columns: RegistryColumn<Counterparty>[] = [
     {
       id: 'name',
-      label: 'Наименование',
+      labelKey: 'registryField.name',
       width: 340,
       required: true,
       sort: 'name',
@@ -62,34 +62,34 @@ export function CounterpartiesPage({
     },
     {
       id: 'country_code',
-      label: 'Страна',
+      labelKey: 'registryField.country_code',
       width: 150,
       sort: 'country_code',
       render: (value) => value.country_code || '—',
     },
     {
       id: 'tax_id',
-      label: 'Налоговый номер',
+      labelKey: 'registryField.tax_id',
       width: 210,
       sort: 'tax_id',
       render: (value) => value.tax_id || '—',
     },
     {
       id: 'roles',
-      label: 'Роли',
+      labelKey: 'registryField.roles',
       width: 280,
       render: (value) =>
         value.roles.map((role) => registryValueLabel('roles', role, locale)).join(', ') || '—',
     },
     {
       id: 'own_company',
-      label: 'Собственное юрлицо',
+      labelKey: 'registryField.own_company',
       width: 180,
       render: (value) => (value.own_company ? translate('filter.yes') : translate('filter.no')),
     },
     {
       id: 'archived',
-      label: 'Состояние',
+      labelKey: 'registryField.archived',
       width: 180,
       sort: 'archived',
       render: (value) =>

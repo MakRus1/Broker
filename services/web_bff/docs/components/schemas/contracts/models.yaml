@@ -186,15 +186,12 @@ RegistryField:
       - date
       - boolean
       type: string
-    label:
-      type: string
     lookup:
       type: string
     sortable:
       type: boolean
   required:
   - id
-  - label
   - kind
   - sortable
   - case_insensitive

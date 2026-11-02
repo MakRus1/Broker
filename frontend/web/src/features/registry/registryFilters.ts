@@ -8,13 +8,16 @@ export interface ColumnFilter {
   empty?: boolean;
   labels?: Record<string, string>;
 }
-export interface RegistryField {
+export interface RegistryFieldMetadata {
   id: string;
-  label: string;
   kind: 'values' | 'set' | 'date' | 'boolean';
   sortable: boolean;
   lookup?: string;
   case_insensitive?: boolean;
+}
+// Display labels are owned by the frontend, never read from API metadata.
+export interface RegistryField extends RegistryFieldMetadata {
+  label: string;
 }
 export interface RegistryValue {
   value: string;

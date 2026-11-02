@@ -1,4 +1,3 @@
-import { registryFieldLabel } from './registryLabels';
 import { translate } from '../../../../shared/i18n/catalog';
 import { readFileSync, readdirSync } from 'node:fs';
 import { expect, it } from 'vitest';
@@ -45,14 +44,11 @@ it('has an English heading for every standard registry column, including hidden 
   let checked = 0;
   for (const path of pages) {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8');
-    for (const match of source.matchAll(
-      /id:\s*'([^']+)'(?:(?!\bid:)[\s\S]){0,300}?label:\s*'([^']*[А-Яа-яЁё][^']*)'/g,
-    )) {
-      const key = /labelKey:\s*'([^']+)'/.exec(match[0])?.[1];
-      const label = key ? translate('en', key) : registryFieldLabel(match[1], match[2], 'en');
-      expect(label, `${path}: ${match[1]}`).not.toMatch(/[А-Яа-яЁё]/);
+    for (const match of source.matchAll(/labelKey:\s*'([^']+)'/g)) {
+      expect(translate('en', match[1]), `${path}: ${match[1]}`).not.toMatch(/[А-Яа-яЁё]/);
       checked++;
     }
   }
+
   expect(checked).toBeGreaterThan(30);
 });

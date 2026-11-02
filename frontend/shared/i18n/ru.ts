@@ -315,4 +315,9 @@ export const ru = {
     "Для общего счёта выберите услуги одного направления, контрагента, договора и валюты счёта",
   "bulk.chargeCount": "Услуг: {count}",
   "bulk.invoiceSaved": "Счёт № {number}: включено услуг — {count}",
+  "registryField.shipmentNumber": "Номер поставки",
+  "registryField.contractNumber": "Номер договора",
+  "registryField.invoiceNumber": "Номер счёта",
+  "registryField.paymentNumber": "Номер платежа",
+  "registryField.payment": "Платёж",
 } as const;

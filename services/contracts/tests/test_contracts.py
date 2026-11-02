@@ -103,6 +103,7 @@ async def test_registry_filters_and_sorting(api,directory):
     result=await api.post('/api/v1/contracts/list',{'sort':'valid_until','filters':[{'field':'valid_until','empty':True}]})
     assert [item['number'] for item in result['items']] == ['Д-10']
     fields=(await api.post('/api/v1/contracts/filter-values',{'registry':{}}))['fields']
+    assert all('label' not in field for field in fields)
     assert next(field for field in fields if field['id']=='contract_date')['kind'] == 'date'
     assert next(field for field in fields if field['id']=='counterparty_id')['lookup'] == 'counterparties'
     values=(await api.post('/api/v1/contracts/filter-values',{'registry':{},'field':'number'}))['values']

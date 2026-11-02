@@ -59,8 +59,7 @@ export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: 
 
 export interface ColumnDefinition {
   id: string;
-  label: string;
-  labelKey?: MessageKey;
+  labelKey: MessageKey;
   width: number;
   required?: boolean;
   defaultVisible?: boolean;

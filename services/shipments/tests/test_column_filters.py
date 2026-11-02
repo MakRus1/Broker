@@ -49,6 +49,7 @@ async def test_facets_exclude_only_their_own_condition_and_have_cursor(api, reco
         },
     )
     assert second["values"] == [{"value": "s-11", "label": "S-11"}]
+    assert all("label" not in field for field in first["fields"])
     assert "next_after" not in second
     assert any(
         field["id"] == "number" and field["sortable"] and field["case_insensitive"]

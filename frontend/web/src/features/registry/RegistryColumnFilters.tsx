@@ -1,4 +1,4 @@
-import { registryFieldLabel, registryValueLabel } from './registryLabels';
+import { localizeRegistryFields, registryValueLabel } from './registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { translate as translateMessage, type Locale } from '../../../../shared/i18n/catalog';
 import {
@@ -20,6 +20,7 @@ import {
   splitFilterValues,
   type ColumnFilter,
   type RegistryField,
+  type RegistryFieldMetadata,
   type RegistryValue,
 } from './registryFilters';
 
@@ -53,13 +54,13 @@ export function useColumnFilters({
   onSort: (field: string, descending: boolean) => void;
 }): ColumnFilterController {
   const { translate, locale } = useLocalization();
-  const [fields, setFields] = useState<RegistryField[]>([]);
+  const [fields, setFields] = useState<RegistryFieldMetadata[]>([]);
   const [failure, setFailure] = useState('');
   useEffect(() => {
     if (!session) return;
     const controller = new AbortController();
     setFailure('');
-    request<{ fields: RegistryField[] }>(
+    request<{ fields: RegistryFieldMetadata[] }>(
       `/api/v1/${registry}/filter-values`,
       session ?? undefined,
       { registry: {} },
@@ -185,10 +186,7 @@ export function useColumnFilters({
     [query, registry, session, locale],
   );
   return {
-    fields: fields.map((field) => ({
-      ...field,
-      label: registryFieldLabel(field.id, field.label, locale),
-    })),
+    fields: localizeRegistryFields(fields, locale, registry),
     filters: query.filters ?? [],
     sort: query.sort,
     descending: query.descending,

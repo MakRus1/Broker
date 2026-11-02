@@ -939,14 +939,11 @@ RegistryField:
   additionalProperties: false
   required:
   - id
-  - label
   - kind
   - sortable
   - case_insensitive
   properties:
     id:
-      type: string
-    label:
       type: string
     kind:
       type: string

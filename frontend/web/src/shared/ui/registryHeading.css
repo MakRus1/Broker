@@ -34,3 +34,15 @@
   padding: 0 16px;
   line-height: 20px;
 }
+
+.record-page.record-registry {
+  padding: 26px 28px;
+}
+.record-registry .registry-filter-toolbar {
+  padding: 12px 0;
+}
+@media (max-width: 760px) {
+  .record-page.record-registry {
+    padding: 20px 16px;
+  }
+}

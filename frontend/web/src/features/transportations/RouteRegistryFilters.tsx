@@ -1,5 +1,5 @@
 import { useLocalization } from '../localization/Localization';
-import { registryFieldLabel } from '../registry/registryLabels';
+import { localizeRegistryFields } from '../registry/registryLabels';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -12,6 +12,7 @@ import {
   filterRequest,
   type ColumnFilter,
   type RegistryField,
+  type RegistryFieldMetadata,
   type RegistryValue,
 } from '../registry/registryFilters';
 import type { RegistryQuery, RouteFilterGroup } from './transportationRegistry';
@@ -22,17 +23,14 @@ export function useRouteRegistryFilters(
   onChange: (groups: RouteFilterGroup[]) => void,
 ) {
   const { translate, locale } = useLocalization();
-  const [rawFields, setFields] = useState<RegistryField[]>([]);
-  const fields = rawFields.map((field) => ({
-    ...field,
-    label: registryFieldLabel(field.id, field.label, locale),
-  }));
+  const [rawFields, setFields] = useState<RegistryFieldMetadata[]>([]);
+  const fields = localizeRegistryFields(rawFields, locale);
   const [failure, setFailure] = useState('');
   const [anchor, setAnchor] = useState<HTMLElement>();
   useEffect(() => {
     if (!session?.permissions.includes('transportations.read')) return;
     const abort = new AbortController();
-    request<{ fields: RegistryField[] }>(
+    request<{ fields: RegistryFieldMetadata[] }>(
       '/api/v1/transportations/filter-values',
       session,
       { registry: {}, scope: 'route' },

@@ -27,22 +27,20 @@ inline constexpr registry::Field<std::string> kCurrency{"currency", "currency"};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
     "(CASE WHEN archived THEN '1' ELSE '0' END) COLLATE \"C\"");
 inline constexpr std::array<registry::RegistryField, 8> kFields{{
-    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
-    {.Field = kNumber, .Label = "Номер договора", .ValueSql = "number", .FoldValues = true},
+    {.Field = kId, .ValueSql = "id", .Visible = false},
+    {.Field = kNumber, .ValueSql = "number", .FoldValues = true},
     {.Field = kOwnCompany,
-        .Label = "Собственное юрлицо",
         .ValueSql = "own_company_id",
         .Sortable = false,
         .Lookup = "counterparties"},
     {.Field = kCounterparty,
-        .Label = "Контрагент",
         .ValueSql = "counterparty_id",
         .Sortable = false,
         .Lookup = "counterparties"},
-    {.Field = kDate, .Label = "Дата договора", .ValueSql = "contract_date"},
-    {.Field = kValidUntil, .Label = "Действует до", .ValueSql = "valid_until"},
-    {.Field = kCurrency, .Label = "Валюта", .ValueSql = "currency"},
-    {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
+    {.Field = kDate, .ValueSql = "contract_date"},
+    {.Field = kValidUntil, .ValueSql = "valid_until"},
+    {.Field = kCurrency, .ValueSql = "currency"},
+    {.Field = kArchived, .ValueSql = "archived"},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields

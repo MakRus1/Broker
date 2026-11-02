@@ -1,6 +1,7 @@
+import type { RegistryField, RegistryFieldMetadata } from './registryFilters';
 import { translate, type Locale, type MessageKey } from '../../../../shared/i18n/catalog';
 
-const fieldKeys: Readonly<Record<string, MessageKey>> = {
+const fieldKeys: Readonly<Partial<Record<string, MessageKey>>> = {
   payment_delay_days: 'registryField.paymentDelay',
 
   vat: 'registryField.vat_minor',
@@ -67,11 +68,31 @@ const fieldKeys: Readonly<Record<string, MessageKey>> = {
   search: 'registryField.search',
 };
 
-// API identifiers remain stable; unknown fields retain the server's label.
-export function registryFieldLabel(id: string, fallback: string, locale: Locale): string {
-  if (locale === 'ru') return fallback;
-  const key = fieldKeys[id];
-  return key ? translate(locale, key) : fallback;
+const scopedFieldKeys: Readonly<Record<string, Readonly<Partial<Record<string, MessageKey>>>>> = {
+  shipments: { number: 'registryField.shipmentNumber' },
+  contracts: { number: 'registryField.contractNumber' },
+  payments: { number: 'registryField.paymentNumber' },
+  invoices: { number: 'registryField.invoiceNumber', total_minor: 'registryField.totalWithVat' },
+};
+
+export function registryFieldLabel(
+  id: string,
+  locale: Locale,
+  registry?: string,
+): string | undefined {
+  const key = (registry ? scopedFieldKeys[registry]?.[id] : undefined) ?? fieldKeys[id];
+  return key ? translate(locale, key) : undefined;
+}
+
+export function localizeRegistryFields(
+  fields: readonly RegistryFieldMetadata[],
+  locale: Locale,
+  registry?: string,
+): RegistryField[] {
+  return fields.map((field) => ({
+    ...field,
+    label: registryFieldLabel(field.id, locale, registry) ?? field.id,
+  }));
 }
 
 const valueKeys: Readonly<Record<string, Readonly<Record<string, MessageKey>>>> = {

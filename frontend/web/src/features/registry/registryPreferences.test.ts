@@ -15,9 +15,9 @@ import {
 import { CalendarDate } from '../../shared/dates/CalendarDate';
 
 const definitions = [
-  { id: 'name', label: 'Наименование', width: 300, required: true },
-  { id: 'country', label: 'Страна', width: 150 },
-  { id: 'tax', label: 'ИНН', width: 200 },
+  { id: 'name', labelKey: 'registryField.name' as const, width: 300, required: true },
+  { id: 'country', labelKey: 'registryField.country_code' as const, width: 150 },
+  { id: 'tax', labelKey: 'registryField.tax_id' as const, width: 200 },
 ];
 describe('личная раскладка реестра', () => {
   it('сохраняет порядок и скрытие, исключает удалённые/повторные поля, добавляет новые', () => {
@@ -175,7 +175,7 @@ describe('новые столбцы реестра', () => {
   it('замечает новые поля, включая скрытые по умолчанию', () => {
     const updated = [
       ...definitions,
-      { id: 'new', label: 'Новое поле', width: 180, defaultVisible: false },
+      { id: 'new', labelKey: 'registryField.number' as const, width: 180, defaultVisible: false },
     ];
     expect(newColumnIds(['name', 'country'], updated)).toEqual(['tax', 'new']);
     const columns = restoreColumns([{ id: 'name', visible: true, width: 240 }], updated);

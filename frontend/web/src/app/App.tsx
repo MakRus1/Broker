@@ -89,7 +89,7 @@ export function App() {
   const shipmentColumns: RegistryColumn<Shipment>[] = [
     {
       id: 'number',
-      label: translate('field.shipment'),
+      labelKey: 'field.shipment',
       width: 180,
       required: true,
       sort: 'number',
@@ -105,7 +105,7 @@ export function App() {
     },
     {
       id: 'shipment_date',
-      label: translate('field.shipmentDate'),
+      labelKey: 'field.shipmentDate',
       width: 190,
       sort: 'shipment_date',
       render: (item) =>
@@ -114,20 +114,20 @@ export function App() {
     {
       id: 'customer',
       filterFields: ['customer_id'],
-      label: translate('field.customer'),
+      labelKey: 'field.customer',
       width: 280,
       render: (item) => customerName(item.customer_id),
     },
     {
       id: 'cargo_description',
-      label: translate('field.cargo'),
+      labelKey: 'field.cargo',
       width: 340,
       sort: 'cargo_description',
       render: (item) => item.cargo_description || '—',
     },
     {
       id: 'status',
-      label: translate('field.status'),
+      labelKey: 'field.status',
       width: 180,
       sort: 'status',
       render: (item) => <span className="badge">{item.status || '—'}</span>,

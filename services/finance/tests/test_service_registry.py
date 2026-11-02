@@ -53,6 +53,7 @@ async def test_invoice_filter_and_facets(api,charge,invoice_references):
     assert facets['values']==[{'value':'income','label':'Доход'}]
     assert (await api.post(BASE+'filter-values',{'registry':query,'field':'direction'},user='other'))['values']==[]
     catalog=await api.post(BASE+'filter-values',{'registry':{}})
+    assert all('label' not in field for field in catalog['fields'])
     assert {'service_date','counterparty_id','invoice_number','shipment_id','transportation_id'} <= {f['id'] for f in catalog['fields']}
 
 @pytest.mark.parametrize('value', ['12x', '1.5', '9223372036854775808'])

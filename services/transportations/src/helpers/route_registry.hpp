@@ -8,13 +8,11 @@ namespace registry = platform::registry;
 // Фильтры участка используют те же операторы, что поля основного реестра.
 inline constexpr std::array<registry::RegistryField, 7> kFields{{
     {.Field = registry::Field<std::string>{"mode", "shared.mode COLLATE \"C\"", "TEXT"},
-        .Label = "Тип участка",
         .ValueSql = "shared.mode",
         .Sortable = false,
         .ValuesFrom = "shipment_route_segments AS shared"},
     {.Field = registry::Field<std::string>{"origin_station",
          "(local.document #>> '{rail,origin_station,id}')::UUID", "UUID"},
-        .Label = "Станция отправления",
         .ValueSql = "concat_ws(' · ', local.document #>> '{rail,origin_station,name}', "
                     "local.document #>> '{rail,origin_station,esr_code}')",
         .Sortable = false,
@@ -22,7 +20,6 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValuesFrom = "route_segments AS local"},
     {.Field = registry::Field<std::string>{"destination_station",
          "(local.document #>> '{rail,destination_station,id}')::UUID", "UUID"},
-        .Label = "Станция назначения",
         .ValueSql = "concat_ws(' · ', local.document #>> '{rail,destination_station,name}', "
                     "local.document #>> '{rail,destination_station,esr_code}')",
         .Sortable = false,
@@ -30,7 +27,6 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValuesFrom = "route_segments AS local"},
     {.Field = registry::Field<std::string>{"pol", "(shared.document #>> '{sea,pol,id}')::UUID",
          "UUID"},
-        .Label = "Порт отправления",
         .ValueSql = "concat_ws(' · ', shared.document #>> '{sea,pol,name}', shared.document #>> "
                     "'{sea,pol,code}')",
         .Sortable = false,
@@ -38,7 +34,6 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValuesFrom = "shipment_route_segments AS shared"},
     {.Field = registry::Field<std::string>{"pod", "(shared.document #>> '{sea,pod,id}')::UUID",
          "UUID"},
-        .Label = "Порт назначения",
         .ValueSql = "concat_ws(' · ', shared.document #>> '{sea,pod,name}', shared.document #>> "
                     "'{sea,pod,code}')",
         .Sortable = false,
@@ -46,7 +41,6 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValuesFrom = "shipment_route_segments AS shared"},
     {.Field = registry::Field<std::string>{"origin_airport",
          "(shared.document #>> '{air,origin_airport,id}')::UUID", "UUID"},
-        .Label = "Аэропорт отправления",
         .ValueSql = "concat_ws(' · ', shared.document #>> '{air,origin_airport,name}', "
                     "shared.document #>> '{air,origin_airport,code}')",
         .Sortable = false,
@@ -54,7 +48,6 @@ inline constexpr std::array<registry::RegistryField, 7> kFields{{
         .ValuesFrom = "shipment_route_segments AS shared"},
     {.Field = registry::Field<std::string>{"destination_airport",
          "(shared.document #>> '{air,destination_airport,id}')::UUID", "UUID"},
-        .Label = "Аэропорт назначения",
         .ValueSql = "concat_ws(' · ', shared.document #>> '{air,destination_airport,name}', "
                     "shared.document #>> '{air,destination_airport,code}')",
         .Sortable = false,

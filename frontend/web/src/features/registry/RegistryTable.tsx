@@ -1,4 +1,3 @@
-import { registryFieldLabel } from './registryLabels';
 import { useLocalization } from '../localization/Localization';
 import {
   RegistryFilterToolbar,
@@ -49,11 +48,8 @@ export function RegistryColumnSettings({
   newColumns,
   acknowledgeColumns,
 }: RegistryColumns) {
-  const { translate, locale } = useLocalization();
-  const displayLabel = (definition: ColumnDefinition) =>
-    definition.labelKey
-      ? translate(definition.labelKey)
-      : registryFieldLabel(definition.id, definition.label, locale);
+  const { translate } = useLocalization();
+  const displayLabel = (definition: ColumnDefinition) => translate(definition.labelKey);
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -193,11 +189,8 @@ export function RegistryTable<T extends { id: string }>({
   onSort?: (field: string) => void;
   onOpen: (item: T) => void;
 }) {
-  const { translate, locale } = useLocalization();
-  const displayLabel = (definition: ColumnDefinition) =>
-    definition.labelKey
-      ? translate(definition.labelKey)
-      : registryFieldLabel(definition.id, definition.label, locale);
+  const { translate } = useLocalization();
+  const displayLabel = (definition: ColumnDefinition) => translate(definition.labelKey);
   const [filterEditor, setFilterEditor] = useState<{
     fields: string[];
     anchor: HTMLElement;
@@ -287,15 +280,14 @@ export function RegistryTable<T extends { id: string }>({
         <RegistryFilterToolbar
           controller={filters}
           hidden={hidden}
-          extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => ({
-            id,
-            label: registryFieldLabel(
+          extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => {
+            const column = definitions.find((column) => column.id === id);
+            return {
               id,
-              definitions.find((column) => column.id === id)?.label ?? id,
-              locale,
-            ),
-            onOpen: value.onOpen,
-          }))}
+              label: column ? displayLabel(column) : id,
+              onOpen: value.onOpen,
+            };
+          })}
           children={filterSummary}
           onOpen={(fields, anchor) => setFilterEditor({ fields, anchor })}
         />

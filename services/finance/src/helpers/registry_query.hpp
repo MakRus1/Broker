@@ -24,15 +24,14 @@ inline constexpr registry::Field<std::string> kVatMode{"vat_mode", "vat_mode"};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
     "(CASE WHEN archived THEN '1' ELSE '0' END) COLLATE \"C\"");
 inline constexpr std::array<registry::RegistryField, 7> kFields{{
-    {.Field = kId, .Label = "Идентификатор", .ValueSql = "id", .Visible = false},
-    {.Field = kName, .Label = "Наименование", .ValueSql = "name", .FoldValues = true},
-    {.Field = kDirection, .Label = "Направление", .ValueSql = kDirectionLabel},
-    {.Field = kUnit, .Label = "Единица расчёта", .ValueSql = kUnitLabel},
-    {.Field = kCurrency, .Label = "Валюта", .ValueSql = "currency"},
+    {.Field = kId, .ValueSql = "id", .Visible = false},
+    {.Field = kName, .ValueSql = "name", .FoldValues = true},
+    {.Field = kDirection, .ValueSql = kDirectionLabel},
+    {.Field = kUnit, .ValueSql = kUnitLabel},
+    {.Field = kCurrency, .ValueSql = "currency"},
     {.Field = kVatMode,
-        .Label = "НДС",
         .ValueSql = "CASE vat_mode WHEN 'exempt' THEN 'Без НДС' ELSE 'Ставка НДС' END"},
-    {.Field = kArchived, .Label = "Состояние", .ValueSql = "archived"},
+    {.Field = kArchived, .ValueSql = "archived"},
 }};
 inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields

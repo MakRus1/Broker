@@ -38,6 +38,13 @@ def apply(directory, context, services=None, infrastructure=None):
         raise ValueError('Неверный или повторяющийся сервис')
     if not services and not infrastructure:
         raise ValueError('Не выбраны сервисы или инфраструктура')
+    migration_path = directory / 'postgres-migration.json'
+    migration = json.loads(migration_path.read_text()) if migration_path.exists() else None
+    if migration and migration['phase'] != 'activated':
+        if migration['phase'] != 'imported':
+            raise ValueError('Перенос PostgreSQL не завершён: проверьте postgres-migration.json')
+        if not infrastructure or set(services) != set(services_available):
+            raise ValueError('Первый деплой после переноса PostgreSQL требует Deploy all с включённой инфраструктурой')
     with tempfile.TemporaryDirectory(prefix='broker-selected-') as temporary:
         paths, jobs = {}, []
         for phase in ('services', 'migrations'):
@@ -60,6 +67,11 @@ def apply(directory, context, services=None, infrastructure=None):
             path.chmod(0o600)
             paths[phase] = path if selected else None
         _apply(directory, context, services, infrastructure, paths, jobs)
+    if migration and migration['phase'] == 'imported':
+        from staging_manifest import private_write
+
+        migration['phase'] = 'activated'
+        private_write(migration_path, json.dumps(migration, indent=2) + '\n')
 
 
 def _apply(directory, context, services, infrastructure, paths, jobs):

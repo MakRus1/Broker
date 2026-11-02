@@ -87,7 +87,7 @@ export KUBECONFIG="$HOME/.kube/config"
 .venv-gen/bin/python scripts/staging.py render --release .staging/release.json --output .staging
 .venv-gen/bin/python scripts/staging_postgres_migrate.py \
   --context default --output .staging --backup-root "$HOME/broker-backups"
-# После успешного импорта — Deploy all из того же релиза.
+# После успешного импорта — Deploy all с включённой инфраструктурой из того же релиза.
 ```
 
 Сначала устанавливается оператор и проверяется отсутствие целевых кластеров.

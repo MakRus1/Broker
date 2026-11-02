@@ -209,7 +209,7 @@ class LanTest(unittest.TestCase):
                 )
                 return subprocess.CompletedProcess(args, 0, stdout=stdout)
 
-            with patch('staging.subprocess.run', side_effect=run), patch(
+            with patch('staging_postgres.install'), patch('staging.subprocess.run', side_effect=run), patch(
                 'staging_lan.initialize'
             ) as initialize, patch(
                 'organization_identity.configure_cluster'

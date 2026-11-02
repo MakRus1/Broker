@@ -366,6 +366,11 @@ def render(root, ns, platform, lan):
                 'collector': ['--config=/etc/broker-monitoring/config.yaml'],
             }
             container['args'] = flags[name]
+        if name == 'tempo':
+            # Компактация трасс требует запаса сверх Go heap.
+            container['resources']['requests']['memory'] = '256Mi'
+            container['resources']['limits']['memory'] = '1Gi'
+            container['env'] = [{'name': 'GOMEMLIMIT', 'value': '768MiB'}]
         if name == 'collector':
             container['securityContext'] = {'runAsUser': 0}
             container['volumeMounts'].append(

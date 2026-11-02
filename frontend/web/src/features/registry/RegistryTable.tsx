@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import {
   RegistryFilterToolbar,
   RegistryFilterEditor,
@@ -47,6 +48,7 @@ export function RegistryColumnSettings({
   newColumns,
   acknowledgeColumns,
 }: RegistryColumns) {
+  const { translate } = useLocalization();
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -84,15 +86,19 @@ export function RegistryColumnSettings({
           setOpen(!open);
         }}
       >
-        Столбцы
+        {translate('registry.columns')}
         {newColumns.length > 0 && (
-          <span className="registry-column-indicator" role="img" aria-label="Есть новые столбцы" />
+          <span
+            className="registry-column-indicator"
+            role="img"
+            aria-label={translate('registry.newColumns')}
+          />
         )}
       </button>
       {open && (
         <div id={panelId} className="registry-column-panel">
-          <h2>Столбцы реестра</h2>
-          <p>Перетащите заголовок, чтобы изменить порядок, а его границу — ширину.</p>
+          <h2>{translate('registry.columnsTitle')}</h2>
+          <p>{translate('registry.columnsHint')}</p>
           {columns.map((column, index) => {
             const definition = definitions.find((entry) => entry.id === column.id)!;
             return (
@@ -114,7 +120,7 @@ export function RegistryColumnSettings({
                   />
                   {definition.label}
                   {highlighted.includes(column.id) && (
-                    <span className="registry-column-new">Новое</span>
+                    <span className="registry-column-new">{translate('registry.new')}</span>
                   )}
                 </label>
                 <button
@@ -137,7 +143,7 @@ export function RegistryColumnSettings({
             );
           })}
           <button type="button" onClick={() => setColumns(restoreColumns(null, definitions))}>
-            Сбросить столбцы
+            {translate('registry.resetColumns')}
           </button>
         </div>
       )}

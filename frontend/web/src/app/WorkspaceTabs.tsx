@@ -1,3 +1,4 @@
+import { useLocalization } from '../features/localization/Localization';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { moveWorkspace, workspaceTitle, type WorkspaceTab } from './workspace';
@@ -23,6 +24,7 @@ export function WorkspaceTabs({
   onClose: (id: string) => void;
   onCloseAll: () => void;
 }) {
+  const { translate, locale } = useLocalization();
   const strip = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -152,7 +154,13 @@ export function WorkspaceTabs({
     const next = moveWorkspace(tabs, id, target, side);
     onMove(id, target, side);
     const index = next.findIndex((tab) => tab.id === id);
-    setAnnouncement(`Вкладка «${next[index].title}»: позиция ${index + 1} из ${next.length}`);
+    setAnnouncement(
+      translate('tabs.position', {
+        title: next[index].title,
+        position: index + 1,
+        count: next.length,
+      }),
+    );
   }
   if (!tabs.length) return null;
   return (
@@ -162,7 +170,7 @@ export function WorkspaceTabs({
           <button
             type="button"
             className="workspace-scroll"
-            aria-label="Прокрутить вкладки влево"
+            aria-label={translate('tabs.left')}
             disabled={!edges.before}
             onClick={() => scroll(-1)}
           >
@@ -173,7 +181,7 @@ export function WorkspaceTabs({
           ref={strip}
           className="workspace-tabs"
           role="tablist"
-          aria-label="Открытые формы"
+          aria-label={translate('tabs.forms')}
           onDragOver={(event) => {
             if (!dragging.current) return;
             const element = event.currentTarget;
@@ -234,7 +242,7 @@ export function WorkspaceTabs({
                 type="button"
                 role="tab"
                 aria-selected={active === entry.id}
-                title={`${entry.title} · Перетащите для изменения порядка. С клавиатуры: Alt + ← / →`}
+                title={translate('tabs.reorder', { title: entry.title })}
                 aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                 onKeyDown={(event) => {
                   if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
@@ -260,7 +268,7 @@ export function WorkspaceTabs({
                 type="button"
                 className="workspace-close"
                 draggable={false}
-                aria-label={`Закрыть вкладку ${entry.title}`}
+                aria-label={translate('tabs.close', { title: entry.title })}
                 onClick={() => onClose(entry.id)}
               >
                 ×
@@ -293,7 +301,7 @@ export function WorkspaceTabs({
           <button
             type="button"
             className="workspace-scroll"
-            aria-label="Прокрутить вкладки вправо"
+            aria-label={translate('tabs.right')}
             disabled={!edges.after}
             onClick={() => scroll(1)}
           >
@@ -305,8 +313,8 @@ export function WorkspaceTabs({
             ref={menuButton}
             type="button"
             className="workspace-scroll"
-            aria-label={`Все открытые вкладки (${tabs.length})`}
-            title="Все открытые вкладки"
+            aria-label={`${translate('tabs.all')} (${tabs.length})`}
+            title={translate('tabs.all')}
             aria-expanded={listOpen}
             aria-controls="workspace-open-list"
             onClick={() => {
@@ -323,28 +331,28 @@ export function WorkspaceTabs({
               id="workspace-open-list"
               className="workspace-open-list"
               role="navigation"
-              aria-label="Все открытые вкладки"
+              aria-label={translate('tabs.all')}
             >
               <div className="workspace-list-heading">
-                <strong>Открытые вкладки · {tabs.length}</strong>
+                <strong>{translate('tabs.open', { count: tabs.length })}</strong>
                 <button
                   type="button"
                   className="workspace-close-all"
                   disabled={busy}
-                  title={busy ? 'Дождитесь завершения сохранения' : 'Закрыть все вкладки'}
+                  title={busy ? translate('tabs.wait') : translate('tabs.closeAll')}
                   onClick={() => {
                     setListOpen(false);
                     onCloseAll();
                   }}
                 >
-                  Закрыть все
+                  {translate('tabs.closeAllShort')}
                 </button>
               </div>
               {tabs.length > 8 && (
                 <input
                   className="workspace-tab-search"
-                  aria-label="Найти открытую вкладку"
-                  placeholder="Найти вкладку…"
+                  aria-label={translate('tabs.find')}
+                  placeholder={translate('tabs.placeholder')}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   autoFocus
@@ -353,7 +361,7 @@ export function WorkspaceTabs({
               <div className="workspace-list-items">
                 {tabs
                   .filter((entry) =>
-                    (entry.title + ' ' + workspaceTitle(entry.route))
+                    (entry.title + ' ' + workspaceTitle(entry.route, locale))
                       .toLocaleLowerCase()
                       .includes(query.trim().toLocaleLowerCase()),
                   )
@@ -374,18 +382,18 @@ export function WorkspaceTabs({
                     >
                       <span className="workspace-list-title">
                         {entry.title}
-                        {workspaceTitle(entry.route) !== entry.title && (
-                          <small>{workspaceTitle(entry.route)}</small>
+                        {workspaceTitle(entry.route, locale) !== entry.title && (
+                          <small>{workspaceTitle(entry.route, locale)}</small>
                         )}
                       </span>
                       {active === entry.id && <span aria-hidden="true">✓</span>}
                     </button>
                   ))}
                 {!tabs.some((entry) =>
-                  (entry.title + ' ' + workspaceTitle(entry.route))
+                  (entry.title + ' ' + workspaceTitle(entry.route, locale))
                     .toLocaleLowerCase()
                     .includes(query.trim().toLocaleLowerCase()),
-                ) && <p className="workspace-search-empty">Вкладки не найдены</p>}
+                ) && <p className="workspace-search-empty">{translate('tabs.empty')}</p>}
               </div>
             </div>
           )}
@@ -397,7 +405,7 @@ export function WorkspaceTabs({
             ref={contextNode}
             className="workspace-context-menu"
             role="menu"
-            aria-label="Действия с вкладками"
+            aria-label={translate('tabs.actions')}
             tabIndex={-1}
             style={{ left: context.x, top: context.y }}
           >
@@ -405,13 +413,13 @@ export function WorkspaceTabs({
               type="button"
               role="menuitem"
               disabled={busy}
-              title={busy ? 'Дождитесь завершения сохранения' : undefined}
+              title={busy ? translate('tabs.wait') : undefined}
               onClick={() => {
                 setContext(null);
                 onCloseAll();
               }}
             >
-              Закрыть все вкладки
+              {translate('tabs.closeAll')}
             </button>
           </div>,
           document.body,

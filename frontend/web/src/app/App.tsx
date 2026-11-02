@@ -35,6 +35,7 @@ import {
   openWorkspace,
   replaceWorkspace,
   workspaceId,
+  localizedWorkspaceTitle,
   moveWorkspace,
   restoreWorkspaces,
   initialWorkspaceRoute,
@@ -62,7 +63,11 @@ import { usePreferencesSession } from '../features/preferences/UserPreferences';
 import { initialThemePreference } from '../../../shared/theme/theme';
 import { ThemeControl } from '../features/appearance/ThemeControl';
 
+import { useLocalization } from '../features/localization/Localization';
+import { LanguageControl } from '../features/localization/LanguageControl';
+
 export function App() {
+  const { translate, locale } = useLocalization();
   const [session, setSession] = usePreferencesSession();
   const [tab, setTab] = useState<
     | 'home'
@@ -84,7 +89,7 @@ export function App() {
   const shipmentColumns: RegistryColumn<Shipment>[] = [
     {
       id: 'number',
-      label: 'Поставка',
+      label: translate('field.shipment'),
       width: 180,
       required: true,
       sort: 'number',
@@ -100,7 +105,7 @@ export function App() {
     },
     {
       id: 'shipment_date',
-      label: 'Дата поставки',
+      label: translate('field.shipmentDate'),
       width: 190,
       sort: 'shipment_date',
       render: (item) =>
@@ -109,20 +114,20 @@ export function App() {
     {
       id: 'customer',
       filterFields: ['customer_id'],
-      label: 'Клиент',
+      label: translate('field.customer'),
       width: 280,
       render: (item) => customerName(item.customer_id),
     },
     {
       id: 'cargo_description',
-      label: 'Груз',
+      label: translate('field.cargo'),
       width: 340,
       sort: 'cargo_description',
       render: (item) => item.cargo_description || '—',
     },
     {
       id: 'status',
-      label: 'Статус',
+      label: translate('field.status'),
       width: 180,
       sort: 'status',
       render: (item) => <span className="badge">{item.status || '—'}</span>,
@@ -264,8 +269,8 @@ export function App() {
   }, []);
   useEffect(() => {
     const current = workspaces.find((entry) => entry.id === activeWorkspace);
-    document.title = `${current?.title ?? 'Рабочее пространство'} · Broker`;
-  }, [activeWorkspace, workspaces]);
+    document.title = `${current ? localizedWorkspaceTitle(current, locale) : translate('workspace.title')} · Broker`;
+  }, [activeWorkspace, workspaces, locale]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [navigationPinned, setNavigationPinned] = useState(() => {
     try {
@@ -469,18 +474,18 @@ export function App() {
     return (
       <div className="login">
         <Brand />
-        <p>Открываем рабочее пространство…</p>
+        <p>{translate('login.opening')}</p>
       </div>
     );
   if (!session)
     return (
       <div className="login">
         <Brand />
-        <h1>Логистика начинается здесь</h1>
-        <p>Поставки, позиции и перевозки в одном рабочем пространстве.</p>
+        <h1>{translate('login.title')}</h1>
+        <p>{translate('login.description')}</p>
         <a
           className="primary"
-          href={`/auth/login?theme=${initialThemePreference()}`}
+          href={`/auth/login?theme=${initialThemePreference()}&language=${locale}`}
           onClick={() => {
             try {
               sessionStorage.setItem('broker:login-return', location.hash.slice(1));
@@ -489,7 +494,7 @@ export function App() {
             }
           }}
         >
-          Войти в Broker →
+          {translate('login.signIn')}
         </a>
         {notice && <p role="alert">{notice}</p>}
       </div>
@@ -501,9 +506,11 @@ export function App() {
           <Brand />
           <button
             className="navigation-pin"
-            aria-label={navigationPinned ? 'Открепить меню' : 'Закрепить меню'}
+            aria-label={
+              navigationPinned ? translate('workspace.unpin') : translate('workspace.pin')
+            }
             aria-pressed={navigationPinned}
-            title={navigationPinned ? 'Открепить меню' : 'Закрепить меню'}
+            title={navigationPinned ? translate('workspace.unpin') : translate('workspace.pin')}
             onClick={() => {
               const next = !navigationPinned;
               setNavigationPinned(next);
@@ -530,11 +537,11 @@ export function App() {
             </svg>
           </button>
         </div>
-        <span className="nav-label">РАБОЧЕЕ ПРОСТРАНСТВО</span>
-        <nav aria-label="Разделы">
+        <span className="nav-label">{translate('workspace.title')}</span>
+        <nav aria-label={translate('workspace.sections')}>
           <button
-            aria-label="Поставки"
-            title="Поставки"
+            aria-label={translate('nav.shipments')}
+            title={translate('nav.shipments')}
             aria-current={tab === 'shipments' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/shipments';
@@ -543,11 +550,11 @@ export function App() {
             <span className="navigation-icon" aria-hidden="true">
               ▣
             </span>{' '}
-            <span className="navigation-text">Поставки</span>
+            <span className="navigation-text">{translate('nav.shipments')}</span>
           </button>
           <button
-            aria-label="Перевозки"
-            title="Перевозки"
+            aria-label={translate('nav.transportations')}
+            title={translate('nav.transportations')}
             aria-current={tab === 'transportations' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/transportations';
@@ -556,11 +563,11 @@ export function App() {
             <span className="navigation-icon" aria-hidden="true">
               ⇄
             </span>{' '}
-            <span className="navigation-text">Перевозки</span>
+            <span className="navigation-text">{translate('nav.transportations')}</span>
           </button>
           <button
-            aria-label="Контрагенты"
-            title="Контрагенты"
+            aria-label={translate('nav.counterparties')}
+            title={translate('nav.counterparties')}
             aria-current={tab === 'counterparties' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/counterparties';
@@ -569,11 +576,11 @@ export function App() {
             <span className="navigation-icon" aria-hidden="true">
               ▤
             </span>{' '}
-            <span className="navigation-text">Контрагенты</span>
+            <span className="navigation-text">{translate('nav.counterparties')}</span>
           </button>
           <button
-            aria-label="Договоры"
-            title="Договоры"
+            aria-label={translate('nav.contracts')}
+            title={translate('nav.contracts')}
             aria-current={tab === 'contracts' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/contracts';
@@ -582,14 +589,22 @@ export function App() {
             <span className="navigation-icon" aria-hidden="true">
               ▧
             </span>{' '}
-            <span className="navigation-text">Договоры</span>
+            <span className="navigation-text">{translate('nav.contracts')}</span>
           </button>
           {session.permissions.includes('finance.read_payments') &&
             (['receipts', 'disbursements'] as const).map((section) => (
               <button
                 key={section}
-                aria-label={section === 'receipts' ? 'Поступления' : 'Списания'}
-                title={section === 'receipts' ? 'Поступления' : 'Списания'}
+                aria-label={
+                  section === 'receipts'
+                    ? translate('nav.receipts')
+                    : translate('nav.disbursements')
+                }
+                title={
+                  section === 'receipts'
+                    ? translate('nav.receipts')
+                    : translate('nav.disbursements')
+                }
                 aria-current={tab === section ? 'page' : undefined}
                 onClick={() => {
                   location.hash = `/${section}`;
@@ -599,7 +614,9 @@ export function App() {
                   {section === 'receipts' ? '↓' : '↑'}
                 </span>
                 <span className="navigation-text">
-                  {section === 'receipts' ? 'Поступления' : 'Списания'}
+                  {section === 'receipts'
+                    ? translate('nav.receipts')
+                    : translate('nav.disbursements')}
                 </span>
               </button>
             ))}
@@ -607,8 +624,16 @@ export function App() {
             (['incoming', 'outgoing'] as const).map((direction) => (
               <button
                 key={direction}
-                aria-label={direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
-                title={direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
+                aria-label={
+                  direction === 'incoming'
+                    ? translate('nav.incomingInvoices')
+                    : translate('nav.outgoingInvoices')
+                }
+                title={
+                  direction === 'incoming'
+                    ? translate('nav.incomingInvoices')
+                    : translate('nav.outgoingInvoices')
+                }
                 aria-current={tab === `${direction}-invoices` ? 'page' : undefined}
                 onClick={() => {
                   location.hash = `/${direction}-invoices`;
@@ -618,14 +643,16 @@ export function App() {
                   {direction === 'incoming' ? '↙' : '↗'}
                 </span>
                 <span className="navigation-text">
-                  {direction === 'incoming' ? 'Входящие счета' : 'Исходящие счета'}
+                  {direction === 'incoming'
+                    ? translate('nav.incomingInvoices')
+                    : translate('nav.outgoingInvoices')}
                 </span>
               </button>
             ))}
           {session.permissions.includes('finance.read_service_charges') && (
             <button
-              aria-label="Услуги"
-              title="Услуги"
+              aria-label={translate('nav.serviceCharges')}
+              title={translate('nav.serviceCharges')}
               aria-current={tab === 'service-charges' ? 'page' : undefined}
               onClick={() => {
                 location.hash = '/service-charges';
@@ -634,12 +661,12 @@ export function App() {
               <span className="navigation-icon" aria-hidden="true">
                 ≡
               </span>
-              <span className="navigation-text">Услуги</span>
+              <span className="navigation-text">{translate('nav.serviceCharges')}</span>
             </button>
           )}
           <button
-            aria-label="Финансовые метки"
-            title="Финансовые метки"
+            aria-label={translate('nav.financialLabels')}
+            title={translate('nav.financialLabels')}
             aria-current={tab === 'financial-labels' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/financial-labels';
@@ -648,7 +675,7 @@ export function App() {
             <span className="navigation-icon" aria-hidden="true">
               ₽
             </span>{' '}
-            <span className="navigation-text">Финансовые метки</span>
+            <span className="navigation-text">{translate('nav.financialLabels')}</span>
           </button>
         </nav>
         <div className="profile">
@@ -659,20 +686,24 @@ export function App() {
             <strong title={session.display_name || session.subject}>
               {profileName(session.display_name || session.subject)}
             </strong>
-            <button onClick={() => void logout()}>Выйти</button>
+            <button onClick={() => void logout()}>{translate('action.logout')}</button>
           </div>
         </div>
       </aside>
       <main>
         <header>
-          <span>Операционный учёт</span>
+          <span>{translate('workspace.operations')}</span>
           <div className="header-tools">
-            <span className="environment">Broker / Рабочее пространство</span>
+            <span className="environment">Broker / {translate('workspace.title')}</span>
+            <LanguageControl />
             <ThemeControl />
           </div>
         </header>
         <WorkspaceTabs
-          tabs={workspaces}
+          tabs={workspaces.map((entry) => ({
+            ...entry,
+            title: localizedWorkspaceTitle(entry, locale),
+          }))}
           active={activeWorkspace}
           onMove={(source, target, side) =>
             setWorkspaces((old) => moveWorkspace(old, source, target, side))
@@ -704,11 +735,17 @@ export function App() {
           >
             <div className="page-heading">
               <div>
-                <h1>{tab === 'shipments' ? 'Поставки' : 'Перевозки'}</h1>
+                <h1>
+                  {tab === 'shipments'
+                    ? translate('nav.shipments')
+                    : translate('nav.transportations')}
+                </h1>
                 <span className="registry-count" role="status">
                   {loading
-                    ? 'Загрузка…'
-                    : `Загружено: ${tab === 'shipments' ? shipments.length : transportations.length}`}
+                    ? translate('common.loading')
+                    : translate('common.loaded', {
+                        count: tab === 'shipments' ? shipments.length : transportations.length,
+                      })}
                 </span>
               </div>
               <div className="actions">
@@ -716,7 +753,7 @@ export function App() {
                   {...(tab === 'shipments' ? shipmentColumnState : transportationColumnState)}
                 />
                 <button disabled={loading} onClick={() => void load()}>
-                  Обновить
+                  {translate('action.refresh')}
                 </button>
                 {tab === 'shipments' && write && (
                   <button
@@ -725,7 +762,7 @@ export function App() {
                       location.hash = '/shipments/new/' + crypto.randomUUID();
                     }}
                   >
-                    ＋ Создать поставку
+                    {translate('action.createShipment')}
                   </button>
                 )}
               </div>
@@ -777,7 +814,11 @@ export function App() {
               {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
                 <div className="empty">
                   <span>▣</span>
-                  <h2>{tab === 'shipments' ? 'Поставки не найдены' : 'Перевозки не найдены'}</h2>
+                  <h2>
+                    {tab === 'shipments'
+                      ? translate('empty.shipments')
+                      : translate('empty.transportations')}
+                  </h2>
                   <p>
                     {tab === 'shipments'
                       ? 'Измените фильтры или создайте поставку.'

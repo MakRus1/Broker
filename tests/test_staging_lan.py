@@ -217,7 +217,7 @@ class LanTest(unittest.TestCase):
                 'staging_lan.sync_keycloak'
             ) as sync:
                 staging.apply(state, 'test-context', [], True)
-            initialize.assert_called_once_with(staging.ROOT, state, 'test-context')
+            initialize.assert_called_once_with(staging.ROOT, state, 'test-context', environment='staging')
             identity_setup.assert_called_once()
             sync.assert_called_once_with(
                 'test-context',

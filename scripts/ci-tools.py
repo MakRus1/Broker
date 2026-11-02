@@ -58,7 +58,8 @@ GENERATOR_TESTS = {
 }
 INFRASTRUCTURE = (
     'scripts/staging*',
-    'scripts/deployment.py',
+    'scripts/openapi_gen/deployment.py',
+    'scripts/platform_resources.py',
     'scripts/migrations.py',
     'scripts/organization_identity.py',
     'scripts/permission_catalog.py',
@@ -68,6 +69,7 @@ INFRASTRUCTURE = (
     'tools/local/*',
     'tools/observability/*',
     'platform.yaml',
+    'services/*/platform.yaml',
     'docker-compose*',
     'services/*/postgresql/schemas/*',
     'services/*/configs/*',
@@ -75,6 +77,9 @@ INFRASTRUCTURE = (
 INFRA_TESTS = {
     'test_deploy_cluster',
     'test_deployment',
+    'test_platform_resources',
+    'test_staging_postgres',
+    'test_staging_resource_monitoring',
     'test_release_images',
     'test_local_seed',
     'test_ci_local',

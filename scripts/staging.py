@@ -48,7 +48,9 @@ def apply(directory, context, services=None, infrastructure=None):
                     continue
                 owner = obj['metadata'].get('labels', {}).get('broker/service')
                 if owner not in services_available:
-                    raise ValueError('Манифест без broker/service: повторите render новой версией')
+                    raise ValueError(
+                        'Манифест без broker/service: повторите render новой версией'
+                    )
                 if owner in services:
                     selected.append(obj)
                     if obj['kind'] == 'Job':
@@ -72,34 +74,31 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
     )
     actual = json.loads(version.stdout)['serverVersion']['gitVersion']
     if actual != plan['kubernetes_version']:
-        raise ValueError(f"Кластер {actual} не соответствует {plan['kubernetes_version']}")
+        raise ValueError(f'Кластер {actual} не соответствует {plan["kubernetes_version"]}')
+    from staging_postgres import install, wait, check_credentials
+
+    ns = ['-n', plan['namespace']]
+    database_owners = (
+        plan['database_owners']
+        if infrastructure
+        else [name for name in plan['database_owners'] if name in services]
+    )
+    databases = [
+        obj
+        for obj in yaml.safe_load_all((directory / 'databases.yaml').read_text())
+        if obj['metadata']['labels']['broker/database'] in database_owners
+    ]
+    check_credentials([*kubectl, *ns], databases)
     previous = subprocess.run(
-        [
-            *kubectl,
-            '-n',
-            plan['namespace'],
-            'get',
-            'secret',
-            'database',
-            '--ignore-not-found',
-            '-o',
-            'json',
-        ],
+        [*kubectl, *ns, 'get', 'statefulset', 'postgres', '--ignore-not-found', '-o', 'json'],
         check=True,
         text=True,
         capture_output=True,
     )
-    if previous.stdout.strip():
-        old_password = base64.b64decode(json.loads(previous.stdout)['data']['password']).decode()
-        database_secret = next(
-            obj
-            for obj in yaml.safe_load_all((directory / 'infrastructure.yaml').read_text())
-            if obj['kind'] == 'Secret' and obj['metadata']['name'] == 'database'
+    if previous.stdout.strip() and json.loads(previous.stdout)['spec'].get('replicas', 1):
+        raise ValueError(
+            'Сначала выполните scripts/staging_postgres_migrate.py: существующая БД ещё общая'
         )
-        if old_password != base64.b64decode(database_secret['data']['password']).decode():
-            raise ValueError(
-                'Пароль существующей БД отличается: восстановите credentials.json; автоматическая ротация запрещена'
-            )
     if infrastructure:
         run(
             'apply',
@@ -109,10 +108,11 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             '-f',
             str(directory / 'namespace.yaml'),
         )
+        install(ROOT, kubectl, environment=plan['environment'])
         if plan.get('lan'):
             from staging_lan import initialize
 
-            initialize(ROOT, directory, context)
+            initialize(ROOT, directory, context, environment=plan['environment'])
         run(
             'apply',
             '--server-side',
@@ -122,7 +122,14 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             str(directory / 'infrastructure.yaml'),
         )
     ns = ['-n', plan['namespace']]
-    run(*ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s')
+    if databases:
+        subprocess.run(
+            [*kubectl, 'apply', '--server-side', '--field-manager=broker-staging', '-f', '-'],
+            input=yaml.safe_dump_all(databases, sort_keys=False),
+            text=True,
+            check=True,
+        )
+    wait([*kubectl, *ns], database_owners)
     run(*ns, 'rollout', 'status', 'deployment/keycloak', '--timeout=300s')
     if infrastructure and plan.get('lan'):
         from staging_lan import NAMES, sync_keycloak
@@ -135,6 +142,7 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             '-f',
             str(directory / 'monitoring.yaml'),
         )
+        run(*ns, 'rollout', 'status', 'deployment/kube-state-metrics', '--timeout=300s')
         sync_keycloak(context, plan['namespace'], plan['admin_origin'], plan['web_origin'])
         for name in NAMES:
             run(*ns, 'rollout', 'status', f'deployment/{name}', '--timeout=300s')
@@ -173,14 +181,16 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         list(yaml.safe_load_all(paths['services'].read_text())) if paths['services'] else []
     )
     permission_images = {
-        obj['metadata']['name'].replace('-', '_'): obj['spec']['template']['spec']['containers'][0][
-            'image'
-        ]
+        obj['metadata']['name'].replace('-', '_'): obj['spec']['template']['spec'][
+            'containers'
+        ][0]['image']
         for obj in deployments
         if obj and obj['kind'] == 'Deployment'
     }
     for owner in sorted(services):
-        prepare_permissions([*kubectl, *ns], owner, permission_images[owner], permission_entries)
+        prepare_permissions(
+            [*kubectl, *ns], owner, permission_images[owner], permission_entries
+        )
     if paths['services']:
         run(
             'apply',
@@ -191,7 +201,7 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
             str(paths['services']),
         )
     for name in services:
-        run(*ns, 'rollout', 'status', f"deployment/{name.replace('_', '-')}", '--timeout=300s')
+        run(*ns, 'rollout', 'status', f'deployment/{name.replace("_", "-")}', '--timeout=300s')
     for owner in sorted(services):
         finish_permissions([*kubectl, *ns], owner)
     if plan.get('lan'):
@@ -217,6 +227,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     render_parser = commands.add_parser('render')
+    render_parser.add_argument('--environment', default='staging')
     render_parser.add_argument('--release', type=Path, required=True)
     render_parser.add_argument('--output', type=Path, default=ROOT / '.staging')
     apply_parser = commands.add_parser('apply')
@@ -236,8 +247,10 @@ def main():
         ).stdout.strip()
         if release.get('revision') != revision:
             raise ValueError('Checkout репозитория не соответствует revision в release.json')
-        render(release, args.output)
-        print(f'Манифесты подготовлены: {args.output}. Каталог содержит секреты; не коммитьте его.')
+        render(release, args.output, environment=args.environment)
+        print(
+            f'Манифесты подготовлены: {args.output}. Каталог содержит секреты; не коммитьте его.'
+        )
     else:
         if args.infra_only and args.service:
             parser.error('--infra-only несовместим с --service')

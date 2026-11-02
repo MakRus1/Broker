@@ -62,13 +62,14 @@ class ClusterCheckTest(unittest.TestCase):
                         'kubernetes_version': 'v-test',
                         'namespace': 'test',
                         'jobs': [],
+                        'database_owners': [],
                     }
                 )
             )
             (directory / 'release.json').write_text(json.dumps({'images': {}, 'revision': 'test'}))
-            for phase in ['namespace', 'infrastructure', 'migrations', 'services']:
+            for phase in ['namespace', 'databases', 'infrastructure', 'migrations', 'services']:
                 (directory / (phase + '.yaml')).write_text('')
-            with patch.object(module.subprocess, 'run', side_effect=run):
+            with patch.object(module.subprocess, 'run', side_effect=run), patch.object(module, 'install'):
                 module.check(directory, runtime=True)
         docker_run = calls[0]
         self.assertIn('--cgroupns=host', docker_run)

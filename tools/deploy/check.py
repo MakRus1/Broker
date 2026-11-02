@@ -8,6 +8,10 @@ from pathlib import Path
 import subprocess
 import time
 import uuid
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+from staging_postgres import install, wait
 
 K3S_IMAGE = 'rancher/k3s:v1.36.5-k3s1@sha256:057cfd5a9d51b89f1f0ee139c28d5d5fdd5aa7ddeac2742a0ba90c6dbc0329bb'
 
@@ -23,7 +27,11 @@ def wait_for_runtime_node(command, timeout=120):
             remaining = max(1, int(deadline - time.monotonic()))
             subprocess.run(
                 [
-                    *command, 'wait', '--for=condition=Ready', 'node', '--all',
+                    *command,
+                    'wait',
+                    '--for=condition=Ready',
+                    'node',
+                    '--all',
                     f'--timeout={remaining}s',
                 ],
                 check=True,
@@ -75,9 +83,17 @@ def check(directory, runtime=False):
         version = subprocess.run(
             [*command, 'version', '-o', 'json'], check=True, text=True, capture_output=True
         )
-        if json.loads(version.stdout)['serverVersion']['gitVersion'] != plan['kubernetes_version']:
+        if (
+            json.loads(version.stdout)['serverVersion']['gitVersion']
+            != plan['kubernetes_version']
+        ):
             raise RuntimeError('Версия проверочного K3s отличается от platform.yaml')
-        for phase in ('namespace', 'infrastructure', 'migrations', 'services'):
+        install(
+            Path(__file__).resolve().parents[2],
+            command,
+            environment=plan.get('environment', 'staging'),
+        )
+        for phase in ('namespace', 'databases', 'infrastructure', 'migrations', 'services'):
             args = [*command, 'apply', *apply_flags, '-f', '-']
             if phase != 'namespace':
                 args.append('--dry-run=server')
@@ -85,7 +101,7 @@ def check(directory, runtime=False):
         if runtime:
             release = json.loads((directory / 'release.json').read_text())
             tags = [
-                f"ghcr.io/makrus1/broker-{service.replace('_', '-')}:{release['revision']}"
+                f'ghcr.io/makrus1/broker-{service.replace("_", "-")}:{release["revision"]}'
                 for service in release['images']
             ]
             with tempfile.TemporaryFile() as archive:
@@ -111,7 +127,12 @@ def check(directory, runtime=False):
                 input=(directory / 'infrastructure.yaml').read_bytes(),
                 check=True,
             )
-            run(*ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s')
+            subprocess.run(
+                [*command, 'apply', *apply_flags, '-f', '-'],
+                input=(directory / 'databases.yaml').read_bytes(),
+                check=True,
+            )
+            wait([*command, *ns], plan['database_owners'])
             run(*ns, 'rollout', 'status', 'deployment/keycloak', '--timeout=300s')
             subprocess.run(
                 [*command, 'apply', *apply_flags, '-f', '-'],

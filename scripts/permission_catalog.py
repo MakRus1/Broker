@@ -68,16 +68,18 @@ COMMIT;'''
 
 
 def execute(kubectl, sql):
+    from staging_postgres import primary
+
     subprocess.run(
         [
             *kubectl,
             'exec',
             '-i',
-            'postgres-0',
+            primary(kubectl, 'organizations'),
             '--',
             'psql',
             '-U',
-            'broker',
+            'postgres',
             '-d',
             'organizations',
             '-v',

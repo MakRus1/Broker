@@ -34,6 +34,8 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
         raise ValueError('Каталог копии уже существует: перезапись запрещена')
     temporary = Path(tempfile.mkdtemp(prefix='.backup-', dir=output.parent))
 
+    current_pod = 'postgres-0'
+
     def command(*args):
         cmd = [
             'kubectl',
@@ -42,7 +44,7 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
             '-n',
             namespace,
             'exec',
-            'postgres-0',
+            current_pod,
             '-c',
             'postgres',
             '--',
@@ -55,29 +57,100 @@ def backup(output, context, *, host=None, namespace='broker-staging'):
 
     try:
         files = {}
-        databases = subprocess.check_output(
-            command(
-                'psql',
-                '-U',
-                'broker',
-                '-d',
-                'postgres',
-                '-At',
-                '-c',
-                "SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn AND datname <> 'postgres' ORDER BY datname",
-            ),
-            text=True,
-        ).splitlines()
+        query = ['kubectl', '--context', context, '-n', namespace, 'get', 'pods', '-o', 'json']
+        if host:
+            query = ['ssh', '-T', host, 'KUBECONFIG="$HOME/.kube/config" ' + shlex.join(query)]
+        pods = json.loads(subprocess.check_output(query, text=True))['items']
+        targets = {}
+        clusters = set()
+        legacy = any(
+            pod['metadata']['name'] == 'postgres-0'
+            and pod.get('status', {}).get('phase') == 'Running'
+            for pod in pods
+        )
+        for pod in pods if not legacy else []:
+            labels = pod['metadata'].get('labels', {})
+            cluster = labels.get('cnpg.io/cluster')
+            if not cluster:
+                continue
+            clusters.add(cluster)
+            if labels.get('cnpg.io/instanceRole') != 'primary':
+                continue
+            if not any(
+                c['type'] == 'Ready' and c['status'] == 'True'
+                for c in pod.get('status', {}).get('conditions', [])
+            ):
+                raise ValueError(f'{cluster}: primary не готов для резервного копирования')
+            owner = cluster.removesuffix('-postgres').replace('-', '_')
+            if not re.fullmatch(r'[a-z][a-z0-9_]{0,62}', owner) or owner in targets:
+                raise ValueError('Неоднозначный владелец PostgreSQL primary')
+            targets[owner] = pod['metadata']['name']
+        if clusters != {owner.replace('_', '-') + '-postgres' for owner in targets}:
+            raise ValueError(
+                'Не все PostgreSQL-кластеры имеют primary; частичная копия запрещена'
+            )
+        if targets:
+            query = [
+                'kubectl',
+                '--context',
+                context,
+                '-n',
+                namespace,
+                'get',
+                'clusters.postgresql.cnpg.io',
+                '-o',
+                'json',
+            ]
+            if host:
+                query = [
+                    'ssh',
+                    '-T',
+                    host,
+                    'KUBECONFIG="$HOME/.kube/config" ' + shlex.join(query),
+                ]
+            expected = {
+                obj['metadata']['name']
+                for obj in json.loads(subprocess.check_output(query, text=True))['items']
+            }
+            if expected != clusters:
+                raise ValueError(
+                    'Не у всех PostgreSQL-кластеров есть pod; частичная копия запрещена'
+                )
+            databases = sorted(targets)
+        else:
+            if not legacy:
+                raise ValueError('Не найден работающий PostgreSQL для резервного копирования')
+            databases = subprocess.check_output(
+                command(
+                    'psql',
+                    '-U',
+                    'broker',
+                    '-d',
+                    'postgres',
+                    '-At',
+                    '-c',
+                    "SELECT datname FROM pg_database WHERE NOT datistemplate AND datallowconn AND datname <> 'postgres' ORDER BY datname",
+                ),
+                text=True,
+            ).splitlines()
         if not databases or any(
             not re.fullmatch(r'[a-z][a-z0-9_]{0,62}', name) for name in databases
         ):
             raise ValueError('Неверный или пустой список БД staging')
         for database in databases:
+            current_pod = targets.get(database, 'postgres-0')
             path = temporary / f'{database}.dump'
             with path.open('xb') as target:
                 os.chmod(path, 0o600)
                 subprocess.run(
-                    command('pg_dump', '-U', 'broker', '-Fc', '--no-password', database),
+                    command(
+                        'pg_dump',
+                        '-U',
+                        'postgres' if targets else 'broker',
+                        '-Fc',
+                        '--no-password',
+                        database,
+                    ),
                     check=True,
                     stdout=target,
                 )
@@ -173,7 +246,9 @@ def verify(directory):
                     stdin=source,
                 )
     finally:
-        subprocess.run(['docker', 'rm', '-f', '-v', name], stdout=subprocess.DEVNULL, check=False)
+        subprocess.run(
+            ['docker', 'rm', '-f', '-v', name], stdout=subprocess.DEVNULL, check=False
+        )
 
 
 def verify_cluster(directory, context, namespace, image):

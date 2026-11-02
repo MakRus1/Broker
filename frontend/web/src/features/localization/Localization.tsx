@@ -20,11 +20,18 @@ const Context = createContext({
 export const useLocalization = () => useContext(Context);
 export function Localization({ children }: { children: ReactNode }) {
   const [session] = usePreferencesSession();
-  const [preference, setPreference] = useRegistryPreference(
+  const [devicePreference, setDevicePreference] = useState(initialLanguagePreference);
+  const [profilePreference, setProfilePreference] = useRegistryPreference(
     preferenceKey(session?.subject ?? '', 'appearance', 'language'),
-    initialLanguagePreference(),
+    devicePreference,
     restoreLanguage,
   );
+  const preference = session ? profilePreference : devicePreference;
+  function setPreference(value: string) {
+    const next = restoreLanguage(value);
+    setDevicePreference(next);
+    if (session) setProfilePreference(next);
+  }
   const [languages, setLanguages] = useState(() => navigator.languages);
   useEffect(() => {
     const changed = () => setLanguages(navigator.languages);
@@ -34,6 +41,7 @@ export function Localization({ children }: { children: ReactNode }) {
   const locale = resolveLocale(preference, languages);
   useEffect(() => {
     document.documentElement.lang = locale;
+    setDevicePreference(preference);
     try {
       localStorage.setItem('broker:language-preview', preference);
     } catch {
@@ -45,7 +53,7 @@ export function Localization({ children }: { children: ReactNode }) {
       value={{
         locale,
         preference,
-        setPreference: (value) => setPreference(restoreLanguage(value)),
+        setPreference,
         translate: (key, values) => translate(locale, key, values),
       }}
     >

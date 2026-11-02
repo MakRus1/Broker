@@ -31,7 +31,7 @@ SET
 FROM (SELECT ($2::public.service_charge_v1).*) AS value
 WHERE charge.organization_id = $1::UUID
     AND charge.id = value.id
-    AND charge.shipment_id = value.shipment_id
+    AND charge.shipment_id IS NOT DISTINCT FROM value.shipment_id
     AND charge.transportation_id IS NOT DISTINCT FROM value.transportation_id
     AND charge.revision = $3::BIGINT
 RETURNING ROW(

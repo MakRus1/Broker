@@ -34,6 +34,7 @@ export function Dialog({
       {createPortal(
         <dialog
           ref={ref}
+          onSubmit={(event) => event.stopPropagation()}
           className={className}
           aria-labelledby={titleId}
           onCancel={(event) => {
@@ -64,7 +65,7 @@ export function Dialog({
         >
           <div className="dialog-heading">
             <h2 id={titleId}>{title}</h2>
-            <button aria-label="Закрыть" onClick={close}>
+            <button type="button" aria-label="Закрыть" onClick={close}>
               ×
             </button>
           </div>

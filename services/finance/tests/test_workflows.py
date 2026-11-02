@@ -64,3 +64,21 @@ async def test_invoice_number_masks_and_independent_atomic_sequences(api,invoice
     assert (await create(date='2027-01-01'))['number'] == 'OUT-1/270101'
     await api.post(path+'update',{**rules,'outgoing_number_template':'bad','expected_revision':1},expected=400)
     await api.post(path+'update',rules,expected=409)
+
+
+async def test_standalone_service_can_be_edited_after_creating_its_invoice(api, charge, invoice_references):
+    body = await charge(shipment_id=None, transportation_id=None, vat_mode='exempt', vat_rate_basis_points=None)
+    saved = (await api.post('/api/v1/service-charges/save', body))['charge']
+    document = invoice([saved['id']])
+    await api.post('/api/v1/invoices/save', document)
+    updated = (await api.post('/api/v1/service-charges/save', {
+        **body, 'expected_revision': saved['revision'], 'price_minor': 25000,
+    }))['charge']
+    assert updated['revision'] == saved['revision'] + 1
+    result = await api.post('/api/v1/invoices/get', {'id': document['id']})
+    assert result['charges'] == [updated]
+    assert result['invoice']['total_minor'] == updated['invoice_total_minor']
+    # Защита от настоящего конфликта ревизий сохраняется.
+    await api.post('/api/v1/service-charges/save', {
+        **body, 'expected_revision': saved['revision'],
+    }, expected=409)

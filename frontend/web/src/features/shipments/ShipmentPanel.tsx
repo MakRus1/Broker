@@ -348,7 +348,11 @@ export function ShipmentPanel({
                     </button>
                   )}
                   {write && (
-                    <button disabled={loading} onClick={() => setForm(item)}>
+                    <button
+                      data-workflow-plan-create
+                      disabled={loading}
+                      onClick={() => setForm(item)}
+                    >
                       {translate('shipment.createTransportationsArrow')}
                     </button>
                   )}

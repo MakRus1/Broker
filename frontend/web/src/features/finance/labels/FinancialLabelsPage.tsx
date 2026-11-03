@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
   RecordSection,
@@ -274,9 +275,7 @@ export function FinancialLabelsPage({
       setDraft(draftOf(result.label));
       onSaved(result.label);
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : translate('forms.couldNotSaveTheFinancialLabel'),
-      );
+      setFailure(saveErrorMessage(error, translate('forms.couldNotSaveTheFinancialLabel')));
       onError(error);
     } finally {
       setBusy(false);
@@ -295,9 +294,7 @@ export function FinancialLabelsPage({
       setItems((old) => [...old, ...result.items]);
       setCursor(result.next_cursor);
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : translate('forms.couldNotLoadFinancialLabels'),
-      );
+      setFailure(saveErrorMessage(error, translate('forms.couldNotLoadFinancialLabels')));
       onError(error);
     } finally {
       setLoading(false);
@@ -493,7 +490,7 @@ export function FinancialLabelsPage({
             </label>
           </RecordSection>
           <RecordActions
-            error={failure}
+            error={failure || validation.message}
             status={
               dirty
                 ? translate('shipment.unsaved')

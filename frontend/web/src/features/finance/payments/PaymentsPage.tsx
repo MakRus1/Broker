@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
   RecordSection,
@@ -316,7 +317,7 @@ export function PaymentsPage({
       onTitle(result.payment.number);
       onSaved(result.payment);
     } catch (e) {
-      setFailure((e as Error).message);
+      setFailure(saveErrorMessage(e, translate('errors.request')));
     } finally {
       setBusy(false);
     }
@@ -655,7 +656,7 @@ export function PaymentsPage({
             )}
           </section>
           <RecordActions
-            error={failure}
+            error={failure || validation.message}
             status={
               dirty
                 ? translate('shipment.unsaved')

@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import './bankAccounts.css';
 import { useLocalization } from '../localization/Localization';
@@ -284,7 +285,7 @@ export function BankAccounts({
             </RecordSection>
           </fieldset>
           <RecordActions
-            error={failure}
+            error={failure || validation.message}
             status={
               dirty
                 ? translate('shipment.unsaved')

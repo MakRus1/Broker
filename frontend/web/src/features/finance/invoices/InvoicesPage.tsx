@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
   RecordSection,
@@ -346,7 +347,7 @@ export function InvoicesPage({
       setDraft(undefined);
       onSaved(r.invoice);
     } catch (e) {
-      setFailure((e as Error).message);
+      setFailure(saveErrorMessage(e, translate('errors.request')));
     } finally {
       setBusy(false);
     }
@@ -710,7 +711,7 @@ export function InvoicesPage({
                 </label>
               </RecordSection>
               <RecordActions
-                error={failure}
+                error={failure || validation.message}
                 status={
                   dirty
                     ? translate('shipment.unsaved')

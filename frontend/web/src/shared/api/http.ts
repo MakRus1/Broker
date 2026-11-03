@@ -5,6 +5,7 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public traceId?: string,
+    public code?: string,
   ) {
     super(message);
   }
@@ -34,6 +35,7 @@ export async function request<T>(
       response.status,
       value?.message ?? interfaceText('errors.request'),
       response.headers.get('X-Trace-Id') ?? undefined,
+      typeof value?.error === 'string' ? value.error : undefined,
     );
   }
   return value as T;

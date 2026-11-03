@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { CalendarDate } from '../../shared/dates/CalendarDate';
 import { useLocalization } from '../localization/Localization';
@@ -364,7 +365,7 @@ function ShipmentCard({
         setEditing(false);
       } else props.onCreated(result.shipment);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : translate('shipment.saveFailed'));
+      setFailure(saveErrorMessage(error, translate('shipment.saveFailed')));
       props.onError(error);
     } finally {
       setBusy(false);
@@ -828,7 +829,7 @@ function ShipmentCard({
       )}
       {write && editing && (
         <RecordActions
-          error={failure}
+          error={failure || validation.message}
           status={
             dirty
               ? translate('shipment.unsaved')

@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../../shared/forms/saveError';
 import { DateInput } from '../../../shared/dates/DateInput';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
 import { RecordSection, RecordActions } from '../../../shared/ui/record/RecordLayout';
@@ -221,7 +222,7 @@ export function ServiceChargeEditor({
       setInvoiceSelection(undefined);
       onSaved(saved.charge);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : translate('finance.saveServiceFailed'));
+      setFailure(saveErrorMessage(error, translate('finance.saveServiceFailed')));
     } finally {
       setBusy(false);
     }
@@ -518,7 +519,7 @@ export function ServiceChargeEditor({
           </RecordSection>
         </fieldset>
         <RecordActions
-          error={failure}
+          error={failure || validation.message}
           status={
             readOnly
               ? translate('record.readOnly')

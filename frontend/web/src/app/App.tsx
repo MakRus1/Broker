@@ -125,11 +125,17 @@ export function App() {
     const old = lastWorkspace.current;
     workspaceHistory.current = rememberWorkspace(workspaceHistory.current, activeWorkspace);
     if (old !== activeWorkspace) {
-      workspaceScroll.current.set(old, window.scrollY);
       window.scrollTo(0, workspaceScroll.current.get(activeWorkspace) ?? 0);
       lastWorkspace.current = activeWorkspace;
     }
   }, [activeWorkspace]);
+  useEffect(() => {
+    function rememberScroll() {
+      workspaceScroll.current.set(lastWorkspace.current, window.scrollY);
+    }
+    window.addEventListener('scroll', rememberScroll, { passive: true });
+    return () => window.removeEventListener('scroll', rememberScroll);
+  }, []);
   const renameWorkspace = useCallback((id: string, title: string) => {
     setWorkspaces((old) => {
       if (!old.some((tab) => tab.id === id && tab.title !== title)) return old;
@@ -621,6 +627,7 @@ export function App() {
                     onError={error}
                     onUpdate={invalidateShipmentRegistry}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     onCreated={(value) => {
                       const next = `/shipments/${value.id}`;
                       setWorkspaces((old) =>

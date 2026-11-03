@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -318,256 +319,258 @@ export function ServiceChargeEditor({
             <RecordGuide kind="service" />
           </div>
         )}
-        <fieldset disabled={busy || readOnly || !!recovery.candidate}>
-          <RecordSection title={translate('record.identification')}>
-            <div className="record-fields">
-              <ServiceChargeLookup<FinancialLabel>
-                session={session}
-                kind="labels"
-                label={translate('finance.labelRequired')}
-                required
-                value={draft.label_id}
-                name={draft.label_name}
-                disabled={busy}
-                onChange={(label) => {
-                  if (label)
+        <RecordEditorSections>
+          <fieldset disabled={busy || readOnly || !!recovery.candidate}>
+            <RecordSection title={translate('record.identification')}>
+              <div className="record-fields">
+                <ServiceChargeLookup<FinancialLabel>
+                  session={session}
+                  kind="labels"
+                  label={translate('finance.labelRequired')}
+                  required
+                  value={draft.label_id}
+                  name={draft.label_name}
+                  disabled={busy}
+                  onChange={(label) => {
+                    if (label)
+                      setDraft((old) =>
+                        old
+                          ? {
+                              ...old,
+                              label_id: label.id,
+                              label_name: label.name,
+                              unit: label.unit,
+                              currency: label.currency,
+                              vat_mode: label.vat_mode,
+                              rate: formatVatRate(label.vat_rate_basis_points ?? 0),
+                              contract_id: invoice?.contract_id ?? null,
+                              contract_number: invoice?.contract_number ?? null,
+                              ...(invoice || label.direction === 'both'
+                                ? {}
+                                : { direction: label.direction }),
+                            }
+                          : old,
+                      );
+                  }}
+                />
+                <Select
+                  disabled={!!invoice}
+                  label={translate('registryField.direction')}
+                  value={draft.direction}
+                  options={[
+                    { value: 'income', label: translate('registryValue.direction.income') },
+                    { value: 'expense', label: translate('registryValue.direction.expense') },
+                  ]}
+                  onChange={(value) => set('direction', value as ServiceCharge['direction'])}
+                />
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.parties')}>
+              <div className="record-fields">
+                <CustomerSelect
+                  session={session}
+                  items={customers}
+                  value={draft.counterparty_id}
+                  required
+                  label={translate('finance.counterpartyRequired')}
+                  disabled={busy || !!invoice}
+                  onChange={(id) =>
+                    setDraft((old) =>
+                      old
+                        ? { ...old, counterparty_id: id, contract_id: null, contract_number: null }
+                        : old,
+                    )
+                  }
+                />
+                <ServiceChargeLookup<Contract>
+                  session={session}
+                  kind="contracts"
+                  label={translate('registryField.contract_id')}
+                  value={draft.contract_id ?? ''}
+                  name={draft.contract_number ?? ''}
+                  counterparty={draft.counterparty_id}
+                  disabled={busy || !!invoice || !draft.counterparty_id}
+                  onChange={(contract) =>
                     setDraft((old) =>
                       old
                         ? {
                             ...old,
-                            label_id: label.id,
-                            label_name: label.name,
-                            unit: label.unit,
-                            currency: label.currency,
-                            vat_mode: label.vat_mode,
-                            rate: formatVatRate(label.vat_rate_basis_points ?? 0),
-                            contract_id: invoice?.contract_id ?? null,
-                            contract_number: invoice?.contract_number ?? null,
-                            ...(invoice || label.direction === 'both'
-                              ? {}
-                              : { direction: label.direction }),
+                            contract_id: contract?.id ?? null,
+                            contract_number: contract?.number ?? null,
+                            ...(contract ? { invoice_currency: contract.currency } : {}),
                           }
                         : old,
-                    );
-                }}
-              />
-              <Select
-                disabled={!!invoice}
-                label={translate('registryField.direction')}
-                value={draft.direction}
-                options={[
-                  { value: 'income', label: translate('registryValue.direction.income') },
-                  { value: 'expense', label: translate('registryValue.direction.expense') },
-                ]}
-                onChange={(value) => set('direction', value as ServiceCharge['direction'])}
-              />
-            </div>
-          </RecordSection>
-          <RecordSection title={translate('record.parties')}>
-            <div className="record-fields">
-              <CustomerSelect
-                session={session}
-                items={customers}
-                value={draft.counterparty_id}
-                required
-                label={translate('finance.counterpartyRequired')}
-                disabled={busy || !!invoice}
-                onChange={(id) =>
-                  setDraft((old) =>
-                    old
-                      ? { ...old, counterparty_id: id, contract_id: null, contract_number: null }
-                      : old,
-                  )
-                }
-              />
-              <ServiceChargeLookup<Contract>
-                session={session}
-                kind="contracts"
-                label={translate('registryField.contract_id')}
-                value={draft.contract_id ?? ''}
-                name={draft.contract_number ?? ''}
-                counterparty={draft.counterparty_id}
-                disabled={busy || !!invoice || !draft.counterparty_id}
-                onChange={(contract) =>
-                  setDraft((old) =>
-                    old
-                      ? {
-                          ...old,
-                          contract_id: contract?.id ?? null,
-                          contract_number: contract?.number ?? null,
-                          ...(contract ? { invoice_currency: contract.currency } : {}),
-                        }
-                      : old,
-                  )
-                }
-              />
-              {allowInvoiceSelection &&
-                !invoice &&
-                session.permissions.includes('finance.write_invoices') &&
-                !draft.archived && (
-                  <ServiceInvoiceActions
-                    service={draft}
-                    session={session}
-                    selection={invoiceSelection}
-                    current={current}
-                    onSelect={async (selection) => {
-                      const previous = current;
-                      if (previous) {
-                        if (selection) {
-                          const saved = await attachServiceInvoice(
-                            draft.id,
-                            selection,
-                            session,
-                            previous.invoice_id,
-                          );
-                          setCurrent({
-                            invoice_id: saved.invoice.id,
-                            number: saved.invoice.number,
-                            invoice_date: saved.invoice.invoice_date,
-                            direction: saved.invoice.direction,
-                            service_charge_id: draft.id,
-                            read_only: false,
-                          });
-                        } else {
-                          await request('/api/v1/invoices/detach-service-charge', session, {
-                            invoice_id: previous.invoice_id,
-                            service_charge_id: draft.id,
-                          });
-                          setCurrent(undefined);
-                        }
-                        setInvoiceSelection(undefined);
-                      } else setInvoiceSelection(selection);
-                    }}
+                    )
+                  }
+                />
+                {allowInvoiceSelection &&
+                  !invoice &&
+                  session.permissions.includes('finance.write_invoices') &&
+                  !draft.archived && (
+                    <ServiceInvoiceActions
+                      service={draft}
+                      session={session}
+                      selection={invoiceSelection}
+                      current={current}
+                      onSelect={async (selection) => {
+                        const previous = current;
+                        if (previous) {
+                          if (selection) {
+                            const saved = await attachServiceInvoice(
+                              draft.id,
+                              selection,
+                              session,
+                              previous.invoice_id,
+                            );
+                            setCurrent({
+                              invoice_id: saved.invoice.id,
+                              number: saved.invoice.number,
+                              invoice_date: saved.invoice.invoice_date,
+                              direction: saved.invoice.direction,
+                              service_charge_id: draft.id,
+                              read_only: false,
+                            });
+                          } else {
+                            await request('/api/v1/invoices/detach-service-charge', session, {
+                              invoice_id: previous.invoice_id,
+                              service_charge_id: draft.id,
+                            });
+                            setCurrent(undefined);
+                          }
+                          setInvoiceSelection(undefined);
+                        } else setInvoiceSelection(selection);
+                      }}
+                    />
+                  )}
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.calculation')}>
+              <div className="record-fields">
+                <label>
+                  {translate('finance.serviceDateRequired')}
+                  <DateInput
+                    required
+                    disabled={busy}
+                    value={draft.service_date}
+                    onChange={(value) => set('service_date', value)}
                   />
-                )}
-            </div>
-          </RecordSection>
-          <RecordSection title={translate('record.calculation')}>
-            <div className="record-fields">
-              <label>
-                {translate('finance.serviceDateRequired')}
-                <DateInput
-                  required
+                </label>
+                <label>
+                  {translate('finance.quantityRequired')}
+                  <DecimalInput
+                    required
+                    precision={3}
+                    value={draft.quantity}
+                    onChange={(e) => {
+                      e.target.setCustomValidity('');
+                      set('quantity', e.target.value);
+                    }}
+                    onBlur={(e) =>
+                      e.target.setCustomValidity(
+                        (parseFixed(e.target.value, 3, 10000000) ?? 0) > 0
+                          ? ''
+                          : translate('finance.quantityInvalid'),
+                      )
+                    }
+                  />
+                </label>
+                <Select
+                  label={translate('registryField.unit')}
+                  value={draft.unit}
+                  options={Object.entries(financialLabelUnits).map(([value, label]) => ({
+                    value,
+                    label: registryValueLabel('unit', value, locale) ?? label,
+                  }))}
+                  onChange={(value) => set('unit', value as ServiceCharge['unit'])}
+                />
+                <label>
+                  {translate('finance.priceRequired')}
+                  <DecimalInput
+                    required
+                    precision={2}
+                    value={draft.price}
+                    onChange={(e) => {
+                      e.target.setCustomValidity('');
+                      set('price', e.target.value);
+                    }}
+                    onBlur={(e) =>
+                      e.target.setCustomValidity(
+                        parseFixed(e.target.value, 2, 100000000) !== undefined
+                          ? ''
+                          : translate('finance.priceInvalid'),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.currencyAndTax')}>
+              <div className="record-fields">
+                <ServiceExchangeFields
+                  session={session}
                   disabled={busy}
-                  value={draft.service_date}
-                  onChange={(value) => set('service_date', value)}
-                />
-              </label>
-              <label>
-                {translate('finance.quantityRequired')}
-                <DecimalInput
-                  required
-                  precision={3}
-                  value={draft.quantity}
-                  onChange={(e) => {
-                    e.target.setCustomValidity('');
-                    set('quantity', e.target.value);
-                  }}
-                  onBlur={(e) =>
-                    e.target.setCustomValidity(
-                      (parseFixed(e.target.value, 3, 10000000) ?? 0) > 0
-                        ? ''
-                        : translate('finance.quantityInvalid'),
+                  date={draft.service_date}
+                  currency={draft.currency}
+                  invoiceCurrency={draft.invoice_currency}
+                  invoiceCurrencyLocked={!!invoice}
+                  manual={draft.manualExchange}
+                  rate={draft.exchangeValue}
+                  onCurrency={(value) => set('currency', value)}
+                  onInvoiceCurrency={(value) =>
+                    setDraft((old) =>
+                      old
+                        ? {
+                            ...old,
+                            invoice_currency: value,
+                            contract_id: null,
+                            contract_number: null,
+                          }
+                        : old,
                     )
                   }
+                  onManual={(value) => set('manualExchange', value)}
+                  onRate={(value) => set('exchangeValue', value)}
                 />
-              </label>
-              <Select
-                label={translate('registryField.unit')}
-                value={draft.unit}
-                options={Object.entries(financialLabelUnits).map(([value, label]) => ({
-                  value,
-                  label: registryValueLabel('unit', value, locale) ?? label,
-                }))}
-                onChange={(value) => set('unit', value as ServiceCharge['unit'])}
-              />
-              <label>
-                {translate('finance.priceRequired')}
-                <DecimalInput
-                  required
-                  precision={2}
-                  value={draft.price}
-                  onChange={(e) => {
-                    e.target.setCustomValidity('');
-                    set('price', e.target.value);
-                  }}
-                  onBlur={(e) =>
-                    e.target.setCustomValidity(
-                      parseFixed(e.target.value, 2, 100000000) !== undefined
-                        ? ''
-                        : translate('finance.priceInvalid'),
-                    )
-                  }
+                <Select
+                  label={translate('finance.priceMode')}
+                  value={draft.price_mode}
+                  options={[
+                    { value: 'net', label: translate('finance.net') },
+                    { value: 'gross', label: translate('finance.gross') },
+                  ]}
+                  onChange={(value) => set('price_mode', value as ServiceCharge['price_mode'])}
                 />
-              </label>
-            </div>
-          </RecordSection>
-          <RecordSection title={translate('record.currencyAndTax')}>
-            <div className="record-fields">
-              <ServiceExchangeFields
-                session={session}
-                disabled={busy}
-                date={draft.service_date}
-                currency={draft.currency}
-                invoiceCurrency={draft.invoice_currency}
-                invoiceCurrencyLocked={!!invoice}
-                manual={draft.manualExchange}
-                rate={draft.exchangeValue}
-                onCurrency={(value) => set('currency', value)}
-                onInvoiceCurrency={(value) =>
-                  setDraft((old) =>
-                    old
-                      ? {
-                          ...old,
-                          invoice_currency: value,
-                          contract_id: null,
-                          contract_number: null,
-                        }
-                      : old,
-                  )
-                }
-                onManual={(value) => set('manualExchange', value)}
-                onRate={(value) => set('exchangeValue', value)}
-              />
-              <Select
-                label={translate('finance.priceMode')}
-                value={draft.price_mode}
-                options={[
-                  { value: 'net', label: translate('finance.net') },
-                  { value: 'gross', label: translate('finance.gross') },
-                ]}
-                onChange={(value) => set('price_mode', value as ServiceCharge['price_mode'])}
-              />
-              <VatRateSelect
-                value={draft.rate}
-                mode={draft.vat_mode}
-                disabled={busy}
-                onMode={(value) => set('vat_mode', value)}
-                onChange={(value) => set('rate', value)}
-              />
-            </div>
-          </RecordSection>
-          <RecordSection title={translate('record.additional')}>
-            <div className="record-fields">
-              <label className="record-wide">
-                {translate('shipment.note')}
-                <textarea
-                  value={draft.note ?? ''}
-                  onChange={(e) => set('note', e.target.value || null)}
-                  maxLength={4000}
+                <VatRateSelect
+                  value={draft.rate}
+                  mode={draft.vat_mode}
+                  disabled={busy}
+                  onMode={(value) => set('vat_mode', value)}
+                  onChange={(value) => set('rate', value)}
                 />
-              </label>
-              <label className="bank-archive-toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.archived}
-                  onChange={(e) => set('archived', e.target.checked)}
-                />
-                {translate('filter.archived')}
-              </label>
-            </div>
-          </RecordSection>
-        </fieldset>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.additional')}>
+              <div className="record-fields">
+                <label className="record-wide">
+                  {translate('shipment.note')}
+                  <textarea
+                    value={draft.note ?? ''}
+                    onChange={(e) => set('note', e.target.value || null)}
+                    maxLength={4000}
+                  />
+                </label>
+                <label className="bank-archive-toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.archived}
+                    onChange={(e) => set('archived', e.target.checked)}
+                  />
+                  {translate('filter.archived')}
+                </label>
+              </div>
+            </RecordSection>
+          </fieldset>
+        </RecordEditorSections>
         <RecordActions
           error={failure || validation.message}
           status={

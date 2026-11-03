@@ -851,3 +851,42 @@
 .draft-recovery-fields {
   display: contents;
 }
+
+.record-editor-sections {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px;
+  margin: 0 0 20px;
+  border: 1px solid var(--divider);
+  border-radius: 7px;
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+.record-editor-sections > button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 10px;
+  margin: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+.record-editor-sections > button:hover,
+.record-editor-sections > button[aria-current] {
+  background: var(--surface-muted);
+  color: var(--accent-text);
+}
+.record-layout-section {
+  scroll-margin-top: 76px;
+}
+.record-layout-section-heading h2:focus {
+  outline: none;
+}

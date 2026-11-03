@@ -1,3 +1,4 @@
+import { useEditorSection } from './RecordEditorSections';
 import { RecordGuide } from './RecordGuide';
 import type { RecordGuideKind } from './recordGuides';
 import { useId, type ReactNode } from 'react';
@@ -50,10 +51,13 @@ export function RecordSection({
   children: ReactNode;
 }) {
   const id = useId();
+  useEditorSection(id, title);
   return (
-    <section className="record-layout-section" aria-labelledby={id}>
+    <section id={id} className="record-layout-section" aria-labelledby={`${id}-heading`}>
       <div className="record-layout-section-heading">
-        <h2 id={id}>{title}</h2>
+        <h2 id={`${id}-heading`} tabIndex={-1}>
+          {title}
+        </h2>
         {description && <p>{description}</p>}
       </div>
       <div className="record-layout-section-body">{children}</div>

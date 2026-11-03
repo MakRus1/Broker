@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { Chevron } from '../../shared/ui/Select';
 import { useEffect, useId, useRef, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -11,7 +12,7 @@ export function CustomerSelect({
   onChange,
   session,
   disabled,
-  label = 'Клиент',
+  label,
   required = false,
   error = '',
   ownCompany = false,
@@ -28,13 +29,15 @@ export function CustomerSelect({
   ownCompany?: boolean;
   excludeId?: string;
 }) {
+  const { translate } = useLocalization();
+  label ??= translate('field.customer');
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     inputRef.current?.setCustomValidity(
-      required && !value ? 'Выберите клиента из справочника' : '',
+      required && !value ? translate('lookup.chooseCustomerDirectory') : '',
     );
-  }, [required, value]);
+  }, [required, value, translate]);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -133,8 +136,12 @@ export function CustomerSelect({
           autoComplete="off"
           disabled={disabled}
           required={required && !value}
-          value={open ? query : (current?.name ?? (value ? 'Контрагент недоступен' : ''))}
-          placeholder="Выберите из справочника или начните вводить название / ИНН"
+          value={
+            open
+              ? query
+              : (current?.name ?? (value ? translate('lookup.counterpartyUnavailable') : ''))
+          }
+          placeholder={translate('lookup.counterpartyPlaceholder')}
           onFocus={() => {
             setOpen(true);
             setQuery('');
@@ -169,7 +176,7 @@ export function CustomerSelect({
         <button
           type="button"
           className="combobox-toggle"
-          aria-label={`Открыть справочник: ${label}`}
+          aria-label={translate('lookup.openDirectory', { label })}
           disabled={disabled}
           onClick={() => {
             setOpen((old) => !old);
@@ -181,9 +188,9 @@ export function CustomerSelect({
       </div>
       {open && (
         <div className="counterparty-options" id={listId} role="listbox" aria-label={label}>
-          {loading && <p role="status">Ищем в справочнике…</p>}
+          {loading && <p role="status">{translate('lookup.directorySearching')}</p>}
           {!loading && !failure && !results.length && (
-            <p>Совпадений нет. Измените запрос или добавьте запись в справочнике контрагентов.</p>
+            <p>{translate('lookup.directoryNoMatches')}</p>
           )}
           {failure && (
             <p role="alert" className="error">
@@ -206,9 +213,7 @@ export function CustomerSelect({
                 <small>{[item.country_code, item.tax_id].filter(Boolean).join(' · ')}</small>
               </button>
             ))}
-          {!loading && results.length === 100 && (
-            <p>Показаны первые 100 записей. Уточните название или ИНН.</p>
-          )}
+          {!loading && results.length === 100 && <p>{translate('lookup.directoryLimit')}</p>}
         </div>
       )}
       {error && (
@@ -218,7 +223,7 @@ export function CustomerSelect({
       )}
       {value && (
         <div className="counterparty-selected">
-          <span>{current?.name ?? 'Контрагент недоступен'}</span>
+          <span>{current?.name ?? translate('lookup.counterpartyUnavailable')}</span>
           <button
             type="button"
             disabled={disabled}
@@ -228,7 +233,7 @@ export function CustomerSelect({
               setQuery('');
             }}
           >
-            Убрать выбор
+            {translate('lookup.clearSelection')}
           </button>
         </div>
       )}

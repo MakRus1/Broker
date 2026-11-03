@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Item } from './types';
@@ -14,6 +15,7 @@ export function PlanQuantityForm({
   onSubmit: (quantity: number) => Promise<void>;
   onError: (error: unknown) => void;
 }) {
+  const { translate } = useLocalization();
   const [quantity, setQuantity] = useState(String(item.planned_quantity));
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -29,7 +31,9 @@ export function PlanQuantityForm({
         try {
           await onSubmit(Number(quantity));
         } catch (error) {
-          setFailure(error instanceof Error ? error.message : 'Не удалось изменить план');
+          setFailure(
+            error instanceof Error ? error.message : translate('shipment.planChangeFailed'),
+          );
           onError(error);
         } finally {
           setBusy(false);
@@ -40,7 +44,7 @@ export function PlanQuantityForm({
         {item.container_type_code} · {item.container_ownership}
       </p>
       <label>
-        По плану
+        {translate('shipment.planned')}
         <input
           autoFocus
           required
@@ -55,7 +59,9 @@ export function PlanQuantityForm({
       </label>
       {Number(quantity) < item.created_quantity && (
         <p className="plan-excess">
-          Превышение плана на {item.created_quantity - Number(quantity)}. Сохранение разрешено.
+          {translate('shipment.planExcessAllowed', {
+            count: item.created_quantity - Number(quantity),
+          })}
         </p>
       )}
       {failure && (
@@ -64,7 +70,7 @@ export function PlanQuantityForm({
         </p>
       )}
       <button className="primary" disabled={busy}>
-        {busy ? 'Сохраняем…' : 'Сохранить'}
+        {busy ? translate('shipment.saving') : translate('action.save')}
       </button>
     </form>
   );
@@ -80,6 +86,7 @@ export function IncompleteContainers({
   session: Session;
   onError: (error: unknown) => void;
 }) {
+  const { translate } = useLocalization();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Transportation[]>([]);
   const [more, setMore] = useState(true);
@@ -113,7 +120,7 @@ export function IncompleteContainers({
       setMore(result.items.length === 50);
     } catch (error) {
       if (signal?.aborted) return;
-      setFailure('Не удалось загрузить перевозки');
+      setFailure(translate('shipment.loadTransportationsFailed'));
       onError(error);
     } finally {
       if (!signal?.aborted) setBusy(false);
@@ -127,13 +134,16 @@ export function IncompleteContainers({
           setOpen(!open);
         }}
       >
-        {open ? 'Скрыть' : 'Показать перевозки'}
+        {open ? translate('shipment.hide') : translate('shipment.showTransportations')}
       </button>
       {open && (
         <>
           {failure && (
             <p className="error" role="alert">
-              {failure} <button onClick={() => void load(items.at(-1)?.id)}>Повторить</button>
+              {failure}{' '}
+              <button onClick={() => void load(items.at(-1)?.id)}>
+                {translate('filter.retry')}
+              </button>
             </p>
           )}
           <TransportationTable items={items} />

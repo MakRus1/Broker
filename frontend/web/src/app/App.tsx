@@ -20,7 +20,7 @@ import { WorkspaceTabs } from './WorkspaceTabs';
 import { ShipmentWorkspace } from '../features/shipments/ShipmentWorkspace';
 import { useDiscardConfirmation } from '../shared/ui/Dialog';
 import { profileName } from '../shared/profile/profile';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, request } from '../shared/api/http';
 import { FinancialLabelsPage } from '../features/finance/labels/FinancialLabelsPage';
 import { ContractsPage } from '../features/contracts/ContractsPage';
@@ -56,6 +56,14 @@ export function App() {
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipmentRegistryVersion, setShipmentRegistryVersion] = useState(0);
   const [transportationRegistryVersion, setTransportationRegistryVersion] = useState(0);
+  const invalidateShipmentRegistry = useCallback(
+    () => setShipmentRegistryVersion((old) => old + 1),
+    [],
+  );
+  const invalidateTransportationRegistry = useCallback(
+    () => setTransportationRegistryVersion((old) => old + 1),
+    [],
+  );
   const rememberCustomers = useCallback((items: Counterparty[]) => {
     setCustomers((old) => [
       ...old,
@@ -65,6 +73,14 @@ export function App() {
   const [route, setRoute] = useState(() => location.hash.slice(1) || '/');
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
   const activeWorkspace = workspaceId(route);
+  const localizedTabs = useMemo(
+    () =>
+      workspaces.map((entry) => ({
+        ...entry,
+        title: localizedWorkspaceTitle(entry, locale),
+      })),
+    [workspaces, locale],
+  );
   const [restoredFor, setRestoredFor] = useState('');
   const storageKey = session ? `broker:workspaces:${session.subject}` : '';
   useEffect(() => {
@@ -107,9 +123,10 @@ export function App() {
     }
   }, [activeWorkspace]);
   const renameWorkspace = useCallback((id: string, title: string) => {
-    setWorkspaces((old) =>
-      old.map((tab) => (tab.id === id && tab.title !== title ? { ...tab, title } : tab)),
-    );
+    setWorkspaces((old) => {
+      if (!old.some((tab) => tab.id === id && tab.title !== title)) return old;
+      return old.map((tab) => (tab.id === id ? { ...tab, title } : tab));
+    });
   }, []);
   function closeWorkspace(id: string) {
     const node = workspaceNodes.current.get(id);
@@ -465,10 +482,7 @@ export function App() {
           </div>
         </header>
         <WorkspaceTabs
-          tabs={workspaces.map((entry) => ({
-            ...entry,
-            title: localizedWorkspaceTitle(entry, locale),
-          }))}
+          tabs={localizedTabs}
           active={activeWorkspace}
           onMove={(source, target, side) =>
             setWorkspaces((old) => moveWorkspace(old, source, target, side))
@@ -614,7 +628,7 @@ export function App() {
                     session={session}
                     customers={customers}
                     onError={error}
-                    onUpdate={() => setShipmentRegistryVersion((old) => old + 1)}
+                    onUpdate={invalidateShipmentRegistry}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCreated={(value) => {
                       const next = `/shipments/${value.id}`;
@@ -645,7 +659,7 @@ export function App() {
                   />
                 ) : (
                   <TransportationPage
-                    onChanged={() => setTransportationRegistryVersion((old) => old + 1)}
+                    onChanged={invalidateTransportationRegistry}
                     id={entry.id.split('/')[2]}
                     active={activeWorkspace === entry.id}
                     onTitle={(title) => renameWorkspace(entry.id, title)}

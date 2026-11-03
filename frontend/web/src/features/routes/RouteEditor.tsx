@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { DateTimeInput } from '../../shared/dates/DateInput';
 import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
@@ -68,6 +69,7 @@ export function RouteEditor({
   onSaved: (value: Transportation) => void;
   onError: (error: unknown) => void;
 }) {
+  const { locale } = useLocalization();
   const key = `broker:route-draft:${session.actor}:${initial.id}`;
   const [baseline] = useState<Draft>(() => ({
     revision: initial.revision,
@@ -196,7 +198,7 @@ export function RouteEditor({
                     {index + 1}. {modes[route_segment.mode]}
                   </h3>
                   <span className="route-summary-meta">
-                    {sharedRouteDirection(sharedStage(route_segment))}
+                    {sharedRouteDirection(sharedStage(route_segment), locale)}
                   </span>
                 </summary>
                 <div className="shared-route-inherited">

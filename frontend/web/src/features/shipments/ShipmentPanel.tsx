@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { Select } from '../../shared/ui/Select';
 import { PlanQuantityForm, IncompleteContainers } from './ContainerPlan';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
@@ -5,13 +6,19 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { ApiError, request } from '../../shared/api/http';
 import { Commands } from '../../shared/api/commands';
 import { operationStorageKey, readOperationIds } from './operations';
-import { ownership, statusName } from '../routes/logisticsLabels';
+import { ownership } from '../routes/logisticsLabels';
 import { type Item, type ContainerFact, type Operation, type Shipment } from './types';
 import { type Transportation } from '../transportations/types';
 import { type Session } from '../../shared/api/session';
 import { CardNavigation } from '../../shared/ui/CardNavigation';
 import { Dialog, useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { TransportationTable } from '../transportations/TransportationTable';
+
+const operationStatusKeys = {
+  pending: 'shipment.creating',
+  succeeded: 'shipment.created',
+  rejected: 'shipment.rejected',
+} as const;
 
 type Props = {
   active?: boolean;
@@ -37,7 +44,10 @@ export function ShipmentPanel({
   onError,
   onUpdate,
 }: Props) {
+  const { translate } = useLocalization();
   const [shipment, setShipment] = useState(initial);
+  const updateCallback = useRef(onUpdate);
+  updateCallback.current = onUpdate;
   useEffect(() => {
     if (!embedded) document.title = `${shipment.number} · Broker`;
   }, [shipment.number]);
@@ -88,7 +98,7 @@ export function ShipmentPanel({
       ]);
       if (signal?.aborted) return;
       setShipment(selected.shipment);
-      onUpdate(selected.shipment);
+      updateCallback.current(selected.shipment);
       setItems(positions.items);
       setUnplanned(positions.unplanned_items);
       setTransportations(deliveries.items);
@@ -96,7 +106,7 @@ export function ShipmentPanel({
       setMoreTransportations(deliveries.items.length === 50);
       setFailure('');
     },
-    [session, initial.id, canReadTransportations, onUpdate],
+    [session, initial.id, canReadTransportations],
   );
   useEffect(() => {
     if (!active) return;
@@ -114,6 +124,7 @@ export function ShipmentPanel({
     return () => controller.abort();
   }, [refresh, onError, active]);
   useEffect(() => {
+    if (!active || !ids.length) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     let warned = false;
@@ -156,7 +167,7 @@ export function ShipmentPanel({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [ids, session, refresh, onError]);
+  }, [ids, session, refresh, onError, active]);
   function close() {
     if (panel.current?.querySelector('form[data-busy="true"]')) return;
     confirmDiscard(!!panel.current?.querySelector('form[data-dirty="true"]'), onClose);
@@ -187,7 +198,7 @@ export function ShipmentPanel({
         setMoreTransportations(result.items.length === 50);
       }
     } catch (value) {
-      setFailure(value instanceof Error ? value.message : 'Не удалось загрузить записи');
+      setFailure(value instanceof Error ? value.message : translate('shipment.loadRecordsFailed'));
       onError(value);
     } finally {
       setLoading(false);
@@ -231,24 +242,24 @@ export function ShipmentPanel({
           <>
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">ПОСТАВКА</p>
+                <p className="eyebrow">{translate('shipment.eyebrow')}</p>
                 <h2 id="shipment-title">{shipment.number}</h2>
               </div>
-              <button aria-label="К списку поставок" onClick={close}>
-                ← К списку
+              <button aria-label={translate('shipment.backToShipments')} onClick={close}>
+                {translate('shipment.backToList')}
               </button>
             </div>
             <div className="shipment-summary">
               <div>
-                <span>Клиент</span>
+                <span>{translate('registryValue.roles.customer')}</span>
                 <strong>{customerName}</strong>
               </div>
               <div>
-                <span>Примечание</span>
-                <strong>{shipment.reference || 'Не указано'}</strong>
+                <span>{translate('shipment.note')}</span>
+                <strong>{shipment.reference || translate('shipment.notSpecified')}</strong>
               </div>
               <div>
-                <span>Редакция</span>
+                <span>{translate('shipment.revisionLabel')}</span>
                 <strong>{shipment.revision}</strong>
               </div>
             </div>
@@ -266,13 +277,13 @@ export function ShipmentPanel({
               }}
             >
               <button aria-pressed={tab === 'items'} onClick={() => setTab('items')}>
-                Позиции
+                {translate('shipment.items')}
               </button>
               <button
                 aria-pressed={tab === 'transportations'}
                 onClick={() => setTab('transportations')}
               >
-                Перевозки
+                {translate('nav.transportations')}
               </button>
             </CardNavigation>
           </>
@@ -287,8 +298,8 @@ export function ShipmentPanel({
             <>
               <div className="section-heading">
                 <div>
-                  <h3>Плановые контейнеры</h3>
-                  <p>Перевозки учитываются автоматически по типу контейнера и SOC/COC.</p>
+                  <h3>{translate('shipment.plannedContainers')}</h3>
+                  <p>{translate('shipment.planMatchingHint')}</p>
                 </div>
                 {write && (
                   <button
@@ -296,7 +307,7 @@ export function ShipmentPanel({
                     disabled={loading || Boolean(failure)}
                     onClick={() => setForm('item')}
                   >
-                    ＋ Добавить позицию
+                    {translate('shipment.addItemButton')}
                   </button>
                 )}
               </div>
@@ -308,56 +319,56 @@ export function ShipmentPanel({
                   </div>
                   <div className="quantities">
                     <div>
-                      <span>По плану</span>
+                      <span>{translate('shipment.planned')}</span>
                       <strong>{item.planned_quantity}</strong>
                     </div>
                     <div>
-                      <span>Созданы</span>
+                      <span>{translate('shipment.created')}</span>
                       <strong>{item.created_quantity}</strong>
                     </div>
                     {item.pending_quantity > 0 && (
                       <div>
-                        <span>Создаются</span>
+                        <span>{translate('shipment.creating')}</span>
                         <strong>{item.pending_quantity}</strong>
                       </div>
                     )}
                     <div>
-                      <span>Осталось</span>
+                      <span>{translate('shipment.remaining')}</span>
                       <strong>{item.available_quantity}</strong>
                     </div>
                   </div>
                   {item.excess_quantity > 0 && (
                     <p className="plan-excess" role="status">
-                      Превышение плана на {item.excess_quantity}
+                      {translate('shipment.planExcess', { count: item.excess_quantity })}
                     </p>
                   )}
                   {write && (
                     <button disabled={loading} onClick={() => setEditPlan(item)}>
-                      Изменить план
+                      {translate('shipment.editPlan')}
                     </button>
                   )}
                   {write && (
                     <button disabled={loading} onClick={() => setForm(item)}>
-                      Создать перевозки →
+                      {translate('shipment.createTransportationsArrow')}
                     </button>
                   )}
                 </article>
               ))}
               {!items.length && !loading && !failure && (
                 <div className="empty">
-                  <h3>Добавьте первую позицию</h3>
-                  <p>Укажите тип контейнера, принадлежность и плановое количество.</p>
+                  <h3>{translate('shipment.firstItem')}</h3>
+                  <p>{translate('shipment.firstItemHint')}</p>
                 </div>
               )}
               {unplanned.length > 0 && (
                 <section className="unplanned-containers">
-                  <h3>Вне плана</h3>
+                  <h3>{translate('shipment.unplanned')}</h3>
                   {unplanned
                     .filter((value) => value.container_type_code && value.container_ownership)
                     .map((value) => (
                       <p key={`${value.container_type_code}-${value.container_ownership}`}>
                         {value.container_type_code} · {value.container_ownership}: {value.quantity}{' '}
-                        перев.
+                        {translate('shipment.transportationShort')}
                       </p>
                     ))}
                   {unplanned.some(
@@ -365,13 +376,13 @@ export function ShipmentPanel({
                   ) && (
                     <>
                       <p>
-                        Не учтены в плане:{' '}
-                        {unplanned
-                          .filter(
-                            (value) => !value.container_type_code || !value.container_ownership,
-                          )
-                          .reduce((sum, value) => sum + value.quantity, 0)}
-                        . Заполните тип контейнера и принадлежность.
+                        {translate('shipment.incompletePlan', {
+                          count: unplanned
+                            .filter(
+                              (value) => !value.container_type_code || !value.container_ownership,
+                            )
+                            .reduce((sum, value) => sum + value.quantity, 0),
+                        })}
                       </p>
                       {canReadTransportations && (
                         <IncompleteContainers
@@ -393,18 +404,20 @@ export function ShipmentPanel({
               />
               {operations.length > 0 && (
                 <section className="operations">
-                  <h3>Операции создания</h3>
-                  <p className="hint">
-                    Операции, запущенные с этого устройства. Статус обновляется автоматически.
-                  </p>
+                  <h3>{translate('shipment.creationOperations')}</h3>
+                  <p className="hint">{translate('shipment.operationsHint')}</p>
                   {operations.map((value) => (
                     <div className="operation" key={value.id}>
                       <div>
-                        <strong>{value.quantity} перев.</strong>
+                        <strong>
+                          {value.quantity} {translate('shipment.transportationShort')}
+                        </strong>
                         <small className="mono">{value.id}</small>
                         {value.rejection_code && <small>{value.rejection_code}</small>}
                       </div>
-                      <span className={`badge ${value.status}`}>{statusName[value.status]}</span>
+                      <span className={`badge ${value.status}`}>
+                        {translate(operationStatusKeys[value.status])}
+                      </span>
                     </div>
                   ))}
                 </section>
@@ -413,22 +426,22 @@ export function ShipmentPanel({
           ) : (
             <>
               {!canReadTransportations ? (
-                <p>Нет права на просмотр перевозок.</p>
+                <p>{translate('shipment.noTransportationAccess')}</p>
               ) : (
                 <>
                   {session.permissions.includes('transportations.write') && (
                     <div className="section-heading">
-                      <h3>Перевозки поставки</h3>
+                      <h3>{translate('shipment.shipmentTransportations')}</h3>
                       <a className="primary" href={`#/transportations/new/${shipment.id}`}>
-                        ＋ Создать перевозку
+                        {translate('shipment.createTransportationButton')}
                       </a>
                     </div>
                   )}
                   <TransportationTable items={transportations} />
                   {!transportations.length && (
                     <div className="empty">
-                      <h3>Перевозки ещё не созданы</h3>
-                      <p>Создайте перевозку вручную или из плановой позиции.</p>
+                      <h3>{translate('shipment.noTransportations')}</h3>
+                      <p>{translate('shipment.noTransportationsHint')}</p>
                     </div>
                   )}
                   <AutoLoadMore
@@ -444,7 +457,11 @@ export function ShipmentPanel({
         </div>
         {form && (
           <Dialog
-            title={form === 'item' ? 'Добавить позицию' : 'Создать перевозки'}
+            title={
+              form === 'item'
+                ? translate('shipment.addItem')
+                : translate('shipment.createTransportations')
+            }
             onClose={() => setForm(null)}
           >
             <PositionForm
@@ -458,7 +475,7 @@ export function ShipmentPanel({
         )}
       </section>
       {editPlan && (
-        <Dialog title="Изменить план" onClose={() => setEditPlan(null)}>
+        <Dialog title={translate('shipment.editPlan')} onClose={() => setEditPlan(null)}>
           <PlanQuantityForm
             item={editPlan}
             onError={onError}
@@ -489,6 +506,7 @@ function PositionForm({
   onSubmit: (body: object) => Promise<void>;
   onError: (value: unknown) => void;
 }) {
+  const { translate } = useLocalization();
   const defaultCode = containerTypes.includes('40HC') ? '40HC' : (containerTypes[0] ?? '');
   const [code, setCode] = useState(defaultCode);
   const [owner, setOwner] = useState('COC');
@@ -511,7 +529,7 @@ function PositionForm({
             },
       );
     } catch (value) {
-      setFailure(value instanceof Error ? value.message : 'Ошибка сохранения');
+      setFailure(value instanceof Error ? value.message : translate('shipment.saveError'));
       onError(value);
     } finally {
       setBusy(false);
@@ -521,20 +539,22 @@ function PositionForm({
     <form onSubmit={submit} data-dirty={dirty} data-busy={busy}>
       {item ? (
         <p className="hint">
-          {item.container_type_code} · доступно {item.available_quantity}. Одна единица создаст одну
-          фактическую перевозку.
+          {translate('shipment.availableUnits', {
+            type: item.container_type_code,
+            count: item.available_quantity,
+          })}
         </p>
       ) : (
         <>
           <Select
-            label="Тип контейнера"
+            label={translate('registryField.container_type')}
             disabled={busy}
             value={code}
             onChange={setCode}
             options={containerTypes.map((value) => ({ value, label: value }))}
           />
           <Select
-            label="Принадлежность"
+            label={translate('registryField.container_ownership')}
             disabled={busy}
             value={owner}
             onChange={setOwner}
@@ -546,7 +566,7 @@ function PositionForm({
         </>
       )}
       <label>
-        {item ? 'Создать перевозок' : 'Плановое количество'}
+        {item ? translate('shipment.createQuantity') : translate('shipment.plannedQuantity')}
         <input
           disabled={busy}
           autoFocus={Boolean(item)}
@@ -565,7 +585,11 @@ function PositionForm({
         </p>
       )}
       <button className="primary" disabled={busy}>
-        {busy ? 'Сохраняем…' : item ? 'Создать перевозки' : 'Добавить позицию'}
+        {busy
+          ? translate('shipment.saving')
+          : item
+            ? translate('shipment.createTransportations')
+            : translate('shipment.addItem')}
       </button>
     </form>
   );

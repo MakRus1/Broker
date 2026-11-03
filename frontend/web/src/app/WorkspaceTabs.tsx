@@ -25,6 +25,7 @@ export function WorkspaceTabs({
   onCloseAll: () => void;
 }) {
   const { translate, locale } = useLocalization();
+  const tabLayout = JSON.stringify(tabs.map(({ id, title }) => [id, title]));
   const strip = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -77,10 +78,9 @@ export function WorkspaceTabs({
     const element = strip.current;
     if (!element) return;
     const update = () => {
-      setEdges({
-        before: element.scrollLeft > 1,
-        after: element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
-      });
+      const before = element.scrollLeft > 1;
+      const after = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+      setEdges((old) => (old.before === before && old.after === after ? old : { before, after }));
     };
     const revealSelected = () => {
       const selected = element.querySelector<HTMLElement>('.workspace-tab.selected');
@@ -103,7 +103,7 @@ export function WorkspaceTabs({
       observer.disconnect();
       element.removeEventListener('scroll', update);
     };
-  }, [active, tabs]);
+  }, [active, tabLayout]);
   useEffect(() => {
     const element = strip.current;
     if (!element) return;

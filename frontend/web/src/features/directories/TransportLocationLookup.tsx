@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useId, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -16,6 +17,7 @@ export function TransportLocationLookup({
   session: Session;
   onChange: (station?: TransportLocation) => void;
 }) {
+  const { translate } = useLocalization();
   const id = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -81,7 +83,7 @@ export function TransportLocationLookup({
           aria-controls={open ? `${id}-options` : undefined}
           aria-activedescendant={open && items[active] ? `${id}-${items[active].id}` : undefined}
           autoComplete="off"
-          placeholder="Название или код"
+          placeholder={translate('lookup.locationPlaceholder')}
           value={open ? query : value ? [value.name, value.code].filter(Boolean).join(' · ') : ''}
           onFocus={() => {
             setOpen(true);
@@ -115,7 +117,7 @@ export function TransportLocationLookup({
         {value && (
           <button
             type="button"
-            aria-label={`Убрать: ${label}`}
+            aria-label={translate('lookup.clearField', { label })}
             onClick={() => {
               onChange(undefined);
               setQuery('');
@@ -133,11 +135,11 @@ export function TransportLocationLookup({
           aria-label={label}
         >
           {busy ? (
-            <p role="status">Ищем…</p>
+            <p role="status">{translate('lookup.searching')}</p>
           ) : failure ? (
             <p role="alert">{failure}</p>
           ) : !items.length ? (
-            <p>Совпадения не найдены в справочнике</p>
+            <p>{translate('lookup.locationNoMatches')}</p>
           ) : (
             items.map((station, index) => (
               <button
@@ -155,7 +157,7 @@ export function TransportLocationLookup({
               </button>
             ))
           )}
-          {items.length === 20 && <p>Первые 20 совпадений. Уточните название или код.</p>}
+          {items.length === 20 && <p>{translate('lookup.locationLimit')}</p>}
         </div>
       )}
     </div>

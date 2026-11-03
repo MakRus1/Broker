@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { useLocalization } from '../localization/Localization';
 import { useRouteCollapse } from '../routes/routeCollapse';
 import { Select } from '../../shared/ui/Select';
 import {
@@ -25,8 +27,12 @@ export function ShipmentRoute({
   session: Session;
   customers: Counterparty[];
 }) {
+  const { translate, locale } = useLocalization();
   const collapse = useRouteCollapse(segments.map((stage) => stage.id));
-  const title = (type: string) => types.find((item) => item.code === type)?.name ?? type;
+  const title = (type: string) =>
+    registryValueLabel('mode', type, locale) ??
+    types.find((item) => item.code === type)?.name ??
+    type;
   const update = (index: number, value: ShipmentRouteSegment) =>
     onChange?.(segments.map((old, i) => (i === index ? value : old)));
   function move(index: number, delta: number) {
@@ -38,17 +44,17 @@ export function ShipmentRoute({
     <section className="shipment-route-workspace">
       <div className="shipment-route-heading">
         <div>
-          <h2>Маршрут поставки</h2>
-          <p>Море и авиа — общие данные для всех перевозок.</p>
+          <h2>{translate('shipment.routeTitle')}</h2>
+          <p>{translate('shipment.sharedRouteHint')}</p>
         </div>
       </div>
       {!!segments.length && (
         <div className="route-collapse-actions">
           <button type="button" onClick={collapse.expandAll}>
-            Развернуть все
+            {translate('route.expandAll')}
           </button>
           <button type="button" onClick={collapse.collapseAll}>
-            Свернуть все
+            {translate('route.collapseAll')}
           </button>
         </div>
       )}
@@ -66,15 +72,15 @@ export function ShipmentRoute({
               </h3>
               <span className="route-summary-meta">
                 {segment.type === 'sea' || segment.type === 'air'
-                  ? sharedRouteDirection(segment)
-                  : 'Данные заполняются в перевозке'}
+                  ? sharedRouteDirection(segment, locale)
+                  : translate('shipment.filledInTransportation')}
               </span>
             </summary>
             {onChange ? (
               <>
                 <div className="shipment-route-stage-toolbar">
                   <Select
-                    label="Тип участка"
+                    label={translate('registryField.mode')}
                     value={segment.type}
                     options={[...new Set([...allowedTypes, segment.type])].map((value) => ({
                       value,
@@ -85,12 +91,12 @@ export function ShipmentRoute({
                   <div
                     className="shipment-route-actions"
                     role="group"
-                    aria-label={`Действия с участком ${index + 1}`}
+                    aria-label={translate('route.segmentActions', { number: index + 1 })}
                   >
                     <button
                       type="button"
                       disabled={index === 0}
-                      aria-label={`Поднять участок ${index + 1}`}
+                      aria-label={translate('route.moveSegmentUp', { number: index + 1 })}
                       onClick={() => move(index, -1)}
                     >
                       ↑
@@ -98,7 +104,7 @@ export function ShipmentRoute({
                     <button
                       type="button"
                       disabled={index === segments.length - 1}
-                      aria-label={`Опустить участок ${index + 1}`}
+                      aria-label={translate('route.moveSegmentDown', { number: index + 1 })}
                       onClick={() => move(index, 1)}
                     >
                       ↓
@@ -107,7 +113,7 @@ export function ShipmentRoute({
                       type="button"
                       onClick={() => onChange(segments.filter((_, i) => i !== index))}
                     >
-                      Убрать
+                      {translate('shipment.remove')}
                     </button>
                   </div>
                 </div>
@@ -136,9 +142,7 @@ export function ShipmentRoute({
                     }
                   />
                 ) : (
-                  <p className="muted">
-                    Поля этого участка заполняются отдельно в каждой перевозке.
-                  </p>
+                  <p className="muted">{translate('shipment.separateSegmentHint')}</p>
                 )}
               </>
             ) : segment.type === 'sea' || segment.type === 'air' ? (
@@ -149,12 +153,12 @@ export function ShipmentRoute({
                 session={session}
               />
             ) : (
-              <p className="muted">Данные этого участка заполняются в перевозках.</p>
+              <p className="muted">{translate('shipment.segmentHint')}</p>
             )}
           </details>
         ))}
       </div>
-      {!segments.length && <p className="muted">Добавьте участки в порядке следования.</p>}
+      {!segments.length && <p className="muted">{translate('shipment.addSegmentsHint')}</p>}
       {onChange && (
         <button
           className="shipment-route-add"
@@ -166,7 +170,7 @@ export function ShipmentRoute({
             collapse.toggle(id, false);
           }}
         >
-          ＋ Добавить участок
+          {translate('shipment.addSegment')}
         </button>
       )}
     </section>

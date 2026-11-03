@@ -79,6 +79,17 @@ export const en = {
     "This section shows the contract currency and payment delay. The delay is used to calculate payment due dates for linked invoices.",
   "guide.contractAdditionalView":
     "The note contains additional terms and explanations. The archive status is displayed in the record header.",
+  "draft.local": "Not saved to server · Draft saved on this device",
+  "draft.found": "An unsaved draft is available",
+  "draft.hint": "Restore changes saved on this device?",
+  "draft.stale": "The record has changed since this draft was saved",
+  "draft.staleHint":
+    "This draft cannot overwrite a newer revision. Draft saved:",
+  "draft.restore": "Restore",
+  "draft.discard": "Delete draft",
+  "draft.storageFailed":
+    "Could not save the draft on this device. Save the form before closing it.",
+  "draft.saved": "Changes saved",
   "guide.title": "Form walkthrough",
   "guide.legal":
     "Enter the name and company details. Russian companies can be filled by tax ID; verify the result before saving. Mark a company as your own legal entity only if it belongs to your organization.",
@@ -440,6 +451,9 @@ export const en = {
   "ui.noMatches": "No matches",
   "ui.refreshing": "Refreshing…",
   "ui.close": "Close",
+  "ui.closeDraftTitle": "Close this form?",
+  "ui.closeDraftHint": "Your draft will stay on this device.",
+  "ui.continueEditing": "Continue editing",
   "ui.discardTitle": "Discard changes?",
   "ui.discardHint": "Changes in this form will be lost when you leave.",
   "ui.stay": "Stay",

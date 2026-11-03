@@ -1,3 +1,6 @@
+import { restoreDraft } from '../../../shared/forms/restoreDraft';
+import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { RecordGuide } from '../../../shared/ui/record/RecordGuide';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import { DateInput } from '../../../shared/dates/DateInput';
@@ -135,6 +138,37 @@ export function ServiceChargeEditor({
   const [failure, setFailure] = useState('');
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const dirty = JSON.stringify(draft) !== baseline.current || !!invoiceSelection;
+  const [baseRevision, setBaseRevision] = useState(initial.revision);
+  const restoringInvoice = useRef(false);
+  const storageKey = draftStorageKey(
+    session,
+    'service-charge',
+    initial.revision
+      ? initial.id
+      : `new-${invoice?.id ?? initial.transportation_id ?? initial.shipment_id ?? 'standalone'}-${initial.direction}`,
+  );
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: baseRevision,
+    value: { draft, invoiceSelection },
+    dirty,
+    enabled: !readOnly,
+    onRestore(raw) {
+      const next = restoreDraft<{ draft: unknown; invoiceSelection?: ServiceInvoiceSelection }>(
+        raw,
+      );
+      const restored = restoreDraft<Draft>(next.draft, ['service_date']);
+      if (
+        typeof restored.id !== 'string' ||
+        typeof restored.quantity !== 'string' ||
+        typeof restored.price !== 'string'
+      )
+        throw new Error('Invalid draft');
+      restoringInvoice.current = true;
+      setDraft(restored);
+      setInvoiceSelection(next.invoiceSelection);
+    },
+  });
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
       if (dirty || busy) {
@@ -146,10 +180,18 @@ export function ServiceChargeEditor({
     return () => window.removeEventListener('beforeunload', leave);
   }, [dirty, busy]);
   useEffect(() => {
+    if (restoringInvoice.current) {
+      restoringInvoice.current = false;
+      return;
+    }
     if (!invoice) setInvoiceSelection(undefined);
   }, [draft.counterparty_id, draft.invoice_currency, draft.contract_id, invoice]);
   function cancel() {
-    if (!busy) confirmDiscard(dirty, onCancel);
+    if (!busy)
+      confirmDiscard(dirty, () => {
+        recovery.discard();
+        onCancel();
+      });
   }
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((old) => ({ ...old, [key]: value }));
@@ -157,7 +199,7 @@ export function ServiceChargeEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
-    if (!draft || busy || readOnly) return;
+    if (!draft || busy || readOnly || recovery.candidate) return;
     const quantity = parseFixed(draft.quantity, 3, 10000000);
     const price = parseFixed(draft.price, 2, 100000000);
     const rate = draft.vat_mode === 'rate' ? parseVatRate(draft.rate) : null;
@@ -212,6 +254,7 @@ export function ServiceChargeEditor({
           await attachServiceInvoice(saved.charge.id, invoiceSelection, session);
         } catch (error) {
           const persisted = draftOf(saved.charge);
+          setBaseRevision(saved.charge.revision);
           setDraft(persisted);
           baseline.current = JSON.stringify(persisted);
           setFailure(
@@ -221,6 +264,7 @@ export function ServiceChargeEditor({
         }
       }
       setInvoiceSelection(undefined);
+      recovery.markSaved();
       onSaved(saved.charge);
     } catch (error) {
       setFailure(saveErrorMessage(error, translate('finance.saveServiceFailed')));
@@ -248,7 +292,9 @@ export function ServiceChargeEditor({
           session={session}
         />
       )}
+      {!readOnly && <DraftRecovery recovery={recovery} />}
       <form
+        data-recovery-key={storageKey}
         hidden={historyOpen}
         onSubmit={save}
         data-validation-attempted={validation.attempted}
@@ -272,7 +318,7 @@ export function ServiceChargeEditor({
             <RecordGuide kind="service" />
           </div>
         )}
-        <fieldset disabled={busy || readOnly}>
+        <fieldset disabled={busy || readOnly || !!recovery.candidate}>
           <RecordSection title={translate('record.identification')}>
             <div className="record-fields">
               <ServiceChargeLookup<FinancialLabel>
@@ -528,7 +574,9 @@ export function ServiceChargeEditor({
             readOnly
               ? translate('record.readOnly')
               : dirty
-                ? translate('shipment.unsaved')
+                ? translate(
+                    recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                  )
                 : initial.revision > 0
                   ? translate('shipment.revision', { revision: initial.revision })
                   : translate('record.creating')
@@ -538,7 +586,7 @@ export function ServiceChargeEditor({
             {readOnly ? translate('ui.close') : translate('action.cancel')}
           </button>
           {!readOnly && (
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !!recovery.candidate}>
               {translate('action.save')}
             </button>
           )}

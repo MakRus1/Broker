@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { MultiSelect } from '../../shared/ui/MultiSelect';
 import './counterpartyEditor.css';
@@ -37,21 +39,9 @@ export function CounterpartyForm({
 }) {
   const { translate, locale } = useLocalization();
   const validation = useFieldValidation();
-  const storageKey = `broker:counterparty-draft:${session.actor}:${initial?.id ?? 'new'}`;
-  const [stored] = useState(() => {
-    const fallback = {
-      id: initial?.id ?? crypto.randomUUID(),
-      baseRevision: initial?.revision ?? 0,
-      value: counterpartyDetails(initial),
-    };
-    try {
-      return restoreCounterpartyDraft(sessionStorage.getItem(storageKey), fallback);
-    } catch {
-      return fallback;
-    }
-  });
-  const [draft, setDraft] = useState(stored.value);
-  const id = stored.id;
+  const storageKey = draftStorageKey(session, 'counterparty', initial?.id ?? 'new');
+  const [id, setId] = useState(() => initial?.id ?? crypto.randomUUID());
+  const [draft, setDraft] = useState(() => counterpartyDetails(initial));
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState('');
@@ -59,15 +49,26 @@ export function CounterpartyForm({
     !saved &&
     JSON.stringify(counterpartyPayload(draft)) !==
       JSON.stringify(counterpartyPayload(counterpartyDetails(initial)));
-  const stale = stored.baseRevision !== (initial?.revision ?? 0) || (initial && id !== initial.id);
-  useEffect(() => {
-    try {
-      if (dirty) sessionStorage.setItem(storageKey, JSON.stringify({ ...stored, value: draft }));
-      else sessionStorage.removeItem(storageKey);
-    } catch {
-      /* Недоступное локальное хранилище не блокирует редактирование. */
-    }
-  }, [storageKey, stored, draft, dirty]);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: initial?.revision ?? 0,
+    value: { id, baseRevision: initial?.revision ?? 0, value: draft },
+    dirty,
+    enabled: !saved,
+    onRestore(raw) {
+      const fallback = {
+        id,
+        baseRevision: initial?.revision ?? 0,
+        value: counterpartyDetails(initial),
+      };
+      const next = restoreCounterpartyDraft(JSON.stringify(raw), fallback);
+      if (next === fallback || (initial && next.id !== initial.id))
+        throw new Error('Invalid draft');
+      setId(next.id);
+      setDraft(next.value);
+    },
+  });
+  const stale = recovery.stale;
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   useEffect(() => {
     function leaving(event: BeforeUnloadEvent) {
@@ -85,17 +86,13 @@ export function CounterpartyForm({
   function cancel() {
     if (!busy)
       confirmDiscard(dirty, () => {
-        try {
-          sessionStorage.removeItem(storageKey);
-        } catch {
-          /* Отмена доступна без хранилища. */
-        }
+        recovery.discard();
         onCancel?.();
       });
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || stale) return;
+    if (busy || stale || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -109,11 +106,7 @@ export function CounterpartyForm({
           ...(initial ? { expected_revision: initial.revision } : {}),
         },
       );
-      try {
-        sessionStorage.removeItem(storageKey);
-      } catch {
-        /* Запись на сервер не зависит от хранилища. */
-      }
+      recovery.markSaved();
       setSaved(true);
       onSaved(result.counterparty);
     } catch (error) {
@@ -132,7 +125,7 @@ export function CounterpartyForm({
     <>
       <form
         className="counterparty-form document-editor"
-        data-draft-key={storageKey}
+        data-recovery-key={storageKey}
         data-dirty={dirty}
         data-busy={busy}
         onSubmit={submit}
@@ -140,6 +133,7 @@ export function CounterpartyForm({
         onInvalid={validation.onInvalid}
         onInput={validation.onInput}
       >
+        <DraftRecovery recovery={recovery} />
         <RecordHeading
           guide="counterparty"
           kind={translate('nav.counterparties')}
@@ -151,7 +145,7 @@ export function CounterpartyForm({
             {translate('counterparty.draftConflict')}
           </p>
         )}
-        <fieldset disabled={busy || !!stale}>
+        <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('counterparty.legalEntity')}>
             <label className="record-toggle">
               <input
@@ -220,7 +214,7 @@ export function CounterpartyForm({
             </RegistryLookup>
           </RecordSection>
         </fieldset>
-        <fieldset disabled={busy}>
+        <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('registryField.roles')}>
             <p className="hint">{translate('counterparty.rolesHint')}</p>
             <MultiSelect
@@ -235,7 +229,7 @@ export function CounterpartyForm({
             />
           </RecordSection>
         </fieldset>
-        <fieldset disabled={busy}>
+        <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('counterparty.responsibleEmployee')}>
             <DirectoryLookup
               session={session}
@@ -247,7 +241,7 @@ export function CounterpartyForm({
             <p className="hint">{translate('counterparty.logistHint')}</p>
           </RecordSection>
         </fieldset>
-        <fieldset disabled={busy}>
+        <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('counterparty.contacts')}>
             {draft.contacts.map((contact, index) => (
               <div className="contact-editor" key={index}>
@@ -317,14 +311,19 @@ export function CounterpartyForm({
           error={failure || validation.message}
           status={
             dirty
-              ? translate('shipment.unsaved')
-              : translate('counterparty.theDraftIsSavedInThisTab')
+              ? translate(
+                  recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                )
+              : translate(initial ? 'record.editing' : 'record.creating')
           }
         >
           <button type="button" disabled={busy} onClick={cancel}>
             {translate('action.cancel')}
           </button>
-          <button className="primary" disabled={busy || !!stale || !dirty || !draft.name.trim()}>
+          <button
+            className="primary"
+            disabled={busy || !!recovery.candidate || !!stale || !dirty || !draft.name.trim()}
+          >
             {busy
               ? translate('shipment.saving')
               : initial

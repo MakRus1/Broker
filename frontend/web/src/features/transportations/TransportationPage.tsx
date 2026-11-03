@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordHeading, RecordSection } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -569,8 +571,28 @@ function ActualForm({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const unchanged = value === localDateTime(previous);
+  const storageKey = draftStorageKey(
+    session,
+    'transportation-actual',
+    `${transportation.id}-${route_segment.id}-${kind}`,
+  );
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: transportation.revision,
+    value: { value, reason },
+    dirty: value !== initialValue || !!reason,
+    enabled: true,
+    onRestore(raw) {
+      const next = raw as { value: string; reason: string };
+      if (!next || typeof next.value !== 'string' || typeof next.reason !== 'string')
+        throw new Error('Invalid draft');
+      setValue(next.value);
+      setReason(next.reason);
+    },
+  });
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -586,6 +608,7 @@ function ActualForm({
           ...(previous ? { reason: reason.trim() } : {}),
         },
       );
+      recovery.markSaved();
       onSaved(result.transportation);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : translate('forms.couldNotSaveTheDate'));
@@ -595,7 +618,13 @@ function ActualForm({
     }
   }
   return (
-    <form onSubmit={submit} data-dirty={value !== initialValue || Boolean(reason)} data-busy={busy}>
+    <form
+      data-recovery-key={storageKey}
+      onSubmit={submit}
+      data-dirty={value !== initialValue || Boolean(reason)}
+      data-busy={busy}
+    >
+      <DraftRecovery recovery={recovery} />
       {previous && (
         <p>
           {translate('forms.current')}
@@ -606,7 +635,7 @@ function ActualForm({
         {translate('forms.dateAndTime')}
         <DateTimeInput
           required
-          disabled={busy}
+          disabled={busy || !!recovery.candidate}
           value={value}
           onChange={(dateValue) => setValue(dateValue)}
         />
@@ -622,7 +651,7 @@ function ActualForm({
           <textarea
             required
             maxLength={2048}
-            disabled={busy}
+            disabled={busy || !!recovery.candidate}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
           />

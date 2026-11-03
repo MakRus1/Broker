@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -23,38 +25,6 @@ import {
 } from '../transportations/transportation';
 
 type Draft = { revision: number; route_segments: PlannedRouteSegment[] };
-function readDraft(key: string, fallback: Draft): Draft {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(key) || 'null');
-    if (
-      value &&
-      Number.isSafeInteger(value.revision) &&
-      value.revision > 0 &&
-      Array.isArray(value.route_segments) &&
-      value.route_segments.length <= 32 &&
-      value.route_segments.every(
-        (route_segment: PlannedRouteSegment) =>
-          route_segment &&
-          typeof route_segment.id === 'string' &&
-          route_segment.mode in modes &&
-          [route_segment.origin, route_segment.destination].every(
-            (point) =>
-              point === undefined ||
-              (typeof point.name === 'string' && typeof point.country_code === 'string'),
-          ) &&
-          [
-            route_segment.contractor_id,
-            route_segment.planned_departure_at,
-            route_segment.planned_arrival_at,
-          ].every((field) => field === undefined || typeof field === 'string'),
-      )
-    )
-      return value;
-  } catch {
-    /* Повреждённый локальный черновик не мешает открыть серверный маршрут. */
-  }
-  return fallback;
-}
 export function RouteEditor({
   initial,
   session,
@@ -71,14 +41,14 @@ export function RouteEditor({
   onError: (error: unknown) => void;
 }) {
   const { translate, locale } = useLocalization();
-  const key = `broker:route-draft:${session.actor}:${initial.id}`;
+  const key = draftStorageKey(session, 'transportation-route', initial.id);
   const [baseline] = useState<Draft>(() => ({
     revision: initial.revision,
     route_segments: initial.route_segments
       .filter((stage) => stage.inherited !== false)
       .map(routeSegment),
   }));
-  const [draft, setDraft] = useState(() => readDraft(key, baseline));
+  const [draft, setDraft] = useState(baseline);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -87,15 +57,28 @@ export function RouteEditor({
   const stale = draft.revision !== initial.revision;
   const sharedStage = (stage: PlannedRouteSegment) =>
     initial.route_segments.find((value) => value.id === stage.id) ?? stage;
-  useEffect(() => {
-    if (!allowed) return;
-    try {
-      if (dirty) sessionStorage.setItem(key, JSON.stringify(draft));
-      else sessionStorage.removeItem(key);
-    } catch {
-      /* Хранилище может быть запрещено браузером. */
-    }
-  }, [key, draft, allowed, dirty]);
+  const recovery = useDraftRecovery({
+    storageKey: key,
+    revision: initial.revision,
+    value: draft,
+    dirty,
+    enabled: allowed,
+    onRestore(raw) {
+      const next = raw as Draft;
+      if (
+        !next ||
+        !Array.isArray(next.route_segments) ||
+        next.route_segments.length !== baseline.route_segments.length ||
+        next.route_segments.some(
+          (stage, index) =>
+            stage.id !== baseline.route_segments[index].id ||
+            stage.mode !== baseline.route_segments[index].mode,
+        )
+      )
+        throw new Error('Invalid draft');
+      setDraft(next);
+    },
+  });
   useEffect(() => {
     function leaving(event: BeforeUnloadEvent) {
       if (dirty || busy) {
@@ -117,17 +100,13 @@ export function RouteEditor({
   function discard() {
     if (busy) return;
     confirmDiscard(dirty, () => {
-      try {
-        sessionStorage.removeItem(key);
-      } catch {
-        /* Отмена доступна и без локального хранилища. */
-      }
+      recovery.discard();
       location.hash = `/transportations/${initial.id}`;
     });
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!allowed || stale) return;
+    if (!allowed || stale || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -136,11 +115,7 @@ export function RouteEditor({
         session,
         routeRequest(initial.id, draft.revision, draft.route_segments, locale),
       );
-      try {
-        sessionStorage.removeItem(key);
-      } catch {
-        /* Результат записи не зависит от локального хранилища. */
-      }
+      recovery.markSaved();
       onSaved(result.transportation);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : translate('forms.couldNotSaveTheRoute'));
@@ -158,12 +133,13 @@ export function RouteEditor({
     );
   return (
     <>
+      <DraftRecovery recovery={recovery} />
       <form
         className="route-editor panel-content"
         onSubmit={submit}
         data-dirty={dirty}
         data-busy={busy}
-        data-draft-key={key}
+        data-recovery-key={key}
       >
         <div className="section-heading">
           <div>
@@ -187,7 +163,7 @@ export function RouteEditor({
             {translate('route.collapseAll')}
           </button>
         </div>
-        <fieldset disabled={busy || stale}>
+        <fieldset disabled={busy || stale || !!recovery.candidate}>
           {draft.route_segments.map((route_segment, index) =>
             route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
               <details
@@ -378,7 +354,9 @@ export function RouteEditor({
           error={failure}
           status={
             dirty
-              ? translate('shipment.unsaved')
+              ? translate(
+                  recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                )
               : translate('shipment.revision', { revision: initial.revision })
           }
         >
@@ -387,7 +365,9 @@ export function RouteEditor({
           </button>
           <button
             className="primary"
-            disabled={busy || stale || !dirty || !draft.route_segments.length}
+            disabled={
+              busy || !!recovery.candidate || stale || !dirty || !draft.route_segments.length
+            }
           >
             {busy ? translate('shipment.saving') : translate('action.save')}
           </button>

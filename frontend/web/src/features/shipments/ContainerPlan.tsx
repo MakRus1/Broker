@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { useLocalization } from '../localization/Localization';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -7,10 +9,12 @@ import { type Session } from '../../shared/api/session';
 import { TransportationTable } from '../transportations/TransportationTable';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
 export function PlanQuantityForm({
+  session,
   item,
   onSubmit,
   onError,
 }: {
+  session: Session;
   item: Item;
   onSubmit: (quantity: number) => Promise<void>;
   onError: (error: unknown) => void;
@@ -19,17 +23,32 @@ export function PlanQuantityForm({
   const [quantity, setQuantity] = useState(String(item.planned_quantity));
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
+  const storageKey = draftStorageKey(session, 'container-plan', item.id);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: item.revision,
+    value: { quantity },
+    dirty: quantity !== String(item.planned_quantity),
+    enabled: true,
+    onRestore(raw) {
+      const next = raw as { quantity: string };
+      if (!next || typeof next.quantity !== 'string') throw new Error('Invalid draft');
+      setQuantity(next.quantity);
+    },
+  });
   return (
     <form
+      data-recovery-key={storageKey}
       data-dirty={quantity !== String(item.planned_quantity)}
       data-busy={busy}
       onSubmit={async (event) => {
         event.preventDefault();
-        if (busy) return;
+        if (busy || recovery.candidate) return;
         setBusy(true);
         setFailure('');
         try {
           await onSubmit(Number(quantity));
+          recovery.markSaved();
         } catch (error) {
           setFailure(
             error instanceof Error ? error.message : translate('shipment.planChangeFailed'),
@@ -40,6 +59,7 @@ export function PlanQuantityForm({
         }
       }}
     >
+      <DraftRecovery recovery={recovery} />
       <p>
         {item.container_type_code} · {item.container_ownership}
       </p>
@@ -53,7 +73,7 @@ export function PlanQuantityForm({
           max={2147483647}
           step={1}
           value={quantity}
-          disabled={busy}
+          disabled={busy || !!recovery.candidate}
           onChange={(event) => setQuantity(event.target.value)}
         />
       </label>
@@ -69,7 +89,7 @@ export function PlanQuantityForm({
           {failure}
         </p>
       )}
-      <button className="primary" disabled={busy}>
+      <button className="primary" disabled={busy || !!recovery.candidate}>
         {busy ? translate('shipment.saving') : translate('action.save')}
       </button>
     </form>

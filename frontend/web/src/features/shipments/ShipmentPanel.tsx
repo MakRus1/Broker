@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { useLocalization } from '../localization/Localization';
 import { Select } from '../../shared/ui/Select';
 import { PlanQuantityForm, IncompleteContainers } from './ContainerPlan';
@@ -469,6 +471,8 @@ export function ShipmentPanel({
             onClose={() => setForm(null)}
           >
             <PositionForm
+              session={session}
+              shipment={shipment}
               key={form === 'item' ? 'item' : form.id}
               item={form === 'item' ? undefined : form}
               containerTypes={containerTypes}
@@ -481,6 +485,7 @@ export function ShipmentPanel({
       {editPlan && (
         <Dialog title={translate('shipment.editPlan')} onClose={() => setEditPlan(null)}>
           <PlanQuantityForm
+            session={session}
             item={editPlan}
             onError={onError}
             onSubmit={async (quantity) => {
@@ -500,11 +505,15 @@ export function ShipmentPanel({
   );
 }
 function PositionForm({
+  session,
+  shipment,
   item,
   containerTypes,
   onSubmit,
   onError,
 }: {
+  session: Session;
+  shipment: Shipment;
   item?: Item;
   containerTypes: string[];
   onSubmit: (body: object) => Promise<void>;
@@ -518,8 +527,25 @@ function PositionForm({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const dirty = quantity !== '1' || (!item && (code !== defaultCode || owner !== 'COC'));
+  const storageKey = draftStorageKey(session, 'container-position', item?.id ?? shipment.id);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: item?.revision ?? shipment.revision,
+    value: { code, owner, quantity },
+    dirty,
+    enabled: true,
+    onRestore(raw) {
+      const next = raw as { code: string; owner: string; quantity: string };
+      if (!next || [next.code, next.owner, next.quantity].some((x) => typeof x !== 'string'))
+        throw new Error('Invalid draft');
+      setCode(next.code);
+      setOwner(next.owner);
+      setQuantity(next.quantity);
+    },
+  });
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -532,6 +558,7 @@ function PositionForm({
               planned_quantity: Number(quantity),
             },
       );
+      recovery.markSaved();
     } catch (value) {
       setFailure(value instanceof Error ? value.message : translate('shipment.saveError'));
       onError(value);
@@ -540,7 +567,8 @@ function PositionForm({
     }
   }
   return (
-    <form onSubmit={submit} data-dirty={dirty} data-busy={busy}>
+    <form data-recovery-key={storageKey} onSubmit={submit} data-dirty={dirty} data-busy={busy}>
+      <DraftRecovery recovery={recovery} />
       {item ? (
         <p className="hint">
           {translate('shipment.availableUnits', {
@@ -552,14 +580,14 @@ function PositionForm({
         <>
           <Select
             label={translate('registryField.container_type')}
-            disabled={busy}
+            disabled={busy || !!recovery.candidate}
             value={code}
             onChange={setCode}
             options={containerTypes.map((value) => ({ value, label: value }))}
           />
           <Select
             label={translate('registryField.container_ownership')}
-            disabled={busy}
+            disabled={busy || !!recovery.candidate}
             value={owner}
             onChange={setOwner}
             options={[
@@ -572,7 +600,7 @@ function PositionForm({
       <label>
         {item ? translate('shipment.createQuantity') : translate('shipment.plannedQuantity')}
         <input
-          disabled={busy}
+          disabled={busy || !!recovery.candidate}
           autoFocus={Boolean(item)}
           required
           type="number"
@@ -588,7 +616,7 @@ function PositionForm({
           {failure}
         </p>
       )}
-      <button className="primary" disabled={busy}>
+      <button className="primary" disabled={busy || !!recovery.candidate}>
         {busy
           ? translate('shipment.saving')
           : item

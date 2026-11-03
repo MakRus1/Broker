@@ -1,3 +1,5 @@
+import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordGuideNotice } from '../../shared/ui/record/RecordGuideNotice';
 import { RecordGuideMenu } from '../../shared/ui/record/RecordGuideMenu';
 import { GuidedWorkflow } from '../../shared/ui/GuidedWorkflow';
@@ -146,17 +148,8 @@ function ShipmentCard({
   const { translate } = useLocalization();
   const formId = useId();
   const validation = useFieldValidation();
-  const storageKey = `broker:shipment-card:${props.session.actor}:${props.route}`;
-  const [draft, setDraft] = useState<CardDraft>(() => {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
-      if (saved?.revision === (initial?.revision ?? 0) && saved?.value)
-        return { ...draftOf(initial), ...saved.value };
-    } catch {
-      /* Повреждённый черновик не блокирует открытие карточки. */
-    }
-    return draftOf(initial);
-  });
+  const storageKey = draftStorageKey(props.session, 'shipment', initial?.id ?? 'new');
+  const [draft, setDraft] = useState<CardDraft>(() => draftOf(initial));
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
@@ -194,23 +187,34 @@ function ShipmentCard({
   const [manualNumber, setManualNumber] = useState(Boolean(initial));
   const commands = useRef(new Commands());
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
-  const baselineRevision = useRef(initial?.revision ?? 0);
   const write = props.session.permissions.includes('shipments.write');
   const [revision, setRevision] = useState(initial?.revision);
   const set = <K extends keyof CardDraft>(key: K, value: CardDraft[K]) =>
     setDraft((old) => ({ ...old, [key]: value }));
-  useEffect(() => {
-    try {
-      if (dirty)
-        sessionStorage.setItem(
-          storageKey,
-          JSON.stringify({ revision: baselineRevision.current, value: draft }),
-        );
-      else sessionStorage.removeItem(storageKey);
-    } catch {
-      /* Форма работает и при запрете хранилища. */
-    }
-  }, [storageKey, draft, dirty]);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: revision ?? 0,
+    value: draft,
+    dirty,
+    enabled: editing && write,
+    onRestore(raw) {
+      const candidate = raw as CardDraft;
+      if (
+        !candidate ||
+        !Array.isArray(candidate.route_segments) ||
+        Object.keys(draftOf(initial)).some(
+          (key) =>
+            key !== 'route_segments' && typeof candidate[key as keyof CardDraft] !== 'string',
+        )
+      )
+        throw new Error('Invalid draft');
+      setDraft(candidate);
+      setEditing(true);
+      setManualNumber(Boolean(candidate.number));
+      manualLogist.current = true;
+      manualStatus.current = true;
+    },
+  });
   useEffect(() => {
     const leaving = (event: BeforeUnloadEvent) => {
       if ((editing && dirty) || busy) {
@@ -365,12 +369,7 @@ function ShipmentCard({
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setRevision(result.shipment.revision);
-      baselineRevision.current = result.shipment.revision;
-      try {
-        sessionStorage.removeItem(storageKey);
-      } catch {
-        /* Успешное сохранение на сервере не зависит от браузерного хранилища. */
-      }
+      recovery.markSaved();
       if (initial) {
         onSaved(result.shipment);
         setEditing(false);
@@ -389,7 +388,6 @@ function ShipmentCard({
         setDraft(next);
         setBaseline(JSON.stringify(next));
         setRevision(value.revision);
-        baselineRevision.current = value.revision;
       }
       onSaved(value);
     },
@@ -412,6 +410,7 @@ function ShipmentCard({
   ];
   return (
     <section className="shipment-editor surface record-workbench">
+      {write && <DraftRecovery recovery={recovery} />}
       <RecordHeading
         kind={translate('shipment.eyebrow')}
         title={initial?.number ?? translate('entity.newShipment')}
@@ -621,6 +620,7 @@ function ShipmentCard({
         hidden={!editing}
         id={formId}
         onSubmit={save}
+        data-recovery-key={storageKey}
         data-validation-attempted={validation.attempted}
         onInputCapture={validation.onInput}
         onInvalidCapture={(event) => {
@@ -628,11 +628,11 @@ function ShipmentCard({
           setTab(section?.getAttribute('data-edit-tab') ?? 'details');
           validation.onInvalid(event);
         }}
-        data-draft-key={storageKey}
+
         data-dirty={editing && dirty}
         data-busy={busy}
       >
-        <fieldset disabled={busy || !write || !settings || !dictionaries}>
+        <fieldset disabled={busy || !write || !settings || !dictionaries || !!recovery.candidate}>
           <fieldset
             className="shipment-edit-section"
             data-edit-tab="details"
@@ -980,7 +980,9 @@ function ShipmentCard({
           error={failure || validation.message}
           status={
             dirty
-              ? translate('shipment.unsaved')
+              ? translate(
+                  recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                )
               : initial
                 ? translate('shipment.revision', { revision: revision ?? 0 })
                 : translate('shipment.required')
@@ -992,6 +994,7 @@ function ShipmentCard({
               disabled={busy}
               onClick={() =>
                 confirmDiscard(dirty, () => {
+                  recovery.discard();
                   validation.reset();
                   if (initial) setEditing(false);
                   manualLogist.current = false;

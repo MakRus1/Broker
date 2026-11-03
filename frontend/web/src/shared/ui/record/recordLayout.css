@@ -820,3 +820,34 @@
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+
+.draft-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  background: var(--surface-muted);
+  border-left: 3px solid var(--accent);
+}
+.draft-recovery p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.draft-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.record-save-confirmation {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.draft-recovery-fields {
+  display: contents;
+}

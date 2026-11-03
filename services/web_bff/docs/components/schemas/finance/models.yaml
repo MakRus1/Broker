@@ -1522,6 +1522,82 @@ FinancialHistorySource:
   - service_charge
   - invoice
   - payment
+FinancialHistoryAction:
+  type: string
+  enum:
+  - created
+  - updated
+  - archived
+  - restored
+  - invoice_linked
+  - invoice_unlinked
+  - payment_allocated
+  - payment_reallocated
+  - payment_unallocated
+FinancialHistoryDocument:
+  type: string
+  enum:
+  - service_charge
+  - invoice
+  - receipt
+  - disbursement
+FinancialHistoryField:
+  type: string
+  enum:
+  - label_id
+  - direction
+  - counterparty_id
+  - contract_id
+  - shipment_id
+  - transportation_id
+  - quantity_milli
+  - unit
+  - price_minor
+  - currency
+  - service_date
+  - invoice_currency
+  - invoice_rate.rate_millionths
+  - invoice_rate.date
+  - invoice_rate.source
+  - price_mode
+  - vat_mode
+  - vat_rate_basis_points
+  - net_minor
+  - vat_minor
+  - total_minor
+  - invoice_net_minor
+  - invoice_vat_minor
+  - invoice_total_minor
+  - note
+  - archived
+  - number
+  - invoice_date
+  - due_date
+  - own_company_id
+  - own_bank_account_id
+  - counterparty_bank_account_id
+  - kind
+  - payment_date
+  - amount_minor
+  - purpose
+  - charges
+  - invoice
+  - allocation
+FinancialHistoryReference:
+  type: object
+  additionalProperties: false
+  required:
+  - source
+  - id
+  properties:
+    source:
+      $ref: '#/FinancialHistorySource'
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      description: Сохранённое имя или номер связанного документа; не локализуется.
 FinancialHistoryFormat:
   type: string
   enum:
@@ -1531,6 +1607,9 @@ FinancialHistoryFormat:
   - quantity
   - percent
   - rate
+  - boolean
+  - enum
+  - reference
 FinancialHistoryValue:
   type: object
   additionalProperties: false
@@ -1540,21 +1619,26 @@ FinancialHistoryValue:
   properties:
     value:
       type: string
+      description: 'Исходное значение: целое число для денежных/числовых форматов,
+        true/false для boolean, код для enum, ID для reference.'
     format:
       $ref: '#/FinancialHistoryFormat'
     currency:
       type: string
+    display_name:
+      type: string
+      description: Сохранённое имя связанного объекта для reference. ID остаётся в
+        value.
 FinancialHistoryChange:
   type: object
   additionalProperties: false
   required:
   - field
-  - label
   properties:
     field:
-      type: string
-    label:
-      type: string
+      $ref: '#/FinancialHistoryField'
+    subject:
+      $ref: '#/FinancialHistoryReference'
     before:
       $ref: '#/FinancialHistoryValue'
     after:
@@ -1586,7 +1670,8 @@ FinancialHistoryEvent:
   required:
   - cursor
   - actor
-  - title
+  - action
+  - document
   - has_previous
   - changes
   properties:
@@ -1596,8 +1681,12 @@ FinancialHistoryEvent:
       type: string
     actor_name:
       type: string
-    title:
-      type: string
+    action:
+      $ref: '#/FinancialHistoryAction'
+    document:
+      $ref: '#/FinancialHistoryDocument'
+    reference:
+      $ref: '#/FinancialHistoryReference'
     has_previous:
       type: boolean
     changes:

@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { EmployeeName } from '../../../shared/profile/EmployeeName';
 import { useEffect, useRef, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -5,6 +6,10 @@ import type { Session } from '../../../shared/api/session';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import {
   historyValue,
+  historyTitle,
+  historyFieldLabel,
+  historyChangeKey,
+  historyReferenceIdsDiffer,
   type HistoryEvent,
   type HistoryKind,
   type HistoryPage,
@@ -22,6 +27,7 @@ export function FinancialHistory({
   revision: number;
   session: Session;
 }) {
+  const { translate } = useLocalization();
   const [page, setPage] = useState<HistoryPage>({ items: [] });
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -62,17 +68,17 @@ export function FinancialHistory({
         setPage((old) => ({ ...next, items: [...old.items, ...next.items] }));
     } catch (error) {
       if (!pending.signal.aborted)
-        setFailure(error instanceof Error ? error.message : 'Не удалось загрузить историю');
+        setFailure(error instanceof Error ? error.message : translate('forms.couldNotLoadHistory'));
     } finally {
       if (!pending.signal.aborted) setBusy(false);
     }
   }
   return (
-    <section className="financial-history" aria-label="История изменений">
+    <section className="financial-history" aria-label={translate('forms.changeHistory')}>
       <div className="section-heading">
-        <h2>История изменений</h2>
+        <h2>{translate('forms.changeHistory')}</h2>
         <button type="button" disabled={busy} onClick={() => setVersion((old) => old + 1)}>
-          Обновить
+          {translate('action.refresh')}
         </button>
       </div>
       {failure && (
@@ -82,7 +88,7 @@ export function FinancialHistory({
             type="button"
             onClick={() => (page.next_before ? void more() : setVersion((old) => old + 1))}
           >
-            Повторить
+            {translate('filter.retry')}
           </button>
         </p>
       )}
@@ -95,11 +101,11 @@ export function FinancialHistory({
         />
       ))}
       {!busy && !failure && !page.items.length && (
-        <p className="empty-state">Сохранённых изменений пока нет.</p>
+        <p className="empty-state">{translate('history.empty')}</p>
       )}
       {busy && (
         <p className="hint" role="status">
-          Загружаем историю…
+          {translate('history.loading')}
         </p>
       )}
       <AutoLoadMore enabled={!!page.next_before} loading={busy} failed={!!failure} onLoad={more} />
@@ -115,67 +121,77 @@ function HistoryRecord({
   initiallyOpen: boolean;
   session: Session;
 }) {
+  const { translate, locale } = useLocalization();
   return (
     <details className="financial-history-event" open={initiallyOpen || undefined}>
       <summary>
-        <span className="financial-history-title">{event.title}</span>
+        <span className="financial-history-title">{historyTitle(event, locale)}</span>
         <span
           className="financial-history-actor"
-          title={
-            event.actor_name
-              ? undefined
-              : 'Историческое имя не сохранено; показан текущий профиль автора'
-          }
+          title={event.actor_name ? undefined : translate('history.actorFallback')}
         >
           {event.actor_name || (
             <EmployeeName
               subject={event.actor.split('#').at(-1)}
               session={session}
-              fallback={event.actor.split('#').at(-1) || 'Имя не сохранено'}
+              fallback={event.actor.split('#').at(-1) || translate('forms.nameNotRecorded')}
             />
           )}
         </span>
         <time dateTime={event.cursor.occurred_at}>
-          {new Date(event.cursor.occurred_at).toLocaleString('ru-RU')}
+          {new Date(event.cursor.occurred_at).toLocaleString(locale)}
         </time>
         <span className="hint">
-          Редакция{' '}
-          {event.cursor.source === 'service_charge'
-            ? 'услуги'
-            : event.cursor.source === 'invoice'
-              ? 'счёта'
-              : 'платежа'}{' '}
-          {event.cursor.revision}
+          {translate(
+            event.cursor.source === 'service_charge'
+              ? 'history.chargeRevision'
+              : event.cursor.source === 'invoice'
+                ? 'history.invoiceRevision'
+                : 'history.paymentRevision',
+            { revision: event.cursor.revision },
+          )}
         </span>
       </summary>
       {!event.has_previous && event.cursor.revision > 1 && (
-        <p className="route-notice">
-          Предыдущая редакция не сохранена. Показаны доступные данные этой редакции.
-        </p>
+        <p className="route-notice">{translate('history.previousMissing')}</p>
       )}
       {event.changes.length ? (
         <div className="table-scroll">
           <table className="financial-history-diff">
             <thead>
               <tr>
-                <th>Поле</th>
-                <th>До изменения</th>
-                <th>После изменения</th>
+                <th>{translate('counterparty.field')}</th>
+                <th>{translate('counterparty.before')}</th>
+                <th>{translate('counterparty.after')}</th>
               </tr>
             </thead>
             <tbody>
               {event.changes.map((change) => (
-                <tr key={change.field}>
-                  <th scope="row">{change.label}</th>
-                  <td>{historyValue(change.before)}</td>
-                  <td>{historyValue(change.after)}</td>
+                <tr key={historyChangeKey(change)}>
+                  <th scope="row">{historyFieldLabel(change, event.document, locale)}</th>
+                  <td>
+                    {historyValue(
+                      change.before,
+                      locale,
+                      change.field,
+                      historyReferenceIdsDiffer(change),
+                    )}
+                  </td>
+                  <td>
+                    {historyValue(
+                      change.after,
+                      locale,
+                      change.field,
+                      historyReferenceIdsDiffer(change),
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className="hint">Значения полей не изменились.</p>
+        <p className="hint">{translate('counterparty.noFieldValuesChanged')}</p>
       )}
     </details>
   );

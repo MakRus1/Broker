@@ -3,16 +3,19 @@
 
 namespace finance::helpers::history {
 using Source = models::FinancialHistorySource;
+using Action = models::FinancialHistoryAction;
+using Document = models::FinancialHistoryDocument;
+using FieldKey = models::FinancialHistoryField;
+using Reference = models::FinancialHistoryReference;
 
 inline bool Archived(const Json& doc) {
     return At(doc, "archived").As<bool>(false);
 }
 
 inline void Fields(std::vector<models::FinancialHistoryChange>& changes, const auto& fields,
-    const Json& before, const Json& after, const std::string& prefix = "",
-    const std::string& label = "") {
+    const Json& before, const Json& after, const std::optional<Reference>& subject = std::nullopt) {
     for (const auto& field : fields)
-        AddChange(changes, field, before, after, prefix, label);
+        AddChange(changes, field, before, after, subject);
 }
 
 inline void InvoiceLines(
@@ -27,19 +30,19 @@ inline void InvoiceLines(
     for (const auto& id : ids) {
         const auto previous = Find(old, id);
         const auto value = Find(current, id);
-        const auto label = "Услуга «" +
-            (current.contains(id) ? Name(value, "label_name") : Name(previous, "label_name")) +
-            "»: ";
+        const Reference subject{.id = id,
+            .name = Scalar(At(current.contains(id) ? value : previous, "label_name")),
+            .source = Source::ServiceCharge};
         if (!old.contains(id) || !current.contains(id)) {
             const models::FinancialHistoryValue included{
-                .format = Format::Text, .value = "Включена в счёт"};
+                .format = Format::Boolean, .value = "true"};
             changes.push_back(
                 {.after = current.contains(id) ? std::optional{included} : std::nullopt,
                     .before = old.contains(id) ? std::optional{included} : std::nullopt,
-                    .field = "charges." + id,
-                    .label = label + "состав счёта"});
+                    .field = FieldKey::Charges,
+                    .subject = subject});
         } else {
-            Fields(changes, kChargeFields, previous, value, "charges." + id + ".", label);
+            Fields(changes, kChargeFields, previous, value, subject);
         }
     }
 }
@@ -59,63 +62,82 @@ inline std::optional<models::FinancialHistoryValue> Money(std::int64_t value, co
         .value = std::to_string(value)};
 }
 
+inline Document DocumentType(Source source, const Json& document) {
+    if (source == Source::ServiceCharge)
+        return Document::ServiceCharge;
+    if (source == Source::Invoice)
+        return Document::Invoice;
+    return models::ParseEnumScalar(Name(document, "kind"), models::PaymentKind{}) ==
+            models::PaymentKind::Receipt
+        ? Document::Receipt
+        : Document::Disbursement;
+}
+
+inline Action DocumentAction(std::int64_t revision, const Json& before, const Json& after) {
+    if (revision == 1)
+        return Action::Created;
+    if (before.IsMissing() || before.IsNull())
+        return Action::Updated;
+    if (Archived(after) && !Archived(before))
+        return Action::Archived;
+    if (!Archived(after) && Archived(before))
+        return Action::Restored;
+    return Action::Updated;
+}
+
 inline models::FinancialHistoryEvent Event(models::FinancialHistoryCursor cursor,
     const std::string& actor, const Json& before, const Json& after, Source requested,
     const std::string& requested_id, const std::map<std::string, std::string>& invoices) {
-    models::FinancialHistoryEvent event{.actor = actor,
-        .cursor = cursor,
-        .has_previous = !before.IsNull() && !before.IsMissing(),
-        .title = ""};
-    event.actor_name = Scalar(At(after, "actor_name"));
-    if (cursor.source == Source::Invoice && requested == Source::ServiceCharge) {
-        const auto old = Indexed(At(before, "charges"), "id");
-        const auto current = Indexed(At(after, "charges"), "id");
-        const bool was = old.contains(requested_id) && !Archived(At(before, "invoice"));
-        const bool included = current.contains(requested_id) && !Archived(At(after, "invoice"));
-        const auto old_number = Name(At(before, "invoice"), "number");
-        const auto number = Name(At(after, "invoice"), "number");
-        event.title = included ? "Услуга включена в счёт № " + number
-                               : "Услуга исключена из счёта № " + number;
-        event.changes.push_back(
-            {.after = included ? std::optional{models::FinancialHistoryValue{
-                                     .format = Format::Text, .value = "№ " + number}}
-                               : std::nullopt,
-                .before = was ? std::optional{models::FinancialHistoryValue{
-                                    .format = Format::Text, .value = "№ " + old_number}}
-                              : std::nullopt,
-                .field = "invoice",
-                .label = "Счёт"});
-        return event;
-    }
-    if (cursor.source == Source::Payment && requested == Source::Invoice) {
-        const auto old = Allocated(before, requested_id);
-        const auto current = Allocated(after, requested_id);
-        const auto payment = At(after, "payment");
-        event.title = (current == 0 ? "Отменено распределение оплаты: "
-                              : old == 0 ? "Распределена оплата: "
-                                         : "Изменено распределение оплаты: ") +
-            Name(payment, "number");
-        event.changes.push_back({.after = Money(current, after),
-            .before = Money(old, before),
-            .field = "allocation",
-            .label = "Оплата этого счёта"});
-        return event;
-    }
     const auto document = cursor.source == Source::Invoice ? At(after, "invoice")
         : cursor.source == Source::Payment                 ? At(after, "payment")
                                                            : after;
     const auto previous = cursor.source == Source::Invoice ? At(before, "invoice")
         : cursor.source == Source::Payment                 ? At(before, "payment")
                                                            : before;
-    const std::string kind = cursor.source == Source::Invoice ? "Счёт"
-        : cursor.source == Source::Payment
-        ? (Name(document, "kind") == "receipt" ? "Поступление" : "Списание")
-        : "Услуга";
-    event.title = kind +
-        (cursor.revision == 1                               ? ": создание"
-                : Archived(document) && !Archived(previous) ? ": архивирование"
-                : !Archived(document) && Archived(previous) ? ": восстановление"
-                                                            : ": изменение");
+    models::FinancialHistoryEvent event{
+        .action = DocumentAction(cursor.revision, previous, document),
+        .actor = actor,
+        .cursor = cursor,
+        .document = DocumentType(cursor.source, document),
+        .has_previous = !before.IsNull() && !before.IsMissing()};
+    event.actor_name = Scalar(At(after, "actor_name"));
+    if (cursor.source == Source::Invoice && requested == Source::ServiceCharge) {
+        const auto old = Indexed(At(before, "charges"), "id");
+        const auto current = Indexed(At(after, "charges"), "id");
+        const bool was = old.contains(requested_id) && !Archived(At(before, "invoice"));
+        const bool included = current.contains(requested_id) && !Archived(At(after, "invoice"));
+        event.action = included ? Action::InvoiceLinked : Action::InvoiceUnlinked;
+        event.reference = Reference{.id = cursor.entity_id,
+            .name = Scalar(At(document, "number")),
+            .source = Source::Invoice};
+        event.changes.push_back(
+            {.after = included ? std::optional{models::FinancialHistoryValue{
+                                     .display_name = Scalar(At(document, "number")),
+                                     .format = Format::Reference,
+                                     .value = cursor.entity_id}}
+                               : std::nullopt,
+                .before = was ? std::optional{models::FinancialHistoryValue{
+                                    .display_name = Scalar(At(previous, "number")),
+                                    .format = Format::Reference,
+                                    .value = cursor.entity_id}}
+                              : std::nullopt,
+                .field = FieldKey::Invoice});
+        return event;
+    }
+    if (cursor.source == Source::Payment && requested == Source::Invoice) {
+        const auto old = Allocated(before, requested_id);
+        const auto current = Allocated(after, requested_id);
+        event.action = current == 0 ? Action::PaymentUnallocated
+            : old == 0              ? Action::PaymentAllocated
+                                    : Action::PaymentReallocated;
+        event.reference = Reference{.id = cursor.entity_id,
+            .name = Scalar(At(document, "number")),
+            .source = Source::Payment};
+        event.changes.push_back({.after = Money(current, after),
+            .before = Money(old, before),
+            .field = FieldKey::Allocation});
+        return event;
+    }
     if (cursor.source == Source::ServiceCharge)
         Fields(event.changes, kChargeFields, previous, document);
     if (cursor.source == Source::Invoice) {
@@ -139,8 +161,10 @@ inline models::FinancialHistoryEvent Event(models::FinancialHistoryCursor cursor
             const auto name = invoices.find(id);
             event.changes.push_back({.after = Money(amount, after),
                 .before = Money(was, before),
-                .field = "allocations." + id,
-                .label = "Оплата счёта № " + (name == invoices.end() ? id : name->second)});
+                .field = FieldKey::Allocation,
+                .subject = Reference{.id = id,
+                    .name = name == invoices.end() ? std::nullopt : std::optional{name->second},
+                    .source = Source::Invoice}});
         }
     }
     return event;

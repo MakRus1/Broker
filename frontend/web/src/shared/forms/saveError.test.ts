@@ -8,14 +8,12 @@ afterEach(() => vi.unstubAllGlobals());
 it('preserves the server error code and trace for conflict handling', async () => {
   vi.stubGlobal(
     'fetch',
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ error: 'revision_conflict', message: 'Changed' }), {
-          status: 409,
-          headers: { 'X-Trace-Id': 'trace' },
-        }),
-      ),
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'revision_conflict', message: 'Changed' }), {
+        status: 409,
+        headers: { 'X-Trace-Id': 'trace' },
+      }),
+    ),
   );
   await expect(request('/save')).rejects.toMatchObject({
     status: 409,

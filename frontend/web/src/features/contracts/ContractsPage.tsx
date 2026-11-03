@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
@@ -417,9 +418,7 @@ export function ContractsPage({
       });
       onSaved(result.contract);
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : translate('forms.couldNotSaveTheContract'),
-      );
+      setFailure(saveErrorMessage(error, translate('forms.couldNotSaveTheContract')));
       onError(error);
     } finally {
       setBusy(false);
@@ -443,7 +442,7 @@ export function ContractsPage({
       setItems((old) => [...old, ...result.items]);
       setAfter(result.next_cursor);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : translate('forms.couldNotLoadContracts'));
+      setFailure(saveErrorMessage(error, translate('forms.couldNotLoadContracts')));
       onError(error);
     } finally {
       setLoading(false);
@@ -698,7 +697,7 @@ export function ContractsPage({
             </RecordSection>
           </fieldset>
           <RecordActions
-            error={failure}
+            error={failure || validation.message}
             status={
               dirty
                 ? translate('shipment.unsaved')

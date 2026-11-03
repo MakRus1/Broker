@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -88,9 +89,7 @@ export function TransportationDetailsForm({
       setSaved(true);
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : translate('forms.couldNotSaveTheTransportation'),
-      );
+      setFailure(saveErrorMessage(error, translate('forms.couldNotSaveTheTransportation')));
       onError(error);
     } finally {
       setBusy(false);
@@ -182,7 +181,11 @@ export function TransportationDetailsForm({
           <button type="button" disabled={busy} onClick={() => confirmDiscard(dirty, onCancel)}>
             {translate('action.cancel')}
           </button>
-          <button className="primary" disabled={busy || (Boolean(initial) && !dirty)}>
+          <button
+            className="primary"
+            disabled={busy || (Boolean(initial) && !dirty)}
+            title={initial && !dirty ? translate('validation.noChanges') : undefined}
+          >
             {busy
               ? translate('shipment.saving')
               : initial

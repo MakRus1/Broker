@@ -1,3 +1,4 @@
+import { saveErrorMessage } from '../../shared/forms/saveError';
 import { MultiSelect } from '../../shared/ui/MultiSelect';
 import './counterpartyEditor.css';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
@@ -117,12 +118,10 @@ export function CounterpartyForm({
       onSaved(result.counterparty);
     } catch (error) {
       setFailure(
-        error instanceof ApiError && error.status === 409
+        error instanceof ApiError && error.status === 409 && error.code !== 'revision_conflict'
           ? error.message +
               translate('counterparty.checkTheExistingRecordOrRefreshTheDataBeforeRetrying')
-          : error instanceof Error
-            ? error.message
-            : translate('counterparty.couldNotSave'),
+          : saveErrorMessage(error, translate('counterparty.couldNotSave')),
       );
       onError(error);
     } finally {
@@ -314,7 +313,7 @@ export function CounterpartyForm({
           </RecordSection>
         </fieldset>
         <RecordActions
-          error={failure}
+          error={failure || validation.message}
           status={
             dirty
               ? translate('shipment.unsaved')

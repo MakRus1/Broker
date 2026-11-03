@@ -2170,6 +2170,7 @@ textarea::placeholder {
 
 form[data-validation-attempted='true'] input:invalid,
 form[data-validation-attempted='true'] textarea:invalid,
+form[data-validation-attempted='true'] select:invalid,
 input[aria-invalid='true'] {
   border-color: var(--danger-fill);
   background: var(--danger-soft);

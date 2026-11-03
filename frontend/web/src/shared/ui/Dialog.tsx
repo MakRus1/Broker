@@ -1,3 +1,4 @@
+import { parseDraft } from '../forms/useDraftRecovery';
 import './dialog.css';
 import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
@@ -17,7 +18,7 @@ export function Dialog({
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const startedOnBackdrop = useRef(false);
-  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  const { confirmClose, confirmation } = useDiscardConfirmation();
   useEffect(() => {
     const node = ref.current!;
     const previousFocus = document.activeElement;
@@ -30,7 +31,7 @@ export function Dialog({
   }, []);
   function close() {
     if (ref.current?.querySelector('form[data-busy="true"]')) return;
-    confirmDiscard(!!ref.current?.querySelector('form[data-dirty="true"]'), onClose);
+    confirmClose(ref.current ? [ref.current] : [], onClose);
   }
   return (
     <>
@@ -83,36 +84,76 @@ export function Dialog({
 
 export function useDiscardConfirmation() {
   const { translate } = useLocalization();
-  const [pending, setPending] = useState<(() => void) | null>(null);
-  function confirmDiscard(dirty: boolean, discard: () => void) {
-    if (dirty) setPending(() => discard);
+  const [pending, setPending] = useState<{ action: () => void; keepDraft: boolean } | null>(null);
+  function confirmDiscard(dirty: boolean, discard: () => void, keepDraft = false) {
+    if (dirty) setPending({ action: discard, keepDraft });
     else discard();
   }
   const confirmation = pending && (
     <Dialog
       className="discard-dialog"
-      title={translate('ui.discardTitle')}
+      title={translate(pending.keepDraft ? 'ui.closeDraftTitle' : 'ui.discardTitle')}
       onClose={() => setPending(null)}
     >
-      <p className="confirmation-copy">{translate('ui.discardHint')}</p>
+      <p className="confirmation-copy">
+        {translate(pending.keepDraft ? 'ui.closeDraftHint' : 'ui.discardHint')}
+      </p>
       <DialogActions>
         <button type="button" data-autofocus onClick={() => setPending(null)}>
-          {translate('ui.stay')}
+          {translate(pending.keepDraft ? 'ui.continueEditing' : 'ui.stay')}
         </button>
         <button
           type="button"
-          className="danger"
+          className={pending.keepDraft ? undefined : 'danger'}
           onClick={() => {
             setPending(null);
-            pending();
+            pending.action();
           }}
         >
-          {translate('ui.discard')}
+          {translate(pending.keepDraft ? 'ui.close' : 'ui.discard')}
         </button>
       </DialogActions>
     </Dialog>
   );
-  return { confirmDiscard, confirmation };
+  function confirmClose(nodes: HTMLElement[], close: () => void) {
+    const forms = nodes.flatMap((node) => [
+      ...node.querySelectorAll<HTMLElement>('form[data-dirty="true"]'),
+    ]);
+    const keepDraft =
+      forms.length > 0 &&
+      forms.every((form) => {
+        try {
+          return (
+            !!form.dataset.recoveryKey &&
+            !!parseDraft(localStorage.getItem(form.dataset.recoveryKey))
+          );
+        } catch {
+          return false;
+        }
+      });
+    confirmDiscard(
+      forms.length > 0,
+      () => {
+        // Если хранилище недоступно, явно предупреждаем о потере изменений.
+        if (forms.length && !keepDraft) {
+          for (const node of nodes)
+            node
+              .querySelectorAll<HTMLElement>('[data-recovery-key], [data-draft-key]')
+              .forEach((form) => {
+                try {
+                  if (form.dataset.recoveryKey) localStorage.removeItem(form.dataset.recoveryKey);
+                  if (form.dataset.draftKey) sessionStorage.removeItem(form.dataset.draftKey);
+                } catch {
+                  /* Закрытие доступно и без хранилища. */
+                }
+              });
+        }
+        close();
+      },
+      keepDraft,
+    );
+  }
+  return { confirmDiscard, confirmClose, confirmation };
 }
 
 export function DialogActions({ children, error }: { children: ReactNode; error?: string }) {

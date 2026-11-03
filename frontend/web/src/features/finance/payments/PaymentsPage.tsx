@@ -1,3 +1,6 @@
+import { restoreDraft } from '../../../shared/forms/restoreDraft';
+import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
@@ -112,6 +115,32 @@ export function PaymentsPage({
   const loadedDocument = useRef('');
   editing.current = !!draft;
   const dirty = !!draft && JSON.stringify({ draft, allocations }) !== original.current;
+  const storageKey = draftStorageKey(session, 'payment', `${kind}-${id || 'registry'}`);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: value?.payment.revision ?? 0,
+    value: { draft, allocations, invoiceMap },
+    dirty,
+    enabled: !!draft && session.permissions.includes('finance.write_payments') && !loading,
+    onRestore(raw) {
+      const next = restoreDraft<{
+        draft: unknown;
+        allocations: Record<string, string>;
+        invoiceMap: Record<string, InvoiceBalance>;
+      }>(raw);
+      const restored = restoreDraft<Draft>(next.draft, ['payment_date']);
+      if (
+        restored.kind !== kind ||
+        typeof restored.id !== 'string' ||
+        !next.allocations ||
+        Object.values(next.allocations).some((x) => typeof x !== 'string')
+      )
+        throw new Error('Invalid draft');
+      setDraft(restored);
+      setAllocations(next.allocations);
+      setInvoiceMap(next.invoiceMap);
+    },
+  });
   function edit(details: PaymentDetails) {
     const next = draftOf(details.payment);
     const selected = Object.fromEntries(
@@ -252,6 +281,7 @@ export function PaymentsPage({
   }
   function cancel() {
     confirmDiscard(dirty, () => {
+      recovery.discard();
       setFailure('');
       validation.reset();
       if (creating) onCancel();
@@ -273,7 +303,7 @@ export function PaymentsPage({
   }
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (!draft) return;
+    if (!draft || busy || recovery.candidate) return;
     const amount = parseFixed(draft.amount, 2, 9000000000000000);
     if (!amount || !draft.payment_date) {
       setFailure(translate('forms.enterThePaymentAmountAndDate'));
@@ -317,6 +347,7 @@ export function PaymentsPage({
       setValue(result);
       setDraft(undefined);
       onTitle(result.payment.number);
+      recovery.markSaved();
       onSaved(result.payment);
     } catch (e) {
       setFailure(saveErrorMessage(e, translate('errors.request')));
@@ -343,6 +374,7 @@ export function PaymentsPage({
   return (
     <section className="payment-page surface record-workbench financial-record-workbench">
       {confirmation}
+      {write && !loading && <DraftRecovery recovery={recovery} />}
       <RecordHeading
         guide={receipt ? 'receipt' : 'disbursement'}
         kind={title}
@@ -390,6 +422,7 @@ export function PaymentsPage({
         />
       ) : draft ? (
         <form
+          data-recovery-key={storageKey}
           className="payment-form record-editor-form document-editor"
           onSubmit={save}
           data-dirty={dirty}
@@ -398,7 +431,7 @@ export function PaymentsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset disabled={busy}>
+          <fieldset disabled={busy || !!recovery.candidate}>
             <RecordSection title={translate('record.identification')}>
               <div className="record-fields">
                 <label>
@@ -662,14 +695,16 @@ export function PaymentsPage({
             error={failure || validation.message}
             status={
               dirty
-                ? translate('shipment.unsaved')
+                ? translate(
+                    recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                  )
                 : translate(creating ? 'record.creating' : 'record.editing')
             }
           >
             <button type="button" disabled={busy} onClick={() => void cancel()}>
               {translate('action.cancel')}
             </button>
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !!recovery.candidate}>
               {translate('action.save')}
             </button>
           </RecordActions>

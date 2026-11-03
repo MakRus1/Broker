@@ -1,3 +1,5 @@
+import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
@@ -366,6 +368,30 @@ export function ContractsPage({
     editing &&
     !!draft &&
     JSON.stringify(draft) !== (creating ? initialDraft.current : JSON.stringify(value));
+  const recovery = useDraftRecovery({
+    storageKey: draftStorageKey(session, 'contract', id ?? 'new'),
+    revision: value?.revision ?? 0,
+    value: draft,
+    dirty,
+    enabled: editing && write && !!draft && !loading,
+    onRestore(raw) {
+      const saved = raw as Contract;
+      if (
+        !saved ||
+        typeof saved.number !== 'string' ||
+        typeof saved.own_company_id !== 'string' ||
+        typeof saved.counterparty_id !== 'string' ||
+        typeof saved.currency !== 'string'
+      )
+        throw new Error('Invalid draft');
+      setDraft({
+        ...saved,
+        contract_date: saved.contract_date ? CalendarDate.fromISO(saved.contract_date) : null,
+        valid_until: saved.valid_until ? CalendarDate.fromISO(saved.valid_until) : null,
+      });
+      if (!editing) location.hash = `/contracts/${id}/edit`;
+    },
+  });
   useEffect(() => {
     const leaving = (event: BeforeUnloadEvent) => {
       if (dirty || busy) {
@@ -388,13 +414,20 @@ export function ContractsPage({
   function cancel() {
     confirmDiscard(dirty, () => {
       setFailure('');
+      recovery.discard();
+      if (value && !creating)
+        setDraft({
+          ...value,
+          contract_date: CalendarDate.fromISO(value.contract_date),
+          valid_until: value.valid_until ? CalendarDate.fromISO(value.valid_until) : null,
+        });
       onCancel();
     });
   }
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!draft || busy) return;
+    if (!draft || busy || recovery.candidate) return;
     if (draft.own_company_id === draft.counterparty_id) {
       setFailure(translate('forms.selectDifferentPartiesToTheContract'));
       return;
@@ -416,6 +449,7 @@ export function ContractsPage({
           ? CalendarDate.fromISO(result.contract.valid_until)
           : null,
       });
+      recovery.markSaved();
       onSaved(result.contract);
     } catch (error) {
       setFailure(saveErrorMessage(error, translate('forms.couldNotSaveTheContract')));
@@ -515,6 +549,7 @@ export function ContractsPage({
     );
   return (
     <section className="surface record-workbench financial-record-workbench">
+      {write && (editing || recovery.saved) && <DraftRecovery recovery={recovery} />}
       {confirmation}
       <RecordHeading
         guide="contract"
@@ -547,13 +582,14 @@ export function ContractsPage({
         <form
           className="counterparty-form document-editor"
           onSubmit={save}
+          data-recovery-key={draftStorageKey(session, 'contract', id ?? 'new')}
           data-dirty={dirty}
           data-busy={busy}
           data-validation-attempted={validation.attempted}
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset disabled={busy}>
+          <fieldset disabled={busy || !!recovery.candidate}>
             <RecordSection title={translate('record.identification')}>
               <div className="record-fields record-fields-three">
                 <label>
@@ -701,7 +737,9 @@ export function ContractsPage({
             error={failure || validation.message}
             status={
               dirty
-                ? translate('shipment.unsaved')
+                ? translate(
+                    recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                  )
                 : value
                   ? translate('shipment.revision', { revision: value.revision })
                   : translate('record.creating')
@@ -710,7 +748,7 @@ export function ContractsPage({
             <button type="button" disabled={busy} onClick={cancel}>
               {translate('action.cancel')}
             </button>
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !!recovery.candidate}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </RecordActions>

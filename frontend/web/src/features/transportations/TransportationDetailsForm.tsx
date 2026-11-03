@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
@@ -44,7 +46,7 @@ export function TransportationDetailsForm({
       });
     return () => controller.abort();
   }, [session]);
-  const [id] = useState(() => crypto.randomUUID());
+  const [id, setId] = useState<string>(() => crypto.randomUUID());
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
   const [containerNumber, setContainerNumber] = useState(initial?.container_number ?? '');
@@ -62,9 +64,43 @@ export function TransportationDetailsForm({
       containerType !== (initial?.container_type_code ?? '') ||
       ownership !== (initial?.container_ownership ?? '') ||
       containerNumber !== (initial?.container_number ?? ''));
+  const storageKey = draftStorageKey(session, 'transportation', initial?.id ?? `new-${shipmentId}`);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: initial?.revision ?? 0,
+    value: { id, type, hazardous, containerNumber, containerType, ownership },
+    dirty,
+    enabled: !saved,
+    onRestore(raw) {
+      const value = raw as {
+        id: string;
+        type: Transportation['type'];
+        hazardous: boolean;
+        containerNumber: string;
+        containerType: string;
+        ownership: string;
+      };
+      if (
+        !value ||
+        typeof value.id !== 'string' ||
+        !(value.type in transportationTypes) ||
+        typeof value.hazardous !== 'boolean' ||
+        [value.containerNumber, value.containerType, value.ownership].some(
+          (x) => typeof x !== 'string',
+        )
+      )
+        throw new Error('Invalid draft');
+      setId(value.id);
+      setType(value.type);
+      setHazardous(value.hazardous);
+      setContainerNumber(value.containerNumber);
+      setContainerType(value.containerType);
+      setOwnership(value.ownership);
+    },
+  });
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -86,6 +122,7 @@ export function TransportationDetailsForm({
           ...(type === 'container' && ownership ? { container_ownership: ownership } : {}),
         },
       );
+      recovery.markSaved();
       setSaved(true);
       onSaved(result.transportation);
     } catch (error) {
@@ -97,8 +134,15 @@ export function TransportationDetailsForm({
   }
   return (
     <>
-      <form className="transportation-editor" onSubmit={submit} data-dirty={dirty} data-busy={busy}>
-        <fieldset disabled={busy}>
+      <DraftRecovery recovery={recovery} />
+      <form
+        data-recovery-key={storageKey}
+        className="transportation-editor"
+        onSubmit={submit}
+        data-dirty={dirty}
+        data-busy={busy}
+      >
+        <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('transport.details')}>
             <div className="shipment-fields">
               <Select
@@ -172,13 +216,24 @@ export function TransportationDetailsForm({
           error={failure}
           status={
             dirty
-              ? translate('shipment.unsaved')
+              ? translate(
+                  recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                )
               : initial
                 ? translate('shipment.revision', { revision: initial.revision })
                 : translate('transport.createHint')
           }
         >
-          <button type="button" disabled={busy} onClick={() => confirmDiscard(dirty, onCancel)}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              confirmDiscard(dirty, () => {
+                recovery.discard();
+                onCancel();
+              })
+            }
+          >
             {translate('action.cancel')}
           </button>
           <button

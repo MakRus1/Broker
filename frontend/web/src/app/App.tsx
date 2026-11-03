@@ -117,7 +117,7 @@ export function App() {
   useEffect(() => {
     workspaceHistory.current = [activeWorkspace];
   }, [storageKey]);
-  const { confirmDiscard, confirmation } = useDiscardConfirmation();
+  const { confirmClose, confirmation } = useDiscardConfirmation();
   useEffect(() => {
     setWorkspaces((old) => openWorkspace(old, route));
   }, [route]);
@@ -154,36 +154,18 @@ export function App() {
   function closeWorkspace(id: string) {
     const node = workspaceNodes.current.get(id);
     if (node?.querySelector('form[data-busy="true"]')) return;
-    confirmDiscard(Boolean(node?.querySelector('form[data-dirty="true"]')), () => {
-      node?.querySelectorAll<HTMLElement>('[data-draft-key]').forEach((form) => {
-        try {
-          sessionStorage.removeItem(form.dataset.draftKey!);
-        } catch {
-          /* Закрытие формы не зависит от хранилища. */
-        }
-      });
-      dismissWorkspace(id);
-    });
+    confirmClose(node ? [node] : [], () => dismissWorkspace(id));
   }
   function closeAllWorkspaces() {
     const nodes = [...workspaceNodes.current.values()];
     if (nodes.some((node) => node.querySelector('form[data-busy="true"]'))) return;
-    const dirty = nodes.some((node) => node.querySelector('form[data-dirty="true"]'));
-    confirmDiscard(dirty, () => {
-      for (const node of nodes) {
-        node.querySelectorAll<HTMLElement>('[data-draft-key]').forEach((form) => {
-          try {
-            sessionStorage.removeItem(form.dataset.draftKey!);
-          } catch {
-            /* Закрытие формы не зависит от хранилища. */
-          }
-        });
-      }
+    confirmClose(nodes, () => {
       setWorkspaces([]);
       workspaceHistory.current = [];
       location.hash = '/';
     });
   }
+
   useEffect(() => {
     function changed() {
       if (!location.hash) {

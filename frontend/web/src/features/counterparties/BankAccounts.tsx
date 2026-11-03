@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import './bankAccounts.css';
@@ -64,6 +66,33 @@ export function BankAccounts({
   const dirty = !!draft && JSON.stringify(draft) !== JSON.stringify(editing);
   const write =
     session.permissions.includes('counterparties.write_bank_accounts') && !archivedOwner;
+  const storageKey = draftStorageKey(session, 'bank-account', counterpartyId);
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: draft?.revision ?? 0,
+    value: { draft, baseline: editing },
+    dirty,
+    enabled: write && !!draft && !loading,
+    revisionForDraft(raw) {
+      const next = raw as { draft?: BankAccount };
+      if (!next?.draft) return -1;
+      return next.draft.revision === 0
+        ? 0
+        : (items.find((x) => x.id === next.draft?.id)?.revision ?? -1);
+    },
+    onRestore(raw) {
+      const next = raw as { draft: BankAccount; baseline: BankAccount };
+      if (
+        !next?.draft ||
+        next.draft.counterparty_id !== counterpartyId ||
+        typeof next.draft.number !== 'string' ||
+        !next.baseline
+      )
+        throw new Error('Invalid draft');
+      setDraft(next.draft);
+      setEditing(next.baseline);
+    },
+  });
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   useEffect(() => {
     onDirty(dirty || busy);
@@ -117,6 +146,7 @@ export function BankAccounts({
   function cancel() {
     if (!busy)
       confirmDiscard(dirty, () => {
+        recovery.discard();
         setDraft(undefined);
         setEditing(undefined);
         setFailure('');
@@ -124,7 +154,7 @@ export function BankAccounts({
   }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!draft || busy) return;
+    if (!draft || busy || recovery.candidate) return;
     setBusy(true);
     setFailure('');
     try {
@@ -142,6 +172,7 @@ export function BankAccounts({
         ...account,
         expected_revision: revision,
       });
+      recovery.markSaved();
       setDraft(undefined);
       setEditing(undefined);
       setRefresh((value) => value + 1);
@@ -158,6 +189,7 @@ export function BankAccounts({
   }
   return (
     <section className="bank-accounts">
+      {write && !loading && <DraftRecovery recovery={recovery} />}
       <div className="section-heading">
         <h2>
           {draft
@@ -191,6 +223,7 @@ export function BankAccounts({
       )}
       {draft ? (
         <form
+          data-recovery-key={storageKey}
           className="bank-account-editor"
           onSubmit={save}
           data-dirty={dirty}
@@ -201,7 +234,7 @@ export function BankAccounts({
         >
           <fieldset
             className="record-layout-content"
-            disabled={busy}
+            disabled={busy || !!recovery.candidate}
             aria-label={translate('counterparty.bankAccountDetails')}
           >
             {(
@@ -288,7 +321,9 @@ export function BankAccounts({
             error={failure || validation.message}
             status={
               dirty
-                ? translate('shipment.unsaved')
+                ? translate(
+                    recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                  )
                 : draft.revision
                   ? translate('shipment.revision', { revision: draft.revision })
                   : translate('record.creating')
@@ -297,7 +332,7 @@ export function BankAccounts({
             <button type="button" onClick={cancel} disabled={busy}>
               {translate('action.cancel')}
             </button>
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !!recovery.candidate}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </RecordActions>

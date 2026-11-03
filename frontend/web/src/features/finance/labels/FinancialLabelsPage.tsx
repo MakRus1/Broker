@@ -1,3 +1,5 @@
+import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
@@ -114,6 +116,25 @@ export function FinancialLabelsPage({
     !!draft &&
     JSON.stringify(draft) !==
       (creating ? initial.current : value ? JSON.stringify(draftOf(value)) : '');
+  const storageKey = draftStorageKey(session, 'financial-label', id ?? 'new');
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: value?.revision ?? 0,
+    value: draft,
+    dirty,
+    enabled: editing && write && !!draft && !loading,
+    onRestore(raw) {
+      const next = raw as Draft;
+      if (
+        !next ||
+        typeof next.id !== 'string' ||
+        typeof next.name !== 'string' ||
+        typeof next.vatRate !== 'string'
+      )
+        throw new Error('Invalid draft');
+      setDraft(next);
+    },
+  });
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => {
       if (dirty || busy) {
@@ -255,11 +276,15 @@ export function FinancialLabelsPage({
   const columnState = useRegistryColumns(session.subject, 'financial_labels', columns);
   function cancel() {
     if (busy) return;
-    confirmDiscard(dirty, onCancel);
+    confirmDiscard(dirty, () => {
+      recovery.discard();
+      if (value) setDraft(draftOf(value));
+      onCancel();
+    });
   }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!draft || busy) return;
+    if (!draft || busy || recovery.candidate) return;
     const rate = draft.vat_mode === 'rate' ? parseVatRate(draft.vatRate) : null;
     if (rate === undefined) return;
     setBusy(true);
@@ -273,6 +298,7 @@ export function FinancialLabelsPage({
       );
       setValue(result.label);
       setDraft(draftOf(result.label));
+      recovery.markSaved();
       onSaved(result.label);
     } catch (error) {
       setFailure(saveErrorMessage(error, translate('forms.couldNotSaveTheFinancialLabel')));
@@ -375,6 +401,7 @@ export function FinancialLabelsPage({
   return (
     <section className="surface record-workbench financial-record-workbench financial-label-page">
       {confirmation}
+      {write && !loading && (editing || recovery.saved) && <DraftRecovery recovery={recovery} />}
       <RecordHeading
         guide="label"
         kind={translate('forms.financialLABEL')}
@@ -407,6 +434,7 @@ export function FinancialLabelsPage({
       )}
       {editing && draft && write && !loading ? (
         <form
+          data-recovery-key={storageKey}
           className="record-editor-form document-editor"
           onSubmit={save}
           data-dirty={dirty}
@@ -415,93 +443,97 @@ export function FinancialLabelsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <RecordSection title={translate('record.calculation')}>
-            <div className="record-fields">
-              <label className="record-wide">
-                {translate('forms.nameRequired')}
+          <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
+            <RecordSection title={translate('record.calculation')}>
+              <div className="record-fields">
+                <label className="record-wide">
+                  {translate('forms.nameRequired')}
+                  <input
+                    name="name"
+                    required
+                    maxLength={256}
+                    value={draft.name}
+                    disabled={busy}
+                    onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  />
+                </label>
+                <Select
+                  label={translate('registryField.direction')}
+                  value={draft.direction}
+                  disabled={busy}
+                  onChange={(direction) =>
+                    setDraft({ ...draft, direction: direction as FinancialLabel['direction'] })
+                  }
+                  options={Object.entries(financialLabelDirections).map(([value, label]) => ({
+                    value,
+                    label: registryValueLabel('direction', value, locale) ?? label,
+                  }))}
+                />
+                <Select
+                  label={translate('registryField.unit')}
+                  value={draft.unit}
+                  disabled={busy}
+                  onChange={(unit) => setDraft({ ...draft, unit: unit as FinancialLabel['unit'] })}
+                  options={Object.entries(financialLabelUnits).map(([value, label]) => ({
+                    value,
+                    label: registryValueLabel('unit', value, locale) ?? label,
+                  }))}
+                />
+                <Select
+                  label={translate('forms.defaultCurrency')}
+                  value={draft.currency}
+                  disabled={busy}
+                  searchable
+                  onChange={(currency) => setDraft({ ...draft, currency })}
+                  options={currenciesWithCurrent(draft.currency, locale)}
+                />
+                <VatRateSelect
+                  value={draft.vatRate}
+                  mode={draft.vat_mode}
+                  disabled={busy}
+                  onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
+                  onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
+                />
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.additional')}>
+              <div className="record-fields">
+                <label className="record-wide">
+                  {translate('shipment.note')}
+                  <textarea
+                    rows={3}
+                    maxLength={4000}
+                    disabled={busy}
+                    value={draft.note ?? ''}
+                    onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
+                  />
+                </label>
+              </div>
+              <label className="bank-archive-toggle">
                 <input
-                  name="name"
-                  required
-                  maxLength={256}
-                  value={draft.name}
+                  type="checkbox"
+                  checked={draft.archived}
                   disabled={busy}
-                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
                 />
+                {translate('filter.archived')}
               </label>
-              <Select
-                label={translate('registryField.direction')}
-                value={draft.direction}
-                disabled={busy}
-                onChange={(direction) =>
-                  setDraft({ ...draft, direction: direction as FinancialLabel['direction'] })
-                }
-                options={Object.entries(financialLabelDirections).map(([value, label]) => ({
-                  value,
-                  label: registryValueLabel('direction', value, locale) ?? label,
-                }))}
-              />
-              <Select
-                label={translate('registryField.unit')}
-                value={draft.unit}
-                disabled={busy}
-                onChange={(unit) => setDraft({ ...draft, unit: unit as FinancialLabel['unit'] })}
-                options={Object.entries(financialLabelUnits).map(([value, label]) => ({
-                  value,
-                  label: registryValueLabel('unit', value, locale) ?? label,
-                }))}
-              />
-              <Select
-                label={translate('forms.defaultCurrency')}
-                value={draft.currency}
-                disabled={busy}
-                searchable
-                onChange={(currency) => setDraft({ ...draft, currency })}
-                options={currenciesWithCurrent(draft.currency, locale)}
-              />
-              <VatRateSelect
-                value={draft.vatRate}
-                mode={draft.vat_mode}
-                disabled={busy}
-                onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
-                onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
-              />
-            </div>
-          </RecordSection>
-          <RecordSection title={translate('record.additional')}>
-            <div className="record-fields">
-              <label className="record-wide">
-                {translate('shipment.note')}
-                <textarea
-                  rows={3}
-                  maxLength={4000}
-                  disabled={busy}
-                  value={draft.note ?? ''}
-                  onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
-                />
-              </label>
-            </div>
-            <label className="bank-archive-toggle">
-              <input
-                type="checkbox"
-                checked={draft.archived}
-                disabled={busy}
-                onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
-              />
-              {translate('filter.archived')}
-            </label>
-          </RecordSection>
+            </RecordSection>
+          </fieldset>
           <RecordActions
             error={failure || validation.message}
             status={
               dirty
-                ? translate('shipment.unsaved')
+                ? translate(
+                    recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                  )
                 : translate(creating ? 'record.creating' : 'record.editing')
             }
           >
             <button type="button" disabled={busy} onClick={cancel}>
               {translate('action.cancel')}
             </button>
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || !!recovery.candidate}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </RecordActions>

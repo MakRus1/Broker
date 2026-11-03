@@ -1,3 +1,6 @@
+import { restoreDraft } from '../../../shared/forms/restoreDraft';
+import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
+import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import {
   RecordHeading,
@@ -127,6 +130,42 @@ export function InvoicesPage({
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const dirty =
     !!draft && JSON.stringify({ draft, selected: selected.map((x) => x.id) }) !== baseline.current;
+  const storageKey = draftStorageKey(
+    session,
+    'invoice',
+    creating ? `${direction}-new-${sourceEntry ?? ''}` : (id ?? 'registry'),
+  );
+  const recovery = useDraftRecovery({
+    storageKey,
+    revision: details?.invoice.revision ?? 0,
+    value: {
+      draft,
+      selected,
+      automaticDue: automaticDue.current,
+      paymentDelay: paymentDelay.current,
+    },
+    dirty,
+    enabled: !!draft && write && !paidReadOnly && !loading,
+    onRestore(raw) {
+      const next = restoreDraft<{
+        draft: unknown;
+        selected: ServiceCharge[];
+        automaticDue: boolean;
+        paymentDelay: number | null;
+      }>(raw);
+      const restored = restoreDraft<Draft>(next.draft, ['invoice_date', 'due_date']);
+      if (
+        restored.direction !== direction ||
+        typeof restored.id !== 'string' ||
+        !Array.isArray(next.selected)
+      )
+        throw new Error('Invalid draft');
+      setDraft(restored);
+      setSelected(next.selected);
+      automaticDue.current = next.automaticDue;
+      paymentDelay.current = next.paymentDelay;
+    },
+  });
   const validation = useFieldValidation();
   useEffect(() => {
     const refresh = () => {
@@ -295,6 +334,7 @@ export function InvoicesPage({
   }
   function cancel() {
     confirmDiscard(dirty, () => {
+      recovery.discard();
       setFailure('');
       validation.reset();
       if (creating) onCancel();
@@ -319,7 +359,7 @@ export function InvoicesPage({
   }
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!draft) return;
+    if (!draft || busy || recovery.candidate) return;
     if (!e.currentTarget.checkValidity()) {
       e.currentTarget.reportValidity();
       return;
@@ -347,6 +387,7 @@ export function InvoicesPage({
       });
       setDetails(r);
       setDraft(undefined);
+      recovery.markSaved();
       onSaved(r.invoice);
     } catch (e) {
       setFailure(saveErrorMessage(e, translate('errors.request')));
@@ -374,6 +415,7 @@ export function InvoicesPage({
         <InvoiceRegistry direction={direction} active={active} session={session} />
       ) : (
         <>
+          {write && !loading && !paidReadOnly && <DraftRecovery recovery={recovery} />}
           <RecordHeading
             guide="invoice"
             kind={translate(
@@ -448,6 +490,7 @@ export function InvoicesPage({
             />
           ) : draft ? (
             <form
+              data-recovery-key={storageKey}
               data-dirty={dirty}
               data-busy={busy}
               data-validation-attempted={validation.attempted}
@@ -457,274 +500,284 @@ export function InvoicesPage({
               onInvalid={validation.onInvalid}
               onInput={validation.onInput}
             >
-              <RecordSection title={translate('record.identification')}>
-                <div className="record-fields">
-                  <label>
-                    {translate('registryField.invoiceNumber')}
-                    <input
-                      required={!creating}
-                      placeholder={creating ? translate('finance.automaticOnSave') : undefined}
-                      maxLength={100}
-                      value={draft.number}
-                      onChange={(e) => setDraft({ ...draft, number: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    {translate('registryField.invoice_date')}
-                    <DateInput
+              <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
+                <RecordSection title={translate('record.identification')}>
+                  <div className="record-fields">
+                    <label>
+                      {translate('registryField.invoiceNumber')}
+                      <input
+                        required={!creating}
+                        placeholder={creating ? translate('finance.automaticOnSave') : undefined}
+                        maxLength={100}
+                        value={draft.number}
+                        onChange={(e) => setDraft({ ...draft, number: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      {translate('registryField.invoice_date')}
+                      <DateInput
+                        required
+                        value={draft.invoice_date}
+                        onChange={(invoice_date) =>
+                          setDraft({
+                            ...draft,
+                            invoice_date,
+                            due_date:
+                              automaticDue.current && paymentDelay.current !== null
+                                ? (invoice_date?.addDays(paymentDelay.current) ?? null)
+                                : draft.due_date,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                </RecordSection>
+                <RecordSection title={translate('record.parties')}>
+                  <div className="record-fields">
+                    <CustomerSelect
                       required
-                      value={draft.invoice_date}
-                      onChange={(invoice_date) =>
-                        setDraft({
-                          ...draft,
-                          invoice_date,
-                          due_date:
-                            automaticDue.current && paymentDelay.current !== null
-                              ? (invoice_date?.addDays(paymentDelay.current) ?? null)
-                              : draft.due_date,
+                      label={translate('finance.ownCompany')}
+                      items={emptyParties}
+                      disabled={busy}
+                      ownCompany
+                      value={draft.own_company_id}
+                      session={session}
+                      onChange={(own_company_id) =>
+                        changeParties({
+                          own_company_id,
+                          own_bank_account_id: null,
+                          contract_id: null,
                         })
                       }
                     />
-                  </label>
-                </div>
-              </RecordSection>
-              <RecordSection title={translate('record.parties')}>
-                <div className="record-fields">
-                  <CustomerSelect
-                    required
-                    label={translate('finance.ownCompany')}
-                    items={emptyParties}
-                    disabled={busy}
-                    ownCompany
-                    value={draft.own_company_id}
-                    session={session}
-                    onChange={(own_company_id) =>
-                      changeParties({
-                        own_company_id,
-                        own_bank_account_id: null,
-                        contract_id: null,
-                      })
-                    }
-                  />
-                  <CustomerSelect
-                    required
-                    label={translate('registryField.counterparty_id')}
-                    items={emptyParties}
-                    disabled={busy}
-                    value={draft.counterparty_id}
-                    session={session}
-                    onChange={(counterparty_id) =>
-                      changeParties({
-                        counterparty_id,
-                        counterparty_bank_account_id: null,
-                        contract_id: null,
-                      })
-                    }
-                  />
-                </div>
-              </RecordSection>
-              <RecordSection title={translate('record.paymentTerms')}>
-                <div className="record-fields">
-                  <Select
-                    label={translate('registryField.currency')}
-                    value={draft.currency}
-                    searchable
-                    options={currenciesWithCurrent(draft.currency, locale)}
-                    onChange={(currency) =>
-                      changeParties({
-                        currency,
-                        own_bank_account_id: null,
-                        counterparty_bank_account_id: null,
-                        contract_id: null,
-                      })
-                    }
-                  />
-                  <ServiceChargeLookup<Contract>
-                    kind="contracts"
-                    label={translate('registryField.contract_id')}
-                    value={draft.contract_id ?? ''}
-                    name={draft.contract_number ?? ''}
-                    session={session}
-                    counterparty={draft.counterparty_id}
-                    disabled={busy || !draft.counterparty_id}
-                    onChange={(contract) => {
-                      paymentDelay.current = contract?.payment_delay_days ?? null;
-                      changeParties({
-                        ...(automaticDue.current
-                          ? {
-                              due_date:
-                                paymentDelay.current !== null
-                                  ? (draft.invoice_date?.addDays(paymentDelay.current) ?? null)
-                                  : null,
-                            }
-                          : {}),
-                        contract_id: contract?.id ?? null,
-                        contract_number: contract?.number ?? null,
-                        ...(contract
-                          ? {
-                              own_company_id: contract.own_company_id,
-                              currency: contract.currency,
-                              own_bank_account_id: contract.own_bank_account_id,
-                              counterparty_bank_account_id: contract.counterparty_bank_account_id,
-                            }
-                          : {}),
-                      });
-                    }}
-                  />
-                  <BankAccountSelect
-                    label={translate('finance.ownBankAccount')}
-                    owner={draft.own_company_id}
-                    value={draft.own_bank_account_id}
-                    currency={draft.currency}
-                    session={session}
-                    onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
-                  />
-                  <BankAccountSelect
-                    label={translate('finance.counterpartyBankAccount')}
-                    owner={draft.counterparty_id}
-                    value={draft.counterparty_bank_account_id}
-                    currency={draft.currency}
-                    session={session}
-                    onChange={(counterparty_bank_account_id) =>
-                      setDraft({ ...draft, counterparty_bank_account_id })
-                    }
-                  />
-                  <label>
-                    {translate('finance.dueDate')}
-                    <DateInput
-                      value={draft.due_date}
-                      onChange={(due_date) => {
-                        automaticDue.current = false;
-                        setDraft({ ...draft, due_date });
+                    <CustomerSelect
+                      required
+                      label={translate('registryField.counterparty_id')}
+                      items={emptyParties}
+                      disabled={busy}
+                      value={draft.counterparty_id}
+                      session={session}
+                      onChange={(counterparty_id) =>
+                        changeParties({
+                          counterparty_id,
+                          counterparty_bank_account_id: null,
+                          contract_id: null,
+                        })
+                      }
+                    />
+                  </div>
+                </RecordSection>
+                <RecordSection title={translate('record.paymentTerms')}>
+                  <div className="record-fields">
+                    <Select
+                      label={translate('registryField.currency')}
+                      value={draft.currency}
+                      searchable
+                      options={currenciesWithCurrent(draft.currency, locale)}
+                      onChange={(currency) =>
+                        changeParties({
+                          currency,
+                          own_bank_account_id: null,
+                          counterparty_bank_account_id: null,
+                          contract_id: null,
+                        })
+                      }
+                    />
+                    <ServiceChargeLookup<Contract>
+                      kind="contracts"
+                      label={translate('registryField.contract_id')}
+                      value={draft.contract_id ?? ''}
+                      name={draft.contract_number ?? ''}
+                      session={session}
+                      counterparty={draft.counterparty_id}
+                      disabled={busy || !draft.counterparty_id}
+                      onChange={(contract) => {
+                        paymentDelay.current = contract?.payment_delay_days ?? null;
+                        changeParties({
+                          ...(automaticDue.current
+                            ? {
+                                due_date:
+                                  paymentDelay.current !== null
+                                    ? (draft.invoice_date?.addDays(paymentDelay.current) ?? null)
+                                    : null,
+                              }
+                            : {}),
+                          contract_id: contract?.id ?? null,
+                          contract_number: contract?.number ?? null,
+                          ...(contract
+                            ? {
+                                own_company_id: contract.own_company_id,
+                                currency: contract.currency,
+                                own_bank_account_id: contract.own_bank_account_id,
+                                counterparty_bank_account_id: contract.counterparty_bank_account_id,
+                              }
+                            : {}),
+                        });
                       }}
                     />
-                  </label>
-                </div>
-              </RecordSection>
-              <section className="invoice-lines">
-                <div className="section-heading">
-                  <h2>{translate('nav.serviceCharges')}</h2>
-                  {session.permissions.includes('finance.write_service_charges') && (
-                    <button
-                      type="button"
-                      disabled={busy || !!newService || !draft.counterparty_id}
-                      onClick={() =>
-                        setNewService({
-                          ...newCharge(
-                            { shipment_id: null, transportation_id: null },
-                            draft.direction === 'outgoing' ? 'income' : 'expense',
-                          ),
-                          counterparty_id: draft.counterparty_id,
-                          counterparty_name: draft.counterparty_name,
-                          contract_id: draft.contract_id,
-                          contract_number: draft.contract_number,
-                          currency: draft.currency,
-                          invoice_currency: draft.currency,
-                        })
+                    <BankAccountSelect
+                      label={translate('finance.ownBankAccount')}
+                      owner={draft.own_company_id}
+                      value={draft.own_bank_account_id}
+                      currency={draft.currency}
+                      session={session}
+                      onChange={(own_bank_account_id) =>
+                        setDraft({ ...draft, own_bank_account_id })
                       }
-                    >
-                      {translate('forms.createServiceCharge')}
-                    </button>
-                  )}
-                </div>
-                <p className="hint">{translate('invoice.matchingChargesHint')}</p>
-                {selected.map((charge) => (
-                  <div className="invoice-charge" key={charge.id}>
-                    <div>
-                      <strong>{charge.label_name}</strong>
-                      <span>{charge.counterparty_name}</span>
-                    </div>
-                    <span>
-                      {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelected(selected.filter((x) => x.id !== charge.id))}
-                    >
-                      {translate('shipment.remove')}
-                    </button>
+                    />
+                    <BankAccountSelect
+                      label={translate('finance.counterpartyBankAccount')}
+                      owner={draft.counterparty_id}
+                      value={draft.counterparty_bank_account_id}
+                      currency={draft.currency}
+                      session={session}
+                      onChange={(counterparty_bank_account_id) =>
+                        setDraft({ ...draft, counterparty_bank_account_id })
+                      }
+                    />
+                    <label>
+                      {translate('finance.dueDate')}
+                      <DateInput
+                        value={draft.due_date}
+                        onChange={(due_date) => {
+                          automaticDue.current = false;
+                          setDraft({ ...draft, due_date });
+                        }}
+                      />
+                    </label>
                   </div>
-                ))}
-                <details className="invoice-service-picker" open={!selected.length}>
-                  <summary>{translate('forms.addServiceCharges')}</summary>
-                  {candidates
-                    .filter((x) => !selected.some((y) => y.id === x.id))
-                    .map((charge) => (
-                      <label className="invoice-candidate" key={charge.id}>
-                        <input
-                          type="checkbox"
-                          checked={false}
-                          onChange={() => setSelected([...selected, charge])}
-                        />
-                        <span>
-                          <strong>{charge.label_name}</strong>
-                          <small>
-                            {charge.transportation_id
-                              ? translate('registryValue.unit.transportation')
-                              : translate('registryField.shipment_id')}{' '}
-                            · {charge.note ?? charge.counterparty_name}
-                          </small>
-                        </span>
-                        <span>
-                          {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
-                        </span>
-                      </label>
-                    ))}
-                  {candidateFailure && (
-                    <p className="error" role="alert">
-                      {candidateFailure}
-                    </p>
-                  )}
-                  {!candidateLoading && !candidates.length && (
-                    <p className="hint">{translate('forms.noServiceChargesAvailable')}</p>
-                  )}
-                  <AutoLoadMore
-                    enabled={!!candidateAfter}
-                    loading={candidateLoading}
-                    onLoad={moreCandidates}
-                  />
-                </details>
-                <p className="invoice-total">
-                  {translate('forms.totalInclVAT')}{' '}
-                  <strong>
-                    {formatFixed(
-                      selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
-                      2,
-                    )}{' '}
-                    {draft.currency}
-                  </strong>
-                </p>
-              </section>
-              <RecordSection title={translate('record.additional')}>
-                <label>
-                  {translate('shipment.note')}
-                  <textarea
-                    maxLength={4000}
-                    value={draft.note ?? ''}
-                    onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
-                  />
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={draft.archived}
-                    onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
-                  />
-                  {translate('filter.archived')}
-                </label>
-              </RecordSection>
+                </RecordSection>
+                <section className="invoice-lines">
+                  <div className="section-heading">
+                    <h2>{translate('nav.serviceCharges')}</h2>
+                    {session.permissions.includes('finance.write_service_charges') && (
+                      <button
+                        type="button"
+                        disabled={busy || !!newService || !draft.counterparty_id}
+                        onClick={() =>
+                          setNewService({
+                            ...newCharge(
+                              { shipment_id: null, transportation_id: null },
+                              draft.direction === 'outgoing' ? 'income' : 'expense',
+                            ),
+                            counterparty_id: draft.counterparty_id,
+                            counterparty_name: draft.counterparty_name,
+                            contract_id: draft.contract_id,
+                            contract_number: draft.contract_number,
+                            currency: draft.currency,
+                            invoice_currency: draft.currency,
+                          })
+                        }
+                      >
+                        {translate('forms.createServiceCharge')}
+                      </button>
+                    )}
+                  </div>
+                  <p className="hint">{translate('invoice.matchingChargesHint')}</p>
+                  {selected.map((charge) => (
+                    <div className="invoice-charge" key={charge.id}>
+                      <div>
+                        <strong>{charge.label_name}</strong>
+                        <span>{charge.counterparty_name}</span>
+                      </div>
+                      <span>
+                        {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(selected.filter((x) => x.id !== charge.id))}
+                      >
+                        {translate('shipment.remove')}
+                      </button>
+                    </div>
+                  ))}
+                  <details className="invoice-service-picker" open={!selected.length}>
+                    <summary>{translate('forms.addServiceCharges')}</summary>
+                    {candidates
+                      .filter((x) => !selected.some((y) => y.id === x.id))
+                      .map((charge) => (
+                        <label className="invoice-candidate" key={charge.id}>
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => setSelected([...selected, charge])}
+                          />
+                          <span>
+                            <strong>{charge.label_name}</strong>
+                            <small>
+                              {charge.transportation_id
+                                ? translate('registryValue.unit.transportation')
+                                : translate('registryField.shipment_id')}{' '}
+                              · {charge.note ?? charge.counterparty_name}
+                            </small>
+                          </span>
+                          <span>
+                            {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
+                          </span>
+                        </label>
+                      ))}
+                    {candidateFailure && (
+                      <p className="error" role="alert">
+                        {candidateFailure}
+                      </p>
+                    )}
+                    {!candidateLoading && !candidates.length && (
+                      <p className="hint">{translate('forms.noServiceChargesAvailable')}</p>
+                    )}
+                    <AutoLoadMore
+                      enabled={!!candidateAfter}
+                      loading={candidateLoading}
+                      onLoad={moreCandidates}
+                    />
+                  </details>
+                  <p className="invoice-total">
+                    {translate('forms.totalInclVAT')}{' '}
+                    <strong>
+                      {formatFixed(
+                        selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
+                        2,
+                      )}{' '}
+                      {draft.currency}
+                    </strong>
+                  </p>
+                </section>
+                <RecordSection title={translate('record.additional')}>
+                  <label>
+                    {translate('shipment.note')}
+                    <textarea
+                      maxLength={4000}
+                      value={draft.note ?? ''}
+                      onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
+                    />
+                  </label>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={draft.archived}
+                      onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
+                    />
+                    {translate('filter.archived')}
+                  </label>
+                </RecordSection>
+              </fieldset>
               <RecordActions
                 error={failure || validation.message}
                 status={
                   dirty
-                    ? translate('shipment.unsaved')
+                    ? translate(
+                        recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
+                      )
                     : translate(creating ? 'record.creating' : 'record.editing')
                 }
               >
                 <button type="button" disabled={busy} onClick={cancel}>
                   {translate('action.cancel')}
                 </button>
-                <button type="submit" className="primary" disabled={busy || !!newService}>
+                <button
+                  type="submit"
+                  className="primary"
+                  disabled={busy || !!newService || !!recovery.candidate}
+                >
                   {busy ? translate('shipment.saving') : translate('action.save')}
                 </button>
               </RecordActions>

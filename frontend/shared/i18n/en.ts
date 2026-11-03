@@ -1,5 +1,18 @@
 import type { MessageKey } from "./catalog";
 export const en = {
+  "workflow.title": "Shipment walkthrough",
+  "workflow.progress": "Step {current} of {total}",
+  "workflow.previous": "Back",
+  "workflow.next": "Next",
+  "workflow.finish": "Finish walkthrough",
+  "workflow.detailsTitle": "Check the shipment details",
+  "workflow.detailsHint": "The Overview contains the customer, recipient, date and logistics coordinator. Choose Edit to change them. Save separately: this walkthrough does not change your data.",
+  "workflow.routeTitle": "Build the route",
+  "workflow.routeHint": "Set the legs and their order in Route. Sea and air details belong to the shipment; other leg details belong to transportations. Transportations inherit changes to the route structure.",
+  "workflow.transportTitle": "Add transportations",
+  "workflow.transportHint": "Create a transportation in the Transportations tab and enter its details. Open its card to fill in its route legs. Planned containers, when enabled, have a separate tab.",
+  "workflow.financeTitle": "Continue with services and payment",
+  "workflow.financeHint": "Add an income or expense service in Finance. Select or create an invoice from the service. Allocate payment from the invoice, receipt or disbursement. Transportation services are included in the shipment summary without double counting.",
   "nav.shipments": "Shipments",
   "nav.transportations": "Transportations",
   "nav.counterparties": "Counterparties",

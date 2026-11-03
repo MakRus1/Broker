@@ -1,3 +1,6 @@
+import { GuidedWorkflow } from '../../shared/ui/GuidedWorkflow';
+import { preferenceKey } from '../registry/registryPreferences';
+import { shipmentWorkflow } from './shipmentWorkflow';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { CalendarDate } from '../../shared/dates/CalendarDate';
@@ -418,17 +421,48 @@ function ShipmentCard({
             : undefined
         }
         actions={
-          initial && !editing && write ? (
-            <button
-              className="primary"
-              onClick={() => {
-                if (tab !== 'details' && tab !== 'route') setTab('details');
-                setEditing(true);
-                setFailure('');
-              }}
-            >
-              {translate('shipment.editShipment')}
-            </button>
+          initial && write ? (
+            <>
+              <GuidedWorkflow
+                preference={preferenceKey(props.session.subject, 'shipments', 'workflow')}
+                steps={shipmentWorkflow(
+                  props.session.permissions.includes('finance.read_service_charges'),
+                )}
+                active={props.active !== false}
+                getTarget={(key) =>
+                  document
+                    .getElementById(formId)
+                    ?.closest('section')
+                    ?.querySelector<HTMLElement>(`[data-workflow-tab="${key}"]`) ?? null
+                }
+                onOpen={(key, proceed) => {
+                  const root = document.getElementById(formId)?.closest('section');
+                  if (root?.querySelector('form[data-busy="true"]')) return;
+                  confirmDiscard(Boolean(root?.querySelector('form[data-dirty="true"]')), () => {
+                    if (editing) {
+                      setDraft(JSON.parse(baseline) as CardDraft);
+                      setEditing(false);
+                      validation.reset();
+                      setFailure('');
+                    }
+                    setTab(key);
+                    proceed();
+                  });
+                }}
+              />
+              {!editing && (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    if (tab !== 'details' && tab !== 'route') setTab('details');
+                    setEditing(true);
+                    setFailure('');
+                  }}
+                >
+                  {translate('shipment.editShipment')}
+                </button>
+              )}
+            </>
           ) : undefined
         }
       />
@@ -441,6 +475,7 @@ function ShipmentCard({
         {panels.map(([key, label]) => (
           <button
             key={key}
+            data-workflow-tab={key}
             type="button"
             aria-pressed={tab === key}
             onClick={(event) => {

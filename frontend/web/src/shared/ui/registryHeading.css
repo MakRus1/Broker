@@ -49,3 +49,44 @@
     padding: 20px 16px;
   }
 }
+
+.registry-heading-tools,
+.registry-heading-create {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.registry-heading > .actions {
+  gap: 8px;
+}
+.registry-heading .registry-heading-tools > button,
+.registry-heading .registry-heading-create > button,
+.registry-heading .registry-heading-create > a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 20px;
+}
+.registry-workbench .registry-heading > .actions {
+  gap: 8px;
+}
+
+/* Keep secondary controls on the same surface as the registry heading. */
+.registry-heading .registry-heading-tools > button,
+.registry-heading .registry-column-settings > button,
+.registry-heading .registry-heading-create > button:not(.primary) {
+  background: transparent;
+}
+.registry-heading .registry-heading-tools > button:hover:not(:disabled),
+.registry-heading .registry-column-settings > button:hover:not(:disabled),
+.registry-heading .registry-heading-create > button:not(.primary):hover:not(:disabled) {
+  background: var(--surface-hover);
+}

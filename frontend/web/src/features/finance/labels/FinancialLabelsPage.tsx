@@ -1,3 +1,8 @@
+import {
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
@@ -62,7 +67,7 @@ export function FinancialLabelsPage({
   onError,
   onTitle,
   onSaved,
-  onCancelNew,
+  onCancel,
 }: {
   route: string;
   active: boolean;
@@ -70,7 +75,7 @@ export function FinancialLabelsPage({
   onError: (error: unknown) => void;
   onTitle: (title: string) => void;
   onSaved: (value: FinancialLabel) => void;
-  onCancelNew: () => void;
+  onCancel: () => void;
 }) {
   const { translate, locale } = useLocalization();
   const id = /^\/financial-labels\/([0-9a-f-]{36})/i.exec(route)?.[1];
@@ -249,13 +254,7 @@ export function FinancialLabelsPage({
   const columnState = useRegistryColumns(session.subject, 'financial_labels', columns);
   function cancel() {
     if (busy) return;
-    confirmDiscard(dirty, () => {
-      if (creating) onCancelNew();
-      else {
-        if (value) setDraft(draftOf(value));
-        location.hash = `/financial-labels/${id}`;
-      }
-    });
+    confirmDiscard(dirty, onCancel);
   }
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -377,35 +376,29 @@ export function FinancialLabelsPage({
       </section>
     );
   return (
-    <section className="record-page financial-label-page">
+    <section className="surface record-workbench financial-record-workbench financial-label-page">
       {confirmation}
-      <div className="record-heading">
-        <a className="link record-back" href="#/financial-labels">
-          {translate('forms.backToFinancialLabels')}
-        </a>
-        <div className="section-heading">
-          <div>
-            {!creating && <p className="eyebrow">{translate('forms.financialLABEL')}</p>}
-            <h1>
-              {creating
-                ? translate('entity.newFinancialLabel')
-                : (value?.name ?? translate('registryField.label_name'))}
-            </h1>
-            {value && !editing && (
-              <p className="record-state">
-                {value.archived ? translate('filter.archived') : translate('filter.active')} ·
-                {translate('forms.revisionValue', { revision: value.revision })}
-              </p>
-            )}
-          </div>
-          {!editing && value && write && (
+      <RecordHeading
+        kind={translate('forms.financialLABEL')}
+        title={
+          creating
+            ? translate('entity.newFinancialLabel')
+            : (value?.name ?? translate('registryField.label_name'))
+        }
+        status={value ? translate(value.archived ? 'filter.archived' : 'filter.active') : undefined}
+        metadata={
+          value ? translate('forms.revisionValue', { revision: value.revision }) : undefined
+        }
+        mode={editing ? translate(creating ? 'record.creating' : 'record.editing') : undefined}
+        actions={
+          !editing && value && write ? (
             <a className="button primary" href={`#/financial-labels/${id}/edit`}>
               {translate('shipment.edit')}
             </a>
-          )}
-        </div>
-      </div>
-      {failure && (
+          ) : undefined
+        }
+      />
+      {failure && !editing && (
         <p className="error" role="alert">
           {failure}
         </p>
@@ -416,7 +409,7 @@ export function FinancialLabelsPage({
       )}
       {editing && draft && write && !loading ? (
         <form
-          className="counterparty-form"
+          className="record-editor-form document-editor"
           onSubmit={save}
           data-dirty={dirty}
           data-busy={busy}
@@ -424,114 +417,130 @@ export function FinancialLabelsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <div className="record-fields">
-            <label className="record-wide">
-              {translate('forms.nameRequired')}
+          <RecordSection title={translate('record.calculation')}>
+            <div className="record-fields">
+              <label className="record-wide">
+                {translate('forms.nameRequired')}
+                <input
+                  name="name"
+                  required
+                  maxLength={256}
+                  value={draft.name}
+                  disabled={busy}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                />
+              </label>
+              <Select
+                label={translate('registryField.direction')}
+                value={draft.direction}
+                disabled={busy}
+                onChange={(direction) =>
+                  setDraft({ ...draft, direction: direction as FinancialLabel['direction'] })
+                }
+                options={Object.entries(financialLabelDirections).map(([value, label]) => ({
+                  value,
+                  label: registryValueLabel('direction', value, locale) ?? label,
+                }))}
+              />
+              <Select
+                label={translate('registryField.unit')}
+                value={draft.unit}
+                disabled={busy}
+                onChange={(unit) => setDraft({ ...draft, unit: unit as FinancialLabel['unit'] })}
+                options={Object.entries(financialLabelUnits).map(([value, label]) => ({
+                  value,
+                  label: registryValueLabel('unit', value, locale) ?? label,
+                }))}
+              />
+              <Select
+                label={translate('forms.defaultCurrency')}
+                value={draft.currency}
+                disabled={busy}
+                searchable
+                onChange={(currency) => setDraft({ ...draft, currency })}
+                options={currenciesWithCurrent(draft.currency, locale)}
+              />
+              <VatRateSelect
+                value={draft.vatRate}
+                mode={draft.vat_mode}
+                disabled={busy}
+                onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
+                onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
+              />
+            </div>
+          </RecordSection>
+          <RecordSection title={translate('record.additional')}>
+            <div className="record-fields">
+              <label className="record-wide">
+                {translate('shipment.note')}
+                <textarea
+                  rows={3}
+                  maxLength={4000}
+                  disabled={busy}
+                  value={draft.note ?? ''}
+                  onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
+                />
+              </label>
+            </div>
+            <label className="bank-archive-toggle">
               <input
-                name="name"
-                required
-                maxLength={256}
-                value={draft.name}
+                type="checkbox"
+                checked={draft.archived}
                 disabled={busy}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
               />
+              {translate('filter.archived')}
             </label>
-            <Select
-              label={translate('registryField.direction')}
-              value={draft.direction}
-              disabled={busy}
-              onChange={(direction) =>
-                setDraft({ ...draft, direction: direction as FinancialLabel['direction'] })
-              }
-              options={Object.entries(financialLabelDirections).map(([value, label]) => ({
-                value,
-                label: registryValueLabel('direction', value, locale) ?? label,
-              }))}
-            />
-            <Select
-              label={translate('registryField.unit')}
-              value={draft.unit}
-              disabled={busy}
-              onChange={(unit) => setDraft({ ...draft, unit: unit as FinancialLabel['unit'] })}
-              options={Object.entries(financialLabelUnits).map(([value, label]) => ({
-                value,
-                label: registryValueLabel('unit', value, locale) ?? label,
-              }))}
-            />
-            <Select
-              label={translate('forms.defaultCurrency')}
-              value={draft.currency}
-              disabled={busy}
-              searchable
-              onChange={(currency) => setDraft({ ...draft, currency })}
-              options={currenciesWithCurrent(draft.currency, locale)}
-            />
-            <VatRateSelect
-              value={draft.vatRate}
-              mode={draft.vat_mode}
-              disabled={busy}
-              onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
-              onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
-            />
-            <label className="record-wide">
-              {translate('shipment.note')}
-              <textarea
-                rows={3}
-                maxLength={4000}
-                disabled={busy}
-                value={draft.note ?? ''}
-                onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
-              />
-            </label>
-          </div>
-          <label className="bank-archive-toggle">
-            <input
-              type="checkbox"
-              checked={draft.archived}
-              disabled={busy}
-              onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
-            />
-            {translate('filter.archived')}
-          </label>
-          <div className="form-actions">
+          </RecordSection>
+          <RecordActions
+            error={failure}
+            status={
+              dirty
+                ? translate('shipment.unsaved')
+                : translate(creating ? 'record.creating' : 'record.editing')
+            }
+          >
             <button type="button" disabled={busy} onClick={cancel}>
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
-          </div>
+          </RecordActions>
         </form>
       ) : (
         !editing &&
         value && (
-          <div className="record-fields record-summary">
-            <div>
-              <span className="hint">{translate('registryField.direction')}</span>
-              <p>
-                {registryValueLabel('direction', value.direction, locale) ??
-                  financialLabelDirections[value.direction]}
-              </p>
-            </div>
-            <div>
-              <span className="hint">{translate('registryField.unit')}</span>
-              <p>
-                {registryValueLabel('unit', value.unit, locale) ?? financialLabelUnits[value.unit]}
-              </p>
-            </div>
-            <div>
-              <span className="hint">{translate('forms.defaultCurrency')}</span>
-              <p>{value.currency}</p>
-            </div>
-            <div>
-              <span className="hint">{translate('forms.defaultVAT')}</span>
-              <p>{vatLabel(value, locale)}</p>
-            </div>
-            <div className="record-wide">
-              <span className="hint">{translate('shipment.note')}</span>
-              <p>{value.note || '—'}</p>
-            </div>
-          </div>
+          <RecordSection title={translate('record.calculation')}>
+            <dl className="record-layout-details">
+              <div>
+                <dt>{translate('registryField.direction')}</dt>
+                <dd>
+                  {registryValueLabel('direction', value.direction, locale) ??
+                    financialLabelDirections[value.direction]}
+                </dd>
+              </div>
+              <div>
+                <dt>{translate('registryField.unit')}</dt>
+                <dd>
+                  {registryValueLabel('unit', value.unit, locale) ??
+                    financialLabelUnits[value.unit]}
+                </dd>
+              </div>
+              <div>
+                <dt>{translate('forms.defaultCurrency')}</dt>
+                <dd>{value.currency}</dd>
+              </div>
+              <div>
+                <dt>{translate('forms.defaultVAT')}</dt>
+                <dd>{vatLabel(value, locale)}</dd>
+              </div>
+              <div className="record-wide">
+                <dt>{translate('shipment.note')}</dt>
+                <dd>{value.note || '—'}</dd>
+              </div>
+            </dl>
+          </RecordSection>
         )
       )}
     </section>

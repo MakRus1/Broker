@@ -47,7 +47,7 @@ export function RecordSection({
         <h2 id={id}>{title}</h2>
         {description && <p>{description}</p>}
       </div>
-      {children}
+      <div className="record-layout-section-body">{children}</div>
     </section>
   );
 }

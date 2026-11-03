@@ -76,7 +76,7 @@
 .record-workbench .record-layout-tabs {
   display: flex;
   flex-wrap: nowrap;
-  gap: 20px;
+  gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -90,7 +90,7 @@
 }
 .record-workbench .record-layout-tabs > button {
   flex: 0 0 auto;
-  padding: 10px 0 11px;
+  padding: 10px 8px 11px;
   margin: 0;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -191,8 +191,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px 20px;
-  margin: 24px calc(-1 * var(--record-inset)) calc(-1 * var(--record-inset));
-  padding: 14px var(--record-inset) max(14px, env(safe-area-inset-bottom));
+  margin: 24px calc(-1 * var(--record-inset, 0px)) calc(-1 * var(--record-inset, 0px));
+  padding: 14px var(--record-inset, 0px) max(14px, env(safe-area-inset-bottom));
   background: var(--surface);
   border-top: 1px solid var(--divider);
   border-radius: 0 0 10px 10px;
@@ -494,4 +494,329 @@
 .record-layout-metadata .record-layout-reference:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.surface.financial-record-workbench {
+  overflow: visible;
+}
+.financial-record-workbench .counterparty-form,
+.financial-record-workbench .finance-charge-form {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+.financial-record-workbench .counterparty-form > fieldset,
+.financial-record-workbench .finance-charge-form > fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.financial-record-workbench .record-fields {
+  gap: 18px 24px;
+}
+.financial-record-workbench .record-fields > label {
+  gap: 6px;
+}
+.record-layout-details .record-party-account {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+.record-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 16px;
+  font-size: 12px;
+}
+.record-layout-actions > a.button.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent-border);
+}
+.record-layout-actions > a.button.primary:hover {
+  background: var(--accent-hover);
+}
+.record-layout-content > .record-layout-section:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.record-layout-content > .record-layout-section:nth-last-child(2):nth-child(even) {
+  border-bottom: 1px solid var(--divider);
+}
+
+.record-layout-content .record-amounts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 600px) {
+  .record-layout-content .record-amounts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Единый редактор документа: никаких ограничений ширины от старых форм. */
+.financial-record-workbench form.record-editor-form,
+.financial-record-workbench form.payment-form,
+.financial-record-workbench form.counterparty-form,
+.financial-record-workbench form.finance-charge-form {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+}
+.financial-record-workbench form > fieldset {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.financial-record-workbench form > fieldset > .record-layout-section {
+  margin-bottom: 24px;
+}
+.financial-record-workbench .record-fields,
+.financial-record-workbench .route-fields {
+  gap: 18px 24px;
+}
+.financial-record-workbench .record-layout-section .role-options {
+  margin-top: 12px;
+}
+.financial-record-workbench form > .record-layout-save {
+  margin-top: 24px;
+}
+.financial-record-workbench .invoice-lines,
+.financial-record-workbench .payment-allocation {
+  margin: 0 0 24px;
+  padding: 0 0 24px;
+  border-top: 0;
+  border-bottom: 1px solid var(--divider);
+}
+.financial-record-workbench .invoice-lines h2,
+.financial-record-workbench .payment-allocation h2 {
+  font-size: 14px;
+  line-height: 22px;
+}
+.record-workbench.service-charge-summary,
+.record-layout-content.service-charge-summary {
+  grid-template-columns: 1fr;
+}
+.financial-record-workbench .service-charge-summary > .record-layout-section {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 24px;
+}
+.financial-record-workbench .service-charge-summary > .record-layout-section:last-child {
+  border-bottom: 0;
+}
+.financial-record-workbench .service-charge-summary .record-layout-details {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .financial-record-workbench .service-charge-summary .record-layout-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+.financial-record-workbench .record-fields-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .financial-record-workbench .record-fields-three {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Общая компактная вертикальная компоновка редакторов. */
+.record-layout-section-body {
+  min-width: 0;
+}
+.financial-record-workbench .document-editor .record-layout-section {
+  display: block;
+  padding: 24px 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--divider);
+}
+.financial-record-workbench .document-editor .record-layout-section-heading {
+  margin: 0 0 16px;
+  padding: 0;
+}
+.financial-record-workbench .document-editor .record-layout-section-heading h2 {
+  font-size: 13px;
+  line-height: 20px;
+}
+.financial-record-workbench .document-editor .record-fields,
+.financial-record-workbench .document-editor .route-fields {
+  gap: 16px 20px;
+}
+.financial-record-workbench .document-editor .record-layout-section-body > .bank-archive-toggle {
+  margin: 0 0 18px;
+}
+.financial-record-workbench .document-editor label {
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+}
+.financial-record-workbench .document-editor input:not([type='checkbox']),
+.financial-record-workbench .document-editor textarea,
+.financial-record-workbench .document-editor .select-trigger {
+  font-weight: 400;
+  font-size: 13px;
+}
+.financial-record-workbench .document-editor textarea {
+  min-height: 68px;
+}
+.financial-record-workbench .document-editor .role-options {
+  margin-top: 0;
+  gap: 12px 20px;
+}
+.financial-record-workbench .document-editor .record-layout-section-body > .hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.financial-record-workbench .document-editor .record-layout-section-body > .hint:first-child {
+  margin: 0 0 12px;
+}
+.financial-record-workbench .document-editor .record-layout-save {
+  margin-top: 0;
+}
+.financial-record-workbench .document-editor > .record-layout-heading {
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) {
+  .financial-record-workbench .document-editor .record-layout-section {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px 0;
+  }
+}
+
+.document-editor input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--text-muted);
+  border-radius: 4px;
+  background: var(--surface);
+  vertical-align: middle;
+  cursor: pointer;
+}
+.document-editor input[type='checkbox']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.document-editor input[type='checkbox']::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid var(--on-accent);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg) scale(0);
+}
+.document-editor input[type='checkbox']:checked::after {
+  transform: translateY(-1px) rotate(45deg) scale(1);
+}
+.document-editor input[type='checkbox']:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.document-editor .record-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.document-editor .record-toggle input[role='switch'] {
+  width: 30px;
+  min-width: 30px;
+  height: 18px;
+  flex-basis: 30px;
+  border-radius: 9px;
+  display: block;
+  position: relative;
+}
+.document-editor .record-toggle input[role='switch']::after {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transform: none;
+}
+.document-editor .record-toggle input[role='switch']:checked::after {
+  left: 15px;
+  background: var(--on-accent);
+}
+
+.financial-record-workbench .document-editor > .invoice-lines {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+.financial-record-workbench .document-editor .record-layout-section-body > .check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.document-editor .service-exchange-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
+  align-items: start;
+}
+.document-editor .service-exchange-rate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+.document-editor .service-exchange-rate > .field-label {
+  margin: 0;
+}
+.document-editor .service-exchange-rate > .hint,
+.document-editor .service-exchange-rate > .field-error,
+.document-editor .service-exchange-rate > input,
+.document-editor .service-exchange-rate > output {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+}
+.document-editor .service-exchange-rate .inline-check {
+  margin: 0;
+}
+.financial-record-workbench .document-editor .record-layout-section-body > .bank-archive-toggle {
+  margin: 16px 0 0;
+}
+@media (max-width: 760px) {
+  .document-editor .service-exchange-fields {
+    grid-template-columns: 1fr;
+  }
+  .document-editor .service-exchange-rate {
+    grid-column: 1;
+  }
+}
+
+.document-editor .service-rate-value {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 7px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }

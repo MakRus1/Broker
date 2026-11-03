@@ -9,6 +9,8 @@ import { InvoicesPage } from '../features/finance/invoices/InvoicesPage';
 import { transportationTitle } from '../features/transportations/transportation';
 import {
   openWorkspace,
+  rememberWorkspace,
+  workspaceAfterClose,
   replaceWorkspace,
   workspaceId,
   localizedWorkspaceTitle,
@@ -111,12 +113,17 @@ export function App() {
   const workspaceNodes = useRef(new Map<string, HTMLDivElement>());
   const workspaceScroll = useRef(new Map<string, number>());
   const lastWorkspace = useRef(activeWorkspace);
+  const workspaceHistory = useRef<string[]>([activeWorkspace]);
+  useEffect(() => {
+    workspaceHistory.current = [activeWorkspace];
+  }, [storageKey]);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   useEffect(() => {
     setWorkspaces((old) => openWorkspace(old, route));
   }, [route]);
   useEffect(() => {
     const old = lastWorkspace.current;
+    workspaceHistory.current = rememberWorkspace(workspaceHistory.current, activeWorkspace);
     if (old !== activeWorkspace) {
       workspaceScroll.current.set(old, window.scrollY);
       window.scrollTo(0, workspaceScroll.current.get(activeWorkspace) ?? 0);
@@ -129,6 +136,12 @@ export function App() {
       return old.map((tab) => (tab.id === id ? { ...tab, title } : tab));
     });
   }, []);
+  function dismissWorkspace(id: string) {
+    const next = workspaceAfterClose(workspaces, id, workspaceHistory.current);
+    workspaceHistory.current = workspaceHistory.current.filter((entry) => entry !== id);
+    setWorkspaces((old) => old.filter((tab) => tab.id !== id));
+    if (activeWorkspace === id) location.hash = next;
+  }
   function closeWorkspace(id: string) {
     const node = workspaceNodes.current.get(id);
     if (node?.querySelector('form[data-busy="true"]')) return;
@@ -140,10 +153,7 @@ export function App() {
           /* Закрытие формы не зависит от хранилища. */
         }
       });
-      const index = workspaces.findIndex((tab) => tab.id === id);
-      const remaining = workspaces.filter((tab) => tab.id !== id);
-      setWorkspaces(remaining);
-      if (activeWorkspace === id) location.hash = remaining[Math.max(0, index - 1)]?.route ?? '/';
+      dismissWorkspace(id);
     });
   }
   function closeAllWorkspaces() {
@@ -161,6 +171,7 @@ export function App() {
         });
       }
       setWorkspaces([]);
+      workspaceHistory.current = [];
       location.hash = '/';
     });
   }
@@ -529,10 +540,7 @@ export function App() {
                     active={activeWorkspace === entry.id}
                     session={session}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancelNew={() => {
-                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = entry.route.split('/').slice(0, 2).join('/');
-                    }}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     onSaved={(value) => {
                       const next = `/${value.kind === 'receipt' ? 'receipts' : 'disbursements'}/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -547,10 +555,7 @@ export function App() {
                     session={session}
 
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancelNew={() => {
-                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = entry.route.split('/').slice(0, 2).join('/');
-                    }}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     onSaved={(value) => {
                       const next = `/${value.direction}-invoices/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -563,10 +568,7 @@ export function App() {
                     session={session}
                     customers={customers}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onClose={() => {
-                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = '/service-charges';
-                    }}
+                    onClose={() => dismissWorkspace(entry.id)}
                   />
                 ) : entry.route.startsWith('/service-charges') ? (
                   <ServiceCharges
@@ -581,10 +583,7 @@ export function App() {
                     session={session}
                     onError={error}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancelNew={() => {
-                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = '/financial-labels';
-                    }}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     onSaved={(value) => {
                       const next = `/financial-labels/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
@@ -598,10 +597,7 @@ export function App() {
                     session={session}
                     onError={error}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancelNew={() => {
-                      setWorkspaces((old) => old.filter((tab) => tab.id !== entry.id));
-                      location.hash = '/contracts';
-                    }}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     onSaved={(value) => {
                       const next = `/contracts/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -611,6 +607,7 @@ export function App() {
                 ) : entry.route.startsWith('/counterparties') ? (
                   <CounterpartiesPage
                     route={entry.route}
+                    onCancel={() => dismissWorkspace(entry.id)}
                     active={activeWorkspace === entry.id}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     session={session}

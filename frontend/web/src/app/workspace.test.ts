@@ -1,3 +1,4 @@
+import { rememberWorkspace, workspaceAfterClose } from './workspace';
 import { describe, expect, it } from 'vitest';
 import {
   openWorkspace,
@@ -106,4 +107,32 @@ it('восстанавливает активную форму, сохраняя
   expect(initialWorkspaceRoute('/shipments', '/contracts')).toBe('/shipments');
   expect(initialWorkspaceRoute('', '/')).toBe('/');
   expect(initialWorkspaceRoute('', 'https://example.com')).toBe('/');
+});
+
+describe('возврат к предыдущей активной вкладке', () => {
+  const tabs = ['/shipments', '/contracts', '/counterparties'].map((route) => ({
+    id: route,
+    route,
+    title: route,
+  }));
+  it('выбирает последнюю посещённую, независимо от порядка вкладок', () => {
+    const history = ['/contracts', '/shipments', '/counterparties'];
+    expect(workspaceAfterClose(tabs, '/counterparties', history)).toBe('/shipments');
+  });
+  it('пропускает закрытые вкладки и сохраняет актуальный маршрут редактора', () => {
+    const edited = [
+      { id: '/contracts/abc', route: '/contracts/abc/edit', title: 'Contract' },
+      tabs[0],
+    ];
+    expect(
+      workspaceAfterClose(edited, '/shipments', ['/missing', '/contracts/abc', '/shipments']),
+    ).toBe('/contracts/abc/edit');
+  });
+  it('не дублирует посещения и возвращает домой после последней вкладки', () => {
+    expect(rememberWorkspace(['/shipments', '/contracts'], '/shipments')).toEqual([
+      '/contracts',
+      '/shipments',
+    ]);
+    expect(workspaceAfterClose([tabs[0]], '/shipments', ['/shipments'])).toBe('/');
+  });
 });

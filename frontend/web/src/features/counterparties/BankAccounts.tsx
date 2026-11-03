@@ -1,3 +1,5 @@
+import { RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+import './bankAccounts.css';
 import { useLocalization } from '../localization/Localization';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Select } from '../../shared/ui/Select';
@@ -23,14 +25,14 @@ export interface BankAccount {
   revision: number;
 }
 const accountFields = [
-  ['name', 'counterparty.accountName', 256],
-  ['number', 'counterparty.accountNumber', 64],
-  ['currency', 'registryField.currency', 3],
-  ['bank_name', 'counterparty.bankName', 256],
-  ['bic', 'counterparty.russianBankBIC', 9],
-  ['swift', 'counterparty.foreignBankSWIFTBIC', 11],
-  ['correspondent_account', 'counterparty.correspondentAccount', 64],
-  ['iban', 'IBAN', 34],
+  ['name', 'counterparty.accountName', 256, 'account'],
+  ['number', 'counterparty.accountNumber', 64, 'account'],
+  ['currency', 'registryField.currency', 3, 'account'],
+  ['bank_name', 'counterparty.bankName', 256, 'bank'],
+  ['bic', 'counterparty.russianBankBIC', 9, 'bank'],
+  ['swift', 'counterparty.foreignBankSWIFTBIC', 11, 'bank'],
+  ['correspondent_account', 'counterparty.correspondentAccount', 64, 'bank'],
+  ['iban', 'IBAN', 34, 'bank'],
 ] as const;
 
 export function BankAccounts({
@@ -156,20 +158,39 @@ export function BankAccounts({
   return (
     <section className="bank-accounts">
       <div className="section-heading">
-        <h2>{translate('counterparty.bankAccounts')}</h2>
-        {write && !draft && (
-          <button className="primary" onClick={() => edit()}>
-            {translate('counterparty.addBankAccount')}
-          </button>
+        <h2>
+          {draft
+            ? translate(
+                draft.revision ? 'counterparty.editBankAccount' : 'counterparty.newBankAccount',
+              )
+            : translate('counterparty.bankAccounts')}
+        </h2>
+        {!draft && (
+          <div className="bank-accounts-actions">
+            <label className="bank-archive-toggle">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(event) => setShowArchived(event.target.checked)}
+              />
+              {translate('finance.showArchived')}
+            </label>
+            {write && (
+              <button className="primary" onClick={() => edit()}>
+                {translate('counterparty.addBankAccount')}
+              </button>
+            )}
+          </div>
         )}
       </div>
-      {failure && (
+      {failure && !draft && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
       {draft ? (
         <form
+          className="bank-account-editor"
           onSubmit={save}
           data-dirty={dirty}
           data-busy={busy}
@@ -177,98 +198,111 @@ export function BankAccounts({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <h3>
-            {draft.revision
-              ? translate('counterparty.editBankAccount')
-              : translate('counterparty.newBankAccount')}
-          </h3>
-          <fieldset disabled={busy} aria-label={translate('counterparty.bankAccountDetails')}>
-            <div className="route-fields">
-              {accountFields.map(([field, label, maxLength]) =>
-                field === 'currency' ? (
-                  <Select
-                    key={field}
-                    label={translate('registryField.currency')}
-                    value={draft.currency}
-                    searchable
-                    options={currenciesWithCurrent(draft.currency, locale)}
-                    disabled={busy}
-                    onChange={(currency) => setDraft({ ...draft, currency })}
+          <fieldset
+            className="record-layout-content"
+            disabled={busy}
+            aria-label={translate('counterparty.bankAccountDetails')}
+          >
+            {(
+              [
+                ['account', 'counterparty.bankAccountDetails'],
+                ['bank', 'print.bankDetails'],
+              ] as const
+            ).map(([group, title]) => (
+              <RecordSection key={group} title={translate(title)}>
+                <div className="record-fields">
+                  {accountFields
+                    .filter((field) => field[3] === group)
+                    .map(([field, label, maxLength]) =>
+                      field === 'currency' ? (
+                        <Select
+                          key={field}
+                          label={translate('registryField.currency')}
+                          value={draft.currency}
+                          searchable
+                          options={currenciesWithCurrent(draft.currency, locale)}
+                          disabled={busy}
+                          onChange={(currency) => setDraft({ ...draft, currency })}
+                        />
+                      ) : (
+                        <label key={field}>
+                          {label === 'IBAN' ? label : translate(label)}
+                          <input
+                            name={field}
+                            value={draft[field] ?? ''}
+                            maxLength={maxLength}
+                            required={['name', 'number', 'bank_name'].includes(field)}
+                            pattern={
+                              field === 'bic'
+                                ? '[0-9]{9}'
+                                : field === 'swift'
+                                  ? '[A-Z0-9]{8}([A-Z0-9]{3})?'
+                                  : undefined
+                            }
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                [field]:
+                                  field === 'swift'
+                                    ? event.target.value.toUpperCase()
+                                    : event.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      ),
+                    )}
+                </div>
+              </RecordSection>
+            ))}
+            <RecordSection title={translate('record.additional')}>
+              <div className="role-options">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={draft.is_primary}
+                    disabled={draft.archived}
+                    onChange={(event) => setDraft({ ...draft, is_primary: event.target.checked })}
                   />
-                ) : (
-                  <label key={field}>
-                    {label === 'IBAN' ? label : translate(label)}
-                    <input
-                      name={field}
-                      value={draft[field] ?? ''}
-                      maxLength={maxLength}
-                      required={['name', 'number', 'bank_name'].includes(field)}
-                      pattern={
-                        field === 'bic'
-                          ? '[0-9]{9}'
-                          : field === 'swift'
-                            ? '[A-Z0-9]{8}([A-Z0-9]{3})?'
-                            : undefined
-                      }
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          [field]:
-                            field === 'swift'
-                              ? event.target.value.toUpperCase()
-                              : event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                ),
-              )}
-            </div>
-            <div className="role-options">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={draft.is_primary}
-                  disabled={draft.archived}
-                  onChange={(event) => setDraft({ ...draft, is_primary: event.target.checked })}
-                />
-                {translate('counterparty.primaryForThisCurrency')}
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={draft.archived}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      archived: event.target.checked,
-                      is_primary: event.target.checked ? false : draft.is_primary,
-                    })
-                  }
-                />
-                {translate('filter.archived')}
-              </label>
-            </div>
+                  {translate('counterparty.primaryForThisCurrency')}
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={draft.archived}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        archived: event.target.checked,
+                        is_primary: event.target.checked ? false : draft.is_primary,
+                      })
+                    }
+                  />
+                  {translate('filter.archived')}
+                </label>
+              </div>
+            </RecordSection>
           </fieldset>
-          <div className="form-actions">
+          <RecordActions
+            error={failure}
+            status={
+              dirty
+                ? translate('shipment.unsaved')
+                : draft.revision
+                  ? translate('shipment.revision', { revision: draft.revision })
+                  : translate('record.creating')
+            }
+          >
             <button type="button" onClick={cancel} disabled={busy}>
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
-          </div>
+          </RecordActions>
         </form>
       ) : (
         <>
-          <label className="bank-archive-toggle">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            {translate('finance.showArchived')}
-          </label>
           {loading ? (
             <p className="hint">{translate('finance.loadingAccounts')}</p>
           ) : (
@@ -276,34 +310,11 @@ export function BankAccounts({
               {items
                 .filter((item) => showArchived || !item.archived)
                 .map((item) => (
-                  <article key={item.id} className="bank-account-card">
-                    <div className="section-heading">
-                      <div>
-                        <h3>{item.name}</h3>
-                        <p className="hint">
-                          {item.currency}
-                          {item.is_primary ? translate('counterparty.primary') : ''}
-                          {item.archived ? translate('finance.archivedSuffix') : ''}
-                        </p>
-                      </div>
-                      {write && (
-                        <button onClick={() => edit(item)}>{translate('shipment.edit')}</button>
-                      )}
-                    </div>
-                    <dl className="counterparty-details">
-                      {accountFields
-                        .filter(([field]) => !['name', 'currency'].includes(field))
-                        .map(
-                          ([field, label]) =>
-                            item[field] && (
-                              <div key={field}>
-                                <dt>{label === 'IBAN' ? label : translate(label)}</dt>
-                                <dd>{item[field]}</dd>
-                              </div>
-                            ),
-                        )}
-                    </dl>
-                  </article>
+                  <BankAccountCard
+                    key={item.id}
+                    account={item}
+                    onEdit={write ? () => edit(item) : undefined}
+                  />
                 ))}
               {!items.some((item) => showArchived || !item.archived) && (
                 <p className="hint">
@@ -318,5 +329,56 @@ export function BankAccounts({
       )}
       {confirmation}
     </section>
+  );
+}
+
+export function BankAccountCard({
+  account,
+  onEdit,
+}: {
+  account: BankAccount;
+  onEdit?: () => void;
+}) {
+  const { translate } = useLocalization();
+  return (
+    <details className="bank-account-card">
+      <summary className="bank-account-summary">
+        <span className="bank-account-identity">
+          <strong>{account.name}</strong>
+          <span className="bank-account-number">{account.number}</span>
+        </span>
+        <span className="bank-account-bank">{account.bank_name}</span>
+        <span className="bank-account-status">
+          <span>{account.currency}</span>
+          {account.is_primary && (
+            <span className="badge">{translate('counterparty.primaryAccount')}</span>
+          )}
+          {account.archived && <span className="badge">{translate('filter.archived')}</span>}
+        </span>
+      </summary>
+      <div className="bank-account-body">
+        <div className="bank-account-body-heading">
+          <span>{translate('shipment.revision', { revision: account.revision })}</span>
+          {onEdit && (
+            <button type="button" onClick={onEdit}>
+              {translate('shipment.edit')}
+            </button>
+          )}
+        </div>
+        <dl className="record-layout-details">
+          {accountFields
+            .filter(([field]) => !['name', 'currency'].includes(field))
+            .map(
+              ([field, label]) =>
+                account[field] && (
+                  <div key={field}>
+                    <dt>{label === 'IBAN' ? label : translate(label)}</dt>
+                    <dd>{account[field]}</dd>
+                  </div>
+                ),
+            )}
+        </dl>
+      </div>
+    </details>
   );
 }

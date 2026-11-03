@@ -1,3 +1,7 @@
+import { RecordHeading } from '../../../shared/ui/record/RecordLayout';
+import { CardNavigation } from '../../../shared/ui/CardNavigation';
+import { FinancialHistory } from '../history/FinancialHistory';
+import { ServiceChargeSummary } from './ServiceChargeSummary';
 import { useLocalization } from '../../localization/Localization';
 import { useEffect, useRef, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -28,6 +32,8 @@ export function ServiceChargePage({
   const [value, setValue] = useState<{ charge: ServiceCharge; invoice?: ServiceChargeInvoice }>();
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const title = useRef(onTitle);
   title.current = onTitle;
   useEffect(() => {
@@ -55,8 +61,11 @@ export function ServiceChargePage({
       });
     return () => controller.abort();
   }, [id, session, version]);
+  const readOnly =
+    !session.permissions.includes('finance.write_service_charges') ||
+    value?.invoice?.read_only === true;
   return (
-    <section className="finance-section service-charges-page">
+    <section className="finance-section surface record-workbench financial-record-workbench">
       {failure ? (
         <div className="error" role="alert">
           {failure}{' '}
@@ -65,22 +74,64 @@ export function ServiceChargePage({
       ) : !value ? (
         <p role="status">{translate('finance.loadingService')}</p>
       ) : (
-        <ServiceChargeEditor
-          key={`${id}:${version}`}
-          initial={value.charge}
-          session={session}
-          customers={customers}
-          currentInvoice={value.invoice}
-          readOnly={
-            !session.permissions.includes('finance.write_service_charges') ||
-            value.invoice?.read_only === true
-          }
-          onCancel={onClose}
-          onSaved={() => {
-            window.dispatchEvent(new Event('finance-charges-changed'));
-            setVersion((old) => old + 1);
-          }}
-        />
+        <>
+          <RecordHeading
+            kind={translate('entity.serviceCharge')}
+            title={value.charge.label_name}
+            status={translate(value.charge.archived ? 'filter.archived' : 'finance.activeService')}
+            metadata={
+              <>
+                {translate('shipment.revision', { revision: value.charge.revision })}
+                {value.invoice?.read_only && <> · {translate('finance.paidChargeReadonly')}</>}
+              </>
+            }
+            mode={editing ? translate('record.editing') : undefined}
+            actions={
+              !editing && !readOnly ? (
+                <button className="primary" onClick={() => setEditing(true)}>
+                  {translate('shipment.edit')}
+                </button>
+              ) : undefined
+            }
+          />
+          {!editing && (
+            <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
+              <button aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
+                {translate('shipment.details')}
+              </button>
+              <button aria-pressed={historyOpen} onClick={() => setHistoryOpen(true)}>
+                {translate('finance.history')}
+              </button>
+            </CardNavigation>
+          )}
+          {editing ? (
+            <ServiceChargeEditor
+              key={`${id}:${version}`}
+              initial={value.charge}
+              session={session}
+              customers={customers}
+              currentInvoice={value.invoice}
+              readOnly={readOnly}
+              showHeading={false}
+              showNavigation={false}
+              onCancel={onClose}
+              onSaved={() => {
+                window.dispatchEvent(new Event('finance-charges-changed'));
+                setEditing(false);
+                setVersion((old) => old + 1);
+              }}
+            />
+          ) : historyOpen ? (
+            <FinancialHistory
+              kind="service-charges"
+              id={id}
+              revision={value.charge.revision}
+              session={session}
+            />
+          ) : (
+            <ServiceChargeSummary charge={value.charge} invoice={value.invoice} />
+          )}
+        </>
       )}
     </section>
   );

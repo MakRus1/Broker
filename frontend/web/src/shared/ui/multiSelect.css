@@ -1,0 +1,121 @@
+.multi-select {
+  position: relative;
+  max-width: 100%;
+}
+.multi-select-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1px solid var(--divider);
+  border-radius: 7px;
+  background: var(--surface);
+}
+.multi-select-control:focus-within {
+  border-color: var(--accent-border);
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+.multi-select-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 9px;
+  background: var(--surface-muted);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+}
+.multi-select-tag button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.multi-select .multi-select-trigger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--text-secondary);
+}
+.multi-select-options {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  z-index: 20;
+  padding: 5px;
+  box-sizing: border-box;
+  border: 1px solid var(--divider);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px #0002;
+}
+.multi-select-options > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 400;
+}
+.multi-select-options > button[aria-selected='true'] {
+  color: var(--accent-text);
+}
+.multi-select-options > button:hover,
+.multi-select-options > button:focus-visible {
+  background: var(--surface-hover);
+}
+
+.multi-select .multi-select-trigger:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.multi-select .multi-select-trigger:hover:not(:disabled),
+.multi-select .multi-select-trigger:focus-visible {
+  background: transparent;
+  border-color: transparent;
+}
+.multi-select .multi-select-options {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.multi-select .multi-select-options > button {
+  height: 36px;
+  margin: 0;
+  line-height: 20px;
+}
+.multi-select .multi-select-options > button[aria-selected='true'] {
+  background: var(--accent-soft);
+}
+.multi-select .multi-select-options > button:focus-visible {
+  outline: 1px solid var(--accent-border);
+  outline-offset: -1px;
+}

@@ -33,6 +33,7 @@ type Props = {
   onError: (error: unknown) => void;
   onChanged: (value: Counterparty) => void;
   onSaved: (value: Counterparty) => void;
+  onCancel: () => void;
 };
 export function CounterpartiesPage({
   route,
@@ -40,6 +41,7 @@ export function CounterpartiesPage({
   onError,
   onChanged,
   onSaved,
+  onCancel,
   onTitle,
   active = true,
 }: Props) {
@@ -255,10 +257,14 @@ export function CounterpartiesPage({
     );
   if (creating || id)
     return (
-      <section className="creation-page surface counterparty-page">
-        <a className="link" href="#/counterparties">
-          {translate('counterparty.backToCounterparties')}
-        </a>
+      <section
+        className={`creation-page surface counterparty-page${editing ? ' record-workbench financial-record-workbench' : ''}`}
+      >
+        {!editing && (
+          <a className="link" href="#/counterparties">
+            {translate('counterparty.backToCounterparties')}
+          </a>
+        )}
         {failure && (
           <p role="alert" className="error">
             {failure}
@@ -278,6 +284,7 @@ export function CounterpartiesPage({
               key={creating ? 'new' : item?.id}
               initial={creating ? undefined : item}
               session={session}
+              onCancel={onCancel}
               onError={onError}
               onSaved={(value) => {
                 setItem(value);
@@ -298,7 +305,8 @@ export function CounterpartiesPage({
                   </p>
                   <h1>{item.name}</h1>
                   <p>
-                    {item.archived ? translate('filter.archived') : translate('filter.active')} ·
+                    {item.archived ? translate('filter.archived') : translate('filter.active')}
+                    {' · '}
                     {translate('forms.revisionValue', { revision: item.revision })}
                   </p>
                 </div>
@@ -325,7 +333,7 @@ export function CounterpartiesPage({
               {item.archived && (
                 <p className="route-notice">{translate('counterparty.archivedHint')}</p>
               )}
-              <CardNavigation onRefresh={() => refresh().catch(onError)}>
+              <CardNavigation>
                 <button aria-pressed={tab === 'details'} onClick={() => switchTab('details')}>
                   {translate('counterparty.details')}
                 </button>
@@ -519,7 +527,9 @@ export function CounterpartiesPage({
               descending: old.sort === field ? !old.descending : false,
             }));
           }}
-          onOpen={onSaved}
+          onOpen={(value) => {
+            location.hash = `/counterparties/${value.id}`;
+          }}
         />
         {loading && (
           <p className="directory-loading" role="status">

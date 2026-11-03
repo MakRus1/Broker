@@ -1,3 +1,4 @@
+import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { useLocalization } from '../localization/Localization';
@@ -116,20 +117,20 @@ function PartyDetails({
   }, [id, accountId, session]);
   return (
     <div>
-      <span className="hint">{label}</span>
-      <p>
+      <dt>{label}</dt>
+      <dd>
         <a className="link" href={`#/counterparties/${id}`}>
           {name}
         </a>
-      </p>
-      <p className="hint">
+      </dd>
+      <dd className="record-party-account">
         {accountId
           ? account ||
             (session.permissions.includes('counterparties.read_bank_accounts')
               ? translate('forms.loadingBankAccount')
               : translate('forms.youDoNotHavePermissionToViewThisBankAccount'))
           : translate('forms.noBankAccountSelected')}
-      </p>
+      </dd>
     </div>
   );
 }
@@ -140,7 +141,7 @@ export function ContractsPage({
   onError,
   onTitle,
   onSaved,
-  onCancelNew,
+  onCancel,
   active,
 }: {
   active: boolean;
@@ -149,7 +150,7 @@ export function ContractsPage({
   onError: (error: unknown) => void;
   onTitle: (title: string) => void;
   onSaved: (value: Contract) => void;
-  onCancelNew: () => void;
+  onCancel: () => void;
 }) {
   const { translate, locale } = useLocalization();
   const titleCallback = useRef(onTitle);
@@ -385,18 +386,11 @@ export function ContractsPage({
 
   function cancel() {
     confirmDiscard(dirty, () => {
-      if (creating) onCancelNew();
-      else {
-        if (value)
-          setDraft({
-            ...value,
-            contract_date: CalendarDate.fromISO(value.contract_date),
-            valid_until: value.valid_until ? CalendarDate.fromISO(value.valid_until) : null,
-          });
-        location.hash = `/contracts/${id}`;
-      }
+      setFailure('');
+      onCancel();
     });
   }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!draft || busy) return;
@@ -521,35 +515,29 @@ export function ContractsPage({
       </section>
     );
   return (
-    <section className="card record-page">
+    <section className="surface record-workbench financial-record-workbench">
       {confirmation}
-      <div className="record-heading">
-        <a className="link record-back" href="#/contracts">
-          {translate('forms.backToContracts')}
-        </a>
-        <div className="section-heading">
-          <div>
-            {!creating && <p className="eyebrow">{translate('forms.contract')}</p>}
-            <h1>
-              {creating
-                ? translate('entity.newContract')
-                : (value?.number ?? translate('registryField.contract_id'))}
-            </h1>
-            {value && !editing && (
-              <p className="record-state">
-                {value.archived ? translate('filter.archived') : translate('filter.active')} ·
-                {translate('forms.revisionValue', { revision: value.revision })}
-              </p>
-            )}
-          </div>
-          {!editing && value && write && (
+      <RecordHeading
+        kind={translate('forms.contract')}
+        title={
+          creating
+            ? translate('entity.newContract')
+            : (value?.number ?? translate('registryField.contract_id'))
+        }
+        status={value ? translate(value.archived ? 'filter.archived' : 'filter.active') : undefined}
+        metadata={
+          value ? translate('forms.revisionValue', { revision: value.revision }) : undefined
+        }
+        mode={editing ? translate(creating ? 'record.creating' : 'record.editing') : undefined}
+        actions={
+          !editing && value && write ? (
             <a className="button primary" href={`#/contracts/${id}/edit`}>
               {translate('shipment.edit')}
             </a>
-          )}
-        </div>
-      </div>
-      {failure && (
+          ) : undefined
+        }
+      />
+      {failure && !editing && (
         <p className="error" role="alert">
           {failure}
         </p>
@@ -557,7 +545,7 @@ export function ContractsPage({
       {loading && <p className="hint">{translate('forms.loadingContract')}</p>}
       {editing && draft && write && !loading ? (
         <form
-          className="counterparty-form"
+          className="counterparty-form document-editor"
           onSubmit={save}
           data-dirty={dirty}
           data-busy={busy}
@@ -565,186 +553,225 @@ export function ContractsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <div className="record-fields">
-            <label>
-              {translate('registryField.contractNumber')}
-              <input
-                required={!creating}
-                name="number"
-                placeholder={creating ? translate('finance.automaticOnSave') : undefined}
-                maxLength={128}
-                value={draft.number}
-                onChange={(event) => setDraft({ ...draft, number: event.target.value })}
-              />
-            </label>
-            <label>
-              {translate('forms.contractDateRequired')}
-              <DateInput
-                required
-                name="contract_date"
-                min={CalendarDate.fromISO('1900-01-01')}
-                value={draft.contract_date}
-                onChange={(contract_date) => setDraft({ ...draft, contract_date })}
-              />
-            </label>
-            <CustomerSelect
-              items={emptyParties}
-              label={translate('forms.ownLegalEntityRequired')}
-              required
-              ownCompany
-              session={session}
-              disabled={busy}
-              excludeId={draft.counterparty_id}
-              value={draft.own_company_id}
-              onChange={(own_company_id) =>
-                setDraft({ ...draft, own_company_id, own_bank_account_id: null })
-              }
-            />
-            <CustomerSelect
-              items={emptyParties}
-              label={translate('finance.counterpartyRequired')}
-              required
-              session={session}
-              disabled={busy}
-              excludeId={draft.own_company_id}
-              value={draft.counterparty_id}
-              onChange={(counterparty_id) =>
-                setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })
-              }
-            />
-            <div>
-              <Select
-                label={translate('registryField.currency')}
-                value={draft.currency}
-                onChange={(currency) =>
-                  setDraft({
-                    ...draft,
-                    currency,
-                    own_bank_account_id: null,
-                    counterparty_bank_account_id: null,
-                  })
-                }
-                searchable
-                options={currenciesWithCurrent(draft.currency, locale)}
-              />
-            </div>
-            <label>
-              {translate('registryField.valid_until')}
-              <DateInput
-                value={draft.valid_until}
-                min={draft.contract_date ?? CalendarDate.fromISO('1900-01-01')}
-                onChange={(valid_until) => setDraft({ ...draft, valid_until })}
-              />
-            </label>
-            <div>
-              <BankAccountSelect
-                label={translate('forms.ownBankAccount')}
-                session={session}
-                owner={draft.own_company_id}
-                currency={draft.currency}
-                value={draft.own_bank_account_id}
-                onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
-              />
-            </div>
-            <div>
-              <BankAccountSelect
-                label={translate('finance.counterpartyBankAccount')}
-                session={session}
-                owner={draft.counterparty_id}
-                currency={draft.currency}
-                value={draft.counterparty_bank_account_id}
-                onChange={(counterparty_bank_account_id) =>
-                  setDraft({ ...draft, counterparty_bank_account_id })
-                }
-              />
-            </div>
-            <label>
-              {translate('registryField.paymentDelay')}
-              <input
-                type="number"
-                min={0}
-                max={36500}
-                step={1}
-                value={draft.payment_delay_days ?? ''}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    payment_delay_days:
-                      event.target.value === '' ? null : Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-            <label className="bank-archive-toggle">
-              <input
-                type="checkbox"
-                checked={draft.archived}
-                onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
-              />
-              {translate('filter.archived')}
-            </label>
-            <label className="record-wide">
-              {translate('shipment.note')}
-              <textarea
-                rows={3}
-                maxLength={4000}
-                value={draft.note ?? ''}
-                onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
-              />
-            </label>
-          </div>
-          <div className="form-actions">
+          <fieldset disabled={busy}>
+            <RecordSection title={translate('record.identification')}>
+              <div className="record-fields record-fields-three">
+                <label>
+                  {translate('registryField.contractNumber')}
+                  <input
+                    required={!creating}
+                    name="number"
+                    placeholder={creating ? translate('finance.automaticOnSave') : undefined}
+                    maxLength={128}
+                    value={draft.number}
+                    onChange={(event) => setDraft({ ...draft, number: event.target.value })}
+                  />
+                </label>
+                <label>
+                  {translate('forms.contractDateRequired')}
+                  <DateInput
+                    required
+                    name="contract_date"
+                    min={CalendarDate.fromISO('1900-01-01')}
+                    value={draft.contract_date}
+                    onChange={(contract_date) => setDraft({ ...draft, contract_date })}
+                  />
+                </label>
+                <label>
+                  {translate('registryField.valid_until')}
+                  <DateInput
+                    value={draft.valid_until}
+                    min={draft.contract_date ?? CalendarDate.fromISO('1900-01-01')}
+                    onChange={(valid_until) => setDraft({ ...draft, valid_until })}
+                  />
+                </label>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.parties')}>
+              <div className="record-fields">
+                <CustomerSelect
+                  items={emptyParties}
+                  label={translate('forms.ownLegalEntityRequired')}
+                  required
+                  ownCompany
+                  session={session}
+                  disabled={busy}
+                  excludeId={draft.counterparty_id}
+                  value={draft.own_company_id}
+                  onChange={(own_company_id) =>
+                    setDraft({ ...draft, own_company_id, own_bank_account_id: null })
+                  }
+                />
+                <CustomerSelect
+                  items={emptyParties}
+                  label={translate('finance.counterpartyRequired')}
+                  required
+                  session={session}
+                  disabled={busy}
+                  excludeId={draft.own_company_id}
+                  value={draft.counterparty_id}
+                  onChange={(counterparty_id) =>
+                    setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })
+                  }
+                />
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.paymentTerms')}>
+              <div className="record-fields">
+                <div>
+                  <Select
+                    label={translate('registryField.currency')}
+                    value={draft.currency}
+                    onChange={(currency) =>
+                      setDraft({
+                        ...draft,
+                        currency,
+                        own_bank_account_id: null,
+                        counterparty_bank_account_id: null,
+                      })
+                    }
+                    searchable
+                    options={currenciesWithCurrent(draft.currency, locale)}
+                  />
+                </div>
+                <div>
+                  <BankAccountSelect
+                    label={translate('forms.ownBankAccount')}
+                    session={session}
+                    owner={draft.own_company_id}
+                    currency={draft.currency}
+                    value={draft.own_bank_account_id}
+                    onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
+                  />
+                </div>
+                <div>
+                  <BankAccountSelect
+                    label={translate('finance.counterpartyBankAccount')}
+                    session={session}
+                    owner={draft.counterparty_id}
+                    currency={draft.currency}
+                    value={draft.counterparty_bank_account_id}
+                    onChange={(counterparty_bank_account_id) =>
+                      setDraft({ ...draft, counterparty_bank_account_id })
+                    }
+                  />
+                </div>
+                <label>
+                  {translate('registryField.paymentDelay')}
+                  <input
+                    type="number"
+                    min={0}
+                    max={36500}
+                    step={1}
+                    value={draft.payment_delay_days ?? ''}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        payment_delay_days:
+                          event.target.value === '' ? null : Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.additional')}>
+              <div className="record-fields">
+                <label className="bank-archive-toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.archived}
+                    onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
+                  />
+                  {translate('filter.archived')}
+                </label>
+                <label className="record-wide">
+                  {translate('shipment.note')}
+                  <textarea
+                    rows={3}
+                    maxLength={4000}
+                    value={draft.note ?? ''}
+                    onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
+                  />
+                </label>
+              </div>
+            </RecordSection>
+          </fieldset>
+          <RecordActions
+            error={failure}
+            status={
+              dirty
+                ? translate('shipment.unsaved')
+                : value
+                  ? translate('shipment.revision', { revision: value.revision })
+                  : translate('record.creating')
+            }
+          >
             <button type="button" disabled={busy} onClick={cancel}>
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
               {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
-          </div>
+          </RecordActions>
         </form>
       ) : (
         value &&
         !editing && (
-          <>
-            <div className="record-fields record-summary">
-              <div>
-                <span className="hint">{translate('registryField.contract_date')}</span>
-                <p>{date(value.contract_date)}</p>
-              </div>
-              <div>
-                <span className="hint">{translate('registryField.valid_until')}</span>
-                <p>{date(value.valid_until)}</p>
-              </div>
-              <PartyDetails
-                label={translate('registryField.own_company_id')}
-                id={value.own_company_id}
-                accountId={value.own_bank_account_id}
-                session={session}
-              />
-              <PartyDetails
-                label={translate('registryField.counterparty_id')}
-                id={value.counterparty_id}
-                accountId={value.counterparty_bank_account_id}
-                session={session}
-              />
-              <div>
-                <span className="hint">{translate('registryField.currency')}</span>
-                <p>{value.currency}</p>
-              </div>
-              <div>
-                <span className="hint">{translate('forms.paymentTerms')}</span>
-                <p>
-                  {value.payment_delay_days === null
-                    ? translate('forms.notSpecified')
-                    : translate('forms.daysValue', { days: value.payment_delay_days })}
-                </p>
-              </div>
-              <div className="record-wide">
-                <span className="hint">{translate('shipment.note')}</span>
-                <p>{value.note || '—'}</p>
-              </div>
-            </div>
-          </>
+          <div className="record-layout-content">
+            <RecordSection title={translate('record.identification')}>
+              <dl className="record-layout-details">
+                <div>
+                  <dt>{translate('registryField.contract_date')}</dt>
+                  <dd>{date(value.contract_date)}</dd>
+                </div>
+                <div>
+                  <dt>{translate('registryField.valid_until')}</dt>
+                  <dd>{date(value.valid_until)}</dd>
+                </div>
+              </dl>
+            </RecordSection>
+            <RecordSection title={translate('record.parties')}>
+              <dl className="record-layout-details">
+                <PartyDetails
+                  label={translate('registryField.own_company_id')}
+                  id={value.own_company_id}
+                  accountId={value.own_bank_account_id}
+                  session={session}
+                />
+                <PartyDetails
+                  label={translate('registryField.counterparty_id')}
+                  id={value.counterparty_id}
+                  accountId={value.counterparty_bank_account_id}
+                  session={session}
+                />
+              </dl>
+            </RecordSection>
+            <RecordSection title={translate('record.paymentTerms')}>
+              <dl className="record-layout-details">
+                <div>
+                  <dt>{translate('registryField.currency')}</dt>
+                  <dd>{value.currency}</dd>
+                </div>
+                <div>
+                  <dt>{translate('registryField.paymentDelay')}</dt>
+                  <dd>
+                    {value.payment_delay_days === null
+                      ? translate('forms.notSpecified')
+                      : translate('forms.daysValue', { days: value.payment_delay_days })}
+                  </dd>
+                </div>
+              </dl>
+            </RecordSection>
+            <RecordSection title={translate('record.additional')}>
+              <dl className="record-layout-details">
+                <div className="record-layout-wide">
+                  <dt>{translate('shipment.note')}</dt>
+                  <dd>{value.note || '—'}</dd>
+                </div>
+              </dl>
+            </RecordSection>
+          </div>
         )
       )}
     </section>

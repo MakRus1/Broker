@@ -106,3 +106,21 @@ export function restoreWorkspaces(raw: string | null, route: string): WorkspaceT
 export function localizedWorkspaceTitle(tab: WorkspaceTab, locale: Locale): string {
   return tab.title === workspaceTitle(tab.route) ? workspaceTitle(tab.route, locale) : tab.title;
 }
+
+export function rememberWorkspace(history: readonly string[], id: string): string[] {
+  return [...history.filter((entry) => entry !== id), id];
+}
+
+export function workspaceAfterClose(
+  tabs: readonly WorkspaceTab[],
+  closed: string,
+  history: readonly string[],
+): string {
+  const remaining = tabs.filter((tab) => tab.id !== closed);
+  for (let index = history.length - 1; index >= 0; --index) {
+    const previous = remaining.find((tab) => tab.id === history[index]);
+    if (previous) return previous.route;
+  }
+  const index = tabs.findIndex((tab) => tab.id === closed);
+  return remaining[Math.max(0, index - 1)]?.route ?? '/';
+}

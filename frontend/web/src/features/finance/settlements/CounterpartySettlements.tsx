@@ -1,7 +1,7 @@
 import { useLocalization } from '../../localization/Localization';
 import './settlements.css';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -58,7 +58,21 @@ export function CounterpartySettlements({
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState('');
   const [view, setView] = useState<SettlementView>('outgoing');
+  const [openedViews, setOpenedViews] = useState<SettlementView[]>(['outgoing']);
+  function selectDocumentView(next: SettlementView) {
+    setOpenedViews((old) => (old.includes(next) ? old : [...old, next]));
+    setView(next);
+  }
   const [overdue, setOverdue] = useState(false);
+  const documents = useRef<HTMLDivElement>(null);
+  const [documentsMinHeight, setDocumentsMinHeight] = useState(0);
+  function preserveDocumentViewport() {
+    if (!documents.current) return;
+    const bounds = documents.current.getBoundingClientRect();
+    // При смене реестра его строки исчезают до ответа сервера. Сохраняем
+    // занятую часть экрана, чтобы браузер не уменьшал scrollY вместе со страницей.
+    setDocumentsMinHeight(Math.max(0, Math.min(bounds.height, window.innerHeight - bounds.top)));
+  }
   useEffect(() => {
     if (mode !== 'balances') return;
     const controller = new AbortController();
@@ -87,10 +101,6 @@ export function CounterpartySettlements({
       });
     return () => controller.abort();
   }, [counterpartyId, filters, session, version, mode]);
-  const scope = useMemo(
-    () => settlementScope(counterpartyId, filters, view, overdue),
-    [counterpartyId, filters, view, overdue],
-  );
   function apply(event: FormEvent) {
     event.preventDefault();
     if (mode === 'reconciliation') {
@@ -105,7 +115,8 @@ export function CounterpartySettlements({
     setAppliedContractName(contractName);
   }
   function drillDown(next: SettlementView, currency: string, onlyOverdue = false) {
-    setView(next);
+    preserveDocumentViewport();
+    selectDocumentView(next);
     setOverdue(onlyOverdue);
     setDraft({ ...filters, currency });
     setContractName(appliedContractName);
@@ -295,54 +306,88 @@ export function CounterpartySettlements({
               </p>
             </>
           )}
-          <div className="settlement-detail-heading">
-            <div className="tabs" role="group" aria-label={translate('forms.settlementDocuments')}>
-              {views.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={view === option.value}
-                  onClick={() => {
-                    setView(option.value);
-                    setOverdue(false);
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
+          <div ref={documents} style={{ minHeight: documentsMinHeight }}>
+            <div className="settlement-detail-heading">
+              <div
+                className="tabs"
+                role="group"
+                aria-label={translate('forms.settlementDocuments')}
+              >
+                {views.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={view === option.value}
+                    onClick={() => {
+                      preserveDocumentViewport();
+                      selectDocumentView(option.value);
+                      setOverdue(false);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {(view === 'outgoing' || view === 'incoming') && (
+                <label className="settlement-overdue">
+                  <input
+                    type="checkbox"
+                    checked={overdue}
+                    onChange={(event) => setOverdue(event.target.checked)}
+                  />
+                  {translate('forms.overdueOnly')}
+                </label>
+              )}
             </div>
-            {(view === 'outgoing' || view === 'incoming') && (
-              <label className="settlement-overdue">
-                <input
-                  type="checkbox"
-                  checked={overdue}
-                  onChange={(event) => setOverdue(event.target.checked)}
+            {openedViews.map((openedView) => (
+              <div key={openedView} hidden={view !== openedView}>
+                <SettlementDocuments
+                  view={openedView}
+                  counterpartyId={counterpartyId}
+                  filters={filters}
+                  overdue={overdue}
+                  session={session}
+                  version={version}
                 />
-                {translate('forms.overdueOnly')}
-              </label>
-            )}
+              </div>
+            ))}
           </div>
-          {view === 'outgoing' || view === 'incoming' ? (
-            <InvoiceRegistry
-              key={view + JSON.stringify(scope.filters)}
-              direction={view}
-              active
-              session={session}
-              scope={scope}
-              refreshVersion={version}
-            />
-          ) : (
-            <PaymentRegistry
-              key={view + JSON.stringify(scope.filters)}
-              kind={view}
-              active
-              session={session}
-              scope={scope}
-              refreshVersion={version}
-            />
-          )}
         </>
       )}
     </section>
+  );
+}
+
+// Посещённые реестры сохраняют данные и настройки при переключении вкладок.
+// Первый запрос выполняется только при первом открытии конкретного реестра.
+function SettlementDocuments({
+  view,
+  counterpartyId,
+  filters,
+  overdue,
+  session,
+  version,
+}: {
+  view: SettlementView;
+  counterpartyId: string;
+  filters: SettlementFilters;
+  overdue: boolean;
+  session: Session;
+  version: number;
+}) {
+  const scope = useMemo(
+    () => settlementScope(counterpartyId, filters, view, overdue),
+    [counterpartyId, filters, view, overdue],
+  );
+  return view === 'outgoing' || view === 'incoming' ? (
+    <InvoiceRegistry
+      direction={view}
+      active
+      session={session}
+      scope={scope}
+      refreshVersion={version}
+    />
+  ) : (
+    <PaymentRegistry kind={view} active session={session} scope={scope} refreshVersion={version} />
   );
 }

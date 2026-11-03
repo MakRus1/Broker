@@ -1,16 +1,18 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { loadPdfFonts } from '../../../shared/printing/pdfFonts';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { formatFixed } from '../services/serviceCharges';
 import {
-  reconciliationLabels,
+  reconciliationLabelKeys,
   type Reconciliation,
   type ReconciliationContext,
 } from './reconciliation';
 export async function downloadReconciliationPdf(
   data: Reconciliation,
   context: ReconciliationContext,
+  locale: Locale = 'ru',
 ) {
   const fonts = await loadPdfFonts();
   const doc = new jsPDF({
@@ -26,14 +28,14 @@ export async function downloadReconciliationPdf(
   doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
   doc.setFont('NotoSans');
   doc.setFontSize(16);
-  doc.text('Акт сверки взаиморасчётов', 14, 18);
+  doc.text(translate(locale, 'reconciliation.pdfTitle'), 14, 18);
   doc.setFontSize(10);
   const intro = [
-    `Контрагент: ${context.counterparty}`,
-    `Наше юрлицо: ${context.ownCompany}`,
-    `Договор: ${context.contract}`,
-    `Период: ${context.from} — ${context.to}`,
-    'Текущее состояние документов. Положительное сальдо — долг контрагента перед нами.',
+    `${translate(locale, 'registryField.counterparty_id')}: ${context.counterparty}`,
+    `${translate(locale, 'forms.ownLegalEntity')}: ${context.ownCompany}`,
+    `${translate(locale, 'registryField.contract_id')}: ${context.contract}`,
+    `${translate(locale, 'reconciliation.period')}: ${context.from} — ${context.to}`,
+    translate(locale, 'reconciliation.pdfNote'),
   ];
   autoTable(doc, {
     startY: 24,
@@ -46,12 +48,28 @@ export async function downloadReconciliationPdf(
     const lines = data.operations.filter((item) => item.currency === total.currency);
     autoTable(doc, {
       startY: y,
-      head: [[total.currency, 'Документ', 'Наше юрлицо', 'Дебет', 'Кредит', 'Сальдо']],
+      head: [
+        [
+          total.currency,
+          translate(locale, 'forms.document'),
+          translate(locale, 'forms.ownLegalEntity'),
+          translate(locale, 'forms.debit'),
+          translate(locale, 'forms.credit'),
+          translate(locale, 'forms.balance'),
+        ],
+      ],
       body: [
-        ['', 'Начальное сальдо', '', '', '', formatFixed(total.opening_minor, 2)],
+        [
+          '',
+          translate(locale, 'forms.openingBalance'),
+          '',
+          '',
+          '',
+          formatFixed(total.opening_minor, 2),
+        ],
         ...lines.map((item) => [
           CalendarDate.fromISO(item.date).toDisplayString(),
-          `${reconciliationLabels[item.kind]} № ${item.number}`,
+          `${translate(locale, reconciliationLabelKeys[item.kind])} № ${item.number}`,
           item.own_company_name,
           formatFixed(item.debit_minor, 2),
           formatFixed(item.credit_minor, 2),
@@ -59,7 +77,7 @@ export async function downloadReconciliationPdf(
         ]),
         [
           '',
-          'Обороты / конечное сальдо',
+          translate(locale, 'reconciliation.turnover'),
           '',
           formatFixed(total.debit_minor, 2),
           formatFixed(total.credit_minor, 2),
@@ -79,5 +97,5 @@ export async function downloadReconciliationPdf(
     });
     y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   }
-  doc.save('Акт_сверки.pdf');
+  doc.save(translate(locale, 'reconciliation.pdfName'));
 }

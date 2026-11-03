@@ -1,13 +1,14 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { formatFixed } from '../services/serviceCharges';
 export type ReconciliationKind =
   'outgoing_invoice' | 'incoming_invoice' | 'receipt' | 'disbursement';
-export const reconciliationLabels: Record<ReconciliationKind, string> = {
-  outgoing_invoice: 'Исходящий счёт',
-  incoming_invoice: 'Входящий счёт',
-  receipt: 'Поступление',
-  disbursement: 'Списание',
-};
+export const reconciliationLabelKeys = {
+  outgoing_invoice: 'forms.outgoingInvoice',
+  incoming_invoice: 'forms.incomingInvoice',
+  receipt: 'entity.receipt',
+  disbursement: 'entity.disbursement',
+} as const;
 export type ReconciliationTotal = {
   currency: string;
   opening_minor: string;
@@ -46,26 +47,38 @@ export function reconciliationLink(operation: ReconciliationOperation) {
   };
   return `#/${base[operation.kind]}/${operation.id}`;
 }
-export function reconciliationCsv(data: Reconciliation, context: ReconciliationContext) {
+export function reconciliationCsv(
+  data: Reconciliation,
+  context: ReconciliationContext,
+  locale: Locale = 'ru',
+) {
   function cell(value: string) {
     const safe = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value;
     return `"${safe.replaceAll('"', '""')}"`;
   }
   const rows: string[][] = [
-    ['Акт сверки'],
-    ['Контрагент', context.counterparty],
-    ['Наше юрлицо', context.ownCompany],
-    ['Договор', context.contract],
-    ['Период', context.from, context.to],
-    ['Сформировано по текущему состоянию документов'],
+    [translate(locale, 'forms.reconciliationStatement')],
+    [translate(locale, 'registryField.counterparty_id'), context.counterparty],
+    [translate(locale, 'forms.ownLegalEntity'), context.ownCompany],
+    [translate(locale, 'registryField.contract_id'), context.contract],
+    [translate(locale, 'reconciliation.period'), context.from, context.to],
+    [translate(locale, 'reconciliation.currentState')],
     [],
-    ['Валюта', 'Дата', 'Документ', 'Наше юрлицо', 'Дебет', 'Кредит', 'Сальдо'],
+    [
+      translate(locale, 'registryField.currency'),
+      translate(locale, 'forms.date'),
+      translate(locale, 'forms.document'),
+      translate(locale, 'forms.ownLegalEntity'),
+      translate(locale, 'forms.debit'),
+      translate(locale, 'forms.credit'),
+      translate(locale, 'forms.balance'),
+    ],
   ];
   for (const total of data.totals)
     rows.push([
       total.currency,
       '',
-      'Начальное сальдо',
+      translate(locale, 'forms.openingBalance'),
       '',
       '',
       '',
@@ -75,7 +88,7 @@ export function reconciliationCsv(data: Reconciliation, context: ReconciliationC
     rows.push([
       item.currency,
       CalendarDate.fromISO(item.date).toDisplayString(),
-      `${reconciliationLabels[item.kind]} № ${item.number}`,
+      `${translate(locale, reconciliationLabelKeys[item.kind])} № ${item.number}`,
       item.own_company_name,
       formatFixed(item.debit_minor, 2),
       formatFixed(item.credit_minor, 2),
@@ -85,7 +98,7 @@ export function reconciliationCsv(data: Reconciliation, context: ReconciliationC
     rows.push([
       total.currency,
       '',
-      'Обороты / конечное сальдо',
+      translate(locale, 'reconciliation.turnover'),
       '',
       formatFixed(total.debit_minor, 2),
       formatFixed(total.credit_minor, 2),

@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import './settlements.css';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -22,12 +23,6 @@ import {
 } from './settlements';
 
 const empty: SettlementFilters = { own_company_id: '', contract_id: '', currency: '' };
-const views: { value: SettlementView; label: string }[] = [
-  { value: 'outgoing', label: 'Исходящие счета' },
-  { value: 'incoming', label: 'Входящие счета' },
-  { value: 'receipt', label: 'Поступления' },
-  { value: 'disbursement', label: 'Списания' },
-];
 export function CounterpartySettlements({
   counterpartyId,
   counterpartyName,
@@ -39,6 +34,13 @@ export function CounterpartySettlements({
   session: Session;
   version: number;
 }) {
+  const { translate, locale } = useLocalization();
+  const views: { value: SettlementView; label: string }[] = [
+    { value: 'outgoing', label: translate('nav.outgoingInvoices') },
+    { value: 'incoming', label: translate('nav.incomingInvoices') },
+    { value: 'receipt', label: translate('nav.receipts') },
+    { value: 'disbursement', label: translate('nav.disbursements') },
+  ];
   const [mode, setMode] = useState('balances');
   const [initialPeriod] = useState(() => ({
     from: CalendarDate.fromISO(`${new Date().getFullYear()}-01-01`),
@@ -93,7 +95,7 @@ export function CounterpartySettlements({
     event.preventDefault();
     if (mode === 'reconciliation') {
       if (!from || !to || from.toString() > to.toString()) {
-        setPeriodError('Укажите корректное начало и конец периода');
+        setPeriodError(translate('forms.enterAValidPeriodStartAndEnd'));
         return;
       }
       setPeriod({ from, to });
@@ -118,13 +120,13 @@ export function CounterpartySettlements({
     );
   }
   return (
-    <section className="counterparty-settlements" aria-label="Взаиморасчёты">
-      <div className="tabs" role="group" aria-label="Режим взаиморасчётов">
+    <section className="counterparty-settlements" aria-label={translate('forms.settlements')}>
+      <div className="tabs" role="group" aria-label={translate('forms.settlementView')}>
         <button aria-pressed={mode === 'balances'} onClick={() => setMode('balances')}>
-          Задолженность
+          {translate('forms.outstandingBalances')}
         </button>
         <button aria-pressed={mode === 'reconciliation'} onClick={() => setMode('reconciliation')}>
-          Акт сверки
+          {translate('forms.reconciliationStatement')}
         </button>
       </div>
       <form
@@ -133,7 +135,7 @@ export function CounterpartySettlements({
       >
         <CustomerSelect
           items={[]}
-          label="Своё юрлицо"
+          label={translate('forms.ownLegalEntityLabel')}
           ownCompany
           disabled={false}
           session={session}
@@ -147,7 +149,7 @@ export function CounterpartySettlements({
           <ServiceChargeLookup<Contract>
             session={session}
             kind="contracts"
-            label="Договор"
+            label={translate('registryField.contract_id')}
             value={draft.contract_id}
             name={contractName}
             counterparty={counterpartyId}
@@ -159,19 +161,23 @@ export function CounterpartySettlements({
           />
         )}
         <Select
-          label="Валюта"
+          label={translate('registryField.currency')}
           selectedLabel={draft.currency || undefined}
           value={draft.currency}
-          options={[{ value: '', label: 'Все валюты' }, ...currenciesWithCurrent(draft.currency)]}
+          options={[
+            { value: '', label: translate('forms.allCurrencies') },
+            ...currenciesWithCurrent(draft.currency, locale),
+          ]}
           onChange={(currency) => setDraft({ ...draft, currency })}
         />
         {mode === 'reconciliation' && (
           <>
             <label>
-              Период с<DateInput required value={from} onChange={setFrom} />
+              {translate('forms.periodFrom')}
+              <DateInput required value={from} onChange={setFrom} />
             </label>
             <label>
-              По
+              {translate('filter.to')}
               <DateInput required value={to} onChange={setTo} />
             </label>
           </>
@@ -191,10 +197,10 @@ export function CounterpartySettlements({
               setPeriodError('');
             }}
           >
-            Сбросить
+            {translate('forms.reset')}
           </button>
           <button className="primary" type="submit">
-            {mode === 'reconciliation' ? 'Сформировать' : 'Применить'}
+            {mode === 'reconciliation' ? translate('forms.generate') : translate('filter.apply')}
           </button>
         </div>
       </form>
@@ -222,36 +228,39 @@ export function CounterpartySettlements({
             </p>
           ) : loading ? (
             <p className="hint" role="status">
-              Считаем взаиморасчёты…
+              {translate('forms.calculatingSettlements')}
             </p>
           ) : totals.length === 0 ? (
-            <p className="hint">Счетов и платежей по выбранным условиям нет.</p>
+            <p className="hint">{translate('forms.noInvoicesOrPaymentsMatchTheseConditions')}</p>
           ) : (
             <>
               <div className="settlement-table-wrap">
-                <table className="settlement-totals" aria-label="Текущие взаиморасчёты по валютам">
+                <table
+                  className="settlement-totals"
+                  aria-label={translate('forms.currentSettlementsByCurrency')}
+                >
                   <thead>
                     <tr className="settlement-groups">
                       <th rowSpan={2} scope="col">
-                        Валюта
+                        {translate('registryField.currency')}
                       </th>
                       <th colSpan={2} scope="colgroup">
-                        Нам должны
+                        {translate('forms.receivables')}
                       </th>
                       <th colSpan={2} scope="colgroup">
-                        Мы должны
+                        {translate('forms.payables')}
                       </th>
                       <th colSpan={2} scope="colgroup">
-                        Нераспределено
+                        {translate('forms.unallocated')}
                       </th>
                     </tr>
                     <tr>
-                      <th scope="col">Всего</th>
-                      <th scope="col">Просрочено</th>
-                      <th scope="col">Всего</th>
-                      <th scope="col">Просрочено</th>
-                      <th scope="col">Поступления</th>
-                      <th scope="col">Списания</th>
+                      <th scope="col">{translate('finance.totalLabel')}</th>
+                      <th scope="col">{translate('forms.overdue')}</th>
+                      <th scope="col">{translate('finance.totalLabel')}</th>
+                      <th scope="col">{translate('forms.overdue')}</th>
+                      <th scope="col">{translate('nav.receipts')}</th>
+                      <th scope="col">{translate('nav.disbursements')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -282,12 +291,12 @@ export function CounterpartySettlements({
                 </table>
               </div>
               <p className="hint settlement-explanation">
-                Нераспределённые платежи не привязаны к договору и не вычитаются из долга.
+                {translate('settlements.unallocatedHint')}
               </p>
             </>
           )}
           <div className="settlement-detail-heading">
-            <div className="tabs" role="group" aria-label="Документы взаиморасчётов">
+            <div className="tabs" role="group" aria-label={translate('forms.settlementDocuments')}>
               {views.map((option) => (
                 <button
                   key={option.value}
@@ -309,7 +318,7 @@ export function CounterpartySettlements({
                   checked={overdue}
                   onChange={(event) => setOverdue(event.target.checked)}
                 />
-                Только просроченные
+                {translate('forms.overdueOnly')}
               </label>
             )}
           </div>

@@ -55,3 +55,37 @@ describe('Акт сверки', () => {
     ).toBe('#/incoming-invoices/456');
   });
 });
+
+it('exports English reconciliation labels while retaining document numbers and company names', () => {
+  const csv = reconciliationCsv(
+    {
+      totals: [],
+      operations: [
+        {
+          id: 'receipt',
+          kind: 'receipt',
+          date: '2026-10-31',
+          number: 'П-123',
+          own_company_name: 'Моя компания',
+          currency: 'RUB',
+          debit_minor: '0',
+          credit_minor: '100',
+          balance_minor: '-100',
+        },
+      ],
+    },
+    {
+      counterparty: 'Клиент',
+      ownCompany: 'Моя компания',
+      contract: 'Д-123',
+      from: '01.10.2026',
+      to: '31.10.2026',
+    },
+    'en',
+  );
+  expect(csv).toContain('Reconciliation statement');
+  expect(csv).toContain('Receipt № П-123');
+  expect(csv).toContain('Моя компания');
+  expect(csv).toContain('Клиент');
+  expect(csv).not.toContain('Поступление');
+});

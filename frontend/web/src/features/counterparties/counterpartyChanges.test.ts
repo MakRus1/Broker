@@ -52,3 +52,19 @@ describe('Сравнение истории контрагентов', () => {
     ).toEqual(['name']);
   });
 });
+
+it('localizes structured history without translating saved values', () => {
+  const event = {
+    id: 1,
+    action: 'update_counterparty',
+    actor: 'author',
+    occurred_at: '2026-10-31T00:00:00Z',
+    before: { name: 'Старое имя' },
+    after: { name: 'Новое имя', archived: true },
+  };
+  expect(counterpartyChanges(event, 'en').find((field) => field.key === 'name')?.label).toBe(
+    'Name',
+  );
+  expect(historyFieldValue(event.after, 'name', 'en')).toBe('Новое имя');
+  expect(historyFieldValue(event.after, 'archived', 'en')).toBe('Archived');
+});

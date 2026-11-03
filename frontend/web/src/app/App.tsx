@@ -651,7 +651,7 @@ export function App() {
                     onSaved={(value) => {
                       const next = `/transportations/${value.id}`;
                       setWorkspaces((old) =>
-                        replaceWorkspace(old, entry.id, next, transportationTitle(value)),
+                        replaceWorkspace(old, entry.id, next, transportationTitle(value, locale)),
                       );
                       location.hash = next;
                       setTransportationRegistryVersion((old) => old + 1);

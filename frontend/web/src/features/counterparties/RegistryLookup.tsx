@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -15,6 +16,7 @@ export function RegistryLookup({
   onApply: (value: RegistryRequisites) => void;
   children: (lookupButton: ReactNode) => ReactNode;
 }) {
+  const { translate } = useLocalization();
   const taxId = draft.tax_id.trim();
   const country = draft.country_code.trim().toUpperCase();
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function RegistryLookup({
   async function lookup() {
     if (busy) return;
     if (!isInn(taxId)) {
-      setFailure('Проверьте ИНН: нужны 10 или 12 цифр с верной контрольной суммой.');
+      setFailure(translate('counterparty.checkTheINNEnter10Or12DigitsWithAValidChecksum'));
       return;
     }
     const controller = new AbortController();
@@ -56,13 +58,16 @@ export function RegistryLookup({
       if (number !== requestNumber.current) return;
       if (result.items[0]) {
         onApply(registryRequisites(result.items[0]));
-        setMessage('Реквизиты подставлены из DaData. Проверьте данные перед сохранением.');
+        setMessage(translate('counterparty.detailsFilledFromDaDataCheckThemBeforeSaving'));
       }
-      if (!result.items.length)
-        setMessage('Организация или ИП с таким ИНН не найдены. Можно заполнить реквизиты вручную.');
+      if (!result.items.length) setMessage(translate('counterparty.lookupEmpty'));
     } catch (error) {
       if (!controller.signal.aborted && number === requestNumber.current)
-        setFailure(error instanceof Error ? error.message : 'Не удалось получить реквизиты');
+        setFailure(
+          error instanceof Error
+            ? error.message
+            : translate('counterparty.couldNotRetrieveCompanyDetails'),
+        );
     } finally {
       if (number === requestNumber.current) setBusy(false);
     }
@@ -70,7 +75,7 @@ export function RegistryLookup({
   return (
     <section
       className="registry-lookup"
-      aria-label="Поиск реквизитов по ИНН"
+      aria-label={translate('counterparty.findCompanyDetailsByINN')}
       onKeyDown={(event) => {
         if (
           event.key !== 'Enter' ||
@@ -87,15 +92,15 @@ export function RegistryLookup({
         <button
           type="button"
           className="registry-search-button"
-          title="Найти головную организацию или ИП России в DaData"
+          title={translate('counterparty.findARussianHeadOfficeOrSoleProprietorInDaData')}
           disabled={busy || !taxId || (!!country && country !== 'RU')}
           onClick={() => void lookup()}
         >
-          {busy ? 'Ищем…' : 'Заполнить по ИНН'}
+          {busy ? translate('lookup.searching') : translate('counterparty.fillByINN')}
         </button>,
       )}
       {!!country && country !== 'RU' && (
-        <p className="hint">Для иностранных компаний реквизиты заполняются вручную.</p>
+        <p className="hint">{translate('counterparty.enterForeignCompanyDetailsManually')}</p>
       )}
       {message && <p role="status">{message}</p>}
       {failure && (

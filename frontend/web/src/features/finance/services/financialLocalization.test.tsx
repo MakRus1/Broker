@@ -73,3 +73,83 @@ it('renders a linked invoice number and date as one localized message', () => {
   expect(html).toContain('#ТЕСТ-123 dated 30.10.2026');
   expect(html).toContain('Unlink');
 });
+
+it('translates rail and road fields without translating selected directory records', async () => {
+  const { RailFields } = await import('../../routes/RailFields');
+  const { RoadDetailsView } = await import('../../routes/RoadFields');
+  const rail = renderToStaticMarkup(
+    <RailFields
+      value={{
+        origin_station: {
+          id: 'station',
+          name: 'Владивосток',
+          country_code: 'RU',
+          esr_code: '981106',
+        },
+      }}
+      session={session}
+      onChange={() => {}}
+    />,
+  );
+  expect(rail).toContain('Departure station');
+  expect(rail).toContain('Train departure');
+  expect(rail).toContain('Владивосток');
+  expect(rail).toContain('ESR 981106');
+  const road = renderToStaticMarkup(
+    <RoadDetailsView pickup={{ driver: 'Иванов Иван', vehicle_number: 'А123ВС' }} customers={[]} />,
+  );
+  expect(road).toContain('Driver');
+  expect(road).toContain('Vehicle number');
+  expect(road).toContain('Иванов Иван');
+});
+
+it('translates transportation types, ownership and container warnings together', async () => {
+  const { TransportationDetailsForm } =
+    await import('../../transportations/TransportationDetailsForm');
+  const html = renderToStaticMarkup(
+    <TransportationDetailsForm
+      shipmentId="shipment"
+      session={session}
+      onSaved={() => {}}
+      onCancel={() => {}}
+      onError={() => {}}
+    />,
+  );
+  expect(html).toContain('Transportation type');
+  expect(html).toContain('Container number');
+  expect(html).toContain('Container ownership');
+  expect(html).toContain('Create transportation');
+  expect(html).not.toContain('Тип перевозки');
+});
+
+it('translates counterparty details and roles without changing the company name or tax ID', async () => {
+  const { CounterpartyForm } = await import('../../counterparties/CounterpartyForm');
+  const html = renderToStaticMarkup(
+    <CounterpartyForm
+      session={session}
+      initial={{
+        id: 'company',
+        name: 'Мой клиент',
+        legal_name: '',
+        country_code: 'RU',
+        tax_id: '7707083893',
+        kpp: '',
+        registration_id: '',
+        legal_address: '',
+        roles: ['customer'],
+        contacts: [],
+        own_company: false,
+        archived: false,
+        revision: 1,
+      }}
+      onSaved={() => {}}
+      onError={() => {}}
+    />,
+  );
+  expect(html).toContain('Edit counterparty');
+  expect(html).toContain('Customer');
+  expect(html).toContain('Short name · required');
+  expect(html).toContain('Мой клиент');
+  expect(html).toContain('7707083893');
+  expect(html).not.toContain('Контактные лица');
+});

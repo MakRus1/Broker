@@ -1,3 +1,5 @@
+import { translate, type Locale } from '../../../../shared/i18n/catalog';
+import { registryValueLabel } from '../registry/registryLabels';
 import { transportationTypes } from '../routes/logisticsLabels';
 import { type Transportation } from './types';
 
@@ -33,21 +35,21 @@ export function routePoint(segment: RouteSegment, point: 'origin' | 'destination
   return segment[point] ?? { name: '', country_code: '' };
 }
 
-export function routeDirection(segment: RouteSegment): string {
+export function routeDirection(segment: RouteSegment, locale: Locale = 'ru'): string {
   if (segment.mode === 'international_road')
     return segment.international_road?.loading_terminal_id
-      ? 'Место погрузки указано'
-      : 'Место погрузки не указано';
+      ? translate(locale, 'transport.loadingSpecified')
+      : translate(locale, 'transport.loadingMissing');
   if (segment.mode === 'road' || segment.mode === 'pickup')
     return (
       segment.pickup?.delivery_city ||
       segment.pickup?.delivery_address ||
-      'Место доставки не указано'
+      translate(locale, 'transport.deliveryMissing')
     );
   const fallback =
     segment.mode === 'rail' || segment.mode === 'international_rail'
-      ? 'Станция не выбрана'
-      : 'Пункт не указан';
+      ? translate(locale, 'transport.stationMissing')
+      : translate(locale, 'transport.pointMissing');
   return `${routePoint(segment, 'origin').name || fallback} → ${routePoint(segment, 'destination').name || fallback}`;
 }
 
@@ -58,7 +60,7 @@ export function localDateTime(value?: string): string {
   const pad = (part: number) => String(part).padStart(2, '0');
   return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-export function utcDateTime(value: string): string {
+export function utcDateTime(value: string, locale: Locale = 'ru'): string {
   const date = new Date(value);
   const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
   if (
@@ -74,12 +76,12 @@ export function utcDateTime(value: string): string {
       date.getSeconds(),
     ].some((part, index) => part !== Number(parts[index + 1] ?? 0))
   )
-    throw new Error('Укажите корректную дату и время');
+    throw new Error(translate(locale, 'transport.invalidDateTime'));
   return date.toISOString().replace('.000Z', 'Z');
 }
-export function formatDate(value?: string): string {
+export function formatDate(value?: string, locale: Locale = 'ru'): string {
   return value
-    ? new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+    ? new Date(value).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
     : '—';
 }
 export function routeSegment(value: RouteSegment): PlannedRouteSegment {
@@ -123,13 +125,18 @@ export function routeSegment(value: RouteSegment): PlannedRouteSegment {
     ...(value.planned_arrival_at ? { planned_arrival_at: value.planned_arrival_at } : {}),
   };
 }
-export function routeRequest(id: string, revision: number, route_segments: PlannedRouteSegment[]) {
+export function routeRequest(
+  id: string,
+  revision: number,
+  route_segments: PlannedRouteSegment[],
+  locale: Locale = 'ru',
+) {
   if (!route_segments.length || route_segments.length > 32)
-    throw new Error('Маршрут должен содержать от 1 до 32 участков');
+    throw new Error(translate(locale, 'transport.routeSize'));
   if (
     new Set(route_segments.map((route_segment) => route_segment.id)).size !== route_segments.length
   )
-    throw new Error('Участки маршрута должны отличаться');
+    throw new Error(translate(locale, 'transport.uniqueLegs'));
   return {
     transportation_id: id,
     expected_revision: revision,
@@ -140,36 +147,40 @@ export function routeRequest(id: string, revision: number, route_segments: Plann
         point.name = point.name.trim();
         point.country_code = point.country_code.trim().toUpperCase();
         if (point.country_code && !/^[A-Z]{2}$/.test(point.country_code))
-          throw new Error('Укажите пункт и двухбуквенный код страны');
+          throw new Error(translate(locale, 'transport.countryCode'));
       }
       for (const value of [route_segment.planned_departure_at, route_segment.planned_arrival_at]) {
         if (value && !Number.isFinite(new Date(value).getTime()))
-          throw new Error('Некорректная плановая дата');
+          throw new Error(translate(locale, 'transport.invalidPlannedDate'));
       }
       if (
         route_segment.planned_departure_at &&
         route_segment.planned_arrival_at &&
         new Date(route_segment.planned_departure_at) > new Date(route_segment.planned_arrival_at)
       )
-        throw new Error('Плановое отправление не может быть позже прибытия');
+        throw new Error(translate(locale, 'transport.departureAfterArrival'));
       return result;
     }),
   };
 }
-export const historyActions: Record<string, string> = {
-  set_route: 'Изменён маршрут',
-  record_actual: 'Записана фактическая дата',
-  correct_actual: 'Исправлена фактическая дата',
-};
+export const historyActions = {
+  set_route: 'transport.routeChanged',
+  record_actual: 'transport.actualRecorded',
+  correct_actual: 'transport.actualCorrected',
+} as const;
 
 export function transportationTitle(
   value: Pick<Transportation, 'container_number' | 'type'>,
+  locale: Locale = 'ru',
 ): string {
-  return value.container_number || `${transportationTypes[value.type]} · Без номера`;
+  return (
+    value.container_number ||
+    `${registryValueLabel('type', value.type, locale) ?? transportationTypes[value.type]} · ${translate(locale, 'transport.noNumber')}`
+  );
 }
 
-export function containerNumberWarning(value: string): string {
+export function containerNumberWarning(value: string, locale: Locale = 'ru'): string {
   const number = value.trim().toUpperCase();
   if (!number || /^[A-Z]{4}[0-9]{7}$/.test(number)) return '';
-  return 'Обычно номер содержит 4 латинские буквы и 7 цифр, например CSQU3054383. Можно сохранить и этот вариант.';
+  return translate(locale, 'transport.containerWarning');
 }

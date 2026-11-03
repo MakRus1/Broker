@@ -4,23 +4,27 @@ import type { InvoiceDirection } from './invoices';
 import type { Session } from '../../../shared/api/session';
 import type { Allocation, InvoiceBalance, PaymentDetails } from '../payments/payments';
 import { parseFixed, inputFixed } from '../services/serviceCharges';
-export const invoicePaymentLabels: Record<
+export function invoicePaymentLabels(
+  locale: Locale = 'ru',
+): Record<
   InvoiceDirection,
   { action: string; success: string; remainder: string; archived: string }
-> = {
-  outgoing: {
-    action: 'Распределить поступление',
-    success: 'Распределение поступления сохранено',
-    remainder: 'Останется в поступлении',
-    archived: 'Платёж отправлен в архив. Выберите другое поступление',
-  },
-  incoming: {
-    action: 'Распределить списание',
-    success: 'Распределение списания сохранено',
-    remainder: 'Останется в списании',
-    archived: 'Платёж отправлен в архив. Выберите другое списание',
-  },
-};
+> {
+  return {
+    outgoing: {
+      action: translate(locale, 'payment.allocateReceipt'),
+      success: translate(locale, 'payment.receiptSaved'),
+      remainder: translate(locale, 'payment.receiptRemainder'),
+      archived: translate(locale, 'payment.receiptArchived'),
+    },
+    incoming: {
+      action: translate(locale, 'payment.allocateDisbursement'),
+      success: translate(locale, 'payment.disbursementSaved'),
+      remainder: translate(locale, 'payment.disbursementRemainder'),
+      archived: translate(locale, 'payment.disbursementArchived'),
+    },
+  };
+}
 export type PaymentTarget = Pick<InvoiceBalance, 'invoice' | 'outstanding_minor'>;
 export function invoicePaymentProblem(
   targets: PaymentTarget[],
@@ -59,26 +63,28 @@ export function invoicePaymentAdditions(
   targets: PaymentTarget[],
   amounts: Record<string, string>,
   available: number,
+  locale: Locale = 'ru',
 ): Allocation[] {
-  const problem = invoicePaymentProblem(targets);
+  const problem = invoicePaymentProblem(targets, locale);
   if (problem) throw new Error(problem);
   const result: Allocation[] = [];
   let remaining = available;
   for (const target of targets) {
     const amount = parseFixed(amounts[target.invoice.id] ?? '', 2, target.outstanding_minor);
     if (amount === undefined)
-      throw new Error(`Счёт № ${target.invoice.number}: укажите сумму от нуля до остатка счёта`);
-    if (amount > remaining) throw new Error('Распределение превышает свободный остаток платежа');
+      throw new Error(translate(locale, 'payment.amountRange', { number: target.invoice.number }));
+    if (amount > remaining) throw new Error(translate(locale, 'payment.overAllocated'));
     remaining -= amount;
     if (amount > 0) result.push({ invoice_id: target.invoice.id, amount_minor: amount });
   }
-  if (!result.length) throw new Error('Укажите положительную сумму хотя бы для одного счёта');
+  if (!result.length) throw new Error(translate(locale, 'payment.positiveAmount'));
   return result;
 }
 export async function saveInvoicePayments(
   details: PaymentDetails,
   additions: Allocation[],
   session: Session,
+  locale: Locale = 'ru',
 ) {
   const allocations = details.allocations.map((item) => ({ ...item }));
   for (const addition of additions) {
@@ -86,8 +92,7 @@ export async function saveInvoicePayments(
     if (old) old.amount_minor += addition.amount_minor;
     else allocations.push(addition);
   }
-  if (allocations.length > 100)
-    throw new Error('В платеже может быть не больше 100 оплачиваемых счетов');
+  if (allocations.length > 100) throw new Error(translate(locale, 'payment.invoiceLimit'));
   const p = details.payment;
   // Редакция взята при выборе платежа: параллельные изменения не перезаписываем.
   return request<PaymentDetails>('/api/v1/payments/save', session, {

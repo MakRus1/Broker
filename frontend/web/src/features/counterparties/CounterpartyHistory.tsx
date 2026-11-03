@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
 import { useEffect, useRef, useState } from 'react';
@@ -22,6 +23,7 @@ export function CounterpartyHistory({
   onError: (error: unknown) => void;
   version: number;
 }) {
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<CounterpartyEvent[]>([]);
   const [selected, setSelected] = useState<CounterpartyEvent>();
   const [more, setMore] = useState(false);
@@ -52,7 +54,9 @@ export function CounterpartyHistory({
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          setFailure(error instanceof Error ? error.message : 'Не удалось загрузить историю');
+          setFailure(
+            error instanceof Error ? error.message : translate('forms.couldNotLoadHistory'),
+          );
           onError(error);
         }
       })
@@ -83,7 +87,7 @@ export function CounterpartyHistory({
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        setFailure(error instanceof Error ? error.message : 'Не удалось загрузить историю');
+        setFailure(error instanceof Error ? error.message : translate('forms.couldNotLoadHistory'));
         onError(error);
       }
     } finally {
@@ -91,22 +95,24 @@ export function CounterpartyHistory({
     }
   }
   if (selected) {
-    const changes = counterpartyChanges(selected);
+    const changes = counterpartyChanges(selected, locale);
     const created = selected.action === 'create_counterparty';
     return (
       <section className="counterparty-history">
         <div className="section-heading">
-          <h2>{counterpartyActions[selected.action] || selected.action}</h2>
-          <button onClick={() => setSelected(undefined)}>← К истории</button>
+          <h2>{counterpartyActions(locale)[selected.action] || selected.action}</h2>
+          <button onClick={() => setSelected(undefined)}>
+            {translate('counterparty.backToHistory')}
+          </button>
         </div>
         <p>
-          {selected.actor_name || 'Имя не сохранено'} · {formatDate(selected.occurred_at)}
-          {selected.revision !== undefined && ` · Редакция ${selected.revision}`}
+          {selected.actor_name || translate('forms.nameNotRecorded')} ·{' '}
+          {formatDate(selected.occurred_at, locale)}
+          {selected.revision !== undefined &&
+            ` · ${translate('forms.revisionValue', { revision: selected.revision })}`}
         </p>
         {!selected.before && !created && (
-          <p className="route-notice">
-            Состояние до этого изменения не сохранено. Показаны доступные данные после изменения.
-          </p>
+          <p className="route-notice">{translate('counterparty.historyMissing')}</p>
         )}
         <label className="history-unchanged">
           <input
@@ -114,15 +120,15 @@ export function CounterpartyHistory({
             checked={showUnchanged}
             onChange={(event) => setShowUnchanged(event.target.checked)}
           />
-          Показать неизменённые поля
+          {translate('counterparty.showUnchangedFields')}
         </label>
         <div className="table-scroll">
           <table className="counterparty-diff">
             <thead>
               <tr>
-                <th>Поле</th>
-                <th>До изменения</th>
-                <th>После изменения</th>
+                <th>{translate('counterparty.field')}</th>
+                <th>{translate('counterparty.before')}</th>
+                <th>{translate('counterparty.after')}</th>
               </tr>
             </thead>
             <tbody>
@@ -133,18 +139,18 @@ export function CounterpartyHistory({
                     <th scope="row">{change.label}</th>
                     <td className={change.changed ? 'before' : ''}>
                       {created ? (
-                        'Контрагент ещё не создан'
+                        translate('counterparty.counterpartyNotYetCreated')
                       ) : change.key === 'logist' ? (
                         <EmployeeName subject={selected.before?.logist} session={session} />
                       ) : (
-                        historyFieldValue(selected.before, change.key)
+                        historyFieldValue(selected.before, change.key, locale)
                       )}
                     </td>
                     <td className={change.changed ? 'after' : ''}>
                       {change.key === 'logist' ? (
                         <EmployeeName subject={selected.after.logist} session={session} />
                       ) : (
-                        historyFieldValue(selected.after, change.key)
+                        historyFieldValue(selected.after, change.key, locale)
                       )}
                     </td>
                   </tr>
@@ -153,20 +159,22 @@ export function CounterpartyHistory({
           </table>
         </div>
         {!changes.some((change) => change.changed) && (
-          <p className="hint">Значения полей не изменились.</p>
+          <p className="hint">{translate('counterparty.noFieldValuesChanged')}</p>
         )}
       </section>
     );
   }
   return (
     <section className="counterparty-history" aria-busy={busy}>
-      <h2>История изменений</h2>
+      <h2>{translate('forms.changeHistory')}</h2>
       {failure && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
-      {!busy && !failure && !items.length && <p className="hint">Изменений пока нет.</p>}
+      {!busy && !failure && !items.length && (
+        <p className="hint">{translate('forms.noChangesYet')}</p>
+      )}
       {items.map((event) => (
         <article className="history-entry" key={event.id}>
           <button
@@ -176,14 +184,15 @@ export function CounterpartyHistory({
               setShowUnchanged(false);
             }}
           >
-            <strong>{counterpartyActions[event.action] || event.action}</strong>
+            <strong>{counterpartyActions(locale)[event.action] || event.action}</strong>
             <span title={event.actor}>
-              {event.actor_name || 'Имя не сохранено'} · {formatDate(event.occurred_at)}
+              {event.actor_name || translate('forms.nameNotRecorded')} ·{' '}
+              {formatDate(event.occurred_at, locale)}
             </span>
             <span>
               {event.revision === undefined
-                ? 'Редакция не сохранена'
-                : `Редакция ${event.revision}`}
+                ? translate('counterparty.revisionNotRecorded')
+                : translate('forms.revisionValue', { revision: event.revision })}
             </span>
           </button>
         </article>

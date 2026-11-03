@@ -152,3 +152,15 @@ it('распределяет списание по входящим счетам
     }),
   );
 });
+
+it('uses English allocation validation without changing amounts or invoice numbers', () => {
+  expect(() => invoicePaymentAdditions([first], { a: '999999,00' }, 100, 'en')).toThrow(
+    'Invoice #A: enter an amount between zero and the outstanding balance',
+  );
+  expect(() => invoicePaymentAdditions([first], { a: '10,00' }, 100, 'en')).toThrow(
+    'Allocation exceeds the available payment balance',
+  );
+  expect(invoicePaymentAdditions([first], { a: '1,00' }, 100, 'en')).toEqual([
+    { invoice_id: 'a', amount_minor: 100 },
+  ]);
+});

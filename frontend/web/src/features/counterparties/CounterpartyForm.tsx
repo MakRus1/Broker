@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useState, type FormEvent } from 'react';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { RegistryLookup } from './RegistryLookup';
@@ -26,6 +28,7 @@ export function CounterpartyForm({
   onSaved: (value: Counterparty) => void;
   onError: (value: unknown) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const storageKey = `broker:counterparty-draft:${session.actor}:${initial?.id ?? 'new'}`;
   const [stored] = useState(() => {
     const fallback = {
@@ -88,7 +91,7 @@ export function CounterpartyForm({
     setBusy(true);
     setFailure('');
     try {
-      validateContacts(draft.contacts);
+      validateContacts(draft.contacts, locale);
       const result = await request<{ counterparty: Counterparty }>(
         `/api/v1/counterparties/${initial ? 'update' : 'create'}`,
         session,
@@ -108,10 +111,11 @@ export function CounterpartyForm({
     } catch (error) {
       setFailure(
         error instanceof ApiError && error.status === 409
-          ? error.message + ' Проверьте существующую карточку или обновите данные перед повтором.'
+          ? error.message +
+              translate('counterparty.checkTheExistingRecordOrRefreshTheDataBeforeRetrying')
           : error instanceof Error
             ? error.message
-            : 'Не удалось сохранить',
+            : translate('counterparty.couldNotSave'),
       );
       onError(error);
     } finally {
@@ -128,27 +132,30 @@ export function CounterpartyForm({
         onSubmit={submit}
       >
         <div className="section-heading">
-          <h1>{initial ? 'Редактирование контрагента' : 'Новый контрагент'}</h1>
+          <h1>
+            {initial
+              ? translate('counterparty.editCounterparty')
+              : translate('entity.newCounterparty')}
+          </h1>
           <button type="button" disabled={busy} onClick={cancel}>
-            Отменить
+            {translate('action.cancel')}
           </button>
         </div>
-        <p className="hint">Черновик сохраняется в этой вкладке.</p>
+        <p className="hint">{translate('counterparty.theDraftIsSavedInThisTab')}</p>
         {stale && (
           <p className="error" role="alert">
-            Черновик основан на другой редакции. Отмените редактирование и откройте актуальную
-            карточку.
+            {translate('counterparty.draftConflict')}
           </p>
         )}
         <fieldset disabled={busy || !!stale}>
-          <legend>Юридическое лицо</legend>
+          <legend>{translate('counterparty.legalEntity')}</legend>
           <label className="bank-archive-toggle">
             <input
               type="checkbox"
               checked={draft.own_company}
               onChange={(event) => set('own_company', event.target.checked)}
             />
-            Собственное юридическое лицо
+            {translate('counterparty.ownLegalEntity')}
           </label>
           <RegistryLookup
             session={session}
@@ -159,13 +166,13 @@ export function CounterpartyForm({
               <div className="route-fields">
                 {(
                   [
-                    ['name', 'Краткое наименование · обязательно', 256],
-                    ['legal_name', 'Юридическое наименование', 512],
-                    ['country_code', 'Код страны (RU, CN…)', 2],
-                    ['tax_id', 'Налоговый номер / ИНН', 64],
-                    ['kpp', 'КПП', 9],
-                    ['registration_id', 'Регистрационный номер / ОГРН', 64],
-                    ['legal_address', 'Юридический адрес', 1024],
+                    ['name', translate('counterparty.shortNameRequired'), 256],
+                    ['legal_name', translate('counterparty.legalName'), 512],
+                    ['country_code', translate('counterparty.countryCodeRUCN'), 2],
+                    ['tax_id', translate('counterparty.taxIDINN'), 64],
+                    ['kpp', translate('counterparty.kpp'), 9],
+                    ['registration_id', translate('counterparty.registrationNumberOGRN'), 64],
+                    ['legal_address', translate('counterparty.registeredAddress'), 1024],
                   ] as const
                 ).map(([key, label, limit]) => (
                   <div
@@ -214,11 +221,8 @@ export function CounterpartyForm({
           </RegistryLookup>
         </fieldset>
         <fieldset disabled={busy}>
-          <legend>Роли</legend>
-          <p className="hint">
-            Роли можно сочетать. Они помогают находить компанию и не ограничивают её участие в
-            перевозке.
-          </p>
+          <legend>{translate('registryField.roles')}</legend>
+          <p className="hint">{translate('counterparty.rolesHint')}</p>
           <div className="role-options">
             {Object.entries(counterpartyRoles).map(([role, label]) => (
               <label key={role}>
@@ -234,26 +238,24 @@ export function CounterpartyForm({
                     )
                   }
                 />
-                {label}
+                {registryValueLabel('roles', role, locale) ?? label}
               </label>
             ))}
           </div>
         </fieldset>
         <fieldset disabled={busy}>
-          <legend>Ответственный сотрудник</legend>
+          <legend>{translate('counterparty.responsibleEmployee')}</legend>
           <DirectoryLookup
             session={session}
             kind="employees"
-            label="Логист"
+            label={translate('shipment.logist')}
             value={draft.logist}
             onChange={(value) => set('logist', value)}
           />
-          <p className="hint">
-            Подставляется при создании поставки для этого клиента. В поставке его можно изменить.
-          </p>
+          <p className="hint">{translate('counterparty.logistHint')}</p>
         </fieldset>
         <fieldset disabled={busy}>
-          <legend>Контактные лица</legend>
+          <legend>{translate('counterparty.contacts')}</legend>
           {draft.contacts.map((contact, index) => (
             <div className="contact-editor" key={index}>
               <div className="route-fields">
@@ -261,10 +263,10 @@ export function CounterpartyForm({
                   <label key={key}>
                     {
                       {
-                        name: 'Имя · обязательно',
-                        position: 'Должность',
+                        name: translate('counterparty.nameRequired'),
+                        position: translate('counterparty.position'),
                         email: 'Email',
-                        phone: 'Телефон',
+                        phone: translate('counterparty.phone'),
                       }[key]
                     }
                     <input
@@ -272,7 +274,9 @@ export function CounterpartyForm({
                       type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
                       title={
                         key === 'phone'
-                          ? 'От 7 до 15 цифр; допустимы +, пробелы, скобки и дефисы'
+                          ? translate(
+                              'counterparty.7To15DigitsSpacesParenthesesAndHyphensAreAllowed',
+                            )
                           : undefined
                       }
                       maxLength={key === 'phone' ? 64 : 256}
@@ -298,7 +302,7 @@ export function CounterpartyForm({
                   )
                 }
               >
-                Удалить контакт
+                {translate('counterparty.removeContact')}
               </button>
             </div>
           ))}
@@ -309,7 +313,7 @@ export function CounterpartyForm({
               set('contacts', [...draft.contacts, { name: '', position: '', email: '', phone: '' }])
             }
           >
-            ＋ Добавить контакт
+            {translate('counterparty.addContact')}
           </button>
         </fieldset>
         {failure && (
@@ -319,7 +323,11 @@ export function CounterpartyForm({
         )}
         <div className="form-actions">
           <button className="primary" disabled={busy || !!stale || !dirty || !draft.name.trim()}>
-            {busy ? 'Сохраняем…' : initial ? 'Сохранить изменения' : 'Создать контрагента'}
+            {busy
+              ? translate('shipment.saving')
+              : initial
+                ? translate('shipment.saveChanges')
+                : translate('counterparty.createCounterparty')}
           </button>
         </div>
       </form>

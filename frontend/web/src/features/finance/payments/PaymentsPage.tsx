@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
@@ -77,10 +78,11 @@ export function PaymentsPage({
   onSaved: (p: Payment) => void;
   onCancelNew: () => void;
 }) {
+  const { translate, locale } = useLocalization();
   const kind: PaymentKind = route.startsWith('/disbursements') ? 'disbursement' : 'receipt';
   const base = paymentBase(kind);
   const receipt = kind === 'receipt';
-  const title = receipt ? 'Поступление' : 'Списание';
+  const title = receipt ? translate('entity.receipt') : translate('entity.disbursement');
   const id = route.slice(base.length + 1);
   const creating = id === 'new';
   const registry = route === base;
@@ -133,7 +135,8 @@ export function PaymentsPage({
     request<PaymentDetails>('/api/v1/payments/get', session, { id })
       .then(async (r) => {
         if (cancelled) return;
-        if (r.payment.kind !== kind) throw new Error('Платёж не найден в этом разделе');
+        if (r.payment.kind !== kind)
+          throw new Error(translate('forms.paymentNotFoundInThisSection'));
         setValue(r);
         onTitle(r.payment.number);
         const items = await Promise.all(
@@ -245,7 +248,7 @@ export function PaymentsPage({
   async function changeParties(patch: Partial<Draft>) {
     if (!draft) return;
     if (Object.keys(allocations).length) {
-      setFailure('Перед изменением сторон или валюты уберите распределение по счетам');
+      setFailure(translate('payment.removeAllocationsHint'));
       return;
     }
     setDraft({ ...draft, ...patch });
@@ -259,7 +262,7 @@ export function PaymentsPage({
     if (!draft) return;
     const amount = parseFixed(draft.amount, 2, 9000000000000000);
     if (!amount || !draft.payment_date) {
-      setFailure('Укажите сумму и дату платежа');
+      setFailure(translate('forms.enterThePaymentAmountAndDate'));
       return;
     }
     const items = Object.entries(allocations).map(([invoice_id, text]) => ({
@@ -267,11 +270,11 @@ export function PaymentsPage({
       amount_minor: parseFixed(text, 2, amount),
     }));
     if (items.some((i) => !i.amount_minor)) {
-      setFailure('Укажите положительную сумму для каждого выбранного счёта');
+      setFailure(translate('forms.enterAPositiveAmountForEachSelectedInvoice'));
       return;
     }
     if (items.reduce((s, i) => s + (i.amount_minor ?? 0), 0) > amount) {
-      setFailure('Распределение превышает сумму платежа');
+      setFailure(translate('forms.theAllocatedAmountExceedsThePaymentAmount'));
       return;
     }
     setBusy(true);
@@ -329,24 +332,24 @@ export function PaymentsPage({
       <div className="payment-heading">
         <div>
           <a className="link record-back" href={`#${base}`}>
-            ← {receipt ? 'К поступлениям' : 'К списаниям'}
+            ← {receipt ? translate('forms.backToReceipts') : translate('forms.backToDisbursements')}
           </a>
           <p className="eyebrow">{title}</p>
           <h1>
             {creating
-              ? `Новое ${receipt ? 'поступление' : 'списание'}`
+              ? translate(receipt ? 'forms.newReceipt' : 'forms.newDisbursement')
               : (value?.payment.number ?? title)}
           </h1>
           {value && (
             <p className="record-state">
-              {value.payment.archived ? 'В архиве' : 'Действующее'} · Редакция{' '}
-              {value.payment.revision}
+              {value.payment.archived ? translate('filter.archived') : translate('forms.active')} ·{' '}
+              {translate('forms.revisionValue', { revision: value.payment.revision })}
             </p>
           )}
         </div>
         {!draft && value && write && (
           <button className="primary" onClick={() => edit(value)}>
-            Редактировать
+            {translate('shipment.edit')}
           </button>
         )}
       </div>
@@ -358,10 +361,10 @@ export function PaymentsPage({
       {value && !draft && (
         <CardNavigation className="financial-card-navigation">
           <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
-            Основное
+            {translate('shipment.details')}
           </button>
           <button type="button" aria-pressed={historyOpen} onClick={() => setHistoryOpen(true)}>
-            История
+            {translate('finance.history')}
           </button>
         </CardNavigation>
       )}
@@ -384,7 +387,7 @@ export function PaymentsPage({
         >
           <fieldset disabled={busy} className="record-fields">
             <label>
-              Номер платежа · обязательно
+              {translate('forms.paymentNumberRequired')}
               <input
                 required
                 maxLength={200}
@@ -393,7 +396,7 @@ export function PaymentsPage({
               />
             </label>
             <label>
-              Дата платежа · обязательно
+              {translate('forms.paymentDateRequired')}
               <DateInput
                 required
                 value={draft.payment_date}
@@ -403,7 +406,7 @@ export function PaymentsPage({
             <CustomerSelect
               required
               ownCompany
-              label="Своё юридическое лицо"
+              label={translate('finance.ownCompany')}
               items={parties}
               disabled={busy}
               value={draft.own_company_id}
@@ -414,7 +417,7 @@ export function PaymentsPage({
             />
             <CustomerSelect
               required
-              label={receipt ? 'Плательщик' : 'Получатель'}
+              label={receipt ? translate('forms.payer') : translate('shipment.recipient')}
               items={parties}
               disabled={busy}
               value={draft.counterparty_id}
@@ -424,7 +427,7 @@ export function PaymentsPage({
               }
             />
             <label>
-              Сумма · обязательно
+              {translate('forms.amountRequired')}
               <DecimalInput
                 required
                 precision={2}
@@ -433,10 +436,10 @@ export function PaymentsPage({
               />
             </label>
             <Select
-              label="Валюта"
+              label={translate('registryField.currency')}
               searchable
               value={draft.currency}
-              options={currenciesWithCurrent(draft.currency)}
+              options={currenciesWithCurrent(draft.currency, locale)}
               onChange={(currency) =>
                 void changeParties({
                   currency,
@@ -447,7 +450,7 @@ export function PaymentsPage({
             />
             <BankAccountSelect
               owner={draft.own_company_id}
-              label="Счёт своего юрлица"
+              label={translate('finance.ownBankAccount')}
               value={draft.own_bank_account_id}
               currency={draft.currency}
               session={session}
@@ -455,7 +458,11 @@ export function PaymentsPage({
             />
             <BankAccountSelect
               owner={draft.counterparty_id}
-              label={receipt ? 'Счёт плательщика' : 'Счёт получателя'}
+              label={
+                receipt
+                  ? translate('forms.payerBankAccount')
+                  : translate('forms.recipientBankAccount')
+              }
               value={draft.counterparty_bank_account_id}
               currency={draft.currency}
               session={session}
@@ -464,7 +471,7 @@ export function PaymentsPage({
               }
             />
             <label className="record-wide">
-              Назначение платежа
+              {translate('forms.paymentPurpose')}
               <textarea
                 maxLength={2000}
                 value={draft.purpose ?? ''}
@@ -472,7 +479,7 @@ export function PaymentsPage({
               />
             </label>
             <label className="record-wide">
-              Примечание
+              {translate('shipment.note')}
               <textarea
                 maxLength={2000}
                 value={draft.note ?? ''}
@@ -485,28 +492,26 @@ export function PaymentsPage({
                 checked={draft.archived}
                 onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
               />
-              В архиве
+              {translate('filter.archived')}
             </label>
           </fieldset>
           <section className="payment-allocation">
             <div className="section-heading">
-              <h2>Распределение по счетам</h2>
+              <h2>{translate('forms.invoiceAllocations')}</h2>
               <span>
-                Не распределено:{' '}
+                {translate('forms.unallocatedPrefix')}{' '}
                 <strong>
                   {formatFixed(amount - allocated, 2)} {draft.currency}
                 </strong>
               </span>
             </div>
-            {draft.archived && (
-              <p className="hint">Архивный платёж не учитывается в оплате счетов.</p>
-            )}
+            {draft.archived && <p className="hint">{translate('payment.archivedHint')}</p>}
             {selected.length > 0 && (
               <table className="payment-allocation-table">
                 <thead>
                   <tr>
-                    <th>Счёт</th>
-                    <th>Сумма оплаты</th>
+                    <th>{translate('registryField.invoice_number')}</th>
+                    <th>{translate('forms.paymentAmount')}</th>
                     <th />
                   </tr>
                 </thead>
@@ -515,12 +520,17 @@ export function PaymentsPage({
                     <tr key={id}>
                       <td>
                         {invoiceMap[id]
-                          ? `№ ${invoiceMap[id].invoice.number} от ${displayDate(invoiceMap[id].invoice.invoice_date)}`
+                          ? translate('finance.invoiceNumberDate', {
+                              number: invoiceMap[id].invoice.number,
+                              date: displayDate(invoiceMap[id].invoice.invoice_date),
+                            })
                           : id}
                       </td>
                       <td>
                         <DecimalInput
-                          aria-label={`Оплата счёта ${invoiceMap[id]?.invoice.number ?? id}`}
+                          aria-label={translate('forms.paymentForInvoice', {
+                            number: invoiceMap[id]?.invoice.number ?? id,
+                          })}
                           required
                           precision={2}
                           value={allocations[id]}
@@ -536,7 +546,7 @@ export function PaymentsPage({
                             )
                           }
                         >
-                          Убрать
+                          {translate('shipment.remove')}
                         </button>
                       </td>
                     </tr>
@@ -547,11 +557,11 @@ export function PaymentsPage({
             {draft.own_company_id && draft.counterparty_id ? (
               <>
                 <label>
-                  Поиск по номеру счёта
+                  {translate('forms.searchByInvoiceNumber')}
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Часть номера…"
+                    placeholder={translate('forms.partOfTheNumber')}
                   />
                 </label>
                 {candidateFailure && (
@@ -562,9 +572,13 @@ export function PaymentsPage({
                 <table className="payment-allocation-table">
                   <thead>
                     <tr>
-                      <th>{receipt ? 'Исходящий счёт' : 'Входящий счёт'}</th>
-                      <th>Сумма</th>
-                      <th>Осталось оплатить</th>
+                      <th>
+                        {receipt
+                          ? translate('forms.outgoingInvoice')
+                          : translate('forms.incomingInvoice')}
+                      </th>
+                      <th>{translate('registryField.amount')}</th>
+                      <th>{translate('registryField.outstanding_minor')}</th>
                       <th />
                     </tr>
                   </thead>
@@ -574,7 +588,9 @@ export function PaymentsPage({
                       .map((i) => (
                         <tr key={i.invoice.id}>
                           <td>
-                            № {i.invoice.number} от {displayDate(i.invoice.invoice_date)}
+                            № {i.invoice.number}
+                            {translate('ui.datePrefix')}
+                            {displayDate(i.invoice.invoice_date)}
                           </td>
                           <td>{formatFixed(i.invoice.total_minor, 2)}</td>
                           <td>{formatFixed(i.outstanding_minor, 2)}</td>
@@ -592,7 +608,7 @@ export function PaymentsPage({
                                 })
                               }
                             >
-                              Добавить
+                              {translate('forms.add')}
                             </button>
                           </td>
                         </tr>
@@ -600,7 +616,7 @@ export function PaymentsPage({
                   </tbody>
                 </table>
                 {!loading && !candidates.length && (
-                  <p className="empty-state">Подходящие счета не найдены</p>
+                  <p className="empty-state">{translate('forms.noMatchingInvoicesFound')}</p>
                 )}
                 <AutoLoadMore
                   enabled={!!after}
@@ -610,18 +626,15 @@ export function PaymentsPage({
                 />
               </>
             ) : (
-              <p className="hint">
-                Выберите стороны платежа. Сохранить {receipt ? 'поступление' : 'списание'} можно без
-                распределения.
-              </p>
+              <p className="hint">{translate('forms.paymentPartiesHint')}</p>
             )}
           </section>
           <div className="form-actions">
             <button type="button" disabled={busy} onClick={() => void cancel()}>
-              Отменить
+              {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              Сохранить
+              {translate('action.save')}
             </button>
           </div>
         </form>
@@ -629,19 +642,21 @@ export function PaymentsPage({
         <>
           <dl className="payment-amounts">
             <div>
-              <dt>{receipt ? 'Сумма поступления' : 'Сумма списания'}</dt>
+              <dt>
+                {receipt ? translate('forms.receiptAmount') : translate('forms.disbursementAmount')}
+              </dt>
               <dd>
                 {formatFixed(amount, 2)} <span>{value.payment.currency}</span>
               </dd>
             </div>
             <div>
-              <dt>Распределено</dt>
+              <dt>{translate('forms.allocated')}</dt>
               <dd>
                 {formatFixed(allocated, 2)} <span>{value.payment.currency}</span>
               </dd>
             </div>
             <div>
-              <dt>Не распределено</dt>
+              <dt>{translate('forms.unallocatedLabel')}</dt>
               <dd>
                 {formatFixed(value.unallocated_minor, 2)} <span>{value.payment.currency}</span>
               </dd>
@@ -649,36 +664,36 @@ export function PaymentsPage({
           </dl>
           <dl className="payment-details">
             <div>
-              <dt>Дата платежа</dt>
+              <dt>{translate('registryField.payment_date')}</dt>
               <dd>{displayDate(value.payment.payment_date)}</dd>
             </div>
             <div>
-              <dt>Своё юрлицо</dt>
+              <dt>{translate('forms.ownLegalEntityLabel')}</dt>
               <dd>{value.payment.own_company_name}</dd>
             </div>
             <div>
-              <dt>{receipt ? 'Плательщик' : 'Получатель'}</dt>
+              <dt>{receipt ? translate('forms.payer') : translate('shipment.recipient')}</dt>
               <dd>{value.payment.counterparty_name}</dd>
             </div>
             {value.payment.purpose && (
               <div className="record-wide">
-                <dt>Назначение платежа</dt>
+                <dt>{translate('forms.paymentPurpose')}</dt>
                 <dd>{value.payment.purpose}</dd>
               </div>
             )}
             {value.payment.note && (
               <div className="record-wide">
-                <dt>Примечание</dt>
+                <dt>{translate('shipment.note')}</dt>
                 <dd>{value.payment.note}</dd>
               </div>
             )}
           </dl>
-          <h2>Оплачиваемые счета</h2>
+          <h2>{translate('forms.allocatedInvoices')}</h2>
           <table className="payment-allocation-table">
             <thead>
               <tr>
-                <th>Счёт</th>
-                <th>Сумма оплаты</th>
+                <th>{translate('registryField.invoice_number')}</th>
+                <th>{translate('forms.paymentAmount')}</th>
               </tr>
             </thead>
             <tbody>
@@ -690,8 +705,11 @@ export function PaymentsPage({
                       href={`#/${receipt ? 'outgoing' : 'incoming'}-invoices/${a.invoice_id}`}
                     >
                       {invoiceMap[a.invoice_id]
-                        ? `№ ${invoiceMap[a.invoice_id].invoice.number} от ${displayDate(invoiceMap[a.invoice_id].invoice.invoice_date)}`
-                        : 'Открыть счёт'}
+                        ? translate('finance.invoiceNumberDate', {
+                            number: invoiceMap[a.invoice_id].invoice.number,
+                            date: displayDate(invoiceMap[a.invoice_id].invoice.invoice_date),
+                          })
+                        : translate('forms.openInvoice')}
                     </a>
                   </td>
                   <td>
@@ -701,10 +719,12 @@ export function PaymentsPage({
               ))}
             </tbody>
           </table>
-          {!value.allocations.length && <p className="empty-state">{title} пока не распределено</p>}
+          {!value.allocations.length && (
+            <p className="empty-state">{translate('forms.paymentUnallocated')}</p>
+          )}
         </>
       ) : loading ? (
-        <p>Загрузка…</p>
+        <p>{translate('filter.loading')}</p>
       ) : null}
     </section>
   );

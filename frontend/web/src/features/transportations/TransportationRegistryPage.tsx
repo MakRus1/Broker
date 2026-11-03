@@ -93,7 +93,7 @@ export function TransportationRegistry({
           <div className="empty">
             <span>▣</span>
             <h2>{translate('empty.transportations')}</h2>
-            <p>Измените фильтры или создайте перевозку в карточке поставки.</p>
+            <p>{translate('transport.emptyRegistry')}</p>
           </div>
         )}
         <AutoLoadMore

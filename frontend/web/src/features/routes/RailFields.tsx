@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { useEffect, useId, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -16,6 +17,7 @@ function StationLookup({
   session: Session;
   onChange: (station?: RailwayStation) => void;
 }) {
+  const { translate } = useLocalization();
   const id = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -81,7 +83,7 @@ function StationLookup({
           aria-controls={open ? `${id}-options` : undefined}
           aria-activedescendant={open && items[active] ? `${id}-${items[active].id}` : undefined}
           autoComplete="off"
-          placeholder="Название станции, ЕСР или UIC"
+          placeholder={translate('forms.stationNameESROrUIC')}
           value={
             open
               ? query
@@ -89,7 +91,7 @@ function StationLookup({
                 ? [
                     value.name,
                     value.esr_code
-                      ? `ЕСР ${value.esr_code}`
+                      ? translate('forms.esrCode', { code: value.esr_code })
                       : value.uic_code
                         ? `UIC ${value.uic_code}`
                         : value.country_code,
@@ -128,7 +130,7 @@ function StationLookup({
         {value && (
           <button
             type="button"
-            aria-label={`Убрать: ${label}`}
+            aria-label={translate('forms.removeField', { label })}
             onClick={() => {
               onChange(undefined);
               setQuery('');
@@ -146,11 +148,11 @@ function StationLookup({
           aria-label={label}
         >
           {busy ? (
-            <p role="status">Ищем станции…</p>
+            <p role="status">{translate('forms.searchingStations')}</p>
           ) : failure ? (
             <p role="alert">{failure}</p>
           ) : !items.length ? (
-            <p>Станции не найдены в справочнике</p>
+            <p>{translate('forms.noStationsFoundInTheDirectory')}</p>
           ) : (
             items.map((station, index) => (
               <button
@@ -166,7 +168,7 @@ function StationLookup({
                 {station.name}
                 <small>
                   {station.esr_code
-                    ? `ЕСР ${station.esr_code}${station.esr_source === 'osm_hint' ? ' (OSM)' : ''} · `
+                    ? `${translate('forms.esrCode', { code: station.esr_code })}${station.esr_source === 'osm_hint' ? ' (OSM)' : ''} · `
                     : ''}
                   {station.uic_code ? `UIC ${station.uic_code} · ` : ''}
                   {station.country_code}
@@ -174,12 +176,12 @@ function StationLookup({
               </button>
             ))
           )}
-          {items.length === 20 && <p>Первые 20 совпадений. Уточните название или код.</p>}
+          {items.length === 20 && <p>{translate('lookup.locationLimit')}</p>}
           <p>
             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
               © OpenStreetMap
             </a>{' '}
-            · ЕСР из OSM не подтверждён
+            {translate('forms.esrFromOSMIsUnverified')}
           </p>
         </div>
       )}
@@ -188,11 +190,11 @@ function StationLookup({
 }
 
 export const railDates = [
-  ['etd', 'ETD · ожидаемое отправление'],
-  ['eta', 'ETA · ожидаемое прибытие'],
-  ['departure_date', 'Отправление поезда'],
-  ['arrival_date', 'Прибытие на станцию назначения'],
-  ['unloading_date', 'Выгрузка на станции назначения'],
+  ['etd', 'route.etd'],
+  ['eta', 'route.eta'],
+  ['departure_date', 'forms.trainDeparture'],
+  ['arrival_date', 'forms.arrivalAtDestinationStation'],
+  ['unloading_date', 'forms.unloadingAtDestinationStation'],
 ] as const;
 export function RailFields({
   value,
@@ -203,23 +205,24 @@ export function RailFields({
   session: Session;
   onChange: (value: RailDetails) => void;
 }) {
+  const { translate } = useLocalization();
   return (
     <>
       <StationLookup
-        label="Станция отправления"
+        label={translate('registryField.origin_station')}
         value={value.origin_station}
         session={session}
         onChange={(station) => onChange({ ...value, origin_station: station })}
       />
       <StationLookup
-        label="Станция назначения"
+        label={translate('registryField.destination_station')}
         value={value.destination_station}
         session={session}
         onChange={(station) => onChange({ ...value, destination_station: station })}
       />
       {railDates.map(([key, label]) => (
         <label key={key}>
-          {label}
+          {translate(label)}
           <IsoDateInput
             min="1900-01-01"
             max={key === 'etd' || key === 'eta' ? undefined : businessDate()}
@@ -232,13 +235,14 @@ export function RailFields({
   );
 }
 export function RailDetailsView({ value }: { value: RailDetails }) {
+  const { translate } = useLocalization();
   if (!Object.values(value).some(Boolean))
-    return <p className="muted">Данные участка пока не указаны.</p>;
+    return <p className="muted">{translate('route.emptySegment')}</p>;
   return (
     <dl className="rail-date-grid">
       {railDates.map(([key, label]) => (
         <div key={key}>
-          <dt>{label}</dt>
+          <dt>{translate(label)}</dt>
           <dd>{calendarDate(value[key])}</dd>
         </div>
       ))}

@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -28,12 +29,13 @@ export function InvoicePaymentPicker({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<Available[]>([]);
   const [after, setAfter] = useState<string | null>();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Available>();
   const targets = balances ?? [balance];
-  const labels = invoicePaymentLabels[balance.invoice.direction];
+  const labels = invoicePaymentLabels(locale)[balance.invoice.direction];
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [details, setDetails] = useState<PaymentDetails>();
   const [selecting, setSelecting] = useState(false);
@@ -44,7 +46,12 @@ export function InvoicePaymentPicker({
   let total = 0n;
   if (details) {
     try {
-      const additions = invoicePaymentAdditions(targets, amounts, details.unallocated_minor);
+      const additions = invoicePaymentAdditions(
+        targets,
+        amounts,
+        details.unallocated_minor,
+        locale,
+      );
       total = additions.reduce((sum, item) => sum + BigInt(item.amount_minor), 0n);
     } catch (error) {
       allocationProblem = (error as Error).message;
@@ -127,9 +134,14 @@ export function InvoicePaymentPicker({
     if (!details || busy) return;
     setFailure('');
     try {
-      const additions = invoicePaymentAdditions(targets, amounts, details.unallocated_minor);
+      const additions = invoicePaymentAdditions(
+        targets,
+        amounts,
+        details.unallocated_minor,
+        locale,
+      );
       setBusy(true);
-      await saveInvoicePayments(details, additions, session);
+      await saveInvoicePayments(details, additions, session, locale);
       onSaved();
     } catch (error) {
       setFailure((error as Error).message);
@@ -147,15 +159,18 @@ export function InvoicePaymentPicker({
         }}
       >
         <p className="hint">
-          Счетов: {targets.length} · Валюта: {balance.invoice.currency} ·{' '}
-          {balance.invoice.own_company_name} · {balance.invoice.counterparty_name}
+          {translate('forms.paymentSelection', {
+            count: targets.length,
+            currency: balance.invoice.currency,
+          })}{' '}
+          · {balance.invoice.own_company_name} · {balance.invoice.counterparty_name}
         </p>
         <label>
-          Поиск по номеру платежа
+          {translate('forms.searchByPaymentNumber')}
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Часть номера…"
+            placeholder={translate('forms.partOfTheNumber')}
             disabled={busy || selecting}
           />
         </label>
@@ -167,8 +182,8 @@ export function InvoicePaymentPicker({
         <table className="payment-allocation-table">
           <thead>
             <tr>
-              <th>Платёж</th>
-              <th>Свободный остаток</th>
+              <th>{translate('registryField.payment')}</th>
+              <th>{translate('forms.availableBalance')}</th>
               <th />
             </tr>
           </thead>
@@ -178,7 +193,8 @@ export function InvoicePaymentPicker({
                 <td>
                   № {item.payment.number}
                   <span className="service-secondary">
-                    от {CalendarDate.fromISO(item.payment.payment_date).toDisplayString()}
+                    {translate('ui.datePrefix')}
+                    {CalendarDate.fromISO(item.payment.payment_date).toDisplayString()}
                   </span>
                 </td>
                 <td>
@@ -193,7 +209,9 @@ export function InvoicePaymentPicker({
                       void choose(item);
                     }}
                   >
-                    {selected?.payment.id === item.payment.id ? 'Выбрано' : 'Выбрать'}
+                    {selected?.payment.id === item.payment.id
+                      ? translate('forms.selected')
+                      : translate('forms.select')}
                   </button>
                 </td>
               </tr>
@@ -201,13 +219,13 @@ export function InvoicePaymentPicker({
           </tbody>
         </table>
         {!loading && !items.length && (
-          <p className="empty-state">Платежи со свободным остатком не найдены</p>
+          <p className="empty-state">{translate('forms.noPaymentsWithAnAvailableBalanceFound')}</p>
         )}
         <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
         {details && (
           <section className="bulk-payment-preview">
             <div className="section-heading">
-              <h3>Распределение</h3>
+              <h3>{translate('forms.allocation')}</h3>
               <button
                 type="button"
                 disabled={busy}
@@ -215,20 +233,22 @@ export function InvoicePaymentPicker({
                   setAmounts(automaticInvoiceAmounts(targets, details.unallocated_minor))
                 }
               >
-                Заполнить по порядку строк
+                {translate('forms.fillInRowOrder')}
               </button>
             </div>
             <p className="hint">
-              Свободно в платеже: {formatFixed(details.unallocated_minor, 2)}{' '}
-              {details.payment.currency}. Суммы добавятся к существующим оплатам.
+              {translate('forms.availablePaymentHint', {
+                amount: formatFixed(details.unallocated_minor, 2),
+                currency: details.payment.currency,
+              })}
             </p>
             <div className="invoice-services-table-wrap">
               <table className="payment-allocation-table">
                 <thead>
                   <tr>
-                    <th>Счёт</th>
-                    <th>Осталось оплатить</th>
-                    <th>Распределить</th>
+                    <th>{translate('registryField.invoice_number')}</th>
+                    <th>{translate('registryField.outstanding_minor')}</th>
+                    <th>{translate('forms.allocate')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,7 +257,8 @@ export function InvoicePaymentPicker({
                       <td>
                         № {invoice.number}
                         <span className="service-secondary">
-                          от {CalendarDate.fromISO(invoice.invoice_date).toDisplayString()}
+                          {translate('ui.datePrefix')}
+                          {CalendarDate.fromISO(invoice.invoice_date).toDisplayString()}
                         </span>
                       </td>
                       <td>
@@ -245,7 +266,9 @@ export function InvoicePaymentPicker({
                       </td>
                       <td>
                         <DecimalInput
-                          aria-label={`Распределить на счёт № ${invoice.number}`}
+                          aria-label={translate('forms.invoiceAllocation', {
+                            number: invoice.number,
+                          })}
                           required
                           precision={2}
                           value={amounts[invoice.id] ?? ''}
@@ -260,9 +283,9 @@ export function InvoicePaymentPicker({
                 </tbody>
               </table>
             </div>
-            <p className="hint">Можно указать ноль, чтобы пока не оплачивать отдельный счёт.</p>
+            <p className="hint">{translate('payment.zeroAllocationHint')}</p>
             <p>
-              Распределить:{' '}
+              {translate('forms.toAllocate')}{' '}
               <strong>
                 {formatFixed(total, 2)} {details.payment.currency}
               </strong>{' '}
@@ -281,13 +304,13 @@ export function InvoicePaymentPicker({
         )}
         <div className="confirmation-actions">
           <button type="button" disabled={busy || selecting} onClick={onClose}>
-            Отменить
+            {translate('action.cancel')}
           </button>
           <button
             className="primary"
             disabled={busy || selecting || !details || !!allocationProblem}
           >
-            Распределить
+            {translate('forms.allocate')}
           </button>
         </div>
       </form>

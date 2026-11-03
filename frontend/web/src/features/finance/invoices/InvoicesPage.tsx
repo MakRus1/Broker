@@ -24,7 +24,6 @@ import { currenciesWithCurrent } from '../currencies';
 import { formatFixed, type ServiceCharge } from '../services/serviceCharges';
 import {
   invoiceRegistry,
-  invoiceTitle,
   type Invoice,
   type InvoiceDetails,
   type InvoiceDirection,
@@ -90,12 +89,11 @@ export function InvoicesPage({
   onSaved: (value: Invoice) => void;
   onCancelNew: () => void;
 }) {
-  const { locale } = useLocalization();
+  const { translate, locale } = useLocalization();
   const direction: InvoiceDirection = route.startsWith('/incoming-invoices')
     ? 'incoming'
     : 'outgoing';
   const base = invoiceRegistry(direction);
-  const title = invoiceTitle(direction);
   const id = route.split('/')[2];
   const creating = id === 'new';
   const sourceEntry = creating ? route.split('/')[3] : undefined;
@@ -152,7 +150,7 @@ export function InvoicesPage({
             controller.signal,
           );
           if (charge.archived || (charge.direction === 'income') !== (direction === 'outgoing'))
-            throw new Error('Услуга не подходит для этого счёта');
+            throw new Error(translate('forms.thisServiceChargeIsNotEligibleForThisInvoice'));
           d.counterparty_id = charge.counterparty_id;
           d.counterparty_name = charge.counterparty_name;
           d.currency = charge.invoice_currency;
@@ -347,7 +345,7 @@ export function InvoicesPage({
       setBusy(false);
     }
   }
-  if (!read) return <p className="hint">Нет доступа к счетам</p>;
+  if (!read) return <p className="hint">{translate('forms.youDoNotHaveAccessToInvoices')}</p>;
   const value = details?.invoice;
   const canEditServices =
     paidReadOnly === false &&
@@ -369,20 +367,27 @@ export function InvoicesPage({
         <>
           <div className="record-heading">
             <a className="link record-back" href={'#' + base}>
-              ← К {direction === 'incoming' ? 'входящим' : 'исходящим'} счетам
+              {translate(
+                direction === 'incoming'
+                  ? 'forms.backIncomingInvoices'
+                  : 'forms.backOutgoingInvoices',
+              )}
             </a>
             <div className="section-heading">
               <div>
                 {!creating && (
                   <p className="eyebrow">
-                    {direction === 'incoming' ? 'ВХОДЯЩИЙ СЧЁТ' : 'ИСХОДЯЩИЙ СЧЁТ'}
+                    {direction === 'incoming'
+                      ? translate('forms.incomingINVOICE')
+                      : translate('forms.outgoingINVOICE')}
                   </p>
                 )}
-                <h1>{creating ? 'Новый счёт' : value?.number}</h1>
+                <h1>{creating ? translate('entity.newInvoice') : value?.number}</h1>
                 {value && !draft && (
                   <p className="record-state">
-                    {value.archived ? 'В архиве' : 'Действующий'} · Редакция {value.revision}
-                    {paidReadOnly ? ' · Оплачен: только чтение' : ''}
+                    {value.archived ? translate('filter.archived') : translate('filter.active')} ·{' '}
+                    {translate('forms.revisionValue', { revision: value.revision })}
+                    {paidReadOnly ? translate('forms.hasPaymentsReadOnly') : ''}
                   </p>
                 )}
               </div>
@@ -394,7 +399,11 @@ export function InvoicesPage({
                   <button
                     className="primary"
                     disabled={paidReadOnly !== false}
-                    title={paidReadOnly ? 'Счёт оплачен и доступен только для чтения' : undefined}
+                    title={
+                      paidReadOnly
+                        ? translate('forms.thisInvoiceHasPaymentsAndIsReadOnly')
+                        : undefined
+                    }
                     onClick={() => {
                       const d = draftOf(value);
                       setDraft(d);
@@ -402,7 +411,7 @@ export function InvoicesPage({
                       setBaseline(d, details.charges);
                     }}
                   >
-                    Редактировать
+                    {translate('shipment.edit')}
                   </button>
                 )}
               </div>
@@ -415,7 +424,7 @@ export function InvoicesPage({
                 aria-pressed={!historyOpen}
                 onClick={() => setHistoryOpen(false)}
               >
-                Основное
+                {translate('shipment.details')}
               </button>
               <button
                 type="button"
@@ -423,7 +432,7 @@ export function InvoicesPage({
                 disabled={!!newService}
                 onClick={() => setHistoryOpen(true)}
               >
-                История
+                {translate('finance.history')}
               </button>
             </CardNavigation>
           )}
@@ -447,17 +456,17 @@ export function InvoicesPage({
             >
               <div className="form-grid">
                 <label>
-                  Номер счёта
+                  {translate('registryField.invoiceNumber')}
                   <input
                     required={!creating}
-                    placeholder={creating ? 'Автоматически при сохранении' : undefined}
+                    placeholder={creating ? translate('finance.automaticOnSave') : undefined}
                     maxLength={100}
                     value={draft.number}
                     onChange={(e) => setDraft({ ...draft, number: e.target.value })}
                   />
                 </label>
                 <label>
-                  Дата счёта
+                  {translate('registryField.invoice_date')}
                   <DateInput
                     required
                     value={draft.invoice_date}
@@ -475,7 +484,7 @@ export function InvoicesPage({
                 </label>
                 <CustomerSelect
                   required
-                  label="Своё юридическое лицо"
+                  label={translate('finance.ownCompany')}
                   items={emptyParties}
                   disabled={busy}
                   ownCompany
@@ -487,7 +496,7 @@ export function InvoicesPage({
                 />
                 <CustomerSelect
                   required
-                  label="Контрагент"
+                  label={translate('registryField.counterparty_id')}
                   items={emptyParties}
                   disabled={busy}
                   value={draft.counterparty_id}
@@ -501,10 +510,10 @@ export function InvoicesPage({
                   }
                 />
                 <Select
-                  label="Валюта"
+                  label={translate('registryField.currency')}
                   value={draft.currency}
                   searchable
-                  options={currenciesWithCurrent(draft.currency)}
+                  options={currenciesWithCurrent(draft.currency, locale)}
                   onChange={(currency) =>
                     changeParties({
                       currency,
@@ -516,7 +525,7 @@ export function InvoicesPage({
                 />
                 <ServiceChargeLookup<Contract>
                   kind="contracts"
-                  label="Договор"
+                  label={translate('registryField.contract_id')}
                   value={draft.contract_id ?? ''}
                   name={draft.contract_number ?? ''}
                   session={session}
@@ -547,7 +556,7 @@ export function InvoicesPage({
                   }}
                 />
                 <BankAccountSelect
-                  label="Счёт своего юрлица"
+                  label={translate('finance.ownBankAccount')}
                   owner={draft.own_company_id}
                   value={draft.own_bank_account_id}
                   currency={draft.currency}
@@ -555,7 +564,7 @@ export function InvoicesPage({
                   onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
                 />
                 <BankAccountSelect
-                  label="Счёт контрагента"
+                  label={translate('finance.counterpartyBankAccount')}
                   owner={draft.counterparty_id}
                   value={draft.counterparty_bank_account_id}
                   currency={draft.currency}
@@ -565,7 +574,7 @@ export function InvoicesPage({
                   }
                 />
                 <label>
-                  Плановая дата оплаты
+                  {translate('finance.dueDate')}
                   <DateInput
                     value={draft.due_date}
                     onChange={(due_date) => {
@@ -577,7 +586,7 @@ export function InvoicesPage({
               </div>
               <section className="invoice-lines">
                 <div className="section-heading">
-                  <h2>Услуги</h2>
+                  <h2>{translate('nav.serviceCharges')}</h2>
                   {session.permissions.includes('finance.write_service_charges') && (
                     <button
                       type="button"
@@ -597,11 +606,11 @@ export function InvoicesPage({
                         })
                       }
                     >
-                      Создать услугу
+                      {translate('forms.createServiceCharge')}
                     </button>
                   )}
                 </div>
-                <p className="hint">Услуги выбранного контрагента, договора и валюты.</p>
+                <p className="hint">{translate('invoice.matchingChargesHint')}</p>
                 {selected.map((charge) => (
                   <div className="invoice-charge" key={charge.id}>
                     <div>
@@ -615,12 +624,12 @@ export function InvoicesPage({
                       type="button"
                       onClick={() => setSelected(selected.filter((x) => x.id !== charge.id))}
                     >
-                      Убрать
+                      {translate('shipment.remove')}
                     </button>
                   </div>
                 ))}
                 <details className="invoice-service-picker" open={!selected.length}>
-                  <summary>Добавить услуги</summary>
+                  <summary>{translate('forms.addServiceCharges')}</summary>
                   {candidates
                     .filter((x) => !selected.some((y) => y.id === x.id))
                     .map((charge) => (
@@ -633,8 +642,10 @@ export function InvoicesPage({
                         <span>
                           <strong>{charge.label_name}</strong>
                           <small>
-                            {charge.transportation_id ? 'Перевозка' : 'Поставка'} ·{' '}
-                            {charge.note ?? charge.counterparty_name}
+                            {charge.transportation_id
+                              ? translate('registryValue.unit.transportation')
+                              : translate('registryField.shipment_id')}{' '}
+                            · {charge.note ?? charge.counterparty_name}
                           </small>
                         </span>
                         <span>
@@ -648,7 +659,7 @@ export function InvoicesPage({
                     </p>
                   )}
                   {!candidateLoading && !candidates.length && (
-                    <p className="hint">Доступных услуг нет</p>
+                    <p className="hint">{translate('forms.noServiceChargesAvailable')}</p>
                   )}
                   <AutoLoadMore
                     enabled={!!candidateAfter}
@@ -657,7 +668,7 @@ export function InvoicesPage({
                   />
                 </details>
                 <p className="invoice-total">
-                  Итого с НДС:{' '}
+                  {translate('forms.totalInclVAT')}{' '}
                   <strong>
                     {formatFixed(
                       selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
@@ -668,7 +679,7 @@ export function InvoicesPage({
                 </p>
               </section>
               <label>
-                Примечание
+                {translate('shipment.note')}
                 <textarea
                   maxLength={4000}
                   value={draft.note ?? ''}
@@ -681,7 +692,7 @@ export function InvoicesPage({
                   checked={draft.archived}
                   onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
                 />
-                В архиве
+                {translate('filter.archived')}
               </label>
               <div className="form-actions">
                 {failure && (
@@ -690,10 +701,10 @@ export function InvoicesPage({
                   </p>
                 )}
                 <button type="button" disabled={busy} onClick={cancel}>
-                  Отменить
+                  {translate('action.cancel')}
                 </button>
                 <button type="submit" className="primary" disabled={busy || !!newService}>
-                  {busy ? 'Сохраняем…' : 'Сохранить'}
+                  {busy ? translate('shipment.saving') : translate('action.save')}
                 </button>
               </div>
             </form>
@@ -709,33 +720,33 @@ export function InvoicesPage({
                 />
                 <dl className="invoice-details">
                   <div>
-                    <dt>Своё юрлицо</dt>
+                    <dt>{translate('forms.ownLegalEntityLabel')}</dt>
                     <dd>{value.own_company_name}</dd>
                   </div>
                   <div>
-                    <dt>Контрагент</dt>
+                    <dt>{translate('registryField.counterparty_id')}</dt>
                     <dd>{value.counterparty_name}</dd>
                   </div>
                   <div>
-                    <dt>Дата счёта</dt>
+                    <dt>{translate('registryField.invoice_date')}</dt>
                     <dd>{dateLabel(value.invoice_date)}</dd>
                   </div>
                   <div>
-                    <dt>Плановая оплата</dt>
+                    <dt>{translate('registryField.due_date')}</dt>
                     <dd>{dateLabel(value.due_date)}</dd>
                   </div>
                   <div>
-                    <dt>Договор</dt>
+                    <dt>{translate('registryField.contract_id')}</dt>
                     <dd>{value.contract_number ?? '—'}</dd>
                   </div>
                   <div>
-                    <dt>Валюта</dt>
+                    <dt>{translate('registryField.currency')}</dt>
                     <dd>{value.currency}</dd>
                   </div>
                 </dl>
                 <section className="invoice-lines">
                   <div className="section-heading">
-                    <h2>Услуги</h2>
+                    <h2>{translate('nav.serviceCharges')}</h2>
                     {canEditServices && !newService && (
                       <button
                         onClick={() =>
@@ -753,7 +764,7 @@ export function InvoicesPage({
                           })
                         }
                       >
-                        Добавить новую услугу
+                        {translate('forms.addNewServiceCharge')}
                       </button>
                     )}
                   </div>
@@ -775,16 +786,16 @@ export function InvoicesPage({
                     />
                   )}
                   {!details.charges.length && !newService && (
-                    <p className="empty-state">Услуги пока не добавлены</p>
+                    <p className="empty-state">{translate('finance.noServicesYet')}</p>
                   )}
                   <div className="invoice-services-table-wrap">
                     <table className="invoice-services-table">
                       <thead>
                         <tr>
-                          <th>Услуга</th>
-                          <th>Без НДС</th>
-                          <th>НДС</th>
-                          <th>Итого</th>
+                          <th>{translate('entity.serviceCharge')}</th>
+                          <th>{translate('finance.net')}</th>
+                          <th>{translate('registryField.vat_mode')}</th>
+                          <th>{translate('registryField.total_minor')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -810,7 +821,9 @@ export function InvoicesPage({
                                       : 'shipments/' + charge.shipment_id)
                                   }
                                 >
-                                  {charge.transportation_id ? 'К перевозке' : 'К поставке'}
+                                  {charge.transportation_id
+                                    ? translate('finance.openTransportation')
+                                    : translate('finance.openShipment')}
                                 </a>
                               )}
                             </td>
@@ -827,10 +840,10 @@ export function InvoicesPage({
                     </table>
                   </div>
                   <div className="invoice-total">
-                    Без НДС: {formatFixed(value.net_minor, 2)} · НДС:{' '}
-                    {formatFixed(value.vat_minor, 2)}
+                    {translate('forms.exclVAT')} {formatFixed(value.net_minor, 2)} ·{' '}
+                    {translate('registryField.vat_minor')}: {formatFixed(value.vat_minor, 2)}
                     <br />
-                    Итого:{' '}
+                    {translate('forms.total')}{' '}
                     <strong>
                       {formatFixed(value.total_minor, 2)} {value.currency}
                     </strong>
@@ -849,7 +862,7 @@ export function InvoicesPage({
       )}
       {draft && newService && (
         <Dialog
-          title="Новая услуга для счёта"
+          title={translate('forms.newServiceChargeForInvoice')}
           onClose={() => setNewService(undefined)}
           className="invoice-service-create-dialog"
         >
@@ -866,7 +879,7 @@ export function InvoicesPage({
           />
         </Dialog>
       )}
-      {loading && <p className="hint">Загружаем…</p>}
+      {loading && <p className="hint">{translate('finance.loading')}</p>}
     </section>
   );
 }

@@ -110,8 +110,8 @@ export function ServiceChargeRegistry({
             page.items.map((item) => [
               item.id,
               source === 'shipments'
-                ? (item.number ?? 'Без номера')
-                : item.container_number || 'Без номера',
+                ? (item.number ?? translate('transport.noNumber'))
+                : item.container_number || translate('transport.noNumber'),
             ]),
           ),
         }));
@@ -300,7 +300,7 @@ export function ServiceChargeRegistry({
             href={`#/shipments/${item.shipment_id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            {references[item.shipment_id] ?? 'Поставка'}
+            {references[item.shipment_id] ?? translate('registryField.shipment_id')}
           </a>
         ) : (
           '—'
@@ -318,7 +318,7 @@ export function ServiceChargeRegistry({
             href={`#/transportations/${item.transportation_id}`}
             onClick={(e) => e.stopPropagation()}
           >
-            {references[item.transportation_id] ?? 'Перевозка'}
+            {references[item.transportation_id] ?? translate('registryField.transportation_id')}
           </a>
         ) : (
           '—'

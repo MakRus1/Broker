@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
@@ -7,7 +8,7 @@ import { formatFixed } from '../services/serviceCharges';
 import type { SettlementFilters } from '../settlements/settlements';
 import {
   reconciliationCsv,
-  reconciliationLabels,
+  reconciliationLabelKeys,
   reconciliationLink,
   type Reconciliation,
   type ReconciliationContext,
@@ -32,6 +33,7 @@ export function CounterpartyReconciliation({
   session: Session;
   version: number;
 }) {
+  const { translate, locale } = useLocalization();
   const [result, setResult] = useState<{ data: Reconciliation; context: ReconciliationContext }>();
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,8 +76,8 @@ export function CounterpartyReconciliation({
           data,
           context: {
             counterparty: counterpartyName,
-            ownCompany: owner?.counterparty.name ?? 'Все собственные юрлица',
-            contract: contractName || 'Все договоры',
+            ownCompany: owner?.counterparty.name ?? translate('forms.allOwnLegalEntities'),
+            contract: contractName || translate('forms.allContracts'),
             from: from.toDisplayString(),
             to: to.toDisplayString(),
           },
@@ -89,7 +91,7 @@ export function CounterpartyReconciliation({
       });
     return () => controller.abort();
   }, [counterpartyId, counterpartyName, filters, from, to, contractName, session, version]);
-  if (loading) return <p role="status">Формируем акт сверки…</p>;
+  if (loading) return <p role="status">{translate('forms.preparingReconciliationStatement')}</p>;
   if (failure)
     return (
       <p className="error" role="alert">
@@ -99,12 +101,19 @@ export function CounterpartyReconciliation({
   if (!result) return null;
   const { data, context } = result;
   return (
-    <section className="reconciliation-result" aria-label="Акт сверки">
+    <section
+      className="reconciliation-result"
+      aria-label={translate('forms.reconciliationStatement')}
+    >
       <div className="section-heading">
         <div>
-          <h2>Акт сверки</h2>
+          <h2>{translate('forms.reconciliationStatement')}</h2>
           <p className="hint">
-            {context.from} — {context.to} · Операций: {data.operations.length}
+            {translate('forms.reconciliationPeriod', {
+              from: context.from,
+              to: context.to,
+              count: data.operations.length,
+            })}
           </p>
         </div>
         <div className="reconciliation-actions">
@@ -112,18 +121,20 @@ export function CounterpartyReconciliation({
             disabled={exporting || !data.totals.length}
             onClick={() => {
               const url = URL.createObjectURL(
-                new Blob([reconciliationCsv(data, context)], { type: 'text/csv;charset=utf-8' }),
+                new Blob([reconciliationCsv(data, context, locale)], {
+                  type: 'text/csv;charset=utf-8',
+                }),
               );
               const link = document.createElement('a');
               link.href = url;
-              link.download = 'Акт_сверки.csv';
+              link.download = translate('forms.reconciliationCsv');
               document.body.append(link);
               link.click();
               link.remove();
               setTimeout(() => URL.revokeObjectURL(url), 30000);
             }}
           >
-            Скачать CSV
+            {translate('forms.downloadCSV')}
           </button>
           <button
             disabled={exporting || !data.totals.length}
@@ -132,7 +143,7 @@ export function CounterpartyReconciliation({
               setExportFailure('');
               try {
                 const { downloadReconciliationPdf } = await import('./reconciliationPdf');
-                await downloadReconciliationPdf(data, context);
+                await downloadReconciliationPdf(data, context, locale);
               } catch (error) {
                 setExportFailure((error as Error).message);
               } finally {
@@ -140,19 +151,16 @@ export function CounterpartyReconciliation({
               }
             }}
           >
-            {exporting ? 'Формируем PDF…' : 'Скачать PDF'}
+            {exporting ? translate('forms.preparingPDF') : translate('forms.downloadPDF')}
           </button>
         </div>
       </div>
-      <p className="hint">
-        Положительное сальдо — контрагент должен нам, отрицательное — мы должны контрагенту. Дебет
-        увеличивает сальдо, кредит уменьшает.
-      </p>
+      <p className="hint">{translate('settlements.balanceExplanation')}</p>
       <p className="hint">
         {filters.contract_id
-          ? 'По договору учтены только распределённые на его счета суммы платежей.'
-          : 'Платежи учтены целиком, включая нераспределённые авансы.'}{' '}
-        Архивные документы исключены. Используется текущее состояние документов.
+          ? translate('settlements.contractPaymentsHint')
+          : translate('settlements.allPaymentsHint')}{' '}
+        {translate('settlements.currentDocumentsHint')}
       </p>
       {exportFailure && (
         <p className="error" role="alert">
@@ -160,18 +168,20 @@ export function CounterpartyReconciliation({
         </p>
       )}
       {!data.totals.length ? (
-        <p className="empty-state">Операций и начального остатка за выбранный период нет</p>
+        <p className="empty-state">
+          {translate('forms.noTransactionsOrOpeningBalanceForThisPeriod')}
+        </p>
       ) : (
         <>
           <div className="reconciliation-table-wrap">
             <table className="reconciliation-totals">
               <thead>
                 <tr>
-                  <th>Валюта</th>
-                  <th>Начальное сальдо</th>
-                  <th>Дебет за период</th>
-                  <th>Кредит за период</th>
-                  <th>Конечное сальдо</th>
+                  <th>{translate('registryField.currency')}</th>
+                  <th>{translate('forms.openingBalance')}</th>
+                  <th>{translate('forms.periodDebit')}</th>
+                  <th>{translate('forms.periodCredit')}</th>
+                  <th>{translate('forms.closingBalance')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,21 +199,23 @@ export function CounterpartyReconciliation({
               </tbody>
             </table>
           </div>
-          <h3>Операции за период</h3>
+          <h3>{translate('forms.periodTransactions')}</h3>
           {!data.operations.length ? (
-            <p className="empty-state">В периоде операций нет; показаны переходящие остатки</p>
+            <p className="empty-state">
+              {translate('forms.noTransactionsInThisPeriodCarriedForwardBalancesAreShown')}
+            </p>
           ) : (
             <div className="reconciliation-table-wrap">
               <table className="reconciliation-operations">
                 <thead>
                   <tr>
-                    <th>Дата</th>
-                    <th>Документ</th>
-                    <th>Наше юрлицо</th>
-                    <th>Валюта</th>
-                    <th>Дебет</th>
-                    <th>Кредит</th>
-                    <th>Сальдо</th>
+                    <th>{translate('forms.date')}</th>
+                    <th>{translate('forms.document')}</th>
+                    <th>{translate('forms.ownLegalEntity')}</th>
+                    <th>{translate('registryField.currency')}</th>
+                    <th>{translate('forms.debit')}</th>
+                    <th>{translate('forms.credit')}</th>
+                    <th>{translate('forms.balance')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,7 +224,7 @@ export function CounterpartyReconciliation({
                       <td>{CalendarDate.fromISO(item.date).toDisplayString()}</td>
                       <td>
                         <a className="link" href={reconciliationLink(item)}>
-                          {reconciliationLabels[item.kind]} № {item.number}
+                          {translate(reconciliationLabelKeys[item.kind])} № {item.number}
                         </a>
                       </td>
                       <td>{item.own_company_name}</td>

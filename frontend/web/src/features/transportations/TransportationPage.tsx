@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { DateTimeInput } from '../../shared/dates/DateInput';
 import { RoadDetailsView } from '../routes/RoadFields';
@@ -48,10 +50,11 @@ export function TransportationPage({
   customers: suppliedCustomers,
   onError,
 }: Props) {
+  const { translate, locale } = useLocalization();
   const [transportation, setTransportation] = useState<Transportation>();
   useEffect(() => {
-    if (transportation) onTitle?.(transportationTitle(transportation));
-  }, [transportation?.container_number, transportation?.type]);
+    if (transportation) onTitle?.(transportationTitle(transportation, locale));
+  }, [transportation?.container_number, transportation?.type, locale]);
   const [shipment, setShipment] = useState<Shipment>();
   const [linkedCustomers, setLinkedCustomers] = useState<Counterparty[]>([]);
   const customers = [
@@ -92,8 +95,8 @@ export function TransportationPage({
   }, [session, shipment, transportation, suppliedCustomers]);
   useEffect(() => {
     if (transportation && active)
-      document.title = `${transportationTitle(transportation)} · Broker`;
-  }, [transportation?.container_number, transportation?.type, active]);
+      document.title = `${transportationTitle(transportation, locale)} · Broker`;
+  }, [transportation?.container_number, transportation?.type, active, locale]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'route' | 'finance' | 'history'>('route');
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
@@ -145,9 +148,9 @@ export function TransportationPage({
   if (!transportation)
     return (
       <section className="creation-page surface">
-        <a href="#/transportations">← К перевозкам</a>
-        <p>{failure || 'Открываем перевозку…'}</p>
-        <button onClick={() => void refresh().catch(onError)}>Повторить</button>
+        <a href="#/transportations">{translate('forms.backToTransportations')}</a>
+        <p>{failure || translate('forms.openingTransportation')}</p>
+        <button onClick={() => void refresh().catch(onError)}>{translate('filter.retry')}</button>
       </section>
     );
   const customerName = customers.find((item) => item.id === shipment?.customer_id)?.name;
@@ -156,21 +159,21 @@ export function TransportationPage({
       <section className="shipment-card">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">ПЕРЕВОЗКА</p>
-            <h1>{transportationTitle(transportation)}</h1>
+            <p className="eyebrow">{translate('forms.transportation')}</p>
+            <h1>{transportationTitle(transportation, locale)}</h1>
             {(editing || editingDetails) && (
               <a
                 className="transportation-parent"
                 href={`#/shipments/${transportation.shipment_id}`}
               >
-                Поставка {shipment?.number || '↗'}
+                {translate('registryField.shipment_id')} {shipment?.number || '↗'}
               </a>
             )}
           </div>
           <div className="transportation-heading-actions">
-            <a href="#/transportations">← К перевозкам</a>
+            <a href="#/transportations">{translate('forms.backToTransportations')}</a>
             {write && !editing && !editingDetails && (
-              <button onClick={() => setEditingDetails(true)}>Редактировать</button>
+              <button onClick={() => setEditingDetails(true)}>{translate('shipment.edit')}</button>
             )}
           </div>
         </div>
@@ -178,26 +181,31 @@ export function TransportationPage({
           <>
             <div className="shipment-summary transportation-summary">
               <div>
-                <span>Поставка</span>
+                <span>{translate('registryField.shipment_id')}</span>
                 <a href={`#/shipments/${transportation.shipment_id}`}>
-                  {shipment?.number || 'Открыть поставку'} ↗
+                  {shipment?.number || translate('forms.openShipment')} ↗
                 </a>
               </div>
               <div>
-                <span>Клиент</span>
+                <span>{translate('registryValue.roles.customer')}</span>
                 <strong>{customerName || '—'}</strong>
               </div>
               <div>
-                <span>Тип перевозки</span>
-                <strong>{transportationTypes[transportation.type]}</strong>
+                <span>{translate('registryField.type')}</span>
+                <strong>
+                  {registryValueLabel('type', transportation.type, locale) ??
+                    transportationTypes[transportation.type]}
+                </strong>
                 {transportation.type === 'container' && (
                   <small className="transportation-container">
-                    {transportation.container_type_code || 'Тип не указан'} ·{' '}
-                    {transportation.container_ownership || 'Принадлежность не указана'}
+                    {transportation.container_type_code || translate('forms.typeNotSpecified')} ·{' '}
+                    {transportation.container_ownership || translate('forms.ownershipNotSpecified')}
                   </small>
                 )}
                 {transportation.hazardous && (
-                  <small className="transportation-hazard">Опасный груз</small>
+                  <small className="transportation-hazard">
+                    {translate('registryField.hazardous')}
+                  </small>
                 )}
               </div>
             </div>
@@ -207,11 +215,11 @@ export function TransportationPage({
                 <strong>{transportation.incoterms || '—'}</strong>
               </div>
               <div>
-                <span>Загрузка</span>
+                <span>{translate('shipment.loading')}</span>
                 <strong>{transportation.loading || '—'}</strong>
               </div>
               <div>
-                <span>Условия перевозки</span>
+                <span>{translate('shipment.carriageTerms')}</span>
                 <strong>{transportation.carriage_terms || '—'}</strong>
               </div>
             </div>
@@ -256,21 +264,21 @@ export function TransportationPage({
                 aria-pressed={tab === 'route'}
                 onClick={(event) => switchTab('route', event.currentTarget)}
               >
-                Маршрут и факты
+                {translate('forms.routeAndEvents')}
               </button>
               {session.permissions.includes('finance.read_service_charges') && (
                 <button
                   aria-pressed={tab === 'finance'}
                   onClick={(event) => switchTab('finance', event.currentTarget)}
                 >
-                  Финансы
+                  {translate('home.finance')}
                 </button>
               )}
               <button
                 aria-pressed={tab === 'history'}
                 onClick={(event) => switchTab('history', event.currentTarget)}
               >
-                История
+                {translate('finance.history')}
               </button>
             </CardNavigation>
             <div className="panel-content">
@@ -292,15 +300,15 @@ export function TransportationPage({
                 <>
                   <div className="section-heading">
                     <div>
-                      <h2>Маршрут перевозки</h2>
+                      <h2>{translate('forms.transportationRoute')}</h2>
                       <p className="hint">
-                        Участки маршрута в порядке следования. Время:{' '}
+                        {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
                         {Intl.DateTimeFormat().resolvedOptions().timeZone}.
                       </p>
                     </div>
                     {write && transportation.route_segments.length > 0 && (
                       <a className="primary" href={`#/transportations/${id}/route`}>
-                        Заполнить участки
+                        {translate('forms.editLegDetails')}
                       </a>
                     )}
                   </div>
@@ -323,7 +331,7 @@ export function TransportationPage({
       {confirmation}
       {actual && (
         <Dialog
-          title={`${actual.kind === 'departure' ? 'Отправление' : 'Прибытие'} · ${routePoint(actual.route_segment, 'origin').name} → ${routePoint(actual.route_segment, 'destination').name}`}
+          title={`${actual.kind === 'departure' ? translate('forms.departure') : translate('forms.arrival')} · ${routePoint(actual.route_segment, 'origin').name} → ${routePoint(actual.route_segment, 'destination').name}`}
           onClose={() => setActual(undefined)}
         >
           <ActualForm
@@ -355,22 +363,23 @@ export function RouteView({
   customers: Counterparty[];
   onActual?: (route_segment: RouteSegment, kind: 'departure' | 'arrival') => void;
 }) {
+  const { translate, locale } = useLocalization();
   const collapse = useRouteCollapse(route_segments.map((stage) => stage.id));
   if (!route_segments.length)
     return (
       <div className="empty">
-        <h3>Маршрут ещё не задан</h3>
-        <p>Задайте участки маршрута в поставке. Они появятся здесь автоматически.</p>
+        <h3>{translate('forms.noRouteYet')}</h3>
+        <p>{translate('transport.inheritRouteHint')}</p>
       </div>
     );
   return (
     <div className="route-list">
       <div className="route-collapse-actions">
         <button type="button" onClick={collapse.expandAll}>
-          Развернуть все
+          {translate('route.expandAll')}
         </button>
         <button type="button" onClick={collapse.collapseAll}>
-          Свернуть все
+          {translate('route.collapseAll')}
         </button>
       </div>
       {route_segments.map((route_segment, index) => (
@@ -382,11 +391,13 @@ export function RouteView({
         >
           <summary className="route-stage-summary">
             <h3>
-              {index + 1}. {modes[route_segment.mode]} · {routeDirection(route_segment)}
+              {index + 1}.{' '}
+              {registryValueLabel('mode', route_segment.mode, locale) ?? modes[route_segment.mode]}{' '}
+              · {routeDirection(route_segment, locale)}
             </h3>
             <span className="route-summary-meta">
               {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
-                'Перевозчик не выбран'}
+                translate('forms.carrierNotSelected')}
               {route_segment.rail && (
                 <>
                   {' '}
@@ -408,10 +419,7 @@ export function RouteView({
             </p>
           )}
           {route_segment.inherited === false && (
-            <p className="hint">
-              Исторический участок: отсутствует в текущем маршруте поставки. Доступен только
-              просмотр.
-            </p>
+            <p className="hint">{translate('transport.historicalLegHint')}</p>
           )}
           {route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
             <SharedRouteDetailsView
@@ -432,7 +440,8 @@ export function RouteView({
             <>
               {(route_segment.rail?.origin_station || route_segment.rail?.destination_station) && (
                 <p className="rail-stations-meta">
-                  ЕСР: {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
+                  {translate('forms.esr')}
+                  {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
                   {route_segment.rail?.destination_station?.esr_code ?? '—'}
                 </p>
               )}
@@ -447,19 +456,27 @@ export function RouteView({
                     : route_segment.actual_arrival_at;
                 return (
                   <div key={kind}>
-                    <strong>{kind === 'departure' ? 'Отправление' : 'Прибытие'}</strong>
+                    <strong>
+                      {kind === 'departure'
+                        ? translate('forms.departure')
+                        : translate('forms.arrival')}
+                    </strong>
                     <span>
-                      План:{' '}
+                      {translate('forms.planned')}{' '}
                       {formatDate(
                         kind === 'departure'
                           ? route_segment.planned_departure_at
                           : route_segment.planned_arrival_at,
+                        locale,
                       )}
                     </span>
-                    <span>Факт: {formatDate(value)}</span>
+                    <span>
+                      {translate('forms.actual')}
+                      {formatDate(value, locale)}
+                    </span>
                     {onActual && route_segment.inherited !== false && (
                       <button type="button" onClick={() => onActual(route_segment, kind)}>
-                        {value ? 'Исправить' : 'Записать факт'}
+                        {value ? translate('forms.correct') : translate('forms.recordEvent')}
                       </button>
                     )}
                   </div>
@@ -488,6 +505,7 @@ function ActualForm({
   onSaved: (value: Transportation) => void;
   onError: (error: unknown) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const previous =
     kind === 'departure' ? route_segment.actual_departure_at : route_segment.actual_arrival_at;
   const [initialValue] = useState(() => localDateTime(previous ?? new Date().toISOString()));
@@ -509,13 +527,13 @@ function ActualForm({
           expected_revision: transportation.revision,
           route_segment_id: route_segment.id,
           event_kind: kind,
-          occurred_at: utcDateTime(value),
+          occurred_at: utcDateTime(value, locale),
           ...(previous ? { reason: reason.trim() } : {}),
         },
       );
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить дату');
+      setFailure(error instanceof Error ? error.message : translate('forms.couldNotSaveTheDate'));
       onError(error);
     } finally {
       setBusy(false);
@@ -523,9 +541,14 @@ function ActualForm({
   }
   return (
     <form onSubmit={submit} data-dirty={value !== initialValue || Boolean(reason)} data-busy={busy}>
-      {previous && <p>Сейчас: {formatDate(previous)}</p>}
+      {previous && (
+        <p>
+          {translate('forms.current')}
+          {formatDate(previous, locale)}
+        </p>
+      )}
       <label>
-        Дата и время
+        {translate('forms.dateAndTime')}
         <DateTimeInput
           required
           disabled={busy}
@@ -534,12 +557,13 @@ function ActualForm({
         />
       </label>
       <p className="hint">
-        Часовой пояс: {Intl.DateTimeFormat().resolvedOptions().timeZone}. На сервере время хранится
-        в UTC.
+        {translate('forms.timeZoneHint', {
+          zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        })}
       </p>
       {previous && (
         <label>
-          Причина исправления · обязательно
+          {translate('forms.reasonForCorrectionRequired')}
           <textarea
             required
             maxLength={2048}
@@ -558,7 +582,11 @@ function ActualForm({
         className="primary"
         disabled={busy || !value || (Boolean(previous) && (unchanged || !reason.trim()))}
       >
-        {busy ? 'Сохраняем…' : previous ? 'Исправить дату' : 'Записать дату'}
+        {busy
+          ? translate('shipment.saving')
+          : previous
+            ? translate('forms.correctDate')
+            : translate('forms.recordDate')}
       </button>
     </form>
   );
@@ -575,6 +603,7 @@ function History({
   customers: Counterparty[];
   onError: (error: unknown) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<TransportationEvent[]>([]);
   const [busy, setBusy] = useState(true);
   const [more, setMore] = useState(false);
@@ -617,7 +646,7 @@ function History({
       setMore(page.items.length === 50);
       setFailure('');
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить историю');
+      setFailure(error instanceof Error ? error.message : translate('forms.couldNotLoadHistory'));
       onError(error);
     } finally {
       setBusy(false);
@@ -625,14 +654,14 @@ function History({
   }
   return (
     <section>
-      <h2>История изменений</h2>
+      <h2>{translate('forms.changeHistory')}</h2>
       {failure && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
-      {busy && <p>Загрузка…</p>}
-      {!busy && !failure && !items.length && <p>Изменений пока нет.</p>}
+      {busy && <p>{translate('filter.loading')}</p>}
+      {!busy && !failure && !items.length && <p>{translate('forms.noChangesYet')}</p>}
       {items.map((item) => (
         <article className="history-entry" key={item.id}>
           <button
@@ -640,20 +669,25 @@ function History({
             onClick={() => setSelected(selected === item.id ? undefined : item.id)}
             aria-expanded={selected === item.id}
           >
-            <strong>{historyActions[item.action] || item.action}</strong>
+            <strong>
+              {item.action in historyActions
+                ? translate(historyActions[item.action as keyof typeof historyActions])
+                : item.action}
+            </strong>
             <span>
-              {item.actor_name || 'Имя не сохранено'} · {formatDate(item.occurred_at)}
+              {item.actor_name || translate('forms.nameNotRecorded')} ·{' '}
+              {formatDate(item.occurred_at, locale)}
             </span>
-            <span>Редакция {item.revision}</span>
+            <span>{translate('forms.revisionValue', { revision: item.revision })}</span>
           </button>
           {selected === item.id && (
             <div className="history-detail">
               {item.reason && (
                 <p>
-                  <strong>Причина:</strong> {item.reason}
+                  <strong>{translate('forms.reason')}</strong> {item.reason}
                 </p>
               )}
-              <p className="hint">Состояние после изменения</p>
+              <p className="hint">{translate('forms.stateAfterChange')}</p>
               <RouteView route_segments={item.route_segments} customers={customers} />
             </div>
           )}

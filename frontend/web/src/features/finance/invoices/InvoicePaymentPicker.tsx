@@ -3,7 +3,7 @@ import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
-import { Dialog } from '../../../shared/ui/Dialog';
+import { Dialog, DialogActions } from '../../../shared/ui/Dialog';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { formatFixed, parseFixed } from '../services/serviceCharges';
@@ -174,11 +174,6 @@ export function InvoicePaymentPicker({
             disabled={busy || selecting}
           />
         </label>
-        {failure && (
-          <p className="error" role="alert">
-            {failure}
-          </p>
-        )}
         <table className="payment-allocation-table">
           <thead>
             <tr>
@@ -295,14 +290,9 @@ export function InvoicePaymentPicker({
                 {details.payment.currency}
               </strong>
             </p>
-            {allocationProblem && (
-              <p className="error" role="alert">
-                {allocationProblem}
-              </p>
-            )}
           </section>
         )}
-        <div className="confirmation-actions">
+        <DialogActions error={failure || allocationProblem || undefined}>
           <button type="button" disabled={busy || selecting} onClick={onClose}>
             {translate('action.cancel')}
           </button>
@@ -312,7 +302,7 @@ export function InvoicePaymentPicker({
           >
             {translate('forms.allocate')}
           </button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   );

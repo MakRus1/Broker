@@ -1,0 +1,94 @@
+dialog.app-dialog {
+  box-sizing: border-box;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border-radius: 10px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.app-dialog .dialog-heading {
+  gap: 16px;
+  margin: 0 0 20px;
+}
+.app-dialog .dialog-heading h2 {
+  font-size: 20px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+.app-dialog .dialog-heading > button {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  line-height: 1;
+  font-size: 24px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.app-dialog .dialog-heading > button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.app-dialog .dialog-actions {
+  position: sticky;
+  bottom: -24px;
+  z-index: 2;
+  margin-top: 20px;
+  padding: 16px 0 0;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+}
+.app-dialog .dialog-actions > .error {
+  margin: 0 0 12px;
+}
+.app-dialog .dialog-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.app-dialog .dialog-action-buttons > button {
+  box-sizing: border-box;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.app-dialog .service-invoice-create .form-grid {
+  gap: 16px 20px;
+}
+.app-dialog .service-invoice-create .form-grid > label {
+  align-self: start;
+}
+.app-dialog .service-invoice-create > .hint {
+  margin: 0;
+}
+.app-dialog .invoice-link-search {
+  margin: 16px 0;
+}
+.app-dialog .invoice-link-list > button {
+  min-height: 60px;
+  padding: 12px;
+  border-radius: 6px;
+}
+@media (max-width: 600px) {
+  dialog.app-dialog {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+  .app-dialog .dialog-actions {
+    bottom: -16px;
+  }
+  .app-dialog .dialog-heading h2 {
+    font-size: 18px;
+  }
+}

@@ -1,6 +1,6 @@
 import { useLocalization } from '../../../localization/Localization';
 import { useEffect, useState } from 'react';
-import { Dialog } from '../../../../shared/ui/Dialog';
+import { Dialog, DialogActions } from '../../../../shared/ui/Dialog';
 import type { Session } from '../../../../shared/api/session';
 import type { Invoice } from '../invoices';
 import type { ArchiveResult } from './invoicePdfArchive';
@@ -71,12 +71,7 @@ export function InvoicePdfArchiveDialog({
           {result.ready > 0 && <p className="hint">{translate('print.partialArchive')}</p>}
         </section>
       )}
-      {failure && (
-        <p className="error" role="alert">
-          {failure}
-        </p>
-      )}
-      <div className="confirmation-actions">
+      <DialogActions error={failure}>
         <button onClick={onClose}>
           {busy ? translate('action.cancel') : translate('ui.close')}
         </button>
@@ -102,7 +97,7 @@ export function InvoicePdfArchiveDialog({
               : translate('print.downloadZip')}
           </button>
         )}
-      </div>
+      </DialogActions>
     </Dialog>
   );
 }

@@ -2,7 +2,7 @@ import { useLocalization } from '../../localization/Localization';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
-import { Dialog } from '../../../shared/ui/Dialog';
+import { Dialog, DialogActions } from '../../../shared/ui/Dialog';
 import { Chevron } from '../../../shared/ui/Select';
 import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -243,19 +243,14 @@ function CreateInvoice({
           ? translate('finance.contractSuffix', { number: service.contract_number })
           : ''}
       </p>
-      {failure && (
-        <p role="alert" className="error">
-          {failure}
-        </p>
-      )}
-      <div className="confirmation-actions">
+      <DialogActions error={failure}>
         <button type="button" disabled={busy} onClick={onCancel}>
           {translate('finance.backToChoice')}
         </button>
         <button type="submit" className="primary" disabled={busy || loading}>
           {busy ? translate('shipment.saving') : translate('finance.useInvoice')}
         </button>
-      </div>
+      </DialogActions>
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import './dialog.css';
 import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -37,7 +38,7 @@ export function Dialog({
         <dialog
           ref={ref}
           onSubmit={(event) => event.stopPropagation()}
-          className={className}
+          className={['app-dialog', className].filter(Boolean).join(' ')}
           aria-labelledby={titleId}
           onCancel={(event) => {
             event.preventDefault();
@@ -94,7 +95,7 @@ export function useDiscardConfirmation() {
       onClose={() => setPending(null)}
     >
       <p className="confirmation-copy">{translate('ui.discardHint')}</p>
-      <div className="confirmation-actions">
+      <DialogActions>
         <button type="button" data-autofocus onClick={() => setPending(null)}>
           {translate('ui.stay')}
         </button>
@@ -108,8 +109,21 @@ export function useDiscardConfirmation() {
         >
           {translate('ui.discard')}
         </button>
-      </div>
+      </DialogActions>
     </Dialog>
   );
   return { confirmDiscard, confirmation };
+}
+
+export function DialogActions({ children, error }: { children: ReactNode; error?: string }) {
+  return (
+    <div className="dialog-actions">
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="dialog-action-buttons">{children}</div>
+    </div>
+  );
 }

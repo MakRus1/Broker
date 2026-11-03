@@ -51,3 +51,8 @@ describe('service row navigation', () => {
     expect(serviceChargeRow(charge, undefined)).toEqual({});
   });
 });
+
+it('localizes the row action while retaining the service name', () => {
+  const props = serviceChargeRow(charge, () => {}, true, 'en');
+  expect(props['aria-label']).toBe('View service charge “Фрахт”');
+});

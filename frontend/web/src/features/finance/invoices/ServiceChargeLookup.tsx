@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { useEffect, useId, useRef, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
@@ -27,6 +28,7 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
   required?: boolean;
   onChange: (value: T | null) => void;
 }) {
+  const { translate } = useLocalization();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -37,8 +39,8 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
   const [active, setActive] = useState(-1);
   useEffect(
     () =>
-      input.current?.setCustomValidity(required && !value ? 'Выберите запись из справочника' : ''),
-    [required, value],
+      input.current?.setCustomValidity(required && !value ? translate('finance.chooseLookup') : ''),
+    [required, value, translate],
   );
   useEffect(() => {
     if (!open) return;
@@ -110,7 +112,7 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
           aria-autocomplete="list"
           aria-activedescendant={open && items[active] ? `${id}-${items[active].id}` : undefined}
           value={open ? query : name}
-          placeholder="Выберите из справочника или начните вводить"
+          placeholder={translate('finance.lookupPlaceholder')}
           onFocus={() => {
             setOpen(true);
             setQuery('');
@@ -144,7 +146,7 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
           className="combobox-toggle"
           type="button"
           disabled={disabled}
-          aria-label={`Открыть справочник: ${label}`}
+          aria-label={translate('lookup.openDirectory', { label })}
           onClick={() => {
             setOpen((old) => !old);
             setQuery('');
@@ -155,13 +157,13 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
       </div>
       {open && (
         <div className="counterparty-options" id={`${id}-list`} role="listbox" aria-label={label}>
-          {busy && <p role="status">Загружаем…</p>}
+          {busy && <p role="status">{translate('finance.loading')}</p>}
           {failure && (
             <p role="alert" className="error">
               {failure}
             </p>
           )}
-          {!busy && !failure && !items.length && <p>Совпадений нет</p>}
+          {!busy && !failure && !items.length && <p>{translate('ui.noMatches')}</p>}
           {!busy &&
             items.map((item, index) => (
               <button
@@ -177,13 +179,13 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
                 {title(item)}
               </button>
             ))}
-          {!busy && items.length === 50 && <p>Первые 50 записей. Уточните поиск.</p>}
+          {!busy && items.length === 50 && <p>{translate('finance.lookupLimit')}</p>}
         </div>
       )}
       {value && !required && (
         <div className="counterparty-selected">
           <button type="button" disabled={disabled} onClick={() => onChange(null)}>
-            Убрать выбор
+            {translate('lookup.clearSelection')}
           </button>
         </div>
       )}

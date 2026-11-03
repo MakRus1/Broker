@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import type { HTMLAttributes } from 'react';
 import type { ServiceCharge } from './serviceCharges';
 
@@ -6,12 +7,15 @@ export function serviceChargeRow(
   charge: ServiceCharge,
   onOpen: ((charge: ServiceCharge) => void) | undefined,
   readOnly = false,
+  locale: Locale = 'ru',
 ): HTMLAttributes<HTMLTableRowElement> {
   if (!onOpen) return {};
   return {
     className: 'service-row-openable',
     tabIndex: 0,
-    'aria-label': `${readOnly ? 'Просмотреть' : 'Редактировать'} услугу «${charge.label_name}»`,
+    'aria-label': translate(locale, readOnly ? 'finance.viewCharge' : 'finance.openCharge', {
+      name: charge.label_name,
+    }),
     onClick: (event) => {
       if (
         (event.target as HTMLElement).closest(

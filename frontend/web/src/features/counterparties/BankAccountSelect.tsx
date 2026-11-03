@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -19,6 +20,7 @@ export function BankAccountSelect({
   session: Session;
   onChange: (value: string | null) => void;
 }) {
+  const { translate } = useLocalization();
   const [items, setItems] = useState<BankAccount[]>([]);
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,15 +56,18 @@ export function BankAccountSelect({
         disabled={!owner || loading}
         searchable
         options={[
-          { value: '', label: loading ? 'Загружаем счета…' : 'Не выбран' },
+          {
+            value: '',
+            label: loading ? translate('finance.loadingAccounts') : translate('ui.notChosen'),
+          },
           ...items
             .filter((item) => (item.currency === currency && !item.archived) || item.id === value)
             .map((item) => ({
               value: item.id,
-              label: `${item.name} · ${item.number} · ${item.currency}${item.archived ? ' · в архиве' : ''}`,
+              label: `${item.name} · ${item.number} · ${item.currency}${item.archived ? translate('finance.archivedAccountSuffix') : ''}`,
             })),
           ...(value && !items.some((item) => item.id === value)
-            ? [{ value, label: 'Выбранный счёт недоступен' }]
+            ? [{ value, label: translate('finance.accountUnavailable') }]
             : []),
         ]}
       />

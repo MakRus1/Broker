@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { useLocalization } from '../localization/Localization';
 import { openServiceCharge } from './services/ServiceChargePage';
 import { ServiceChargeRegistry } from './services/ServiceChargeRegistry';
 import { serviceChargeRow } from './services/serviceChargeRow';
@@ -24,26 +26,27 @@ import {
 
 const emptySummary: ServiceChargeSummary = { own: [], transportations: [], combined: [] };
 function Totals({ title, items }: { title: string; items: CurrencyTotal[] }) {
+  const { translate } = useLocalization();
   return (
     <section className="finance-totals">
       <h3>{title}</h3>
       {!items.length ? (
-        <p className="hint">Услуг нет</p>
+        <p className="hint">{translate('finance.noServices')}</p>
       ) : (
         <dl>
           {items.map((item) => (
             <div key={item.currency}>
               <dt>{item.currency}</dt>
               <dd>
-                <span>Доход с НДС</span>
+                <span>{translate('finance.incomeGross')}</span>
                 <strong>{formatFixed(item.income_minor, 2)}</strong>
               </dd>
               <dd>
-                <span>Расход с НДС</span>
+                <span>{translate('finance.expenseGross')}</span>
                 <strong>{formatFixed(item.expense_minor, 2)}</strong>
               </dd>
               <dd>
-                <span>Разница с НДС</span>
+                <span>{translate('finance.differenceGross')}</span>
                 <strong>
                   {formatFixed(BigInt(item.income_minor) - BigInt(item.expense_minor), 2)}
                 </strong>
@@ -64,6 +67,7 @@ export function ServiceCharges({
   session: Session;
   customers: Counterparty[];
 }) {
+  const { translate, locale } = useLocalization();
   const read = session.permissions.includes('finance.read_service_charges');
   const write = session.permissions.includes('finance.write_service_charges');
   const [items, setItems] = useState<ServiceCharge[]>([]);
@@ -161,7 +165,7 @@ export function ServiceCharges({
       setSummary(result.summary);
       setReporting(result.reporting);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить услуги');
+      setFailure(error instanceof Error ? error.message : translate('finance.loadServicesFailed'));
     } finally {
       setLoading(false);
     }
@@ -181,7 +185,7 @@ export function ServiceCharges({
   return (
     <section
       className={`finance-section${scope.shipment_id ? '' : ' service-charges-page'}`}
-      aria-label="Финансы"
+      aria-label={translate('home.finance')}
     >
       {editing ? (
         <ServiceChargeEditor
@@ -206,28 +210,40 @@ export function ServiceCharges({
       ) : (
         <>
           <div className="section-heading">
-            <h2>{scope.shipment_id ? 'Финансы' : 'Услуги'}</h2>
+            <h2>
+              {scope.shipment_id ? translate('home.finance') : translate('nav.serviceCharges')}
+            </h2>
             <div className="finance-actions">
               {write && (
                 <>
                   <button className="primary" onClick={() => edit(newCharge(scope, 'income'))}>
-                    Добавить доходную услугу
+                    {translate('registryPage.addIncome')}
                   </button>
                   <button onClick={() => edit(newCharge(scope, 'expense'))}>
-                    Добавить расходную услугу
+                    {translate('registryPage.addExpense')}
                   </button>
                 </>
               )}
               <button disabled={loading} onClick={() => setVersion((old) => old + 1)}>
-                Обновить
+                {translate('action.refresh')}
               </button>
             </div>
           </div>
           {scope.shipment_id && reporting && (
             <p className={reporting.missing_rates.length ? 'error' : 'hint'}>
               {reporting.missing_rates.length
-                ? `Пересчёт в ${reporting.currency} недоступен: нет курсов для ${reporting.missing_rates.map((item) => `${item.currency} на ${CalendarDate.fromISO(item.date).toDisplayString()}`).join(', ')}. Показаны суммы по валютам услуг.`
-                : `Сводка в ${reporting.currency} · пересчёт на даты услуг`}
+                ? translate('finance.reportingMissing', {
+                    currency: reporting.currency,
+                    rates: reporting.missing_rates
+                      .map((item) =>
+                        translate('finance.currencyDate', {
+                          currency: item.currency,
+                          date: CalendarDate.fromISO(item.date).toDisplayString(),
+                        }),
+                      )
+                      .join(', '),
+                  })
+                : translate('finance.reportingSummary', { currency: reporting.currency })}
             </p>
           )}
           {displaySummary.combined.length > 0 && (
@@ -240,17 +256,17 @@ export function ServiceCharges({
               >
                 <span className="finance-summary-caption">
                   <Chevron />
-                  <strong>Сводка</strong>
+                  <strong>{translate('finance.summary')}</strong>
                 </span>
                 <span className="finance-summary-compact">
                   {displaySummary.combined.map((item) => (
                     <span key={item.currency}>
                       <strong>{item.currency}</strong>
-                      <span>Доход</span>
+                      <span>{translate('registryValue.direction.income')}</span>
                       <span>{formatFixed(item.income_minor, 2)}</span>
-                      <span>Расход</span>
+                      <span>{translate('registryValue.direction.expense')}</span>
                       <span>{formatFixed(item.expense_minor, 2)}</span>
-                      <span>Разница</span>
+                      <span>{translate('finance.difference')}</span>
                       <span>
                         <strong>
                           {formatFixed(BigInt(item.income_minor) - BigInt(item.expense_minor), 2)}
@@ -265,17 +281,23 @@ export function ServiceCharges({
                   <Totals
                     title={
                       !scope.shipment_id
-                        ? 'Услуги без перевозки'
+                        ? translate('finance.withoutTransportation')
                         : scope.transportation_id
-                          ? 'Перевозка'
-                          : 'Поставка'
+                          ? translate('registryValue.unit.transportation')
+                          : translate('registryField.shipment_id')
                     }
                     items={displaySummary.own}
                   />
                   {!scope.transportation_id && (
                     <>
-                      <Totals title="Перевозки" items={displaySummary.transportations} />
-                      <Totals title="Всего" items={displaySummary.combined} />
+                      <Totals
+                        title={translate('nav.transportations')}
+                        items={displaySummary.transportations}
+                      />
+                      <Totals
+                        title={translate('finance.totalLabel')}
+                        items={displaySummary.combined}
+                      />
                     </>
                   )}
                 </div>
@@ -283,16 +305,19 @@ export function ServiceCharges({
             </section>
           )}
           {scope.shipment_id && !scope.transportation_id && (
-            <p className="hint">
-              Ниже — собственные строки поставки. Услуги перевозок редактируются в перевозках и
-              учитываются в сводке один раз.
-            </p>
+            <p className="hint">{translate('finance.ownChargeHint')}</p>
           )}
           <div className="finance-list-toolbar">
             {scope.shipment_id ? (
-              <h3>{scope.transportation_id ? 'Услуги' : 'Услуги поставки'}</h3>
+              <h3>
+                {scope.transportation_id
+                  ? translate('nav.serviceCharges')
+                  : translate('finance.shipmentServices')}
+              </h3>
             ) : (
-              <span className="registry-count">Загружено: {items.length}</span>
+              <span className="registry-count">
+                {translate('common.loaded', { count: items.length })}
+              </span>
             )}
             <label className="bank-archive-toggle">
               <input
@@ -300,7 +325,7 @@ export function ServiceCharges({
                 checked={archived}
                 onChange={(e) => setArchived(e.target.checked)}
               />
-              Показать архивные
+              {translate('finance.showArchived')}
             </label>
           </div>
           {failure && (
@@ -312,13 +337,13 @@ export function ServiceCharges({
             <table className="finance-services-table">
               <thead>
                 <tr>
-                  <th>Услуга / контрагент</th>
-                  <th>Направление</th>
-                  <th>Количество × цена</th>
-                  <th>Без НДС</th>
-                  <th>НДС</th>
-                  <th>Итого</th>
-                  <th>Счёт</th>
+                  <th>{translate('finance.serviceCounterparty')}</th>
+                  <th>{translate('registryField.direction')}</th>
+                  <th>{translate('registryField.quantityPrice')}</th>
+                  <th>{translate('finance.net')}</th>
+                  <th>{translate('registryField.vat_mode')}</th>
+                  <th>{translate('registryField.total_minor')}</th>
+                  <th>{translate('registryField.invoice_number')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -328,19 +353,19 @@ export function ServiceCharges({
                   return (
                     <tr
                       key={item.id}
-                      {...serviceChargeRow(item, openServiceCharge, !editable)}
+                      {...serviceChargeRow(item, openServiceCharge, !editable, locale)}
                       title={
-                        invoice?.read_only
-                          ? 'Счёт оплачен. Услуга доступна только для чтения'
-                          : undefined
+                        invoice?.read_only ? translate('finance.paidChargeReadonly') : undefined
                       }
                     >
                       <td>
                         <strong>{item.label_name}</strong>
                         <span className="service-secondary">
                           {item.counterparty_name}
-                          {item.contract_number ? ` · Договор ${item.contract_number}` : ''}
-                          {item.archived ? ' · В архиве' : ''}
+                          {item.contract_number
+                            ? translate('finance.contractSuffix', { number: item.contract_number })
+                            : ''}
+                          {item.archived ? translate('finance.archivedSuffix') : ''}
                         </span>
                         {!scope.shipment_id && (item.shipment_id || item.transportation_id) && (
                           <a
@@ -351,25 +376,37 @@ export function ServiceCharges({
                                 : `#/shipments/${item.shipment_id}`
                             }
                           >
-                            {item.transportation_id ? 'К перевозке' : 'К поставке'}
+                            {item.transportation_id
+                              ? translate('finance.openTransportation')
+                              : translate('finance.openShipment')}
                           </a>
                         )}
                         {!scope.shipment_id && !item.shipment_id && (
-                          <span className="service-secondary">Самостоятельная услуга</span>
+                          <span className="service-secondary">
+                            {translate('finance.standalone')}
+                          </span>
                         )}
                         {item.note && (
                           <details className="service-note">
-                            <summary>Примечание</summary>
+                            <summary>{translate('shipment.note')}</summary>
                             <p>{item.note}</p>
                           </details>
                         )}
                       </td>
-                      <td>{item.direction === 'income' ? 'Доход' : 'Расход'}</td>
+                      <td>
+                        {item.direction === 'income'
+                          ? translate('registryValue.direction.income')
+                          : translate('registryValue.direction.expense')}
+                      </td>
                       <td className="service-numeric">
-                        {formatFixed(item.quantity_milli, 3)} {financialLabelUnits[item.unit]}
+                        {formatFixed(item.quantity_milli, 3)}{' '}
+                        {registryValueLabel('unit', item.unit, locale) ??
+                          financialLabelUnits[item.unit]}
                         <span className="service-secondary">
                           × {formatFixed(item.price_minor, 2)} {item.currency} ·{' '}
-                          {item.price_mode === 'gross' ? 'с НДС' : 'без НДС'}
+                          {item.price_mode === 'gross'
+                            ? translate('finance.grossLower')
+                            : translate('finance.netLower')}
                         </span>
                       </td>
                       <td className="service-numeric">
@@ -378,19 +415,26 @@ export function ServiceCharges({
                       </td>
                       <td className="service-numeric">
                         {formatFixed(item.vat_minor, 2)}
-                        <span className="service-secondary">{vatLabel(item)}</span>
+                        <span className="service-secondary">{vatLabel(item, locale)}</span>
                       </td>
                       <td className="service-numeric">
                         <strong>{formatFixed(item.total_minor, 2)}</strong>
                         <span className="service-secondary">{item.currency}</span>
                         {item.invoice_currency !== item.currency && (
                           <span className="service-secondary">
-                            В счёте: {formatFixed(item.invoice_total_minor, 2)}{' '}
-                            {item.invoice_currency}
+                            {translate('finance.invoiceAmount', {
+                              amount: formatFixed(item.invoice_total_minor, 2),
+                              currency: item.invoice_currency,
+                            })}
                             <br />
-                            Курс {formatFixed(item.invoice_rate.rate_millionths, 6)} ·{' '}
-                            {item.invoice_rate.source === 'manual' ? 'вручную' : 'ЦБ'} на{' '}
-                            {CalendarDate.fromISO(item.invoice_rate.date).toDisplayString()}
+                            {translate('finance.rateDescription', {
+                              rate: formatFixed(item.invoice_rate.rate_millionths, 6),
+                              source:
+                                item.invoice_rate.source === 'manual'
+                                  ? translate('finance.manualLower')
+                                  : translate('finance.centralBank'),
+                              date: CalendarDate.fromISO(item.invoice_rate.date).toDisplayString(),
+                            })}
                           </span>
                         )}
                       </td>
@@ -402,7 +446,9 @@ export function ServiceCharges({
                           >
                             № {invoice.number}
                             <span className="service-secondary">
-                              от {CalendarDate.fromISO(invoice.invoice_date).toDisplayString()}
+                              {translate('finance.invoiceDate', {
+                                date: CalendarDate.fromISO(invoice.invoice_date).toDisplayString(),
+                              })}
                             </span>
                           </a>
                         ) : !item.archived &&
@@ -419,10 +465,12 @@ export function ServiceCharges({
                             }}
                           />
                         ) : (
-                          <span className="hint">Не выбран</span>
+                          <span className="hint">{translate('ui.notChosen')}</span>
                         )}
                         {invoice?.read_only && (
-                          <span className="service-secondary">Оплачен · только чтение</span>
+                          <span className="service-secondary">
+                            {translate('finance.paidReadonly')}
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -432,7 +480,7 @@ export function ServiceCharges({
             </table>
           </div>
           {!loading && !items.length && !failure && (
-            <p className="empty-state">Услуги пока не добавлены</p>
+            <p className="empty-state">{translate('finance.noServicesYet')}</p>
           )}
           <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
         </>

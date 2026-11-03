@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
@@ -37,6 +38,7 @@ export function ServiceExchangeFields({
   onManual: (value: boolean) => void;
   onRate: (value: string) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [quote, setQuote] = useState<ExchangeRate>();
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,14 +75,14 @@ export function ServiceExchangeFields({
   return (
     <>
       <label>
-        Дата услуги · обязательно
+        {translate('finance.serviceDateRequired')}
         <DateInput required value={date} onChange={onDate} disabled={disabled} />
       </label>
       <Select
-        label="Валюта услуги"
+        label={translate('finance.serviceCurrency')}
         searchable
         value={currency}
-        options={currenciesWithCurrent(currency)}
+        options={currenciesWithCurrent(currency, locale)}
         onChange={(value) => {
           onCurrency(value);
           if (value === invoiceCurrency) {
@@ -91,10 +93,10 @@ export function ServiceExchangeFields({
         disabled={disabled}
       />
       <Select
-        label="Валюта счёта"
+        label={translate('finance.invoiceCurrency')}
         searchable
         value={invoiceCurrency}
-        options={currenciesWithCurrent(invoiceCurrency)}
+        options={currenciesWithCurrent(invoiceCurrency, locale)}
         onChange={(value) => {
           onInvoiceCurrency(value);
           if (value === currency) {
@@ -106,10 +108,10 @@ export function ServiceExchangeFields({
       />
       <div className="service-exchange-rate">
         <span className="field-label">
-          Курс: 1 {currency} в {invoiceCurrency}
+          {translate('finance.ratePair', { currency, invoiceCurrency })}
         </span>
         {same ? (
-          <p className="hint">1 · валюты совпадают</p>
+          <p className="hint">{translate('finance.sameCurrencies')}</p>
         ) : (
           <>
             <label className="inline-check">
@@ -122,11 +124,11 @@ export function ServiceExchangeFields({
                   onManual(event.target.checked);
                 }}
               />
-              Указать вручную
+              {translate('finance.setManualRate')}
             </label>
             {manual ? (
               <DecimalInput
-                aria-label="Курс вручную"
+                aria-label={translate('finance.manualRate')}
                 required
                 precision={6}
                 value={rate}
@@ -134,17 +136,19 @@ export function ServiceExchangeFields({
                 onChange={(event) => onRate(event.target.value)}
               />
             ) : loading ? (
-              <p className="hint">Получаем курс ЦБ…</p>
+              <p className="hint">{translate('finance.loadingRate')}</p>
             ) : quote ? (
               <p className="hint">
-                {formatFixed(quote.rate_millionths, 6)} · ЦБ на{' '}
-                {CalendarDate.fromISO(quote.date).toDisplayString()}
+                {translate('finance.centralBankRate', {
+                  rate: formatFixed(quote.rate_millionths, 6),
+                  date: CalendarDate.fromISO(quote.date).toDisplayString(),
+                })}
               </p>
             ) : failure ? (
               <p className="field-error" role="alert">
                 {failure}{' '}
                 <button type="button" onClick={() => setVersion((old) => old + 1)}>
-                  Повторить
+                  {translate('filter.retry')}
                 </button>
               </p>
             ) : null}

@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { openServiceCharge } from '../services/ServiceChargePage';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
@@ -89,6 +90,7 @@ export function InvoicesPage({
   onSaved: (value: Invoice) => void;
   onCancelNew: () => void;
 }) {
+  const { locale } = useLocalization();
   const direction: InvoiceDirection = route.startsWith('/incoming-invoices')
     ? 'incoming'
     : 'outgoing';
@@ -793,6 +795,7 @@ export function InvoicesPage({
                               charge,
                               canOpenServiceEditor ? openServiceCharge : undefined,
                               !canEditServices,
+                              locale,
                             )}
                           >
                             <td>

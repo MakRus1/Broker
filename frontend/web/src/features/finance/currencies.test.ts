@@ -16,3 +16,13 @@ it('сохраняет доступ к существующему коду вн�
   expect(currenciesWithCurrent('XYZ').some((item) => item.value === 'XYZ')).toBe(true);
   expect(currenciesWithCurrent('RUB')).toBe(currencyOptions);
 });
+
+it('localizes currency names without changing codes or rebuilding cached choices', () => {
+  const english = currenciesWithCurrent('RUB', 'en');
+  expect(english[0].label).toMatch(/RUB.*Russian/i);
+  expect(english).toBe(currenciesWithCurrent('USD', 'en'));
+  expect(english.map((item) => item.value).sort()).toEqual(
+    currencyOptions.map((item) => item.value).sort(),
+  );
+  expect(currenciesWithCurrent('XYZ', 'en').some((item) => item.value === 'XYZ')).toBe(true);
+});

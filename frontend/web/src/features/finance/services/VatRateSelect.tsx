@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
 import { useState } from 'react';
 import { Select } from '../../../shared/ui/Select';
@@ -18,6 +19,7 @@ export function VatRateSelect({
   mode?: 'exempt' | 'rate';
   onMode?: (mode: 'exempt' | 'rate') => void;
 }) {
+  const { translate } = useLocalization();
   const rate = parseVatRate(value);
   const [editingCustom, setCustom] = useState(false);
   const custom = editingCustom || rate === undefined || !rates.includes(rate);
@@ -25,13 +27,15 @@ export function VatRateSelect({
   return (
     <div className="vat-rate-select">
       <Select
-        label={mode ? 'НДС' : 'Ставка НДС'}
+        label={
+          mode ? translate('registryField.vat_mode') : translate('registryValue.vat_mode.rate')
+        }
         value={mode === 'exempt' ? 'exempt' : custom ? 'custom' : current}
         disabled={disabled}
         options={[
-          ...(mode ? [{ value: 'exempt', label: 'Без НДС' }] : []),
+          ...(mode ? [{ value: 'exempt', label: translate('registryValue.vat_mode.exempt') }] : []),
           ...rates.map((rate) => ({ value: String(rate), label: `${formatVatRate(rate)}%` })),
-          { value: 'custom', label: 'Другая ставка' },
+          { value: 'custom', label: translate('finance.customVatRate') },
         ]}
         onChange={(next) => {
           if (next === 'exempt') {
@@ -45,7 +49,7 @@ export function VatRateSelect({
       />
       {custom && mode !== 'exempt' && (
         <label>
-          Ставка НДС, % · обязательно
+          {translate('finance.vatRequired')}
           <DecimalInput
             name="vat_rate"
             required
@@ -55,9 +59,7 @@ export function VatRateSelect({
             onChange={(event) => onChange(event.target.value)}
             ref={(node) =>
               node?.setCustomValidity(
-                parseVatRate(value) === undefined
-                  ? 'Укажите ставку от 0 до 100% с точностью до сотых'
-                  : '',
+                parseVatRate(value) === undefined ? translate('finance.vatInvalid') : '',
               )
             }
           />

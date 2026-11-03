@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Page<T, Cursor> {
   items: T[];
-  next_cursor?: Cursor;
+  next_cursor?: Cursor | null;
 }
 
 /** Owns pagination and discards responses from a previous query or inactive registry. */
@@ -40,8 +40,8 @@ export function useRegistryPage<T, Cursor>({
         const page = await loadPage(append ? cursor.current : undefined, controller.signal);
         if (controller.signal.aborted) return;
         setItems((old) => (append ? [...old, ...page.items] : page.items));
-        cursor.current = page.next_cursor;
-        setMore(page.next_cursor !== undefined);
+        cursor.current = page.next_cursor ?? undefined;
+        setMore(cursor.current !== undefined);
       } catch (error) {
         if (!controller.signal.aborted) {
           setFailed(true);

@@ -1,3 +1,5 @@
+import { translate as translateMessage, type Locale } from '../../../../shared/i18n/catalog';
+import { useLocalization } from '../localization/Localization';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { useEffect, useState, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
@@ -24,6 +26,7 @@ export function SharedRouteFields({
   onSea: (value: SeaDetails) => void;
   onAir: (value: AirDetails) => void;
 }) {
+  const { translate } = useLocalization();
   function date(
     label: string,
     value: string | undefined,
@@ -57,31 +60,31 @@ export function SharedRouteFields({
     return (
       <div className="shared-route-grid">
         <TransportLocationLookup
-          label="POL · порт отправления"
+          label={translate('shipment.pol')}
           kind="sea_port"
           value={value.pol}
           session={session}
           onChange={(pol) => onSea({ ...value, pol })}
         />
         <TransportLocationLookup
-          label="POD · порт назначения"
+          label={translate('shipment.pod')}
           kind="sea_port"
           value={value.pod}
           session={session}
           onChange={(pod) => onSea({ ...value, pod })}
         />
-        {company('Терминал отправления', value.departure_terminal_id, (id) =>
+        {company(translate('route.departureTerminal'), value.departure_terminal_id, (id) =>
           onSea({ ...value, departure_terminal_id: id }),
         )}
-        {company('Терминал назначения', value.arrival_terminal_id, (id) =>
+        {company(translate('route.arrivalTerminal'), value.arrival_terminal_id, (id) =>
           onSea({ ...value, arrival_terminal_id: id }),
         )}
-        {date('ETA · ожидаемое прибытие', value.eta, false, (eta) => onSea({ ...value, eta }))}
-        {date('Дата выхода судна', value.departure_date, true, (departure_date) =>
+        {date(translate('route.eta'), value.eta, false, (eta) => onSea({ ...value, eta }))}
+        {date(translate('route.vesselDeparture'), value.departure_date, true, (departure_date) =>
           onSea({ ...value, departure_date }),
         )}
         <label>
-          Судно
+          {translate('registryValue.type.vessel')}
           <input
             maxLength={128}
             value={value.vessel ?? ''}
@@ -89,7 +92,7 @@ export function SharedRouteFields({
           />
         </label>
         <label>
-          Рейс
+          {translate('route.voyage')}
           <input
             maxLength={128}
             value={value.voyage ?? ''}
@@ -103,34 +106,36 @@ export function SharedRouteFields({
   return (
     <div className="shared-route-grid">
       <TransportLocationLookup
-        label="Аэропорт отправления"
+        label={translate('registryField.origin_airport')}
         kind="airport"
         value={value.origin_airport}
         session={session}
         onChange={(origin_airport) => onAir({ ...value, origin_airport })}
       />
       <TransportLocationLookup
-        label="Аэропорт назначения"
+        label={translate('registryField.destination_airport')}
         kind="airport"
         value={value.destination_airport}
         session={session}
         onChange={(destination_airport) => onAir({ ...value, destination_airport })}
       />
-      {company('Перевозчик', value.carrier_id, (id) => onAir({ ...value, carrier_id: id }))}
+      {company(translate('registryValue.roles.carrier'), value.carrier_id, (id) =>
+        onAir({ ...value, carrier_id: id }),
+      )}
       <label>
-        Номер рейса
+        {translate('shipment.flight')}
         <input
           maxLength={64}
           value={value.flight_number ?? ''}
           onChange={(event) => onAir({ ...value, flight_number: event.target.value || undefined })}
         />
       </label>
-      {date('ETD · ожидаемое отправление', value.etd, false, (etd) => onAir({ ...value, etd }))}
-      {date('ETA · ожидаемое прибытие', value.eta, false, (eta) => onAir({ ...value, eta }))}
-      {date('Дата убытия', value.departure_date, true, (departure_date) =>
+      {date(translate('route.etd'), value.etd, false, (etd) => onAir({ ...value, etd }))}
+      {date(translate('route.eta'), value.eta, false, (eta) => onAir({ ...value, eta }))}
+      {date(translate('route.departureDate'), value.departure_date, true, (departure_date) =>
         onAir({ ...value, departure_date }),
       )}
-      {date('Дата прибытия', value.arrival_date, true, (arrival_date) =>
+      {date(translate('route.arrivalDate'), value.arrival_date, true, (arrival_date) =>
         onAir({ ...value, arrival_date }),
       )}
     </div>
@@ -145,6 +150,7 @@ function CompanyName({
   customers: Counterparty[];
   session?: Session;
 }) {
+  const { translate, locale } = useLocalization();
   const known = customers.find((item) => item.id === id)?.name;
   const [name, setName] = useState('');
   useEffect(() => {
@@ -160,16 +166,19 @@ function CompanyName({
         if (!controller.signal.aborted) setName(value.counterparty.name);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName('Контрагент недоступен');
+        if (!controller.signal.aborted) setName(translate('lookup.counterpartyUnavailable'));
       });
     return () => controller.abort();
-  }, [id, known, session]);
-  return <>{id ? known || name || 'Загрузка…' : '—'}</>;
+  }, [id, known, session, locale]);
+  return <>{id ? known || name || translate('filter.loading') : '—'}</>;
 }
-export function sharedRouteDirection(value: { sea?: SeaDetails; air?: AirDetails }) {
+export function sharedRouteDirection(
+  value: { sea?: SeaDetails; air?: AirDetails },
+  locale: Locale,
+) {
   const from = value.sea?.pol ?? value.air?.origin_airport;
   const to = value.sea?.pod ?? value.air?.destination_airport;
-  return `${from?.name || 'Не указан'} → ${to?.name || 'Не указан'}`;
+  return `${from?.name || translateMessage(locale, 'routeFilter.pointNotSet')} → ${to?.name || translateMessage(locale, 'routeFilter.pointNotSet')}`;
 }
 export function SharedRouteDetailsView({
   sea,
@@ -182,30 +191,31 @@ export function SharedRouteDetailsView({
   customers: Counterparty[];
   session?: Session;
 }) {
+  const { translate } = useLocalization();
   const location = (value?: TransportLocation) =>
     value ? [value.name, value.code, value.country_code].filter(Boolean).join(' · ') : '—';
   const company = (id?: string) => <CompanyName id={id} customers={customers} session={session} />;
   const rows: [string, ReactNode][] = sea
     ? [
-        ['POL · порт отправления', location(sea.pol)],
-        ['POD · порт назначения', location(sea.pod)],
-        ['Терминал отправления', company(sea.departure_terminal_id)],
-        ['Терминал назначения', company(sea.arrival_terminal_id)],
+        [translate('shipment.pol'), location(sea.pol)],
+        [translate('shipment.pod'), location(sea.pod)],
+        [translate('route.departureTerminal'), company(sea.departure_terminal_id)],
+        [translate('route.arrivalTerminal'), company(sea.arrival_terminal_id)],
         ['ETA', calendarDate(sea.eta)],
-        ['Дата выхода судна', calendarDate(sea.departure_date)],
-        ['Судно', sea.vessel || '—'],
-        ['Рейс', sea.voyage || '—'],
+        [translate('route.vesselDeparture'), calendarDate(sea.departure_date)],
+        [translate('registryValue.type.vessel'), sea.vessel || '—'],
+        [translate('route.voyage'), sea.voyage || '—'],
       ]
     : air
       ? [
-          ['Аэропорт отправления', location(air.origin_airport)],
-          ['Аэропорт назначения', location(air.destination_airport)],
-          ['Перевозчик', company(air.carrier_id)],
-          ['Номер рейса', air.flight_number || '—'],
+          [translate('registryField.origin_airport'), location(air.origin_airport)],
+          [translate('registryField.destination_airport'), location(air.destination_airport)],
+          [translate('registryValue.roles.carrier'), company(air.carrier_id)],
+          [translate('shipment.flight'), air.flight_number || '—'],
           ['ETD', calendarDate(air.etd)],
           ['ETA', calendarDate(air.eta)],
-          ['Дата убытия', calendarDate(air.departure_date)],
-          ['Дата прибытия', calendarDate(air.arrival_date)],
+          [translate('route.departureDate'), calendarDate(air.departure_date)],
+          [translate('route.arrivalDate'), calendarDate(air.arrival_date)],
         ]
       : [];
   return Object.values(sea ?? air ?? {}).some(Boolean) ? (
@@ -218,6 +228,6 @@ export function SharedRouteDetailsView({
       ))}
     </dl>
   ) : (
-    <p className="muted">Данные участка пока не указаны.</p>
+    <p className="muted">{translate('route.emptySegment')}</p>
   );
 }

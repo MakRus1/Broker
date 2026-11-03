@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { ShipmentRoute } from './ShipmentRoute';
@@ -44,6 +45,7 @@ type Props = {
   onCreated: (shipment: Shipment) => void;
 };
 export function ShipmentWorkspace(props: Props) {
+  const { translate } = useLocalization();
   const creating = /^\/shipments\/new(?:\/|$)/.test(props.route);
   const id = creating ? undefined : props.route.split('/')[2];
   const [shipment, setShipment] = useState<Shipment>();
@@ -83,7 +85,7 @@ export function ShipmentWorkspace(props: Props) {
         {failure}
       </p>
     );
-  if (!creating && !shipment) return <p role="status">Открываем поставку…</p>;
+  if (!creating && !shipment) return <p role="status">{translate('shipment.opening')}</p>;
   return <ShipmentCard key={id ?? props.route} {...props} initial={shipment} onSaved={onSaved} />;
 }
 type CardDraft = {
@@ -127,6 +129,7 @@ function ShipmentCard({
   onSaved,
   ...props
 }: Props & { initial?: Shipment; onSaved: (value: Shipment) => void }) {
+  const { translate } = useLocalization();
   const formId = useId();
   const validation = useFieldValidation();
   const storageKey = `broker:shipment-card:${props.session.actor}:${props.route}`;
@@ -296,14 +299,16 @@ function ShipmentCard({
       });
       setSuggestions((old) => old.filter((item) => item !== value));
     } catch (error) {
-      setCargoFailure(error instanceof Error ? error.message : 'Не удалось удалить подсказку');
+      setCargoFailure(
+        error instanceof Error ? error.message : translate('shipment.deleteSuggestionFailed'),
+      );
     }
   }
   async function save(event: FormEvent) {
     event.preventDefault();
     if (busy || !write || !settings || !dictionaries) return;
     if ((!initial || editingSection === 'details') && !draft.customer_id) {
-      setFailure('Выберите клиента');
+      setFailure(translate('shipment.chooseCustomer'));
       setTab('details');
       return;
     }
@@ -358,7 +363,7 @@ function ShipmentCard({
         setEditing(false);
       } else props.onCreated(result.shipment);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить поставку');
+      setFailure(error instanceof Error ? error.message : translate('shipment.saveFailed'));
       props.onError(error);
     } finally {
       setBusy(false);
@@ -378,28 +383,30 @@ function ShipmentCard({
     [onSaved, dirty],
   );
   const list = (values: DictionaryValue[]) => [
-    { value: '', label: 'Не выбрано' },
+    { value: '', label: translate('ui.notSelected') },
     ...values.map((value) => ({ value: value.code, label: value.name })),
   ];
   const panels = [
-    ['details', 'Основное'],
-    ['route', 'Маршрут'],
-    ...(initial && settings?.planned_containers ? [['items', 'Плановые контейнеры']] : []),
-    ...(initial ? [['transportations', 'Перевозки']] : []),
+    ['details', translate('shipment.details')],
+    ['route', translate('registryField.route')],
+    ...(initial && settings?.planned_containers
+      ? [['items', translate('shipment.plannedContainers')]]
+      : []),
+    ...(initial ? [['transportations', translate('nav.transportations')]] : []),
     ...(initial && props.session.permissions.includes('finance.read_service_charges')
-      ? [['finance', 'Финансы']]
+      ? [['finance', translate('home.finance')]]
       : []),
   ];
   return (
     <section className="shipment-editor surface">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">ПОСТАВКА</p>
-          <h1>{initial?.number ?? 'Новая поставка'}</h1>
+          <p className="eyebrow">{translate('shipment.eyebrow')}</p>
+          <h1>{initial?.number ?? translate('entity.newShipment')}</h1>
         </div>
         <div className="shipment-card-actions">
           <span className="badge">
-            {initial && !editing ? initial.status : draft.status || 'Новая'}
+            {initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')}
           </span>
           {initial && !editing && write && (tab === 'details' || tab === 'route') && (
             <button
@@ -410,14 +417,14 @@ function ShipmentCard({
                 setFailure('');
               }}
             >
-              {tab === 'route' ? 'Редактировать маршрут' : 'Редактировать'}
+              {tab === 'route' ? translate('shipment.editRoute') : translate('shipment.edit')}
             </button>
           )}
         </div>
       </div>
       {settingsFailure && (
         <p className="error" role="alert">
-          Не удалось получить настройки: {settingsFailure}
+          {translate('shipment.settingsFailed', { message: settingsFailure })}
         </p>
       )}
       <div className="tabs shipment-tabs">
@@ -480,7 +487,7 @@ function ShipmentCard({
           >
             <div className="shipment-fields">
               <label>
-                Номер поставки
+                {translate('registryField.shipmentNumber')}
                 <div className="shipment-number">
                   <input
                     name="number"
@@ -492,7 +499,7 @@ function ShipmentCard({
                     readOnly={!manualNumber}
                     maxLength={128}
                     value={draft.number}
-                    placeholder="Присвоится при создании"
+                    placeholder={translate('shipment.autoNumber')}
                     onChange={(e) => set('number', e.target.value)}
                   />
                   {!initial && (
@@ -503,11 +510,19 @@ function ShipmentCard({
                         set('number', '');
                       }}
                     >
-                      {manualNumber ? 'Автоматически' : 'Вручную'}
+                      {manualNumber
+                        ? translate('shipment.automatic')
+                        : translate('shipment.manual')}
                     </button>
                   )}
                 </div>
-                {!manualNumber && <small>Формат: {settings?.number_template}</small>}
+                {!manualNumber && (
+                  <small>
+                    {translate('shipment.numberFormat', {
+                      format: settings?.number_template ?? '',
+                    })}
+                  </small>
+                )}
                 {validation.errors.number && (
                   <small className="field-error" id={`${formId}-number-error`}>
                     {validation.errors.number}
@@ -515,7 +530,7 @@ function ShipmentCard({
                 )}
               </label>
               <label>
-                Дата поставки · обязательно
+                {translate('shipment.dateRequired')}
                 <IsoDateInput
                   name="shipment_date"
                   aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
@@ -536,14 +551,14 @@ function ShipmentCard({
               </label>
             </div>
             <section className="shipment-field-section">
-              <h2>Участники</h2>
+              <h2>{translate('shipment.participants')}</h2>
               <div className="shipment-fields">
                 <CustomerSelect
-                  label="Клиент · обязательно"
+                  label={translate('shipment.customerRequired')}
                   required
                   error={
                     validation.attempted && !draft.customer_id
-                      ? 'Выберите клиента из справочника'
+                      ? translate('lookup.chooseCustomerDirectory')
                       : ''
                   }
                   session={props.session}
@@ -555,7 +570,7 @@ function ShipmentCard({
                   }
                 />
                 <CustomerSelect
-                  label="Получатель"
+                  label={translate('shipment.recipient')}
                   session={props.session}
                   items={props.customers}
                   value={draft.recipient_id}
@@ -565,7 +580,7 @@ function ShipmentCard({
                 <DirectoryLookup
                   session={props.session}
                   kind="employees"
-                  label="Логист"
+                  label={translate('shipment.logist')}
                   value={draft.logist}
                   onChange={(value) => {
                     manualLogist.current = true;
@@ -575,7 +590,7 @@ function ShipmentCard({
               </div>
             </section>
             <section className="shipment-field-section">
-              <h2>Груз и условия</h2>
+              <h2>{translate('shipment.cargoTerms')}</h2>
               <div
                 className="cargo-autocomplete"
                 onBlur={(event) => {
@@ -583,7 +598,7 @@ function ShipmentCard({
                 }}
               >
                 <label>
-                  Описание груза
+                  {translate('shipment.cargoDescription')}
                   <textarea
                     ref={cargoInput}
                     maxLength={2000}
@@ -608,7 +623,7 @@ function ShipmentCard({
                     }}
                     aria-expanded={cargoOpen}
                     aria-controls={cargoOpen ? `${formId}-cargo-options` : undefined}
-                    placeholder="Введите описание или выберите подсказку"
+                    placeholder={translate('shipment.cargoPlaceholder')}
                   />
                 </label>
                 {cargoOpen && (
@@ -617,7 +632,7 @@ function ShipmentCard({
                     id={`${formId}-cargo-options`}
                     className="cargo-suggestions"
                     role="region"
-                    aria-label="Подсказки описания груза"
+                    aria-label={translate('shipment.cargoSuggestions')}
                     onKeyDown={(event) => {
                       if (event.key === 'Escape') {
                         cargoInput.current?.focus();
@@ -627,11 +642,13 @@ function ShipmentCard({
                     }}
                   >
                     {cargoLoading ? (
-                      <p role="status">Ищем описания…</p>
+                      <p role="status">{translate('shipment.cargoSearching')}</p>
                     ) : cargoFailure ? (
-                      <p role="alert">Подсказки недоступны: {cargoFailure}</p>
+                      <p role="alert">
+                        {translate('shipment.cargoFailed', { message: cargoFailure })}
+                      </p>
                     ) : suggestions.length === 0 ? (
-                      <p>Совпадений нет. Можно сохранить своё описание.</p>
+                      <p>{translate('shipment.cargoNoMatches')}</p>
                     ) : (
                       <>
                         {suggestions.map((value) => (
@@ -651,7 +668,7 @@ function ShipmentCard({
                               <button
                                 type="button"
                                 className="cargo-remove"
-                                aria-label={`Удалить подсказку ${value}`}
+                                aria-label={translate('shipment.deleteSuggestion', { value })}
                                 onClick={() => void removeSuggestion(value)}
                               >
                                 ×
@@ -659,9 +676,7 @@ function ShipmentCard({
                             )}
                           </div>
                         ))}
-                        {suggestions.length === 20 && (
-                          <p>Показаны первые 20 совпадений. Уточните описание.</p>
-                        )}
+                        {suggestions.length === 20 && <p>{translate('shipment.cargoLimit')}</p>}
                       </>
                     )}
                   </div>
@@ -675,13 +690,13 @@ function ShipmentCard({
                   options={list(dictionaries?.incoterms ?? [])}
                 />
                 <Select
-                  label="Условия перевозки"
+                  label={translate('shipment.carriageTerms')}
                   value={draft.carriage_terms}
                   onChange={(v) => set('carriage_terms', v)}
                   options={list(dictionaries?.carriage_terms ?? [])}
                 />
                 <Select
-                  label="Загрузка"
+                  label={translate('shipment.loading')}
                   value={draft.loading}
                   onChange={(v) => set('loading', v)}
                   options={list(dictionaries?.loading ?? [])}
@@ -689,12 +704,12 @@ function ShipmentCard({
               </div>
             </section>
             <section className="shipment-field-section">
-              <h2>Доставка</h2>
+              <h2>{translate('shipment.delivery')}</h2>
               <div className="shipment-fields">
                 <DirectoryLookup
                   session={props.session}
                   kind="cities"
-                  label="Город доставки"
+                  label={translate('shipment.deliveryCity')}
                   value={draft.delivery_city}
                   onChange={(value, country) => {
                     setDraft((old) => ({
@@ -705,7 +720,7 @@ function ShipmentCard({
                   }}
                 />
                 <label>
-                  Код страны
+                  {translate('shipment.countryCode')}
                   <input
                     maxLength={2}
                     pattern="[A-Z]{2}"
@@ -715,7 +730,7 @@ function ShipmentCard({
                   />
                 </label>
                 <label className="full">
-                  Адрес доставки
+                  {translate('shipment.deliveryAddress')}
                   <textarea
                     maxLength={1000}
                     rows={2}
@@ -728,7 +743,7 @@ function ShipmentCard({
             <section className="shipment-field-section">
               <div className="shipment-fields">
                 <Select
-                  label="Статус"
+                  label={translate('registryField.status')}
                   value={draft.status}
                   onChange={(v) => {
                     manualStatus.current = true;
@@ -739,7 +754,7 @@ function ShipmentCard({
                     .map((value) => ({ value, label: value }))}
                 />
                 <label>
-                  Примечание
+                  {translate('shipment.note')}
                   <input
                     maxLength={256}
                     value={draft.reference}
@@ -778,12 +793,15 @@ function ShipmentCard({
         <div hidden={tab !== 'items' && tab !== 'transportations'}>
           <ShipmentPanel
             embedded
-            active={props.active}
+            active={props.active !== false && (tab === 'items' || tab === 'transportations')}
             containerTypes={settings?.container_types}
             section={tab === 'items' ? 'items' : 'transportations'}
             initial={initial}
             session={props.session}
-            customerName={props.customers.find((c) => c.id === draft.customer_id)?.name ?? 'Клиент'}
+            customerName={
+              props.customers.find((c) => c.id === draft.customer_id)?.name ??
+              translate('field.customer')
+            }
             onClose={() => {}}
             onError={props.onError}
             onUpdate={updateFromItems}
@@ -799,10 +817,10 @@ function ShipmentCard({
         <div className="shipment-save">
           <span>
             {dirty
-              ? 'Есть несохранённые изменения'
+              ? translate('shipment.unsaved')
               : initial
-                ? `Редакция ${revision}`
-                : 'Обязательно: дата поставки и клиент'}
+                ? translate('shipment.revision', { revision: revision ?? 0 })
+                : translate('shipment.required')}
           </span>
           <div className="shipment-save-actions">
             {(dirty || initial) && (
@@ -821,7 +839,7 @@ function ShipmentCard({
                   })
                 }
               >
-                Отмена
+                {translate('shipment.cancel')}
               </button>
             )}
             <button
@@ -831,12 +849,12 @@ function ShipmentCard({
               disabled={busy || !settings || Boolean(initial && !dirty)}
             >
               {busy
-                ? 'Сохраняем…'
+                ? translate('shipment.saving')
                 : initial
                   ? editingSection === 'route'
-                    ? 'Сохранить маршрут'
-                    : 'Сохранить изменения'
-                  : 'Создать поставку'}
+                    ? translate('shipment.saveRoute')
+                    : translate('shipment.saveChanges')
+                  : translate('shipment.create')}
             </button>
           </div>
         </div>
@@ -859,6 +877,7 @@ function ShipmentSummary({
   routeOnly: boolean;
   dictionaries?: ShipmentDictionaries;
 }) {
+  const { translate, locale } = useLocalization();
   const [logist, setLogist] = useState('');
   useEffect(() => {
     if (!shipment.logist) {
@@ -872,12 +891,12 @@ function ShipmentSummary({
       { subject: shipment.logist, limit: 1 },
       controller.signal,
     )
-      .then(({ items }) => setLogist(items[0]?.display_name ?? 'Сотрудник недоступен'))
+      .then(({ items }) => setLogist(items[0]?.display_name ?? translate('ui.employeeUnavailable')))
       .catch(() => {
-        if (!controller.signal.aborted) setLogist('Сотрудник недоступен');
+        if (!controller.signal.aborted) setLogist(translate('ui.employeeUnavailable'));
       });
     return () => controller.abort();
-  }, [shipment.logist, session]);
+  }, [shipment.logist, session, locale]);
   const company = (id?: string | null) => customers.find((item) => item.id === id)?.name ?? '—';
   const group = (title: string, fields: [string, string | null | undefined][]) => (
     <section className="shipment-summary-section">
@@ -905,25 +924,28 @@ function ShipmentSummary({
 
   return (
     <>
-      {group('Участники', [
-        ['Клиент', company(shipment.customer_id)],
-        ['Получатель', company(shipment.recipient_id)],
-        ['Логист', logist],
+      {group(translate('shipment.participants'), [
+        [translate('field.customer'), company(shipment.customer_id)],
+        [translate('shipment.recipient'), company(shipment.recipient_id)],
+        [translate('shipment.logist'), logist],
       ])}
-      {group('Груз и условия', [
-        ['Описание груза', shipment.cargo_description],
+      {group(translate('shipment.cargoTerms'), [
+        [translate('shipment.cargoDescription'), shipment.cargo_description],
         ['Incoterms', shipment.incoterms],
-        ['Условия перевозки', shipment.carriage_terms],
-        ['Загрузка', shipment.loading],
+        [translate('shipment.carriageTerms'), shipment.carriage_terms],
+        [translate('shipment.loading'), shipment.loading],
       ])}
-      {group('Доставка', [
-        ['Город', shipment.delivery_city],
-        ['Страна', shipment.delivery_country],
-        ['Адрес', shipment.delivery_address],
+      {group(translate('shipment.delivery'), [
+        [translate('shipment.city'), shipment.delivery_city],
+        [translate('registryField.country_code'), shipment.delivery_country],
+        [translate('shipment.address'), shipment.delivery_address],
       ])}
-      {group('Поставка', [
-        ['Дата поставки', shipment.shipment_date?.split('-').reverse().join('.')],
-        ['Примечание', shipment.reference],
+      {group(translate('registryField.shipment_id'), [
+        [
+          translate('registryField.shipment_date'),
+          shipment.shipment_date?.split('-').reverse().join('.'),
+        ],
+        [translate('shipment.note'), shipment.reference],
       ])}
     </>
   );

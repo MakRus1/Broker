@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useId, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -16,6 +17,7 @@ export function DirectoryLookup({
   value: string;
   onChange: (value: string, country?: string) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -38,13 +40,14 @@ export function DirectoryLookup({
       controller.signal,
     )
       .then(({ items }) => {
-        if (!controller.signal.aborted) setName(items[0]?.display_name ?? 'Сотрудник недоступен');
+        if (!controller.signal.aborted)
+          setName(items[0]?.display_name ?? translate('ui.employeeUnavailable'));
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName('Не удалось загрузить сотрудника');
+        if (!controller.signal.aborted) setName(translate('ui.employeeLoadError'));
       });
     return () => controller.abort();
-  }, [employees, value, session]);
+  }, [employees, value, session, locale]);
   useEffect(() => {
     if (!open || (!employees && query.trim().length < 2)) {
       setItems([]);
@@ -126,7 +129,11 @@ export function DirectoryLookup({
           className={employees && value ? 'has-clear' : undefined}
           maxLength={200}
           value={open ? query : employees ? name : value}
-          placeholder={employees ? 'Выберите сотрудника или введите ФИО' : 'Введите город'}
+          placeholder={
+            employees
+              ? translate('lookup.employeePlaceholder')
+              : translate('lookup.cityPlaceholder')
+          }
           onFocus={() => {
             setOpen(true);
             setQuery(employees ? '' : value);
@@ -158,7 +165,7 @@ export function DirectoryLookup({
           <button
             type="button"
             className="directory-lookup-clear"
-            aria-label={`Очистить поле «${label}»`}
+            aria-label={translate('lookup.clearField', { label })}
             onClick={() => {
               onChange('');
               setName('');
@@ -175,10 +182,14 @@ export function DirectoryLookup({
           id={`${id}-results`}
           role="listbox"
         >
-          {loading && <p role="status">Ищем…</p>}
+          {loading && <p role="status">{translate('lookup.searching')}</p>}
           {failure && <p role="status">{failure}</p>}
           {!loading && !failure && !items.length && (
-            <p>Совпадений нет{employees ? '' : '. Можно ввести город и страну вручную'}.</p>
+            <p>
+              {employees
+                ? translate('lookup.directoryEmployeesEmpty')
+                : translate('lookup.directoryCitiesEmpty')}
+            </p>
           )}
           {items.map((item, index) => (
             <button
@@ -192,7 +203,7 @@ export function DirectoryLookup({
               {item.label}
             </button>
           ))}
-          {!employees && <small>Подсказки DaData</small>}
+          {!employees && <small>{translate('lookup.dadata')}</small>}
         </div>
       )}
     </div>

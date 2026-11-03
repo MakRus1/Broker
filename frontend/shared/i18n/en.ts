@@ -761,6 +761,15 @@ export const en = {
   "forms.departure": "Departure",
   "forms.arrival": "Arrival",
   "forms.noRouteYet": "No route yet",
+  "transport.editingDetails": "Editing transportation details",
+  "transport.editingRoute": "Editing route legs",
+  "transport.createHint": "The route and terms will come from the shipment.",
+  "transport.details": "Transportation details",
+  "transport.shipmentTerms": "Shipment terms",
+  "transport.shipmentTermsHint":
+    "Shared by all transportations in this shipment. Edit these terms in the shipment.",
+  "transport.hazardousYes": "Yes",
+  "transport.hazardousNo": "No",
   "transport.inheritRouteHint":
     "Set the route legs in the shipment. They will appear here automatically.",
   "transport.historicalLegHint":

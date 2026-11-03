@@ -1,36 +1,11 @@
-import { RegistryHeading } from '../shared/ui/RegistryHeading';
+import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
+import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
 import { WorkspaceHome } from './WorkspaceHome';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
 import { PaymentsPage } from '../features/finance/payments/PaymentsPage';
 import { InvoicesPage } from '../features/finance/invoices/InvoicesPage';
-import { useRouteRegistryFilters } from '../features/transportations/RouteRegistryFilters';
-import { preferenceKey, useRegistryPreference } from '../features/registry/registryPreferences';
-import {
-  restoreShipmentQuery,
-  restoreTransportationQuery,
-} from '../features/registry/registryQueryPreferences';
-import { useColumnFilters } from '../features/registry/RegistryColumnFilters';
-import {
-  RegistryTable,
-  useRegistryColumns,
-  type RegistryColumn,
-} from '../features/registry/RegistryTable';
-import { transportationColumns } from '../features/transportations/TransportationTable';
-import {
-  initialShipmentQuery,
-  shipmentRegistryRequest,
-  type ShipmentRegistryCursor,
-  type ShipmentSort,
-} from '../features/shipments/shipmentRegistry';
-import { CalendarDate } from '../shared/dates/CalendarDate';
 import { transportationTitle } from '../features/transportations/transportation';
-import {
-  registryRequest,
-  initialRegistryQuery,
-  type RegistryCursor,
-  type RegistrySort,
-} from '../features/transportations/transportationRegistry';
 import {
   openWorkspace,
   replaceWorkspace,
@@ -45,18 +20,14 @@ import { WorkspaceTabs } from './WorkspaceTabs';
 import { ShipmentWorkspace } from '../features/shipments/ShipmentWorkspace';
 import { useDiscardConfirmation } from '../shared/ui/Dialog';
 import { profileName } from '../shared/profile/profile';
-import { AutoLoadMore } from '../shared/ui/AutoLoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, request } from '../shared/api/http';
-import { type Shipment } from '../features/shipments/types';
-import { type Transportation } from '../features/transportations/types';
 import { FinancialLabelsPage } from '../features/finance/labels/FinancialLabelsPage';
 import { ContractsPage } from '../features/contracts/ContractsPage';
 import { CounterpartiesPage } from '../features/counterparties/CounterpartiesPage';
 import { type Counterparty } from '../features/counterparties/CustomerSelect';
 import { TransportationPage } from '../features/transportations/TransportationPage';
 import { NewTransportation } from '../features/transportations/TransportationDetailsForm';
-import { TransportationTable } from '../features/transportations/TransportationTable';
 
 import { usePreferencesSession } from '../features/preferences/UserPreferences';
 
@@ -83,68 +54,15 @@ export function App() {
     | 'disbursements'
   >('home');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
-  const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [transportations, setTransportations] = useState<Transportation[]>([]);
-
-  const shipmentColumns: RegistryColumn<Shipment>[] = [
-    {
-      id: 'number',
-      labelKey: 'field.shipment',
-      width: 180,
-      required: true,
-      sort: 'number',
-      render: (item) => (
-        <a
-          className="link"
-          href={`#/shipments/${item.id}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {item.number}
-        </a>
-      ),
-    },
-    {
-      id: 'shipment_date',
-      labelKey: 'field.shipmentDate',
-      width: 190,
-      sort: 'shipment_date',
-      render: (item) =>
-        item.shipment_date ? CalendarDate.fromISO(item.shipment_date).toDisplayString() : '—',
-    },
-    {
-      id: 'customer',
-      filterFields: ['customer_id'],
-      labelKey: 'field.customer',
-      width: 280,
-      render: (item) => customerName(item.customer_id),
-    },
-    {
-      id: 'cargo_description',
-      labelKey: 'field.cargo',
-      width: 340,
-      sort: 'cargo_description',
-      render: (item) => item.cargo_description || '—',
-    },
-    {
-      id: 'status',
-      labelKey: 'field.status',
-      width: 180,
-      sort: 'status',
-      render: (item) => <span className="badge">{item.status || '—'}</span>,
-    },
-  ];
-  const shipmentColumnState = useRegistryColumns(
-    session?.subject ?? '',
-    'shipments',
-    shipmentColumns,
-  );
-  const transportationColumnState = useRegistryColumns(
-    session?.subject ?? '',
-    'transportations',
-    transportationColumns,
-  );
+  const [shipmentRegistryVersion, setShipmentRegistryVersion] = useState(0);
+  const [transportationRegistryVersion, setTransportationRegistryVersion] = useState(0);
+  const rememberCustomers = useCallback((items: Counterparty[]) => {
+    setCustomers((old) => [
+      ...old,
+      ...items.filter((item) => !old.some((known) => known.id === item.id)),
+    ]);
+  }, []);
   const [route, setRoute] = useState(() => location.hash.slice(1) || '/');
-  const creating = /^\/shipments\/new(?:\/|$)/.test(route);
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(() => openWorkspace([], route));
   const activeWorkspace = workspaceId(route);
   const [restoredFor, setRestoredFor] = useState('');
@@ -228,8 +146,6 @@ export function App() {
       location.hash = '/';
     });
   }
-  const transportationId = /^\/transportations\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
-  const shipmentId = /^\/shipments\/([0-9a-f-]{36})(?:\/route)?$/i.exec(route)?.[1];
   useEffect(() => {
     function changed() {
       if (!location.hash) {
@@ -271,7 +187,6 @@ export function App() {
     const current = workspaces.find((entry) => entry.id === activeWorkspace);
     document.title = `${current ? localizedWorkspaceTitle(current, locale) : translate('workspace.title')} · Broker`;
   }, [activeWorkspace, workspaces, locale]);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [navigationPinned, setNavigationPinned] = useState(() => {
     try {
       return localStorage.getItem('broker:navigation-pinned') === 'true';
@@ -279,55 +194,7 @@ export function App() {
       return false;
     }
   });
-  const [shipmentQuery, setShipmentQuery] = useRegistryPreference(
-    preferenceKey(session?.subject ?? '', 'shipments', 'query'),
-    initialShipmentQuery,
-    restoreShipmentQuery,
-  );
-  const [shipmentCursor, setShipmentCursor] = useState<ShipmentRegistryCursor>();
-  const [registryQuery, setRegistryQuery] = useRegistryPreference(
-    preferenceKey(session?.subject ?? '', 'transportations', 'query'),
-    initialRegistryQuery,
-    restoreTransportationQuery,
-  );
-  const shipmentFilters = useColumnFilters({
-    registry: 'shipments',
-    session,
-    query: shipmentQuery,
-    onChange: (filters) => {
-      setShipmentCursor(undefined);
-      setShipmentQuery((old) => ({ ...old, filters }));
-    },
-    onSort: (sort, descending) => {
-      setShipmentCursor(undefined);
-      setShipmentQuery((old) => ({ ...old, sort: sort as ShipmentSort, descending }));
-    },
-  });
-  const routeFilters = useRouteRegistryFilters(session, registryQuery, (route_filters) => {
-    setRegistryCursor(undefined);
-    setRegistryQuery((old) => ({ ...old, route_filters }));
-  });
-  const transportationFilters = useColumnFilters({
-    registry: 'transportations',
-    session,
-    query: registryQuery,
-    onChange: (filters) => {
-      setRegistryCursor(undefined);
-      setRegistryQuery((old) => ({ ...old, filters }));
-    },
-    onSort: (sort, descending) => {
-      setRegistryCursor(undefined);
-      setRegistryQuery((old) => ({ ...old, sort: sort as RegistrySort, descending }));
-    },
-  });
-  const [registryCursor, setRegistryCursor] = useState<RegistryCursor>();
-  const [loading, setLoading] = useState(false);
-  const [more, setMore] = useState(false);
   const [notice, setNotice] = useState('');
-  const requestNumber = useRef(0);
-  const updateShipment = useCallback((value: Shipment) => {
-    setShipments((old) => old.map((item) => (item.id === value.id ? value : item)));
-  }, []);
   const error = useCallback(
     (value: unknown) => {
       if (value instanceof ApiError && value.status === 401) setSession(null);
@@ -340,80 +207,6 @@ export function App() {
     },
     [setSession],
   );
-  const load = useCallback(
-    async (append = false) => {
-      if (
-        !session ||
-        tab === 'home' ||
-        tab === 'receipts' ||
-        tab === 'disbursements' ||
-        tab === 'counterparties' ||
-        tab === 'incoming-invoices' ||
-        tab === 'outgoing-invoices' ||
-        tab === 'contracts' ||
-        tab === 'financial-labels' ||
-        tab === 'service-charges' ||
-        !session.permissions.includes(tab + '.read')
-      )
-        return;
-      const currentRequest = ++requestNumber.current;
-      if (!append) {
-        if (tab === 'transportations') setTransportations([]);
-        else setShipments([]);
-        setMore(false);
-      }
-      setLoading(true);
-      setLoadFailed(false);
-      try {
-        if (tab === 'shipments') {
-          const page = await request<{ items: Shipment[]; next_cursor?: ShipmentRegistryCursor }>(
-            '/api/v1/shipments/list',
-            session,
-            shipmentRegistryRequest(shipmentQuery, append ? shipmentCursor : undefined),
-          );
-          if (currentRequest !== requestNumber.current) return;
-          setShipments((old) => (append ? [...old, ...page.items] : page.items));
-          setShipmentCursor(page.next_cursor);
-          setMore(Boolean(page.next_cursor));
-        } else {
-          const page = await request<{ items: Transportation[]; next_cursor?: RegistryCursor }>(
-            '/api/v1/transportations/list',
-            session,
-            registryRequest(registryQuery, append ? registryCursor : undefined),
-          );
-          if (currentRequest !== requestNumber.current) return;
-          setTransportations((old) => (append ? [...old, ...page.items] : page.items));
-          setRegistryCursor(page.next_cursor);
-          setMore(Boolean(page.next_cursor));
-        }
-      } catch (value) {
-        if (currentRequest === requestNumber.current) {
-          setLoadFailed(true);
-          error(value);
-        }
-      } finally {
-        if (currentRequest === requestNumber.current) setLoading(false);
-      }
-    },
-    [
-      session,
-      tab,
-      shipments,
-      transportations,
-      registryQuery,
-      registryCursor,
-      shipmentQuery,
-      shipmentCursor,
-      error,
-    ],
-  );
-  // Первую страницу запрашиваем только при входе или переключении раздела.
-  useEffect(() => {
-    if (session) void load();
-    return () => {
-      requestNumber.current++;
-    };
-  }, [session, tab, registryQuery, shipmentQuery]);
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
     const controller = new AbortController();
@@ -434,34 +227,6 @@ export function App() {
     });
     return () => controller.abort();
   }, [session, error]);
-  useEffect(() => {
-    if (!session?.permissions.includes('counterparties.read')) return;
-    const ids = [...new Set(shipments.map((item) => item.customer_id))]
-      .filter((id) => !customers.some((item) => item.id === id))
-      .slice(0, 100);
-    if (!ids.length) return;
-    const controller = new AbortController();
-    void request<{ items: Counterparty[] }>(
-      '/api/v1/counterparties/list',
-      session,
-      { filters: [{ field: 'id', values: ids }], limit: 100 },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted && result.items.length)
-          setCustomers((old) => [
-            ...old,
-            ...result.items.filter((item) => !old.some((known) => known.id === item.id)),
-          ]);
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) error(reason);
-      });
-    return () => controller.abort();
-  }, [session, shipments, customers, error]);
-  const customerName = (id: string) =>
-    customers.find((item) => item.id === id)?.name || 'Клиент недоступен';
-  const write = session?.permissions.includes('shipments.write') ?? false;
   async function logout() {
     try {
       const result = await request<{ logout_url: string }>('/api/logout', session!, {});
@@ -715,109 +480,20 @@ export function App() {
           className={`workspace-content${workspaces.length ? '' : ' without-tabs'}${route === '/' ? ' home-screen' : ''}`}
         >
           {route === '/' && <WorkspaceHome permissions={session.permissions} />}
-          <div
-            className={`registry-page ${tab === 'transportations' ? 'transportation-registry' : 'shipment-registry'}`}
-            hidden={
-              tab === 'home' ||
-              tab === 'receipts' ||
-              tab === 'disbursements' ||
-              tab === 'counterparties' ||
-              tab === 'incoming-invoices' ||
-              tab === 'outgoing-invoices' ||
-              tab === 'contracts' ||
-              tab === 'financial-labels' ||
-              tab === 'service-charges' ||
-              creating ||
-              Boolean(shipmentId) ||
-              Boolean(transportationId) ||
-              route.startsWith('/transportations/new/')
-            }
-          >
-            <RegistryHeading
-              columns={tab === 'shipments' ? shipmentColumnState : transportationColumnState}
-              title={translate(tab === 'shipments' ? 'nav.shipments' : 'nav.transportations')}
-              count={tab === 'shipments' ? shipments.length : transportations.length}
-              loading={loading}
-              onRefresh={() => void load()}
-            >
-              {tab === 'shipments' && write && (
-                <button
-                  className="primary"
-                  onClick={() => {
-                    location.hash = '/shipments/new/' + crypto.randomUUID();
-                  }}
-                >
-                  {translate('action.createShipment')}
-                </button>
-              )}
-            </RegistryHeading>
-            <section className="surface" aria-busy={loading}>
-              {tab === 'shipments' ? (
-                <RegistryTable
-                  items={shipments}
-                  columns={shipmentColumnState}
-                  definitions={shipmentColumns}
-                  filters={shipmentFilters}
-                  sort={shipmentQuery.sort}
-                  descending={shipmentQuery.descending}
-                  onSort={(field) => {
-                    const sort = field as ShipmentSort;
-                    setShipmentCursor(undefined);
-                    setShipmentQuery((old) => ({
-                      ...old,
-                      sort,
-                      descending: old.sort === sort ? !old.descending : false,
-                    }));
-                  }}
-                  onOpen={(item) => {
-                    location.hash = `/shipments/${item.id}`;
-                  }}
-                />
-              ) : (
-                <>
-                  {routeFilters.editor}
-                  <TransportationTable
-                    routeFilter={routeFilters.button}
-                    routeFilterSummary={routeFilters.toolbar}
-                    items={transportations}
-                    filters={transportationFilters}
-                    columns={transportationColumnState}
-                    sort={registryQuery.sort}
-                    descending={registryQuery.descending}
-                    onSort={(sort: RegistrySort) => {
-                      setRegistryCursor(undefined);
-                      setRegistryQuery((old) => ({
-                        ...old,
-                        sort,
-                        descending: old.sort === sort ? !old.descending : false,
-                      }));
-                    }}
-                  />
-                </>
-              )}
-              {!loading && !(tab === 'shipments' ? shipments.length : transportations.length) && (
-                <div className="empty">
-                  <span>▣</span>
-                  <h2>
-                    {tab === 'shipments'
-                      ? translate('empty.shipments')
-                      : translate('empty.transportations')}
-                  </h2>
-                  <p>
-                    {tab === 'shipments'
-                      ? 'Измените фильтры или создайте поставку.'
-                      : 'Измените фильтры или создайте перевозку в карточке поставки.'}
-                  </p>
-                </div>
-              )}
-              <AutoLoadMore
-                enabled={more}
-                loading={loading}
-                failed={loadFailed}
-                onLoad={() => load(true)}
-              />
-            </section>
-          </div>
+          <ShipmentRegistry
+            session={session}
+            active={route === '/shipments'}
+            refreshVersion={shipmentRegistryVersion}
+            customers={customers}
+            onCustomersLoaded={rememberCustomers}
+            onError={error}
+          />
+          <TransportationRegistry
+            session={session}
+            active={route === '/transportations'}
+            refreshVersion={transportationRegistryVersion}
+            onError={error}
+          />
           {workspaces
             .filter((entry) => entry.route !== '/shipments' && entry.route !== '/transportations')
             .map((entry) => (
@@ -938,7 +614,7 @@ export function App() {
                     session={session}
                     customers={customers}
                     onError={error}
-                    onUpdate={updateShipment}
+                    onUpdate={() => setShipmentRegistryVersion((old) => old + 1)}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCreated={(value) => {
                       const next = `/shipments/${value.id}`;
@@ -950,7 +626,7 @@ export function App() {
                         ),
                       );
                       location.hash = next;
-                      void load();
+                      setShipmentRegistryVersion((old) => old + 1);
                     }}
                   />
                 ) : entry.route.startsWith('/transportations/new/') ? (
@@ -964,16 +640,12 @@ export function App() {
                         replaceWorkspace(old, entry.id, next, transportationTitle(value)),
                       );
                       location.hash = next;
-                      void load();
+                      setTransportationRegistryVersion((old) => old + 1);
                     }}
                   />
                 ) : (
                   <TransportationPage
-                    onChanged={(value) =>
-                      setTransportations((old) =>
-                        old.map((item) => (item.id === value.id ? value : item)),
-                      )
-                    }
+                    onChanged={() => setTransportationRegistryVersion((old) => old + 1)}
                     id={entry.id.split('/')[2]}
                     active={activeWorkspace === entry.id}
                     onTitle={(title) => renameWorkspace(entry.id, title)}

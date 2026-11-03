@@ -16,7 +16,8 @@ it('keeps shared controls free of hardcoded Russian interface text', () => {
 
 it('uses the shared registry heading and keeps column settings out of section markup', () => {
   const pages = [
-    '../../app/App.tsx',
+    '../shipments/ShipmentRegistryPage.tsx',
+    '../transportations/TransportationRegistryPage.tsx',
     '../counterparties/CounterpartiesPage.tsx',
     '../contracts/ContractsPage.tsx',
     '../finance/labels/FinancialLabelsPage.tsx',
@@ -33,6 +34,7 @@ it('uses the shared registry heading and keeps column settings out of section ma
 
 it('has an English heading for every standard registry column, including hidden ones', () => {
   const pages = [
+    '../shipments/ShipmentRegistryPage.tsx',
     '../counterparties/CounterpartiesPage.tsx',
     '../contracts/ContractsPage.tsx',
     '../finance/labels/FinancialLabelsPage.tsx',

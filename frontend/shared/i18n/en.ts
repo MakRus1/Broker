@@ -1,46 +1,190 @@
 import type { MessageKey } from "./catalog";
 export const en = {
+  "guide.bank":
+    "Add a bank account, currency and bank details. A primary account is selected separately for each currency; archived accounts are available through the list toggle.",
+  "guide.settlements":
+    "Review debt and overdue balances, open documents and prepare a reconciliation statement. Check the selected legal entity, contract and currency.",
+  "guide.transportRoute":
+    "Expand a leg to view its data. The shipment controls route structure; rail and road details are edited in the transportation.",
+  "guide.tabDescription":
+    "Open this tab to work with this section. Choose “Help for this tab” at the question mark to explore its available data.",
+  "guide.overview": "Card overview",
+  "guide.section": "Help for this tab",
+  "guide.filling": "Help with filling in",
+  "guide.overviewDescription":
+    "Tabs group the card into sections. Use the question mark for help with the current tab. In edit mode it provides guidance on filling in fields. Editing is available when you have permission to change this record.",
+  "guide.sectionNotice": "Need help with this section? Open help:",
+  "guide.fillingNotice": "Help with filling in the fields:",
+  "guide.routeStages":
+    "Each leg contains its locations, carrier and dates. Expand a leg for details. Sea and air data is entered in the shipment; other legs are entered in the transportation.",
+  "guide.routeCollapse":
+    "Expand individual legs or all legs together. Collapsing them does not change or delete data.",
+  "guide.bankArchive":
+    "Show archived accounts to find previously used bank details. Archived accounts are not offered for new documents.",
+  "guide.historyEvents":
+    "Entries show who changed the data and when. Open an entry to inspect the change.",
+  "guide.historyDetails":
+    "Inspect changed values in the details. Viewing history does not alter the current record.",
+  "guide.tax":
+    "Tax and registration details distinguish organizations with similar names. Check them before saving.",
+  "guide.address":
+    "This is the company’s registered address, distinct from the cargo delivery address.",
+  "guide.logist":
+    "The assigned coordinator is suggested when creating a shipment for this customer. It can be changed for an individual shipment.",
+  "guide.direction":
+    "The direction defines income or expense and is used in financial totals.",
+  "guide.unit":
+    "The unit is suggested for a new service charge using this label. Quantity is entered separately in the charge.",
+  "guide.labelCurrency":
+    "The default currency is suggested for new charges. Updating the label does not recalculate existing charges.",
+  "guide.labelVAT":
+    "Default VAT is suggested when selecting this label for a new charge. Check the rate in the charge itself.",
+  "guide.containerNumber":
+    "Leave the container number empty if it is not known yet. The format hint does not block saving.",
+  "guide.containerType":
+    "Container type and ownership describe the equipment. Choose the type from the directory.",
+  "guide.hazard":
+    "The hazardous cargo flag applies to this transportation and is shown in the registry.",
+  "guide.editorNotice":
+    "Help is available for this section. Edit mode has separate guidance for filling in fields. Open help:",
+  "guide.shipmentCustomerView":
+    "The customer is the counterparty for whom the shipment is organized. Its profile may have an assigned coordinator. Change the customer in shipment edit mode.",
+  "guide.shipmentRecipientView":
+    "The recipient may differ from the customer. New shipments initially use the customer as recipient, which can be changed separately.",
+  "guide.shipmentCargoView":
+    "The cargo description applies to the entire shipment. Previously used descriptions for the customer are available in edit mode.",
+  "guide.shipmentDeliveryView":
+    "This section contains the shipment’s delivery city, country and address. Transportation-specific details belong to their route legs.",
+  "guide.historyEmpty":
+    "When no entries exist there is nothing to inspect yet. Saving changes to the record adds entries with the author, time and changed values.",
+  "guide.tabRequisites":
+    "The counterparty’s legal and registration details, roles, assigned coordinator and contacts. Bank details have their own tab.",
+  "guide.tabMain":
+    "The record’s main details and linked objects. Review these values before entering edit mode.",
+  "guide.tabAccounts":
+    "The counterparty’s bank accounts by currency. Add details, choose a primary account and archive accounts no longer used.",
+  "guide.tabSettlements":
+    "Invoice balances, overdue amounts, unallocated payments and reconciliation. Filter by own legal entity, contract and currency.",
+  "guide.tabHistory":
+    "The record’s change log: author, time and changed values. Inspect how the record has changed.",
+  "guide.tabRoute":
+    "Route legs in travel order, origin and destination locations, planned and actual dates. The shipment controls the route structure.",
+  "guide.tabFinance":
+    "Income and expense charges, linked invoices and totals by currency. Shipment and transportation charges are counted without duplication.",
+  "guide.contractIdentityView":
+    "The number and date identify the contract. “Valid until” sets its expiry when applicable. These values are read-only in this view.",
+  "guide.contractPartiesView":
+    "The contract links an organization’s own legal entity and a counterparty. Follow the links to inspect the parties and their details.",
+  "guide.contractPaymentView":
+    "This section shows the contract currency and payment delay. The delay is used to calculate payment due dates for linked invoices.",
+  "guide.contractAdditionalView":
+    "The note contains additional terms and explanations. The archive status is displayed in the record header.",
+  "guide.title": "Form walkthrough",
+  "guide.legal":
+    "Enter the name and company details. Russian companies can be filled by tax ID; verify the result before saving. Mark a company as your own legal entity only if it belongs to your organization.",
+  "guide.roles":
+    "Choose one or more roles. They help find the counterparty and do not restrict participation in transportation.",
+  "guide.contacts":
+    "Add contact people and their contact details. Check phone numbers and email addresses.",
+  "guide.contractIdentity":
+    "Enter the contract date and number. On creation, leave the number for automatic generation using organization settings. Set an expiration date if needed.",
+  "guide.contractParties":
+    "Select your legal entity and the counterparty. The parties must differ. Your legal entities are selected from your organization companies.",
+  "guide.contractPayment":
+    "Set the currency, bank accounts and payment delay in days. The delay is used to calculate the payment due date; a manually entered due date is retained separately.",
+  "guide.additional":
+    "Use the note for additional information. Archiving hides the record from normal lists. Save using the bottom action bar.",
+  "guide.transportData":
+    "Set the transportation type. For containers, enter the number, type and ownership. A number format warning does not prevent saving. Mark hazardous cargo separately.",
+  "guide.transportTerms":
+    "Terms and route structure are inherited from the shipment. Change shared terms in the shipment and transportation-specific leg details in its route.",
+  "guide.serviceLabel":
+    "Choose a financial label and direction: income or expense. The label helps fill the unit, currency and VAT.",
+  "guide.serviceParties":
+    "Set the counterparty and optionally the contract. Select an existing invoice or create one in the invoice field. A service linked to a paid invoice is read-only.",
+  "guide.serviceCalculation":
+    "Check the service date, quantity, unit and price. The price can include or exclude VAT; amounts are calculated on the server.",
+  "guide.serviceCurrency":
+    "Service and invoice currencies can differ. The rate defaults to the service date; enter a manual rate if needed. Check the price mode and VAT.",
+  "guide.serviceAmounts":
+    "This shows the net amount, VAT and total. Service and invoice amounts are shown separately when currencies differ.",
+  "guide.invoiceIdentity":
+    "Check the invoice number and date. On creation, the number can be generated using the organization template.",
+  "guide.invoiceParties":
+    "Choose your legal entity and counterparty, then the appropriate contract. Invoice services must match its parties and currency.",
+  "guide.invoicePayment":
+    "Check the currency, bank accounts and payment due date. Editing is restricted after even a partial payment is allocated.",
+  "guide.invoiceServices":
+    "Add existing services or create new ones from the invoice. Open a service row to view it. An invoice can also be created without services.",
+  "guide.paymentIdentity":
+    "Set the payment number and date. The date determines the reporting and reconciliation period.",
+  "guide.receiptParties":
+    "Choose your legal entity and payer. A receipt can be allocated to several eligible outgoing invoices.",
+  "guide.disbursementParties":
+    "Choose your legal entity and recipient. Allocate the disbursement to eligible incoming invoices.",
+  "guide.paymentAllocation":
+    "Set the amount and currency. Allocate only the available balance, without exceeding the invoice debt. The unallocated part remains an advance.",
+  "guide.labelCalculation":
+    "Set the name, direction and defaults for new services: unit, currency and VAT. Existing services are not changed automatically.",
   "workflow.routeEditTitle": "Add route legs",
-  "workflow.routeEditHint": "In route editing, Add leg is at the bottom. Choose leg types and order. The walkthrough only highlights the button; you add legs yourself.",
+  "workflow.routeEditHint":
+    "In route editing, Add leg is at the bottom. Choose leg types and order. The walkthrough only highlights the button; you add legs yourself.",
   "workflow.routeDetailsTitle": "Fill shared leg details",
-  "workflow.routeDetailsHint": "Expand a leg to see its fields. Sea and air details are entered in the shipment. Rail and road details are entered in transportation cards. Use shipment editing to change shared details.",
+  "workflow.routeDetailsHint":
+    "Expand a leg to see its fields. Sea and air details are entered in the shipment. Rail and road details are entered in transportation cards. Use shipment editing to change shared details.",
   "workflow.planTitle": "Add planned containers",
-  "workflow.planHint": "This tab is enabled in your organization settings. Add a plan item with container type, ownership and quantity. An item describes demand, not an individual numbered container.",
+  "workflow.planHint":
+    "This tab is enabled in your organization settings. Add a plan item with container type, ownership and quantity. An item describes demand, not an individual numbered container.",
   "workflow.planQuantitiesTitle": "Compare plan and actual",
-  "workflow.planQuantitiesHint": "Each item shows planned quantity, created transportations and the available balance. Actual container transportations match the plan by type and ownership. Also review containers without a matching plan item.",
+  "workflow.planQuantitiesHint":
+    "Each item shows planned quantity, created transportations and the available balance. Actual container transportations match the plan by type and ownership. Also review containers without a matching plan item.",
   "workflow.planCreateTitle": "Create transportations from the plan",
-  "workflow.planCreateHint": "Choose Create transportations in a plan item and enter the quantity. They appear in Transportations after creation. Container numbers are entered separately; neither the plan nor the walkthrough generates them.",
+  "workflow.planCreateHint":
+    "Choose Create transportations in a plan item and enter the quantity. They appear in Transportations after creation. Container numbers are entered separately; neither the plan nor the walkthrough generates them.",
   "workflow.transportListTitle": "Open a transportation card",
-  "workflow.transportListHint": "Open a transportation in the table to fill its fields and route legs. Create one using the button above the table.",
+  "workflow.transportListHint":
+    "Open a transportation in the table to fill its fields and route legs. Create one using the button above the table.",
   "workflow.financeSummaryTitle": "Review the summary",
-  "workflow.financeSummaryHint": "Expand the summary to compare income and expenses. Shipment and transportation services are combined without double counting. Different currencies are not added without conversion.",
+  "workflow.financeSummaryHint":
+    "Expand the summary to compare income and expenses. Shipment and transportation services are combined without double counting. Different currencies are not added without conversion.",
   "workflow.financeInvoiceTitle": "Link a service to an invoice",
-  "workflow.financeInvoiceHint": "Open a service by clicking its row. In Invoice, select an existing invoice or create one. The invoice card provides payment allocation. You perform these actions; the walkthrough never issues invoices or makes payments.",
+  "workflow.financeInvoiceHint":
+    "Open a service by clicking its row. In Invoice, select an existing invoice or create one. The invoice card provides payment allocation. You perform these actions; the walkthrough never issues invoices or makes payments.",
   "workflow.customerTitle": "Choose the customer",
-  "workflow.customerHint": "Search by name or tax ID. Selecting a customer also fills the recipient; an assigned logistics coordinator may be filled from the counterparty card.",
+  "workflow.customerHint":
+    "Search by name or tax ID. Selecting a customer also fills the recipient; an assigned logistics coordinator may be filled from the counterparty card.",
   "workflow.recipientTitle": "Check the recipient",
-  "workflow.recipientHint": "Select the recipient from counterparties. Change it here if another company receives the cargo.",
+  "workflow.recipientHint":
+    "Select the recipient from counterparties. Change it here if another company receives the cargo.",
   "workflow.logistTitle": "Assign a logistics coordinator",
-  "workflow.logistHint": "Choose an organization employee. You can replace the coordinator suggested for the customer; this affects this shipment.",
+  "workflow.logistHint":
+    "Choose an organization employee. You can replace the coordinator suggested for the customer; this affects this shipment.",
   "workflow.cargoTitle": "Describe the cargo",
-  "workflow.cargoHint": "Enter a description or select a previously used one. Suggestions reuse customer descriptions; incorrect suggestions can be removed.",
+  "workflow.cargoHint":
+    "Enter a description or select a previously used one. Suggestions reuse customer descriptions; incorrect suggestions can be removed.",
   "workflow.termsTitle": "Set the terms",
-  "workflow.termsHint": "Select Incoterms, carriage terms and loading from the dictionaries. These terms are shared by the shipment transportations and edited here.",
+  "workflow.termsHint":
+    "Select Incoterms, carriage terms and loading from the dictionaries. These terms are shared by the shipment transportations and edited here.",
   "workflow.deliveryTitle": "Set delivery details",
-  "workflow.deliveryHint": "Choose a city, check the country and enter the delivery address. Save the shipment using the bottom bar when ready. The walkthrough never saves automatically.",
+  "workflow.deliveryHint":
+    "Choose a city, check the country and enter the delivery address. Save the shipment using the bottom bar when ready. The walkthrough never saves automatically.",
   "workflow.title": "Shipment walkthrough",
   "workflow.progress": "Step {current} of {total}",
   "workflow.previous": "Back",
   "workflow.next": "Next",
   "workflow.finish": "Finish walkthrough",
   "workflow.detailsTitle": "Check the shipment details",
-  "workflow.detailsHint": "The Overview contains the customer, recipient, date and logistics coordinator. Choose Edit to change them. Save separately: this walkthrough does not change your data.",
+  "workflow.detailsHint":
+    "The Overview contains the customer, recipient, date and logistics coordinator. Choose Edit to change them. Save separately: this walkthrough does not change your data.",
   "workflow.routeTitle": "Build the route",
-  "workflow.routeHint": "Set the legs and their order in Route. Sea and air details belong to the shipment; other leg details belong to transportations. Transportations inherit changes to the route structure.",
+  "workflow.routeHint":
+    "Set the legs and their order in Route. Sea and air details belong to the shipment; other leg details belong to transportations. Transportations inherit changes to the route structure.",
   "workflow.transportTitle": "Add transportations",
-  "workflow.transportHint": "Create a transportation in the Transportations tab and enter its details. Open its card to fill in its route legs.",
+  "workflow.transportHint":
+    "Create a transportation in the Transportations tab and enter its details. Open its card to fill in its route legs.",
   "workflow.financeTitle": "Continue with services and payment",
-  "workflow.financeHint": "Add an income or expense service in Finance. Select or create an invoice from the service. Allocate payment from the invoice, receipt or disbursement. Transportation services are included in the shipment summary without double counting.",
+  "workflow.financeHint":
+    "Add an income or expense service in Finance. Select or create an invoice from the service. Allocate payment from the invoice, receipt or disbursement. Transportation services are included in the shipment summary without double counting.",
   "nav.shipments": "Shipments",
   "nav.transportations": "Transportations",
   "nav.counterparties": "Counterparties",
@@ -1136,8 +1280,10 @@ export const en = {
   "print.bic": "BIC {value}",
   "print.correspondent": "Correspondent account {value}",
   "validation.noChanges": "No changes to save",
-  "validation.checkFields": "Check the highlighted fields. Your changes have not been saved.",
-  "validation.revisionConflict": "This record was changed by another user. Your changes were not saved and remain in the form. Compare them with the current record before saving again.",
+  "validation.checkFields":
+    "Check the highlighted fields. Your changes have not been saved.",
+  "validation.revisionConflict":
+    "This record was changed by another user. Your changes were not saved and remain in the form. Compare them with the current record before saving again.",
   "validation.required": "Fill in this required field",
   "empty.shipmentHint": "Change the filters or create a shipment.",
   "registry.help": "Table guide",

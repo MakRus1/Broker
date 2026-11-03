@@ -296,7 +296,9 @@ export function InvoicesPage({
   function cancel() {
     confirmDiscard(dirty, () => {
       setFailure('');
-      onCancel();
+      validation.reset();
+      if (creating) onCancel();
+      else setDraft(undefined);
     });
   }
 
@@ -373,6 +375,7 @@ export function InvoicesPage({
       ) : (
         <>
           <RecordHeading
+            guide="invoice"
             kind={translate(
               direction === 'incoming' ? 'forms.incomingINVOICE' : 'forms.outgoingINVOICE',
             )}

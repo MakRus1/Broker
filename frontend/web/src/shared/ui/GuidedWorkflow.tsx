@@ -5,7 +5,12 @@ import { useLocalization } from '../../features/localization/Localization';
 import type { MessageKey } from '../../../../shared/i18n/catalog';
 import './guidedWorkflow.css';
 
-export type WorkflowStep = { id: string; title: MessageKey; description: MessageKey };
+export type WorkflowStep = {
+  id: string;
+  title: MessageKey;
+  titleText?: string;
+  description: MessageKey;
+};
 type Progress = { status: 'ready' | 'active' | 'skipped' | 'completed'; step: string };
 export function restoreWorkflow(raw: unknown, steps: readonly WorkflowStep[]): Progress {
   const value = raw as Partial<Progress> | null;
@@ -25,12 +30,16 @@ export function GuidedWorkflow({
   onOpen,
   getTarget,
   active = true,
+  title = 'workflow.title',
+  textButton = false,
 }: {
   preference: string;
   steps: readonly WorkflowStep[];
   onOpen: (id: string, proceed: () => void) => void;
   getTarget: (id: string) => HTMLElement | null;
   active?: boolean;
+  title?: MessageKey;
+  textButton?: boolean;
 }) {
   const { translate } = useLocalization();
   const [progress, setProgress] = useRegistryPreference<Progress>(
@@ -60,7 +69,10 @@ export function GuidedWorkflow({
   const visible = open && active && !!step;
   function close() {
     setOpen(false);
-    opener.current?.focus({ preventScroll: true });
+    const menu = opener.current?.closest('details');
+    const focusTarget =
+      menu && !menu.open ? menu.querySelector<HTMLElement>('summary') : opener.current;
+    focusTarget?.focus({ preventScroll: true });
   }
   useEffect(() => {
     if (!visible) return;
@@ -125,25 +137,34 @@ export function GuidedWorkflow({
       <button
         ref={opener}
         type="button"
-        className="workflow-help"
-        aria-label={translate('workflow.title')}
-        title={translate('workflow.title')}
+        className={textButton ? 'workflow-help workflow-help-text' : 'workflow-help'}
+        aria-label={translate(title)}
+        title={translate(title)}
         aria-haspopup="dialog"
         aria-expanded={visible}
-        onClick={() => (visible ? close() : show(progress.status === 'completed' ? 0 : index))}
+        onClick={() => {
+          const menu = opener.current?.closest('details');
+          if (menu) menu.open = false;
+          if (visible) close();
+          else show(progress.status === 'completed' ? 0 : index);
+        }}
       >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16v1" />
-        </svg>
+        {textButton ? (
+          translate(title)
+        ) : (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16v1" />
+          </svg>
+        )}
       </button>
       {visible &&
         createPortal(
@@ -167,7 +188,18 @@ export function GuidedWorkflow({
                 aria-label={translate('ui.close')}
                 onClick={close}
               >
-                ×
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 6 12 12M18 6 6 18" />
+                </svg>
               </button>
             </div>
             <div
@@ -176,7 +208,7 @@ export function GuidedWorkflow({
               aria-live="polite"
               aria-atomic="true"
             >
-              <h3 id={titleId}>{translate(step.title)}</h3>
+              <h3 id={titleId}>{step.titleText ?? translate(step.title)}</h3>
               <p id={descriptionId}>{translate(step.description)}</p>
             </div>
             <div className="workflow-coachmark-actions">

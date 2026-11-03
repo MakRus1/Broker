@@ -1,3 +1,4 @@
+import { RecordGuide } from '../../../shared/ui/record/RecordGuide';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import { DateInput } from '../../../shared/dates/DateInput';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
@@ -258,15 +259,18 @@ export function ServiceChargeEditor({
         className="finance-charge-form document-editor"
       >
         {showHeading && (
-          <h2>
-            {readOnly
-              ? translate('finance.viewService')
-              : draft.revision
-                ? translate('finance.editService')
-                : draft.direction === 'income'
-                  ? translate('finance.newIncome')
-                  : translate('finance.newExpense')}
-          </h2>
+          <div className="service-editor-guide-heading">
+            <h2>
+              {readOnly
+                ? translate('finance.viewService')
+                : draft.revision
+                  ? translate('finance.editService')
+                  : draft.direction === 'income'
+                    ? translate('finance.newIncome')
+                    : translate('finance.newExpense')}
+            </h2>
+            <RecordGuide kind="service" />
+          </div>
         )}
         <fieldset disabled={busy || readOnly}>
           <RecordSection title={translate('record.identification')}>

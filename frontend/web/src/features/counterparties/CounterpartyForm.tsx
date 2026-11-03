@@ -141,6 +141,7 @@ export function CounterpartyForm({
         onInput={validation.onInput}
       >
         <RecordHeading
+          guide="counterparty"
           kind={translate('nav.counterparties')}
           title={initial ? initial.name : translate('entity.newCounterparty')}
           mode={translate(initial ? 'counterparty.editCounterparty' : 'record.creating')}

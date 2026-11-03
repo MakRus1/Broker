@@ -1,3 +1,4 @@
+import { RecordHeading } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../registry/registryLabels';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
@@ -257,14 +258,7 @@ export function CounterpartiesPage({
     );
   if (creating || id)
     return (
-      <section
-        className={`creation-page surface counterparty-page${editing ? ' record-workbench financial-record-workbench' : ''}`}
-      >
-        {!editing && (
-          <a className="link" href="#/counterparties">
-            {translate('counterparty.backToCounterparties')}
-          </a>
-        )}
+      <section className="surface counterparty-page record-workbench">
         {failure && (
           <p role="alert" className="error">
             {failure}
@@ -296,40 +290,38 @@ export function CounterpartiesPage({
         ) : (
           item && (
             <>
-              <div className="page-heading counterparty-heading">
-                <div>
-                  <p className="eyebrow">
-                    {item.own_company
-                      ? translate('counterparty.ownLEGALENTITY')
-                      : translate('counterparty.counterpartyLEGALENTITY')}
-                  </p>
-                  <h1>{item.name}</h1>
-                  <p>
-                    {item.archived ? translate('filter.archived') : translate('filter.active')}
-                    {' · '}
-                    {translate('forms.revisionValue', { revision: item.revision })}
-                  </p>
-                </div>
-                <div className="actions">
-                  {write && !item.archived && (
-                    <a className="primary" href={`#/counterparties/${item.id}/edit`}>
-                      {translate('shipment.edit')}
-                    </a>
-                  )}
-                  {write && (
-                    <button
-                      onClick={() => {
-                        setArchiveFailure('');
-                        setArchiving(true);
-                      }}
-                    >
-                      {item.archived
-                        ? translate('counterparty.restore')
-                        : translate('counterparty.archive')}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <RecordHeading
+                guide="counterparty"
+                kind={
+                  item.own_company
+                    ? translate('counterparty.ownLEGALENTITY')
+                    : translate('counterparty.counterpartyLEGALENTITY')
+                }
+                title={item.name}
+                status={translate(item.archived ? 'filter.archived' : 'filter.active')}
+                metadata={translate('forms.revisionValue', { revision: item.revision })}
+                actions={
+                  <>
+                    {write && !item.archived && (
+                      <a className="primary" href={`#/counterparties/${item.id}/edit`}>
+                        {translate('shipment.edit')}
+                      </a>
+                    )}
+                    {write && (
+                      <button
+                        onClick={() => {
+                          setArchiveFailure('');
+                          setArchiving(true);
+                        }}
+                      >
+                        {item.archived
+                          ? translate('counterparty.restore')
+                          : translate('counterparty.archive')}
+                      </button>
+                    )}
+                  </>
+                }
+              />
               {item.archived && (
                 <p className="route-notice">{translate('counterparty.archivedHint')}</p>
               )}

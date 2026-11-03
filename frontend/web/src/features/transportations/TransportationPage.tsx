@@ -161,6 +161,7 @@ export function TransportationPage({
     <div className="transportation-page">
       <section className="surface record-workbench transportation-workbench">
         <RecordHeading
+          guide="transportation"
           kind={translate('forms.transportation')}
           title={transportationTitle(transportation, locale)}
           status={transportation.hazardous ? translate('registryField.hazardous') : undefined}

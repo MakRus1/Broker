@@ -76,6 +76,7 @@ export function ServiceChargePage({
       ) : (
         <>
           <RecordHeading
+            guide="service"
             kind={translate('entity.serviceCharge')}
             title={value.charge.label_name}
             status={translate(value.charge.archived ? 'filter.archived' : 'finance.activeService')}
@@ -114,7 +115,7 @@ export function ServiceChargePage({
               readOnly={readOnly}
               showHeading={false}
               showNavigation={false}
-              onCancel={onClose}
+              onCancel={() => setEditing(false)}
               onSaved={() => {
                 window.dispatchEvent(new Event('finance-charges-changed'));
                 setEditing(false);

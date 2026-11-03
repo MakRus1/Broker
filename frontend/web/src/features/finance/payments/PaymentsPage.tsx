@@ -253,7 +253,9 @@ export function PaymentsPage({
   function cancel() {
     confirmDiscard(dirty, () => {
       setFailure('');
-      onCancel();
+      validation.reset();
+      if (creating) onCancel();
+      else setDraft(undefined);
     });
   }
 
@@ -342,6 +344,7 @@ export function PaymentsPage({
     <section className="payment-page surface record-workbench financial-record-workbench">
       {confirmation}
       <RecordHeading
+        guide={receipt ? 'receipt' : 'disbursement'}
         kind={title}
         title={
           creating

@@ -83,3 +83,30 @@ export function shipmentStepTab(id: string): string {
 export function shipmentStepEditing(id: string): boolean {
   return shipmentFieldSteps.has(id) || id === 'route-edit';
 }
+
+export function shipmentContextSteps(
+  tab: string,
+  editing: boolean,
+  finance: boolean,
+  planned: boolean,
+): WorkflowStep[] {
+  const steps = shipmentWorkflow(finance, planned).filter(
+    (step) =>
+      shipmentStepTab(step.id) === tab &&
+      (tab === 'details' || (tab === 'route' && editing) || !shipmentStepEditing(step.id)),
+  );
+  if (editing) return steps.filter((step) => step.id !== 'details' && step.id !== 'route');
+  const viewFields: Record<string, [WorkflowStep['title'], WorkflowStep['description']]> = {
+    customer: ['field.customer', 'guide.shipmentCustomerView'],
+    recipient: ['shipment.recipient', 'guide.shipmentRecipientView'],
+    logist: ['shipment.logist', 'guide.logist'],
+    cargo: ['shipment.cargoDescription', 'guide.shipmentCargoView'],
+    terms: ['shipment.cargoTerms', 'guide.transportTerms'],
+    delivery: ['shipment.delivery', 'guide.shipmentDeliveryView'],
+  };
+  return steps.map((step) =>
+    viewFields[step.id]
+      ? { ...step, title: viewFields[step.id][0], description: viewFields[step.id][1] }
+      : step,
+  );
+}

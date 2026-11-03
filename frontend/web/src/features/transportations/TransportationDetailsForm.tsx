@@ -203,6 +203,7 @@ export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
   return (
     <section className="creation-page surface record-workbench transportation-workbench">
       <RecordHeading
+        guide="transportation"
         kind={translate('forms.transportation')}
         title={translate('entity.newTransportation')}
         actions={

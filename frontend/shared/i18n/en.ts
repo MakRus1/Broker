@@ -41,7 +41,7 @@ export const en = {
   "registry.columns": "Columns",
   "registry.columnsTitle": "Table columns",
   "registry.columnsHint":
-    "Drag a header to reorder columns, or its edge to resize.",
+    "Drag a row using the grip on the left, or use the up and down buttons. Checkboxes control visibility. Resize using the header edge in the table itself.",
   "registry.resetColumns": "Reset columns",
   "registry.new": "New",
   "registry.newColumns": "New columns available",
@@ -1070,4 +1070,32 @@ export const en = {
   "print.correspondent": "Correspondent account {value}",
   "validation.required": "Fill in this required field",
   "empty.shipmentHint": "Change the filters or create a shipment.",
+  "registry.help": "Table guide",
+  "registry.guideTitle": "Make this table work for you",
+  "registry.guideFilters":
+    "Use the filter icon in a column heading. Click a heading to sort.",
+  "registry.guideColumns":
+    "Choose the fields you need in Columns. Drag a heading to change their order.",
+  "registry.guideSaved":
+    "Your preferences are saved. Hiding a column keeps its filter active.",
+  "registry.dismissGuide": "Dismiss this tip",
+  "registry.quickTip":
+    "Filter using the heading icon; sort by clicking the column name.",
+  "registry.noMatches": "No results match these filters",
+  "registry.noMatchesHint":
+    "Try changing the conditions or clearing the filters.",
+  "registry.loadFailed": "Could not load the table",
+  "registry.loadFailedHint":
+    "Try again. Your filters and preferences are kept.",
+  "registry.firstShipment": "Start with your first shipment",
+  "registry.firstShipmentHint":
+    "Add the customer and cargo. You can add the route and transportations later.",
+  "registry.openRow": "Click a row to open its details",
+  "registry.dragColumn": "Drag “{field}” to reorder",
+  "registry.moveUp": "Move “{field}” up",
+  "registry.moveDown": "Move “{field}” down",
+  "registry.emptyCreateHint":
+    "Create the first record to see it in this table.",
+  "registry.emptyReadOnlyHint":
+    "Records available to you in this section will appear here.",
 } satisfies Record<MessageKey, string>;

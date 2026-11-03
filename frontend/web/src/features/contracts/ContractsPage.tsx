@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { useLocalization } from '../localization/Localization';
 import { BankAccountSelect } from '../counterparties/BankAccountSelect';
@@ -456,7 +457,7 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card record-page registry-page contracts-page">
+      <section className="card record-page registry-page contracts-page registry-workbench">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.contracts')}
@@ -470,7 +471,7 @@ export function ContractsPage({
             </a>
           )}
         </RegistryHeading>
-        {failure && (
+        {failure && items.length > 0 && (
           <p className="error" role="alert">
             {failure}
           </p>
@@ -478,13 +479,27 @@ export function ContractsPage({
         <RegistryTable
           items={items}
           emptyMessage={
-            loading
-              ? translate('common.loading')
-              : failure
-                ? undefined
-                : registryQuery.filters.length > 1
-                  ? translate('registryPage.noMatchingContracts')
-                  : translate('registryPage.noContracts')
+            <RegistryResultState
+              loading={loading}
+              failed={Boolean(failure)}
+              failureMessage={failure}
+              filtered={Boolean(registryQuery.filters?.length)}
+              title={translate('registryPage.noContracts')}
+              onRetry={() => {
+                setVersion((value) => value + 1);
+              }}
+              onReset={() => setRegistryQuery((old) => ({ ...old, filters: [] }))}
+              create={
+                write
+                  ? {
+                      label: translate('entity.newContract'),
+                      onClick: () => {
+                        location.hash = '/contracts/new';
+                      },
+                    }
+                  : undefined
+              }
+            />
           }
           columns={columnState}
           filters={columnFilters}

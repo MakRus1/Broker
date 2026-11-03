@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { InvoicePdfArchiveDialog } from './print/InvoicePdfArchiveDialog';
@@ -242,7 +243,7 @@ export function InvoiceRegistry({
   ];
   const columnState = useRegistryColumns(session.subject, `${direction}-invoices`, columns);
   return (
-    <section className="invoice-registry">
+    <section className="invoice-registry registry-workbench">
       <RegistryHeading
         columns={columnState}
         title={
@@ -323,7 +324,7 @@ export function InvoiceRegistry({
           }}
         />
       )}
-      {failure && (
+      {failure && items.length > 0 && (
         <p className="error" role="alert">
           {failure}
         </p>
@@ -412,11 +413,27 @@ export function InvoiceRegistry({
           location.hash = `${base}/${item.id}`;
         }}
         emptyMessage={
-          loading
-            ? translate('common.loading')
-            : failure
-              ? undefined
-              : translate('registryPage.noInvoices')
+          <RegistryResultState
+            loading={loading}
+            failed={Boolean(failure)}
+            failureMessage={failure}
+            filtered={Boolean(query.filters?.length)}
+            title={translate('registryPage.noInvoices')}
+            onRetry={() => {
+              setVersion((value) => value + 1);
+            }}
+            onReset={() => setQuery((old) => ({ ...old, filters: [] }))}
+            create={
+              !scope && session.permissions.includes('finance.write_invoices')
+                ? {
+                    label: translate('registryPage.addInvoice'),
+                    onClick: () => {
+                      location.hash = `${base}/new`;
+                    },
+                  }
+                : undefined
+            }
+          />
         }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />

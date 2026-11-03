@@ -1,0 +1,225 @@
+/* Shared registry layout, controls and feedback. */
+.registry-workbench .registry-heading {
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 20px;
+}
+.registry-workbench .registry-heading h1 {
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: -0.4px;
+}
+.registry-workbench .registry-heading > .actions {
+  gap: 8px;
+}
+.registry-workbench .registry-heading > .actions > .primary {
+  order: 2;
+}
+.registry-workbench .registry-heading > .actions > button,
+.registry-workbench .registry-heading > .actions > a.button,
+.registry-workbench .registry-heading .registry-column-settings > button {
+  height: 36px;
+  min-height: 36px;
+  border-radius: 7px;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+.registry-guide {
+  position: relative;
+  width: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.registry-guide summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 0 8px;
+}
+.registry-guide summary::-webkit-details-marker {
+  display: none;
+}
+.registry-guide summary:hover {
+  color: var(--accent-text);
+}
+.registry-guide summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.registry-guide-content {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: min(360px, calc(100vw - 64px));
+  box-sizing: border-box;
+  z-index: 25;
+  box-shadow: 0 8px 24px var(--shadow);
+  margin-top: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  line-height: 1.6;
+  animation: registry-reveal 140ms ease-out;
+}
+.registry-guide-content strong {
+  color: var(--text);
+}
+.registry-guide-content p {
+  margin: 8px 0 0;
+}
+.registry-tip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.registry-tip > svg {
+  flex-shrink: 0;
+}
+.registry-tip > button {
+  margin-left: auto;
+  flex: 0 0 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  line-height: 1;
+  padding: 0;
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 19px;
+}
+.registry-workbench .registry-workbench-surface {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.registry-workbench .registry-filter-toolbar {
+  gap: 8px;
+  min-height: 36px;
+}
+.registry-workbench .personal-registry-table th {
+  padding: 10px 16px;
+  background: var(--surface-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.registry-workbench .personal-registry-table td {
+  padding: 14px 16px;
+  line-height: 20px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--divider);
+}
+.registry-workbench .personal-registry-table tbody tr {
+  transition: background-color 120ms ease;
+}
+.registry-workbench .personal-registry-table tr.clickable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.registry-workbench .registry-column-resize {
+  opacity: 0.2;
+  transition: opacity 120ms ease;
+}
+.registry-workbench th:hover .registry-column-resize {
+  opacity: 1;
+}
+.registry-workbench .badge {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+}
+.registry-empty-state {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  animation: registry-reveal 160ms ease-out;
+}
+.registry-empty-state > svg {
+  margin-bottom: 14px;
+  color: var(--text-muted);
+}
+.registry-empty-state h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+}
+.registry-empty-state p {
+  max-width: 420px;
+  margin: 9px 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.registry-workbench button {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+@keyframes registry-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 760px) {
+  .registry-workbench .registry-heading > .actions {
+    width: 100%;
+  }
+  .registry-guide summary {
+    justify-content: flex-start;
+  }
+  .registry-guide-content {
+    right: auto;
+    left: 0;
+  }
+  .registry-tip {
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .registry-workbench *,
+  .registry-guide-content,
+  .registry-empty-state {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.registry-workbench .registry-heading > .registry-tip {
+  flex-basis: 100%;
+  margin: 0;
+}
+.registry-empty:has(.registry-empty-state) {
+  padding: 0;
+}
+.registry-loading {
+  padding: 24px 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}

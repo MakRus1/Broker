@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useLocalization } from '../../localization/Localization';
@@ -312,7 +313,7 @@ export function FinancialLabelsPage({
     );
   if (!id && !creating)
     return (
-      <section className="record-page registry-page financial-label-page">
+      <section className="record-page registry-page financial-label-page registry-workbench">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.financialLabels')}
@@ -326,7 +327,7 @@ export function FinancialLabelsPage({
             </a>
           )}
         </RegistryHeading>
-        {failure && (
+        {failure && items.length > 0 && (
           <p className="error" role="alert">
             {failure}
           </p>
@@ -349,11 +350,27 @@ export function FinancialLabelsPage({
             location.hash = `/financial-labels/${item.id}`;
           }}
           emptyMessage={
-            loading
-              ? translate('common.loading')
-              : failure
-                ? undefined
-                : translate('registryPage.noLabels')
+            <RegistryResultState
+              loading={loading}
+              failed={Boolean(failure)}
+              failureMessage={failure}
+              filtered={Boolean(query.filters?.length)}
+              title={translate('registryPage.noLabels')}
+              onRetry={() => {
+                setVersion((value) => value + 1);
+              }}
+              onReset={() => setQuery((old) => ({ ...old, filters: [] }))}
+              create={
+                write
+                  ? {
+                      label: translate('registryPage.newLabel'),
+                      onClick: () => {
+                        location.hash = '/financial-labels/new';
+                      },
+                    }
+                  : undefined
+              }
+            />
           }
         />
         <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />

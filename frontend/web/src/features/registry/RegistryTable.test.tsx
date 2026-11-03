@@ -43,6 +43,7 @@ it('сохраняет соответствие заголовков и ячее
         setColumns: () => {},
         newColumns: [],
         acknowledgeColumns: () => {},
+        guidanceKey: '',
       }}
       sort="name"
       descending={true}

@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { useLocalization } from '../../localization/Localization';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useEffect, useState } from 'react';
@@ -159,7 +160,7 @@ export function PaymentRegistry({
   ];
   const columnState = useRegistryColumns(session.subject, `${kind}-payments`, columns);
   return (
-    <section className="invoice-registry">
+    <section className="invoice-registry registry-workbench">
       <RegistryHeading
         columns={columnState}
         title={
@@ -181,7 +182,7 @@ export function PaymentRegistry({
           </a>
         )}
       </RegistryHeading>
-      {failure && (
+      {failure && items.length > 0 && (
         <p className="error" role="alert">
           {failure}
         </p>
@@ -204,11 +205,31 @@ export function PaymentRegistry({
           location.hash = `${base}/${item.id}`;
         }}
         emptyMessage={
-          loading
-            ? translate('common.loading')
-            : failure
-              ? undefined
-              : translate('registryPage.noPayments')
+          <RegistryResultState
+            loading={loading}
+            failed={Boolean(failure)}
+            failureMessage={failure}
+            filtered={Boolean(query.filters?.length)}
+            title={translate('registryPage.noPayments')}
+            onRetry={() => {
+              setVersion((value) => value + 1);
+            }}
+            onReset={() => setQuery((old) => ({ ...old, filters: [] }))}
+            create={
+              !scope && session.permissions.includes('finance.write_payments')
+                ? {
+                    label: translate(
+                      kind === 'receipt'
+                        ? 'registryPage.addReceipt'
+                        : 'registryPage.addDisbursement',
+                    ),
+                    onClick: () => {
+                      location.hash = `${base}/new`;
+                    },
+                  }
+                : undefined
+            }
+          />
         }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />

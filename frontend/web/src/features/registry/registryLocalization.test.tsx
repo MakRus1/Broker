@@ -22,6 +22,7 @@ it('keeps business actions, columns and refresh together in the shared heading',
     setColumns: () => {},
     newColumns: [],
     acknowledgeColumns: () => {},
+    guidanceKey: '',
   };
   const html = renderToStaticMarkup(
     <RegistryHeading title="Transportations" count={12} columns={columns} onRefresh={() => {}}>
@@ -45,6 +46,7 @@ it('translates composite route columns and empty states', () => {
         setColumns: () => {},
         newColumns: [],
         acknowledgeColumns: () => {},
+        guidanceKey: '',
       }}
       items={[
         {

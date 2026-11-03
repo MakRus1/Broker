@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
@@ -334,7 +335,7 @@ export function ServiceChargeRegistry({
   ];
   const state = useRegistryColumns(session.subject, 'service-charges', columns);
   return (
-    <section className="service-charge-registry registry-page">
+    <section className="service-charge-registry registry-page registry-workbench">
       <RegistryHeading
         columns={state}
         title={translate('nav.serviceCharges')}
@@ -406,7 +407,7 @@ export function ServiceChargeRegistry({
           }}
         />
       )}
-      {failure && (
+      {failure && items.length > 0 && (
         <p className="error" role="alert">
           {failure}
         </p>
@@ -490,11 +491,22 @@ export function ServiceChargeRegistry({
             : undefined,
         })}
         emptyMessage={
-          loading
-            ? translate('common.loading')
-            : failure
-              ? undefined
-              : translate('registryPage.noCharges')
+          <RegistryResultState
+            loading={loading}
+            failed={Boolean(failure)}
+            failureMessage={failure}
+            filtered={Boolean(query.filters?.length)}
+            title={translate('registryPage.noCharges')}
+            onRetry={() => {
+              setRefresh((value) => value + 1);
+            }}
+            onReset={() => setQuery((old) => ({ ...old, filters: [] }))}
+            create={
+              write
+                ? { label: translate('registryPage.addIncome'), onClick: () => onCreate('income') }
+                : undefined
+            }
+          />
         }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />

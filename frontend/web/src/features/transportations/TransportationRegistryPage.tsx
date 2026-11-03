@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { useCallback } from 'react';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
@@ -63,7 +64,7 @@ export function TransportationRegistry({
   );
   const columns = useRegistryColumns(session.subject, 'transportations', transportationColumns);
   return (
-    <div className="registry-page transportation-registry" hidden={!active}>
+    <div className="registry-page transportation-registry registry-workbench" hidden={!active}>
       <RegistryHeading
         columns={columns}
         title={translate('nav.transportations')}
@@ -71,7 +72,7 @@ export function TransportationRegistry({
         loading={page.loading}
         onRefresh={() => void page.refresh()}
       />
-      <section className="surface" aria-busy={page.loading}>
+      <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         {routeFilters.editor}
         <TransportationTable
           routeFilter={routeFilters.button}
@@ -89,12 +90,15 @@ export function TransportationRegistry({
             }))
           }
         />
-        {!page.loading && !page.items.length && (
-          <div className="empty">
-            <span>▣</span>
-            <h2>{translate('empty.transportations')}</h2>
-            <p>{translate('transport.emptyRegistry')}</p>
-          </div>
+        {!page.items.length && (
+          <RegistryResultState
+            loading={page.loading}
+            failed={page.failed}
+            filtered={Boolean(query.filters?.length || query.route_filters?.length)}
+            title={translate('empty.transportations')}
+            onRetry={() => void page.refresh()}
+            onReset={() => setQuery((old) => ({ ...old, filters: [], route_filters: [] }))}
+          />
         )}
         <AutoLoadMore
           enabled={active && page.more}

@@ -1,3 +1,4 @@
+import './registryControls.css';
 import { useLocalization } from '../localization/Localization';
 import {
   RegistryFilterToolbar,
@@ -38,7 +39,14 @@ export function useRegistryColumns(
   }, [subject, knownColumns, definitionSignature]);
   const newColumns = newColumnIds(knownColumns, definitions);
   const acknowledgeColumns = () => setKnownColumns(definitions.map((column) => column.id));
-  return { columns, setColumns, definitions, newColumns, acknowledgeColumns };
+  return {
+    columns,
+    setColumns,
+    definitions,
+    newColumns,
+    acknowledgeColumns,
+    guidanceKey: preferenceKey(subject, registry, 'guide-dismissed'),
+  };
 }
 export type RegistryColumns = ReturnType<typeof useRegistryColumns>;
 export function RegistryColumnSettings({
@@ -55,6 +63,36 @@ export function RegistryColumnSettings({
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState<string[]>([]);
   const panelId = useId();
+  const reorder = useRef<{ id: string; target: string; side: 'before' | 'after' } | null>(null);
+  const [movingColumn, setMovingColumn] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; side: 'before' | 'after' } | null>(
+    null,
+  );
+  function finishReorder(commit: boolean) {
+    const move = reorder.current;
+    if (commit && move) setColumns((old) => placeColumn(old, move.id, move.target, move.side));
+    reorder.current = null;
+    setMovingColumn(null);
+    setDropTarget(null);
+  }
+  function targetAt(y: number) {
+    const rows = [...(ref.current?.querySelectorAll<HTMLElement>('[data-settings-column]') ?? [])];
+    const row = rows.find((row) => y < row.getBoundingClientRect().bottom) ?? rows.at(-1);
+    if (!row || !reorder.current) return;
+    const rect = row.getBoundingClientRect();
+    const target = {
+      id: row.dataset.settingsColumn!,
+      side: y < rect.top + rect.height / 2 ? ('before' as const) : ('after' as const),
+    };
+    reorder.current = { ...reorder.current, target: target.id, side: target.side };
+    setDropTarget(target);
+    const panel = row.closest<HTMLElement>('.registry-column-panel');
+    if (panel) {
+      const bounds = panel.getBoundingClientRect();
+      if (y < bounds.top + 32) panel.scrollTop -= 12;
+      else if (y > bounds.bottom - 32) panel.scrollTop += 12;
+    }
+  }
   useEffect(() => {
     function outside(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) setOpen(false);
@@ -69,6 +107,7 @@ export function RegistryColumnSettings({
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
+          finishReorder(false);
           setOpen(false);
           trigger.current?.focus();
         }
@@ -103,7 +142,57 @@ export function RegistryColumnSettings({
           {columns.map((column, index) => {
             const definition = definitions.find((entry) => entry.id === column.id)!;
             return (
-              <div className="registry-column-option" key={column.id}>
+              <div
+                className="registry-column-option"
+                key={column.id}
+                data-settings-column={column.id}
+                data-moving={movingColumn === column.id || undefined}
+                data-drop-side={
+                  dropTarget?.id === column.id && movingColumn !== column.id
+                    ? dropTarget.side
+                    : undefined
+                }
+              >
+                <button
+                  type="button"
+                  className="registry-column-grip"
+                  aria-label={translate('registry.dragColumn', { field: displayLabel(definition) })}
+                  title={translate('registry.dragColumn', { field: displayLabel(definition) })}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    event.preventDefault();
+                    event.currentTarget.focus();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    reorder.current = { id: column.id, target: column.id, side: 'before' };
+                    setMovingColumn(column.id);
+                  }}
+                  onPointerMove={(event) => {
+                    if (reorder.current?.id === column.id) targetAt(event.clientY);
+                  }}
+                  onPointerUp={(event) => {
+                    if (reorder.current) {
+                      targetAt(event.clientY);
+                      finishReorder(true);
+                    }
+                  }}
+                  onPointerCancel={() => finishReorder(false)}
+                  onLostPointerCapture={() => finishReorder(false)}
+                >
+                  <svg
+                    aria-hidden="true"
+                    width="14"
+                    height="18"
+                    viewBox="0 0 14 18"
+                    fill="currentColor"
+                  >
+                    <circle cx="4" cy="4" r="1.2" />
+                    <circle cx="10" cy="4" r="1.2" />
+                    <circle cx="4" cy="9" r="1.2" />
+                    <circle cx="10" cy="9" r="1.2" />
+                    <circle cx="4" cy="14" r="1.2" />
+                    <circle cx="10" cy="14" r="1.2" />
+                  </svg>
+                </button>
                 <label>
                   <input
                     type="checkbox"
@@ -126,19 +215,19 @@ export function RegistryColumnSettings({
                 </label>
                 <button
                   type="button"
-                  aria-label={translate('filter.moveLeft', { field: displayLabel(definition) })}
+                  aria-label={translate('registry.moveUp', { field: displayLabel(definition) })}
                   disabled={index === 0}
                   onClick={() => setColumns((old) => moveColumn(old, column.id, -1))}
                 >
-                  ←
+                  ↑
                 </button>
                 <button
                   type="button"
-                  aria-label={translate('filter.moveRight', { field: displayLabel(definition) })}
+                  aria-label={translate('registry.moveDown', { field: displayLabel(definition) })}
                   disabled={index === columns.length - 1}
                   onClick={() => setColumns((old) => moveColumn(old, column.id, 1))}
                 >
-                  →
+                  ↓
                 </button>
               </div>
             );
@@ -404,7 +493,7 @@ export function RegistryTable<T extends { id: string }>({
                           )}
                         </button>
                       ) : (
-                        displayLabel(definition)
+                        <span className="registry-column-name">{displayLabel(definition)}</span>
                       )}
                       {(customFilter || (filters && filterFields.length > 0)) && (
                         <button
@@ -512,7 +601,10 @@ export function RegistryTable<T extends { id: string }>({
         </table>
       </div>
       {!items.length && emptyMessage && (
-        <div className="registry-empty" role="status">
+        <div
+          className="registry-empty"
+          role={typeof emptyMessage === 'string' ? 'status' : undefined}
+        >
           {emptyMessage}
         </div>
       )}

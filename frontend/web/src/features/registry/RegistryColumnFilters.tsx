@@ -1,3 +1,4 @@
+import './registryControls.css';
 import { localizeRegistryFields, registryValueLabel } from './registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { translate as translateMessage, type Locale } from '../../../../shared/i18n/catalog';
@@ -790,7 +791,7 @@ function FieldEditor({
             </button>
           )}
           {field.kind === 'values' && !field.lookup && (
-            <details>
+            <details className="registry-paste-values">
               <summary>{translate('filter.paste')}</summary>
               <label>
                 {translate('filter.pasteHint')}

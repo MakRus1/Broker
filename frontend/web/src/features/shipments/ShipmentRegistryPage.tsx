@@ -1,3 +1,4 @@
+import { RegistryEmptyState } from '../../shared/ui/RegistryExperience';
 import { useCallback, useEffect } from 'react';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
@@ -85,6 +86,11 @@ export function ShipmentRegistry({
   }, [session, page.items, customers, onCustomersLoaded, onError]);
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || translate('lookup.counterpartyUnavailable');
+  const canCreate = session.permissions.includes('shipments.write');
+  const hasFilters = Boolean(query.filters?.length);
+  const createShipment = () => {
+    location.hash = '/shipments/new/' + crypto.randomUUID();
+  };
   const columns: RegistryColumn<Shipment>[] = [
     {
       id: 'number',
@@ -135,7 +141,7 @@ export function ShipmentRegistry({
 
   const columnState = useRegistryColumns(session.subject, 'shipments', columns);
   return (
-    <div className="registry-page shipment-registry" hidden={!active}>
+    <div className="registry-page shipment-registry registry-workbench" hidden={!active}>
       <RegistryHeading
         columns={columnState}
         title={translate('nav.shipments')}
@@ -143,18 +149,13 @@ export function ShipmentRegistry({
         loading={page.loading}
         onRefresh={() => void page.refresh()}
       >
-        {session.permissions.includes('shipments.write') && (
-          <button
-            className="primary"
-            onClick={() => {
-              location.hash = '/shipments/new/' + crypto.randomUUID();
-            }}
-          >
+        {canCreate && (
+          <button className="primary" onClick={createShipment}>
             {translate('action.createShipment')}
           </button>
         )}
       </RegistryHeading>
-      <section className="surface" aria-busy={page.loading}>
+      <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         <RegistryTable
           items={page.items}
           columns={columnState}
@@ -174,11 +175,37 @@ export function ShipmentRegistry({
           }}
         />
         {!page.loading && !page.items.length && (
-          <div className="empty">
-            <span>▣</span>
-            <h2>{translate('empty.shipments')}</h2>
-            <p>{translate('empty.shipmentHint')}</p>
-          </div>
+          <RegistryEmptyState
+            kind={page.failed ? 'failure' : hasFilters ? 'filtered' : 'empty'}
+            title={translate(
+              page.failed
+                ? 'registry.loadFailed'
+                : hasFilters
+                  ? 'registry.noMatches'
+                  : canCreate
+                    ? 'registry.firstShipment'
+                    : 'empty.shipments',
+            )}
+            description={translate(
+              page.failed
+                ? 'registry.loadFailedHint'
+                : hasFilters
+                  ? 'registry.noMatchesHint'
+                  : 'registry.firstShipmentHint',
+            )}
+            action={
+              page.failed
+                ? { label: translate('filter.retry'), onClick: () => void page.refresh() }
+                : hasFilters
+                  ? {
+                      label: translate('filter.reset'),
+                      onClick: () => setQuery((old) => ({ ...old, filters: [] })),
+                    }
+                  : canCreate
+                    ? { label: translate('action.createShipment'), onClick: createShipment }
+                    : undefined
+            }
+          />
         )}
         <AutoLoadMore
           enabled={active && page.more}

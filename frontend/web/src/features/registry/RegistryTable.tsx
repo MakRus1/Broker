@@ -1,4 +1,5 @@
 import './registryControls.css';
+import { fitRegistryWidths } from './registryColumnWidths';
 import { useLocalization } from '../localization/Localization';
 import {
   RegistryFilterToolbar,
@@ -293,6 +294,25 @@ export function RegistryTable<T extends { id: string }>({
   const [source, setSource] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; side: 'before' | 'after' } | null>(null);
   const visible = state.columns.filter((column) => column.visible);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  useEffect(() => {
+    const element = scroll.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setAvailableWidth(element.clientWidth));
+    setAvailableWidth(element.clientWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const standardWidths = state.columns.every(
+    (column) => column.width === definitions.find((entry) => entry.id === column.id)?.width,
+  );
+  const columnWidths = standardWidths
+    ? fitRegistryWidths(
+        visible.map((column) => column.width),
+        availableWidth - (selectionColumn ? 48 : 0),
+      )
+    : visible.map((column) => column.width);
+
   function targetAt(x: number) {
     const headers = Array.from(
       scroll.current?.querySelectorAll<HTMLElement>('th[data-column]') ?? [],
@@ -340,12 +360,23 @@ export function RegistryTable<T extends { id: string }>({
     }
     frame.current = requestAnimationFrame(autoScroll);
   }
+  function renderedWidths() {
+    return new Map(
+      [...(scroll.current?.querySelectorAll<HTMLElement>('th[data-column]') ?? [])].map((cell) => [
+        cell.dataset.column!,
+        cell.getBoundingClientRect().width,
+      ]),
+    );
+  }
   function resize(id: string, width: number) {
+    const widths = renderedWidths();
     state.setColumns((old) =>
       old.map((column) =>
         column.id === id
           ? { ...column, width: Math.max(120, Math.min(900, Math.round(width))) }
-          : column,
+          : widths.has(column.id)
+            ? { ...column, width: Math.round(widths.get(column.id)!) }
+            : column,
       ),
     );
   }
@@ -420,13 +451,14 @@ export function RegistryTable<T extends { id: string }>({
         <table
           className="personal-registry-table"
           style={{
-            width: visible.reduce((sum, column) => sum + column.width, selectionColumn ? 48 : 0),
+            width: columnWidths.reduce((sum, width) => sum + width, selectionColumn ? 48 : 0),
+            minWidth: standardWidths ? '100%' : 0,
           }}
         >
           <colgroup>
             {selectionColumn && <col style={{ width: 48 }} />}
-            {visible.map((column) => (
-              <col key={column.id} style={{ width: column.width }} />
+            {visible.map((column, index) => (
+              <col key={column.id} style={{ width: columnWidths[index] }} />
             ))}
           </colgroup>
           <thead>
@@ -551,14 +583,22 @@ export function RegistryTable<T extends { id: string }>({
                       onKeyDown={(event) => {
                         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
                           event.preventDefault();
-                          resize(column.id, column.width + (event.key === 'ArrowLeft' ? -20 : 20));
+                          resize(
+                            column.id,
+                            (renderedWidths().get(column.id) ?? column.width) +
+                              (event.key === 'ArrowLeft' ? -20 : 20),
+                          );
                         }
                       }}
                       onPointerDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         event.currentTarget.setPointerCapture(event.pointerId);
-                        drag.current = { id: column.id, x: event.clientX, width: column.width };
+                        drag.current = {
+                          id: column.id,
+                          x: event.clientX,
+                          width: renderedWidths().get(column.id) ?? column.width,
+                        };
                       }}
                       onPointerMove={(event) => {
                         if (drag.current?.id === column.id)

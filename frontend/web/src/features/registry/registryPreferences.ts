@@ -9,7 +9,8 @@ export function preferenceKey(subject: string, registry: string, kind: string): 
 
 // Ошибка/запрет хранилища не мешает работе реестра. Данные из него всегда проверяются.
 export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: unknown) => T) {
-  const store = usePreferences();
+  const preferences = usePreferences();
+  const store = key ? preferences : null;
   const version = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
     store ? () => JSON.stringify(store.read(key)) : () => undefined,

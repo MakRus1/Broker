@@ -489,7 +489,8 @@ dialog {
   width: min(460px, 94vw);
   border: 1px solid var(--divider);
   border-radius: 13px;
-  color: inherit;
+  color: var(--text);
+  background: var(--surface);
   box-shadow: 0 25px 100px var(--shadow);
 }
 dialog::backdrop {
@@ -2580,7 +2581,7 @@ details[open] > .route-stage-summary::after {
 /* Личная раскладка реестра: ширина задаётся столбцу, а не его позиции. */
 .personal-registry-table {
   table-layout: fixed;
-  min-width: 100%;
+  min-width: 0;
 }
 .personal-registry-table th {
   position: relative;
@@ -2589,6 +2590,9 @@ details[open] > .route-stage-summary::after {
 .personal-registry-table td {
   vertical-align: top;
   overflow-wrap: anywhere;
+}
+.personal-registry-table th:last-child .registry-column-resize {
+  right: 0;
 }
 .registry-column-resize {
   position: absolute;
@@ -3615,11 +3619,7 @@ details[open] > .route-stage-summary::after {
 }
 .finance-services-table th:first-child,
 .finance-services-table td:first-child {
-  padding-left: 0;
   min-width: 220px;
-}
-.finance-services-table td:last-child {
-  padding-right: 0;
 }
 .finance-services-table .service-numeric {
   white-space: nowrap;

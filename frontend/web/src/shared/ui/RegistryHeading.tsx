@@ -1,3 +1,5 @@
+import './registryExperience.css';
+import { RegistryGuide, RegistryTip } from './RegistryExperience';
 import './registryHeading.css';
 import {
   RegistryColumnSettings,
@@ -32,12 +34,14 @@ export function RegistryHeading({
         </p>
       </div>
       <div className="actions">
+        <RegistryGuide />
         {children}
         <RegistryColumnSettings {...columns} />
         <button disabled={loading} onClick={onRefresh}>
           {translate('action.refresh')}
         </button>
       </div>
+      <RegistryTip preference={columns.guidanceKey} />
     </div>
   );
 }

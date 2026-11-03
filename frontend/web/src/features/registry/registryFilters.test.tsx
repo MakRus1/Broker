@@ -84,6 +84,7 @@ describe('фильтры заголовков реестра', () => {
           setColumns: () => {},
           newColumns: [],
           acknowledgeColumns: () => {},
+          guidanceKey: '',
         }}
         sort={query.sort}
         descending={query.descending}

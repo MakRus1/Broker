@@ -1,0 +1,74 @@
+.registry-column-option {
+  position: relative;
+  border-radius: 6px;
+}
+.registry-column-option[data-moving] {
+  opacity: 0.55;
+}
+.registry-column-option[data-drop-side]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-text);
+  pointer-events: none;
+}
+.registry-column-option[data-drop-side='before']::after {
+  top: -5px;
+}
+.registry-column-option[data-drop-side='after']::after {
+  bottom: -5px;
+}
+.registry-column-option .registry-column-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  min-width: 28px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.registry-column-option .registry-column-grip:active {
+  cursor: grabbing;
+}
+.registry-paste-values > summary {
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.registry-paste-values > label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.registry-paste-values > label > textarea {
+  margin: 0;
+}
+.registry-paste-values > button {
+  margin-top: 12px;
+}
+
+.registry-column-heading .table-sort,
+.registry-column-heading .table-sort:hover {
+  background: transparent;
+  border-radius: 3px;
+}
+.registry-column-heading .table-sort:hover {
+  color: var(--accent-text);
+}
+.registry-column-heading .table-sort:hover .registry-column-name {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.registry-column-heading .table-sort:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.registry-column-heading > .registry-column-name {
+  flex: 1;
+}

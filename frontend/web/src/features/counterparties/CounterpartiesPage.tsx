@@ -1,3 +1,4 @@
+import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../registry/registryLabels';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { useLocalization } from '../localization/Localization';
@@ -484,7 +485,7 @@ export function CounterpartiesPage({
       </section>
     );
   return (
-    <div className="counterparty-registry registry-page">
+    <div className="counterparty-registry registry-page registry-workbench">
       <RegistryHeading
         columns={columnState}
         title={translate('nav.counterparties')}
@@ -498,8 +499,8 @@ export function CounterpartiesPage({
           </a>
         )}
       </RegistryHeading>
-      <section className="surface counterparty-list" aria-busy={loading}>
-        {failure && (
+      <section className="surface counterparty-list registry-workbench-surface" aria-busy={loading}>
+        {failure && items.length > 0 && (
           <p className="error" role="alert">
             {failure}
           </p>
@@ -526,10 +527,25 @@ export function CounterpartiesPage({
           </p>
         )}
         {!items.length && !loading && (
-          <div className="empty">
-            <h2>{translate('registryPage.noCounterparties')}</h2>
-            <p>{translate('counterparty.changeTheSearchOrCreateANewRecord')}</p>
-          </div>
+          <RegistryResultState
+            loading={loading}
+            failed={Boolean(failure)}
+            failureMessage={failure}
+            filtered={Boolean(registryFilters.filters?.length)}
+            title={translate('registryPage.noCounterparties')}
+            onRetry={() => void load()}
+            onReset={() => setRegistryFilters((old) => ({ ...old, filters: [] }))}
+            create={
+              write
+                ? {
+                    label: translate('registryPage.newCounterparty'),
+                    onClick: () => {
+                      location.hash = '/counterparties/new';
+                    },
+                  }
+                : undefined
+            }
+          />
         )}
         <AutoLoadMore
           enabled={more}

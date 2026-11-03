@@ -1,0 +1,409 @@
+.record-workbench {
+  --record-inset: 28px;
+  padding: var(--record-inset);
+}
+.record-layout-heading {
+  height: auto;
+  border-bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 22px;
+}
+.record-layout-identity {
+  min-width: 0;
+}
+.record-layout-kind {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+.record-layout-status {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.record-layout-heading h1 {
+  margin: 7px 0 0;
+  color: var(--text);
+  font-size: 26px;
+  line-height: 34px;
+  letter-spacing: -0.4px;
+  overflow-wrap: anywhere;
+}
+.record-layout-metadata {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 20px;
+}
+.record-layout-mode {
+  margin: 8px 0 0;
+  color: var(--accent-text);
+  font-size: 12px;
+  line-height: 20px;
+}
+.record-layout-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.record-layout-actions > button,
+.record-layout-actions > a.button,
+.record-layout-save-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.record-workbench .record-layout-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  max-width: 100%;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  border-radius: 0;
+  background: transparent;
+}
+.record-workbench .record-layout-tabs > button {
+  flex: 0 0 auto;
+  padding: 10px 0 11px;
+  margin: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.record-workbench .record-layout-tabs > button:hover {
+  color: var(--text);
+  background: transparent;
+}
+.record-workbench .record-layout-tabs > button[aria-pressed='true'] {
+  color: var(--accent-text);
+  border-bottom-color: var(--accent-text);
+}
+.record-workbench .record-layout-tabs > button:focus-visible {
+  outline-offset: -3px;
+}
+.record-layout-section {
+  padding: 0 0 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--divider);
+}
+.record-layout-section:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.record-layout-section-heading {
+  margin-bottom: 16px;
+}
+.record-layout-section-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 22px;
+}
+.record-layout-section-heading p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.record-layout-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 28px;
+  margin: 0;
+}
+.record-layout-details dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 18px;
+  margin-bottom: 5px;
+}
+.record-layout-details dd {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 22px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.record-layout-details .record-layout-wide {
+  grid-column: 1 / -1;
+}
+.record-layout-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 32px;
+  animation: record-layout-appear 150ms ease-out;
+}
+.record-workbench .shipment-fields {
+  gap: 18px 24px;
+}
+.record-workbench .shipment-fields.three {
+  margin-top: 18px;
+}
+.record-workbench label {
+  font-size: 12px;
+  line-height: 18px;
+}
+.record-workbench input:not([type='checkbox']),
+.record-workbench .select-trigger {
+  font-size: 13px;
+}
+.record-workbench .shipment-number button {
+  font-size: 12px;
+}
+.record-layout-save {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 24px calc(-1 * var(--record-inset)) calc(-1 * var(--record-inset));
+  padding: 14px var(--record-inset) max(14px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  border-radius: 0 0 10px 10px;
+}
+.record-layout-save-status {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.record-layout-save-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.record-layout-save .record-layout-save-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+@keyframes record-layout-appear {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 800px) {
+  .record-layout-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .record-workbench {
+    --record-inset: 16px;
+  }
+  .record-layout-heading {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .record-layout-heading h1 {
+    font-size: 23px;
+    line-height: 30px;
+  }
+  .record-layout-details {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .record-layout-save-status {
+    flex-basis: 100%;
+  }
+  .record-layout-save-actions {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .record-layout-content {
+    animation: none;
+  }
+}
+
+.record-layout-content > .record-layout-section {
+  margin: 0;
+  padding-bottom: 20px;
+}
+.record-layout-content > .record-layout-section:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+.record-layout-content .record-layout-details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .record-layout-content > .record-layout-section:not(:last-child) {
+    border-bottom: 1px solid var(--divider);
+  }
+  .record-layout-content {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .record-layout-content .record-layout-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Embedded sections share the card inset instead of adding a second frame. */
+.record-workbench > .panel-content {
+  padding: 0;
+}
+.record-workbench .section-heading {
+  margin-bottom: 18px;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+}
+.record-workbench .section-heading h2,
+.record-workbench .section-heading h3,
+.record-workbench .finance-list-toolbar h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+.record-workbench .section-heading p,
+.record-workbench .hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 18px;
+}
+.record-workbench .section-heading button,
+.record-workbench .section-heading a.primary,
+.record-workbench .route-collapse-actions button,
+.record-workbench .shipment-route-actions button,
+.record-workbench .shipment-route-add {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 20px;
+  border-radius: 7px;
+}
+.record-workbench .shipment-route-workspace {
+  padding: 0;
+}
+.record-workbench .shipment-route-heading {
+  margin-bottom: 12px;
+}
+.record-workbench .shipment-route-heading h2 {
+  font-size: 16px;
+  line-height: 24px;
+  margin-bottom: 4px;
+}
+.record-workbench .shipment-route-heading p {
+  font-size: 12px;
+  line-height: 18px;
+}
+.record-workbench .route-collapse-actions {
+  margin-bottom: 12px;
+}
+.record-workbench .shipment-route-stages {
+  gap: 8px;
+}
+.record-workbench .shipment-route-stage {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: transparent;
+}
+.record-workbench .route-stage-summary {
+  grid-template-columns: minmax(150px, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 8px 20px;
+  min-height: 24px;
+}
+.record-workbench .route-stage-summary h3 {
+  font-size: 14px;
+  line-height: 22px;
+}
+.record-workbench .route-summary-meta {
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.record-workbench .route-stage-summary::after {
+  border-color: var(--text-secondary);
+}
+.record-workbench .shipment-route-stage-toolbar {
+  padding: 16px 0;
+  margin-bottom: 16px;
+  gap: 12px 20px;
+}
+.record-workbench .shared-route-grid,
+.record-workbench .shared-route-values {
+  gap: 18px 24px;
+}
+.record-workbench .shared-route-values {
+  margin-top: 18px;
+  font-size: 14px;
+}
+.record-workbench .shared-route-values dt {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.record-workbench .item-card {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: transparent;
+}
+.record-workbench .item-title {
+  margin-bottom: 14px;
+}
+.record-workbench .quantities {
+  margin: 14px 0;
+  gap: 16px;
+}
+.record-workbench .quantities strong {
+  font-size: 22px;
+}
+.record-workbench .item-card > button {
+  min-height: 34px;
+  margin: 0 8px 4px 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 20px;
+}
+@media (max-width: 600px) {
+  .record-workbench .route-stage-summary {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

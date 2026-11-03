@@ -1,3 +1,5 @@
+import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+import { CalendarDate } from '../../shared/dates/CalendarDate';
 import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { IsoDateInput } from '../../shared/dates/DateInput';
@@ -147,9 +149,6 @@ function ShipmentCard({
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
   const [editing, setEditing] = useState(!initial);
-  const [editingSection, setEditingSection] = useState<'details' | 'route'>(
-    props.route.endsWith('/route') ? 'route' : 'details',
-  );
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -307,7 +306,7 @@ function ShipmentCard({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (busy || !write || !settings || !dictionaries) return;
-    if ((!initial || editingSection === 'details') && !draft.customer_id) {
+    if (!draft.customer_id) {
       setFailure(translate('shipment.chooseCustomer'));
       setTab('details');
       return;
@@ -328,13 +327,15 @@ function ShipmentCard({
       delivery_address: draft.delivery_address.trim() || null,
     };
     const { route_segments, ...detailsPayload } = payload;
-    const updatePayload =
-      editingSection === 'route'
-        ? { route_segments }
-        : {
-            ...detailsPayload,
-            logist: draft.logist === (initial?.logist ?? '') ? undefined : payload.logist,
-          };
+    const original = JSON.parse(baseline) as CardDraft;
+    const updatePayload = {
+      ...detailsPayload,
+      logist: draft.logist === (initial?.logist ?? '') ? undefined : payload.logist,
+      route_segments:
+        JSON.stringify(route_segments) === JSON.stringify(original.route_segments)
+          ? undefined
+          : route_segments,
+    };
     try {
       const result = initial
         ? await request<{ shipment: Shipment }>('/api/v1/shipments/update', props.session, {
@@ -398,43 +399,55 @@ function ShipmentCard({
       : []),
   ];
   return (
-    <section className="shipment-editor surface">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{translate('shipment.eyebrow')}</p>
-          <h1>{initial?.number ?? translate('entity.newShipment')}</h1>
-        </div>
-        <div className="shipment-card-actions">
-          <span className="badge">
-            {initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')}
-          </span>
-          {initial && !editing && write && (tab === 'details' || tab === 'route') && (
+    <section className="shipment-editor surface record-workbench">
+      <RecordHeading
+        kind={translate('shipment.eyebrow')}
+        title={initial?.number ?? translate('entity.newShipment')}
+        status={
+          initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')
+        }
+        metadata={
+          initial
+            ? `${translate('registryField.shipment_date')}: ${initial.shipment_date ? CalendarDate.fromISO(initial.shipment_date).toDisplayString() : '—'} · ${translate('shipment.revision', { revision: revision ?? 0 })}`
+            : translate('shipment.createHint')
+        }
+        mode={
+          editing
+            ? translate(initial ? 'shipment.editingShipment' : 'shipment.createMode')
+            : undefined
+        }
+        actions={
+          initial && !editing && write ? (
             <button
               className="primary"
               onClick={() => {
-                setEditingSection(tab);
+                if (tab !== 'details' && tab !== 'route') setTab('details');
                 setEditing(true);
                 setFailure('');
               }}
             >
-              {tab === 'route' ? translate('shipment.editRoute') : translate('shipment.edit')}
+              {translate('shipment.editShipment')}
             </button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
       {settingsFailure && (
         <p className="error" role="alert">
           {translate('shipment.settingsFailed', { message: settingsFailure })}
         </p>
       )}
-      <div className="tabs shipment-tabs">
+      <div className="tabs shipment-tabs record-layout-tabs">
         {panels.map(([key, label]) => (
           <button
             key={key}
             type="button"
             aria-pressed={tab === key}
             onClick={(event) => {
-              if (key === tab) return;
+              if (key === tab || busy) return;
+              if (editing && (key === 'details' || key === 'route')) {
+                setTab(key);
+                return;
+              }
               const section = event.currentTarget.closest('section');
               if (section?.querySelector('form[data-busy="true"]')) return;
               const switchTab = () => {
@@ -472,7 +485,8 @@ function ShipmentCard({
         data-validation-attempted={validation.attempted}
         onInputCapture={validation.onInput}
         onInvalidCapture={(event) => {
-          setTab(initial ? editingSection : 'details');
+          const section = (event.target as HTMLElement).closest('[data-edit-tab]');
+          setTab(section?.getAttribute('data-edit-tab') ?? 'details');
           validation.onInvalid(event);
         }}
         data-draft-key={storageKey}
@@ -482,76 +496,77 @@ function ShipmentCard({
         <fieldset disabled={busy || !write || !settings || !dictionaries}>
           <fieldset
             className="shipment-edit-section"
-            disabled={Boolean(initial && editingSection !== 'details')}
+            data-edit-tab="details"
             hidden={tab !== 'details'}
           >
-            <div className="shipment-fields">
-              <label>
-                {translate('registryField.shipmentNumber')}
-                <div className="shipment-number">
-                  <input
-                    name="number"
-                    aria-invalid={Boolean(validation.errors.number) || undefined}
-                    aria-describedby={
-                      validation.errors.number ? `${formId}-number-error` : undefined
-                    }
-                    required={manualNumber}
-                    readOnly={!manualNumber}
-                    maxLength={128}
-                    value={draft.number}
-                    placeholder={translate('shipment.autoNumber')}
-                    onChange={(e) => set('number', e.target.value)}
-                  />
-                  {!initial && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setManualNumber((old) => !old);
-                        set('number', '');
-                      }}
-                    >
-                      {manualNumber
-                        ? translate('shipment.automatic')
-                        : translate('shipment.manual')}
-                    </button>
+            <RecordSection title={translate('shipment.identification')}>
+              <div className="shipment-fields">
+                <label>
+                  {translate('registryField.shipmentNumber')}
+                  <div className="shipment-number">
+                    <input
+                      name="number"
+                      aria-invalid={Boolean(validation.errors.number) || undefined}
+                      aria-describedby={
+                        validation.errors.number ? `${formId}-number-error` : undefined
+                      }
+                      required={manualNumber}
+                      readOnly={!manualNumber}
+                      maxLength={128}
+                      value={draft.number}
+                      placeholder={translate('shipment.autoNumber')}
+                      onChange={(e) => set('number', e.target.value)}
+                    />
+                    {!initial && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManualNumber((old) => !old);
+                          set('number', '');
+                        }}
+                      >
+                        {manualNumber
+                          ? translate('shipment.automatic')
+                          : translate('shipment.manual')}
+                      </button>
+                    )}
+                  </div>
+                  {!manualNumber && (
+                    <small>
+                      {translate('shipment.numberFormat', {
+                        format: settings?.number_template ?? '',
+                      })}
+                    </small>
                   )}
-                </div>
-                {!manualNumber && (
-                  <small>
-                    {translate('shipment.numberFormat', {
-                      format: settings?.number_template ?? '',
-                    })}
-                  </small>
-                )}
-                {validation.errors.number && (
-                  <small className="field-error" id={`${formId}-number-error`}>
-                    {validation.errors.number}
-                  </small>
-                )}
-              </label>
-              <label>
-                {translate('shipment.dateRequired')}
-                <IsoDateInput
-                  name="shipment_date"
-                  aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
-                  aria-describedby={
-                    validation.errors.shipment_date ? `${formId}-date-error` : undefined
-                  }
+                  {validation.errors.number && (
+                    <small className="field-error" id={`${formId}-number-error`}>
+                      {validation.errors.number}
+                    </small>
+                  )}
+                </label>
+                <label>
+                  {translate('shipment.dateRequired')}
+                  <IsoDateInput
+                    name="shipment_date"
+                    aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
+                    aria-describedby={
+                      validation.errors.shipment_date ? `${formId}-date-error` : undefined
+                    }
 
-                  min="1900-01-01"
-                  required
-                  value={draft.shipment_date}
-                  onChange={(dateValue) => set('shipment_date', dateValue)}
-                />
-                {validation.errors.shipment_date && (
-                  <small className="field-error" id={`${formId}-date-error`}>
-                    {validation.errors.shipment_date}
-                  </small>
-                )}
-              </label>
-            </div>
-            <section className="shipment-field-section">
-              <h2>{translate('shipment.participants')}</h2>
+                    min="1900-01-01"
+                    required
+                    value={draft.shipment_date}
+                    onChange={(dateValue) => set('shipment_date', dateValue)}
+                  />
+                  {validation.errors.shipment_date && (
+                    <small className="field-error" id={`${formId}-date-error`}>
+                      {validation.errors.shipment_date}
+                    </small>
+                  )}
+                </label>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('shipment.participants')}>
               <div className="shipment-fields">
                 <CustomerSelect
                   label={translate('shipment.customerRequired')}
@@ -588,9 +603,8 @@ function ShipmentCard({
                   }}
                 />
               </div>
-            </section>
-            <section className="shipment-field-section">
-              <h2>{translate('shipment.cargoTerms')}</h2>
+            </RecordSection>
+            <RecordSection title={translate('shipment.cargoTerms')}>
               <div
                 className="cargo-autocomplete"
                 onBlur={(event) => {
@@ -702,9 +716,8 @@ function ShipmentCard({
                   options={list(dictionaries?.loading ?? [])}
                 />
               </div>
-            </section>
-            <section className="shipment-field-section">
-              <h2>{translate('shipment.delivery')}</h2>
+            </RecordSection>
+            <RecordSection title={translate('shipment.delivery')}>
               <div className="shipment-fields">
                 <DirectoryLookup
                   session={props.session}
@@ -739,8 +752,8 @@ function ShipmentCard({
                   />
                 </label>
               </div>
-            </section>
-            <section className="shipment-field-section">
+            </RecordSection>
+            <RecordSection title={translate('shipment.additional')}>
               <div className="shipment-fields">
                 <Select
                   label={translate('registryField.status')}
@@ -762,11 +775,11 @@ function ShipmentCard({
                   />
                 </label>
               </div>
-            </section>
+            </RecordSection>
           </fieldset>
           <fieldset
             className="shipment-edit-section"
-            disabled={Boolean(initial && editingSection !== 'route')}
+            data-edit-tab="route"
             hidden={tab !== 'route'}
           >
             <ShipmentRoute
@@ -808,56 +821,54 @@ function ShipmentCard({
           />
         </div>
       )}
-      {failure && (
+      {failure && (!editing || !write) && (
         <p role="alert" className="error">
           {failure}
         </p>
       )}
       {write && editing && (
-        <div className="shipment-save">
-          <span>
-            {dirty
+        <RecordActions
+          error={failure}
+          status={
+            dirty
               ? translate('shipment.unsaved')
               : initial
                 ? translate('shipment.revision', { revision: revision ?? 0 })
-                : translate('shipment.required')}
-          </span>
-          <div className="shipment-save-actions">
-            {(dirty || initial) && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  confirmDiscard(dirty, () => {
-                    validation.reset();
-                    if (initial) setEditing(false);
-                    manualLogist.current = false;
-                    manualStatus.current = false;
-                    setManualNumber(Boolean(initial));
-                    setDraft(JSON.parse(baseline) as CardDraft);
-                    setFailure('');
-                  })
-                }
-              >
-                {translate('shipment.cancel')}
-              </button>
-            )}
+                : translate('shipment.required')
+          }
+        >
+          {(dirty || initial) && (
             <button
-              form={formId}
-              type="submit"
-              className="primary"
-              disabled={busy || !settings || Boolean(initial && !dirty)}
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                confirmDiscard(dirty, () => {
+                  validation.reset();
+                  if (initial) setEditing(false);
+                  manualLogist.current = false;
+                  manualStatus.current = false;
+                  setManualNumber(Boolean(initial));
+                  setDraft(JSON.parse(baseline) as CardDraft);
+                  setFailure('');
+                })
+              }
             >
-              {busy
-                ? translate('shipment.saving')
-                : initial
-                  ? editingSection === 'route'
-                    ? translate('shipment.saveRoute')
-                    : translate('shipment.saveChanges')
-                  : translate('shipment.create')}
+              {translate('shipment.cancel')}
             </button>
-          </div>
-        </div>
+          )}
+          <button
+            form={formId}
+            type="submit"
+            className="primary"
+            disabled={busy || !settings || Boolean(initial && !dirty)}
+          >
+            {busy
+              ? translate('shipment.saving')
+              : initial
+                ? translate('shipment.saveChanges')
+                : translate('shipment.create')}
+          </button>
+        </RecordActions>
       )}
       {confirmation}
     </section>
@@ -898,18 +909,17 @@ function ShipmentSummary({
     return () => controller.abort();
   }, [shipment.logist, session, locale]);
   const company = (id?: string | null) => customers.find((item) => item.id === id)?.name ?? '—';
-  const group = (title: string, fields: [string, string | null | undefined][]) => (
-    <section className="shipment-summary-section">
-      <h2>{title}</h2>
-      <dl className="shipment-summary-grid">
-        {fields.map(([label, value]) => (
-          <div key={label}>
+  const group = (title: string, fields: [string, string | null | undefined, boolean?][]) => (
+    <RecordSection title={title}>
+      <dl className="record-layout-details">
+        {fields.map(([label, value, wide]) => (
+          <div key={label} className={wide ? 'record-layout-wide' : undefined}>
             <dt>{label}</dt>
             <dd>{value || '—'}</dd>
           </div>
         ))}
       </dl>
-    </section>
+    </RecordSection>
   );
   if (routeOnly)
     return (
@@ -923,14 +933,14 @@ function ShipmentSummary({
     );
 
   return (
-    <>
+    <div className="record-layout-content">
       {group(translate('shipment.participants'), [
         [translate('field.customer'), company(shipment.customer_id)],
         [translate('shipment.recipient'), company(shipment.recipient_id)],
         [translate('shipment.logist'), logist],
       ])}
       {group(translate('shipment.cargoTerms'), [
-        [translate('shipment.cargoDescription'), shipment.cargo_description],
+        [translate('shipment.cargoDescription'), shipment.cargo_description, true],
         ['Incoterms', shipment.incoterms],
         [translate('shipment.carriageTerms'), shipment.carriage_terms],
         [translate('shipment.loading'), shipment.loading],
@@ -938,15 +948,11 @@ function ShipmentSummary({
       {group(translate('shipment.delivery'), [
         [translate('shipment.city'), shipment.delivery_city],
         [translate('registryField.country_code'), shipment.delivery_country],
-        [translate('shipment.address'), shipment.delivery_address],
+        [translate('shipment.address'), shipment.delivery_address, true],
       ])}
-      {group(translate('registryField.shipment_id'), [
-        [
-          translate('registryField.shipment_date'),
-          shipment.shipment_date?.split('-').reverse().join('.'),
-        ],
-        [translate('shipment.note'), shipment.reference],
+      {group(translate('shipment.additional'), [
+        [translate('shipment.note'), shipment.reference, true],
       ])}
-    </>
+    </div>
   );
 }

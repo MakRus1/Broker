@@ -1095,4 +1095,11 @@ export const ru = {
     "Создайте первую запись — она появится в этой таблице.",
   "registry.emptyReadOnlyHint":
     "Здесь появятся записи, доступные вам в этом разделе.",
+  "shipment.createHint":
+    "Сначала укажите клиента, дату и груз. Остальное можно дополнить позже.",
+  "shipment.identification": "Данные поставки",
+  "shipment.additional": "Дополнительно",
+  "shipment.editShipment": "Редактировать поставку",
+  "shipment.editingShipment": "Редактирование поставки",
+  "shipment.createMode": "Создание поставки",
 } as const;

@@ -1098,4 +1098,11 @@ export const en = {
     "Create the first record to see it in this table.",
   "registry.emptyReadOnlyHint":
     "Records available to you in this section will appear here.",
+  "shipment.createHint":
+    "Start with the customer, date and cargo. You can add the rest later.",
+  "shipment.identification": "Shipment details",
+  "shipment.additional": "Additional details",
+  "shipment.editShipment": "Edit shipment",
+  "shipment.editingShipment": "Editing shipment",
+  "shipment.createMode": "Creating a shipment",
 } satisfies Record<MessageKey, string>;

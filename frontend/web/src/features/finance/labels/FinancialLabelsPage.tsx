@@ -376,6 +376,7 @@ export function FinancialLabelsPage({
     <section className="surface record-workbench financial-record-workbench financial-label-page">
       {confirmation}
       <RecordHeading
+        guide="label"
         kind={translate('forms.financialLABEL')}
         title={
           creating

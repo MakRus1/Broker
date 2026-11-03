@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest';
 import { restoreWorkflow } from '../../shared/ui/GuidedWorkflow';
-import { shipmentWorkflow, shipmentStepTab, shipmentStepEditing } from './shipmentWorkflow';
+import {
+  shipmentContextSteps,
+  shipmentWorkflow,
+  shipmentStepTab,
+  shipmentStepEditing,
+} from './shipmentWorkflow';
 
 it('only offers finance when the user can view services', () => {
   expect(shipmentWorkflow(false).some((step) => step.id.startsWith('finance'))).toBe(false);
@@ -43,4 +48,26 @@ it('opens route editing and maps detailed steps to existing tabs', () => {
     expect(['details', 'route', 'items', 'transportations', 'finance']).toContain(
       shipmentStepTab(step.id),
     );
+});
+
+it('provides detailed guidance in every shipment tab without entering editing from view mode', () => {
+  for (const editing of [false, true])
+    for (const tab of ['details', 'route', 'items', 'transportations', 'finance']) {
+      expect(shipmentContextSteps(tab, editing, true, true).length).toBeGreaterThan(1);
+    }
+  expect(shipmentContextSteps('details', false, true, false).map((step) => step.id)).toContain(
+    'customer',
+  );
+  expect(shipmentContextSteps('items', false, true, false)).toEqual([]);
+  expect(shipmentContextSteps('finance', false, false, false)).toEqual([]);
+});
+
+it('starts filling guidance at editable fields rather than a view-mode introduction', () => {
+  const steps = shipmentContextSteps('details', true, true, true);
+  expect(steps[0].id).toBe('customer');
+  expect(steps.every((step) => shipmentStepEditing(step.id))).toBe(true);
+  expect(steps[0].description).toBe('workflow.customerHint');
+  expect(shipmentContextSteps('details', false, true, true)[1].description).toBe(
+    'guide.shipmentCustomerView',
+  );
 });

@@ -1,3 +1,5 @@
+import { RecordGuide } from './RecordGuide';
+import type { RecordGuideKind } from './recordGuides';
 import { useId, type ReactNode } from 'react';
 import './recordLayout.css';
 
@@ -8,6 +10,7 @@ export function RecordHeading({
   metadata,
   mode,
   actions,
+  guide,
 }: {
   kind: string;
   title: string;
@@ -15,6 +18,7 @@ export function RecordHeading({
   metadata?: ReactNode;
   mode?: string;
   actions?: ReactNode;
+  guide?: RecordGuideKind;
 }) {
   return (
     <header className="record-layout-heading">
@@ -27,7 +31,12 @@ export function RecordHeading({
         {metadata && <p className="record-layout-metadata">{metadata}</p>}
         {mode && <p className="record-layout-mode">{mode}</p>}
       </div>
-      {actions && <div className="record-layout-actions">{actions}</div>}
+      {(actions || guide) && (
+        <div className="record-layout-actions">
+          {guide && <RecordGuide kind={guide} />}
+          {actions}
+        </div>
+      )}
     </header>
   );
 }

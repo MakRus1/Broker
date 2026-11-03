@@ -104,3 +104,154 @@
     animation: none;
   }
 }
+.record-guide-control {
+  display: inline-flex;
+  align-items: center;
+}
+.record-guide-control > .workflow-help {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.record-guide-control > .workflow-help:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.record-guide-control:empty {
+  display: none;
+}
+.service-editor-guide-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.service-editor-guide-heading h2 {
+  margin: 0;
+}
+
+.record-guide-control {
+  position: relative;
+}
+.record-guide-menu > summary {
+  cursor: pointer;
+  list-style: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.record-guide-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.record-guide-options {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  min-width: 240px;
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #0002;
+}
+.record-guide-options .workflow-help-text {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  min-height: 40px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  color: var(--text);
+}
+.record-guide-options .workflow-help-text:hover {
+  background: var(--surface-hover);
+}
+.record-guide-notice {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 19;
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 32px));
+  margin-top: 8px;
+  padding: 14px 44px 14px 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.record-guide-notice .record-guide-notice-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 1;
+  font-size: 20px;
+}
+.record-guide-menu[open] + .record-guide-notice {
+  display: none;
+}
+
+.record-guide-menu > summary {
+  border: 1px solid var(--border);
+  width: 28px;
+  height: 28px;
+  font-weight: 600;
+}
+
+.workflow-coachmark .workflow-close svg,
+.record-guide-notice .record-guide-notice-close svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+}
+
+.record-guide-notice .record-guide-notice-help {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+}
+.record-guide-menu > summary {
+  border: 0;
+}
+.record-guide-menu > summary svg {
+  display: block;
+}

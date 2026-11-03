@@ -1,8 +1,11 @@
+import { RecordGuideNotice } from '../../shared/ui/record/RecordGuideNotice';
+import { RecordGuideMenu } from '../../shared/ui/record/RecordGuideMenu';
 import { GuidedWorkflow } from '../../shared/ui/GuidedWorkflow';
 import { preferenceKey } from '../registry/registryPreferences';
 import {
   shipmentWorkflow,
   shipmentFieldSteps,
+  shipmentContextSteps,
   shipmentStepTab,
   shipmentStepEditing,
 } from './shipmentWorkflow';
@@ -428,61 +431,128 @@ function ShipmentCard({
         actions={
           initial && write ? (
             <>
-              <GuidedWorkflow
-                preference={preferenceKey(props.session.subject, 'shipments', 'workflow')}
-                steps={shipmentWorkflow(
-                  props.session.permissions.includes('finance.read_service_charges'),
-                  settings?.planned_containers === true,
-                )}
-                active={props.active !== false}
-                getTarget={(key) => {
-                  const root = document.getElementById(formId)?.closest('section');
-                  if (!root) return null;
-                  const selector = shipmentFieldSteps.has(key)
-                    ? `[data-workflow-field="${key}"]`
-                    : key === 'route-edit'
-                      ? '.shipment-route-add'
-                      : key === 'route-details'
-                        ? '.shipment-route-workspace'
-                        : key === 'plan-quantities'
-                          ? '[data-workflow-panel="items"] .quantities'
-                          : key === 'plan-create'
-                            ? '[data-workflow-plan-create]'
-                            : key === 'transport-list'
-                              ? '[data-workflow-panel="transportations"]'
-                              : key === 'finance-summary'
-                                ? '.finance-summary-disclosure'
-                                : key === 'finance-invoice'
-                                  ? '.finance-services-table-wrap'
-                                  : `[data-workflow-tab="${key}"]`;
-                  return (
-                    root.querySelector<HTMLElement>(selector) ??
-                    root.querySelector<HTMLElement>(`[data-workflow-tab="${shipmentStepTab(key)}"]`)
-                  );
-                }}
-                onOpen={(key, proceed) => {
-                  const root = document.getElementById(formId)?.closest('section');
-                  if (root?.querySelector('form[data-busy="true"]')) return;
-                  if (shipmentStepEditing(key)) {
-                    // Field steps stay in the same editor and preserve the user's draft.
-                    if (!editing && dirty) return;
-                    setTab(shipmentStepTab(key));
-                    setEditing(true);
-                    proceed();
-                    return;
-                  }
-                  confirmDiscard(Boolean(root?.querySelector('form[data-dirty="true"]')), () => {
-                    if (editing) {
-                      setDraft(JSON.parse(baseline) as CardDraft);
-                      setEditing(false);
-                      validation.reset();
-                      setFailure('');
-                    }
-                    setTab(shipmentStepTab(key));
-                    proceed();
-                  });
-                }}
-              />
+              <span className="record-guide-control">
+                <RecordGuideMenu>
+                  {['overview', 'context'].map((scope) => (
+                    <GuidedWorkflow
+                      key={
+                        scope === 'overview'
+                          ? scope
+                          : `${scope}-${tab}-${editing ? 'edit' : 'view'}`
+                      }
+                      textButton
+                      title={
+                        scope === 'overview'
+                          ? 'guide.overview'
+                          : editing
+                            ? 'guide.filling'
+                            : 'guide.section'
+                      }
+                      preference={preferenceKey(
+                        props.session.subject,
+                        'shipments',
+                        scope === 'overview'
+                          ? 'overview'
+                          : `workflow-${tab}-${editing ? 'edit' : 'view'}`,
+                      )}
+                      steps={
+                        scope === 'overview'
+                          ? shipmentWorkflow(
+                              props.session.permissions.includes('finance.read_service_charges'),
+                              settings?.planned_containers === true,
+                            ).filter((step) => !shipmentStepEditing(step.id))
+                          : shipmentContextSteps(
+                              tab,
+                              editing,
+                              props.session.permissions.includes('finance.read_service_charges'),
+                              settings?.planned_containers === true,
+                            )
+                      }
+                      active={props.active !== false}
+                      getTarget={(key) => {
+                        const root = document.getElementById(formId)?.closest('section');
+                        if (!root) return null;
+                        if (scope === 'context' && !editing && shipmentFieldSteps.has(key)) {
+                          const labels: Record<string, string> = {
+                            customer: translate('field.customer'),
+                            recipient: translate('shipment.recipient'),
+                            logist: translate('shipment.logist'),
+                            cargo: translate('shipment.cargoDescription'),
+                            terms: 'Incoterms',
+                            delivery: translate('shipment.city'),
+                          };
+                          const field = Array.from(root.querySelectorAll<HTMLElement>('dt')).find(
+                            (node) =>
+                              node.getClientRects().length > 0 && node.textContent === labels[key],
+                          );
+                          return key === 'delivery' || key === 'terms'
+                            ? (field?.closest<HTMLElement>('.record-layout-section') ?? null)
+                            : (field?.parentElement ?? null);
+                        }
+
+                        const selector = shipmentFieldSteps.has(key)
+                          ? `[data-workflow-field="${key}"]`
+                          : key === 'route-edit'
+                            ? '.shipment-route-add'
+                            : key === 'route-details'
+                              ? '.shipment-route-workspace'
+                              : key === 'plan-quantities'
+                                ? '[data-workflow-panel="items"] .quantities'
+                                : key === 'plan-create'
+                                  ? '[data-workflow-plan-create]'
+                                  : key === 'transport-list'
+                                    ? '[data-workflow-panel="transportations"]'
+                                    : key === 'finance-summary'
+                                      ? '.finance-summary-disclosure'
+                                      : key === 'finance-invoice'
+                                        ? '.finance-services-table-wrap'
+                                        : `[data-workflow-tab="${key}"]`;
+                        return (
+                          root.querySelector<HTMLElement>(selector) ??
+                          root.querySelector<HTMLElement>(
+                            `[data-workflow-tab="${shipmentStepTab(key)}"]`,
+                          )
+                        );
+                      }}
+                      onOpen={(key, proceed) => {
+                        if (scope === 'context') {
+                          proceed();
+                          return;
+                        }
+                        const root = document.getElementById(formId)?.closest('section');
+                        if (root?.querySelector('form[data-busy="true"]')) return;
+                        if (shipmentStepEditing(key)) {
+                          // Field steps stay in the same editor and preserve the user's draft.
+                          if (!editing && dirty) return;
+                          setTab(shipmentStepTab(key));
+                          setEditing(true);
+                          proceed();
+                          return;
+                        }
+                        confirmDiscard(
+                          Boolean(root?.querySelector('form[data-dirty="true"]')),
+                          () => {
+                            if (editing) {
+                              setDraft(JSON.parse(baseline) as CardDraft);
+                              setEditing(false);
+                              validation.reset();
+                              setFailure('');
+                            }
+                            setTab(shipmentStepTab(key));
+                            proceed();
+                          },
+                        );
+                      }}
+                    />
+                  ))}
+                </RecordGuideMenu>
+                <RecordGuideNotice
+                  kind="shipment"
+                  context={`${editing ? 'edit' : 'view'}:${tab}`}
+                  active={props.active !== false}
+                  editing={editing}
+                />
+              </span>
               {!editing && (
                 <button
                   className="primary"

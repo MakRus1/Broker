@@ -517,6 +517,7 @@ export function ContractsPage({
     <section className="surface record-workbench financial-record-workbench">
       {confirmation}
       <RecordHeading
+        guide="contract"
         kind={translate('forms.contract')}
         title={
           creating

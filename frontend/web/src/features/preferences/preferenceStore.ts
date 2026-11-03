@@ -46,7 +46,8 @@ export class PreferenceStore {
   }
   private key(legacyKey: string) {
     const prefix = `broker:registry:${encodeURIComponent(this.subject)}:`;
-    return legacyKey.startsWith(prefix) ? legacyKey.slice(prefix.length) : '';
+    const key = legacyKey.startsWith(prefix) ? legacyKey.slice(prefix.length) : '';
+    return /^[a-zA-Z0-9_.:/-]{1,200}$/.test(key) ? key : '';
   }
   private cacheKey(key: string) {
     return `broker:preferences:${encodeURIComponent(this.actor)}:${this.organization}:${key}`;

@@ -142,6 +142,15 @@ export function App() {
     setWorkspaces((old) => old.filter((tab) => tab.id !== id));
     if (activeWorkspace === id) location.hash = next;
   }
+  function cancelWorkspaceEdit(entry: { id: string; route: string }) {
+    if (/\/new(?:\/|$)/.test(entry.route)) {
+      dismissWorkspace(entry.id);
+      return;
+    }
+    const next = entry.route.replace(/\/edit$/, '');
+    setWorkspaces((old) => old.map((tab) => (tab.id === entry.id ? { ...tab, route: next } : tab)));
+    location.hash = next;
+  }
   function closeWorkspace(id: string) {
     const node = workspaceNodes.current.get(id);
     if (node?.querySelector('form[data-busy="true"]')) return;
@@ -540,7 +549,7 @@ export function App() {
                     active={activeWorkspace === entry.id}
                     session={session}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancel={() => dismissWorkspace(entry.id)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
                       const next = `/${value.kind === 'receipt' ? 'receipts' : 'disbursements'}/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -555,7 +564,7 @@ export function App() {
                     session={session}
 
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancel={() => dismissWorkspace(entry.id)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
                       const next = `/${value.direction}-invoices/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -583,7 +592,7 @@ export function App() {
                     session={session}
                     onError={error}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancel={() => dismissWorkspace(entry.id)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
                       const next = `/financial-labels/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
@@ -597,7 +606,7 @@ export function App() {
                     session={session}
                     onError={error}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
-                    onCancel={() => dismissWorkspace(entry.id)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
                       const next = `/contracts/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
@@ -607,7 +616,7 @@ export function App() {
                 ) : entry.route.startsWith('/counterparties') ? (
                   <CounterpartiesPage
                     route={entry.route}
-                    onCancel={() => dismissWorkspace(entry.id)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
                     active={activeWorkspace === entry.id}
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     session={session}

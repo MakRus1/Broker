@@ -124,3 +124,14 @@ describe('серверные личные настройки', () => {
     expect(store.error).toBe('');
   });
 });
+
+it('does not send localized or malformed preference keys to the server', async () => {
+  vi.useFakeTimers();
+  const { store, transport } = setup();
+  store.set('broker:registry:author:guide-contract-view:Основное:workflow:v1', {});
+  store.set(`broker:registry:author:${'a'.repeat(201)}`, {});
+  await vi.advanceTimersByTimeAsync(400);
+  expect(transport.save).not.toHaveBeenCalled();
+  expect(store.error).toBe('');
+  store.dispose();
+});

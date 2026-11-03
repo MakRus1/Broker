@@ -1,6 +1,11 @@
 import { GuidedWorkflow } from '../../shared/ui/GuidedWorkflow';
 import { preferenceKey } from '../registry/registryPreferences';
-import { shipmentWorkflow } from './shipmentWorkflow';
+import {
+  shipmentWorkflow,
+  shipmentFieldSteps,
+  shipmentStepTab,
+  shipmentStepEditing,
+} from './shipmentWorkflow';
 import { saveErrorMessage } from '../../shared/forms/saveError';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { CalendarDate } from '../../shared/dates/CalendarDate';
@@ -427,17 +432,45 @@ function ShipmentCard({
                 preference={preferenceKey(props.session.subject, 'shipments', 'workflow')}
                 steps={shipmentWorkflow(
                   props.session.permissions.includes('finance.read_service_charges'),
+                  settings?.planned_containers === true,
                 )}
                 active={props.active !== false}
-                getTarget={(key) =>
-                  document
-                    .getElementById(formId)
-                    ?.closest('section')
-                    ?.querySelector<HTMLElement>(`[data-workflow-tab="${key}"]`) ?? null
-                }
+                getTarget={(key) => {
+                  const root = document.getElementById(formId)?.closest('section');
+                  if (!root) return null;
+                  const selector = shipmentFieldSteps.has(key)
+                    ? `[data-workflow-field="${key}"]`
+                    : key === 'route-edit'
+                      ? '.shipment-route-add'
+                      : key === 'route-details'
+                        ? '.shipment-route-workspace'
+                        : key === 'plan-quantities'
+                          ? '[data-workflow-panel="items"] .quantities'
+                          : key === 'plan-create'
+                            ? '[data-workflow-plan-create]'
+                            : key === 'transport-list'
+                              ? '[data-workflow-panel="transportations"]'
+                              : key === 'finance-summary'
+                                ? '.finance-summary-disclosure'
+                                : key === 'finance-invoice'
+                                  ? '.finance-services-table-wrap'
+                                  : `[data-workflow-tab="${key}"]`;
+                  return (
+                    root.querySelector<HTMLElement>(selector) ??
+                    root.querySelector<HTMLElement>(`[data-workflow-tab="${shipmentStepTab(key)}"]`)
+                  );
+                }}
                 onOpen={(key, proceed) => {
                   const root = document.getElementById(formId)?.closest('section');
                   if (root?.querySelector('form[data-busy="true"]')) return;
+                  if (shipmentStepEditing(key)) {
+                    // Field steps stay in the same editor and preserve the user's draft.
+                    if (!editing && dirty) return;
+                    setTab(shipmentStepTab(key));
+                    setEditing(true);
+                    proceed();
+                    return;
+                  }
                   confirmDiscard(Boolean(root?.querySelector('form[data-dirty="true"]')), () => {
                     if (editing) {
                       setDraft(JSON.parse(baseline) as CardDraft);
@@ -445,7 +478,7 @@ function ShipmentCard({
                       validation.reset();
                       setFailure('');
                     }
-                    setTab(key);
+                    setTab(shipmentStepTab(key));
                     proceed();
                   });
                 }}
@@ -604,44 +637,51 @@ function ShipmentCard({
             </RecordSection>
             <RecordSection title={translate('shipment.participants')}>
               <div className="shipment-fields">
-                <CustomerSelect
-                  label={translate('shipment.customerRequired')}
-                  required
-                  error={
-                    validation.attempted && !draft.customer_id
-                      ? translate('lookup.chooseCustomerDirectory')
-                      : ''
-                  }
-                  session={props.session}
-                  items={props.customers}
-                  value={draft.customer_id}
-                  disabled={busy || !write}
-                  onChange={(value) =>
-                    setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
-                  }
-                />
-                <CustomerSelect
-                  label={translate('shipment.recipient')}
-                  session={props.session}
-                  items={props.customers}
-                  value={draft.recipient_id}
-                  disabled={busy || !write}
-                  onChange={(value) => set('recipient_id', value)}
-                />
-                <DirectoryLookup
-                  session={props.session}
-                  kind="employees"
-                  label={translate('shipment.logist')}
-                  value={draft.logist}
-                  onChange={(value) => {
-                    manualLogist.current = true;
-                    set('logist', value);
-                  }}
-                />
+                <div data-workflow-field="customer">
+                  <CustomerSelect
+                    label={translate('shipment.customerRequired')}
+                    required
+                    error={
+                      validation.attempted && !draft.customer_id
+                        ? translate('lookup.chooseCustomerDirectory')
+                        : ''
+                    }
+                    session={props.session}
+                    items={props.customers}
+                    value={draft.customer_id}
+                    disabled={busy || !write}
+                    onChange={(value) =>
+                      setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
+                    }
+                  />
+                </div>
+                <div data-workflow-field="recipient">
+                  <CustomerSelect
+                    label={translate('shipment.recipient')}
+                    session={props.session}
+                    items={props.customers}
+                    value={draft.recipient_id}
+                    disabled={busy || !write}
+                    onChange={(value) => set('recipient_id', value)}
+                  />
+                </div>
+                <div data-workflow-field="logist">
+                  <DirectoryLookup
+                    session={props.session}
+                    kind="employees"
+                    label={translate('shipment.logist')}
+                    value={draft.logist}
+                    onChange={(value) => {
+                      manualLogist.current = true;
+                      set('logist', value);
+                    }}
+                  />
+                </div>
               </div>
             </RecordSection>
             <RecordSection title={translate('shipment.cargoTerms')}>
               <div
+                data-workflow-field="cargo"
                 className="cargo-autocomplete"
                 onBlur={(event) => {
                   if (!event.currentTarget.contains(event.relatedTarget)) setCargoOpen(false);
@@ -732,7 +772,7 @@ function ShipmentCard({
                   </div>
                 )}
               </div>
-              <div className="shipment-fields three">
+              <div className="shipment-fields three" data-workflow-field="terms">
                 <Select
                   label="Incoterms"
                   value={draft.incoterms}
@@ -754,7 +794,7 @@ function ShipmentCard({
               </div>
             </RecordSection>
             <RecordSection title={translate('shipment.delivery')}>
-              <div className="shipment-fields">
+              <div className="shipment-fields" data-workflow-field="delivery">
                 <DirectoryLookup
                   session={props.session}
                   kind="cities"
@@ -839,7 +879,10 @@ function ShipmentCard({
         </div>
       )}
       {initial && (
-        <div hidden={tab !== 'items' && tab !== 'transportations'}>
+        <div
+          data-workflow-panel={tab === 'items' ? 'items' : 'transportations'}
+          hidden={tab !== 'items' && tab !== 'transportations'}
+        >
           <ShipmentPanel
             embedded
             active={props.active !== false && (tab === 'items' || tab === 'transportations')}

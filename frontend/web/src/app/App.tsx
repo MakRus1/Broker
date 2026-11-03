@@ -1,3 +1,4 @@
+import { interfaceText } from '../shared/localization/interfaceText';
 import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
 import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
 import { WorkspaceHome } from './WorkspaceHome';
@@ -218,8 +219,10 @@ export function App() {
       setNotice(
         value instanceof Error
           ? value.message +
-              (value instanceof ApiError && value.traceId ? ` · Трейс: ${value.traceId}` : '')
-          : 'Ошибка запроса',
+              (value instanceof ApiError && value.traceId
+                ? ` · ${interfaceText('errors.trace', { id: value.traceId })}`
+                : '')
+          : interfaceText('errors.request'),
       );
     },
     [setSession],
@@ -677,7 +680,7 @@ export function App() {
       {notice && (
         <div className="toast" role="alert">
           <span>{notice}</span>
-          <button aria-label="Закрыть уведомление" onClick={() => setNotice('')}>
+          <button aria-label={translate('errors.closeNotice')} onClick={() => setNotice('')}>
             ×
           </button>
         </div>

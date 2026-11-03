@@ -1,4 +1,5 @@
 import React from 'react';
+import { PreferenceNotice } from '../features/preferences/PreferenceNotice';
 import { createRoot } from 'react-dom/client';
 import { Localization } from '../features/localization/Localization';
 import { App } from './App';
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <UserPreferences>
       <Localization>
+        <PreferenceNotice />
         <App />
       </Localization>
     </UserPreferences>

@@ -1,8 +1,9 @@
+import { interfaceText } from '../localization/interfaceText';
 import regularUrl from './fonts/NotoSans-Regular.ttf?url';
 import boldUrl from './fonts/NotoSans-Bold.ttf?url';
 async function font(url: string): Promise<string> {
   const response = await fetch(url);
-  if (!response.ok) throw new Error('Не удалось загрузить шрифт печатной формы');
+  if (!response.ok) throw new Error(interfaceText('print.fontFailed'));
   const bytes = new Uint8Array(await response.arrayBuffer());
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 8192)

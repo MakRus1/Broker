@@ -1,3 +1,5 @@
+import type { MessageKey } from '../../../../shared/i18n/catalog';
+
 export interface Preference {
   key: string;
   value: { value?: unknown };
@@ -17,7 +19,7 @@ export class PreferenceStore {
   private listeners = new Set<() => void>();
   private version = 0;
   private disposed = false;
-  error = '';
+  error: MessageKey | '' = '';
   constructor(
     private actor: string,
     private subject: string,
@@ -28,8 +30,7 @@ export class PreferenceStore {
     private ready = true,
   ) {
     this.replace(entries);
-    if (!ready)
-      this.error = 'Личные настройки временно недоступны. Изменения сохранены в этом браузере.';
+    if (!ready) this.error = 'preferences.unavailable';
   }
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -134,13 +135,11 @@ export class PreferenceStore {
             this.entries.set(key, current);
             this.cache(key, current.value.value);
           }
-          this.error = 'Настройка изменена в другом окне. Загружена её актуальная версия.';
+          this.error = 'preferences.conflict';
         } catch {
-          this.error = 'Не удалось обновить личные настройки. Повторите сохранение.';
+          this.error = 'preferences.refreshFailed';
         }
-      } else
-        this.error =
-          'Не удалось сохранить личные настройки на сервере. Изменения доступны в этом браузере.';
+      } else this.error = 'preferences.saveFailed';
       this.emit();
     } finally {
       this.running.delete(key);
@@ -159,13 +158,11 @@ export class PreferenceStore {
       }
       this.replace(entries);
       this.ready = true;
-      this.error = conflict
-        ? 'Настройки изменены на другом устройстве. Загружена актуальная версия.'
-        : '';
+      this.error = conflict ? 'preferences.remoteConflict' : '';
       this.emit();
       await Promise.all([...this.pending.keys()].map((key) => this.flush(key)));
     } catch {
-      this.error = 'Личные настройки пока недоступны. Повторите позже.';
+      this.error = 'preferences.retryLater';
       this.emit();
     }
   }

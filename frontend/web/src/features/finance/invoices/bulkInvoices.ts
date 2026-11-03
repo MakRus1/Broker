@@ -1,3 +1,4 @@
+import { interfaceText } from '../../../shared/localization/interfaceText';
 import { translate, type Locale } from '../../../../../shared/i18n/catalog';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
@@ -41,7 +42,7 @@ export async function attachBulkInvoice(
       id: selection.invoice.id,
     });
     if (current.invoice.revision !== selection.invoice.revision)
-      throw new Error('Счёт изменён. Выберите его заново');
+      throw new Error(interfaceText('bulk.invoiceChanged'));
     const invoice = current.invoice;
     body = {
       id: invoice.id,
@@ -62,7 +63,7 @@ export async function attachBulkInvoice(
     };
   }
   if (body.service_charge_ids.length > 500)
-    throw new Error('В счёте может быть не больше 500 услуг');
+    throw new Error(interfaceText('bulk.invoiceChargeLimit'));
   try {
     return await request<InvoiceDetails>('/api/v1/invoices/save', session, body);
   } catch (error) {

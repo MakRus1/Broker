@@ -84,7 +84,7 @@ export function ShipmentRegistry({
     return () => controller.abort();
   }, [session, page.items, customers, onCustomersLoaded, onError]);
   const customerName = (id: string) =>
-    customers.find((item) => item.id === id)?.name || 'Клиент недоступен';
+    customers.find((item) => item.id === id)?.name || translate('lookup.counterpartyUnavailable');
   const columns: RegistryColumn<Shipment>[] = [
     {
       id: 'number',
@@ -177,7 +177,7 @@ export function ShipmentRegistry({
           <div className="empty">
             <span>▣</span>
             <h2>{translate('empty.shipments')}</h2>
-            <p>Измените фильтры или создайте поставку.</p>
+            <p>{translate('empty.shipmentHint')}</p>
           </div>
         )}
         <AutoLoadMore

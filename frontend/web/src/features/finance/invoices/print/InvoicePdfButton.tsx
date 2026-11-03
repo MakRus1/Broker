@@ -1,3 +1,4 @@
+import { useLocalization } from '../../../localization/Localization';
 import './invoicePrint.css';
 import { useState } from 'react';
 import { request } from '../../../../shared/api/http';
@@ -5,6 +6,7 @@ import type { Session } from '../../../../shared/api/session';
 import type { Invoice } from '../invoices';
 import type { InvoicePrintData } from './invoicePdf';
 export function InvoicePdfButton({ invoice, session }: { invoice: Invoice; session: Session }) {
+  const { translate } = useLocalization();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
@@ -23,13 +25,15 @@ export function InvoicePdfButton({ invoice, session }: { invoice: Invoice; sessi
             const { downloadInvoicePdf } = await import('./downloadInvoicePdf');
             await downloadInvoicePdf(data);
           } catch (error) {
-            setError(error instanceof Error ? error.message : 'Не удалось скачать PDF');
+            setError(
+              error instanceof Error ? error.message : translate('forms.couldNotDownloadPdf'),
+            );
           } finally {
             setBusy(false);
           }
         }}
       >
-        {busy ? 'Формируется PDF…' : 'Скачать PDF'}
+        {busy ? translate('forms.preparingPDF') : translate('forms.downloadPDF')}
       </button>
       {error && (
         <p className="error" role="alert">

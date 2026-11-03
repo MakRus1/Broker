@@ -167,7 +167,9 @@ export function CounterpartiesPage({
         setMore(Boolean(result.next_cursor));
       } catch (error) {
         if (!signal?.aborted && current === epoch.current) {
-          setFailure(error instanceof Error ? error.message : 'Ошибка загрузки');
+          setFailure(
+            error instanceof Error ? error.message : translate('counterparty.couldNotLoadData'),
+          );
           onError(error);
         }
       } finally {
@@ -219,8 +221,8 @@ export function CounterpartiesPage({
   }, [id, read, refresh, onError]);
   useEffect(() => {
     if (active)
-      document.title = `${creating ? 'Новый контрагент' : item?.name || translate('nav.counterparties')} · Broker`;
-  }, [creating, item?.name]);
+      document.title = `${creating ? translate('entity.newCounterparty') : item?.name || translate('nav.counterparties')} · Broker`;
+  }, [creating, item?.name, locale]);
   async function archive() {
     if (!item) return;
     setBusy(true);
@@ -235,7 +237,9 @@ export function CounterpartiesPage({
       onChanged(result.counterparty);
       setArchiving(false);
     } catch (error) {
-      setArchiveFailure(error instanceof Error ? error.message : 'Не удалось изменить состояние');
+      setArchiveFailure(
+        error instanceof Error ? error.message : translate('counterparty.couldNotChangeStatus'),
+      );
       onError(error);
     } finally {
       setBusy(false);
@@ -245,14 +249,14 @@ export function CounterpartiesPage({
     return (
       <section className="creation-page surface">
         <h1>{translate('nav.counterparties')}</h1>
-        <p>Нет права на просмотр справочника.</p>
+        <p>{translate('counterparty.youDoNotHavePermissionToViewThisDirectory')}</p>
       </section>
     );
   if (creating || id)
     return (
       <section className="creation-page surface counterparty-page">
         <a className="link" href="#/counterparties">
-          ← К контрагентам
+          {translate('counterparty.backToCounterparties')}
         </a>
         {failure && (
           <p role="alert" className="error">
@@ -260,10 +264,14 @@ export function CounterpartiesPage({
           </p>
         )}
         {id && item?.id !== id ? (
-          <p>{failure ? 'Карточка недоступна.' : 'Открываем контрагента…'}</p>
+          <p>
+            {failure
+              ? translate('counterparty.recordUnavailable')
+              : translate('counterparty.openingCounterparty')}
+          </p>
         ) : editing ? (
           !write || item?.archived ? (
-            <p>Редактирование недоступно. Архивного контрагента сначала нужно восстановить.</p>
+            <p>{translate('counterparty.restoreBeforeEditing')}</p>
           ) : (
             <CounterpartyForm
               key={creating ? 'new' : item?.id}
@@ -283,18 +291,20 @@ export function CounterpartiesPage({
               <div className="page-heading counterparty-heading">
                 <div>
                   <p className="eyebrow">
-                    {item.own_company ? 'СОБСТВЕННОЕ ЮРЛИЦО' : 'КОНТРАГЕНТ · ЮРИДИЧЕСКОЕ ЛИЦО'}
+                    {item.own_company
+                      ? translate('counterparty.ownLEGALENTITY')
+                      : translate('counterparty.counterpartyLEGALENTITY')}
                   </p>
                   <h1>{item.name}</h1>
                   <p>
                     {item.archived ? translate('filter.archived') : translate('filter.active')} ·
-                    Редакция {item.revision}
+                    {translate('forms.revisionValue', { revision: item.revision })}
                   </p>
                 </div>
                 <div className="actions">
                   {write && !item.archived && (
                     <a className="primary" href={`#/counterparties/${item.id}/edit`}>
-                      Редактировать
+                      {translate('shipment.edit')}
                     </a>
                   )}
                   {write && (
@@ -304,24 +314,23 @@ export function CounterpartiesPage({
                         setArchiving(true);
                       }}
                     >
-                      {item.archived ? 'Восстановить' : 'В архив'}
+                      {item.archived
+                        ? translate('counterparty.restore')
+                        : translate('counterparty.archive')}
                     </button>
                   )}
                 </div>
               </div>
               {item.archived && (
-                <p className="route-notice">
-                  Контрагент скрыт из нового выбора. Связанные поставки, перевозки и история
-                  сохранены.
-                </p>
+                <p className="route-notice">{translate('counterparty.archivedHint')}</p>
               )}
               <CardNavigation onRefresh={() => refresh().catch(onError)}>
                 <button aria-pressed={tab === 'details'} onClick={() => switchTab('details')}>
-                  Реквизиты
+                  {translate('counterparty.details')}
                 </button>
                 {session.permissions.includes('counterparties.read_bank_accounts') && (
                   <button aria-pressed={tab === 'accounts'} onClick={() => switchTab('accounts')}>
-                    Банковские счета
+                    {translate('counterparty.bankAccounts')}
                   </button>
                 )}
                 {session.permissions.includes('finance.read_invoices') &&
@@ -330,11 +339,11 @@ export function CounterpartiesPage({
                       aria-pressed={tab === 'settlements'}
                       onClick={() => switchTab('settlements')}
                     >
-                      Взаиморасчёты
+                      {translate('forms.settlements')}
                     </button>
                   )}
                 <button aria-pressed={tab === 'history'} onClick={() => switchTab('history')}>
-                  История
+                  {translate('finance.history')}
                 </button>
               </CardNavigation>
               {confirmation}
@@ -369,45 +378,45 @@ export function CounterpartiesPage({
                     <div className="counterparty-roles">
                       {item.roles.map((value) => (
                         <span className="badge" key={value}>
-                          {counterpartyRoles[value]}
+                          {registryValueLabel('roles', value, locale) ?? counterpartyRoles[value]}
                         </span>
                       ))}
                     </div>
                   )}
                   <dl className="counterparty-details">
                     {[
-                      ['Юридическое наименование', item.legal_name],
-                      ['Страна', item.country_code],
-                      ['Налоговый номер / ИНН', item.tax_id],
-                      ['КПП', item.kpp],
-                      ['Регистрационный номер / ОГРН', item.registration_id],
-                      ['Юридический адрес', item.legal_address],
+                      [translate('counterparty.legalName'), item.legal_name],
+                      [translate('registryField.country_code'), item.country_code],
+                      [translate('counterparty.taxIDINN'), item.tax_id],
+                      [translate('counterparty.kpp'), item.kpp],
+                      [translate('counterparty.registrationNumberOGRN'), item.registration_id],
+                      [translate('counterparty.registeredAddress'), item.legal_address],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <dt>{label}</dt>
-                        <dd>{value || 'Не указано'}</dd>
+                        <dd>{value || translate('shipment.notSpecified')}</dd>
                       </div>
                     ))}
                     <div>
-                      <dt>Логист</dt>
+                      <dt>{translate('shipment.logist')}</dt>
                       <dd>
                         <EmployeeName subject={item.logist} session={session} />
                       </dd>
                     </div>
                   </dl>
                   <section className="counterparty-contacts">
-                    <h2>Контактные лица</h2>
+                    <h2>{translate('counterparty.contacts')}</h2>
                     {!item.contacts.length ? (
-                      <p className="hint">Контакты пока не добавлены.</p>
+                      <p className="hint">{translate('counterparty.noContactsYet')}</p>
                     ) : (
                       <div className="table-scroll">
                         <table>
                           <thead>
                             <tr>
-                              <th>Имя</th>
-                              <th>Должность</th>
+                              <th>{translate('counterparty.name')}</th>
+                              <th>{translate('counterparty.position')}</th>
                               <th>Email</th>
-                              <th>Телефон</th>
+                              <th>{translate('counterparty.phone')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -429,7 +438,9 @@ export function CounterpartiesPage({
               {archiving && (
                 <Dialog
                   title={
-                    item.archived ? 'Восстановить контрагента?' : 'Отправить контрагента в архив?'
+                    item.archived
+                      ? translate('counterparty.restoreCounterparty')
+                      : translate('counterparty.archiveCounterparty')
                   }
                   onClose={() => {
                     if (!busy) setArchiving(false);
@@ -444,8 +455,8 @@ export function CounterpartiesPage({
                   >
                     <p>
                       {item.archived
-                        ? 'Контрагент снова появится при выборе клиентов и подрядчиков.'
-                        : 'Он исчезнет из нового выбора. Все существующие связи останутся.'}
+                        ? translate('counterparty.restoreHint')
+                        : translate('counterparty.archiveHint')}
                     </p>
                     {archiveFailure && (
                       <p className="error" role="alert">
@@ -454,10 +465,14 @@ export function CounterpartiesPage({
                     )}
                     <div className="confirmation-actions">
                       <button type="button" disabled={busy} onClick={() => setArchiving(false)}>
-                        Вернуться
+                        {translate('counterparty.goBack')}
                       </button>
                       <button className="primary" disabled={busy}>
-                        {busy ? 'Сохраняем…' : item.archived ? 'Восстановить' : 'В архив'}
+                        {busy
+                          ? translate('shipment.saving')
+                          : item.archived
+                            ? translate('counterparty.restore')
+                            : translate('counterparty.archive')}
                       </button>
                     </div>
                   </form>
@@ -507,13 +522,13 @@ export function CounterpartiesPage({
         />
         {loading && (
           <p className="directory-loading" role="status">
-            Загружаем контрагентов…
+            {translate('counterparty.loadingCounterparties')}
           </p>
         )}
         {!items.length && !loading && (
           <div className="empty">
             <h2>{translate('registryPage.noCounterparties')}</h2>
-            <p>Измените поиск или создайте новую карточку.</p>
+            <p>{translate('counterparty.changeTheSearchOrCreateANewRecord')}</p>
           </div>
         )}
         <AutoLoadMore

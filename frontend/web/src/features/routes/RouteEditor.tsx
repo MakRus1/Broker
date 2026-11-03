@@ -1,3 +1,4 @@
+import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { DateTimeInput } from '../../shared/dates/DateInput';
 import { RoadFields } from './RoadFields';
@@ -9,7 +10,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import { modes } from './logisticsLabels';
 import { type Session } from '../../shared/api/session';
-import { type Shipment } from '../shipments/types';
 import { type Transportation } from '../transportations/types';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
@@ -69,7 +69,7 @@ export function RouteEditor({
   onSaved: (value: Transportation) => void;
   onError: (error: unknown) => void;
 }) {
-  const { locale } = useLocalization();
+  const { translate, locale } = useLocalization();
   const key = `broker:route-draft:${session.actor}:${initial.id}`;
   const [baseline] = useState<Draft>(() => ({
     revision: initial.revision,
@@ -133,7 +133,7 @@ export function RouteEditor({
       const result = await request<{ transportation: Transportation }>(
         '/api/v1/transportation-routes/set',
         session,
-        routeRequest(initial.id, draft.revision, draft.route_segments),
+        routeRequest(initial.id, draft.revision, draft.route_segments, locale),
       );
       try {
         sessionStorage.removeItem(key);
@@ -142,7 +142,7 @@ export function RouteEditor({
       }
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить маршрут');
+      setFailure(error instanceof Error ? error.message : translate('forms.couldNotSaveTheRoute'));
       onError(error);
     } finally {
       setBusy(false);
@@ -151,8 +151,8 @@ export function RouteEditor({
   if (!allowed)
     return (
       <div className="panel-content">
-        <p>Нет права на изменение перевозок.</p>
-        <a href={`#/transportations/${initial.id}`}>Вернуться к перевозке</a>
+        <p>{translate('forms.youDoNotHavePermissionToEditTransportations')}</p>
+        <a href={`#/transportations/${initial.id}`}>{translate('forms.backToTransportation')}</a>
       </div>
     );
   return (
@@ -166,22 +166,24 @@ export function RouteEditor({
       >
         <div className="section-heading">
           <div>
-            <h2>Участки маршрута</h2>
-            <p className="hint">Даты ЖД-участков указываются без времени.</p>
+            <h2>{translate('forms.routeLegs')}</h2>
+            <p className="hint">{translate('forms.railLegDatesDoNotIncludeATime')}</p>
           </div>
         </div>
         {stale && (
           <p className="error" role="alert">
-            Черновик основан на редакции {draft.revision}, на сервере уже {initial.revision}.
-            Отмените редактирование, чтобы открыть актуальные данные.
+            {translate('forms.routeDraftConflict', {
+              draft: draft.revision,
+              current: initial.revision,
+            })}
           </p>
         )}
         <div className="route-collapse-actions">
           <button type="button" onClick={collapse.expandAll}>
-            Развернуть все
+            {translate('route.expandAll')}
           </button>
           <button type="button" onClick={collapse.collapseAll}>
-            Свернуть все
+            {translate('route.collapseAll')}
           </button>
         </div>
         <fieldset disabled={busy || stale}>
@@ -195,7 +197,9 @@ export function RouteEditor({
               >
                 <summary className="route-stage-summary">
                   <h3>
-                    {index + 1}. {modes[route_segment.mode]}
+                    {index + 1}.{' '}
+                    {registryValueLabel('mode', route_segment.mode, locale) ??
+                      modes[route_segment.mode]}
                   </h3>
                   <span className="route-summary-meta">
                     {sharedRouteDirection(sharedStage(route_segment), locale)}
@@ -203,7 +207,7 @@ export function RouteEditor({
                 </summary>
                 <div className="shared-route-inherited">
                   <a href={`#/shipments/${initial.shipment_id}/route`}>
-                    Открыть маршрут поставки ↗
+                    {translate('forms.openShipmentRoute')}
                   </a>
                   <SharedRouteDetailsView
                     sea={sharedStage(route_segment).sea}
@@ -222,12 +226,14 @@ export function RouteEditor({
               >
                 <summary className="route-stage-summary">
                   <h3>
-                    {index + 1}. {modes[route_segment.mode]}
+                    {index + 1}.{' '}
+                    {registryValueLabel('mode', route_segment.mode, locale) ??
+                      modes[route_segment.mode]}
                   </h3>
-                  <span>{routeDirection(route_segment)}</span>
+                  <span>{routeDirection(route_segment, locale)}</span>
                   <span className="route-summary-meta">
                     {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
-                      'Перевозчик не выбран'}
+                      translate('forms.carrierNotSelected')}
                     {route_segment.rail && (
                       <>
                         {' '}
@@ -240,7 +246,7 @@ export function RouteEditor({
                 <div className="route-fields">
                   <div className="route-contractor-field">
                     <CustomerSelect
-                      label="Перевозчик"
+                      label={translate('registryValue.roles.carrier')}
                       items={customers}
                       session={session}
                       disabled={busy}
@@ -292,7 +298,9 @@ export function RouteEditor({
                       {(['origin', 'destination'] as const).map((point) => (
                         <div key={point} className="point-fields">
                           <label>
-                            {point === 'origin' ? 'Откуда' : 'Куда'}
+                            {point === 'origin'
+                              ? translate('forms.origin')
+                              : translate('forms.destination')}
                             <input
                               maxLength={256}
                               value={routePoint(route_segment, point).name}
@@ -308,7 +316,7 @@ export function RouteEditor({
                             />
                           </label>
                           <label>
-                            Страна
+                            {translate('registryField.country_code')}
                             <input
                               pattern="[A-Za-z]{2}"
                               minLength={2}
@@ -331,20 +339,22 @@ export function RouteEditor({
                       {(['planned_departure_at', 'planned_arrival_at'] as const).map((field) => (
                         <label key={field}>
                           {field === 'planned_departure_at'
-                            ? 'Плановое отправление'
-                            : 'Плановое прибытие'}
+                            ? translate('forms.plannedDeparture')
+                            : translate('forms.plannedArrival')}
                           <DateTimeInput
                             value={localDateTime(route_segment[field])}
                             onChange={(dateValue) => {
                               try {
                                 update(index, {
                                   ...route_segment,
-                                  [field]: dateValue ? utcDateTime(dateValue) : undefined,
+                                  [field]: dateValue ? utcDateTime(dateValue, locale) : undefined,
                                 });
                                 setFailure('');
                               } catch (error) {
                                 setFailure(
-                                  error instanceof Error ? error.message : 'Проверьте дату',
+                                  error instanceof Error
+                                    ? error.message
+                                    : translate('forms.checkTheDate'),
                                 );
                               }
                             }}
@@ -358,7 +368,9 @@ export function RouteEditor({
             ),
           )}
         </fieldset>
-        {!draft.route_segments.length && <p className="hint">Задайте маршрут в поставке.</p>}
+        {!draft.route_segments.length && (
+          <p className="hint">{translate('forms.setTheRouteInTheShipment')}</p>
+        )}
         {failure && (
           <p className="error" role="alert">
             {failure}
@@ -366,13 +378,13 @@ export function RouteEditor({
         )}
         <div className="transportation-form-actions">
           <button type="button" disabled={busy} onClick={discard}>
-            Отменить
+            {translate('action.cancel')}
           </button>
           <button
             className="primary"
             disabled={busy || stale || !dirty || !draft.route_segments.length}
           >
-            {busy ? 'Сохраняем…' : 'Сохранить'}
+            {busy ? translate('shipment.saving') : translate('action.save')}
           </button>
         </div>
       </form>

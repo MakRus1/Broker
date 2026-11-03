@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { businessDate, calendarDate } from '../../shared/dates/calendar';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
@@ -22,6 +23,7 @@ export function RoadFields({
   onRoad: (value: InternationalRoadDetails) => void;
   onPickup: (value: PickupDetails) => void;
 }) {
+  const { translate } = useLocalization();
   const date = (
     label: string,
     value: string | undefined,
@@ -58,30 +60,38 @@ export function RoadFields({
     return (
       <div className="road-details-grid">
         <CustomerSelect
-          label="Место погрузки · терминал"
+          label={translate('forms.loadingTerminal')}
           items={customers}
           value={value.loading_terminal_id ?? ''}
           onChange={(id) => onRoad({ ...value, loading_terminal_id: id || undefined })}
           session={session}
           disabled={false}
         />
-        {text('Номер CMR', value.cmr_number, 128, (cmr_number) => onRoad({ ...value, cmr_number }))}
-        {date('Плановая погрузка', value.planned_loading_date, false, (planned_loading_date) =>
-          onRoad({ ...value, planned_loading_date }),
+        {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
+          onRoad({ ...value, cmr_number }),
         )}
-        {date('Плановая выгрузка', value.planned_unloading_date, false, (planned_unloading_date) =>
-          onRoad({ ...value, planned_unloading_date }),
+        {date(
+          translate('forms.plannedLoading'),
+          value.planned_loading_date,
+          false,
+          (planned_loading_date) => onRoad({ ...value, planned_loading_date }),
         )}
-        {date('Дата выхода', value.departure_date, true, (departure_date) =>
+        {date(
+          translate('forms.plannedUnloading'),
+          value.planned_unloading_date,
+          false,
+          (planned_unloading_date) => onRoad({ ...value, planned_unloading_date }),
+        )}
+        {date(translate('forms.departureDate'), value.departure_date, true, (departure_date) =>
           onRoad({ ...value, departure_date }),
         )}
-        {date('Дата выгрузки', value.unloading_date, true, (unloading_date) =>
+        {date(translate('forms.unloadingDate'), value.unloading_date, true, (unloading_date) =>
           onRoad({ ...value, unloading_date }),
         )}
-        {text('Номер машины', value.vehicle_number, 64, (vehicle_number) =>
+        {text(translate('forms.vehicleNumber'), value.vehicle_number, 64, (vehicle_number) =>
           onRoad({ ...value, vehicle_number }),
         )}
-        {text('Номер прицепа', value.trailer_number, 64, (trailer_number) =>
+        {text(translate('forms.trailerNumber'), value.trailer_number, 64, (trailer_number) =>
           onRoad({ ...value, trailer_number }),
         )}
       </div>
@@ -90,20 +100,26 @@ export function RoadFields({
   const value = pickup ?? {};
   return (
     <div className="road-details-grid">
-      {date('Плановый вывоз', value.planned_pickup_date, false, (planned_pickup_date) =>
-        onPickup({ ...value, planned_pickup_date }),
+      {date(
+        translate('forms.plannedPickup'),
+        value.planned_pickup_date,
+        false,
+        (planned_pickup_date) => onPickup({ ...value, planned_pickup_date }),
       )}
-      {date('Плановая доставка', value.planned_delivery_date, false, (planned_delivery_date) =>
-        onPickup({ ...value, planned_delivery_date }),
+      {date(
+        translate('forms.plannedDelivery'),
+        value.planned_delivery_date,
+        false,
+        (planned_delivery_date) => onPickup({ ...value, planned_delivery_date }),
       )}
-      {date('Дата вывоза', value.pickup_date, true, (pickup_date) =>
+      {date(translate('forms.pickupDate'), value.pickup_date, true, (pickup_date) =>
         onPickup({ ...value, pickup_date }),
       )}
-      {date('Доставка на склад', value.delivery_date, true, (delivery_date) =>
+      {date(translate('forms.warehouseDelivery'), value.delivery_date, true, (delivery_date) =>
         onPickup({ ...value, delivery_date }),
       )}
       <DirectoryLookup
-        label="Город доставки"
+        label={translate('shipment.deliveryCity')}
         kind="cities"
         session={session}
         value={value.delivery_city ?? ''}
@@ -116,7 +132,7 @@ export function RoadFields({
         }
       />
       <label>
-        Код страны
+        {translate('shipment.countryCode')}
         <input
           maxLength={2}
           pattern="[A-Za-z]{2}"
@@ -127,7 +143,7 @@ export function RoadFields({
         />
       </label>
       <label className="road-address">
-        Адрес доставки
+        {translate('shipment.deliveryAddress')}
         <textarea
           maxLength={1024}
           rows={2}
@@ -137,11 +153,15 @@ export function RoadFields({
           }
         />
       </label>
-      {text('Водитель', value.driver, 256, (driver) => onPickup({ ...value, driver }))}
-      {text('Номер машины', value.vehicle_number, 64, (vehicle_number) =>
+      {text(translate('forms.driver'), value.driver, 256, (driver) =>
+        onPickup({ ...value, driver }),
+      )}
+      {text(translate('forms.vehicleNumber'), value.vehicle_number, 64, (vehicle_number) =>
         onPickup({ ...value, vehicle_number }),
       )}
-      {date('Дата ТТН', value.ttn_date, true, (ttn_date) => onPickup({ ...value, ttn_date }))}
+      {date(translate('forms.consignmentNoteDate'), value.ttn_date, true, (ttn_date) =>
+        onPickup({ ...value, ttn_date }),
+      )}
     </div>
   );
 }
@@ -154,32 +174,33 @@ export function RoadDetailsView({
   pickup?: PickupDetails;
   customers: Counterparty[];
 }) {
+  const { translate } = useLocalization();
   const company = (id?: string) => customers.find((item) => item.id === id)?.name ?? '—';
   const rows = road
     ? [
-        ['Место погрузки', company(road.loading_terminal_id)],
-        ['Номер CMR', road.cmr_number],
-        ['Плановая погрузка', calendarDate(road.planned_loading_date)],
-        ['Плановая выгрузка', calendarDate(road.planned_unloading_date)],
-        ['Дата выхода', calendarDate(road.departure_date)],
-        ['Дата выгрузки', calendarDate(road.unloading_date)],
-        ['Номер машины', road.vehicle_number],
-        ['Номер прицепа', road.trailer_number],
+        [translate('forms.loadingLocation'), company(road.loading_terminal_id)],
+        [translate('forms.cmrNumber'), road.cmr_number],
+        [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
+        [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],
+        [translate('forms.departureDate'), calendarDate(road.departure_date)],
+        [translate('forms.unloadingDate'), calendarDate(road.unloading_date)],
+        [translate('forms.vehicleNumber'), road.vehicle_number],
+        [translate('forms.trailerNumber'), road.trailer_number],
       ]
     : pickup
       ? [
-          ['Плановый вывоз', calendarDate(pickup.planned_pickup_date)],
-          ['Плановая доставка', calendarDate(pickup.planned_delivery_date)],
-          ['Дата вывоза', calendarDate(pickup.pickup_date)],
-          ['Доставка на склад', calendarDate(pickup.delivery_date)],
+          [translate('forms.plannedPickup'), calendarDate(pickup.planned_pickup_date)],
+          [translate('forms.plannedDelivery'), calendarDate(pickup.planned_delivery_date)],
+          [translate('forms.pickupDate'), calendarDate(pickup.pickup_date)],
+          [translate('forms.warehouseDelivery'), calendarDate(pickup.delivery_date)],
           [
-            'Город доставки',
+            translate('shipment.deliveryCity'),
             [pickup.delivery_city, pickup.delivery_country].filter(Boolean).join(' · '),
           ],
-          ['Адрес доставки', pickup.delivery_address],
-          ['Водитель', pickup.driver],
-          ['Номер машины', pickup.vehicle_number],
-          ['Дата ТТН', calendarDate(pickup.ttn_date)],
+          [translate('shipment.deliveryAddress'), pickup.delivery_address],
+          [translate('forms.driver'), pickup.driver],
+          [translate('forms.vehicleNumber'), pickup.vehicle_number],
+          [translate('forms.consignmentNoteDate'), calendarDate(pickup.ttn_date)],
         ]
       : [];
   return Object.values(road ?? pickup ?? {}).some(Boolean) ? (
@@ -192,6 +213,6 @@ export function RoadDetailsView({
       ))}
     </dl>
   ) : (
-    <p className="muted">Данные участка пока не указаны.</p>
+    <p className="muted">{translate('route.emptySegment')}</p>
   );
 }

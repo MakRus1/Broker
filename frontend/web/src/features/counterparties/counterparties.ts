@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../../../shared/i18n/catalog';
 export const counterpartyRoles = {
   customer: 'Клиент',
   carrier: 'Перевозчик',
@@ -197,11 +198,11 @@ export function isPhone(value: string): boolean {
   return !opened && digits >= 7 && digits <= 15;
 }
 
-export function validateContacts(contacts: CounterpartyContactDraft[]) {
+export function validateContacts(contacts: CounterpartyContactDraft[], locale: Locale = 'ru') {
   for (const [index, contact] of contacts.entries()) {
     if (contact.email.trim() && !isEmail(contact.email.trim()))
-      throw new Error(`Контакт ${index + 1}: проверьте email`);
+      throw new Error(translate(locale, 'counterparty.contactEmail', { index: index + 1 }));
     if (contact.phone.trim() && !isPhone(contact.phone.trim()))
-      throw new Error(`Контакт ${index + 1}: телефон должен содержать от 7 до 15 цифр`);
+      throw new Error(translate(locale, 'counterparty.contactPhone', { index: index + 1 }));
   }
 }

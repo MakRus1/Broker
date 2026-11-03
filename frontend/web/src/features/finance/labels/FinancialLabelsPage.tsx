@@ -120,10 +120,11 @@ export function FinancialLabelsPage({
   useEffect(() => {
     title.current(
       creating
-        ? 'Новая финансовая метка'
-        : (value?.name ?? (id ? 'Финансовая метка' : translate('nav.financialLabels'))),
+        ? translate('entity.newFinancialLabel')
+        : (value?.name ??
+            (id ? translate('registryField.label_name') : translate('nav.financialLabels'))),
     );
-  }, [creating, id, value?.name]);
+  }, [creating, id, value?.name, locale]);
   useEffect(() => {
     if (creating) {
       setDraft((old) => {
@@ -273,7 +274,9 @@ export function FinancialLabelsPage({
       setDraft(draftOf(result.label));
       onSaved(result.label);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить финансовую метку');
+      setFailure(
+        error instanceof Error ? error.message : translate('forms.couldNotSaveTheFinancialLabel'),
+      );
       onError(error);
     } finally {
       setBusy(false);
@@ -292,7 +295,9 @@ export function FinancialLabelsPage({
       setItems((old) => [...old, ...result.items]);
       setCursor(result.next_cursor);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить метки');
+      setFailure(
+        error instanceof Error ? error.message : translate('forms.couldNotLoadFinancialLabels'),
+      );
       onError(error);
     } finally {
       setLoading(false);
@@ -302,7 +307,7 @@ export function FinancialLabelsPage({
     return (
       <section className="record-page financial-label-page">
         <h1>{translate('nav.financialLabels')}</h1>
-        <p>Нет права на просмотр финансовых меток.</p>
+        <p>{translate('forms.youDoNotHavePermissionToViewFinancialLabels')}</p>
       </section>
     );
   if (!id && !creating)
@@ -359,22 +364,26 @@ export function FinancialLabelsPage({
       {confirmation}
       <div className="record-heading">
         <a className="link record-back" href="#/financial-labels">
-          ← К финансовым меткам
+          {translate('forms.backToFinancialLabels')}
         </a>
         <div className="section-heading">
           <div>
-            {!creating && <p className="eyebrow">ФИНАНСОВАЯ МЕТКА</p>}
-            <h1>{creating ? 'Новая финансовая метка' : (value?.name ?? 'Финансовая метка')}</h1>
+            {!creating && <p className="eyebrow">{translate('forms.financialLABEL')}</p>}
+            <h1>
+              {creating
+                ? translate('entity.newFinancialLabel')
+                : (value?.name ?? translate('registryField.label_name'))}
+            </h1>
             {value && !editing && (
               <p className="record-state">
                 {value.archived ? translate('filter.archived') : translate('filter.active')} ·
-                Редакция {value.revision}
+                {translate('forms.revisionValue', { revision: value.revision })}
               </p>
             )}
           </div>
           {!editing && value && write && (
             <a className="button primary" href={`#/financial-labels/${id}/edit`}>
-              Редактировать
+              {translate('shipment.edit')}
             </a>
           )}
         </div>
@@ -384,8 +393,10 @@ export function FinancialLabelsPage({
           {failure}
         </p>
       )}
-      {loading && <p className="hint">Загружаем метку…</p>}
-      {editing && !write && <p>Нет права на изменение финансовой метки.</p>}
+      {loading && <p className="hint">{translate('forms.loadingFinancialLabel')}</p>}
+      {editing && !write && (
+        <p>{translate('forms.youDoNotHavePermissionToEditThisFinancialLabel')}</p>
+      )}
       {editing && draft && write && !loading ? (
         <form
           className="counterparty-form"
@@ -398,7 +409,7 @@ export function FinancialLabelsPage({
         >
           <div className="record-fields">
             <label className="record-wide">
-              Наименование · обязательно
+              {translate('forms.nameRequired')}
               <input
                 name="name"
                 required
@@ -409,7 +420,7 @@ export function FinancialLabelsPage({
               />
             </label>
             <Select
-              label="Направление"
+              label={translate('registryField.direction')}
               value={draft.direction}
               disabled={busy}
               onChange={(direction) =>
@@ -417,26 +428,26 @@ export function FinancialLabelsPage({
               }
               options={Object.entries(financialLabelDirections).map(([value, label]) => ({
                 value,
-                label,
+                label: registryValueLabel('direction', value, locale) ?? label,
               }))}
             />
             <Select
-              label="Единица расчёта"
+              label={translate('registryField.unit')}
               value={draft.unit}
               disabled={busy}
               onChange={(unit) => setDraft({ ...draft, unit: unit as FinancialLabel['unit'] })}
               options={Object.entries(financialLabelUnits).map(([value, label]) => ({
                 value,
-                label,
+                label: registryValueLabel('unit', value, locale) ?? label,
               }))}
             />
             <Select
-              label="Валюта по умолчанию"
+              label={translate('forms.defaultCurrency')}
               value={draft.currency}
               disabled={busy}
               searchable
               onChange={(currency) => setDraft({ ...draft, currency })}
-              options={currenciesWithCurrent(draft.currency)}
+              options={currenciesWithCurrent(draft.currency, locale)}
             />
             <VatRateSelect
               value={draft.vatRate}
@@ -446,7 +457,7 @@ export function FinancialLabelsPage({
               onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
             />
             <label className="record-wide">
-              Примечание
+              {translate('shipment.note')}
               <textarea
                 rows={3}
                 maxLength={4000}
@@ -463,14 +474,14 @@ export function FinancialLabelsPage({
               disabled={busy}
               onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
             />
-            В архиве
+            {translate('filter.archived')}
           </label>
           <div className="form-actions">
             <button type="button" disabled={busy} onClick={cancel}>
-              Отменить
+              {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              {busy ? 'Сохраняем…' : 'Сохранить'}
+              {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </div>
         </form>
@@ -479,23 +490,28 @@ export function FinancialLabelsPage({
         value && (
           <div className="record-fields record-summary">
             <div>
-              <span className="hint">Направление</span>
-              <p>{financialLabelDirections[value.direction]}</p>
+              <span className="hint">{translate('registryField.direction')}</span>
+              <p>
+                {registryValueLabel('direction', value.direction, locale) ??
+                  financialLabelDirections[value.direction]}
+              </p>
             </div>
             <div>
-              <span className="hint">Единица расчёта</span>
-              <p>{financialLabelUnits[value.unit]}</p>
+              <span className="hint">{translate('registryField.unit')}</span>
+              <p>
+                {registryValueLabel('unit', value.unit, locale) ?? financialLabelUnits[value.unit]}
+              </p>
             </div>
             <div>
-              <span className="hint">Валюта по умолчанию</span>
+              <span className="hint">{translate('forms.defaultCurrency')}</span>
               <p>{value.currency}</p>
             </div>
             <div>
-              <span className="hint">НДС по умолчанию</span>
-              <p>{vatLabel(value)}</p>
+              <span className="hint">{translate('forms.defaultVAT')}</span>
+              <p>{vatLabel(value, locale)}</p>
             </div>
             <div className="record-wide">
-              <span className="hint">Примечание</span>
+              <span className="hint">{translate('shipment.note')}</span>
               <p>{value.note || '—'}</p>
             </div>
           </div>

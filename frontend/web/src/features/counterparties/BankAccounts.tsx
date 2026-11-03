@@ -1,3 +1,4 @@
+import { useLocalization } from '../localization/Localization';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Select } from '../../shared/ui/Select';
 import { currenciesWithCurrent } from '../finance/currencies';
@@ -22,13 +23,13 @@ export interface BankAccount {
   revision: number;
 }
 const accountFields = [
-  ['name', 'Название счёта', 256],
-  ['number', 'Номер счёта', 64],
-  ['currency', 'Валюта', 3],
-  ['bank_name', 'Наименование банка', 256],
-  ['bic', 'БИК российского банка', 9],
-  ['swift', 'SWIFT / BIC иностранного банка', 11],
-  ['correspondent_account', 'Корреспондентский счёт', 64],
+  ['name', 'counterparty.accountName', 256],
+  ['number', 'counterparty.accountNumber', 64],
+  ['currency', 'registryField.currency', 3],
+  ['bank_name', 'counterparty.bankName', 256],
+  ['bic', 'counterparty.russianBankBIC', 9],
+  ['swift', 'counterparty.foreignBankSWIFTBIC', 11],
+  ['correspondent_account', 'counterparty.correspondentAccount', 64],
   ['iban', 'IBAN', 34],
 ] as const;
 
@@ -47,6 +48,7 @@ export function BankAccounts({
   onError: (error: unknown) => void;
   onDirty: (dirty: boolean) => void;
 }) {
+  const { translate, locale } = useLocalization();
   const validation = useFieldValidation();
   const [items, setItems] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +143,11 @@ export function BankAccounts({
       setEditing(undefined);
       setRefresh((value) => value + 1);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить счёт');
+      setFailure(
+        error instanceof Error
+          ? error.message
+          : translate('counterparty.couldNotSaveTheBankAccount'),
+      );
       onError(error);
     } finally {
       setBusy(false);
@@ -150,10 +156,10 @@ export function BankAccounts({
   return (
     <section className="bank-accounts">
       <div className="section-heading">
-        <h2>Банковские счета</h2>
+        <h2>{translate('counterparty.bankAccounts')}</h2>
         {write && !draft && (
           <button className="primary" onClick={() => edit()}>
-            Добавить счёт
+            {translate('counterparty.addBankAccount')}
           </button>
         )}
       </div>
@@ -171,23 +177,27 @@ export function BankAccounts({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <h3>{draft.revision ? 'Редактирование счёта' : 'Новый банковский счёт'}</h3>
-          <fieldset disabled={busy} aria-label="Реквизиты счёта">
+          <h3>
+            {draft.revision
+              ? translate('counterparty.editBankAccount')
+              : translate('counterparty.newBankAccount')}
+          </h3>
+          <fieldset disabled={busy} aria-label={translate('counterparty.bankAccountDetails')}>
             <div className="route-fields">
               {accountFields.map(([field, label, maxLength]) =>
                 field === 'currency' ? (
                   <Select
                     key={field}
-                    label="Валюта"
+                    label={translate('registryField.currency')}
                     value={draft.currency}
                     searchable
-                    options={currenciesWithCurrent(draft.currency)}
+                    options={currenciesWithCurrent(draft.currency, locale)}
                     disabled={busy}
                     onChange={(currency) => setDraft({ ...draft, currency })}
                   />
                 ) : (
                   <label key={field}>
-                    {label}
+                    {label === 'IBAN' ? label : translate(label)}
                     <input
                       name={field}
                       value={draft[field] ?? ''}
@@ -222,7 +232,7 @@ export function BankAccounts({
                   disabled={draft.archived}
                   onChange={(event) => setDraft({ ...draft, is_primary: event.target.checked })}
                 />
-                Основной для этой валюты
+                {translate('counterparty.primaryForThisCurrency')}
               </label>
               <label>
                 <input
@@ -236,16 +246,16 @@ export function BankAccounts({
                     })
                   }
                 />
-                В архиве
+                {translate('filter.archived')}
               </label>
             </div>
           </fieldset>
           <div className="form-actions">
             <button type="button" onClick={cancel} disabled={busy}>
-              Отменить
+              {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              {busy ? 'Сохраняем…' : 'Сохранить'}
+              {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </div>
         </form>
@@ -257,10 +267,10 @@ export function BankAccounts({
               checked={showArchived}
               onChange={(event) => setShowArchived(event.target.checked)}
             />
-            Показать архивные
+            {translate('finance.showArchived')}
           </label>
           {loading ? (
-            <p className="hint">Загружаем счета…</p>
+            <p className="hint">{translate('finance.loadingAccounts')}</p>
           ) : (
             <div className="bank-account-list">
               {items
@@ -272,11 +282,13 @@ export function BankAccounts({
                         <h3>{item.name}</h3>
                         <p className="hint">
                           {item.currency}
-                          {item.is_primary ? ' · Основной' : ''}
-                          {item.archived ? ' · В архиве' : ''}
+                          {item.is_primary ? translate('counterparty.primary') : ''}
+                          {item.archived ? translate('finance.archivedSuffix') : ''}
                         </p>
                       </div>
-                      {write && <button onClick={() => edit(item)}>Редактировать</button>}
+                      {write && (
+                        <button onClick={() => edit(item)}>{translate('shipment.edit')}</button>
+                      )}
                     </div>
                     <dl className="counterparty-details">
                       {accountFields
@@ -285,7 +297,7 @@ export function BankAccounts({
                           ([field, label]) =>
                             item[field] && (
                               <div key={field}>
-                                <dt>{label}</dt>
+                                <dt>{label === 'IBAN' ? label : translate(label)}</dt>
                                 <dd>{item[field]}</dd>
                               </div>
                             ),
@@ -296,8 +308,8 @@ export function BankAccounts({
               {!items.some((item) => showArchived || !item.archived) && (
                 <p className="hint">
                   {items.length
-                    ? 'Действующих банковских счетов нет.'
-                    : 'Банковские счета пока не добавлены.'}
+                    ? translate('counterparty.noActiveBankAccounts')
+                    : translate('counterparty.noBankAccountsYet')}
                 </p>
               )}
             </div>

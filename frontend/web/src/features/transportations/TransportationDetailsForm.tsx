@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../registry/registryLabels';
+import { useLocalization } from '../localization/Localization';
 import { containerNumberWarning } from './transportation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
@@ -23,6 +25,7 @@ export function TransportationDetailsForm({
   onCancel,
   onError,
 }: Props) {
+  const { translate, locale } = useLocalization();
   const [containerTypes, setContainerTypes] = useState<string[]>([]);
   const [settingsFailure, setSettingsFailure] = useState('');
   useEffect(() => {
@@ -43,7 +46,7 @@ export function TransportationDetailsForm({
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
   const [containerNumber, setContainerNumber] = useState(initial?.container_number ?? '');
-  const numberWarning = containerNumberWarning(containerNumber);
+  const numberWarning = containerNumberWarning(containerNumber, locale);
   const [containerType, setContainerType] = useState(initial?.container_type_code ?? '');
   const [ownership, setOwnership] = useState(initial?.container_ownership ?? '');
   const [busy, setBusy] = useState(false);
@@ -84,7 +87,9 @@ export function TransportationDetailsForm({
       setSaved(true);
       onSaved(result.transportation);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить перевозку');
+      setFailure(
+        error instanceof Error ? error.message : translate('forms.couldNotSaveTheTransportation'),
+      );
       onError(error);
     } finally {
       setBusy(false);
@@ -96,11 +101,11 @@ export function TransportationDetailsForm({
         <fieldset disabled={busy}>
           <div className="shipment-fields">
             <Select
-              label="Тип перевозки"
+              label={translate('registryField.type')}
               value={type}
               options={Object.entries(transportationTypes).map(([value, label]) => ({
                 value,
-                label,
+                label: registryValueLabel('type', value, locale) ?? label,
               }))}
               onChange={(value) => setType(value as Transportation['type'])}
             />
@@ -110,12 +115,12 @@ export function TransportationDetailsForm({
                 checked={hazardous}
                 onChange={(event) => setHazardous(event.target.checked)}
               />
-              Опасный груз
+              {translate('registryField.hazardous')}
             </label>
             {type === 'container' && (
               <>
                 <label className="transportation-number-field">
-                  Номер контейнера
+                  {translate('registryField.container_number')}
                   <input
                     maxLength={64}
                     placeholder="CSQU3054383"
@@ -131,10 +136,10 @@ export function TransportationDetailsForm({
                   )}
                 </label>
                 <Select
-                  label="Тип контейнера"
+                  label={translate('registryField.container_type')}
                   value={containerType}
                   options={[
-                    { value: '', label: 'Не указан' },
+                    { value: '', label: translate('routeFilter.pointNotSet') },
                     ...[
                       ...new Set([...containerTypes, ...(containerType ? [containerType] : [])]),
                     ].map((value) => ({ value, label: value })),
@@ -143,14 +148,15 @@ export function TransportationDetailsForm({
                 />
                 {settingsFailure && (
                   <p role="alert" className="error">
-                    Типы контейнеров недоступны: {settingsFailure}
+                    {translate('forms.containerTypesUnavailable')}
+                    {settingsFailure}
                   </p>
                 )}
                 <Select
-                  label="Принадлежность контейнера"
+                  label={translate('forms.containerOwnership')}
                   value={ownership}
                   options={[
-                    { value: '', label: 'Не указана' },
+                    { value: '', label: translate('forms.notSpecified') },
                     { value: 'SOC', label: 'SOC' },
                     { value: 'COC', label: 'COC' },
                   ]}
@@ -167,10 +173,14 @@ export function TransportationDetailsForm({
         )}
         <div className="transportation-form-actions">
           <button type="button" disabled={busy} onClick={() => confirmDiscard(dirty, onCancel)}>
-            Отменить
+            {translate('action.cancel')}
           </button>
           <button className="primary" disabled={busy || (Boolean(initial) && !dirty)}>
-            {busy ? 'Сохраняем…' : initial ? 'Сохранить' : 'Создать перевозку'}
+            {busy
+              ? translate('shipment.saving')
+              : initial
+                ? translate('action.save')
+                : translate('forms.createTransportation')}
           </button>
         </div>
       </form>
@@ -179,11 +189,12 @@ export function TransportationDetailsForm({
   );
 }
 export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
+  const { translate } = useLocalization();
   return (
     <section className="creation-page surface">
       <div className="panel-heading">
-        <h1>Новая перевозка</h1>
-        <a href={`#/shipments/${props.shipmentId}`}>← К поставке</a>
+        <h1>{translate('entity.newTransportation')}</h1>
+        <a href={`#/shipments/${props.shipmentId}`}>{translate('forms.backToShipment')}</a>
       </div>
       <TransportationDetailsForm
         {...props}

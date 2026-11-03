@@ -74,7 +74,8 @@ function PartyDetails({
   label: string;
   session: Session;
 }) {
-  const [name, setName] = useState('Загружаем…');
+  const { translate } = useLocalization();
+  const [name, setName] = useState(translate('finance.loading'));
   const [account, setAccount] = useState('');
   useEffect(() => {
     const controller = new AbortController();
@@ -88,7 +89,7 @@ function PartyDetails({
         if (!controller.signal.aborted) setName(result.counterparty.name);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName('Компания недоступна');
+        if (!controller.signal.aborted) setName(translate('forms.companyUnavailable'));
       });
     if (accountId && session.permissions.includes('counterparties.read_bank_accounts'))
       request<{ items: BankAccount[] }>(
@@ -101,12 +102,14 @@ function PartyDetails({
           if (!controller.signal.aborted) {
             const item = result.items.find((item) => item.id === accountId);
             setAccount(
-              item ? `${item.name} · ${item.number} · ${item.bank_name}` : 'Счёт недоступен',
+              item
+                ? `${item.name} · ${item.number} · ${item.bank_name}`
+                : translate('forms.bankAccountUnavailable'),
             );
           }
         })
         .catch(() => {
-          if (!controller.signal.aborted) setAccount('Счёт недоступен');
+          if (!controller.signal.aborted) setAccount(translate('forms.bankAccountUnavailable'));
         });
     return () => controller.abort();
   }, [id, accountId, session]);
@@ -122,9 +125,9 @@ function PartyDetails({
         {accountId
           ? account ||
             (session.permissions.includes('counterparties.read_bank_accounts')
-              ? 'Загружаем счёт…'
-              : 'Нет права на просмотр счёта')
-          : 'Банковский счёт не выбран'}
+              ? translate('forms.loadingBankAccount')
+              : translate('forms.youDoNotHavePermissionToViewThisBankAccount'))
+          : translate('forms.noBankAccountSelected')}
       </p>
     </div>
   );
@@ -147,7 +150,7 @@ export function ContractsPage({
   onSaved: (value: Contract) => void;
   onCancelNew: () => void;
 }) {
-  const { translate } = useLocalization();
+  const { translate, locale } = useLocalization();
   const titleCallback = useRef(onTitle);
   titleCallback.current = onTitle;
   const id = /^\/contracts\/([0-9a-f-]{36})/i.exec(route)?.[1];
@@ -192,7 +195,7 @@ export function ContractsPage({
         );
         if (controller.signal.aborted) return;
         for (const id of missing.slice(start, start + 100))
-          names.current[id] = 'Недоступная компания';
+          names.current[id] = translate('forms.companyUnavailableLabel');
         for (const party of found.items) names.current[party.id] = party.name;
         setPartyNames({ ...names.current });
       }
@@ -251,9 +254,10 @@ export function ContractsPage({
     titleCallback.current(
       creating
         ? translate('entity.newContract')
-        : (value?.number ?? (id ? 'Договор' : translate('nav.contracts'))),
+        : (value?.number ??
+            (id ? translate('registryField.contract_id') : translate('nav.contracts'))),
     );
-  }, [creating, id, value?.id, value?.number]);
+  }, [creating, id, value?.id, value?.number, locale]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
     const controller = new AbortController();
@@ -321,7 +325,8 @@ export function ContractsPage({
       width: 280,
       filterFields: ['own_company_id'],
       render: (item) =>
-        partyNames[item.own_company_id] ?? (namesFailed ? 'Недоступно' : 'Загружаем…'),
+        partyNames[item.own_company_id] ??
+        (namesFailed ? translate('forms.unavailable') : translate('finance.loading')),
     },
     {
       id: 'counterparty',
@@ -329,7 +334,8 @@ export function ContractsPage({
       width: 280,
       filterFields: ['counterparty_id'],
       render: (item) =>
-        partyNames[item.counterparty_id] ?? (namesFailed ? 'Недоступно' : 'Загружаем…'),
+        partyNames[item.counterparty_id] ??
+        (namesFailed ? translate('forms.unavailable') : translate('finance.loading')),
     },
     {
       id: 'currency',
@@ -372,7 +378,7 @@ export function ContractsPage({
     return (
       <section className="card">
         <h1>{translate('nav.contracts')}</h1>
-        <p>Нет права на просмотр договоров.</p>
+        <p>{translate('forms.youDoNotHavePermissionToViewContracts')}</p>
       </section>
     );
 
@@ -394,7 +400,7 @@ export function ContractsPage({
     event.preventDefault();
     if (!draft || busy) return;
     if (draft.own_company_id === draft.counterparty_id) {
-      setFailure('Выберите разные стороны договора');
+      setFailure(translate('forms.selectDifferentPartiesToTheContract'));
       return;
     }
     setBusy(true);
@@ -416,7 +422,9 @@ export function ContractsPage({
       });
       onSaved(result.contract);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить договор');
+      setFailure(
+        error instanceof Error ? error.message : translate('forms.couldNotSaveTheContract'),
+      );
       onError(error);
     } finally {
       setBusy(false);
@@ -440,7 +448,7 @@ export function ContractsPage({
       setItems((old) => [...old, ...result.items]);
       setAfter(result.next_cursor);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось загрузить договоры');
+      setFailure(error instanceof Error ? error.message : translate('forms.couldNotLoadContracts'));
       onError(error);
     } finally {
       setLoading(false);
@@ -502,22 +510,26 @@ export function ContractsPage({
       {confirmation}
       <div className="record-heading">
         <a className="link record-back" href="#/contracts">
-          ← К договорам
+          {translate('forms.backToContracts')}
         </a>
         <div className="section-heading">
           <div>
-            {!creating && <p className="eyebrow">ДОГОВОР</p>}
-            <h1>{creating ? translate('entity.newContract') : (value?.number ?? 'Договор')}</h1>
+            {!creating && <p className="eyebrow">{translate('forms.contract')}</p>}
+            <h1>
+              {creating
+                ? translate('entity.newContract')
+                : (value?.number ?? translate('registryField.contract_id'))}
+            </h1>
             {value && !editing && (
               <p className="record-state">
                 {value.archived ? translate('filter.archived') : translate('filter.active')} ·
-                Редакция {value.revision}
+                {translate('forms.revisionValue', { revision: value.revision })}
               </p>
             )}
           </div>
           {!editing && value && write && (
             <a className="button primary" href={`#/contracts/${id}/edit`}>
-              Редактировать
+              {translate('shipment.edit')}
             </a>
           )}
         </div>
@@ -527,7 +539,7 @@ export function ContractsPage({
           {failure}
         </p>
       )}
-      {loading && <p className="hint">Загружаем договор…</p>}
+      {loading && <p className="hint">{translate('forms.loadingContract')}</p>}
       {editing && draft && write && !loading ? (
         <form
           className="counterparty-form"
@@ -540,18 +552,18 @@ export function ContractsPage({
         >
           <div className="record-fields">
             <label>
-              Номер договора
+              {translate('registryField.contractNumber')}
               <input
                 required={!creating}
                 name="number"
-                placeholder={creating ? 'Автоматически при сохранении' : undefined}
+                placeholder={creating ? translate('finance.automaticOnSave') : undefined}
                 maxLength={128}
                 value={draft.number}
                 onChange={(event) => setDraft({ ...draft, number: event.target.value })}
               />
             </label>
             <label>
-              Дата договора · обязательно
+              {translate('forms.contractDateRequired')}
               <DateInput
                 required
                 name="contract_date"
@@ -562,7 +574,7 @@ export function ContractsPage({
             </label>
             <CustomerSelect
               items={emptyParties}
-              label="Собственное юрлицо · обязательно"
+              label={translate('forms.ownLegalEntityRequired')}
               required
               ownCompany
               session={session}
@@ -575,7 +587,7 @@ export function ContractsPage({
             />
             <CustomerSelect
               items={emptyParties}
-              label="Контрагент · обязательно"
+              label={translate('finance.counterpartyRequired')}
               required
               session={session}
               disabled={busy}
@@ -587,7 +599,7 @@ export function ContractsPage({
             />
             <div>
               <Select
-                label="Валюта"
+                label={translate('registryField.currency')}
                 value={draft.currency}
                 onChange={(currency) =>
                   setDraft({
@@ -598,11 +610,11 @@ export function ContractsPage({
                   })
                 }
                 searchable
-                options={currenciesWithCurrent(draft.currency)}
+                options={currenciesWithCurrent(draft.currency, locale)}
               />
             </div>
             <label>
-              Действует до
+              {translate('registryField.valid_until')}
               <DateInput
                 value={draft.valid_until}
                 min={draft.contract_date ?? CalendarDate.fromISO('1900-01-01')}
@@ -611,7 +623,7 @@ export function ContractsPage({
             </label>
             <div>
               <BankAccountSelect
-                label="Наш банковский счёт"
+                label={translate('forms.ownBankAccount')}
                 session={session}
                 owner={draft.own_company_id}
                 currency={draft.currency}
@@ -621,7 +633,7 @@ export function ContractsPage({
             </div>
             <div>
               <BankAccountSelect
-                label="Счёт контрагента"
+                label={translate('finance.counterpartyBankAccount')}
                 session={session}
                 owner={draft.counterparty_id}
                 currency={draft.currency}
@@ -632,7 +644,7 @@ export function ContractsPage({
               />
             </div>
             <label>
-              Отсрочка, дней
+              {translate('registryField.paymentDelay')}
               <input
                 type="number"
                 min={0}
@@ -654,10 +666,10 @@ export function ContractsPage({
                 checked={draft.archived}
                 onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
               />
-              В архиве
+              {translate('filter.archived')}
             </label>
             <label className="record-wide">
-              Примечание
+              {translate('shipment.note')}
               <textarea
                 rows={3}
                 maxLength={4000}
@@ -668,10 +680,10 @@ export function ContractsPage({
           </div>
           <div className="form-actions">
             <button type="button" disabled={busy} onClick={cancel}>
-              Отменить
+              {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              {busy ? 'Сохраняем…' : 'Сохранить'}
+              {busy ? translate('shipment.saving') : translate('action.save')}
             </button>
           </div>
         </form>
@@ -681,39 +693,39 @@ export function ContractsPage({
           <>
             <div className="record-fields record-summary">
               <div>
-                <span className="hint">Дата договора</span>
+                <span className="hint">{translate('registryField.contract_date')}</span>
                 <p>{date(value.contract_date)}</p>
               </div>
               <div>
-                <span className="hint">Действует до</span>
+                <span className="hint">{translate('registryField.valid_until')}</span>
                 <p>{date(value.valid_until)}</p>
               </div>
               <PartyDetails
-                label="Собственное юрлицо"
+                label={translate('registryField.own_company_id')}
                 id={value.own_company_id}
                 accountId={value.own_bank_account_id}
                 session={session}
               />
               <PartyDetails
-                label="Контрагент"
+                label={translate('registryField.counterparty_id')}
                 id={value.counterparty_id}
                 accountId={value.counterparty_bank_account_id}
                 session={session}
               />
               <div>
-                <span className="hint">Валюта</span>
+                <span className="hint">{translate('registryField.currency')}</span>
                 <p>{value.currency}</p>
               </div>
               <div>
-                <span className="hint">Отсрочка</span>
+                <span className="hint">{translate('forms.paymentTerms')}</span>
                 <p>
                   {value.payment_delay_days === null
-                    ? 'Не указана'
-                    : `${value.payment_delay_days} дн.`}
+                    ? translate('forms.notSpecified')
+                    : translate('forms.daysValue', { days: value.payment_delay_days })}
                 </p>
               </div>
               <div className="record-wide">
-                <span className="hint">Примечание</span>
+                <span className="hint">{translate('shipment.note')}</span>
                 <p>{value.note || '—'}</p>
               </div>
             </div>

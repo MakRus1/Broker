@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { InvoicePaymentPicker } from './InvoicePaymentPicker';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ export function InvoiceSettlement({
   session: Session;
   onReadOnly: (value: boolean | undefined) => void;
 }) {
+  const { translate } = useLocalization();
   const [value, setValue] = useState<InvoiceBalance>();
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
@@ -42,15 +44,15 @@ export function InvoiceSettlement({
   return (
     <section className="invoice-settlement">
       <div className="section-heading">
-        <h2>Оплата</h2>
+        <h2>{translate('registryField.payment_status')}</h2>
         <div className="actions">
-          <button onClick={() => setVersion((v) => v + 1)}>Обновить</button>
+          <button onClick={() => setVersion((v) => v + 1)}>{translate('action.refresh')}</button>
           {value &&
             !value.invoice.archived &&
             value.outstanding_minor > 0 &&
             session.permissions.includes('finance.write_payments') && (
               <button className="primary" onClick={() => setPicker(true)}>
-                Распределить оплату
+                {translate('forms.allocatePayment')}
               </button>
             )}
         </div>
@@ -63,13 +65,13 @@ export function InvoiceSettlement({
         <>
           <dl className="record-fields">
             <div>
-              <dt>Оплачено</dt>
+              <dt>{translate('registryField.paid_minor')}</dt>
               <dd>
                 {formatFixed(value.paid_minor, 2)} {value.invoice.currency}
               </dd>
             </div>
             <div>
-              <dt>Осталось оплатить</dt>
+              <dt>{translate('registryField.outstanding_minor')}</dt>
               <dd>
                 {formatFixed(value.outstanding_minor, 2)} {value.invoice.currency}
               </dd>
@@ -83,8 +85,10 @@ export function InvoiceSettlement({
                     className="link"
                     href={`#/${item.payment.kind === 'receipt' ? 'receipts' : 'disbursements'}/${item.payment.id}`}
                   >
-                    № {item.payment.number} от{' '}
-                    {CalendarDate.fromISO(item.payment.payment_date).toDisplayString()}
+                    {translate('finance.invoiceNumberDate', {
+                      number: item.payment.number,
+                      date: CalendarDate.fromISO(item.payment.payment_date).toDisplayString(),
+                    })}
                   </a>
                   <span>
                     {formatFixed(item.amount_minor, 2)} {item.payment.currency}
@@ -95,7 +99,7 @@ export function InvoiceSettlement({
           )}
         </>
       ) : (
-        <p className="hint">Загружаем оплату…</p>
+        <p className="hint">{translate('forms.loadingPayments')}</p>
       )}
       {picker && value && (
         <InvoicePaymentPicker

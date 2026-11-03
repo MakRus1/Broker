@@ -150,3 +150,15 @@ it('не называет пункты автомобильных участко
     'Станция не выбрана → Станция не выбрана',
   );
 });
+
+it('localizes unnamed transportation titles and container hints', () => {
+  expect(transportationTitle({ type: 'container', container_number: undefined }, 'en')).toBe(
+    'Container · No number',
+  );
+  expect(transportationTitle({ type: 'container', container_number: 'ABCD1234567' }, 'en')).toBe(
+    'ABCD1234567',
+  );
+  expect(containerNumberWarning('123', 'en')).toContain('4 Latin letters and 7 digits');
+  expect(containerNumberWarning('ABCD1234567', 'en')).toBe('');
+  expect(() => utcDateTime('invalid', 'en')).toThrow('Enter a valid date and time');
+});

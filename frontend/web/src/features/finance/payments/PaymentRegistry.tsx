@@ -41,7 +41,7 @@ export function PaymentRegistry({
   const { translate } = useLocalization();
   const [items, setItems] = useState<Payment[]>([]);
   const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
   const base = paymentBase(kind);

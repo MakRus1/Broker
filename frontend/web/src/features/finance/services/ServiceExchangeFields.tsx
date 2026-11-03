@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
-import { DateInput } from '../../../shared/dates/DateInput';
 import { Select } from '../../../shared/ui/Select';
 import { currenciesWithCurrent } from '../currencies';
 import { formatFixed, inputFixed, type ExchangeRate } from './serviceCharges';
@@ -18,7 +17,6 @@ export function ServiceExchangeFields({
   invoiceCurrencyLocked = false,
   manual,
   rate,
-  onDate,
   onCurrency,
   onInvoiceCurrency,
   onManual,
@@ -32,7 +30,6 @@ export function ServiceExchangeFields({
   invoiceCurrencyLocked?: boolean;
   manual: boolean;
   rate: string;
-  onDate: (value: CalendarDate | null) => void;
   onCurrency: (value: string) => void;
   onInvoiceCurrency: (value: string) => void;
   onManual: (value: boolean) => void;
@@ -74,86 +71,95 @@ export function ServiceExchangeFields({
   }, [session, date, currency, invoiceCurrency, manual, same, version]);
   return (
     <>
-      <label>
-        {translate('finance.serviceDateRequired')}
-        <DateInput required value={date} onChange={onDate} disabled={disabled} />
-      </label>
-      <Select
-        label={translate('finance.serviceCurrency')}
-        searchable
-        value={currency}
-        options={currenciesWithCurrent(currency, locale)}
-        onChange={(value) => {
-          onCurrency(value);
-          if (value === invoiceCurrency) {
-            onManual(false);
-            onRate('1');
-          }
-        }}
-        disabled={disabled}
-      />
-      <Select
-        label={translate('finance.invoiceCurrency')}
-        searchable
-        value={invoiceCurrency}
-        options={currenciesWithCurrent(invoiceCurrency, locale)}
-        onChange={(value) => {
-          onInvoiceCurrency(value);
-          if (value === currency) {
-            onManual(false);
-            onRate('1');
-          }
-        }}
-        disabled={disabled || invoiceCurrencyLocked}
-      />
-      <div className="service-exchange-rate">
-        <span className="field-label">
-          {translate('finance.ratePair', { currency, invoiceCurrency })}
-        </span>
-        {same ? (
-          <p className="hint">{translate('finance.sameCurrencies')}</p>
-        ) : (
-          <>
-            <label className="inline-check">
-              <input
-                type="checkbox"
-                checked={manual}
-                disabled={disabled}
-                onChange={(event) => {
-                  if (event.target.checked && quote) onRate(inputFixed(quote.rate_millionths, 6));
-                  onManual(event.target.checked);
-                }}
-              />
-              {translate('finance.setManualRate')}
-            </label>
-            {manual ? (
-              <DecimalInput
-                aria-label={translate('finance.manualRate')}
-                required
-                precision={6}
-                value={rate}
-                disabled={disabled}
-                onChange={(event) => onRate(event.target.value)}
-              />
+      <div className="service-exchange-fields">
+        <Select
+          label={translate('finance.serviceCurrency')}
+          searchable
+          value={currency}
+          options={currenciesWithCurrent(currency, locale)}
+          onChange={(value) => {
+            onCurrency(value);
+            if (value === invoiceCurrency) {
+              onManual(false);
+              onRate('1');
+            }
+          }}
+          disabled={disabled}
+        />
+        <Select
+          label={translate('finance.invoiceCurrency')}
+          searchable
+          value={invoiceCurrency}
+          options={currenciesWithCurrent(invoiceCurrency, locale)}
+          onChange={(value) => {
+            onInvoiceCurrency(value);
+            if (value === currency) {
+              onManual(false);
+              onRate('1');
+            }
+          }}
+          disabled={disabled || invoiceCurrencyLocked}
+        />
+        <div className="service-exchange-rate">
+          <span className="field-label">
+            {translate('finance.ratePair', { currency, invoiceCurrency })}
+          </span>
+          <label className="inline-check" style={{ visibility: same ? 'hidden' : undefined }}>
+            <input
+              type="checkbox"
+              checked={manual}
+              disabled={disabled || same}
+              onChange={(event) => {
+                if (event.target.checked && quote) onRate(inputFixed(quote.rate_millionths, 6));
+                onManual(event.target.checked);
+              }}
+            />
+            {translate('finance.setManualRate')}
+          </label>
+          {!same && manual ? (
+            <DecimalInput
+              aria-label={translate('finance.manualRate')}
+              required
+              precision={6}
+              value={rate}
+              disabled={disabled}
+              onChange={(event) => onRate(event.target.value)}
+            />
+          ) : (
+            <output className="service-rate-value" aria-busy={!same && loading}>
+              {same
+                ? formatFixed(1000000, 6)
+                : loading || !quote
+                  ? '—'
+                  : formatFixed(quote.rate_millionths, 6)}
+            </output>
+          )}
+          <p
+            className={failure && !same && !manual ? 'field-error' : 'hint'}
+            role={failure && !same && !manual ? 'alert' : undefined}
+          >
+            {same ? (
+              translate('finance.sameCurrencies')
+            ) : manual ? (
+              '\u00a0'
             ) : loading ? (
-              <p className="hint">{translate('finance.loadingRate')}</p>
-            ) : quote ? (
-              <p className="hint">
-                {translate('finance.centralBankRate', {
-                  rate: formatFixed(quote.rate_millionths, 6),
-                  date: CalendarDate.fromISO(quote.date).toDisplayString(),
-                })}
-              </p>
+              translate('finance.loadingRate')
             ) : failure ? (
-              <p className="field-error" role="alert">
+              <>
                 {failure}{' '}
                 <button type="button" onClick={() => setVersion((old) => old + 1)}>
                   {translate('filter.retry')}
                 </button>
-              </p>
-            ) : null}
-          </>
-        )}
+              </>
+            ) : quote ? (
+              translate('finance.centralBankSource', {
+                date: CalendarDate.fromISO(quote.date).toDisplayString(),
+              })
+            ) : (
+              '\u00a0'
+            )}
+          </p>
+        </div>
       </div>
     </>
   );

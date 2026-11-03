@@ -46,7 +46,6 @@ export function InvoiceSettlement({
       <div className="section-heading">
         <h2>{translate('registryField.payment_status')}</h2>
         <div className="actions">
-          <button onClick={() => setVersion((v) => v + 1)}>{translate('action.refresh')}</button>
           {value &&
             !value.invoice.archived &&
             value.outstanding_minor > 0 &&

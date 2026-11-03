@@ -387,6 +387,8 @@ small {
   overflow-x: auto;
 }
 .card-navigation > .tabs button {
+  position: relative;
+  isolation: isolate;
   flex-shrink: 0;
 }
 .tabs {
@@ -396,13 +398,41 @@ small {
   min-width: 0;
 }
 .tabs button {
+  position: relative;
+  isolation: isolate;
   border: 0;
   border-radius: 0;
-  padding: 18px 0;
+  padding: 10px 8px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
   white-space: nowrap;
+}
+.tabs button::before {
+  content: '';
+  position: absolute;
+  inset: 4px 0 5px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 6px;
+  background: var(--surface-hover);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.tabs button:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+}
+.tabs button[aria-pressed='true']:hover:not(:disabled) {
+  border-bottom-color: var(--accent-text);
+}
+.tabs button:hover:not(:disabled)::before {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabs button::before {
+    transition: none;
+  }
 }
 .tabs button[aria-pressed='true'] {
   color: var(--accent-text);
@@ -413,7 +443,7 @@ small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 10px 0 10px auto;
+  margin: 0 0 0 auto;
   padding: 8px 12px;
   font-size: 12px;
 }
@@ -890,8 +920,11 @@ button.danger:hover:not(:disabled) {
   max-width: none;
 }
 .counterparty-heading {
-  padding: 24px 0;
+  padding: 20px 0 12px;
   margin: 0;
+}
+.counterparty-page .card-navigation {
+  padding-inline: 0;
 }
 .counterparty-heading h1 {
   overflow-wrap: anywhere;
@@ -1510,14 +1543,15 @@ main > header {
 }
 .workspace-content {
   border: 1px solid var(--border);
-  border-radius: 0 9px 9px 9px;
+  border-radius: 0 0 9px 9px;
   background: var(--surface);
   min-width: 0;
 }
 .workspace-content > [data-workspace] > .surface,
-.workspace-content .counterparty-page > .surface {
+.workspace-content .counterparty-page > .surface,
+.workspace-content .record-workbench {
   border: 0;
-  border-radius: 0 9px 9px 9px;
+  border-radius: 0 0 9px 9px;
   box-shadow: none;
 }
 .workspace-content .creation-page {
@@ -3903,6 +3937,9 @@ details[open] > .route-stage-summary::after {
   padding: 20px 0;
   border-block: 1px solid var(--divider);
 }
+.payment-amounts {
+  border-top: 0;
+}
 .payment-amounts dt,
 .payment-details dt,
 .invoice-settlement dt {
@@ -3953,6 +3990,7 @@ details[open] > .route-stage-summary::after {
   padding: 6px 10px;
 }
 .invoice-settlement dl {
+  border-top: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 16px 0;
   margin: 0;

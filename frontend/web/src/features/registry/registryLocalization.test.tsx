@@ -30,7 +30,9 @@ it('keeps business actions, columns and refresh together in the shared heading',
     </RegistryHeading>,
   );
   expect(html).toContain('Loaded: 12');
-  expect(html.indexOf('>Create<')).toBeLessThan(html.indexOf('>Columns<'));
+  expect(html.indexOf('>Refresh<')).toBeLessThan(html.indexOf('>Create<'));
+  expect(html).toContain('registry-heading-tools');
+  expect(html).toContain('registry-heading-create');
   expect(html.indexOf('>Columns<')).toBeLessThan(html.indexOf('>Refresh<'));
   expect(html).not.toMatch(/[А-Яа-яЁё]/);
 });

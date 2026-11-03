@@ -74,7 +74,7 @@ export function InvoiceRegistry({
     setPaying(targets);
   }
   const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
   const base = invoiceRegistry(direction);

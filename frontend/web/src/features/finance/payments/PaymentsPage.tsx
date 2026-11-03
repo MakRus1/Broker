@@ -1,3 +1,8 @@
+import {
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../../shared/ui/record/RecordLayout';
 import { useLocalization } from '../../localization/Localization';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
@@ -69,14 +74,14 @@ export function PaymentsPage({
   session,
   onTitle,
   onSaved,
-  onCancelNew,
+  onCancel,
 }: {
   route: string;
   active: boolean;
   session: Session;
   onTitle: (s: string) => void;
   onSaved: (p: Payment) => void;
-  onCancelNew: () => void;
+  onCancel: () => void;
 }) {
   const { translate, locale } = useLocalization();
   const kind: PaymentKind = route.startsWith('/disbursements') ? 'disbursement' : 'receipt';
@@ -103,6 +108,7 @@ export function PaymentsPage({
   const validation = useFieldValidation();
   const original = useRef('');
   const editing = useRef(false);
+  const loadedDocument = useRef('');
   editing.current = !!draft;
   const dirty = !!draft && JSON.stringify({ draft, allocations }) !== original.current;
   function edit(details: PaymentDetails) {
@@ -121,9 +127,14 @@ export function PaymentsPage({
     if (!active || registry || editing.current) return;
     let cancelled = false;
     setFailure('');
-    setDraft(undefined);
-    setValue(undefined);
-    setInvoiceMap({});
+    const documentKey = `${session.subject}:${session.organization_id}:${kind}:${id}`;
+    if (loadedDocument.current !== documentKey) {
+      setDraft(undefined);
+      setValue(undefined);
+      setInvoiceMap({});
+      loadedDocument.current = documentKey;
+    }
+    // Возврат во вкладку обновляет данные в фоне, не убирая открытую карточку.
     if (creating) {
       const d = empty(kind);
       setDraft(d);
@@ -238,13 +249,13 @@ export function PaymentsPage({
       setLoading(false);
     }
   }
-  async function cancel() {
+  function cancel() {
     confirmDiscard(dirty, () => {
-      if (creating) onCancelNew();
-      else setDraft(undefined);
       setFailure('');
+      onCancel();
     });
   }
+
   async function changeParties(patch: Partial<Draft>) {
     if (!draft) return;
     if (Object.keys(allocations).length) {
@@ -327,39 +338,37 @@ export function PaymentsPage({
     ? Object.keys(allocations)
     : (value?.allocations.map((a) => a.invoice_id) ?? []);
   return (
-    <section className="payment-page">
+    <section className="payment-page surface record-workbench financial-record-workbench">
       {confirmation}
-      <div className="payment-heading">
-        <div>
-          <a className="link record-back" href={`#${base}`}>
-            ← {receipt ? translate('forms.backToReceipts') : translate('forms.backToDisbursements')}
-          </a>
-          <p className="eyebrow">{title}</p>
-          <h1>
-            {creating
-              ? translate(receipt ? 'forms.newReceipt' : 'forms.newDisbursement')
-              : (value?.payment.number ?? title)}
-          </h1>
-          {value && (
-            <p className="record-state">
-              {value.payment.archived ? translate('filter.archived') : translate('forms.active')} ·{' '}
-              {translate('forms.revisionValue', { revision: value.payment.revision })}
-            </p>
-          )}
-        </div>
-        {!draft && value && write && (
-          <button className="primary" onClick={() => edit(value)}>
-            {translate('shipment.edit')}
-          </button>
-        )}
-      </div>
-      {failure && (
+      <RecordHeading
+        kind={title}
+        title={
+          creating
+            ? translate(receipt ? 'forms.newReceipt' : 'forms.newDisbursement')
+            : (value?.payment.number ?? title)
+        }
+        status={
+          value ? translate(value.payment.archived ? 'filter.archived' : 'forms.active') : undefined
+        }
+        metadata={
+          value ? translate('forms.revisionValue', { revision: value.payment.revision }) : undefined
+        }
+        mode={draft ? translate(creating ? 'record.creating' : 'record.editing') : undefined}
+        actions={
+          !draft && value && write ? (
+            <button className="primary" onClick={() => edit(value)}>
+              {translate('shipment.edit')}
+            </button>
+          ) : undefined
+        }
+      />
+      {failure && !draft && (
         <p role="alert" className="error">
           {failure}
         </p>
       )}
       {value && !draft && (
-        <CardNavigation className="financial-card-navigation">
+        <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
           <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
             {translate('shipment.details')}
           </button>
@@ -377,7 +386,7 @@ export function PaymentsPage({
         />
       ) : draft ? (
         <form
-          className="payment-form"
+          className="payment-form record-editor-form document-editor"
           onSubmit={save}
           data-dirty={dirty}
           data-busy={busy}
@@ -385,115 +394,131 @@ export function PaymentsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset disabled={busy} className="record-fields">
-            <label>
-              {translate('forms.paymentNumberRequired')}
-              <input
-                required
-                maxLength={200}
-                value={draft.number}
-                onChange={(e) => setDraft({ ...draft, number: e.target.value })}
-              />
-            </label>
-            <label>
-              {translate('forms.paymentDateRequired')}
-              <DateInput
-                required
-                value={draft.payment_date}
-                onChange={(payment_date) => setDraft({ ...draft, payment_date })}
-              />
-            </label>
-            <CustomerSelect
-              required
-              ownCompany
-              label={translate('finance.ownCompany')}
-              items={parties}
-              disabled={busy}
-              value={draft.own_company_id}
-              session={session}
-              onChange={(own_company_id) =>
-                void changeParties({ own_company_id, own_bank_account_id: null })
-              }
-            />
-            <CustomerSelect
-              required
-              label={receipt ? translate('forms.payer') : translate('shipment.recipient')}
-              items={parties}
-              disabled={busy}
-              value={draft.counterparty_id}
-              session={session}
-              onChange={(counterparty_id) =>
-                void changeParties({ counterparty_id, counterparty_bank_account_id: null })
-              }
-            />
-            <label>
-              {translate('forms.amountRequired')}
-              <DecimalInput
-                required
-                precision={2}
-                value={draft.amount}
-                onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-              />
-            </label>
-            <Select
-              label={translate('registryField.currency')}
-              searchable
-              value={draft.currency}
-              options={currenciesWithCurrent(draft.currency, locale)}
-              onChange={(currency) =>
-                void changeParties({
-                  currency,
-                  own_bank_account_id: null,
-                  counterparty_bank_account_id: null,
-                })
-              }
-            />
-            <BankAccountSelect
-              owner={draft.own_company_id}
-              label={translate('finance.ownBankAccount')}
-              value={draft.own_bank_account_id}
-              currency={draft.currency}
-              session={session}
-              onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
-            />
-            <BankAccountSelect
-              owner={draft.counterparty_id}
-              label={
-                receipt
-                  ? translate('forms.payerBankAccount')
-                  : translate('forms.recipientBankAccount')
-              }
-              value={draft.counterparty_bank_account_id}
-              currency={draft.currency}
-              session={session}
-              onChange={(counterparty_bank_account_id) =>
-                setDraft({ ...draft, counterparty_bank_account_id })
-              }
-            />
-            <label className="record-wide">
-              {translate('forms.paymentPurpose')}
-              <textarea
-                maxLength={2000}
-                value={draft.purpose ?? ''}
-                onChange={(e) => setDraft({ ...draft, purpose: e.target.value || null })}
-              />
-            </label>
-            <label className="record-wide">
-              {translate('shipment.note')}
-              <textarea
-                maxLength={2000}
-                value={draft.note ?? ''}
-                onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
-              />
-            </label>
-            <label className="bank-archive-toggle">
-              <input
-                type="checkbox"
-                checked={draft.archived}
-                onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
-              />
-              {translate('filter.archived')}
-            </label>
+          <fieldset disabled={busy}>
+            <RecordSection title={translate('record.identification')}>
+              <div className="record-fields">
+                <label>
+                  {translate('forms.paymentNumberRequired')}
+                  <input
+                    required
+                    maxLength={200}
+                    value={draft.number}
+                    onChange={(e) => setDraft({ ...draft, number: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {translate('forms.paymentDateRequired')}
+                  <DateInput
+                    required
+                    value={draft.payment_date}
+                    onChange={(payment_date) => setDraft({ ...draft, payment_date })}
+                  />
+                </label>
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.parties')}>
+              <div className="record-fields">
+                <CustomerSelect
+                  required
+                  ownCompany
+                  label={translate('finance.ownCompany')}
+                  items={parties}
+                  disabled={busy}
+                  value={draft.own_company_id}
+                  session={session}
+                  onChange={(own_company_id) =>
+                    void changeParties({ own_company_id, own_bank_account_id: null })
+                  }
+                />
+                <CustomerSelect
+                  required
+                  label={receipt ? translate('forms.payer') : translate('shipment.recipient')}
+                  items={parties}
+                  disabled={busy}
+                  value={draft.counterparty_id}
+                  session={session}
+                  onChange={(counterparty_id) =>
+                    void changeParties({ counterparty_id, counterparty_bank_account_id: null })
+                  }
+                />
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.paymentTerms')}>
+              <div className="record-fields">
+                <label>
+                  {translate('forms.amountRequired')}
+                  <DecimalInput
+                    required
+                    precision={2}
+                    value={draft.amount}
+                    onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+                  />
+                </label>
+                <Select
+                  label={translate('registryField.currency')}
+                  searchable
+                  value={draft.currency}
+                  options={currenciesWithCurrent(draft.currency, locale)}
+                  onChange={(currency) =>
+                    void changeParties({
+                      currency,
+                      own_bank_account_id: null,
+                      counterparty_bank_account_id: null,
+                    })
+                  }
+                />
+                <BankAccountSelect
+                  owner={draft.own_company_id}
+                  label={translate('finance.ownBankAccount')}
+                  value={draft.own_bank_account_id}
+                  currency={draft.currency}
+                  session={session}
+                  onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
+                />
+                <BankAccountSelect
+                  owner={draft.counterparty_id}
+                  label={
+                    receipt
+                      ? translate('forms.payerBankAccount')
+                      : translate('forms.recipientBankAccount')
+                  }
+                  value={draft.counterparty_bank_account_id}
+                  currency={draft.currency}
+                  session={session}
+                  onChange={(counterparty_bank_account_id) =>
+                    setDraft({ ...draft, counterparty_bank_account_id })
+                  }
+                />
+              </div>
+            </RecordSection>
+            <RecordSection title={translate('record.additional')}>
+              <div className="record-fields">
+                <label className="record-wide">
+                  {translate('forms.paymentPurpose')}
+                  <textarea
+                    maxLength={2000}
+                    value={draft.purpose ?? ''}
+                    onChange={(e) => setDraft({ ...draft, purpose: e.target.value || null })}
+                  />
+                </label>
+                <label className="record-wide">
+                  {translate('shipment.note')}
+                  <textarea
+                    maxLength={2000}
+                    value={draft.note ?? ''}
+                    onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
+                  />
+                </label>
+                <label className="bank-archive-toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.archived}
+                    onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
+                  />
+                  {translate('filter.archived')}
+                </label>
+              </div>
+            </RecordSection>
           </fieldset>
           <section className="payment-allocation">
             <div className="section-heading">
@@ -629,14 +654,21 @@ export function PaymentsPage({
               <p className="hint">{translate('forms.paymentPartiesHint')}</p>
             )}
           </section>
-          <div className="form-actions">
+          <RecordActions
+            error={failure}
+            status={
+              dirty
+                ? translate('shipment.unsaved')
+                : translate(creating ? 'record.creating' : 'record.editing')
+            }
+          >
             <button type="button" disabled={busy} onClick={() => void cancel()}>
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
               {translate('action.save')}
             </button>
-          </div>
+          </RecordActions>
         </form>
       ) : value ? (
         <>

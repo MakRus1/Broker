@@ -12,9 +12,6 @@
 .registry-workbench .registry-heading > .actions {
   gap: 8px;
 }
-.registry-workbench .registry-heading > .actions > .primary {
-  order: 2;
-}
 .registry-workbench .registry-heading > .actions > button,
 .registry-workbench .registry-heading > .actions > a.button,
 .registry-workbench .registry-heading .registry-column-settings > button {

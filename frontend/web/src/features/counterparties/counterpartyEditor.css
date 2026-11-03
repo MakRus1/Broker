@@ -1,0 +1,56 @@
+.counterparty-requisites {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+.counterparty-requisites > div {
+  min-width: 0;
+  grid-column: span 6;
+}
+.counterparty-requisites .counterparty-field-country_code {
+  grid-column: span 2;
+}
+.counterparty-requisites .counterparty-field-kpp,
+.counterparty-requisites .counterparty-field-registration_id {
+  grid-column: span 4;
+}
+.counterparty-requisites .counterparty-field-legal_address {
+  grid-column: span 8;
+}
+.financial-record-workbench .document-editor .counterparty-requisites textarea {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  line-height: 22px;
+}
+.financial-record-workbench .document-editor .record-toggle {
+  margin-bottom: 16px;
+}
+@media (max-width: 760px) {
+  .counterparty-requisites {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .counterparty-requisites > div,
+  .counterparty-requisites .counterparty-field-country_code,
+  .counterparty-requisites .counterparty-field-kpp,
+  .counterparty-requisites .counterparty-field-registration_id,
+  .counterparty-requisites .counterparty-field-legal_address {
+    grid-column: span 1;
+  }
+  .counterparty-requisites .counterparty-field-name,
+  .counterparty-requisites .counterparty-field-legal_name,
+  .counterparty-requisites .counterparty-field-tax_id,
+  .counterparty-requisites .counterparty-field-legal_address {
+    grid-column: 1 / -1;
+  }
+}
+
+.financial-record-workbench .document-editor .counterparty-requisites textarea {
+  field-sizing: content;
+  max-height: 160px;
+  resize: vertical;
+}
+
+.counterparty-form .multi-select {
+  width: 100%;
+}

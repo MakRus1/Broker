@@ -170,3 +170,72 @@
 .settlement-totals tbody td:nth-child(6) {
   border-left: 1px solid var(--divider);
 }
+
+/* Общая компактная компоновка вложенного финансового раздела. */
+.counterparty-settlements {
+  margin-top: 24px;
+}
+.counterparty-settlements > .tabs {
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--divider);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+.counterparty-settlements .settlement-filters,
+.counterparty-settlements .settlement-filters.reconciliation-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--divider);
+}
+.counterparty-settlements .settlement-filter-actions {
+  grid-column: 1 / -1;
+  padding-top: 0;
+  justify-content: flex-end;
+}
+.counterparty-settlements .settlement-filter-actions button {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.counterparty-settlements .settlement-filters .select-trigger,
+.counterparty-settlements .settlement-filters input:not([type='checkbox']) {
+  height: 40px;
+  min-height: 40px;
+  font-size: 13px;
+}
+.counterparty-settlements .settlement-detail-heading {
+  align-items: center;
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid var(--divider);
+}
+.counterparty-settlements .settlement-detail-heading > .tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 12px;
+}
+.counterparty-settlements .settlement-detail-heading .tabs button {
+  padding: 10px 8px;
+}
+.counterparty-settlements .invoice-registry .page-heading,
+.counterparty-settlements .payment-registry .page-heading {
+  padding: 0 0 16px;
+}
+.counterparty-settlements .invoice-registry .page-heading h1,
+.counterparty-settlements .payment-registry .page-heading h1 {
+  font-size: 18px;
+  line-height: 26px;
+}
+@media (max-width: 760px) {
+  .counterparty-settlements .settlement-filters,
+  .counterparty-settlements .settlement-filters.reconciliation-filters {
+    grid-template-columns: 1fr;
+  }
+  .counterparty-settlements .settlement-detail-heading > .tabs {
+    width: 100%;
+  }
+}

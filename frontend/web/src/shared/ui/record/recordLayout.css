@@ -338,7 +338,7 @@
 .record-workbench .shipment-route-stages {
   gap: 8px;
 }
-.record-workbench .shipment-route-stage {
+.record-workbench .route-segment {
   padding: 14px 16px;
   border-radius: 8px;
   background: transparent;
@@ -406,4 +406,92 @@
     grid-template-columns: 1fr;
     gap: 4px;
   }
+}
+
+.record-workbench .record-layout-navigation {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.transportation-workbench .route-editor,
+.transportation-workbench .transportation-edit-content {
+  padding: 0;
+}
+.transportation-workbench .route-list {
+  gap: 8px;
+  padding: 0;
+}
+.transportation-workbench .route-editor > fieldset {
+  display: grid;
+  gap: 8px;
+}
+.transportation-workbench .route-segment {
+  margin: 0;
+}
+.transportation-workbench .route-summary-meta {
+  display: grid;
+  gap: 3px;
+}
+.transportation-workbench .route-fields,
+.transportation-workbench .road-details-grid,
+.transportation-workbench .rail-date-grid {
+  gap: 18px 24px;
+}
+.transportation-workbench .route-stage-summary + .route-fields {
+  margin-top: 18px;
+}
+.transportation-workbench .route-fields > label,
+.transportation-workbench .shared-route-grid > label,
+.transportation-workbench .road-details-grid > label {
+  gap: 6px;
+}
+.transportation-workbench .rail-date-grid dd,
+.transportation-workbench .road-details-values dd {
+  font-size: 14px;
+  line-height: 22px;
+}
+.transportation-workbench .route-segment > .hint,
+.transportation-workbench .route-segment > .muted {
+  margin-bottom: 0;
+}
+.transportation-workbench .transportation-danger {
+  min-height: 40px;
+}
+
+.creation-page.transportation-workbench {
+  margin: 0;
+}
+.creation-page.transportation-workbench form {
+  max-width: none;
+}
+.surface.transportation-workbench {
+  overflow: visible;
+}
+
+.transportation-workbench .route-editor {
+  gap: 16px;
+}
+.transportation-workbench .route-editor > .section-heading,
+.transportation-workbench .route-editor > .route-collapse-actions {
+  margin-bottom: 0;
+}
+.record-layout-actions > a.button {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  text-decoration: none;
+}
+.record-layout-actions > a.button:hover {
+  background: var(--accent-soft);
+  border-color: var(--border);
+}
+
+.record-layout-metadata .record-layout-reference {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.record-layout-metadata .record-layout-reference:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

@@ -755,6 +755,15 @@ export const ru = {
   "forms.departure": "Отправление",
   "forms.arrival": "Прибытие",
   "forms.noRouteYet": "Маршрут ещё не задан",
+  "transport.editingDetails": "Редактирование данных перевозки",
+  "transport.editingRoute": "Редактирование участков",
+  "transport.createHint": "Маршрут и условия будут взяты из поставки.",
+  "transport.details": "Данные перевозки",
+  "transport.shipmentTerms": "Условия поставки",
+  "transport.shipmentTermsHint":
+    "Общие для перевозок этой поставки. Изменяются в карточке поставки.",
+  "transport.hazardousYes": "Да",
+  "transport.hazardousNo": "Нет",
   "transport.inheritRouteHint":
     "Задайте участки маршрута в поставке. Они появятся здесь автоматически.",
   "transport.historicalLegHint":

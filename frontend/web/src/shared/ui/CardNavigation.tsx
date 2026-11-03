@@ -5,17 +5,19 @@ export function CardNavigation({
   onRefresh,
   disabled = false,
   className = '',
+  tabsClassName = '',
 }: {
   children: ReactNode;
   onRefresh?: () => Promise<unknown>;
   disabled?: boolean;
   className?: string;
+  tabsClassName?: string;
 }) {
   const { translate } = useLocalization();
   const [refreshing, setRefreshing] = useState(false);
   return (
     <div className={`card-navigation ${className}`}>
-      <div className="tabs">{children}</div>
+      <div className={`tabs ${tabsClassName}`}>{children}</div>
       {onRefresh && (
         <button
           type="button"

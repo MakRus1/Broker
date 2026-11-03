@@ -1,3 +1,4 @@
+import { RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { DateTimeInput } from '../../shared/dates/DateInput';
@@ -230,10 +231,12 @@ export function RouteEditor({
                     {registryValueLabel('mode', route_segment.mode, locale) ??
                       modes[route_segment.mode]}
                   </h3>
-                  <span>{routeDirection(route_segment, locale)}</span>
                   <span className="route-summary-meta">
-                    {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
-                      translate('forms.carrierNotSelected')}
+                    <span>{routeDirection(route_segment, locale)}</span>
+                    <span>
+                      {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
+                        translate('forms.carrierNotSelected')}
+                    </span>
                     {route_segment.rail && (
                       <>
                         {' '}
@@ -371,12 +374,14 @@ export function RouteEditor({
         {!draft.route_segments.length && (
           <p className="hint">{translate('forms.setTheRouteInTheShipment')}</p>
         )}
-        {failure && (
-          <p className="error" role="alert">
-            {failure}
-          </p>
-        )}
-        <div className="transportation-form-actions">
+        <RecordActions
+          error={failure}
+          status={
+            dirty
+              ? translate('shipment.unsaved')
+              : translate('shipment.revision', { revision: initial.revision })
+          }
+        >
           <button type="button" disabled={busy} onClick={discard}>
             {translate('action.cancel')}
           </button>
@@ -386,7 +391,7 @@ export function RouteEditor({
           >
             {busy ? translate('shipment.saving') : translate('action.save')}
           </button>
-        </div>
+        </RecordActions>
       </form>
       {confirmation}
     </>

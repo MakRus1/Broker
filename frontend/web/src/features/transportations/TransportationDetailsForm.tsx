@@ -1,3 +1,4 @@
+import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { containerNumberWarning } from './transportation';
@@ -99,79 +100,85 @@ export function TransportationDetailsForm({
     <>
       <form className="transportation-editor" onSubmit={submit} data-dirty={dirty} data-busy={busy}>
         <fieldset disabled={busy}>
-          <div className="shipment-fields">
-            <Select
-              label={translate('registryField.type')}
-              value={type}
-              options={Object.entries(transportationTypes).map(([value, label]) => ({
-                value,
-                label: registryValueLabel('type', value, locale) ?? label,
-              }))}
-              onChange={(value) => setType(value as Transportation['type'])}
-            />
-            <label className="transportation-danger">
-              <input
-                type="checkbox"
-                checked={hazardous}
-                onChange={(event) => setHazardous(event.target.checked)}
+          <RecordSection title={translate('transport.details')}>
+            <div className="shipment-fields">
+              <Select
+                label={translate('registryField.type')}
+                value={type}
+                options={Object.entries(transportationTypes).map(([value, label]) => ({
+                  value,
+                  label: registryValueLabel('type', value, locale) ?? label,
+                }))}
+                onChange={(value) => setType(value as Transportation['type'])}
               />
-              {translate('registryField.hazardous')}
-            </label>
-            {type === 'container' && (
-              <>
-                <label className="transportation-number-field">
-                  {translate('registryField.container_number')}
-                  <input
-                    maxLength={64}
-                    placeholder="CSQU3054383"
-                    autoCapitalize="characters"
-                    spellCheck={false}
-                    value={containerNumber}
-                    onChange={(event) => setContainerNumber(event.target.value.toUpperCase())}
+              <label className="transportation-danger">
+                <input
+                  type="checkbox"
+                  checked={hazardous}
+                  onChange={(event) => setHazardous(event.target.checked)}
+                />
+                {translate('registryField.hazardous')}
+              </label>
+              {type === 'container' && (
+                <>
+                  <label className="transportation-number-field">
+                    {translate('registryField.container_number')}
+                    <input
+                      maxLength={64}
+                      placeholder="CSQU3054383"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      value={containerNumber}
+                      onChange={(event) => setContainerNumber(event.target.value.toUpperCase())}
+                    />
+                    {numberWarning && (
+                      <small className="field-warning" role="status">
+                        {numberWarning}
+                      </small>
+                    )}
+                  </label>
+                  <Select
+                    label={translate('registryField.container_type')}
+                    value={containerType}
+                    options={[
+                      { value: '', label: translate('routeFilter.pointNotSet') },
+                      ...[
+                        ...new Set([...containerTypes, ...(containerType ? [containerType] : [])]),
+                      ].map((value) => ({ value, label: value })),
+                    ]}
+                    onChange={setContainerType}
                   />
-                  {numberWarning && (
-                    <small className="field-warning" role="status">
-                      {numberWarning}
-                    </small>
+                  {settingsFailure && (
+                    <p role="alert" className="error">
+                      {translate('forms.containerTypesUnavailable')}
+                      {settingsFailure}
+                    </p>
                   )}
-                </label>
-                <Select
-                  label={translate('registryField.container_type')}
-                  value={containerType}
-                  options={[
-                    { value: '', label: translate('routeFilter.pointNotSet') },
-                    ...[
-                      ...new Set([...containerTypes, ...(containerType ? [containerType] : [])]),
-                    ].map((value) => ({ value, label: value })),
-                  ]}
-                  onChange={setContainerType}
-                />
-                {settingsFailure && (
-                  <p role="alert" className="error">
-                    {translate('forms.containerTypesUnavailable')}
-                    {settingsFailure}
-                  </p>
-                )}
-                <Select
-                  label={translate('forms.containerOwnership')}
-                  value={ownership}
-                  options={[
-                    { value: '', label: translate('forms.notSpecified') },
-                    { value: 'SOC', label: 'SOC' },
-                    { value: 'COC', label: 'COC' },
-                  ]}
-                  onChange={setOwnership}
-                />
-              </>
-            )}
-          </div>
+                  <Select
+                    label={translate('forms.containerOwnership')}
+                    value={ownership}
+                    options={[
+                      { value: '', label: translate('forms.notSpecified') },
+                      { value: 'SOC', label: 'SOC' },
+                      { value: 'COC', label: 'COC' },
+                    ]}
+                    onChange={setOwnership}
+                  />
+                </>
+              )}
+            </div>
+          </RecordSection>
         </fieldset>
-        {failure && (
-          <p className="error" role="alert">
-            {failure}
-          </p>
-        )}
-        <div className="transportation-form-actions">
+        <RecordActions
+          error={failure}
+          status={
+            dirty
+              ? translate('shipment.unsaved')
+              : initial
+                ? translate('shipment.revision', { revision: initial.revision })
+                : translate('transport.createHint')
+          }
+        >
           <button type="button" disabled={busy} onClick={() => confirmDiscard(dirty, onCancel)}>
             {translate('action.cancel')}
           </button>
@@ -182,7 +189,7 @@ export function TransportationDetailsForm({
                 ? translate('action.save')
                 : translate('forms.createTransportation')}
           </button>
-        </div>
+        </RecordActions>
       </form>
       {confirmation}
     </>
@@ -191,11 +198,16 @@ export function TransportationDetailsForm({
 export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
   const { translate } = useLocalization();
   return (
-    <section className="creation-page surface">
-      <div className="panel-heading">
-        <h1>{translate('entity.newTransportation')}</h1>
-        <a href={`#/shipments/${props.shipmentId}`}>{translate('forms.backToShipment')}</a>
-      </div>
+    <section className="creation-page surface record-workbench transportation-workbench">
+      <RecordHeading
+        kind={translate('forms.transportation')}
+        title={translate('entity.newTransportation')}
+        actions={
+          <a className="button" href={`#/shipments/${props.shipmentId}`}>
+            {translate('forms.backToShipment')}
+          </a>
+        }
+      />
       <TransportationDetailsForm
         {...props}
         onCancel={() => {

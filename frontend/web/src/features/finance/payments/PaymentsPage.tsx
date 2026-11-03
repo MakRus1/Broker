@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -431,266 +432,275 @@ export function PaymentsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset disabled={busy || !!recovery.candidate}>
-            <RecordSection title={translate('record.identification')}>
-              <div className="record-fields">
-                <label>
-                  {translate('forms.paymentNumberRequired')}
-                  <input
+          <RecordEditorSections>
+            <fieldset disabled={busy || !!recovery.candidate}>
+              <RecordSection title={translate('record.identification')}>
+                <div className="record-fields">
+                  <label>
+                    {translate('forms.paymentNumberRequired')}
+                    <input
+                      required
+                      maxLength={200}
+                      value={draft.number}
+                      onChange={(e) => setDraft({ ...draft, number: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {translate('forms.paymentDateRequired')}
+                    <DateInput
+                      required
+                      value={draft.payment_date}
+                      onChange={(payment_date) => setDraft({ ...draft, payment_date })}
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('record.parties')}>
+                <div className="record-fields">
+                  <CustomerSelect
                     required
-                    maxLength={200}
-                    value={draft.number}
-                    onChange={(e) => setDraft({ ...draft, number: e.target.value })}
+                    ownCompany
+                    label={translate('finance.ownCompany')}
+                    items={parties}
+                    disabled={busy}
+                    value={draft.own_company_id}
+                    session={session}
+                    onChange={(own_company_id) =>
+                      void changeParties({ own_company_id, own_bank_account_id: null })
+                    }
                   />
-                </label>
-                <label>
-                  {translate('forms.paymentDateRequired')}
-                  <DateInput
+                  <CustomerSelect
                     required
-                    value={draft.payment_date}
-                    onChange={(payment_date) => setDraft({ ...draft, payment_date })}
+                    label={receipt ? translate('forms.payer') : translate('shipment.recipient')}
+                    items={parties}
+                    disabled={busy}
+                    value={draft.counterparty_id}
+                    session={session}
+                    onChange={(counterparty_id) =>
+                      void changeParties({ counterparty_id, counterparty_bank_account_id: null })
+                    }
                   />
-                </label>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('record.paymentTerms')}>
+                <div className="record-fields">
+                  <label>
+                    {translate('forms.amountRequired')}
+                    <DecimalInput
+                      required
+                      precision={2}
+                      value={draft.amount}
+                      onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+                    />
+                  </label>
+                  <Select
+                    label={translate('registryField.currency')}
+                    searchable
+                    value={draft.currency}
+                    options={currenciesWithCurrent(draft.currency, locale)}
+                    onChange={(currency) =>
+                      void changeParties({
+                        currency,
+                        own_bank_account_id: null,
+                        counterparty_bank_account_id: null,
+                      })
+                    }
+                  />
+                  <BankAccountSelect
+                    owner={draft.own_company_id}
+                    label={translate('finance.ownBankAccount')}
+                    value={draft.own_bank_account_id}
+                    currency={draft.currency}
+                    session={session}
+                    onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
+                  />
+                  <BankAccountSelect
+                    owner={draft.counterparty_id}
+                    label={
+                      receipt
+                        ? translate('forms.payerBankAccount')
+                        : translate('forms.recipientBankAccount')
+                    }
+                    value={draft.counterparty_bank_account_id}
+                    currency={draft.currency}
+                    session={session}
+                    onChange={(counterparty_bank_account_id) =>
+                      setDraft({ ...draft, counterparty_bank_account_id })
+                    }
+                  />
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('record.additional')}>
+                <div className="record-fields">
+                  <label className="record-wide">
+                    {translate('forms.paymentPurpose')}
+                    <textarea
+                      maxLength={2000}
+                      value={draft.purpose ?? ''}
+                      onChange={(e) => setDraft({ ...draft, purpose: e.target.value || null })}
+                    />
+                  </label>
+                  <label className="record-wide">
+                    {translate('shipment.note')}
+                    <textarea
+                      maxLength={2000}
+                      value={draft.note ?? ''}
+                      onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
+                    />
+                  </label>
+                  <label className="bank-archive-toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.archived}
+                      onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
+                    />
+                    {translate('filter.archived')}
+                  </label>
+                </div>
+              </RecordSection>
+            </fieldset>
+            <section className="payment-allocation">
+              <div className="section-heading">
+                <h2>{translate('forms.invoiceAllocations')}</h2>
+                <span>
+                  {translate('forms.unallocatedPrefix')}{' '}
+                  <strong>
+                    {formatFixed(amount - allocated, 2)} {draft.currency}
+                  </strong>
+                </span>
               </div>
-            </RecordSection>
-            <RecordSection title={translate('record.parties')}>
-              <div className="record-fields">
-                <CustomerSelect
-                  required
-                  ownCompany
-                  label={translate('finance.ownCompany')}
-                  items={parties}
-                  disabled={busy}
-                  value={draft.own_company_id}
-                  session={session}
-                  onChange={(own_company_id) =>
-                    void changeParties({ own_company_id, own_bank_account_id: null })
-                  }
-                />
-                <CustomerSelect
-                  required
-                  label={receipt ? translate('forms.payer') : translate('shipment.recipient')}
-                  items={parties}
-                  disabled={busy}
-                  value={draft.counterparty_id}
-                  session={session}
-                  onChange={(counterparty_id) =>
-                    void changeParties({ counterparty_id, counterparty_bank_account_id: null })
-                  }
-                />
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('record.paymentTerms')}>
-              <div className="record-fields">
-                <label>
-                  {translate('forms.amountRequired')}
-                  <DecimalInput
-                    required
-                    precision={2}
-                    value={draft.amount}
-                    onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-                  />
-                </label>
-                <Select
-                  label={translate('registryField.currency')}
-                  searchable
-                  value={draft.currency}
-                  options={currenciesWithCurrent(draft.currency, locale)}
-                  onChange={(currency) =>
-                    void changeParties({
-                      currency,
-                      own_bank_account_id: null,
-                      counterparty_bank_account_id: null,
-                    })
-                  }
-                />
-                <BankAccountSelect
-                  owner={draft.own_company_id}
-                  label={translate('finance.ownBankAccount')}
-                  value={draft.own_bank_account_id}
-                  currency={draft.currency}
-                  session={session}
-                  onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
-                />
-                <BankAccountSelect
-                  owner={draft.counterparty_id}
-                  label={
-                    receipt
-                      ? translate('forms.payerBankAccount')
-                      : translate('forms.recipientBankAccount')
-                  }
-                  value={draft.counterparty_bank_account_id}
-                  currency={draft.currency}
-                  session={session}
-                  onChange={(counterparty_bank_account_id) =>
-                    setDraft({ ...draft, counterparty_bank_account_id })
-                  }
-                />
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('record.additional')}>
-              <div className="record-fields">
-                <label className="record-wide">
-                  {translate('forms.paymentPurpose')}
-                  <textarea
-                    maxLength={2000}
-                    value={draft.purpose ?? ''}
-                    onChange={(e) => setDraft({ ...draft, purpose: e.target.value || null })}
-                  />
-                </label>
-                <label className="record-wide">
-                  {translate('shipment.note')}
-                  <textarea
-                    maxLength={2000}
-                    value={draft.note ?? ''}
-                    onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
-                  />
-                </label>
-                <label className="bank-archive-toggle">
-                  <input
-                    type="checkbox"
-                    checked={draft.archived}
-                    onChange={(e) => setDraft({ ...draft, archived: e.target.checked })}
-                  />
-                  {translate('filter.archived')}
-                </label>
-              </div>
-            </RecordSection>
-          </fieldset>
-          <section className="payment-allocation">
-            <div className="section-heading">
-              <h2>{translate('forms.invoiceAllocations')}</h2>
-              <span>
-                {translate('forms.unallocatedPrefix')}{' '}
-                <strong>
-                  {formatFixed(amount - allocated, 2)} {draft.currency}
-                </strong>
-              </span>
-            </div>
-            {draft.archived && <p className="hint">{translate('payment.archivedHint')}</p>}
-            {selected.length > 0 && (
-              <table className="payment-allocation-table">
-                <thead>
-                  <tr>
-                    <th>{translate('registryField.invoice_number')}</th>
-                    <th>{translate('forms.paymentAmount')}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {selected.map((id) => (
-                    <tr key={id}>
-                      <td>
-                        {invoiceMap[id]
-                          ? translate('finance.invoiceNumberDate', {
-                              number: invoiceMap[id].invoice.number,
-                              date: displayDate(invoiceMap[id].invoice.invoice_date),
-                            })
-                          : id}
-                      </td>
-                      <td>
-                        <DecimalInput
-                          aria-label={translate('forms.paymentForInvoice', {
-                            number: invoiceMap[id]?.invoice.number ?? id,
-                          })}
-                          required
-                          precision={2}
-                          value={allocations[id]}
-                          onChange={(e) => setAllocations({ ...allocations, [id]: e.target.value })}
-                        />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAllocations((old) =>
-                              Object.fromEntries(Object.entries(old).filter(([key]) => key !== id)),
-                            )
-                          }
-                        >
-                          {translate('shipment.remove')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {draft.own_company_id && draft.counterparty_id ? (
-              <>
-                <label>
-                  {translate('forms.searchByInvoiceNumber')}
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={translate('forms.partOfTheNumber')}
-                  />
-                </label>
-                {candidateFailure && (
-                  <p className="error" role="alert">
-                    {candidateFailure}
-                  </p>
-                )}
+              {draft.archived && <p className="hint">{translate('payment.archivedHint')}</p>}
+              {selected.length > 0 && (
                 <table className="payment-allocation-table">
                   <thead>
                     <tr>
-                      <th>
-                        {receipt
-                          ? translate('forms.outgoingInvoice')
-                          : translate('forms.incomingInvoice')}
-                      </th>
-                      <th>{translate('registryField.amount')}</th>
-                      <th>{translate('registryField.outstanding_minor')}</th>
+                      <th>{translate('registryField.invoice_number')}</th>
+                      <th>{translate('forms.paymentAmount')}</th>
                       <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {candidates
-                      .filter((i) => !(i.invoice.id in allocations))
-                      .map((i) => (
-                        <tr key={i.invoice.id}>
-                          <td>
-                            № {i.invoice.number}
-                            {translate('ui.datePrefix')}
-                            {displayDate(i.invoice.invoice_date)}
-                          </td>
-                          <td>{formatFixed(i.invoice.total_minor, 2)}</td>
-                          <td>{formatFixed(i.outstanding_minor, 2)}</td>
-                          <td>
-                            <button
-                              type="button"
-                              disabled={i.outstanding_minor <= 0}
-                              onClick={() =>
-                                setAllocations({
-                                  ...allocations,
-                                  [i.invoice.id]: formatFixed(
-                                    Math.min(Math.max(amount - allocated, 0), i.outstanding_minor),
-                                    2,
-                                  ).replace(/\s/g, ''),
-                                })
-                              }
-                            >
-                              {translate('forms.add')}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    {selected.map((id) => (
+                      <tr key={id}>
+                        <td>
+                          {invoiceMap[id]
+                            ? translate('finance.invoiceNumberDate', {
+                                number: invoiceMap[id].invoice.number,
+                                date: displayDate(invoiceMap[id].invoice.invoice_date),
+                              })
+                            : id}
+                        </td>
+                        <td>
+                          <DecimalInput
+                            aria-label={translate('forms.paymentForInvoice', {
+                              number: invoiceMap[id]?.invoice.number ?? id,
+                            })}
+                            required
+                            precision={2}
+                            value={allocations[id]}
+                            onChange={(e) =>
+                              setAllocations({ ...allocations, [id]: e.target.value })
+                            }
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAllocations((old) =>
+                                Object.fromEntries(
+                                  Object.entries(old).filter(([key]) => key !== id),
+                                ),
+                              )
+                            }
+                          >
+                            {translate('shipment.remove')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
-                {!loading && !candidates.length && (
-                  <p className="empty-state">{translate('forms.noMatchingInvoicesFound')}</p>
-                )}
-                <AutoLoadMore
-                  enabled={!!after}
-                  loading={loading}
-                  failed={!!candidateFailure}
-                  onLoad={more}
-                />
-              </>
-            ) : (
-              <p className="hint">{translate('forms.paymentPartiesHint')}</p>
-            )}
-          </section>
+              )}
+              {draft.own_company_id && draft.counterparty_id ? (
+                <>
+                  <label>
+                    {translate('forms.searchByInvoiceNumber')}
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={translate('forms.partOfTheNumber')}
+                    />
+                  </label>
+                  {candidateFailure && (
+                    <p className="error" role="alert">
+                      {candidateFailure}
+                    </p>
+                  )}
+                  <table className="payment-allocation-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          {receipt
+                            ? translate('forms.outgoingInvoice')
+                            : translate('forms.incomingInvoice')}
+                        </th>
+                        <th>{translate('registryField.amount')}</th>
+                        <th>{translate('registryField.outstanding_minor')}</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {candidates
+                        .filter((i) => !(i.invoice.id in allocations))
+                        .map((i) => (
+                          <tr key={i.invoice.id}>
+                            <td>
+                              № {i.invoice.number}
+                              {translate('ui.datePrefix')}
+                              {displayDate(i.invoice.invoice_date)}
+                            </td>
+                            <td>{formatFixed(i.invoice.total_minor, 2)}</td>
+                            <td>{formatFixed(i.outstanding_minor, 2)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                disabled={i.outstanding_minor <= 0}
+                                onClick={() =>
+                                  setAllocations({
+                                    ...allocations,
+                                    [i.invoice.id]: formatFixed(
+                                      Math.min(
+                                        Math.max(amount - allocated, 0),
+                                        i.outstanding_minor,
+                                      ),
+                                      2,
+                                    ).replace(/\s/g, ''),
+                                  })
+                                }
+                              >
+                                {translate('forms.add')}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  {!loading && !candidates.length && (
+                    <p className="empty-state">{translate('forms.noMatchingInvoicesFound')}</p>
+                  )}
+                  <AutoLoadMore
+                    enabled={!!after}
+                    loading={loading}
+                    failed={!!candidateFailure}
+                    onLoad={more}
+                  />
+                </>
+              ) : (
+                <p className="hint">{translate('forms.paymentPartiesHint')}</p>
+              )}
+            </section>
+          </RecordEditorSections>
           <RecordActions
             error={failure || validation.message}
             status={

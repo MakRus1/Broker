@@ -959,6 +959,7 @@ export const ru = {
   "transport.editingDetails": "Редактирование данных перевозки",
   "transport.editingRoute": "Редактирование участков",
   "transport.createHint": "Маршрут и условия будут взяты из поставки.",
+  "record.sections": "Разделы формы",
   "record.identification": "Реквизиты",
   "record.parties": "Стороны",
   "record.paymentTerms": "Условия оплаты",

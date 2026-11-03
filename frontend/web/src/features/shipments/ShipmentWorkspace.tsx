@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordGuideNotice } from '../../shared/ui/record/RecordGuideNotice';
@@ -58,6 +59,7 @@ type Props = {
   onError: (error: unknown) => void;
   onUpdate: (shipment: Shipment) => void;
   onTitle: (title: string) => void;
+  onCancel: () => void;
   onCreated: (shipment: Shipment) => void;
 };
 export function ShipmentWorkspace(props: Props) {
@@ -638,290 +640,292 @@ function ShipmentCard({
             data-edit-tab="details"
             hidden={tab !== 'details'}
           >
-            <RecordSection title={translate('shipment.identification')}>
-              <div className="shipment-fields">
-                <label>
-                  {translate('registryField.shipmentNumber')}
-                  <div className="shipment-number">
-                    <input
-                      name="number"
-                      aria-invalid={Boolean(validation.errors.number) || undefined}
-                      aria-describedby={
-                        validation.errors.number ? `${formId}-number-error` : undefined
-                      }
-                      required={manualNumber}
-                      readOnly={!manualNumber}
-                      maxLength={128}
-                      value={draft.number}
-                      placeholder={translate('shipment.autoNumber')}
-                      onChange={(e) => set('number', e.target.value)}
-                    />
-                    {!initial && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setManualNumber((old) => !old);
-                          set('number', '');
-                        }}
-                      >
-                        {manualNumber
-                          ? translate('shipment.automatic')
-                          : translate('shipment.manual')}
-                      </button>
+            <RecordEditorSections>
+              <RecordSection title={translate('shipment.identification')}>
+                <div className="shipment-fields">
+                  <label>
+                    {translate('registryField.shipmentNumber')}
+                    <div className="shipment-number">
+                      <input
+                        name="number"
+                        aria-invalid={Boolean(validation.errors.number) || undefined}
+                        aria-describedby={
+                          validation.errors.number ? `${formId}-number-error` : undefined
+                        }
+                        required={manualNumber}
+                        readOnly={!manualNumber}
+                        maxLength={128}
+                        value={draft.number}
+                        placeholder={translate('shipment.autoNumber')}
+                        onChange={(e) => set('number', e.target.value)}
+                      />
+                      {!initial && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setManualNumber((old) => !old);
+                            set('number', '');
+                          }}
+                        >
+                          {manualNumber
+                            ? translate('shipment.automatic')
+                            : translate('shipment.manual')}
+                        </button>
+                      )}
+                    </div>
+                    {!manualNumber && (
+                      <small>
+                        {translate('shipment.numberFormat', {
+                          format: settings?.number_template ?? '',
+                        })}
+                      </small>
                     )}
-                  </div>
-                  {!manualNumber && (
-                    <small>
-                      {translate('shipment.numberFormat', {
-                        format: settings?.number_template ?? '',
-                      })}
-                    </small>
-                  )}
-                  {validation.errors.number && (
-                    <small className="field-error" id={`${formId}-number-error`}>
-                      {validation.errors.number}
-                    </small>
-                  )}
-                </label>
-                <label>
-                  {translate('shipment.dateRequired')}
-                  <IsoDateInput
-                    name="shipment_date"
-                    aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
-                    aria-describedby={
-                      validation.errors.shipment_date ? `${formId}-date-error` : undefined
-                    }
+                    {validation.errors.number && (
+                      <small className="field-error" id={`${formId}-number-error`}>
+                        {validation.errors.number}
+                      </small>
+                    )}
+                  </label>
+                  <label>
+                    {translate('shipment.dateRequired')}
+                    <IsoDateInput
+                      name="shipment_date"
+                      aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
+                      aria-describedby={
+                        validation.errors.shipment_date ? `${formId}-date-error` : undefined
+                      }
 
-                    min="1900-01-01"
-                    required
-                    value={draft.shipment_date}
-                    onChange={(dateValue) => set('shipment_date', dateValue)}
-                  />
-                  {validation.errors.shipment_date && (
-                    <small className="field-error" id={`${formId}-date-error`}>
-                      {validation.errors.shipment_date}
-                    </small>
-                  )}
-                </label>
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('shipment.participants')}>
-              <div className="shipment-fields">
-                <div data-workflow-field="customer">
-                  <CustomerSelect
-                    label={translate('shipment.customerRequired')}
-                    required
-                    error={
-                      validation.attempted && !draft.customer_id
-                        ? translate('lookup.chooseCustomerDirectory')
-                        : ''
-                    }
-                    session={props.session}
-                    items={props.customers}
-                    value={draft.customer_id}
-                    disabled={busy || !write}
-                    onChange={(value) =>
-                      setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
-                    }
-                  />
+                      min="1900-01-01"
+                      required
+                      value={draft.shipment_date}
+                      onChange={(dateValue) => set('shipment_date', dateValue)}
+                    />
+                    {validation.errors.shipment_date && (
+                      <small className="field-error" id={`${formId}-date-error`}>
+                        {validation.errors.shipment_date}
+                      </small>
+                    )}
+                  </label>
                 </div>
-                <div data-workflow-field="recipient">
-                  <CustomerSelect
-                    label={translate('shipment.recipient')}
-                    session={props.session}
-                    items={props.customers}
-                    value={draft.recipient_id}
-                    disabled={busy || !write}
-                    onChange={(value) => set('recipient_id', value)}
-                  />
+              </RecordSection>
+              <RecordSection title={translate('shipment.participants')}>
+                <div className="shipment-fields">
+                  <div data-workflow-field="customer">
+                    <CustomerSelect
+                      label={translate('shipment.customerRequired')}
+                      required
+                      error={
+                        validation.attempted && !draft.customer_id
+                          ? translate('lookup.chooseCustomerDirectory')
+                          : ''
+                      }
+                      session={props.session}
+                      items={props.customers}
+                      value={draft.customer_id}
+                      disabled={busy || !write}
+                      onChange={(value) =>
+                        setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
+                      }
+                    />
+                  </div>
+                  <div data-workflow-field="recipient">
+                    <CustomerSelect
+                      label={translate('shipment.recipient')}
+                      session={props.session}
+                      items={props.customers}
+                      value={draft.recipient_id}
+                      disabled={busy || !write}
+                      onChange={(value) => set('recipient_id', value)}
+                    />
+                  </div>
+                  <div data-workflow-field="logist">
+                    <DirectoryLookup
+                      session={props.session}
+                      kind="employees"
+                      label={translate('shipment.logist')}
+                      value={draft.logist}
+                      onChange={(value) => {
+                        manualLogist.current = true;
+                        set('logist', value);
+                      }}
+                    />
+                  </div>
                 </div>
-                <div data-workflow-field="logist">
-                  <DirectoryLookup
-                    session={props.session}
-                    kind="employees"
-                    label={translate('shipment.logist')}
-                    value={draft.logist}
-                    onChange={(value) => {
-                      manualLogist.current = true;
-                      set('logist', value);
-                    }}
-                  />
-                </div>
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('shipment.cargoTerms')}>
-              <div
-                data-workflow-field="cargo"
-                className="cargo-autocomplete"
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) setCargoOpen(false);
-                }}
-              >
-                <label>
-                  {translate('shipment.cargoDescription')}
-                  <textarea
-                    ref={cargoInput}
-                    maxLength={2000}
-                    rows={2}
-                    value={draft.cargo_description}
-                    onFocus={() => setCargoOpen(true)}
-                    onChange={(event) => {
-                      set('cargo_description', event.target.value);
-                      setCargoOpen(true);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') {
-                        setCargoOpen(false);
-                        event.preventDefault();
-                      }
-                      if (event.key === 'ArrowDown' && cargoOpen && suggestions.length) {
-                        event.preventDefault();
-                        cargoOptions.current
-                          ?.querySelector<HTMLButtonElement>('[data-cargo-choice]')
-                          ?.focus();
-                      }
-                    }}
-                    aria-expanded={cargoOpen}
-                    aria-controls={cargoOpen ? `${formId}-cargo-options` : undefined}
-                    placeholder={translate('shipment.cargoPlaceholder')}
-                  />
-                </label>
-                {cargoOpen && (
-                  <div
-                    ref={cargoOptions}
-                    id={`${formId}-cargo-options`}
-                    className="cargo-suggestions"
-                    role="region"
-                    aria-label={translate('shipment.cargoSuggestions')}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') {
-                        cargoInput.current?.focus();
-                        setCargoOpen(false);
-                        event.preventDefault();
-                      }
-                    }}
-                  >
-                    {cargoLoading ? (
-                      <p role="status">{translate('shipment.cargoSearching')}</p>
-                    ) : cargoFailure ? (
-                      <p role="alert">
-                        {translate('shipment.cargoFailed', { message: cargoFailure })}
-                      </p>
-                    ) : suggestions.length === 0 ? (
-                      <p>{translate('shipment.cargoNoMatches')}</p>
-                    ) : (
-                      <>
-                        {suggestions.map((value) => (
-                          <div key={value} className="cargo-suggestion">
-                            <button
-                              type="button"
-                              data-cargo-choice
-                              onClick={() => {
-                                set('cargo_description', value);
-                                cargoInput.current?.focus();
-                                setCargoOpen(false);
-                              }}
-                            >
-                              {value}
-                            </button>
-                            {write && (
+              </RecordSection>
+              <RecordSection title={translate('shipment.cargoTerms')}>
+                <div
+                  data-workflow-field="cargo"
+                  className="cargo-autocomplete"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setCargoOpen(false);
+                  }}
+                >
+                  <label>
+                    {translate('shipment.cargoDescription')}
+                    <textarea
+                      ref={cargoInput}
+                      maxLength={2000}
+                      rows={2}
+                      value={draft.cargo_description}
+                      onFocus={() => setCargoOpen(true)}
+                      onChange={(event) => {
+                        set('cargo_description', event.target.value);
+                        setCargoOpen(true);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          setCargoOpen(false);
+                          event.preventDefault();
+                        }
+                        if (event.key === 'ArrowDown' && cargoOpen && suggestions.length) {
+                          event.preventDefault();
+                          cargoOptions.current
+                            ?.querySelector<HTMLButtonElement>('[data-cargo-choice]')
+                            ?.focus();
+                        }
+                      }}
+                      aria-expanded={cargoOpen}
+                      aria-controls={cargoOpen ? `${formId}-cargo-options` : undefined}
+                      placeholder={translate('shipment.cargoPlaceholder')}
+                    />
+                  </label>
+                  {cargoOpen && (
+                    <div
+                      ref={cargoOptions}
+                      id={`${formId}-cargo-options`}
+                      className="cargo-suggestions"
+                      role="region"
+                      aria-label={translate('shipment.cargoSuggestions')}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          cargoInput.current?.focus();
+                          setCargoOpen(false);
+                          event.preventDefault();
+                        }
+                      }}
+                    >
+                      {cargoLoading ? (
+                        <p role="status">{translate('shipment.cargoSearching')}</p>
+                      ) : cargoFailure ? (
+                        <p role="alert">
+                          {translate('shipment.cargoFailed', { message: cargoFailure })}
+                        </p>
+                      ) : suggestions.length === 0 ? (
+                        <p>{translate('shipment.cargoNoMatches')}</p>
+                      ) : (
+                        <>
+                          {suggestions.map((value) => (
+                            <div key={value} className="cargo-suggestion">
                               <button
                                 type="button"
-                                className="cargo-remove"
-                                aria-label={translate('shipment.deleteSuggestion', { value })}
-                                onClick={() => void removeSuggestion(value)}
+                                data-cargo-choice
+                                onClick={() => {
+                                  set('cargo_description', value);
+                                  cargoInput.current?.focus();
+                                  setCargoOpen(false);
+                                }}
                               >
-                                ×
+                                {value}
                               </button>
-                            )}
-                          </div>
-                        ))}
-                        {suggestions.length === 20 && <p>{translate('shipment.cargoLimit')}</p>}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="shipment-fields three" data-workflow-field="terms">
-                <Select
-                  label="Incoterms"
-                  value={draft.incoterms}
-                  onChange={(v) => set('incoterms', v)}
-                  options={list(dictionaries?.incoterms ?? [])}
-                />
-                <Select
-                  label={translate('shipment.carriageTerms')}
-                  value={draft.carriage_terms}
-                  onChange={(v) => set('carriage_terms', v)}
-                  options={list(dictionaries?.carriage_terms ?? [])}
-                />
-                <Select
-                  label={translate('shipment.loading')}
-                  value={draft.loading}
-                  onChange={(v) => set('loading', v)}
-                  options={list(dictionaries?.loading ?? [])}
-                />
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('shipment.delivery')}>
-              <div className="shipment-fields" data-workflow-field="delivery">
-                <DirectoryLookup
-                  session={props.session}
-                  kind="cities"
-                  label={translate('shipment.deliveryCity')}
-                  value={draft.delivery_city}
-                  onChange={(value, country) => {
-                    setDraft((old) => ({
-                      ...old,
-                      delivery_city: value,
-                      ...(country ? { delivery_country: country } : {}),
-                    }));
-                  }}
-                />
-                <label>
-                  {translate('shipment.countryCode')}
-                  <input
-                    maxLength={2}
-                    pattern="[A-Z]{2}"
-                    placeholder="RU"
-                    value={draft.delivery_country}
-                    onChange={(e) => set('delivery_country', e.target.value.toUpperCase())}
+                              {write && (
+                                <button
+                                  type="button"
+                                  className="cargo-remove"
+                                  aria-label={translate('shipment.deleteSuggestion', { value })}
+                                  onClick={() => void removeSuggestion(value)}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          {suggestions.length === 20 && <p>{translate('shipment.cargoLimit')}</p>}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shipment-fields three" data-workflow-field="terms">
+                  <Select
+                    label="Incoterms"
+                    value={draft.incoterms}
+                    onChange={(v) => set('incoterms', v)}
+                    options={list(dictionaries?.incoterms ?? [])}
                   />
-                </label>
-                <label className="full">
-                  {translate('shipment.deliveryAddress')}
-                  <textarea
-                    maxLength={1000}
-                    rows={2}
-                    value={draft.delivery_address}
-                    onChange={(e) => set('delivery_address', e.target.value)}
+                  <Select
+                    label={translate('shipment.carriageTerms')}
+                    value={draft.carriage_terms}
+                    onChange={(v) => set('carriage_terms', v)}
+                    options={list(dictionaries?.carriage_terms ?? [])}
                   />
-                </label>
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('shipment.additional')}>
-              <div className="shipment-fields">
-                <Select
-                  label={translate('registryField.status')}
-                  value={draft.status}
-                  onChange={(v) => {
-                    manualStatus.current = true;
-                    set('status', v);
-                  }}
-                  options={[...new Set([...(settings?.statuses ?? []), draft.status])]
-                    .filter(Boolean)
-                    .map((value) => ({ value, label: value }))}
-                />
-                <label>
-                  {translate('shipment.note')}
-                  <input
-                    maxLength={256}
-                    value={draft.reference}
-                    onChange={(e) => set('reference', e.target.value)}
+                  <Select
+                    label={translate('shipment.loading')}
+                    value={draft.loading}
+                    onChange={(v) => set('loading', v)}
+                    options={list(dictionaries?.loading ?? [])}
                   />
-                </label>
-              </div>
-            </RecordSection>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('shipment.delivery')}>
+                <div className="shipment-fields" data-workflow-field="delivery">
+                  <DirectoryLookup
+                    session={props.session}
+                    kind="cities"
+                    label={translate('shipment.deliveryCity')}
+                    value={draft.delivery_city}
+                    onChange={(value, country) => {
+                      setDraft((old) => ({
+                        ...old,
+                        delivery_city: value,
+                        ...(country ? { delivery_country: country } : {}),
+                      }));
+                    }}
+                  />
+                  <label>
+                    {translate('shipment.countryCode')}
+                    <input
+                      maxLength={2}
+                      pattern="[A-Z]{2}"
+                      placeholder="RU"
+                      value={draft.delivery_country}
+                      onChange={(e) => set('delivery_country', e.target.value.toUpperCase())}
+                    />
+                  </label>
+                  <label className="full">
+                    {translate('shipment.deliveryAddress')}
+                    <textarea
+                      maxLength={1000}
+                      rows={2}
+                      value={draft.delivery_address}
+                      onChange={(e) => set('delivery_address', e.target.value)}
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('shipment.additional')}>
+                <div className="shipment-fields">
+                  <Select
+                    label={translate('registryField.status')}
+                    value={draft.status}
+                    onChange={(v) => {
+                      manualStatus.current = true;
+                      set('status', v);
+                    }}
+                    options={[...new Set([...(settings?.statuses ?? []), draft.status])]
+                      .filter(Boolean)
+                      .map((value) => ({ value, label: value }))}
+                  />
+                  <label>
+                    {translate('shipment.note')}
+                    <input
+                      maxLength={256}
+                      value={draft.reference}
+                      onChange={(e) => set('reference', e.target.value)}
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+            </RecordEditorSections>
           </fieldset>
           <fieldset
             className="shipment-edit-section"
@@ -988,7 +992,7 @@ function ShipmentCard({
                 : translate('shipment.required')
           }
         >
-          {(dirty || initial) && (
+          {
             <button
               type="button"
               disabled={busy}
@@ -996,7 +1000,11 @@ function ShipmentCard({
                 confirmDiscard(dirty, () => {
                   recovery.discard();
                   validation.reset();
-                  if (initial) setEditing(false);
+                  if (!initial) {
+                    props.onCancel();
+                    return;
+                  }
+                  setEditing(false);
                   manualLogist.current = false;
                   manualStatus.current = false;
                   setManualNumber(Boolean(initial));
@@ -1007,7 +1015,7 @@ function ShipmentCard({
             >
               {translate('shipment.cancel')}
             </button>
-          )}
+          }
           <button
             form={formId}
             type="submit"

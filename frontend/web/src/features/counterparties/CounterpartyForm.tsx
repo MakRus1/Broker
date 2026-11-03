@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -145,168 +146,172 @@ export function CounterpartyForm({
             {translate('counterparty.draftConflict')}
           </p>
         )}
-        <fieldset disabled={busy || !!recovery.candidate}>
-          <RecordSection title={translate('counterparty.legalEntity')}>
-            <label className="record-toggle">
-              <input
-                type="checkbox"
-                role="switch"
-                checked={draft.own_company}
-                onChange={(event) => set('own_company', event.target.checked)}
+        <RecordEditorSections>
+          <fieldset disabled={busy || !!recovery.candidate}>
+            <RecordSection title={translate('counterparty.legalEntity')}>
+              <label className="record-toggle">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={draft.own_company}
+                  onChange={(event) => set('own_company', event.target.checked)}
+                />
+                {translate('counterparty.ownLegalEntity')}
+              </label>
+              <RegistryLookup
+                session={session}
+                draft={draft}
+                onApply={(value) => setDraft((old) => ({ ...old, ...value }))}
+              >
+                {(lookupButton) => (
+                  <div className="counterparty-requisites">
+                    {(
+                      [
+                        ['name', translate('counterparty.shortNameRequired'), 256],
+                        ['legal_name', translate('counterparty.legalName'), 512],
+                        ['tax_id', translate('counterparty.taxIDINN'), 64],
+                        ['country_code', translate('counterparty.countryCodeRUCN'), 2],
+                        ['kpp', translate('counterparty.kpp'), 9],
+                        ['registration_id', translate('counterparty.registrationNumberOGRN'), 64],
+                        ['legal_address', translate('counterparty.registeredAddress'), 1024],
+                      ] as const
+                    ).map(([key, label, limit]) => (
+                      <div
+                        key={key}
+                        className={`counterparty-field-${key}${key === 'tax_id' ? ' registry-tax-field' : ''}`}
+                      >
+                        <label>
+                          {label}
+                          {key === 'legal_name' || key === 'legal_address' ? (
+                            <textarea
+                              rows={1}
+                              value={draft[key]}
+                              maxLength={limit}
+                              onChange={(event) => set(key, event.target.value)}
+                            />
+                          ) : (
+                            <input
+                              name={key}
+                              value={draft[key]}
+                              required={
+                                key === 'name' || (key === 'country_code' && !!draft.tax_id)
+                              }
+                              maxLength={limit}
+                              pattern={
+                                key === 'kpp'
+                                  ? '[0-9]{9}'
+                                  : key === 'country_code'
+                                    ? '[A-Za-z]{2}'
+                                    : key === 'tax_id'
+                                      ? '[A-Za-z0-9 -]*'
+                                      : undefined
+                              }
+                              onChange={(event) => set(key, event.target.value)}
+                            />
+                          )}
+                        </label>
+                        {key === 'tax_id' && lookupButton}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </RegistryLookup>
+            </RecordSection>
+          </fieldset>
+          <fieldset disabled={busy || !!recovery.candidate}>
+            <RecordSection title={translate('registryField.roles')}>
+              <p className="hint">{translate('counterparty.rolesHint')}</p>
+              <MultiSelect
+                label={translate('counterparty.selectRoles')}
+                values={draft.roles}
+                disabled={busy}
+                options={Object.entries(counterpartyRoles).map(([value, label]) => ({
+                  value,
+                  label: registryValueLabel('roles', value, locale) ?? label,
+                }))}
+                onChange={(roles) => set('roles', roles as CounterpartyRole[])}
               />
-              {translate('counterparty.ownLegalEntity')}
-            </label>
-            <RegistryLookup
-              session={session}
-              draft={draft}
-              onApply={(value) => setDraft((old) => ({ ...old, ...value }))}
-            >
-              {(lookupButton) => (
-                <div className="counterparty-requisites">
-                  {(
-                    [
-                      ['name', translate('counterparty.shortNameRequired'), 256],
-                      ['legal_name', translate('counterparty.legalName'), 512],
-                      ['tax_id', translate('counterparty.taxIDINN'), 64],
-                      ['country_code', translate('counterparty.countryCodeRUCN'), 2],
-                      ['kpp', translate('counterparty.kpp'), 9],
-                      ['registration_id', translate('counterparty.registrationNumberOGRN'), 64],
-                      ['legal_address', translate('counterparty.registeredAddress'), 1024],
-                    ] as const
-                  ).map(([key, label, limit]) => (
-                    <div
-                      key={key}
-                      className={`counterparty-field-${key}${key === 'tax_id' ? ' registry-tax-field' : ''}`}
-                    >
-                      <label>
-                        {label}
-                        {key === 'legal_name' || key === 'legal_address' ? (
-                          <textarea
-                            rows={1}
-                            value={draft[key]}
-                            maxLength={limit}
-                            onChange={(event) => set(key, event.target.value)}
-                          />
-                        ) : (
-                          <input
-                            name={key}
-                            value={draft[key]}
-                            required={key === 'name' || (key === 'country_code' && !!draft.tax_id)}
-                            maxLength={limit}
-                            pattern={
-                              key === 'kpp'
-                                ? '[0-9]{9}'
-                                : key === 'country_code'
-                                  ? '[A-Za-z]{2}'
-                                  : key === 'tax_id'
-                                    ? '[A-Za-z0-9 -]*'
-                                    : undefined
-                            }
-                            onChange={(event) => set(key, event.target.value)}
-                          />
-                        )}
-                      </label>
-                      {key === 'tax_id' && lookupButton}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </RegistryLookup>
-          </RecordSection>
-        </fieldset>
-        <fieldset disabled={busy || !!recovery.candidate}>
-          <RecordSection title={translate('registryField.roles')}>
-            <p className="hint">{translate('counterparty.rolesHint')}</p>
-            <MultiSelect
-              label={translate('counterparty.selectRoles')}
-              values={draft.roles}
-              disabled={busy}
-              options={Object.entries(counterpartyRoles).map(([value, label]) => ({
-                value,
-                label: registryValueLabel('roles', value, locale) ?? label,
-              }))}
-              onChange={(roles) => set('roles', roles as CounterpartyRole[])}
-            />
-          </RecordSection>
-        </fieldset>
-        <fieldset disabled={busy || !!recovery.candidate}>
-          <RecordSection title={translate('counterparty.responsibleEmployee')}>
-            <DirectoryLookup
-              session={session}
-              kind="employees"
-              label={translate('shipment.logist')}
-              value={draft.logist}
-              onChange={(value) => set('logist', value)}
-            />
-            <p className="hint">{translate('counterparty.logistHint')}</p>
-          </RecordSection>
-        </fieldset>
-        <fieldset disabled={busy || !!recovery.candidate}>
-          <RecordSection title={translate('counterparty.contacts')}>
-            {draft.contacts.map((contact, index) => (
-              <div className="contact-editor" key={index}>
-                <div className="route-fields">
-                  {(['name', 'position', 'email', 'phone'] as const).map((key) => (
-                    <label key={key}>
-                      {
+            </RecordSection>
+          </fieldset>
+          <fieldset disabled={busy || !!recovery.candidate}>
+            <RecordSection title={translate('counterparty.responsibleEmployee')}>
+              <DirectoryLookup
+                session={session}
+                kind="employees"
+                label={translate('shipment.logist')}
+                value={draft.logist}
+                onChange={(value) => set('logist', value)}
+              />
+              <p className="hint">{translate('counterparty.logistHint')}</p>
+            </RecordSection>
+          </fieldset>
+          <fieldset disabled={busy || !!recovery.candidate}>
+            <RecordSection title={translate('counterparty.contacts')}>
+              {draft.contacts.map((contact, index) => (
+                <div className="contact-editor" key={index}>
+                  <div className="route-fields">
+                    {(['name', 'position', 'email', 'phone'] as const).map((key) => (
+                      <label key={key}>
                         {
-                          name: translate('counterparty.nameRequired'),
-                          position: translate('counterparty.position'),
-                          email: 'Email',
-                          phone: translate('counterparty.phone'),
-                        }[key]
-                      }
-                      <input
-                        required={key === 'name'}
-                        type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
-                        title={
-                          key === 'phone'
-                            ? translate(
-                                'counterparty.7To15DigitsSpacesParenthesesAndHyphensAreAllowed',
-                              )
-                            : undefined
+                          {
+                            name: translate('counterparty.nameRequired'),
+                            position: translate('counterparty.position'),
+                            email: 'Email',
+                            phone: translate('counterparty.phone'),
+                          }[key]
                         }
-                        maxLength={key === 'phone' ? 64 : 256}
-                        value={contact[key]}
-                        onChange={(event) =>
-                          set(
-                            'contacts',
-                            draft.contacts.map((value, i) =>
-                              i === index ? { ...value, [key]: event.target.value } : value,
-                            ),
-                          )
-                        }
-                      />
-                    </label>
-                  ))}
+                        <input
+                          required={key === 'name'}
+                          type={key === 'email' ? 'email' : key === 'phone' ? 'tel' : 'text'}
+                          title={
+                            key === 'phone'
+                              ? translate(
+                                  'counterparty.7To15DigitsSpacesParenthesesAndHyphensAreAllowed',
+                                )
+                              : undefined
+                          }
+                          maxLength={key === 'phone' ? 64 : 256}
+                          value={contact[key]}
+                          onChange={(event) =>
+                            set(
+                              'contacts',
+                              draft.contacts.map((value, i) =>
+                                i === index ? { ...value, [key]: event.target.value } : value,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set(
+                        'contacts',
+                        draft.contacts.filter((_, i) => i !== index),
+                      )
+                    }
+                  >
+                    {translate('counterparty.removeContact')}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    set(
-                      'contacts',
-                      draft.contacts.filter((_, i) => i !== index),
-                    )
-                  }
-                >
-                  {translate('counterparty.removeContact')}
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              disabled={draft.contacts.length >= 32}
-              onClick={() =>
-                set('contacts', [
-                  ...draft.contacts,
-                  { name: '', position: '', email: '', phone: '' },
-                ])
-              }
-            >
-              {translate('counterparty.addContact')}
-            </button>
-          </RecordSection>
-        </fieldset>
+              ))}
+              <button
+                type="button"
+                disabled={draft.contacts.length >= 32}
+                onClick={() =>
+                  set('contacts', [
+                    ...draft.contacts,
+                    { name: '', position: '', email: '', phone: '' },
+                  ])
+                }
+              >
+                {translate('counterparty.addContact')}
+              </button>
+            </RecordSection>
+          </fieldset>
+        </RecordEditorSections>
         <RecordActions
           error={failure || validation.message}
           status={

@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -232,91 +233,93 @@ export function BankAccounts({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset
-            className="record-layout-content"
-            disabled={busy || !!recovery.candidate}
-            aria-label={translate('counterparty.bankAccountDetails')}
-          >
-            {(
-              [
-                ['account', 'counterparty.bankAccountDetails'],
-                ['bank', 'print.bankDetails'],
-              ] as const
-            ).map(([group, title]) => (
-              <RecordSection key={group} title={translate(title)}>
-                <div className="record-fields">
-                  {accountFields
-                    .filter((field) => field[3] === group)
-                    .map(([field, label, maxLength]) =>
-                      field === 'currency' ? (
-                        <Select
-                          key={field}
-                          label={translate('registryField.currency')}
-                          value={draft.currency}
-                          searchable
-                          options={currenciesWithCurrent(draft.currency, locale)}
-                          disabled={busy}
-                          onChange={(currency) => setDraft({ ...draft, currency })}
-                        />
-                      ) : (
-                        <label key={field}>
-                          {label === 'IBAN' ? label : translate(label)}
-                          <input
-                            name={field}
-                            value={draft[field] ?? ''}
-                            maxLength={maxLength}
-                            required={['name', 'number', 'bank_name'].includes(field)}
-                            pattern={
-                              field === 'bic'
-                                ? '[0-9]{9}'
-                                : field === 'swift'
-                                  ? '[A-Z0-9]{8}([A-Z0-9]{3})?'
-                                  : undefined
-                            }
-                            onChange={(event) =>
-                              setDraft({
-                                ...draft,
-                                [field]:
-                                  field === 'swift'
-                                    ? event.target.value.toUpperCase()
-                                    : event.target.value,
-                              })
-                            }
+          <RecordEditorSections>
+            <fieldset
+              className="record-layout-content"
+              disabled={busy || !!recovery.candidate}
+              aria-label={translate('counterparty.bankAccountDetails')}
+            >
+              {(
+                [
+                  ['account', 'counterparty.bankAccountDetails'],
+                  ['bank', 'print.bankDetails'],
+                ] as const
+              ).map(([group, title]) => (
+                <RecordSection key={group} title={translate(title)}>
+                  <div className="record-fields">
+                    {accountFields
+                      .filter((field) => field[3] === group)
+                      .map(([field, label, maxLength]) =>
+                        field === 'currency' ? (
+                          <Select
+                            key={field}
+                            label={translate('registryField.currency')}
+                            value={draft.currency}
+                            searchable
+                            options={currenciesWithCurrent(draft.currency, locale)}
+                            disabled={busy}
+                            onChange={(currency) => setDraft({ ...draft, currency })}
                           />
-                        </label>
-                      ),
-                    )}
+                        ) : (
+                          <label key={field}>
+                            {label === 'IBAN' ? label : translate(label)}
+                            <input
+                              name={field}
+                              value={draft[field] ?? ''}
+                              maxLength={maxLength}
+                              required={['name', 'number', 'bank_name'].includes(field)}
+                              pattern={
+                                field === 'bic'
+                                  ? '[0-9]{9}'
+                                  : field === 'swift'
+                                    ? '[A-Z0-9]{8}([A-Z0-9]{3})?'
+                                    : undefined
+                              }
+                              onChange={(event) =>
+                                setDraft({
+                                  ...draft,
+                                  [field]:
+                                    field === 'swift'
+                                      ? event.target.value.toUpperCase()
+                                      : event.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                        ),
+                      )}
+                  </div>
+                </RecordSection>
+              ))}
+              <RecordSection title={translate('record.additional')}>
+                <div className="role-options">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={draft.is_primary}
+                      disabled={draft.archived}
+                      onChange={(event) => setDraft({ ...draft, is_primary: event.target.checked })}
+                    />
+                    {translate('counterparty.primaryForThisCurrency')}
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={draft.archived}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          archived: event.target.checked,
+                          is_primary: event.target.checked ? false : draft.is_primary,
+                        })
+                      }
+                    />
+                    {translate('filter.archived')}
+                  </label>
                 </div>
               </RecordSection>
-            ))}
-            <RecordSection title={translate('record.additional')}>
-              <div className="role-options">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={draft.is_primary}
-                    disabled={draft.archived}
-                    onChange={(event) => setDraft({ ...draft, is_primary: event.target.checked })}
-                  />
-                  {translate('counterparty.primaryForThisCurrency')}
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={draft.archived}
-                    onChange={(event) =>
-                      setDraft({
-                        ...draft,
-                        archived: event.target.checked,
-                        is_primary: event.target.checked ? false : draft.is_primary,
-                      })
-                    }
-                  />
-                  {translate('filter.archived')}
-                </label>
-              </div>
-            </RecordSection>
-          </fieldset>
+            </fieldset>
+          </RecordEditorSections>
           <RecordActions
             error={failure || validation.message}
             status={

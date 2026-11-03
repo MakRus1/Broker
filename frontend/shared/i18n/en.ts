@@ -965,6 +965,7 @@ export const en = {
   "transport.editingDetails": "Editing transportation details",
   "transport.editingRoute": "Editing route legs",
   "transport.createHint": "The route and terms will come from the shipment.",
+  "record.sections": "Form sections",
   "record.identification": "Details",
   "record.parties": "Parties",
   "record.paymentTerms": "Payment terms",

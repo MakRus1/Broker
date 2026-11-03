@@ -1,3 +1,4 @@
+import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -589,150 +590,154 @@ export function ContractsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <fieldset disabled={busy || !!recovery.candidate}>
-            <RecordSection title={translate('record.identification')}>
-              <div className="record-fields record-fields-three">
-                <label>
-                  {translate('registryField.contractNumber')}
-                  <input
-                    required={!creating}
-                    name="number"
-                    placeholder={creating ? translate('finance.automaticOnSave') : undefined}
-                    maxLength={128}
-                    value={draft.number}
-                    onChange={(event) => setDraft({ ...draft, number: event.target.value })}
-                  />
-                </label>
-                <label>
-                  {translate('forms.contractDateRequired')}
-                  <DateInput
+          <RecordEditorSections>
+            <fieldset disabled={busy || !!recovery.candidate}>
+              <RecordSection title={translate('record.identification')}>
+                <div className="record-fields record-fields-three">
+                  <label>
+                    {translate('registryField.contractNumber')}
+                    <input
+                      required={!creating}
+                      name="number"
+                      placeholder={creating ? translate('finance.automaticOnSave') : undefined}
+                      maxLength={128}
+                      value={draft.number}
+                      onChange={(event) => setDraft({ ...draft, number: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {translate('forms.contractDateRequired')}
+                    <DateInput
+                      required
+                      name="contract_date"
+                      min={CalendarDate.fromISO('1900-01-01')}
+                      value={draft.contract_date}
+                      onChange={(contract_date) => setDraft({ ...draft, contract_date })}
+                    />
+                  </label>
+                  <label>
+                    {translate('registryField.valid_until')}
+                    <DateInput
+                      value={draft.valid_until}
+                      min={draft.contract_date ?? CalendarDate.fromISO('1900-01-01')}
+                      onChange={(valid_until) => setDraft({ ...draft, valid_until })}
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('record.parties')}>
+                <div className="record-fields">
+                  <CustomerSelect
+                    items={emptyParties}
+                    label={translate('forms.ownLegalEntityRequired')}
                     required
-                    name="contract_date"
-                    min={CalendarDate.fromISO('1900-01-01')}
-                    value={draft.contract_date}
-                    onChange={(contract_date) => setDraft({ ...draft, contract_date })}
-                  />
-                </label>
-                <label>
-                  {translate('registryField.valid_until')}
-                  <DateInput
-                    value={draft.valid_until}
-                    min={draft.contract_date ?? CalendarDate.fromISO('1900-01-01')}
-                    onChange={(valid_until) => setDraft({ ...draft, valid_until })}
-                  />
-                </label>
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('record.parties')}>
-              <div className="record-fields">
-                <CustomerSelect
-                  items={emptyParties}
-                  label={translate('forms.ownLegalEntityRequired')}
-                  required
-                  ownCompany
-                  session={session}
-                  disabled={busy}
-                  excludeId={draft.counterparty_id}
-                  value={draft.own_company_id}
-                  onChange={(own_company_id) =>
-                    setDraft({ ...draft, own_company_id, own_bank_account_id: null })
-                  }
-                />
-                <CustomerSelect
-                  items={emptyParties}
-                  label={translate('finance.counterpartyRequired')}
-                  required
-                  session={session}
-                  disabled={busy}
-                  excludeId={draft.own_company_id}
-                  value={draft.counterparty_id}
-                  onChange={(counterparty_id) =>
-                    setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })
-                  }
-                />
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('record.paymentTerms')}>
-              <div className="record-fields">
-                <div>
-                  <Select
-                    label={translate('registryField.currency')}
-                    value={draft.currency}
-                    onChange={(currency) =>
-                      setDraft({
-                        ...draft,
-                        currency,
-                        own_bank_account_id: null,
-                        counterparty_bank_account_id: null,
-                      })
-                    }
-                    searchable
-                    options={currenciesWithCurrent(draft.currency, locale)}
-                  />
-                </div>
-                <div>
-                  <BankAccountSelect
-                    label={translate('forms.ownBankAccount')}
+                    ownCompany
                     session={session}
-                    owner={draft.own_company_id}
-                    currency={draft.currency}
-                    value={draft.own_bank_account_id}
-                    onChange={(own_bank_account_id) => setDraft({ ...draft, own_bank_account_id })}
+                    disabled={busy}
+                    excludeId={draft.counterparty_id}
+                    value={draft.own_company_id}
+                    onChange={(own_company_id) =>
+                      setDraft({ ...draft, own_company_id, own_bank_account_id: null })
+                    }
                   />
-                </div>
-                <div>
-                  <BankAccountSelect
-                    label={translate('finance.counterpartyBankAccount')}
+                  <CustomerSelect
+                    items={emptyParties}
+                    label={translate('finance.counterpartyRequired')}
+                    required
                     session={session}
-                    owner={draft.counterparty_id}
-                    currency={draft.currency}
-                    value={draft.counterparty_bank_account_id}
-                    onChange={(counterparty_bank_account_id) =>
-                      setDraft({ ...draft, counterparty_bank_account_id })
+                    disabled={busy}
+                    excludeId={draft.own_company_id}
+                    value={draft.counterparty_id}
+                    onChange={(counterparty_id) =>
+                      setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })
                     }
                   />
                 </div>
-                <label>
-                  {translate('registryField.paymentDelay')}
-                  <input
-                    type="number"
-                    min={0}
-                    max={36500}
-                    step={1}
-                    value={draft.payment_delay_days ?? ''}
-                    onChange={(event) =>
-                      setDraft({
-                        ...draft,
-                        payment_delay_days:
-                          event.target.value === '' ? null : Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </div>
-            </RecordSection>
-            <RecordSection title={translate('record.additional')}>
-              <div className="record-fields">
-                <label className="bank-archive-toggle">
-                  <input
-                    type="checkbox"
-                    checked={draft.archived}
-                    onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
-                  />
-                  {translate('filter.archived')}
-                </label>
-                <label className="record-wide">
-                  {translate('shipment.note')}
-                  <textarea
-                    rows={3}
-                    maxLength={4000}
-                    value={draft.note ?? ''}
-                    onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
-                  />
-                </label>
-              </div>
-            </RecordSection>
-          </fieldset>
+              </RecordSection>
+              <RecordSection title={translate('record.paymentTerms')}>
+                <div className="record-fields">
+                  <div>
+                    <Select
+                      label={translate('registryField.currency')}
+                      value={draft.currency}
+                      onChange={(currency) =>
+                        setDraft({
+                          ...draft,
+                          currency,
+                          own_bank_account_id: null,
+                          counterparty_bank_account_id: null,
+                        })
+                      }
+                      searchable
+                      options={currenciesWithCurrent(draft.currency, locale)}
+                    />
+                  </div>
+                  <div>
+                    <BankAccountSelect
+                      label={translate('forms.ownBankAccount')}
+                      session={session}
+                      owner={draft.own_company_id}
+                      currency={draft.currency}
+                      value={draft.own_bank_account_id}
+                      onChange={(own_bank_account_id) =>
+                        setDraft({ ...draft, own_bank_account_id })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <BankAccountSelect
+                      label={translate('finance.counterpartyBankAccount')}
+                      session={session}
+                      owner={draft.counterparty_id}
+                      currency={draft.currency}
+                      value={draft.counterparty_bank_account_id}
+                      onChange={(counterparty_bank_account_id) =>
+                        setDraft({ ...draft, counterparty_bank_account_id })
+                      }
+                    />
+                  </div>
+                  <label>
+                    {translate('registryField.paymentDelay')}
+                    <input
+                      type="number"
+                      min={0}
+                      max={36500}
+                      step={1}
+                      value={draft.payment_delay_days ?? ''}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          payment_delay_days:
+                            event.target.value === '' ? null : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+              <RecordSection title={translate('record.additional')}>
+                <div className="record-fields">
+                  <label className="bank-archive-toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.archived}
+                      onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
+                    />
+                    {translate('filter.archived')}
+                  </label>
+                  <label className="record-wide">
+                    {translate('shipment.note')}
+                    <textarea
+                      rows={3}
+                      maxLength={4000}
+                      value={draft.note ?? ''}
+                      onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
+                    />
+                  </label>
+                </div>
+              </RecordSection>
+            </fieldset>
+          </RecordEditorSections>
           <RecordActions
             error={failure || validation.message}
             status={

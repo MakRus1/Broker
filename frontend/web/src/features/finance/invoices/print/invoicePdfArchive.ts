@@ -1,3 +1,4 @@
+import { interfaceText } from '../../../../shared/localization/interfaceText';
 import { strToU8, zipSync } from 'fflate';
 import { request } from '../../../../shared/api/http';
 import type { Session } from '../../../../shared/api/session';
@@ -9,7 +10,7 @@ export type ArchiveFailure = { id: string; number: string; message: string };
 export type ArchiveResult = { blob?: Blob; ready: number; failures: ArchiveFailure[] };
 export function invoiceArchiveFilename(invoice: Pick<Invoice, 'id' | 'number' | 'invoice_date'>) {
   const number = invoice.number.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 70);
-  return `Счёт_${number}_${invoice.invoice_date}_${invoice.id}.pdf`;
+  return `${interfaceText('print.invoicePrefix')}_${number}_${invoice.invoice_date}_${invoice.id}.pdf`;
 }
 async function render(data: InvoicePrintData) {
   const { invoicePdfDocument } = await import('./downloadInvoicePdf');
@@ -23,9 +24,9 @@ export async function buildInvoiceArchive(
   renderPdf: (data: InvoicePrintData) => Promise<Uint8Array> = render,
 ): Promise<ArchiveResult> {
   if (!invoices.length || invoices.length > maxArchiveInvoices)
-    throw new Error(`Выберите от 1 до ${maxArchiveInvoices} счетов`);
+    throw new Error(interfaceText('print.selectRange', { max: maxArchiveInvoices }));
   if (new Set(invoices.map((invoice) => invoice.id)).size !== invoices.length)
-    throw new Error('Счета не должны повторяться');
+    throw new Error(interfaceText('print.duplicates'));
   const files: Record<string, Uint8Array> = {};
   const failures: ArchiveFailure[] = [];
   let bytes = 0;
@@ -33,8 +34,7 @@ export async function buildInvoiceArchive(
   for (const [index, invoice] of invoices.entries()) {
     signal.throwIfAborted();
     try {
-      if (invoice.direction !== 'outgoing')
-        throw new Error('PDF доступен только для исходящих счетов');
+      if (invoice.direction !== 'outgoing') throw new Error(interfaceText('print.outgoingOnly'));
       const data = await request<InvoicePrintData>(
         '/api/v1/invoices/print-data',
         session,
@@ -43,11 +43,11 @@ export async function buildInvoiceArchive(
       );
       signal.throwIfAborted();
       if (data.invoice.id !== invoice.id || data.invoice.revision !== invoice.revision)
-        throw new Error('Редакция счёта изменилась. Обновите реестр');
+        throw new Error(interfaceText('print.revisionChanged'));
       const pdf = await renderPdf(data);
       signal.throwIfAborted();
       if (bytes + pdf.byteLength > maxArchiveBytes)
-        throw new Error('Превышен лимит 50 МБ. Скачайте счета меньшими группами');
+        throw new Error(interfaceText('print.archiveLimit'));
       bytes += pdf.byteLength;
       files[invoiceArchiveFilename(invoice)] = pdf;
       ready += 1;
@@ -56,7 +56,7 @@ export async function buildInvoiceArchive(
       failures.push({
         id: invoice.id,
         number: invoice.number,
-        message: error instanceof Error ? error.message : 'Не удалось сформировать PDF',
+        message: error instanceof Error ? error.message : interfaceText('print.pdfFailed'),
       });
     }
     onProgress(index + 1);
@@ -66,8 +66,16 @@ export async function buildInvoiceArchive(
   signal.throwIfAborted();
   if (!ready) return { ready, failures };
   if (failures.length)
-    files['Ошибки.txt'] = strToU8(
-      failures.map((item) => `Счёт № ${item.number} (${item.id}): ${item.message}`).join('\n'),
+    files[interfaceText('print.errorFile')] = strToU8(
+      failures
+        .map((item) =>
+          interfaceText('print.errorLine', {
+            number: item.number,
+            id: item.id,
+            message: item.message,
+          }),
+        )
+        .join('\n'),
     );
   // PDF уже сжат генератором; повторное сжатие расходует CPU почти без выигрыша.
   const archive = zipSync(files, { level: 0 });

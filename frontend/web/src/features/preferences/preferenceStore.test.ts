@@ -111,7 +111,7 @@ describe('серверные личные настройки', () => {
     await vi.runAllTimersAsync();
     expect(store.read(key)).toEqual(['other device']);
     expect(transport.save).toHaveBeenCalledOnce();
-    expect(store.error).toContain('другом окне');
+    expect(store.error).toBe('preferences.conflict');
   });
   it('не пишет настройки при неудачной загрузке и повторяет после восстановления', async () => {
     vi.useFakeTimers();

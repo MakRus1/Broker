@@ -1,3 +1,4 @@
+import { interfaceText } from '../localization/interfaceText';
 import type { Session } from './session';
 export class ApiError extends Error {
   constructor(
@@ -31,7 +32,7 @@ export async function request<T>(
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      value?.message ?? 'Не удалось выполнить запрос. Попробуйте ещё раз.',
+      value?.message ?? interfaceText('errors.request'),
       response.headers.get('X-Trace-Id') ?? undefined,
     );
   }

@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { interfaceText } from '../../shared/localization/interfaceText';
 import { request, ApiError } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
 import { PreferenceStore, type Preference, type PreferenceTransport } from './preferenceStore';
@@ -20,15 +13,6 @@ export const usePreferences = () => useContext(PreferencesContext);
 export function usePreferencesSession() {
   const { session, setSession } = useContext(SessionContext);
   return [session, setSession] as const;
-}
-function PreferenceNotice({ store }: { store: PreferenceStore }) {
-  useSyncExternalStore(store.subscribe, store.snapshot);
-  return store.error ? (
-    <div className="preference-notice" role="status">
-      {store.error}
-      <button onClick={() => void store.retry()}>Повторить</button>
-    </div>
-  ) : null;
 }
 export function UserPreferences({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>();
@@ -94,7 +78,7 @@ export function UserPreferences({ children }: { children: ReactNode }) {
         if (!controller.signal.aborted) {
           setSession(null);
           if (!(value instanceof ApiError && value.status === 401))
-            setError(value instanceof Error ? value.message : 'Не удалось открыть сессию');
+            setError(value instanceof Error ? value.message : interfaceText('errors.session'));
         }
       }
     })();
@@ -116,7 +100,6 @@ export function UserPreferences({ children }: { children: ReactNode }) {
   return (
     <SessionContext.Provider value={{ session, setSession: changeSession }}>
       <PreferencesContext.Provider value={store}>
-        {session && store && <PreferenceNotice store={store} />}
         {error && <div role="alert">{error}</div>}
         {children}
       </PreferencesContext.Provider>

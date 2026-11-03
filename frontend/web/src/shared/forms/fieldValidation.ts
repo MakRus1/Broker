@@ -1,3 +1,4 @@
+import { interfaceText } from '../localization/interfaceText';
 import { useState, type FormEvent } from 'react';
 
 export function useFieldValidation() {
@@ -7,7 +8,7 @@ export function useFieldValidation() {
     const message = input.validity.valid
       ? ''
       : input.validity.valueMissing
-        ? 'Заполните обязательное поле'
+        ? interfaceText('validation.required')
         : input.validationMessage;
     if (input.name) setErrors((old) => ({ ...old, [input.name]: message }));
   }

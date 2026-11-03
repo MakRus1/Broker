@@ -138,9 +138,9 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ('service-charges/registry',{'sort':'service_date','descending':True,'limit':50,'filters':[]},{'items':[SERVICE_CHARGE],'invoices':[]},200),
         ('invoices/filter-values',{'registry':{'direction':'incoming','sort':'id','descending':False,'limit':50}},{'fields':[],'values':[]},200),
         ('invoices/get',{'id':ID},{'invoice':INVOICE,'charges':[SERVICE_CHARGE]},200),
-        ('service-charges/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','title':'Изменение','has_previous':True,'cursor':{'source':'service_charge','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','label':'Примечание','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
-        ('invoices/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','title':'Изменение','has_previous':True,'cursor':{'source':'invoice','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','label':'Примечание','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
-        ('payments/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','title':'Изменение','has_previous':True,'cursor':{'source':'payment','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','label':'Примечание','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
+        ('service-charges/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','action':'updated','document':'service_charge','has_previous':True,'cursor':{'source':'service_charge','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
+        ('invoices/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','action':'updated','document':'invoice','has_previous':True,'cursor':{'source':'invoice','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
+        ('payments/history',{'id':ID,'limit':30},{'items':[{'actor':'issuer#author','actor_name':'Автор','action':'updated','document':'receipt','has_previous':True,'cursor':{'source':'payment','entity_id':ID,'revision':2,'occurred_at':'2026-10-31T12:00:00+00:00'},'changes':[{'field':'note','before':{'format':'text','value':'Было'},'after':{'format':'text','value':'Стало'}}]}]},200),
         ('invoices/print-data',{'id':ID,'revision':1},{'invoice':INVOICE,'charges':[SERVICE_CHARGE],'supplier':{'name':'Компания','tax_id':None,'kpp':None,'registration_id':None,'legal_address':None},'customer':{'name':'Компания','tax_id':None,'kpp':None,'registration_id':None,'legal_address':None}},200),
         ('invoices/list',{'direction':'outgoing','sort':'invoice_date','limit':50,'filters':[]},{'items':[{'invoice':INVOICE,'paid_minor':0,'outstanding_minor':INVOICE['total_minor'],'payment_status':'unpaid','overdue_days':0}]},200),
         ('invoices/candidates',{'direction':'outgoing','counterparty_id':CUSTOMER,'currency':'RUB','contract_id':None,'invoice_id':None,'after':None,'limit':50},{'items':[SERVICE_CHARGE],'next_after':None},200),
@@ -737,4 +737,32 @@ async def test_reconciliation_proxy(browser, mockserver):
 
     response = await browser.post('/api/v1/counterparty-reconciliation/get', body)
     assert response.status == 200
+    assert response.json() == result
+
+@pytest.mark.parametrize('path,source,document', [
+    ('service-charges', 'service_charge', 'service_charge'),
+    ('invoices', 'invoice', 'invoice'),
+    ('payments', 'payment', 'receipt'),
+])
+async def test_financial_history_keeps_structured_context(browser, mockserver, path, source, document):
+    await browser.sign_in()
+    cursor = dict(source=source, entity_id=ID, revision=2, occurred_at='2026-10-31T12:00:00+00:00')
+    result = dict(items=[dict(actor='issuer#author', action='updated', document=document,
+        has_previous=True, cursor=cursor,
+        reference=dict(source='invoice', id=ID, name='ИС-1'),
+        changes=[
+            dict(field='direction', before=dict(format='enum', value='income'), after=dict(format='enum', value='expense')),
+            dict(field='archived', after=dict(format='boolean', value='true')),
+            dict(field='counterparty_id', subject=dict(source='service_charge', id=CUSTOMER, name='Фрахт'),
+                 after=dict(format='reference', value=CUSTOMER, display_name='Компания')),
+        ])], next_before=cursor)
+    endpoint = f'/api/v1/{path}/history'
+
+    @mockserver.json_handler(endpoint)
+    def upstream(request):
+        assert request.json['before'] == cursor
+        return mockserver.make_response(status=200, json=result)
+
+    response = await browser.post(endpoint, dict(id=ID, limit=30, before=cursor))
+    assert response.status == 200, response.text
     assert response.json() == result

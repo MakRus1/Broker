@@ -1437,6 +1437,7 @@ main > header {
   min-width: 0;
   flex: 1;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   overscroll-behavior-x: contain;
 }

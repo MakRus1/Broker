@@ -1,3 +1,5 @@
+import { registryValueLabel } from '../../registry/registryLabels';
+import { useLocalization } from '../../localization/Localization';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
@@ -109,6 +111,7 @@ export function ServiceChargeEditor({
   onSaved: (charge: ServiceCharge) => void;
   onCancel: () => void;
 }) {
+  const { translate, locale } = useLocalization();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(() =>
     'quantity' in initial ? initial : draftOf(initial),
@@ -157,7 +160,7 @@ export function ServiceChargeEditor({
       !draft.label_id ||
       !draft.counterparty_id
     ) {
-      setFailure('Проверьте метку, контрагента, дату услуги, количество, цену, курс и ставку НДС');
+      setFailure(translate('finance.invalidCharge'));
       return;
     }
     setBusy(true);
@@ -201,14 +204,16 @@ export function ServiceChargeEditor({
           const persisted = draftOf(saved.charge);
           setDraft(persisted);
           baseline.current = JSON.stringify(persisted);
-          setFailure('Услуга сохранена, но счёт не привязан: ' + (error as Error).message);
+          setFailure(
+            translate('finance.chargeSavedInvoiceFailed', { message: (error as Error).message }),
+          );
           return;
         }
       }
       setInvoiceSelection(undefined);
       onSaved(saved.charge);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : 'Не удалось сохранить услугу');
+      setFailure(error instanceof Error ? error.message : translate('finance.saveServiceFailed'));
     } finally {
       setBusy(false);
     }
@@ -218,10 +223,10 @@ export function ServiceChargeEditor({
       {initial.revision > 0 && (
         <CardNavigation className="financial-card-navigation">
           <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
-            Услуга
+            {translate('entity.serviceCharge')}
           </button>
           <button type="button" aria-pressed={historyOpen} onClick={() => setHistoryOpen(true)}>
-            История
+            {translate('finance.history')}
           </button>
         </CardNavigation>
       )}
@@ -242,18 +247,18 @@ export function ServiceChargeEditor({
       >
         <h2>
           {readOnly
-            ? 'Просмотр услуги'
+            ? translate('finance.viewService')
             : draft.revision
-              ? 'Редактирование услуги'
+              ? translate('finance.editService')
               : draft.direction === 'income'
-                ? 'Новый доход'
-                : 'Новый расход'}
+                ? translate('finance.newIncome')
+                : translate('finance.newExpense')}
         </h2>
         <fieldset disabled={busy || readOnly} className="record-fields">
           <ServiceChargeLookup<FinancialLabel>
             session={session}
             kind="labels"
-            label="Финансовая метка · обязательно"
+            label={translate('finance.labelRequired')}
             required
             value={draft.label_id}
             name={draft.label_name}
@@ -282,11 +287,11 @@ export function ServiceChargeEditor({
           />
           <Select
             disabled={!!invoice}
-            label="Направление"
+            label={translate('registryField.direction')}
             value={draft.direction}
             options={[
-              { value: 'income', label: 'Доход' },
-              { value: 'expense', label: 'Расход' },
+              { value: 'income', label: translate('registryValue.direction.income') },
+              { value: 'expense', label: translate('registryValue.direction.expense') },
             ]}
             onChange={(value) => set('direction', value as ServiceCharge['direction'])}
           />
@@ -295,7 +300,7 @@ export function ServiceChargeEditor({
             items={customers}
             value={draft.counterparty_id}
             required
-            label="Контрагент · обязательно"
+            label={translate('finance.counterpartyRequired')}
             disabled={busy || !!invoice}
             onChange={(id) =>
               setDraft((old) =>
@@ -308,7 +313,7 @@ export function ServiceChargeEditor({
           <ServiceChargeLookup<Contract>
             session={session}
             kind="contracts"
-            label="Договор"
+            label={translate('registryField.contract_id')}
             value={draft.contract_id ?? ''}
             name={draft.contract_number ?? ''}
             counterparty={draft.counterparty_id}
@@ -366,7 +371,7 @@ export function ServiceChargeEditor({
               />
             )}
           <label>
-            Количество · обязательно
+            {translate('finance.quantityRequired')}
             <DecimalInput
               required
               precision={3}
@@ -379,22 +384,22 @@ export function ServiceChargeEditor({
                 e.target.setCustomValidity(
                   (parseFixed(e.target.value, 3, 10000000) ?? 0) > 0
                     ? ''
-                    : 'Введите количество больше нуля, до 10 000 и до 3 знаков после запятой',
+                    : translate('finance.quantityInvalid'),
                 )
               }
             />
           </label>
           <Select
-            label="Единица расчёта"
+            label={translate('registryField.unit')}
             value={draft.unit}
             options={Object.entries(financialLabelUnits).map(([value, label]) => ({
               value,
-              label,
+              label: registryValueLabel('unit', value, locale) ?? label,
             }))}
             onChange={(value) => set('unit', value as ServiceCharge['unit'])}
           />
           <label>
-            Цена · обязательно
+            {translate('finance.priceRequired')}
             <DecimalInput
               required
               precision={2}
@@ -407,7 +412,7 @@ export function ServiceChargeEditor({
                 e.target.setCustomValidity(
                   parseFixed(e.target.value, 2, 100000000) !== undefined
                     ? ''
-                    : 'Введите цену от 0 до 1 000 000, до 2 знаков после запятой',
+                    : translate('finance.priceInvalid'),
                 )
               }
             />
@@ -434,11 +439,11 @@ export function ServiceChargeEditor({
             onRate={(value) => set('exchangeValue', value)}
           />
           <Select
-            label="Цена указана"
+            label={translate('finance.priceMode')}
             value={draft.price_mode}
             options={[
-              { value: 'net', label: 'Без НДС' },
-              { value: 'gross', label: 'С НДС' },
+              { value: 'net', label: translate('finance.net') },
+              { value: 'gross', label: translate('finance.gross') },
             ]}
             onChange={(value) => set('price_mode', value as ServiceCharge['price_mode'])}
           />
@@ -450,7 +455,7 @@ export function ServiceChargeEditor({
             onChange={(value) => set('rate', value)}
           />
           <label className="record-wide">
-            Примечание
+            {translate('shipment.note')}
             <textarea
               value={draft.note ?? ''}
               onChange={(e) => set('note', e.target.value || null)}
@@ -463,7 +468,7 @@ export function ServiceChargeEditor({
               checked={draft.archived}
               onChange={(e) => set('archived', e.target.checked)}
             />
-            В архиве
+            {translate('filter.archived')}
           </label>
         </fieldset>
         <div className="form-actions">
@@ -473,11 +478,11 @@ export function ServiceChargeEditor({
             </p>
           )}
           <button type="button" disabled={busy} onClick={cancel}>
-            {readOnly ? 'Закрыть' : 'Отменить'}
+            {readOnly ? translate('ui.close') : translate('action.cancel')}
           </button>
           {!readOnly && (
             <button className="primary" disabled={busy}>
-              Сохранить
+              {translate('action.save')}
             </button>
           )}
         </div>

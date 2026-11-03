@@ -471,6 +471,7 @@ export function ServiceChargeRegistry({
             item,
             () => onEdit(item, item.invoice),
             !write || item.invoice?.read_only === true,
+            locale,
           ),
           'data-selection-row': item.id,
           'aria-selected': selection.selected.has(item.id),

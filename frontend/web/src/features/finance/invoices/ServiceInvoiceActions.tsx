@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
@@ -98,6 +99,7 @@ function CreateInvoice({
   onChoose: (selection: ServiceInvoiceSelection) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { translate } = useLocalization();
   const [number, setNumber] = useState('');
   const [date, setDate] = useState<CalendarDate | null>(today);
   const [due, setDue] = useState<CalendarDate | null>(null);
@@ -180,9 +182,9 @@ function CreateInvoice({
     >
       <div className="form-grid">
         <label>
-          Номер счёта
+          {translate('registryField.invoiceNumber')}
           <input
-            placeholder="Автоматически при сохранении"
+            placeholder={translate('finance.automaticOnSave')}
             maxLength={100}
             value={number}
             onChange={(e) => setNumber(e.target.value)}
@@ -190,7 +192,7 @@ function CreateInvoice({
           />
         </label>
         <label>
-          Дата счёта · обязательно
+          {translate('finance.invoiceDateRequired')}
           <DateInput required value={date} onChange={setDate} disabled={busy} />
         </label>
         <CustomerSelect
@@ -204,10 +206,10 @@ function CreateInvoice({
           required
           ownCompany
           disabled={busy || loading || !!service.contract_id}
-          label="Своё юридическое лицо"
+          label={translate('finance.ownCompany')}
         />
         <label>
-          Плановая дата оплаты
+          {translate('finance.dueDate')}
           <DateInput
             value={due}
             onChange={(value) => {
@@ -219,7 +221,7 @@ function CreateInvoice({
         </label>
         <BankAccountSelect
           owner={own}
-          label="Счёт своего юрлица"
+          label={translate('finance.ownBankAccount')}
           value={ownAccount}
           currency={service.invoice_currency}
           session={session}
@@ -227,7 +229,7 @@ function CreateInvoice({
         />
         <BankAccountSelect
           owner={service.counterparty_id}
-          label="Счёт контрагента"
+          label={translate('finance.counterpartyBankAccount')}
           value={partyAccount}
           currency={service.invoice_currency}
           session={session}
@@ -235,8 +237,11 @@ function CreateInvoice({
         />
       </div>
       <p className="hint">
-        {service.counterparty_name || 'Выбранный контрагент'} · {service.invoice_currency}
-        {service.contract_number ? ` · Договор ${service.contract_number}` : ''}
+        {service.counterparty_name || translate('finance.chosenCounterparty')} ·{' '}
+        {service.invoice_currency}
+        {service.contract_number
+          ? translate('finance.contractSuffix', { number: service.contract_number })
+          : ''}
       </p>
       {failure && (
         <p role="alert" className="error">
@@ -245,10 +250,10 @@ function CreateInvoice({
       )}
       <div className="confirmation-actions">
         <button type="button" disabled={busy} onClick={onCancel}>
-          Назад к выбору
+          {translate('finance.backToChoice')}
         </button>
         <button type="submit" className="primary" disabled={busy || loading}>
-          {busy ? 'Сохраняем…' : 'Использовать этот счёт'}
+          {busy ? translate('shipment.saving') : translate('finance.useInvoice')}
         </button>
       </div>
     </form>
@@ -275,6 +280,7 @@ export function ServiceInvoiceActions({
   selection?: ServiceInvoiceSelection;
   onSelect: (selection: ServiceInvoiceSelection | undefined) => Promise<void> | void;
 }) {
+  const { translate } = useLocalization();
   const [open, setOpen] = useState(!!initialMode);
   const [creating, setCreating] = useState(initialMode === 'new');
   const [query, setQuery] = useState('');
@@ -367,6 +373,12 @@ export function ServiceInvoiceActions({
     }
   }
   const chosen = selection?.kind === 'existing' ? selection.invoice : (selection?.body ?? current);
+  const chosenLabel = chosen
+    ? translate(chosen.number ? 'finance.invoiceNumberDate' : 'finance.invoiceAutoDate', {
+        number: chosen.number ?? '',
+        date: CalendarDate.fromISO(chosen.invoice_date).toDisplayString(),
+      })
+    : translate('finance.chooseInvoice');
   return (
     <div
       className={
@@ -379,16 +391,16 @@ export function ServiceInvoiceActions({
     >
       {!initialMode && (
         <>
-          {!compact && <span className="service-invoice-label">Счёт</span>}
+          {!compact && (
+            <span className="service-invoice-label">
+              {translate('registryField.invoice_number')}
+            </span>
+          )}
           <button
             type="button"
             className={compact ? 'service-invoice-trigger compact' : 'service-invoice-trigger'}
             disabled={busy || !service.counterparty_id || !service.invoice_currency}
-            aria-label={
-              chosen
-                ? `${chosen.number ? 'Счёт № ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
-                : 'Выберите или создайте счёт'
-            }
+            aria-label={chosen ? chosenLabel : translate('finance.chooseInvoice')}
             onClick={() => {
               setCreating(false);
               setOpen(true);
@@ -396,15 +408,15 @@ export function ServiceInvoiceActions({
           >
             <span className={chosen ? '' : 'service-invoice-placeholder'}>
               {chosen
-                ? `${chosen.number ? '№ ' + chosen.number : 'Номер автоматически'} от ${CalendarDate.fromISO(chosen.invoice_date).toDisplayString()}`
+                ? chosenLabel
                 : compact
-                  ? 'Выбрать / создать'
-                  : 'Выберите или создайте счёт'}
+                  ? translate('ui.invoiceSelect')
+                  : translate('finance.chooseInvoice')}
             </span>
             {!compact && <Chevron />}
           </button>
           {selection?.kind === 'new' && (
-            <span className="service-secondary">Будет создан при сохранении услуги</span>
+            <span className="service-secondary">{translate('finance.createOnChargeSave')}</span>
           )}
           {chosen && (
             <button
@@ -423,7 +435,7 @@ export function ServiceInvoiceActions({
                 }
               }}
             >
-              {current ? 'Отвязать' : 'Убрать выбор'}
+              {current ? translate('finance.unlink') : translate('lookup.clearSelection')}
             </button>
           )}
           {!open && failure && (
@@ -435,7 +447,13 @@ export function ServiceInvoiceActions({
       )}
       {open && (
         <Dialog
-          title={creating ? 'Новый счёт' : initialMode ? 'Счёт выбранных услуг' : 'Счёт услуги'}
+          title={
+            creating
+              ? translate('entity.newInvoice')
+              : initialMode
+                ? translate('finance.selectedChargesInvoice')
+                : translate('finance.chargeInvoice')
+          }
           onClose={() => {
             if (!busy) {
               setOpen(false);
@@ -456,18 +474,19 @@ export function ServiceInvoiceActions({
             <>
               <div className="section-heading">
                 <p className="hint">
-                  {service.counterparty_name || 'Выбранный контрагент'} · {service.invoice_currency}
+                  {service.counterparty_name || translate('finance.chosenCounterparty')} ·{' '}
+                  {service.invoice_currency}
                 </p>
                 <button className="primary" type="button" onClick={() => setCreating(true)}>
-                  Создать счёт
+                  {translate('ui.createInvoice')}
                 </button>
               </div>
               <label className="invoice-link-search">
-                Найти существующий счёт
+                {translate('finance.findInvoice')}
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Часть номера счёта"
+                  placeholder={translate('finance.invoiceSearch')}
                   disabled={busy}
                 />
               </label>
@@ -483,8 +502,10 @@ export function ServiceInvoiceActions({
                   >
                     <span>
                       <strong>
-                        № {item.number} от{' '}
-                        {CalendarDate.fromISO(item.invoice_date).toDisplayString()}
+                        {translate('finance.invoiceNumberDate', {
+                          number: item.number,
+                          date: CalendarDate.fromISO(item.invoice_date).toDisplayString(),
+                        })}
                       </strong>
                       <small>{item.own_company_name}</small>
                     </span>
@@ -495,7 +516,7 @@ export function ServiceInvoiceActions({
                 ))}
               </div>
               {!loading && !items.length && (
-                <p className="hint">Подходящих счетов нет. Можно создать новый.</p>
+                <p className="hint">{translate('finance.noInvoices')}</p>
               )}
               {failure && (
                 <p className="error" role="alert">

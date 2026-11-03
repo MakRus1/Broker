@@ -1,3 +1,4 @@
+import { useLocalization } from '../../localization/Localization';
 import { useEffect, useRef, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
@@ -23,6 +24,7 @@ export function ServiceChargePage({
   onTitle: (title: string) => void;
   onClose: () => void;
 }) {
+  const { translate } = useLocalization();
   const [value, setValue] = useState<{ charge: ServiceCharge; invoice?: ServiceChargeInvoice }>();
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
@@ -41,7 +43,7 @@ export function ServiceChargePage({
       .then((result) => {
         if (controller.signal.aborted) return;
         const charge = result.items[0];
-        if (!charge) throw new Error('Услуга не найдена или недоступна');
+        if (!charge) throw new Error(translate('finance.serviceNotFound'));
         setValue({
           charge,
           invoice: result.invoices.find((item) => item.service_charge_id === id),
@@ -57,10 +59,11 @@ export function ServiceChargePage({
     <section className="finance-section service-charges-page">
       {failure ? (
         <div className="error" role="alert">
-          {failure} <button onClick={() => setVersion((old) => old + 1)}>Повторить</button>
+          {failure}{' '}
+          <button onClick={() => setVersion((old) => old + 1)}>{translate('filter.retry')}</button>
         </div>
       ) : !value ? (
-        <p role="status">Загружаем услугу…</p>
+        <p role="status">{translate('finance.loadingService')}</p>
       ) : (
         <ServiceChargeEditor
           key={`${id}:${version}`}

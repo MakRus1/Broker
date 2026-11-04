@@ -110,10 +110,9 @@ def build(
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 scope = "broker-services-selected-v2-" + platform.replace('/', '-')
                 cache = ['--cache-from', f'type=gha,version=2,scope={scope}']
-                # Первый образ уже содержит общую компиляцию всех выбранных сервисов.
-                # Сохраняем её до упаковки остальных образов, затем обновляем кэш в конце.
-                if index in (0, len(selected) - 1):
-                    cache += ['--cache-to', f'type=gha,version=2,scope={scope},mode=max']
+                # Сначала публикуем все образы. Кэш слоёв — необязательная оптимизация.
+                if index == len(selected) - 1:
+                    cache += ['--cache-to', f'type=gha,version=2,scope={scope},mode=max,timeout=2m,ignore-error=true']
             subprocess.run(
                 [
                     'docker',

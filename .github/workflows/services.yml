@@ -26,9 +26,9 @@ concurrency:
 jobs:
   images:
     runs-on: ubuntu-24.04
-    # Полная Release-сборка при изменении common/codegen занимает около 30 минут.
-    # Лимит включает публикацию всех образов, экспорт кэша и проверку манифестов.
-    timeout-minutes: 60
+    # Холодная полная Release-сборка занимает до часа; оставляем время на публикацию
+    # всех образов и проверку манифестов. Повторные сборки используют отдельный ccache.
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: read
@@ -61,6 +61,18 @@ jobs:
               if (name === 'ACTIONS_RUNTIME_TOKEN') core.setSecret(value);
               core.exportVariable(name, value);
             }
+      - name: Кэш компиляции релизных образов
+        id: compiler-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: .release-ccache
+          key: release-ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/container-images.json') }}-${{ github.sha }}
+          restore-keys: |
+            release-ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/container-images.json') }}-
+      - name: Восстановить ccache в BuildKit
+        timeout-minutes: 5
+        continue-on-error: true
+        run: python tools/deploy/compiler_cache.py restore
       - name: Найти предыдущий опубликованный релиз
         id: base
         if: github.event_name == 'workflow_dispatch' && !inputs.full_rebuild
@@ -68,6 +80,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python tools/deploy/release_base.py --revision "$GITHUB_SHA" --output .staging/base-release.json
       - name: Собрать сервисные образы
+        id: images
         env:
           PUBLISH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
           BASE_RELEASE: ${{ steps.base.outputs.path }}
@@ -76,6 +89,20 @@ jobs:
           if [[ "$PUBLISH" == true ]]; then args+=(--push); fi
           if [[ -n "$BASE_RELEASE" ]]; then args+=(--base-release "$BASE_RELEASE"); fi
           python tools/deploy/build.py "${args[@]}"
+      - name: Выгрузить ccache из BuildKit
+        id: compiler-snapshot
+        if: ${{ !cancelled() && steps.images.outcome == 'success' }}
+        timeout-minutes: 5
+        continue-on-error: true
+        run: python tools/deploy/compiler_cache.py export
+      - name: Сохранить кэш компиляции
+        if: ${{ !cancelled() && steps.compiler-snapshot.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6.1.0
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          path: .release-ccache
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
       - name: Освободить ресурсы сборщика перед запуском K3s
         run: docker buildx stop
       - name: Проверить запуск runtime без компилятора

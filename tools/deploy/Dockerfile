@@ -42,12 +42,14 @@ COPY scripts/service_catalog.py scripts/service_catalog.py
 COPY tools/versions.env tools/python-constraints.txt tools/
 ARG BUILD_SERVICES
 ARG TARGETARCH
-ENV CCACHE_DIR=/cache/ccache CCACHE_BASEDIR=/workspaces/broker CCACHE_MAXSIZE=512M CCACHE_COMPILERCHECK=content
+ENV CCACHE_DIR=/cache/ccache CCACHE_BASEDIR=/workspaces/broker CCACHE_MAXSIZE=2G CCACHE_COMPILERCHECK=content
 # Общие C++-объекты переиспользуются между сервисами одной сборки Buildx.
 RUN --mount=type=cache,id=broker-release-${TARGETARCH},target=/cache/ccache cmake -S . -B /tmp/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DBUILD_TESTING=OFF -DBROKER_SERVICES="$BUILD_SERVICES" \
     -DPython3_EXECUTABLE=/opt/broker/venv/bin/python && \
-    cmake --build /tmp/build -j 4 --target $BUILD_SERVICES
+    ccache --zero-stats && \
+    cmake --build /tmp/build -j 4 --target $BUILD_SERVICES && \
+    ccache --show-stats
 COPY tools/deploy/package.py /tmp/package.py
 RUN python3 /tmp/package.py /tmp/build /runtime $BUILD_SERVICES
 

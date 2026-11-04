@@ -1,0 +1,63 @@
+Translation:
+  type: object
+  additionalProperties: false
+  required:
+  - key
+  - value
+  properties:
+    key:
+      type: string
+    value:
+      type: string
+EditableCatalog:
+  type: object
+  additionalProperties: false
+  required:
+  - ru
+  - en
+  properties:
+    ru:
+      type: array
+      maxItems: 10000
+      items:
+        $ref: '#/Translation'
+    en:
+      type: array
+      maxItems: 10000
+      items:
+        $ref: '#/Translation'
+CatalogEditorState:
+  type: object
+  additionalProperties: false
+  required:
+  - version
+  - revision
+  - published
+  - inherited
+  - source
+  properties:
+    version:
+      type: integer
+      format: int64
+    revision:
+      type: integer
+      format: int64
+    published:
+      $ref: '#/EditableCatalog'
+    inherited:
+      $ref: '#/EditableCatalog'
+    draft:
+      $ref: '#/EditableCatalog'
+    source:
+      $ref: '#/EditableCatalog'
+ApiError:
+  type: object
+  additionalProperties: false
+  required:
+  - error
+  - message
+  properties:
+    error:
+      type: string
+    message:
+      type: string

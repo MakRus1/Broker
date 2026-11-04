@@ -77,6 +77,7 @@ class ImageSelectionTest(unittest.TestCase):
             ('frontend/web/src/App.tsx', {'web_bff'}),
             ('frontend/admin/src/App.tsx', {'admin_bff'}),
             ('frontend/shared/currencies.ts', {'admin_bff', 'web_bff'}),
+            ('frontend/shared/i18n/ru.json', {'admin_bff', 'web_bff'}),
             (
                 'schemas/services/shipments/models.yaml',
                 {'shipments', 'configs', 'admin_bff', 'web_bff', 'transportations', 'finance'},

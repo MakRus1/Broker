@@ -26,3 +26,7 @@ class LocalClientsTest(unittest.TestCase):
         clients = local_environment.client_variables('admin_bff')
         self.assertEqual(clients['client-shipments-base-url'], 'http://shipments:8100')
         self.assertEqual(clients['client-config_admin-base-url'], 'http://configs:8092')
+
+    def test_localization_is_addressable_by_both_bffs(self):
+        for service in ('web_bff', 'admin_bff'):
+            self.assertEqual(local_environment.client_variables(service)['client-localization-base-url'], 'http://localization:8180')

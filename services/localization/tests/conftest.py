@@ -41,7 +41,7 @@ def configure_auth(mockserver_info):
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
-        component['organization-url'] = mockserver_info.url('/organizations/access')
+        component['platform-url'] = mockserver_info.url('/platform/access')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url
 
     return patch
@@ -82,13 +82,14 @@ def organization_access(mockserver):
 @pytest.fixture
 def api(service_client, auth_key):
     class Client:
-        async def post(self, path, body, *, user='author', roles=None, expected=200):
+        async def post(self, path, body, *, user='author', roles=None, expected=200, client='broker-web'):
             roles = roles if roles is not None else []
             token = auth_key.token(
                 user,
                 roles=roles,
                 claims={
                     'aud': 'broker-logistics',
+                    'azp': client,
                     'resource_access': {'broker-logistics': {'roles': roles}},
                 },
             )
@@ -103,3 +104,32 @@ def api(service_client, auth_key):
             return {'message': response.text}
 
     return Client()
+
+
+@pytest.fixture(autouse=True)
+def platform_access(mockserver):
+    import base64
+    import json
+
+    @mockserver.handler('/platform/access')
+    def access(request):
+        payload = json.loads(base64.urlsafe_b64decode(request.headers['Authorization'].split('.')[1] + '=='))
+        permissions = {'translator': ['localization.read', 'localization.write'], 'reader': ['localization.read']}.get(payload['sub'], [])
+        if request.json['permission'] not in permissions:
+            return mockserver.make_response(status=403, json={'error': 'forbidden', 'message': 'Нет права'})
+        return mockserver.make_response(json={'permissions': permissions, 'revision': 1})
+
+
+@pytest.fixture(autouse=True)
+async def source_catalog(api):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
+    from localization_catalog import load
+
+    async def register(source, expected=200):
+        body = {locale: [{'key': key, 'value': value} for key, value in values.items()]
+                for locale, values in source.items()}
+        return await api.post('/api/internal/localization/sources/upsert', body,
+            user='publisher', roles=['localization.register'], client='localization-publisher', expected=expected)
+
+    await register(load(Path(__file__).resolve().parents[3]))
+    return register

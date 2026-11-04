@@ -15,6 +15,23 @@ auth:
   protected-prefix: /api/
   permissions:
     /api/v1/localization/catalog: authenticated
+    /api/admin/localization/get: localization.read
+    /api/admin/localization/save: localization.write
+    /api/admin/localization/publish: localization.write
+    /api/internal/localization/sources/upsert: localization.register
+  platform-access: true
+  service-clients:
+    localization.register: localization-publisher
 http_logging:
   exclude_paths:
   - /api/v1/localization/**
+service_accounts:
+  publisher:
+    client_id: localization-publisher
+    audience: broker-logistics
+    permissions:
+    - localization.register
+    config:
+      client_id: publisher-client-id
+      client_secret: publisher-client-secret
+      token_url: publisher-token-url

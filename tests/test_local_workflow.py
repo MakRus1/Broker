@@ -122,7 +122,8 @@ class LocalUpdateTest(unittest.TestCase):
 
     def test_bff_has_no_database_migration(self):
         commands = self.run_update('web_bff')
-        self.assertEqual(len(commands), 3)
+        self.assertEqual(len(commands), 4)
+        self.assertIn(['run', '--rm', '--no-deps', 'localization-register'], commands)
         self.assertFalse(any('migrate-web_bff' in command for command in commands))
 
     def test_failed_build_does_not_migrate_or_restart(self):

@@ -1,5 +1,7 @@
 """Только корневой администратор выдаёт независимые платформенные права."""
 
+from pathlib import Path
+
 import pytest
 
 
@@ -79,7 +81,14 @@ async def test_platform_grant_revision_and_audit(api, pgsql):
     )
     result = await api.call('/api/admin/platform-access/get', {'subject': 'viewer'})
     assert result['access']['revision'] == 1
-    assert all(permission['id'].startswith('configs.') for permission in result['catalog'])
+    from permission_catalog import load
+
+    catalog = load(Path(__file__).resolve().parents[3])
+    expected_permissions = {
+        code for code, permission in catalog.items() if permission['scope'] == 'platform'
+    }
+    assert {permission['id'] for permission in result['catalog']} == expected_permissions
+    assert set(result['access']['permissions']) == {'configs.read', 'configs.approve'}
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT subject,revision FROM platform_access_audit')
         assert cursor.fetchall() == [('viewer', 1)]

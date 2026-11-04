@@ -654,6 +654,10 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         )
         + '\n',
     )
+    from localization_catalog import load as load_localization
+
+    if {'web_bff', 'admin_bff'} & set(release['images']):
+        private_write(directory / 'localization.json', json.dumps(load_localization(root), ensure_ascii=False))
     from permission_catalog import load as load_permissions
 
     private_write(

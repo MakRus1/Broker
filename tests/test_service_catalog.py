@@ -38,6 +38,7 @@ class CatalogTest(unittest.TestCase):
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
             shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
+            shutil.copytree(ROOT / 'frontend/shared/i18n', root / 'frontend/shared/i18n')
             shutil.copy(ROOT / 'tools/container-images.json', root / 'tools/container-images.json')
             shutil.copy(ROOT / 'platform.yaml', root / 'platform.yaml')
             shutil.copytree(root / 'services/broker', root / 'services/new_service')

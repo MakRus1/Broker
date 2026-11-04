@@ -25,6 +25,9 @@ clients:
   contracts:
     service: contracts
     transport: http
+  localization:
+    service: localization
+    transport: http
 dashboard:
   title: Broker · Административный BFF
   tags:

@@ -34,7 +34,7 @@ def client_variables(name):
     # Адреса объявленных клиентов берём из service.yaml, чтобы новые зависимости
     # не уходили на localhost внутри контейнера.
     ports = {'configs': 8090, 'broker': 8080, 'shipments': 8100,
-             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130, 'transport_locations': 8140, 'contracts': 8150, 'finance': 8160, 'user_preferences': 8170}
+             'transportations': 8110, 'counterparties': 8120, 'organizations': 8130, 'transport_locations': 8140, 'contracts': 8150, 'finance': 8160, 'user_preferences': 8170, 'localization': 8180}
     specification = yaml.safe_load((ROOT / f'services/{name}/service.yaml').read_text())
     result = {}
     for alias, client in specification.get('clients', {}).items():
@@ -143,7 +143,7 @@ def prepare():
             },
         }
     }
-    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132), ("transport_locations", 8140, 8142), ("contracts", 8150, 8152), ("finance", 8160, 8162), ("user_preferences", 8170, 8172)]:
+    for name, port, monitor in [("configs", 8090, 8092), ("broker", 8080, 8082), ("shipments", 8100, 8102), ("transportations", 8110, 8112), ("counterparties", 8120, 8122), ("organizations", 8130, 8132), ("transport_locations", 8140, 8142), ("contracts", 8150, 8152), ("finance", 8160, 8162), ("user_preferences", 8170, 8172), ("localization", 8180, 8182)]:
         variables = yaml.safe_load((ROOT / f"services/{name}/configs/config_vars.yaml").read_text())
         variables.update(
             {
@@ -226,6 +226,12 @@ def prepare():
                 f"migrate-{name}": {"condition": "service_completed_successfully"},
             },
         }
+    services['localization-register'] = {
+        'image': images['dev'], 'working_dir': '/workspaces/broker', 'volumes': shared,
+        'command': ['python3', 'scripts/localization_catalog.py'],
+        'depends_on': {'localization': {'condition': 'service_started'},
+                       'keycloak-setup': {'condition': 'service_completed_successfully'}},
+    }
     services['transport-locations-transfer'] = {
         'image': images['dev'], 'working_dir': '/workspaces/broker',
         'volumes': shared, 'environment': {'PGPASSWORD': 'testsuite'},
@@ -356,6 +362,8 @@ def prepare():
                        'transportations': {'condition': 'service_started'},
                        'configs': {'condition': 'service_started'}},
     }
+    for frontend_service in ('admin_bff', 'web_bff'):
+        services[frontend_service]['depends_on']['localization-register'] = {'condition': 'service_completed_successfully'}
     for name, port, internal, args in [
         ("loki", 13100, 3100, ["-config.file=/etc/local/loki.yaml"]),
         ("tempo", 13200, 3200, ["-config.file=/etc/local/tempo.yaml"]),
@@ -551,6 +559,8 @@ def update(service, jobs):
     if migration in services:
         print(f'Миграции {service}', flush=True)
         subprocess.run(command + ['run', '--rm', '--no-deps', migration], check=True)
+    if service in {'web_bff', 'admin_bff'}:
+        subprocess.run(command + ['run', '--rm', '--no-deps', 'localization-register'], check=True)
     print(f'Перезапуск {service}', flush=True)
     try:
         subprocess.run(command + ['up', '-d', '--no-deps', '--force-recreate', service], check=True)

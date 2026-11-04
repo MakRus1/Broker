@@ -1,3 +1,4 @@
+import { TranslationEditor } from '../features/localization/TranslationEditor';
 import { useEffect, useState } from 'react';
 import { RouteLocations } from '../features/directories/RouteLocations';
 import { RailwayStations } from '../features/directories/RailwayStations';
@@ -13,9 +14,18 @@ import { ThemeControl } from '../features/appearance/ThemeControl';
 
 export function App() {
   const workspace = useWorkspace();
-  const [section, setSection] = useState<'configs' | 'organizations' | 'stations' | 'locations'>(
-    'configs',
-  );
+  const [section, setSection] = useState<
+    'configs' | 'organizations' | 'stations' | 'locations' | 'translations'
+  >('configs');
+  const [translationDirty, setTranslationDirty] = useState(false);
+  const chooseSection = (next: typeof section) => {
+    if (
+      next === section ||
+      !translationDirty ||
+      window.confirm('Перейти без сохранения переводов?')
+    )
+      setSection(next);
+  };
   const [access, setAccess] = useState<OrganizationAccess>();
   const [accessError, setAccessError] = useState('');
   useEffect(() => {
@@ -25,7 +35,12 @@ export function App() {
       .then((value) => {
         if (!active) return;
         setAccess(value);
-        if (!workspace.session?.permissions.includes('configs.read')) setSection('organizations');
+        if (!workspace.session?.permissions.includes('configs.read'))
+          setSection(
+            workspace.session?.permissions.includes('localization.read')
+              ? 'translations'
+              : 'organizations',
+          );
       })
       .catch((reason: unknown) => {
         if (active)
@@ -57,7 +72,7 @@ export function App() {
         {session.permissions.includes('configs.read') && (
           <button
             aria-current={section === 'configs' ? 'page' : undefined}
-            onClick={() => setSection('configs')}
+            onClick={() => chooseSection('configs')}
           >
             Конфиги
           </button>
@@ -65,7 +80,7 @@ export function App() {
         {access && (access.platform_admin || access.managed_organization_ids.length > 0) && (
           <button
             aria-current={section === 'organizations' ? 'page' : undefined}
-            onClick={() => setSection('organizations')}
+            onClick={() => chooseSection('organizations')}
           >
             {access.platform_admin ? 'Организации' : 'Сотрудники и роли'}
           </button>
@@ -73,7 +88,7 @@ export function App() {
         {access?.platform_admin && (
           <button
             aria-current={section === 'stations' ? 'page' : undefined}
-            onClick={() => setSection('stations')}
+            onClick={() => chooseSection('stations')}
           >
             Станции
           </button>
@@ -81,13 +96,27 @@ export function App() {
         {access?.platform_admin && (
           <button
             aria-current={section === 'locations' ? 'page' : undefined}
-            onClick={() => setSection('locations')}
+            onClick={() => chooseSection('locations')}
           >
             Порты и аэропорты
           </button>
         )}
+        {session.permissions.includes('localization.read') && (
+          <button
+            aria-current={section === 'translations' ? 'page' : undefined}
+            onClick={() => chooseSection('translations')}
+          >
+            Переводы
+          </button>
+        )}
       </nav>
-      {section === 'locations' && access?.platform_admin ? (
+      {section === 'translations' && session.permissions.includes('localization.read') ? (
+        <TranslationEditor
+          session={session}
+          organizations={access?.organizations ?? []}
+          onDirtyChange={setTranslationDirty}
+        />
+      ) : section === 'locations' && access?.platform_admin ? (
         <RouteLocations session={session} />
       ) : section === 'stations' && access?.platform_admin ? (
         <RailwayStations session={session} />

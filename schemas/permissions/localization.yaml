@@ -1,0 +1,16 @@
+localization.read:
+  name: Просмотр переводов
+  group: Переводы
+  scope: platform
+  requires: []
+localization.write:
+  name: Изменение и публикация переводов
+  group: Переводы
+  scope: platform
+  requires:
+  - localization.read
+localization.register:
+  name: Регистрация исходных переводов релизом
+  group: Переводы
+  scope: service
+  requires: []

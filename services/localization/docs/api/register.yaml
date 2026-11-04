@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Редактор переводов
+  version: '1'
+paths:
+  /api/internal/localization/sources/upsert:
+    post:
+      summary: Регистрация исходных текстов релизом
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/localization.yaml#/EditableCatalog
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - registered
+                properties:
+                  registered:
+                    type: integer
+        '400':
+          description: Некорректные переводы
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Нет права управления переводами
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '409':
+          description: Черновик изменён другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '502':
+          description: Сервис прав недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

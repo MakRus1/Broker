@@ -203,6 +203,15 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         prepare_permissions(
             [*kubectl, *ns], owner, permission_images[owner], permission_entries
         )
+    if {'web_bff', 'admin_bff'} & set(services):
+        from localization_catalog import configure_cluster as register_localization
+
+        if 'localization' in services:
+            source_objects = [obj for obj in deployments if obj and obj['metadata'].get('labels', {}).get('broker/service') == 'localization']
+            subprocess.run([*kubectl, *ns, 'apply', '--server-side', '--field-manager=broker-staging', '-f', '-'], input=yaml.safe_dump_all(source_objects, sort_keys=False), text=True, check=True)
+            run(*ns, 'rollout', 'status', 'deployment/localization', '--timeout=300s')
+        register_localization([*kubectl, *ns], json.loads((directory / 'localization.json').read_text()),
+                              (directory / 'localization-publisher-secret').read_text().strip())
     if paths['services']:
         run(
             'apply',

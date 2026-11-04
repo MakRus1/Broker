@@ -87,7 +87,8 @@ def identity_provider(mockserver, auth_key):
 def memberships(pgsql):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
-    from permission_catalog import load, register_sql
+    from permission_catalog import load
+    from permission_fixtures import register_sql
     catalog = load(Path(__file__).resolve().parents[3])
     with pgsql['db_1'].cursor() as cursor:
         for owner in sorted({value['owner'] for value in catalog.values()}):
@@ -111,10 +112,10 @@ def memberships(pgsql):
 @pytest.fixture
 def api(service_client, auth_key):
     class Client:
-        async def call(self, path, body=None, *, user='platform', expected=200):
-            roles = ['platform.admin'] if user == 'platform' else []
+        async def call(self, path, body=None, *, user='platform', expected=200, roles=None, client='broker-web'):
+            roles = roles if roles is not None else (['platform.admin'] if user == 'platform' else [])
             token = auth_key.token(user, claims={
-                'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': roles}},
+                'azp': client, 'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': roles}},
             })
             response = await service_client.request(
                 'GET' if body is None else 'POST', path, json=body,

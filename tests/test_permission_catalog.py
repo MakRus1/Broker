@@ -11,30 +11,22 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from permission_catalog import load, register_sql, reconcile_sql, live_images, finish
+from permission_catalog import load, release_entries, register, live_images, finish
 from staging_manifest import workload
 from openapi_gen.permissions import catalog
 
 
 class PermissionCatalogTest(unittest.TestCase):
-    def test_catalog_and_sql_escaping(self):
+    def test_registration_uses_service_token_and_owned_entries(self):
         values = load(ROOT)
-        self.assertEqual(values['shipments.write']['requires'], ['shipments.read'])
-        for code in ['configs.write', 'configs.approve']:
-            self.assertEqual(values[code]['requires'], ['configs.read'])
-        sql = register_sql('shipments', 'image', values)
-        self.assertIn('ON CONFLICT', sql)
-        self.assertNotIn('DELETE', sql)
-        self.assertNotIn('"code": "counterparties.read"', sql)
-        self.assertIn('"counterparties.read"', sql)
-
-    def test_reconciliation_requires_live_versions(self):
-        with self.assertRaises(ValueError):
-            reconcile_sql('shipments', [])
-        sql = reconcile_sql('shipments', ['old', 'new'])
-        self.assertIn("version IN ('new','old')", sql)
-        self.assertIn('RAISE EXCEPTION', sql)
-        self.assertNotIn('DELETE', sql)
+        entries = release_entries('shipments', values)
+        self.assertTrue(all(entry['code'].startswith('shipments.') for entry in entries))
+        with patch('release_catalog_api.request_json', side_effect=[{'access_token': 'token'}, {'success': True}]) as request:
+            register('http://organizations', 'http://auth/token', 'secret', 'upsert',
+                     dict(owner='shipments', version='image', entries=entries))
+        self.assertEqual(request.call_args_list[0].args[1]['client_id'], 'permission-publisher')
+        self.assertEqual(request.call_args.args[0], 'http://organizations/api/internal/permissions/releases/upsert')
+        self.assertEqual(request.call_args.args[2], 'token')
 
     def test_live_images_follow_manifest_labels_and_container_names(self):
         for owner in ['admin_bff', 'web_bff', 'configs']:
@@ -65,11 +57,11 @@ class PermissionCatalogTest(unittest.TestCase):
         with patch('permission_catalog.subprocess.run', side_effect=responses), patch(
             'permission_catalog.time.sleep'
         ) as sleep, patch('permission_catalog.live_images', return_value={'current'}), patch(
-            'permission_catalog.execute'
+            'permission_catalog.call_cluster'
         ) as execute:
-            finish(['kubectl'], 'admin_bff')
+            finish(['kubectl'], 'admin_bff', 'secret')
         sleep.assert_called_once_with(2)
-        execute.assert_called_once_with(['kubectl'], reconcile_sql('admin_bff', {'current'}))
+        execute.assert_called_once_with(['kubectl'], 'secret', 'reconcile', dict(owner='admin_bff', versions=['current']))
 
     def test_invalid_catalog(self):
         for entries in [

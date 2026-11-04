@@ -107,7 +107,8 @@ def execute(root, context, namespace, service, *, target='', apply=False, histor
             )
 
             # Каталоги сохраняются по digest образа, исходники старого релиза не нужны.
-            restore_permissions(kubectl, service, describe(snapshot)['image'])
+            permission_secret = (root / '.staging/permission-publisher-secret').read_text().strip()
+            restore_permissions(kubectl, service, describe(snapshot)['image'], permission_secret)
             # В apply передаются только два объекта одного сервиса, без Job/SQL/инфраструктуры.
             run(
                 [
@@ -135,7 +136,7 @@ def execute(root, context, namespace, service, *, target='', apply=False, histor
                 ],
                 check=True,
             )
-            finish_permissions(kubectl, service)
+            finish_permissions(kubectl, service, permission_secret)
             run(
                 [
                     str(root / '.venv-gen/bin/python'),

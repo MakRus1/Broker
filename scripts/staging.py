@@ -199,9 +199,15 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
         for obj in deployments
         if obj and obj['kind'] == 'Deployment'
     }
+    # При первом переходе на API сначала обновляем его поставщика.
+    if 'organizations' in services:
+        organization_objects = [obj for obj in deployments if obj and obj['metadata'].get('labels', {}).get('broker/service') == 'organizations']
+        subprocess.run([*kubectl, *ns, 'apply', '--server-side', '--field-manager=broker-staging', '--force-conflicts', '-f', '-'], input=yaml.safe_dump_all(organization_objects, sort_keys=False), text=True, check=True)
+        run(*ns, 'rollout', 'status', 'deployment/organizations', '--timeout=300s')
+    permission_secret = (directory / 'permission-publisher-secret').read_text().strip()
     for owner in sorted(services):
         prepare_permissions(
-            [*kubectl, *ns], owner, permission_images[owner], permission_entries
+            [*kubectl, *ns], owner, permission_images[owner], permission_entries, permission_secret
         )
     if {'web_bff', 'admin_bff'} & set(services):
         from localization_catalog import configure_cluster as register_localization
@@ -224,7 +230,7 @@ def _apply(directory, context, services, infrastructure, paths, jobs):
     for name in services:
         run(*ns, 'rollout', 'status', f'deployment/{name.replace("_", "-")}', '--timeout=300s')
     for owner in sorted(services):
-        finish_permissions([*kubectl, *ns], owner)
+        finish_permissions([*kubectl, *ns], owner, permission_secret)
     if plan.get('lan'):
         if not infrastructure:
             from staging_monitoring import refresh

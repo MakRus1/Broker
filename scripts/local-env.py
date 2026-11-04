@@ -330,6 +330,7 @@ def prepare():
         'depends_on': {name: {'condition': 'service_completed_successfully'} for name in
                        ('keycloak-setup', 'migrate-shipments', 'migrate-transportations', 'migrate-counterparties', 'migrate-organizations')},
     }
+    services['logistics-setup']['depends_on']['organizations'] = {'condition': 'service_started'}
     variables = yaml.safe_load((ROOT / 'services/web_bff/configs/config_vars.yaml').read_text())
     variables.update({
         'server-port': 8280, 'monitor-port': 8282,

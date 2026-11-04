@@ -251,6 +251,21 @@ class DeploymentTest(unittest.TestCase):
                     staging.apply(path, 'ctx', services, infrastructure)
                     apply.assert_called_once()
 
+    def test_render_replaces_stale_release_catalog_before_deploy_all(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            stale = deepcopy(RELEASE)
+            stale['revision'] = 'c' * 40
+            del stale['images']['localization']
+            (path / 'release.json').write_text(json.dumps(stale))
+            staging.render(RELEASE, path)
+            self.assertEqual(json.loads((path / 'release.json').read_text()), RELEASE)
+            with patch('staging._apply') as apply:
+                staging.apply(path, 'ctx', list(RELEASE['images']), False)
+            self.assertEqual(apply.call_args.args[2], list(RELEASE['images']))
+
     def test_selection_rejected_before_kubectl(self):
         from unittest.mock import patch
 

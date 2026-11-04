@@ -166,7 +166,9 @@ class BuildImagesTest(unittest.TestCase):
                 self.assertIn(f'SERVICE={service}', command)
                 self.assertIn(f'ASSETS_STAGE={assets}', command)
                 self.assertIn('BUILD_SERVICES=' + ' '.join(selected), command)
-                self.assertEqual('--cache-to' in command, service in (selected[0], selected[-1]))
+                self.assertEqual('--cache-to' in command, service == selected[-1])
+                if service == selected[-1]:
+                    self.assertIn('timeout=2m,ignore-error=true', command[command.index('--cache-to') + 1])
                 self.assertIn(
                     'type=gha,version=2,scope=broker-services-selected-v2-linux-amd64',
                     command,
@@ -248,3 +250,26 @@ class PreviousReleaseTest(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, 'revision'):
                 base_loader.previous_release('owner/repo', 'c' * 40)
+
+
+class CompilerCacheTest(unittest.TestCase):
+    def test_cache_mount_transfer_is_explicit_and_bounded(self):
+        cache = module('release_compiler_cache', 'tools/deploy/compiler_cache.py')
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(cache.subprocess, 'run') as run:
+            cache.transfer('restore', directory)
+            restore = run.call_args
+            self.assertIn('compiler-cache=' + str(Path(directory).resolve()), restore.args[0])
+            self.assertNotIn('--no-cache', restore.args[0])
+            self.assertTrue(any(arg.startswith('CACHE_TRANSFER=') for arg in restore.args[0]))
+            self.assertEqual(restore.kwargs['timeout'], 240)
+            cache.transfer('export', directory)
+            export = run.call_args
+            self.assertIn('type=local,dest=' + str(Path(directory).resolve()), export.args[0])
+            self.assertNotIn('--no-cache', export.args[0])
+            self.assertTrue(any(arg.startswith('CACHE_TRANSFER=') for arg in export.args[0]))
+            self.assertEqual(export.kwargs['timeout'], 240)
+        dockerfile = (ROOT / 'tools/deploy/CompilerCache.Dockerfile').read_text()
+        buildfile = (ROOT / 'tools/deploy/Dockerfile').read_text()
+        self.assertIn('id=broker-release-${TARGETARCH}', dockerfile)
+        self.assertIn('id=broker-release-${TARGETARCH}', buildfile)
+        self.assertIn('CCACHE_MAXSIZE=2G', buildfile)

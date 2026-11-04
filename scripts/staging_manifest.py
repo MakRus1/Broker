@@ -30,6 +30,16 @@ def read_yaml(path):
     return yaml.load(path.read_text(), Loader=UniqueLoader)
 
 
+def keycloak_theme_files(root):
+    files = {
+        str(path.relative_to(root)).replace('/', '__'): path.read_text()
+        for path in sorted(root.rglob('*')) if path.is_file()
+    }
+    version = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:16]
+    files['login__theme.properties'] += '\nassetsVersion=' + version + '\n'
+    return files
+
+
 def private_write(path, text):
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(descriptor, 0o600)
@@ -288,11 +298,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         )
     )
     theme_root = root / 'tools/keycloak/themes/broker'
-    theme_files = {
-        str(path.relative_to(theme_root)).replace('/', '__'): path.read_text()
-        for path in sorted(theme_root.rglob('*'))
-        if path.is_file()
-    }
+    theme_files = keycloak_theme_files(theme_root)
     theme_name = hashed('keycloak-theme', theme_files)
     infra.append(document('ConfigMap', theme_name, namespace, data=theme_files))
     keycloak_memory = infrastructure_deployments['keycloak']['application']['resources']

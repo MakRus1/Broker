@@ -47,9 +47,9 @@
     <#else>
         <link rel="icon" href="${url.resourcesPath}/img/favicon.ico" />
     </#if>
-    <script src="${url.resourcesPath}/js/theme.js"></script>
-    <script defer src="${url.resourcesPath}/js/localization.js"></script>
-    <link href="${url.resourcesPath}/css/broker.css" rel="stylesheet" />
+    <script src="${url.resourcesPath}/js/theme.js?v=${properties.assetsVersion!'dev'}"></script>
+    <script defer src="${url.resourcesPath}/js/localization.js?v=${properties.assetsVersion!'dev'}"></script>
+    <link href="${url.resourcesPath}/css/broker.css?v=${properties.assetsVersion!'dev'}" rel="stylesheet" />
     <script type="importmap">
         {
             "imports": {

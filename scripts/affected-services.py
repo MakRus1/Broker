@@ -142,7 +142,9 @@ def select(paths, services, dependencies, consumers, shared_paths, schema_consum
         if path.endswith('.md'):
             continue
         parts = path.split('/')
-        if any(matches(path, prefix) for prefix in shared_paths):
+        if path in {'frontend/shared/i18n/ru.json', 'frontend/shared/i18n/en.json'}:
+            add(['localization'], 'Встроенный каталог переводов: ' + path)
+        elif any(matches(path, prefix) for prefix in shared_paths):
             add(services, 'Общая платформа: ' + path)
         elif parts[0] == 'libs' and len(parts) > 1:
             add(dependencies.get(parts[1], services), 'Библиотека: ' + path)

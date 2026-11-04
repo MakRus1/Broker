@@ -3,6 +3,15 @@ project(localization CXX)
 include("${CMAKE_SOURCE_DIR}/cmake/OpenApiCodegen.cmake")
 broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
+set(localization_catalog_dir "${CMAKE_SOURCE_DIR}/frontend/shared/i18n")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${localization_catalog_dir}/ru.json" "${localization_catalog_dir}/en.json")
+file(READ "${localization_catalog_dir}/ru.json" LOCALIZATION_RU)
+file(READ "${localization_catalog_dir}/en.json" LOCALIZATION_EN)
+string(REPLACE "\n" ")catalog\",\nR\"catalog(" LOCALIZATION_RU "${LOCALIZATION_RU}")
+string(REPLACE "\n" ")catalog\",\nR\"catalog(" LOCALIZATION_EN "${LOCALIZATION_EN}")
+configure_file(src/helpers/builtin_catalog.hpp.in generated/builtin_catalog.hpp @ONLY)
+
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
@@ -31,6 +40,7 @@ userver_add_sql_library(${PROJECT_NAME}_sql
 target_link_libraries(${PROJECT_NAME}_objs PUBLIC ${PROJECT_NAME}_sql)
 endif()
 # SERVICE_CMAKE_END
+target_include_directories(${PROJECT_NAME}_objs PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/generated")
 broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")
 

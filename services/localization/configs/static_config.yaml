@@ -7,6 +7,24 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
+        handler-api-admin-localization-get:
+            path: /api/admin/localization/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-localization-publish:
+            path: /api/admin/localization/publish
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-localization-save:
+            path: /api/admin/localization/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-localization-catalog:
             path: /api/v1/localization/catalog
             method: POST
@@ -47,7 +65,14 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
+                /api/admin/localization/get: localization.read
+                /api/admin/localization/publish: localization.write
+                /api/admin/localization/save: localization.write
                 /api/v1/localization/catalog: authenticated
+            permission-dependencies:
+                localization.write:
+                - localization.read
+            platform-url: $platform-access-url
         auth-http-client:
             wait-for-dynamic-configs: false
         dynamic-config:

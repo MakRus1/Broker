@@ -6,6 +6,7 @@
 #include <clients/config_admin/client.hpp>
 #include <clients/contracts/client.hpp>
 #include <clients/finance/client.hpp>
+#include <clients/localization/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
@@ -28,6 +29,7 @@ struct Deps {
     clients::config_admin::Client config_admin;
     clients::contracts::Client contracts;
     clients::finance::Client finance;
+    clients::localization::Client localization;
     clients::organizations::Client organizations;
     clients::shipments::Client shipments;
     clients::transport_locations::Client transport_locations;
@@ -47,6 +49,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
             component_context.FindComponent<clients::config_admin::Component>().GetClient(),
         .contracts = component_context.FindComponent<clients::contracts::Component>().GetClient(),
         .finance = component_context.FindComponent<clients::finance::Component>().GetClient(),
+        .localization =
+            component_context.FindComponent<clients::localization::Component>().GetClient(),
         .organizations =
             component_context.FindComponent<clients::organizations::Component>().GetClient(),
         .shipments = component_context.FindComponent<clients::shipments::Component>().GetClient(),

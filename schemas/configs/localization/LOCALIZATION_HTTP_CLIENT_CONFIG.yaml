@@ -2,6 +2,9 @@ name: LOCALIZATION_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
+- /api/admin/localization/get
+- /api/admin/localization/publish
+- /api/admin/localization/save
 - /api/v1/localization/catalog
 - /localization/catalog
 default:

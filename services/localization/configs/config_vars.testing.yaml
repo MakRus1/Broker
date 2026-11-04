@@ -15,3 +15,4 @@ config-updates-enabled: false
 config-server-url: http://localhost:8090
 config-cache-path: ''
 client-organizations-base-url: http://localhost:8080
+platform-access-url: http://localhost:8130/api/platform/access

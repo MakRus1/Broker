@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: Редактор переводов
+  version: '1'
+paths:
+  /api/admin/localization/get:
+    post:
+      summary: Переводы и черновик
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/CatalogEditorState
+        '400':
+          description: Некорректные переводы
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '403':
+          description: Нет права управления переводами
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '409':
+          description: Черновик изменён другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '502':
+          description: Сервис прав недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+      security:
+      - BrowserSession: []
+  /api/admin/localization/save:
+    post:
+      summary: Сохранить черновик переводов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                version:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                catalog:
+                  $ref: components/schemas/localization.yaml#/EditableCatalog
+              required:
+              - version
+              - catalog
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/CatalogEditorState
+        '400':
+          description: Некорректные переводы
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '403':
+          description: Нет права управления переводами
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '409':
+          description: Черновик изменён другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '502':
+          description: Сервис прав недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+      security:
+      - BrowserSession: []
+  /api/admin/localization/publish:
+    post:
+      summary: Опубликовать черновик переводов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                version:
+                  type: integer
+                  format: int64
+                  minimum: 0
+              required:
+              - version
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/CatalogEditorState
+        '400':
+          description: Некорректные переводы
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '403':
+          description: Нет права управления переводами
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '409':
+          description: Черновик изменён другим пользователем
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+        '502':
+          description: Сервис прав недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/localization.yaml#/ApiError
+      security:
+      - BrowserSession: []
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin

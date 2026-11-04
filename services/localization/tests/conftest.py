@@ -41,7 +41,7 @@ def configure_auth(mockserver_info):
         component['issuer'] = ISSUER
         component['jwks-url'] = mockserver_info.url('/auth/jwks')
         component['allow-http'] = True
-        component['organization-url'] = mockserver_info.url('/organizations/access')
+        component['platform-url'] = mockserver_info.url('/platform/access')
         config_vars['client-organizations-base-url'] = mockserver_info.base_url
 
     return patch
@@ -103,3 +103,17 @@ def api(service_client, auth_key):
             return {'message': response.text}
 
     return Client()
+
+
+@pytest.fixture(autouse=True)
+def platform_access(mockserver):
+    import base64
+    import json
+
+    @mockserver.handler('/platform/access')
+    def access(request):
+        payload = json.loads(base64.urlsafe_b64decode(request.headers['Authorization'].split('.')[1] + '=='))
+        permissions = {'translator': ['localization.read', 'localization.write'], 'reader': ['localization.read']}.get(payload['sub'], [])
+        if request.json['permission'] not in permissions:
+            return mockserver.make_response(status=403, json={'error': 'forbidden', 'message': 'Нет права'})
+        return mockserver.make_response(json={'permissions': permissions, 'revision': 1})

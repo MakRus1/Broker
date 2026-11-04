@@ -9,3 +9,41 @@ Translation:
       type: string
     value:
       type: string
+EditableCatalog:
+  type: object
+  additionalProperties: false
+  required:
+  - ru
+  - en
+  properties:
+    ru:
+      type: array
+      maxItems: 10000
+      items:
+        $ref: '#/Translation'
+    en:
+      type: array
+      maxItems: 10000
+      items:
+        $ref: '#/Translation'
+CatalogEditorState:
+  type: object
+  additionalProperties: false
+  required:
+  - version
+  - revision
+  - published
+  - inherited
+  properties:
+    version:
+      type: integer
+      format: int64
+    revision:
+      type: integer
+      format: int64
+    published:
+      $ref: '#/EditableCatalog'
+    inherited:
+      $ref: '#/EditableCatalog'
+    draft:
+      $ref: '#/EditableCatalog'

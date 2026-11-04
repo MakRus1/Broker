@@ -15,6 +15,10 @@ auth:
   protected-prefix: /api/
   permissions:
     /api/v1/localization/catalog: authenticated
+    /api/admin/localization/get: localization.read
+    /api/admin/localization/save: localization.write
+    /api/admin/localization/publish: localization.write
+  platform-access: true
 http_logging:
   exclude_paths:
   - /api/v1/localization/**

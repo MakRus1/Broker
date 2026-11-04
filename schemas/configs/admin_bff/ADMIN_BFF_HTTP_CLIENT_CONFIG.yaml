@@ -6,6 +6,9 @@ paths:
 - /api/admin/contracts/numbering/update
 - /api/admin/finance/settings/get
 - /api/admin/finance/settings/update
+- /api/admin/localization/get
+- /api/admin/localization/publish
+- /api/admin/localization/save
 - /api/admin/organizations/create
 - /api/admin/organizations/list
 - /api/admin/organizations/members/add

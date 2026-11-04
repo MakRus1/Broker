@@ -149,7 +149,9 @@ function ShipmentCard({
 }: Props & { initial?: Shipment; onSaved: (value: Shipment) => void }) {
   const { translate } = useLocalization();
   const formId = useId();
-  const validation = useFieldValidation();
+  const validation = useFieldValidation((field) => {
+    setTab(field.closest('[data-edit-tab]')?.getAttribute('data-edit-tab') ?? 'details');
+  });
   const storageKey = draftStorageKey(props.session, 'shipment', initial?.id ?? 'new');
   const [draft, setDraft] = useState<CardDraft>(() => draftOf(initial));
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
@@ -625,12 +627,7 @@ function ShipmentCard({
         data-recovery-key={storageKey}
         data-validation-attempted={validation.attempted}
         onInputCapture={validation.onInput}
-        onInvalidCapture={(event) => {
-          const section = (event.target as HTMLElement).closest('[data-edit-tab]');
-          setTab(section?.getAttribute('data-edit-tab') ?? 'details');
-          validation.onInvalid(event);
-        }}
-
+        onInvalidCapture={validation.onInvalid}
         data-dirty={editing && dirty}
         data-busy={busy}
       >
@@ -981,7 +978,9 @@ function ShipmentCard({
       )}
       {write && editing && (
         <RecordActions
-          error={failure || validation.message}
+          error={failure}
+          issues={validation.issues}
+          onIssueClick={validation.focusIssue}
           status={
             dirty
               ? translate(

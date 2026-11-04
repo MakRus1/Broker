@@ -1,3 +1,4 @@
+import { useLocalization } from '../../../features/localization/Localization';
 import { useEditorSection } from './RecordEditorSections';
 import { RecordGuide } from './RecordGuide';
 import type { RecordGuideKind } from './recordGuides';
@@ -67,18 +68,43 @@ export function RecordSection({
 export function RecordActions({
   status,
   error,
+  issues,
+  onIssueClick,
   children,
 }: {
   status: ReactNode;
   error?: string;
+  issues?: {
+    field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    label: string;
+    message: string;
+  }[];
+  onIssueClick?: (field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) => void;
   children: ReactNode;
 }) {
+  const { translate } = useLocalization();
   return (
     <div className="record-layout-save">
       {error && (
         <p className="record-layout-save-error error" role="alert">
           {error}
         </p>
+      )}
+      {issues && issues.length > 0 && (
+        <div className="record-validation" aria-live="polite">
+          <strong>{translate('validation.summaryTitle')}</strong>
+          <p>{translate('validation.summaryHint')}</p>
+          <ul className="record-validation-issues" role="list">
+            {issues.map(({ field, label, message }, index) => (
+              <li key={index}>
+                <button type="button" onClick={() => onIssueClick?.(field)}>
+                  {label || message}
+                </button>
+                {label && <span>{message}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <span className="record-layout-save-status" role="status">
         {status}

@@ -321,7 +321,9 @@ export function BankAccounts({
             </fieldset>
           </RecordEditorSections>
           <RecordActions
-            error={failure || validation.message}
+            error={failure}
+            issues={validation.issues}
+            onIssueClick={validation.focusIssue}
             status={
               dirty
                 ? translate(

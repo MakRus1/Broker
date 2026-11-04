@@ -134,7 +134,7 @@ export function App() {
               <h1>
                 Конфиги <span className="count">{catalog.length}</span>
               </h1>
-              <p>Изменения под контролем. Значения, согласование и история — в одном месте.</p>
+              <p>Значения конфигов, согласование изменений и история.</p>
             </div>
           </div>
           <Catalog workspace={workspace} />

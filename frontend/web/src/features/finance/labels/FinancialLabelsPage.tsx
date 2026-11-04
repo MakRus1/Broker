@@ -80,7 +80,7 @@ export function FinancialLabelsPage({
   onSaved: (value: FinancialLabel) => void;
   onCancel: () => void;
 }) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const id = /^\/financial-labels\/([0-9a-f-]{36})/i.exec(route)?.[1];
   const creating = route === '/financial-labels/new';
   const editing = creating || route.endsWith('/edit');
@@ -152,7 +152,7 @@ export function FinancialLabelsPage({
         : (value?.name ??
             (id ? translate('registryField.label_name') : translate('nav.financialLabels'))),
     );
-  }, [creating, id, value?.name, locale]);
+  }, [creating, id, value?.name, locale, catalogVersion]);
   useEffect(() => {
     if (creating) {
       setDraft((old) => {

@@ -1,0 +1,74 @@
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web_session
+info:
+  title: Опубликованные переводы
+  version: '1'
+openapi: 3.0.3
+paths:
+  /api/localization/catalog:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              properties:
+                locale:
+                  enum:
+                  - ru
+                  - en
+                  type: string
+                organization_id:
+                  format: uuid
+                  type: string
+              required:
+              - organization_id
+              - locale
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: components/schemas/localization.yaml#/Translation
+                required:
+                - messages
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/preferences/models.yaml#/ApiError
+          description: Некорректная настройка
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/preferences/models.yaml#/ApiError
+          description: Требуется вход
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/preferences/models.yaml#/ApiError
+          description: Нет доступа к организации
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/preferences/models.yaml#/ApiError
+          description: Сервис организаций недоступен
+      security:
+      - BrowserSession: []
+      summary: Опубликованный каталог переводов организации

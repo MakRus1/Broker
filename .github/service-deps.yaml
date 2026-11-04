@@ -7,6 +7,7 @@ libs:
     - contracts
     - counterparties
     - finance
+    - localization
     - organizations
     - shipments
     - transport_locations

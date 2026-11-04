@@ -46,7 +46,7 @@ export function CounterpartiesPage({
   onTitle,
   active = true,
 }: Props) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const columns: RegistryColumn<Counterparty>[] = [
     {
       id: 'name',
@@ -226,7 +226,7 @@ export function CounterpartiesPage({
   useEffect(() => {
     if (active)
       document.title = `${creating ? translate('entity.newCounterparty') : item?.name || translate('nav.counterparties')} · Broker`;
-  }, [creating, item?.name, locale]);
+  }, [creating, item?.name, locale, catalogVersion]);
   async function archive() {
     if (!item) return;
     setBusy(true);

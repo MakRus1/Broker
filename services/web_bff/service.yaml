@@ -28,6 +28,9 @@ clients:
   user_preferences:
     service: user_preferences
     transport: http
+  localization:
+    service: localization
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

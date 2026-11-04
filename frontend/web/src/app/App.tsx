@@ -41,7 +41,7 @@ import { useLocalization } from '../features/localization/Localization';
 import { LanguageControl } from '../features/localization/LanguageControl';
 
 export function App() {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const [session, setSession] = usePreferencesSession();
   const [tab, setTab] = useState<
     | 'home'
@@ -82,7 +82,7 @@ export function App() {
         ...entry,
         title: localizedWorkspaceTitle(entry, locale),
       })),
-    [workspaces, locale],
+    [workspaces, locale, catalogVersion],
   );
   const [restoredFor, setRestoredFor] = useState('');
   const storageKey = session ? `broker:workspaces:${session.subject}` : '';
@@ -212,7 +212,7 @@ export function App() {
   useEffect(() => {
     const current = workspaces.find((entry) => entry.id === activeWorkspace);
     document.title = `${current ? localizedWorkspaceTitle(current, locale) : translate('workspace.title')} · Broker`;
-  }, [activeWorkspace, workspaces, locale]);
+  }, [activeWorkspace, workspaces, locale, catalogVersion]);
   const [navigationPinned, setNavigationPinned] = useState(() => {
     try {
       return localStorage.getItem('broker:navigation-pinned') === 'true';

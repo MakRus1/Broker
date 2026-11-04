@@ -5,6 +5,7 @@ paths:
 - /api/geography/cities
 - /api/geography/railway-stations
 - /api/geography/route-locations
+- /api/localization/catalog
 - /api/logout
 - /api/organizations/employees/list
 - /api/preferences/list

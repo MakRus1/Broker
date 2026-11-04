@@ -156,7 +156,7 @@ export function ContractsPage({
   onSaved: (value: Contract) => void;
   onCancel: () => void;
 }) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const titleCallback = useRef(onTitle);
   titleCallback.current = onTitle;
   const id = /^\/contracts\/([0-9a-f-]{36})/i.exec(route)?.[1];
@@ -263,7 +263,7 @@ export function ContractsPage({
         : (value?.number ??
             (id ? translate('registryField.contract_id') : translate('nav.contracts'))),
     );
-  }, [creating, id, value?.id, value?.number, locale]);
+  }, [creating, id, value?.id, value?.number, locale, catalogVersion]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
     const controller = new AbortController();

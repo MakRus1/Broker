@@ -53,11 +53,11 @@ export function TransportationPage({
   customers: suppliedCustomers,
   onError,
 }: Props) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const [transportation, setTransportation] = useState<Transportation>();
   useEffect(() => {
     if (transportation) onTitle?.(transportationTitle(transportation, locale));
-  }, [transportation?.container_number, transportation?.type, locale]);
+  }, [transportation?.container_number, transportation?.type, locale, catalogVersion]);
   const [shipment, setShipment] = useState<Shipment>();
   const [linkedCustomers, setLinkedCustomers] = useState<Counterparty[]>([]);
   const customers = [
@@ -99,7 +99,7 @@ export function TransportationPage({
   useEffect(() => {
     if (transportation && active)
       document.title = `${transportationTitle(transportation, locale)} · Broker`;
-  }, [transportation?.container_number, transportation?.type, active, locale]);
+  }, [transportation?.container_number, transportation?.type, active, locale, catalogVersion]);
   const [failure, setFailure] = useState('');
   const [tab, setTab] = useState<'details' | 'route' | 'finance' | 'history'>(
     editing ? 'route' : 'details',
@@ -417,7 +417,7 @@ export function RouteView({
   customers: Counterparty[];
   onActual?: (route_segment: RouteSegment, kind: 'departure' | 'arrival') => void;
 }) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const collapse = useRouteCollapse(route_segments.map((stage) => stage.id));
   if (!route_segments.length)
     return (
@@ -562,7 +562,7 @@ function ActualForm({
   onSaved: (value: Transportation) => void;
   onError: (error: unknown) => void;
 }) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const previous =
     kind === 'departure' ? route_segment.actual_departure_at : route_segment.actual_arrival_at;
   const [initialValue] = useState(() => localDateTime(previous ?? new Date().toISOString()));
@@ -687,7 +687,7 @@ function History({
   customers: Counterparty[];
   onError: (error: unknown) => void;
 }) {
-  const { translate, locale } = useLocalization();
+  const { translate, locale, catalogVersion } = useLocalization();
   const [items, setItems] = useState<TransportationEvent[]>([]);
   const [busy, setBusy] = useState(true);
   const [more, setMore] = useState(false);

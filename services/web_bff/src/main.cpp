@@ -30,6 +30,7 @@
 #include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
 #include <clients/finance/client.hpp>
+#include <clients/localization/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
@@ -79,6 +80,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<web_bff::clients::contracts::Component>();
     component_list.Append<web_bff::clients::counterparties::Component>();
     component_list.Append<web_bff::clients::finance::Component>();
+    component_list.Append<web_bff::clients::localization::Component>();
     component_list.Append<web_bff::clients::organizations::Component>();
     component_list.Append<web_bff::clients::shipments::Component>();
     component_list.Append<web_bff::clients::transport_locations::Component>();

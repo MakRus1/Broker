@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Опубликованные переводы
+  version: '1'
+paths:
+  /api/v1/localization/catalog:
+    post:
+      summary: Опубликованный каталог переводов организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                locale:
+                  type: string
+                  enum:
+                  - ru
+                  - en
+              required:
+              - organization_id
+              - locale
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - messages
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/localization.yaml#/Translation
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '403':
+          description: Нет доступа к организации
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+        '502':
+          description: Сервис организаций недоступен
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/errors.yaml#/ApiError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

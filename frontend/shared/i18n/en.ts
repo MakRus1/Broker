@@ -1295,8 +1295,8 @@ export const en = {
   "print.bic": "BIC {value}",
   "print.correspondent": "Correspondent account {value}",
   "validation.noChanges": "No changes to save",
-  "validation.checkFields":
-    "Check the highlighted fields. Your changes have not been saved.",
+  "validation.summaryTitle": "Check these fields before saving",
+  "validation.summaryHint": "Select a field name to jump to it.",
   "validation.revisionConflict":
     "This record was changed by another user. Your changes were not saved and remain in the form. Compare them with the current record before saving again.",
   "validation.required": "Fill in this required field",

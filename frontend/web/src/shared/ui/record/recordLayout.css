@@ -686,6 +686,11 @@
   margin-bottom: 24px;
 }
 @media (max-width: 900px) {
+  .record-layout-save {
+    margin-inline: 0;
+    padding-inline: 0;
+    border-radius: 0;
+  }
   .financial-record-workbench .document-editor .record-layout-section {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -889,4 +894,50 @@
 }
 .record-layout-section-heading h2:focus {
   outline: none;
+}
+
+.record-validation {
+  flex-basis: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border-inline-start: 3px solid var(--danger);
+  border-radius: 4px;
+  background: var(--danger-soft);
+  font-size: 13px;
+}
+.record-validation > p {
+  margin: 3px 0 8px;
+  color: var(--text-secondary);
+}
+.record-validation-issues {
+  display: grid;
+  gap: 4px;
+  max-height: 7rem;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 3px;
+}
+.record-validation-issues li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+.record-validation-issues span {
+  color: var(--text-secondary);
+}
+.record-validation-issues button,
+.record-validation-issues button:hover {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

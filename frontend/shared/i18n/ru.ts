@@ -1293,8 +1293,8 @@ export const ru = {
   "print.bic": "БИК {value}",
   "print.correspondent": "Корр. счёт {value}",
   "validation.noChanges": "Нет изменений для сохранения",
-  "validation.checkFields":
-    "Проверьте выделенные поля. Данные пока не сохранены.",
+  "validation.summaryTitle": "Проверьте поля перед сохранением",
+  "validation.summaryHint": "Нажмите на название поля, чтобы перейти к нему.",
   "validation.revisionConflict":
     "Запись изменена другим пользователем. Данные не сохранены; введённые значения остаются в форме. Сверьте их с актуальной записью перед повторным сохранением.",
   "validation.required": "Заполните обязательное поле",

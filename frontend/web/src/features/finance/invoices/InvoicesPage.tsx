@@ -361,10 +361,7 @@ export function InvoicesPage({
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!draft || busy || recovery.candidate) return;
-    if (!e.currentTarget.checkValidity()) {
-      e.currentTarget.reportValidity();
-      return;
-    }
+    if (!e.currentTarget.checkValidity()) return;
     setBusy(true);
     setFailure('');
     try {
@@ -765,7 +762,9 @@ export function InvoicesPage({
                 </fieldset>
               </RecordEditorSections>
               <RecordActions
-                error={failure || validation.message}
+                error={failure}
+                issues={validation.issues}
+                onIssueClick={validation.focusIssue}
                 status={
                   dirty
                     ? translate(

@@ -312,6 +312,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             {'name': 'KC_BOOTSTRAP_ADMIN_USERNAME', 'value': 'admin'},
             secret_env('KC_BOOTSTRAP_ADMIN_PASSWORD', 'keycloak-admin', 'password'),
             {'name': 'KC_HOSTNAME', 'value': settings['auth_origin']},
+            {'name': 'BROKER_LOCALIZATION_URL', 'value': settings['web_origin'] + '/localization/catalog'},
             {'name': 'KC_HTTP_ENABLED', 'value': 'true'},
             {'name': 'KC_HEALTH_ENABLED', 'value': 'true'},
             {

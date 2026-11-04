@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info:
+  title: Общие переводы экрана входа
+  version: '1'
+paths:
+  /localization/catalog:
+    get:
+      summary: Общие опубликованные тексты входа
+      parameters:
+      - in: query
+        name: locale
+        required: true
+        schema:
+          type: string
+          enum:
+          - ru
+          - en
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: components/schemas/localization.yaml#/Translation
+                required:
+                - messages
+                type: object
+          description: Успех

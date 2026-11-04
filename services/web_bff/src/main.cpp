@@ -24,6 +24,7 @@
 #include <userver/ugrpc/client/component_list.hpp>
 
 #include <components/cities.hpp>
+#include <components/public_catalog.hpp>
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
@@ -59,6 +60,7 @@ int main(int argc, char* argv[]) {
             .Append<platform::browser::Sessions>()
             .Append<userver::components::FsCache>("browser-assets")
             .Append<platform::browser::BrowserSessionFactory>()
+            .Append<web_bff::PublicCatalogCors>()
             .Append<platform::HttpTelemetryPipeline>()
             .Append<platform::browser::Login>()
             .Append<platform::browser::LoginCallback>()

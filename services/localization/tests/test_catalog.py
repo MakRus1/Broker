@@ -36,3 +36,24 @@ async def test_organization_overrides_and_locale(api, pgsql):
     )
     assert {item['key']: item['value'] for item in result['messages']}['nav.shipments'] == 'Поставки'
     assert await api.post(PATH, body | {'locale': 'en'}) == {'messages': []}
+
+
+async def test_public_catalog_excludes_organization_and_private_keys(service_client, pgsql):
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO localization_catalogs (locale, messages, revision) VALUES ('ru', %s::JSONB, 1)",
+            (json.dumps({'login.title': 'Общий вход', 'keycloak.doLogIn': 'Войти',
+                         'nav.shipments': 'Поставки'}),),
+        )
+        cursor.execute(
+            "INSERT INTO organization_localization_catalogs "
+            "(organization_id, locale, messages, revision) VALUES (%s, 'ru', %s::JSONB, 1)",
+            (ORGANIZATION, json.dumps({'login.title': 'Вход организации'})),
+        )
+    response = await service_client.get('/localization/catalog?locale=ru')
+    assert response.status == 200
+    assert {item['key']: item['value'] for item in response.json()['messages']} == {
+        'login.title': 'Общий вход', 'keycloak.doLogIn': 'Войти',
+    }
+    assert (await service_client.get('/localization/catalog?locale=en')).json() == {'messages': []}
+    assert (await service_client.get('/localization/catalog?locale=de')).status == 400

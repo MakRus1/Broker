@@ -79,6 +79,7 @@ paths:
 - /api/v1/transportations/history
 - /api/v1/transportations/list
 - /api/v1/transportations/update
+- /localization/catalog
 default:
   '**default**':
     timeout: 1000

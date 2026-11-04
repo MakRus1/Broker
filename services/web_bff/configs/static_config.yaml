@@ -469,6 +469,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-localization-catalog:
+            path: /localization/catalog
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         client-contracts:
@@ -567,9 +573,11 @@ components_manager:
         platform-http-telemetry:
             service-name: web_bff
             environment: $environment
+        public-catalog-cors: {}
         platform-http-pipeline:
             final-middlewares:
             - browser-session
+            - public-catalog-cors
         server:
             middleware-pipeline-builder: platform-http-pipeline
             listener:

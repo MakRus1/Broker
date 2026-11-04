@@ -58,19 +58,25 @@ export function Localization({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     clearPublishedMessages();
     setCatalogVersion((version) => version + 1);
-    if (!session) return;
     const controller = new AbortController();
     let pending = false;
     async function refresh() {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       try {
-        const result = await request<{ messages: unknown }>(
-          '/api/localization/catalog',
-          sessionRef.current!,
-          { organization_id: session!.organization_id, locale },
-          controller.signal,
-        );
+        const result = session
+          ? await request<{ messages: unknown }>(
+              '/api/localization/catalog',
+              sessionRef.current!,
+              { organization_id: session.organization_id, locale },
+              controller.signal,
+            )
+          : await request<{ messages: unknown }>(
+              `/localization/catalog?locale=${locale}`,
+              undefined,
+              undefined,
+              controller.signal,
+            );
         if (controller.signal.aborted) return;
         replacePublishedMessages(locale, validatePublishedMessages(result.messages, locale));
         setCatalogVersion((version) => version + 1);

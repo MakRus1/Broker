@@ -1,5 +1,13 @@
 import type { MessageKey } from "./catalog";
 export const en = {
+  "keycloak.loginAccountTitle": "Sign in to Broker",
+  "keycloak.username": "Username",
+  "keycloak.usernameOrEmail": "Username or email",
+  "keycloak.email": "Email",
+  "keycloak.password": "Password",
+  "keycloak.doLogIn": "Sign in",
+  "keycloak.brokerLoginHint": "Sign in to your workspace",
+
   "guide.bank":
     "Add a bank account, currency and bank details. A primary account is selected separately for each currency; archived accounts are available through the list toggle.",
   "guide.settlements":

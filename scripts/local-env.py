@@ -254,6 +254,7 @@ def prepare():
         "environment": {
             "KC_DB": "postgres", "KC_DB_URL": "jdbc:postgresql://postgres-keycloak:5432/keycloak",
             "KC_DB_USERNAME": "keycloak", "KC_DB_PASSWORD": auth_secrets["postgres-password"],
+            "BROKER_LOCALIZATION_URL": "http://localhost:14080/localization/catalog",
             "KC_HOSTNAME": "http://localhost:18888", "KC_HOSTNAME_STRICT": "false",
             "KC_BOOTSTRAP_ADMIN_USERNAME": "admin",
             "KC_BOOTSTRAP_ADMIN_PASSWORD": auth_secrets["admin-password"],

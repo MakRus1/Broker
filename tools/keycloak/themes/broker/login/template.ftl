@@ -31,6 +31,8 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="broker-username-key" content="<#if !realm.loginWithEmailAllowed>username<#elseif !realm.registrationEmailAsUsername>usernameOrEmail<#else>email</#if>">
+    <meta name="broker-localization-url" content="${properties.localizationUrl!}">
     <meta name="color-scheme" content="light dark">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -46,6 +48,7 @@
         <link rel="icon" href="${url.resourcesPath}/img/favicon.ico" />
     </#if>
     <script src="${url.resourcesPath}/js/theme.js"></script>
+    <script defer src="${url.resourcesPath}/js/localization.js"></script>
     <link href="${url.resourcesPath}/css/broker.css" rel="stylesheet" />
     <script type="importmap">
         {
@@ -125,7 +128,7 @@
       </header>
       <div class="${properties.kcLoginMainHeader!}">
         <h1 class="${properties.kcLoginMainTitle!}" id="kc-page-title"><#nested "header"></h1>
-        <p class="broker-subtitle">${msg("brokerLoginHint")}</p>
+        <p class="broker-subtitle" data-broker-message="brokerLoginHint">${msg("brokerLoginHint")}</p>
         <#if realm.internationalizationEnabled  && locale.supported?size gt 1>
         <div class="${properties.kcLoginMainHeaderUtilities!}">
           <div class="${properties.kcInputClass!}">

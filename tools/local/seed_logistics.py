@@ -56,14 +56,27 @@ subprocess.run(
 # Локальный стенд использует единственную рабочую версию каждого модуля.
 import sys
 sys.path.insert(0, '/workspaces/broker/scripts')
-from permission_catalog import load, register_sql, reconcile_sql
+from permission_catalog import load, release_entries, register
+from urllib.request import urlopen
+import time
 catalog = load('/workspaces/broker')
 import hashlib
 version = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
+for attempt in range(60):
+    try:
+        with urlopen('http://organizations:8132/ping/ready', timeout=2):
+            break
+    except OSError:
+        if attempt == 59:
+            raise RuntimeError('Organizations не готов к регистрации прав') from None
+        time.sleep(1)
+secret = json.loads(Path('/workspaces/broker/.local/auth-secrets.json').read_text())['permission-publisher-secret']
 for owner in sorted(path.name for path in Path('/workspaces/broker/services').iterdir() if (path / 'service.yaml').exists()):
-    subprocess.run(
-        ['psql', '-h', 'postgres-organizations', '-U', 'testsuite', '-d', 'organizations_db_1', '-v', 'ON_ERROR_STOP=1'],
-        env={**os.environ, 'PGPASSWORD': 'testsuite'}, input=register_sql(owner, version, catalog) + reconcile_sql(owner, [version]), text=True, check=True)
+    for action, body in [('upsert', dict(owner=owner, version=version, entries=release_entries(owner, catalog))),
+                         ('reconcile', dict(owner=owner, versions=[version]))]:
+        register('http://organizations:8130', 'http://keycloak:8080/realms/broker/protocol/openid-connect/token', secret, action, body)
+
+print('Каталоги прав зарегистрированы и сверены через API Organizations')
 
 # Изолированные технические аккаунты нужны локальным сценариям подготовки конфигов.
 for client, subject in json.loads(Path('/cache/platform-users.json').read_text()).items():

@@ -31,64 +31,25 @@ def load(root):
     return catalog(Path(root), UniqueLoader)
 
 
-def literal(value):
-    return "'" + value.replace("'", "''") + "'"
+def release_entries(owner, entries):
+    return [dict(code=code, name=value['name'], group=value['group'], scope=value['scope'],
+                 dependencies=value['requires'])
+            for code, value in sorted(entries.items()) if value['owner'] == owner]
 
 
-def register_sql(owner, version, entries):
-    document = [
-        {'code': code, **value} for code, value in entries.items() if value['owner'] == owner
-    ]
-    return (
-        'BEGIN; SELECT pg_advisory_xact_lock(824193); '
-        'INSERT INTO permission_releases(owner,version,entries,active) VALUES ('
-        + ','.join(
-            [
-                literal(owner),
-                literal(version),
-                literal(json.dumps(document, ensure_ascii=False)),
-                'true',
-            ]
-        )
-        + ') ON CONFLICT(owner,version) DO UPDATE SET active=true; COMMIT;'
-    )
+def register(base_url, token_url, secret, action, body):
+    from release_catalog_api import request_json
+    access = request_json(token_url, {'grant_type': 'client_credentials',
+        'client_id': 'permission-publisher', 'client_secret': secret}, form=True)
+    return request_json(base_url + '/api/internal/permissions/releases/' + action,
+                        body, access['access_token'])
 
 
-def reconcile_sql(owner, versions):
-    if not versions:
-        raise ValueError('Нельзя сверять каталог без работающих версий: ' + owner)
-    values = ','.join(literal(version) for version in sorted(set(versions)))
-    # Проверка полноты выполняется до изменения активности в той же транзакции.
-    return f'''BEGIN; SELECT pg_advisory_xact_lock(824193);
-DO $$ BEGIN IF (SELECT count(*) FROM permission_releases
- WHERE owner={literal(owner)} AND version IN ({values})) != {len(set(versions))}
- THEN RAISE EXCEPTION 'Нет каталога одной из работающих версий'; END IF; END $$;
-UPDATE permission_releases SET active=(version IN ({values})) WHERE owner={literal(owner)};
-COMMIT;'''
-
-
-def execute(kubectl, sql):
-    from staging_postgres import primary
-
-    subprocess.run(
-        [
-            *kubectl,
-            'exec',
-            '-i',
-            primary(kubectl, 'organizations'),
-            '--',
-            'psql',
-            '-U',
-            'postgres',
-            '-d',
-            'organizations',
-            '-v',
-            'ON_ERROR_STOP=1',
-        ],
-        input=sql,
-        text=True,
-        check=True,
-    )
+def call_cluster(kubectl, secret, action, body):
+    from release_catalog_api import forward_service
+    with forward_service(kubectl, 'keycloak') as keycloak, forward_service(kubectl, 'organizations') as organizations:
+        return register(organizations, keycloak + '/realms/broker/protocol/openid-connect/token',
+                        secret, action, body)
 
 
 def live_images(kubectl, service):
@@ -109,11 +70,12 @@ def live_images(kubectl, service):
     return images
 
 
-def prepare(kubectl, owner, image, entries):
-    execute(kubectl, register_sql(owner, image, entries))
+def prepare(kubectl, owner, image, entries, secret):
+    call_cluster(kubectl, secret, 'upsert', dict(owner=owner, version=image,
+                                             entries=release_entries(owner, entries)))
 
 
-def finish(kubectl, owner):
+def finish(kubectl, owner, secret):
     # rollout status не гарантирует завершение terminating-подов: ждём их дренирования.
     for attempt in range(46):
         result = subprocess.run(
@@ -126,18 +88,15 @@ def finish(kubectl, owner):
             and pod['metadata'].get('deletionTimestamp')
         ]
         if not draining:
-            execute(kubectl, reconcile_sql(owner, live_images(kubectl, owner)))
+            versions = sorted(live_images(kubectl, owner))
+            if not versions:
+                raise ValueError('Нельзя сверять каталог без работающих версий: ' + owner)
+            call_cluster(kubectl, secret, 'reconcile', dict(owner=owner, versions=versions))
             return
         if attempt != 45:
             time.sleep(2)
     raise RuntimeError('Каталог сохранён: старые поды ещё завершаются: ' + owner)
 
 
-def restore(kubectl, owner, image):
-    execute(
-        kubectl,
-        f'''BEGIN; SELECT pg_advisory_xact_lock(824193);
-DO $$ BEGIN IF NOT EXISTS(SELECT FROM permission_releases WHERE owner={literal(owner)} AND version={literal(image)})
-THEN RAISE EXCEPTION 'У целевого образа нет зарегистрированного каталога прав'; END IF; END $$;
-UPDATE permission_releases SET active=true WHERE owner={literal(owner)} AND version={literal(image)}; COMMIT;''',
-    )
+def restore(kubectl, owner, image, secret):
+    call_cluster(kubectl, secret, 'activate', dict(owner=owner, version=image))

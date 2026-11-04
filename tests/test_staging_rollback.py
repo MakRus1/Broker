@@ -173,6 +173,8 @@ class RollbackTest(unittest.TestCase):
                         raise subprocess.CalledProcessError(1, command)
                 return Mock(stdout='')
 
+            (root / '.staging').mkdir(exist_ok=True)
+            (root / '.staging/permission-publisher-secret').write_text('test-secret')
             lock_path = root / '.cache/broker-staging/deploy.lock'
             lock_path.parent.mkdir(parents=True)
             with lock_path.open('a') as held, patch.dict(

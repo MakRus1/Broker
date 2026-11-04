@@ -9,3 +9,8 @@ organizations.read_employees:
   group: Сотрудники
   scope: organization
   requires: []
+organizations.register_permissions:
+  name: Регистрация каталогов прав релизов
+  group: Каталоги прав
+  scope: service
+  requires: []

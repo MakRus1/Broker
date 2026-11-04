@@ -96,6 +96,24 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-internal-permissions-releases-activate:
+            path: /api/internal/permissions/releases/activate
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-internal-permissions-releases-reconcile:
+            path: /api/internal/permissions/releases/reconcile
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-internal-permissions-releases-upsert:
+            path: /api/internal/permissions/releases/upsert
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-organizations-access:
             path: /api/organizations/access
             method: POST
@@ -167,6 +185,9 @@ components_manager:
                 /api/admin/organizations/update: authenticated
                 /api/admin/platform-access/get: authenticated
                 /api/admin/platform-access/update: authenticated
+                /api/internal/permissions/releases/activate: organizations.register_permissions
+                /api/internal/permissions/releases/reconcile: organizations.register_permissions
+                /api/internal/permissions/releases/upsert: organizations.register_permissions
                 /api/organizations/access: authenticated
                 /api/organizations/administration/check: authenticated
                 /api/organizations/employees/list: authenticated
@@ -176,6 +197,8 @@ components_manager:
             permission-dependencies:
                 organizations.manage:
                 - organizations.read_employees
+            service-clients:
+                organizations.register_permissions: permission-publisher
         auth-http-client:
             wait-for-dynamic-configs: false
         # SERVICE_CONFIG_END

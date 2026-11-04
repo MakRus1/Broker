@@ -64,6 +64,7 @@ INFRASTRUCTURE = (
     'scripts/organization_identity.py',
     'scripts/permission_catalog.py',
     'scripts/localization_catalog.py',
+    'scripts/release_catalog_api.py',
     'scripts/local-env.py',
     'scripts/ci-local.py',
     'tools/deploy/*',

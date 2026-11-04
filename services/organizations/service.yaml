@@ -9,6 +9,9 @@ auth:
   roles-client: broker-logistics
   protected-prefix: /api/
   permissions:
+    /api/internal/permissions/releases/upsert: organizations.register_permissions
+    /api/internal/permissions/releases/activate: organizations.register_permissions
+    /api/internal/permissions/releases/reconcile: organizations.register_permissions
     /api/organizations/access: authenticated
     /api/organizations/me: authenticated
     /api/admin/organizations/list: authenticated
@@ -28,10 +31,21 @@ auth:
     /api/organizations/employees/list: authenticated
     /api/organizations/administration/check: authenticated
     /api/organizations/membership/get: authenticated
+  service-clients:
+    organizations.register_permissions: permission-publisher
 http_logging:
   exclude_paths:
   - /api/admin/organizations/members/create
 service_accounts:
+  publisher:
+    client_id: permission-publisher
+    audience: broker-logistics
+    permissions:
+    - organizations.register_permissions
+    config:
+      client_id: publisher-client-id
+      client_secret: publisher-client-secret
+      token_url: publisher-token-url
   users:
     client_id: organizations-manager
     keycloak_roles:

@@ -663,4 +663,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
     private_write(
         directory / 'permissions.json', json.dumps(load_permissions(root), ensure_ascii=False)
     )
+    # apply читает этот снимок, а не входной файл из истории деплоев.
+    private_write(directory / 'release.json', json.dumps(release, indent=2) + '\n')
     return phases

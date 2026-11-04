@@ -9,19 +9,14 @@ export function LoginScreen({ workspace }: { workspace: Workspace }) {
       <div className="brand">
         B<span>Broker</span>
       </div>
-      <p className="eyebrow">УПРАВЛЕНИЕ ПЛАТФОРМОЙ</p>
-      <h1>
-        Платформа
-        <br />
-        под контролем.
-      </h1>
-      <p>Управляйте организациями, сотрудниками и конфигурацией Broker.</p>
+      <h1>Администрирование</h1>
+      <p>Организации, сотрудники, настройки и переводы.</p>
       {loginRequired ? (
         <a className="primary link" href={`/auth/login?theme=${initialThemePreference()}`}>
-          Войти →
+          Войти
         </a>
       ) : (
-        <p>Подключаемся…</p>
+        <p>Загрузка…</p>
       )}
       {error && !loginRequired && (
         <p role="alert" className="error">

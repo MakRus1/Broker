@@ -61,6 +61,29 @@ class DeploymentTest(unittest.TestCase):
                 )
             )
 
+    def test_theme_asset_version_changes_with_content(self):
+        from staging_manifest import keycloak_theme_files
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'login/resources/css').mkdir(parents=True)
+            (root / 'login/resources/js').mkdir()
+            (root / 'login/theme.properties').write_text('parent=keycloak.v2\n')
+            css = root / 'login/resources/css/broker.css'
+            css.write_text(':root { color-scheme: light; }')
+            first = keycloak_theme_files(root)
+            self.assertEqual(first, keycloak_theme_files(root))
+            self.assertRegex(first['login__theme.properties'], r'assetsVersion=[0-9a-f]{16}')
+            css.write_text(':root { color-scheme: light dark; }')
+            second = keycloak_theme_files(root)
+            self.assertNotEqual(first['login__theme.properties'], second['login__theme.properties'])
+            (root / 'login/resources/js/theme.js').write_text('applyTheme();')
+            third = keycloak_theme_files(root)
+            self.assertNotEqual(second['login__theme.properties'], third['login__theme.properties'])
+        template = (ROOT / 'tools/keycloak/themes/broker/login/template.ftl').read_text()
+        for resource in ('css/broker.css', 'js/theme.js', 'js/localization.js'):
+            self.assertIn(resource + '?v=${properties.assetsVersion!', template)
+
     def test_layered_resources_and_invalid_values(self):
         result = merge(
             {
@@ -196,6 +219,7 @@ class DeploymentTest(unittest.TestCase):
                 ROOT / 'services', root / 'services', ignore=shutil.ignore_patterns('__pycache__')
             )
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
+            shutil.copytree(ROOT / 'tools/keycloak', root / 'tools/keycloak')
             shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
             shutil.copytree(ROOT / 'frontend/shared/i18n', root / 'frontend/shared/i18n')

@@ -36,6 +36,7 @@ class CatalogTest(unittest.TestCase):
                 ROOT / 'services', root / 'services', ignore=shutil.ignore_patterns('__pycache__')
             )
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
+            shutil.copytree(ROOT / 'tools/keycloak', root / 'tools/keycloak')
             shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
             shutil.copytree(ROOT / 'frontend/shared/i18n', root / 'frontend/shared/i18n')

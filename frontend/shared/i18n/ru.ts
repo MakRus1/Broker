@@ -1,4 +1,12 @@
 export const ru = {
+  "keycloak.loginAccountTitle": "Вход в Broker",
+  "keycloak.username": "Логин",
+  "keycloak.usernameOrEmail": "Логин или email",
+  "keycloak.email": "Email",
+  "keycloak.password": "Пароль",
+  "keycloak.doLogIn": "Войти",
+  "keycloak.brokerLoginHint": "Войдите в рабочее пространство",
+
   "guide.bank":
     "Добавьте банковский счёт, укажите валюту и реквизиты банка. Основной счёт выбирается отдельно для каждой валюты; архивные счета доступны через переключатель списка.",
   "guide.settlements":

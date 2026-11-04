@@ -3,6 +3,7 @@ mode: http-client
 generated: true
 paths:
 - /api/v1/localization/catalog
+- /localization/catalog
 default:
   '**default**':
     timeout: 1000

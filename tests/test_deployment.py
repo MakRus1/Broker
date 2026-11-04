@@ -35,6 +35,12 @@ class DeploymentTest(unittest.TestCase):
                 if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'keycloak'
             )
             pod = keycloak['spec']['template']['spec']
+            environment = {
+                item['name']: item.get('value')
+                for item in pod['containers'][0]['env']
+            }
+            self.assertTrue(environment['BROKER_LOCALIZATION_URL'].endswith('/localization/catalog'))
+
             theme = next(volume for volume in pod['volumes'] if volume['name'] == 'theme')
             theme_config = next(
                 obj

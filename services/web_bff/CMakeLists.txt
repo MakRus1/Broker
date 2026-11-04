@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
     src/components/cities.cpp
+    src/components/public_catalog.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

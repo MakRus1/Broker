@@ -1,3 +1,5 @@
 version: 1
 include:
-  - /**
+  - /api/v1/**
+  - /api/admin/**
+  - /localization/**

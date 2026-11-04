@@ -198,6 +198,7 @@ class DeploymentTest(unittest.TestCase):
             shutil.copytree(ROOT / 'tools/local', root / 'tools/local')
             shutil.copytree(ROOT / 'tools/deploy', root / 'tools/deploy')
             shutil.copytree(ROOT / 'schemas/permissions', root / 'schemas/permissions')
+            shutil.copytree(ROOT / 'frontend/shared/i18n', root / 'frontend/shared/i18n')
             path = Path(directory) / 'state'
             first = staging.render(RELEASE, path, root=root)
             manifest = root / 'services/configs/platform.yaml'

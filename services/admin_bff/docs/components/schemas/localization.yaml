@@ -34,6 +34,7 @@ CatalogEditorState:
   - revision
   - published
   - inherited
+  - source
   properties:
     version:
       type: integer
@@ -46,6 +47,8 @@ CatalogEditorState:
     inherited:
       $ref: '#/EditableCatalog'
     draft:
+      $ref: '#/EditableCatalog'
+    source:
       $ref: '#/EditableCatalog'
 ApiError:
   type: object

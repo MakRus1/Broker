@@ -226,6 +226,12 @@ def prepare():
                 f"migrate-{name}": {"condition": "service_completed_successfully"},
             },
         }
+    services['localization-register'] = {
+        'image': images['dev'], 'working_dir': '/workspaces/broker', 'volumes': shared,
+        'command': ['python3', 'scripts/localization_catalog.py'],
+        'depends_on': {'localization': {'condition': 'service_started'},
+                       'keycloak-setup': {'condition': 'service_completed_successfully'}},
+    }
     services['transport-locations-transfer'] = {
         'image': images['dev'], 'working_dir': '/workspaces/broker',
         'volumes': shared, 'environment': {'PGPASSWORD': 'testsuite'},
@@ -356,6 +362,8 @@ def prepare():
                        'transportations': {'condition': 'service_started'},
                        'configs': {'condition': 'service_started'}},
     }
+    for frontend_service in ('admin_bff', 'web_bff'):
+        services[frontend_service]['depends_on']['localization-register'] = {'condition': 'service_completed_successfully'}
     for name, port, internal, args in [
         ("loki", 13100, 3100, ["-config.file=/etc/local/loki.yaml"]),
         ("tempo", 13200, 3200, ["-config.file=/etc/local/tempo.yaml"]),
@@ -551,6 +559,8 @@ def update(service, jobs):
     if migration in services:
         print(f'Миграции {service}', flush=True)
         subprocess.run(command + ['run', '--rm', '--no-deps', migration], check=True)
+    if service in {'web_bff', 'admin_bff'}:
+        subprocess.run(command + ['run', '--rm', '--no-deps', 'localization-register'], check=True)
     print(f'Перезапуск {service}', flush=True)
     try:
         subprocess.run(command + ['up', '-d', '--no-deps', '--force-recreate', service], check=True)

@@ -60,3 +60,40 @@ async def test_public_catalog_changes_only_on_publish(api, service_client):
     assert (await service_client.get('/localization/catalog?locale=ru')).json()['messages'] == []
     await api.post(ROOT + 'publish', {'version': state['version']}, user='translator')
     assert (await service_client.get('/localization/catalog?locale=ru')).json()['messages'] == catalog['ru']
+
+
+async def test_register_new_key_without_service_rebuild(api, pgsql, source_catalog):
+    source = {'ru': {'new.release.key': 'Новый {count}'}, 'en': {'new.release.key': 'New {count}'}}
+    await source_catalog(source)
+    state = await api.post(ROOT + 'get', {}, user='translator')
+    assert {'key': 'new.release.key', 'value': 'Новый {count}'} in state['source']['ru']
+    changes = {'ru': [{'key': 'new.release.key', 'value': 'Переопределённый {count}'}], 'en': []}
+    state = await api.post(ROOT + 'save', {'version': 0, 'catalog': changes}, user='translator')
+    await source_catalog({'ru': {'another.key': 'Другой'}, 'en': {'another.key': 'Another'}})
+    await source_catalog(source)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("SELECT updated_at FROM localization_source WHERE key = 'new.release.key'")
+        original_time = cursor.fetchone()[0]
+    await source_catalog(source)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("SELECT updated_at FROM localization_source WHERE key = 'new.release.key'")
+        assert cursor.fetchone()[0] == original_time
+    current = await api.post(ROOT + 'get', {}, user='translator')
+    assert current['version'] == state['version'] and current['draft'] == changes
+    await api.post(ROOT + 'publish', {'version': state['version']}, user='translator')
+    await source_catalog({'ru': {'new.release.key': 'Обновлённый {count}'}, 'en': {'new.release.key': 'Updated {count}'}})
+    current = await api.post(ROOT + 'get', {}, user='translator')
+    assert current['published'] == changes
+    assert {'key': 'another.key', 'value': 'Другой'} in current['source']['ru']
+
+
+async def test_registration_access_and_validation(api, service_client, source_catalog):
+    path = '/api/internal/localization/sources/upsert'
+    body = {'ru': [], 'en': []}
+    await api.post(path, body, user='translator', expected=403)
+    await api.post(path, body, roles=['localization.register'], expected=403)
+    assert (await service_client.post(path, json=body)).status == 401
+    await source_catalog({'ru': {'stable.key': '{count}'}, 'en': {'stable.key': '{count}'}})
+    await source_catalog({'ru': {'stable.key': '{name}'}, 'en': {'stable.key': '{name}'}}, expected=409)
+    await source_catalog({'ru': {'a': 'A'}, 'en': {}}, expected=400)
+    await source_catalog({'ru': {'a': '{count}'}, 'en': {'a': '{name}'}}, expected=400)

@@ -36,7 +36,6 @@ COPY cmake/ cmake/
 COPY libs/ libs/
 COPY services/ services/
 COPY schemas/ schemas/
-COPY frontend/shared/i18n/ frontend/shared/i18n/
 COPY scripts/openapi_gen/ scripts/openapi_gen/
 COPY scripts/templates/ scripts/templates/
 COPY scripts/service_catalog.py scripts/service_catalog.py

@@ -1,6 +1,3 @@
-import { ru } from '../../../../shared/i18n/ru';
-import { en } from '../../../../shared/i18n/en';
-export const builtins = { ru, en };
 export type Locale = 'ru' | 'en';
 export type Messages = Record<string, string>;
 export type Catalog = Record<Locale, { key: string; value: string }[]>;
@@ -10,6 +7,7 @@ export interface EditorState {
   revision: number;
   published: Catalog;
   inherited: Catalog;
+  source: Catalog;
   draft?: Catalog;
 }
 export function decode(catalog: Catalog): Values {

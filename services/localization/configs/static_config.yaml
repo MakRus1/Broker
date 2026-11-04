@@ -25,6 +25,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-internal-localization-sources-upsert:
+            path: /api/internal/localization/sources/upsert
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-localization-catalog:
             path: /api/v1/localization/catalog
             method: POST
@@ -68,10 +74,13 @@ components_manager:
                 /api/admin/localization/get: localization.read
                 /api/admin/localization/publish: localization.write
                 /api/admin/localization/save: localization.write
+                /api/internal/localization/sources/upsert: localization.register
                 /api/v1/localization/catalog: authenticated
             permission-dependencies:
                 localization.write:
                 - localization.read
+            service-clients:
+                localization.register: localization-publisher
             platform-url: $platform-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

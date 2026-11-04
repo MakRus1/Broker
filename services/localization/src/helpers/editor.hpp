@@ -1,5 +1,4 @@
 #pragma once
-#include <builtin_catalog.hpp>
 #include <helpers/catalog.hpp>
 #include <regex>
 #include <set>
@@ -21,16 +20,9 @@ inline std::set<std::string> Parameters(const std::string& text) {
     return result;
 }
 
-inline json::Value Builtin(std::initializer_list<std::string_view> parts) {
-    std::string text;
-    for (auto part : parts)
-        text += part;
-    return json::FromString(text);
-}
-
-inline json::Value EncodeCatalog(const Catalog& catalog) {
-    static const auto ru = Builtin(kBuiltinRu);
-    static const auto en = Builtin(kBuiltinEn);
+inline json::Value EncodeCatalog(const Catalog& catalog, const json::Value& source) {
+    const auto ru = source["ru"];
+    const auto en = source["en"];
     json::ValueBuilder result{json::Type::kObject};
     const auto encode = [&](const auto& entries, const auto& builtin, const char* locale) {
         result[locale] = json::ValueBuilder{json::Type::kObject};
@@ -70,6 +62,7 @@ inline Catalog DecodeCatalog(const json::Value& value) {
 // Called inside the writer transaction too: returned version and catalogs are one snapshot.
 inline models::CatalogEditorState ReadEditor(pg::Transaction& tx, const std::string& scope) {
     models::CatalogEditorState result;
+    result.source = DecodeCatalog(tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>());
     result.version = 0;
     result.revision = 0;
     const auto state = tx.Execute(sql::kGetEditor, scope);
@@ -101,7 +94,7 @@ inline models::CatalogEditorState GetEditor(const Deps& deps, const std::string&
 
 inline models::CatalogEditorState ChangeEditor(const Deps& deps, const std::string& scope,
     std::int64_t expected, const std::optional<Catalog>& catalog) {
-    // Validate before taking a row lock; publishing revalidates the saved draft.
+    // Регистрация исходных текстов не меняет черновики; публикация проверяет их заново.
     if (scope != "global" && catalog) {
         for (const auto* entries : {&catalog->ru, &catalog->en})
             for (const auto& entry : *entries)
@@ -109,7 +102,6 @@ inline models::CatalogEditorState ChangeEditor(const Deps& deps, const std::stri
                     throw ApiError<400>{"global_translation_only",
                         "Переводы входа доступны только в общем каталоге"};
     }
-    const auto encoded = catalog ? std::optional{EncodeCatalog(*catalog)} : std::nullopt;
     auto tx = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kEnsureEditor, scope);
     const auto [version, revision, draft] =
@@ -119,12 +111,14 @@ inline models::CatalogEditorState ChangeEditor(const Deps& deps, const std::stri
     if (version != expected)
         throw ApiError<409>{
             "catalog_changed", "Переводы изменены. Обновите редактор перед сохранением"};
-    if (encoded) {
-        tx.Execute(sql::kSaveEditor, scope, *encoded);
+    const auto source = tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>();
+    if (catalog) {
+        const auto encoded = EncodeCatalog(*catalog, source);
+        tx.Execute(sql::kSaveEditor, scope, encoded);
     } else {
         if (!draft)
             throw ApiError<409>{"draft_required", "Нет черновика для публикации"};
-        const auto valid = EncodeCatalog(DecodeCatalog(*draft));
+        const auto valid = EncodeCatalog(DecodeCatalog(*draft), source);
         for (const auto& locale : {"ru", "en"}) {
             if (scope == "global")
                 tx.Execute(sql::kPublishCatalog, locale, valid[locale], revision + 1);

@@ -9,3 +9,8 @@ localization.write:
   scope: platform
   requires:
   - localization.read
+localization.register:
+  name: Регистрация исходных переводов релизом
+  group: Переводы
+  scope: service
+  requires: []

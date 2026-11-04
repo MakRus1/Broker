@@ -1,7 +1,0 @@
-#pragma once
-#include <initializer_list>
-#include <string_view>
-namespace localization::helpers {
-inline constexpr std::initializer_list<std::string_view> kBuiltinRu = {R"catalog(@LOCALIZATION_RU@)catalog"};
-inline constexpr std::initializer_list<std::string_view> kBuiltinEn = {R"catalog(@LOCALIZATION_EN@)catalog"};
-}

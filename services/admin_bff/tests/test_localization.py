@@ -1,7 +1,7 @@
 import pytest
 
 CATALOG = {'ru': [{'key': 'nav.shipments', 'value': 'Букинги'}], 'en': []}
-STATE = {'version': 1, 'revision': 0, 'published': {'ru': [], 'en': []}, 'inherited': {'ru': [], 'en': []}, 'draft': CATALOG}
+STATE = {'version': 1, 'revision': 0, 'published': {'ru': [], 'en': []}, 'inherited': {'ru': [], 'en': []}, 'draft': CATALOG, 'source': CATALOG}
 
 
 @pytest.mark.parametrize('action,body', [('get', {}), ('save', {'version': 0, 'catalog': CATALOG}), ('publish', {'version': 1})])

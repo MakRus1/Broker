@@ -3,7 +3,6 @@ import { request, type Session } from '../../shared/api/api';
 import { Select } from '../../shared/ui/Select';
 import type { Organization } from '../organizations/types';
 import {
-  builtins,
   decode,
   encode,
   parameters,
@@ -72,6 +71,7 @@ export function TranslationEditor({
     return () => window.removeEventListener('beforeunload', prevent);
   }, [dirty]);
   const inherited = useMemo(() => (state ? decode(state.inherited) : { ru: {}, en: {} }), [state]);
+  const builtins = useMemo(() => (state ? decode(state.source) : { ru: {}, en: {} }), [state]);
   const keys = useMemo(
     () =>
       Object.keys(builtins.ru)
@@ -92,7 +92,7 @@ export function TranslationEditor({
           return text.includes(query.toLowerCase());
         })
         .sort(),
-    [query, changedOnly, scope, values, inherited],
+    [query, changedOnly, scope, values, inherited, builtins],
   );
   const invalid = useMemo(
     () =>
@@ -105,7 +105,7 @@ export function TranslationEditor({
           )
           .map(([key]) => key),
       ),
-    [values],
+    [values, builtins],
   );
   const edit = (locale: Locale, key: string, value: string) => {
     setValues((previous) => ({ ...previous, [locale]: { ...previous[locale], [key]: value } }));

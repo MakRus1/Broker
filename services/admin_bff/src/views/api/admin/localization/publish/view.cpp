@@ -20,6 +20,8 @@ Response View::Handle(
         .published = broker_codegen::ParseJson<models::EditableCatalog>(
             userver::formats::json::ValueBuilder(result.published).ExtractValue()),
         .revision = result.revision,
+        .source = broker_codegen::ParseJson<models::EditableCatalog>(
+            userver::formats::json::ValueBuilder(result.source).ExtractValue()),
         .version = result.version};
 }
 }  // namespace admin_bff::views::api::admin::localization::publish

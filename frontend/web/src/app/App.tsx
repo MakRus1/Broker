@@ -356,7 +356,19 @@ function WorkspaceApp() {
             }}
           >
             <span className="navigation-icon" aria-hidden="true">
-              ⌂
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" />
+                <path d="M9 21v-8h6v8" />
+              </svg>
             </span>
             <span className="navigation-text">{translate('home.navigation')}</span>
           </button>

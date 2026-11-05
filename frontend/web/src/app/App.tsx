@@ -1,3 +1,4 @@
+import { GlobalSearch } from '../features/search/GlobalSearch';
 import { RelatedCreationProvider, useRelatedRequests } from '../shared/forms/RelatedCreation';
 import { BankAccountCreation } from '../features/counterparties/BankAccountCreation';
 import { interfaceText } from '../shared/localization/interfaceText';
@@ -502,6 +503,12 @@ function WorkspaceApp() {
           <span>{translate('workspace.operations')}</span>
           <div className="header-tools">
             <span className="environment">Broker / {translate('workspace.title')}</span>
+            <GlobalSearch
+              key={`${session.subject}:${session.organization_id}`}
+              session={session}
+              tabs={localizedTabs}
+              route={route}
+            />
             <LanguageControl />
             <ThemeControl />
           </div>

@@ -169,3 +169,32 @@ it('подтверждение сохранения не меняет snapshot �
   expect(store.snapshotFor(key)).toBe(changed);
   store.dispose();
 });
+
+it('uses role defaults only when no personal value exists and never imports defaults', () => {
+  const transport: PreferenceTransport = {
+    list: vi.fn(async () => []),
+    save: vi.fn(async (_key, value, revision) => entry(value.value, revision + 1)),
+  };
+  const store = new PreferenceStore('actor', 'author', 'org', transport, [], storage(), true, {
+    'shipments:columns:v1': ['role'],
+  });
+  expect(store.read(key)).toEqual(['role']);
+  store.import(key);
+  expect(transport.save).not.toHaveBeenCalled();
+  expect(store.readPersonal(key)).toBeUndefined();
+  store.set(key, ['personal']);
+  expect(store.read(key)).toEqual(['personal']);
+  store.dispose();
+  const personal = new PreferenceStore(
+    'actor',
+    'author',
+    'org',
+    transport,
+    [entry(['personal'])],
+    storage(),
+    true,
+    { 'shipments:columns:v1': ['new-role'] },
+  );
+  expect(personal.read(key)).toEqual(['personal']);
+  personal.dispose();
+});

@@ -4,6 +4,12 @@ import { request, ApiError } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
 import { PreferenceStore, type Preference, type PreferenceTransport } from './preferenceStore';
 
+export interface RoleRegistryDefault {
+  role: string;
+  registry: string;
+  value: { columns: unknown; query: unknown };
+  revision: number;
+}
 const PreferencesContext = createContext<PreferenceStore | undefined>(undefined);
 const SessionContext = createContext<{
   session: Session | null | undefined;
@@ -29,16 +35,21 @@ export function UserPreferences({ children }: { children: ReactNode }) {
           undefined,
           controller.signal,
         );
+        let roleDefaults: RoleRegistryDefault[] = [];
         const transport: PreferenceTransport = {
-          list: async () =>
-            (
-              await request<{ preferences: Preference[] }>(
-                '/api/preferences/list',
-                user,
-                { organization_id: user.organization_id },
-                controller.signal,
-              )
-            ).preferences,
+          list: async () => {
+            const result = await request<{
+              preferences: Preference[];
+              role_defaults?: RoleRegistryDefault[];
+            }>(
+              '/api/preferences/list',
+              user,
+              { organization_id: user.organization_id },
+              controller.signal,
+            );
+            roleDefaults = result.role_defaults ?? [];
+            return result.preferences;
+          },
           save: async (key, value, expected_revision) =>
             (
               await request<{ preference: Preference }>(
@@ -71,6 +82,12 @@ export function UserPreferences({ children }: { children: ReactNode }) {
           entries,
           storage,
           ready,
+          Object.fromEntries(
+            roleDefaults.flatMap((item) => [
+              [`${item.registry}:columns:v1`, item.value.columns],
+              [`${item.registry}:query:v1`, item.value.query],
+            ]),
+          ),
         );
         setStore(current);
         setSession(user);

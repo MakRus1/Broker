@@ -49,6 +49,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-preferences-roles-list:
+            path: /api/preferences/roles/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
+        handler-api-preferences-roles-save:
+            path: /api/preferences/roles/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 0
+            response_data_size_log_limit: 0
         handler-api-preferences-save:
             path: /api/preferences/save
             method: POST

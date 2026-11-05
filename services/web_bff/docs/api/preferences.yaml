@@ -29,11 +29,16 @@ paths:
                 additionalProperties: false
                 required:
                 - preferences
+                - role_defaults
                 properties:
                   preferences:
                     type: array
                     items:
                       $ref: ../components/schemas/preferences/models.yaml#/Preference
+                  role_defaults:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/registry_defaults.yaml#/RegistryDefault
         '400':
           description: Некорректная настройка
           content:

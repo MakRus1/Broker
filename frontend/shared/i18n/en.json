@@ -1203,5 +1203,10 @@
   "home.chooseSections": "Choose sections",
   "home.recentHint": "Records you open will appear here.",
   "home.viewsHint": "Save filters and columns with Save as in a registry. The view will appear here.",
-  "home.navigation": "Home"
+  "home.navigation": "Home",
+  "roleView.action": "Role default…",
+  "roleView.title": "Default registry view",
+  "roleView.description": "Use the current columns, filters and sort order as the default for this role. Personal settings will be preserved.",
+  "roleView.role": "Role",
+  "roleView.saved": "Role default saved"
 }

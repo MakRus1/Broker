@@ -9,6 +9,8 @@ paths:
 - /api/logout
 - /api/organizations/employees/list
 - /api/preferences/list
+- /api/preferences/roles/list
+- /api/preferences/roles/save
 - /api/preferences/save
 - /api/session
 - /api/v1/contracts/filter-values

@@ -20,6 +20,9 @@ paths:
 - /api/organizations/employees/list
 - /api/organizations/me
 - /api/organizations/membership/get
+- /api/organizations/registry-defaults/get
+- /api/organizations/registry-defaults/list
+- /api/organizations/registry-defaults/save
 - /api/platform/access
 default:
   '**default**':

@@ -22,6 +22,7 @@ export function useRegistryColumns(
   subject: string,
   registry: string,
   definitions: readonly ColumnDefinition[],
+  view?: { query: unknown; apply: (raw: unknown) => void; active?: boolean },
 ) {
   const [columns, setColumns] = useRegistryPreference(
     preferenceKey(subject, registry, 'columns'),
@@ -41,6 +42,8 @@ export function useRegistryColumns(
   const newColumns = newColumnIds(knownColumns, definitions);
   const acknowledgeColumns = () => setKnownColumns(definitions.map((column) => column.id));
   return {
+    view,
+    viewsKey: preferenceKey(subject, registry, 'saved-views'),
     columns,
     setColumns,
     definitions,
@@ -49,7 +52,9 @@ export function useRegistryColumns(
     guidanceKey: preferenceKey(subject, registry, 'guide-dismissed'),
   };
 }
-export type RegistryColumns = ReturnType<typeof useRegistryColumns>;
+type RegistryColumnState = ReturnType<typeof useRegistryColumns>;
+export type RegistryColumns = Omit<RegistryColumnState, 'view' | 'viewsKey'> &
+  Partial<Pick<RegistryColumnState, 'view' | 'viewsKey'>>;
 export function RegistryColumnSettings({
   columns,
   setColumns,

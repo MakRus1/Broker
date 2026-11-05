@@ -101,7 +101,6 @@ export function CounterpartiesPage({
         value.archived ? translate('filter.archived') : translate('filter.active'),
     },
   ];
-  const columnState = useRegistryColumns(session.subject, 'counterparties', columns);
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
   const creating = /^\/counterparties\/new(?:\/|$)/.test(route);
   const related = useRelatedRequests()?.pending.get(route);
@@ -122,6 +121,11 @@ export function CounterpartiesPage({
     initialCounterpartyQuery,
     restoreCounterpartyQuery,
   );
+  const columnState = useRegistryColumns(session.subject, 'counterparties', columns, {
+    active,
+    query: registryFilters,
+    apply: (raw) => setRegistryFilters(restoreCounterpartyQuery(raw)),
+  });
   const { sort, descending } = registryFilters;
   const filters = useColumnFilters({
     registry: 'counterparties',
@@ -147,7 +151,6 @@ export function CounterpartiesPage({
     async (cursor?: CounterpartyRegistryCursor, signal?: AbortSignal) => {
       const current = ++epoch.current;
       if (!cursor) {
-        setItems([]);
         setMore(false);
       }
       setLoading(true);

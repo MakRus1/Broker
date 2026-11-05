@@ -106,7 +106,6 @@ export function InvoiceRegistry({
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
-    setItems([]);
     setCursor(undefined);
     request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
       '/api/v1/invoices/list',
@@ -241,7 +240,11 @@ export function InvoiceRegistry({
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
-  const columnState = useRegistryColumns(session.subject, `${direction}-invoices`, columns);
+  const columnState = useRegistryColumns(session.subject, `${direction}-invoices`, columns, {
+    active,
+    query: query,
+    apply: (raw) => setQuery(restoreInvoiceQuery(raw)),
+  });
   return (
     <section className="invoice-registry registry-workbench">
       <RegistryHeading

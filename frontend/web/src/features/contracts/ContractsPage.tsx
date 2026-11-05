@@ -276,7 +276,6 @@ export function ContractsPage({
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
-    setItems([]);
     setAfter(undefined);
     request<{ items: Contract[]; next_cursor?: Cursor }>(
       '/api/v1/contracts/list',
@@ -371,7 +370,11 @@ export function ContractsPage({
       render: (item) => item.payment_delay_days ?? translate('routeFilter.pointNotSet'),
     },
   ];
-  const columnState = useRegistryColumns(session.subject, 'contracts', columns);
+  const columnState = useRegistryColumns(session.subject, 'contracts', columns, {
+    active,
+    query: registryQuery,
+    apply: (raw) => setRegistryQuery(restoreContractQuery(raw)),
+  });
   const dirty =
     editing &&
     !!draft &&

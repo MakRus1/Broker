@@ -1165,5 +1165,20 @@
   "related.invoiceReturnHint": "After saving, the invoice will be selected in “{title}”.",
   "related.createInvoice": "Create invoice…",
   "related.createLabel": "Create financial label…",
-  "related.labelReturnHint": "After saving, the financial label will be selected in “{title}”."
+  "related.labelReturnHint": "After saving, the financial label will be selected in “{title}”.",
+  "views.title": "View",
+  "views.current": "Personal view",
+  "views.save": "Save as…",
+  "views.manage": "Registry view",
+  "views.name": "Name",
+  "views.hint": "Filters, sorting and columns are saved automatically to the selected view. Enter a new name to create a separate view.",
+  "views.saveNew": "Save new",
+  "views.update": "Update view",
+  "views.delete": "Delete view",
+  "views.duplicate": "A view with this name already exists.",
+  "views.nameRequired": "Enter a view name.",
+  "views.limit": "You can save up to 20 views per registry.",
+  "views.tooLarge": "View storage is full. Reduce filters or delete unused views.",
+  "views.modified": " · modified",
+  "views.saveCopy": "Save as a new view"
 }

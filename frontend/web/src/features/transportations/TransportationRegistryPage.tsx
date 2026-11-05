@@ -62,7 +62,11 @@ export function TransportationRegistry({
   const routeFilters = useRouteRegistryFilters(session, query, (route_filters) =>
     setQuery((old) => ({ ...old, route_filters })),
   );
-  const columns = useRegistryColumns(session.subject, 'transportations', transportationColumns);
+  const columns = useRegistryColumns(session.subject, 'transportations', transportationColumns, {
+    active,
+    query: query,
+    apply: (raw) => setQuery(restoreTransportationQuery(raw)),
+  });
   return (
     <div className="registry-page transportation-registry registry-workbench" hidden={!active}>
       <RegistryHeading

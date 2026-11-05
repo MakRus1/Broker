@@ -299,6 +299,7 @@ export function RegistryTable<T extends { id: string }>({
   const [source, setSource] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; side: 'before' | 'after' } | null>(null);
   const visible = state.columns.filter((column) => column.visible);
+  const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
   const [availableWidth, setAvailableWidth] = useState(0);
   useEffect(() => {
     const element = scroll.current;
@@ -309,7 +310,7 @@ export function RegistryTable<T extends { id: string }>({
     return () => observer.disconnect();
   }, []);
   const standardWidths = state.columns.every(
-    (column) => column.width === definitions.find((entry) => entry.id === column.id)?.width,
+    (column) => column.width === definitionsById.get(column.id)?.width,
   );
   const columnWidths = standardWidths
     ? fitRegistryWidths(
@@ -390,7 +391,7 @@ export function RegistryTable<T extends { id: string }>({
       .filter(
         (field) =>
           !visible.some((column) => {
-            const definition = definitions.find((value) => value.id === column.id)!;
+            const definition = definitionsById.get(column.id)!;
             return (
               definition.filterFields !== false &&
               (definition.filterFields ?? [definition.id]).includes(field.id)
@@ -406,7 +407,7 @@ export function RegistryTable<T extends { id: string }>({
           controller={filters}
           hidden={hidden}
           extraEntries={Object.entries(customFilters ?? {}).map(([id, value]) => {
-            const column = definitions.find((column) => column.id === id);
+            const column = definitionsById.get(id);
             return {
               id,
               label: column ? displayLabel(column) : id,
@@ -472,7 +473,7 @@ export function RegistryTable<T extends { id: string }>({
                 <th className="registry-selection-cell">{selectionColumn.header}</th>
               )}
               {visible.map((column) => {
-                const definition = definitions.find((entry) => entry.id === column.id)!;
+                const definition = definitionsById.get(column.id)!;
                 const filterFields =
                   definition.filterFields === false
                     ? []
@@ -633,11 +634,8 @@ export function RegistryTable<T extends { id: string }>({
                   <td className="registry-selection-cell">{selectionColumn.render(item)}</td>
                 )}
                 {visible.map((column) => (
-                  <td
-                    key={column.id}
-                    className={definitions.find((entry) => entry.id === column.id)!.cellClassName}
-                  >
-                    {definitions.find((entry) => entry.id === column.id)!.render(item)}
+                  <td key={column.id} className={definitionsById.get(column.id)!.cellClassName}>
+                    {definitionsById.get(column.id)!.render(item)}
                   </td>
                 ))}
               </tr>

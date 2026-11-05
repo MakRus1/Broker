@@ -13,7 +13,7 @@ export function useRegistryPreference<T>(key: string, initial: T, decode: (raw: 
   const store = key ? preferences : null;
   const version = useSyncExternalStore(
     store?.subscribe ?? (() => () => {}),
-    store ? () => JSON.stringify(store.read(key)) : () => undefined,
+    store ? () => store.snapshotFor(key) : () => undefined,
     () => undefined,
   );
   function read(): T {

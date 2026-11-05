@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from './useRegistryFreshness';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Page<T, Cursor> {
@@ -17,6 +18,7 @@ export function useRegistryPage<T, Cursor>({
   loadPage: (cursor: Cursor | undefined, signal: AbortSignal) => Promise<Page<T, Cursor>>;
   onError: (error: unknown) => void;
 }) {
+  const cache = useRegistryFreshness([loadPage, refreshVersion]);
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -30,6 +32,7 @@ export function useRegistryPage<T, Cursor>({
       const controller = new AbortController();
       pending.current = controller;
       if (!append) {
+        cache.clear();
         cursor.current = undefined;
         setMore(false);
       }
@@ -38,6 +41,7 @@ export function useRegistryPage<T, Cursor>({
       try {
         const page = await loadPage(append ? cursor.current : undefined, controller.signal);
         if (controller.signal.aborted) return;
+        if (!append) cache.complete();
         setItems((old) => (append ? [...old, ...page.items] : page.items));
         cursor.current = page.next_cursor ?? undefined;
         setMore(cursor.current !== undefined);
@@ -53,14 +57,17 @@ export function useRegistryPage<T, Cursor>({
         }
       }
     },
-    [active, loadPage, onError],
+    [active, loadPage, onError, cache.version, refreshVersion],
   );
   useEffect(() => {
-    void load();
+    if (active && !cache.isFresh()) void load();
     return () => {
-      pending.current?.abort();
-      pending.current = null;
+      if (pending.current) {
+        pending.current.abort();
+        pending.current = null;
+        setLoading(false);
+      }
     };
-  }, [load, refreshVersion]);
+  }, [load, refreshVersion, cache.version]);
   return { items, loading, failed, more, refresh: () => load(), loadMore: () => load(true) };
 }

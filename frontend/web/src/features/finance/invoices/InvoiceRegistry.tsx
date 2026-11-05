@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
@@ -101,8 +102,11 @@ export function InvoiceRegistry({
     fields: filters.fields.filter((field) => !scopedFields.has(field.id)),
     filters: filters.filters.filter((filter) => !scopedFields.has(filter.field)),
   };
+  const cache = useRegistryFreshness([direction, query, session, version, scope, refreshVersion]);
   useEffect(() => {
     if (!active) return;
+    if (cache.isFresh()) return;
+    cache.clear();
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
@@ -115,6 +119,7 @@ export function InvoiceRegistry({
     )
       .then((r) => {
         if (!controller.signal.aborted) {
+          cache.complete();
           setItems(r.items.map(flatten));
           setCursor(r.next_cursor);
         }
@@ -126,7 +131,7 @@ export function InvoiceRegistry({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [active, direction, query, session, version, scope, refreshVersion]);
+  }, [active, direction, query, session, version, scope, refreshVersion, cache.version]);
   async function more() {
     if (!cursor || loading) return;
     setLoading(true);

@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from '../registry/useRegistryFreshness';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
@@ -271,8 +272,11 @@ export function ContractsPage({
             (id ? translate('registryField.contract_id') : translate('nav.contracts'))),
     );
   }, [creating, id, value?.id, value?.number, locale, catalogVersion]);
+  const cache = useRegistryFreshness([id, creating, read, registryQuery, session, version]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
+    if (cache.isFresh()) return;
+    cache.clear();
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
@@ -285,6 +289,7 @@ export function ContractsPage({
     )
       .then((result) => {
         if (!controller.signal.aborted) {
+          cache.complete();
           setItems(result.items);
           setAfter(result.next_cursor);
         }
@@ -299,7 +304,7 @@ export function ContractsPage({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [id, creating, read, active, registryQuery, session, version]);
+  }, [id, creating, read, active, registryQuery, session, version, cache.version]);
   const columns: RegistryColumn<Contract>[] = [
     {
       id: 'number',

@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
 import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -193,8 +194,11 @@ export function FinancialLabelsPage({
       });
     return () => controller.abort();
   }, [creating, creationId, id, read, session]);
+  const cache = useRegistryFreshness([read, id, creating, query, session, version]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
+    if (cache.isFresh()) return;
+    cache.clear();
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
@@ -207,6 +211,7 @@ export function FinancialLabelsPage({
     )
       .then((result) => {
         if (!controller.signal.aborted) {
+          cache.complete();
           setItems(result.items);
           setCursor(result.next_cursor);
         }
@@ -221,7 +226,7 @@ export function FinancialLabelsPage({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [active, read, id, creating, query, session, version]);
+  }, [active, read, id, creating, query, session, version, cache.version]);
   const columns: RegistryColumn<FinancialLabel>[] = [
     {
       id: 'name',

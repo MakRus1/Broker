@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         registry: fileURLToPath(new URL('./registry.html', import.meta.url)),
         pages: fileURLToPath(new URL('./pages.html', import.meta.url)),
+        endurance: fileURLToPath(new URL('./endurance.html', import.meta.url)),
       },
     },
   },

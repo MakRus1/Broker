@@ -1,4 +1,4 @@
-import { useRegistryFreshness } from '../registry/useRegistryFreshness';
+import { useRegistryPage } from '../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordHeading } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
@@ -116,7 +116,6 @@ export function CounterpartiesPage({
   const [historyVersion, setHistoryVersion] = useState(0);
   const [item, setItem] = useState<Counterparty>();
   const [failure, setFailure] = useState('');
-  const [items, setItems] = useState<Counterparty[]>([]);
   const [registryFilters, setRegistryFilters] = useRegistryPreference(
     preferenceKey(session.subject, 'counterparties', 'query'),
     initialCounterpartyQuery,
@@ -136,73 +135,39 @@ export function CounterpartiesPage({
     onSort: (sort, descending) =>
       setRegistryFilters((old) => ({ ...old, sort: sort as CounterpartySort, descending })),
   });
-  const [nextCursor, setNextCursor] = useState<CounterpartyRegistryCursor>();
-  const [more, setMore] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(false);
   const [archiveFailure, setArchiveFailure] = useState('');
   const [busy, setBusy] = useState(false);
-  const epoch = useRef(0);
   useEffect(() => {
     if (item) onTitle?.(item.name);
   }, [item?.name]);
   const write = session.permissions.includes('counterparties.write');
   const read = session.permissions.includes('counterparties.read');
-  const cache = useRegistryFreshness([registryFilters, session, read]);
-  const load = useCallback(
-    async (cursor?: CounterpartyRegistryCursor, signal?: AbortSignal) => {
-      const current = ++epoch.current;
-      if (!cursor) {
-        cache.clear();
-        setMore(false);
-      }
-      setLoading(true);
+  const loadPage = useCallback(
+    (cursor: CounterpartyRegistryCursor | undefined, signal: AbortSignal) => {
       setFailure('');
-      try {
-        const result = await request<{
-          items: Counterparty[];
-          next_cursor?: CounterpartyRegistryCursor;
-        }>(
-          '/api/v1/counterparties/list',
-          session,
-          {
-            filters: filterRequest(registryFilters.filters),
-            sort,
-            descending,
-            limit: 50,
-            ...(cursor ? { cursor } : {}),
-          },
-          signal,
-        );
-        if (signal?.aborted || current !== epoch.current) return;
-        if (!cursor) cache.complete();
-        setItems((old) => (cursor ? [...old, ...result.items] : result.items));
-        setNextCursor(result.next_cursor);
-        setMore(Boolean(result.next_cursor));
-      } catch (error) {
-        if (!signal?.aborted && current === epoch.current) {
-          setFailure(
-            error instanceof Error ? error.message : translate('counterparty.couldNotLoadData'),
-          );
-          onError(error);
-        }
-      } finally {
-        if (current === epoch.current) setLoading(false);
-      }
+      return request<{ items: Counterparty[]; next_cursor?: CounterpartyRegistryCursor }>(
+        '/api/v1/counterparties/list',
+        session,
+        { filters: filterRequest(registryFilters.filters), sort, descending, limit: 50, cursor },
+        signal,
+      );
     },
-    [sort, descending, registryFilters.filters, session, onError, cache.version],
+    [registryFilters, session],
   );
-  useEffect(() => {
-    if (!active || id || creating || !read || cache.isFresh()) return;
-    const controller = new AbortController();
-    setLoading(true);
-    void load(undefined, controller.signal);
-    return () => {
-      controller.abort();
-      epoch.current++;
-      setLoading(false);
-    };
-  }, [active, id, creating, read, load, cache.version]);
+  const page = useRegistryPage({
+    active: active && !id && !creating && read,
+    refreshVersion: 0,
+    loadPage,
+    onError: (error) => {
+      setFailure(
+        error instanceof Error ? error.message : translate('counterparty.couldNotLoadData'),
+      );
+      onError(error);
+    },
+  });
+  const items = page.items;
+  const loading = page.loading;
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
       if (!id) return;
@@ -504,9 +469,9 @@ export function CounterpartiesPage({
       <RegistryHeading
         columns={columnState}
         title={translate('nav.counterparties')}
-        count={items.length}
+        count={page.count}
         loading={loading}
-        onRefresh={() => void load()}
+        onRefresh={() => void page.refresh()}
       >
         {write && (
           <a className="button primary" href="#/counterparties/new">
@@ -521,6 +486,7 @@ export function CounterpartiesPage({
           </p>
         )}
         <RegistryTable
+          pageSource={page.source}
           items={items}
           columns={columnState}
           definitions={columns}
@@ -550,7 +516,7 @@ export function CounterpartiesPage({
             failureMessage={failure}
             filtered={Boolean(registryFilters.filters?.length)}
             title={translate('registryPage.noCounterparties')}
-            onRetry={() => void load()}
+            onRetry={() => void page.refresh()}
             onReset={() => setRegistryFilters((old) => ({ ...old, filters: [] }))}
             create={
               write
@@ -565,10 +531,10 @@ export function CounterpartiesPage({
           />
         )}
         <AutoLoadMore
-          enabled={more}
+          enabled={page.more}
           loading={loading}
           failed={Boolean(failure)}
-          onLoad={() => load(nextCursor)}
+          onLoad={page.loadMore}
         />
       </section>
     </div>

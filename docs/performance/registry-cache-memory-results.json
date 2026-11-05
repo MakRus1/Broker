@@ -1,0 +1,118 @@
+{
+  "runtime": "v24.22.1",
+  "platform": "darwin",
+  "registries": 4,
+  "columns": 100,
+  "pageSize": 50,
+  "pageLimit": 8,
+  "samples": [
+    {
+      "phase": "append",
+      "rowsPerRegistry": 0,
+      "heapUsedBytes": 3819792,
+      "resident": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "elapsedMs": 1
+    },
+    {
+      "phase": "append",
+      "rowsPerRegistry": 1000,
+      "heapUsedBytes": 15406016,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 60
+    },
+    {
+      "phase": "append",
+      "rowsPerRegistry": 10000,
+      "heapUsedBytes": 20019800,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 453
+    },
+    {
+      "phase": "append",
+      "rowsPerRegistry": 25000,
+      "heapUsedBytes": 24581104,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 1156
+    },
+    {
+      "phase": "append",
+      "rowsPerRegistry": 50000,
+      "heapUsedBytes": 33254912,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 2385
+    },
+    {
+      "phase": "append",
+      "rowsPerRegistry": 100000,
+      "heapUsedBytes": 51103992,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 5161
+    },
+    {
+      "phase": "restore-round-1",
+      "rowsPerRegistry": 100000,
+      "heapUsedBytes": 50681080,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 5397
+    },
+    {
+      "phase": "restore-round-2",
+      "rowsPerRegistry": 100000,
+      "heapUsedBytes": 50686576,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 5619
+    },
+    {
+      "phase": "restore-round-3",
+      "rowsPerRegistry": 100000,
+      "heapUsedBytes": 50687072,
+      "resident": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "elapsedMs": 5843
+    }
+  ]
+}

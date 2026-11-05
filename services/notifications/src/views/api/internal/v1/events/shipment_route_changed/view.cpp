@@ -23,7 +23,8 @@ Response View::Handle(
                  .AsSingleRow<bool>())
             throw ApiError<409>{
                 "event_conflict", "Событие с этим ключом уже принято с другими данными"};
-    } else if (event.recipient_subject.has_value()) {
+    } else if (event.recipient_subject.has_value() &&
+        event.recipient_subject.value() != event.actor_subject) {
         transaction.Execute(sql::kCreateNotification, event.organization_id, event.recipient_issuer,
             event.recipient_subject.value(), event.shipment_id, event.shipment_number,
             event.revision);

@@ -102,3 +102,17 @@ async def test_event_without_assigned_logist_is_still_recorded(api, publish):
     assert (await publish(event(recipient_subject=None))).status == 200
     assert (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items'] == []
     assert (await publish(event())).status == 409
+
+
+async def test_author_does_not_receive_own_route_change(api, publish, pgsql):
+    own_event = event(actor_subject='author')
+    assert (await publish(own_event)).status == 200
+    assert (await publish(own_event)).status == 200
+    assert (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items'] == []
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM notification_events')
+        assert cursor.fetchone()[0] == 1
+    # Другой автор по-прежнему уведомляет назначенного логиста.
+    assert (await publish(event(revision=3))).status == 200
+    items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
+    assert len(items) == 1 and items[0]['shipment_revision'] == 3

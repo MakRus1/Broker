@@ -1,3 +1,4 @@
+import { invalidateRegistryData, isDataMutation } from './dataInvalidation';
 import { interfaceText } from '../localization/interfaceText';
 import type { Session } from './session';
 export class ApiError extends Error {
@@ -38,5 +39,6 @@ export async function request<T>(
       typeof value?.error === 'string' ? value.error : undefined,
     );
   }
+  if (isDataMutation(path)) invalidateRegistryData();
   return value as T;
 }

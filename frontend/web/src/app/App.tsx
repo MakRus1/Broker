@@ -628,6 +628,7 @@ function WorkspaceApp() {
                   />
                 ) : entry.route.startsWith('/service-charges') ? (
                   <ServiceCharges
+                    active={activeWorkspace === entry.id}
                     scope={{ shipment_id: null, transportation_id: null }}
                     session={session}
                     customers={customers}

@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
@@ -51,11 +52,13 @@ function restore(raw: unknown): typeof initial {
   };
 }
 export function ServiceChargeRegistry({
+  active = true,
   session,
   version,
   onEdit,
   onCreate,
 }: {
+  active?: boolean;
   session: Session;
   version: number;
   onEdit: (charge: ServiceCharge, invoice?: ServiceChargeInvoice) => void;
@@ -145,7 +148,10 @@ export function ServiceChargeRegistry({
     onChange: (filters) => setQuery((old) => ({ ...old, filters })),
     onSort: (sort, descending) => setQuery((old) => ({ ...old, sort, descending })),
   });
+  const cache = useRegistryFreshness([query, session, version, refresh]);
   useEffect(() => {
+    if (!active || cache.isFresh()) return;
+    cache.clear();
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
@@ -158,6 +164,7 @@ export function ServiceChargeRegistry({
     )
       .then((page) => {
         if (!controller.signal.aborted) {
+          cache.complete();
           setItems(rows(page));
           setCursor(page.next_cursor);
         }
@@ -169,7 +176,7 @@ export function ServiceChargeRegistry({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [query, session, version, refresh]);
+  }, [active, query, session, version, refresh, cache.version]);
   async function more() {
     if (!cursor || loading) return;
     setLoading(true);

@@ -18,6 +18,9 @@ export class PreferenceStore {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private listeners = new Set<() => void>();
   private version = 0;
+  private keyVersions = new Map<string, number>();
+  private keyValues = new Map<string, string | undefined>();
+  private refreshVersion = 0;
   private disposed = false;
   error: MessageKey | '' = '';
   constructor(
@@ -39,9 +42,21 @@ export class PreferenceStore {
     };
   };
   snapshot = () => this.version;
-  private emit() {
+  snapshotFor = (legacyKey: string) =>
+    Math.max(this.refreshVersion, this.keyVersions.get(this.key(legacyKey)) ?? 0);
+  private emit(key?: string) {
     if (this.disposed) return;
     this.version++;
+    if (key) {
+      // Сравниваем один раз на изменение, а не в каждой подписке React.
+      const value = JSON.stringify(
+        this.pending.has(key) ? this.pending.get(key) : this.entries.get(key)?.value.value,
+      );
+      if (value !== this.keyValues.get(key)) {
+        this.keyValues.set(key, value);
+        this.keyVersions.set(key, this.version);
+      }
+    } else this.refreshVersion = this.version;
     this.listeners.forEach((listener) => listener());
   }
   private key(legacyKey: string) {
@@ -62,6 +77,8 @@ export class PreferenceStore {
   private replace(entries: Preference[]) {
     for (const entry of entries) {
       this.entries.set(entry.key, entry);
+      if (!this.pending.has(entry.key))
+        this.keyValues.set(entry.key, JSON.stringify(entry.value.value));
       if (!this.pending.has(entry.key)) this.cache(entry.key, entry.value.value);
     }
   }
@@ -110,7 +127,7 @@ export class PreferenceStore {
         void this.flush(key);
       }, 350),
     );
-    this.emit();
+    this.emit(key);
   }
   private async flush(key: string) {
     if (!this.ready || this.running.has(key) || !this.pending.has(key) || this.disposed) return;
@@ -125,7 +142,7 @@ export class PreferenceStore {
         );
         this.entries.set(key, entry);
         if (this.pending.get(key) === value) this.pending.delete(key);
-        this.emit();
+        this.emit(key);
       }
     } catch (error) {
       if ((error as { status?: number }).status === 409) {
@@ -141,7 +158,7 @@ export class PreferenceStore {
           this.error = 'preferences.refreshFailed';
         }
       } else this.error = 'preferences.saveFailed';
-      this.emit();
+      this.emit(key);
     } finally {
       this.running.delete(key);
     }

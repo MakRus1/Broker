@@ -135,3 +135,37 @@ it('does not send localized or malformed preference keys to the server', async (
   expect(store.error).toBe('');
   store.dispose();
 });
+
+describe('подписка на конкретную настройку', () => {
+  it('изменение и сохранение одного ключа не инвалидирует остальные', async () => {
+    vi.useFakeTimers();
+    const { store } = setup([entry(['old'])]);
+    const other = 'broker:registry:author:contracts:columns:v1';
+    const before = store.snapshotFor(other);
+    store.set(key, ['new']);
+    expect(store.snapshotFor(key)).toBeGreaterThan(0);
+    expect(store.snapshotFor(other)).toBe(before);
+    await vi.runAllTimersAsync();
+    expect(store.snapshotFor(other)).toBe(before);
+    store.dispose();
+  });
+  it('повторная загрузка инвалидирует ключи, включая отсутствующие ранее', async () => {
+    const { store } = setup();
+    const before = store.snapshotFor(key);
+    await store.retry();
+    expect(store.snapshotFor(key)).toBeGreaterThan(before);
+    store.dispose();
+  });
+});
+
+it('подтверждение сохранения не меняет snapshot значения и не перезагружает реестр', async () => {
+  vi.useFakeTimers();
+  const { store } = setup([entry(['old'])]);
+  store.set(key, ['new']);
+  const changed = store.snapshotFor(key);
+  await vi.runAllTimersAsync();
+  expect(store.snapshotFor(key)).toBe(changed);
+  store.set(key, ['new']);
+  expect(store.snapshotFor(key)).toBe(changed);
+  store.dispose();
+});

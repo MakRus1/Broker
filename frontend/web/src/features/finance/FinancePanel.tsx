@@ -190,6 +190,7 @@ export function ServiceCharges({
   if (!scope.shipment_id && !editing)
     return (
       <ServiceChargeRegistry
+        active={active}
         session={session}
         version={version}
         onCreate={(direction) => {

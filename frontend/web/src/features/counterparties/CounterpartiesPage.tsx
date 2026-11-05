@@ -1,3 +1,4 @@
+import { useRegistryFreshness } from '../registry/useRegistryFreshness';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordHeading } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
@@ -147,10 +148,12 @@ export function CounterpartiesPage({
   }, [item?.name]);
   const write = session.permissions.includes('counterparties.write');
   const read = session.permissions.includes('counterparties.read');
+  const cache = useRegistryFreshness([registryFilters, session, read]);
   const load = useCallback(
     async (cursor?: CounterpartyRegistryCursor, signal?: AbortSignal) => {
       const current = ++epoch.current;
       if (!cursor) {
+        cache.clear();
         setMore(false);
       }
       setLoading(true);
@@ -172,6 +175,7 @@ export function CounterpartiesPage({
           signal,
         );
         if (signal?.aborted || current !== epoch.current) return;
+        if (!cursor) cache.complete();
         setItems((old) => (cursor ? [...old, ...result.items] : result.items));
         setNextCursor(result.next_cursor);
         setMore(Boolean(result.next_cursor));
@@ -186,18 +190,19 @@ export function CounterpartiesPage({
         if (current === epoch.current) setLoading(false);
       }
     },
-    [sort, descending, registryFilters.filters, session, onError],
+    [sort, descending, registryFilters.filters, session, onError, cache.version],
   );
   useEffect(() => {
-    if (id || creating || !read) return;
+    if (!active || id || creating || !read || cache.isFresh()) return;
     const controller = new AbortController();
     setLoading(true);
     void load(undefined, controller.signal);
     return () => {
       controller.abort();
       epoch.current++;
+      setLoading(false);
     };
-  }, [id, creating, read, load]);
+  }, [active, id, creating, read, load, cache.version]);
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
       if (!id) return;

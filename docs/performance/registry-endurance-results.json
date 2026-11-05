@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-05",
+  "kind": "production browser fixture, simulated page requests (10 ms delay), no BFF/PostgreSQL",
+  "registries": 4,
+  "columnsPerRegistry": 100,
+  "appendRequests": 480,
+  "rounds": 2,
+  "rowsPerRegistry": 6050,
+  "residentPerRegistry": 400,
+  "requestsPerRegistry": 129,
+  "warmSwitches": 12,
+  "warmSwitchRequestDelta": 0,
+  "elapsedMs": 12489,
+  "switchMedianMs": 16.799999952316284,
+  "switchMaxMs": 17.700000047683716,
+  "longTaskSupported": true,
+  "longTasks": 0,
+  "longestTaskMs": 0,
+  "domElements": 975,
+  "bodyCells": 658
+}

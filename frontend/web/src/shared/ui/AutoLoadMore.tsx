@@ -1,3 +1,4 @@
+import { useDelayedBusy } from './useDelayedBusy';
 import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useRef } from 'react';
 
@@ -13,6 +14,7 @@ export function AutoLoadMore({
   onLoad: () => Promise<void>;
 }) {
   const { translate } = useLocalization();
+  const showLoading = useDelayedBusy(loading);
   const marker = useRef<HTMLDivElement>(null);
   const pending = useRef(false);
   useEffect(() => {
@@ -31,10 +33,9 @@ export function AutoLoadMore({
     observer.observe(marker.current);
     return () => observer.disconnect();
   }, [enabled, loading, failed, onLoad]);
-  if (!enabled && !loading) return null;
   return (
     <div className="auto-load" ref={marker}>
-      {loading && <span role="status">{translate('ui.loadingRecords')}</span>}
+      {showLoading && <span role="status">{translate('ui.loadingRecords')}</span>}
       {enabled && failed && (
         <button disabled={loading} onClick={() => void onLoad()}>
           {translate('ui.retryLoad')}

@@ -149,7 +149,6 @@ export function ServiceChargeRegistry({
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
-    setItems([]);
     setCursor(undefined);
     request<Page>(
       '/api/v1/service-charges/registry',
@@ -333,7 +332,10 @@ export function ServiceChargeRegistry({
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
-  const state = useRegistryColumns(session.subject, 'service-charges', columns);
+  const state = useRegistryColumns(session.subject, 'service-charges', columns, {
+    query: query,
+    apply: (raw) => setQuery(restore(raw)),
+  });
   return (
     <section className="service-charge-registry registry-page registry-workbench">
       <RegistryHeading

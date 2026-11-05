@@ -90,3 +90,9 @@
 .registry-heading .registry-heading-create > button:not(.primary):hover:not(:disabled) {
   background: var(--surface-hover);
 }
+.registry-heading .registry-refresh-status {
+  display: inline-block;
+  margin-inline-start: 10px;
+  min-width: 90px;
+  font-size: 11px;
+}

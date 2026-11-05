@@ -1,3 +1,5 @@
+import { useDelayedBusy } from './useDelayedBusy';
+import { RegistrySavedViews } from '../../features/registry/RegistrySavedViews';
 import './registryExperience.css';
 import { RegistryGuide, RegistryTip } from './RegistryExperience';
 import './registryHeading.css';
@@ -25,19 +27,29 @@ export function RegistryHeading({
   loading?: boolean;
 }) {
   const { translate } = useLocalization();
+  const showLoading = useDelayedBusy(loading);
   return (
     <div className="page-heading registry-heading">
       <div>
         {title && <h1>{title}</h1>}
         <p className="hint" role="status">
-          {loading ? translate('common.loading') : translate('common.loaded', { count })}
+          {translate('common.loaded', { count })}
+          <span className="registry-refresh-status" aria-hidden={!showLoading}>
+            {showLoading ? translate('common.loading') : '\u00a0'}
+          </span>
         </p>
       </div>
       <div className="actions">
         <div className="registry-heading-tools">
+          <RegistrySavedViews state={columns} />
           <RegistryGuide />
           <RegistryColumnSettings {...columns} />
-          <button disabled={loading} onClick={onRefresh}>
+          <button
+            aria-disabled={loading}
+            onClick={() => {
+              if (!loading) onRefresh();
+            }}
+          >
             {translate('action.refresh')}
           </button>
         </div>

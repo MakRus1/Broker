@@ -198,7 +198,6 @@ export function FinancialLabelsPage({
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
-    setItems([]);
     setCursor(undefined);
     request<{ items: FinancialLabel[]; next_cursor?: Cursor }>(
       '/api/v1/financial-labels/list',
@@ -276,7 +275,11 @@ export function FinancialLabelsPage({
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
-  const columnState = useRegistryColumns(session.subject, 'financial_labels', columns);
+  const columnState = useRegistryColumns(session.subject, 'financial_labels', columns, {
+    active,
+    query: query,
+    apply: (raw) => setQuery(restoreFinancialLabelQuery(raw)),
+  });
   function cancel() {
     if (busy) return;
     confirmDiscard(dirty, () => {

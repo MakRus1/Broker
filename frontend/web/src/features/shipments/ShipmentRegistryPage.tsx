@@ -139,7 +139,11 @@ export function ShipmentRegistry({
     },
   ];
 
-  const columnState = useRegistryColumns(session.subject, 'shipments', columns);
+  const columnState = useRegistryColumns(session.subject, 'shipments', columns, {
+    active,
+    query: query,
+    apply: (raw) => setQuery(restoreShipmentQuery(raw)),
+  });
   return (
     <div className="registry-page shipment-registry registry-workbench" hidden={!active}>
       <RegistryHeading

@@ -30,7 +30,6 @@ export function useRegistryPage<T, Cursor>({
       const controller = new AbortController();
       pending.current = controller;
       if (!append) {
-        setItems([]);
         cursor.current = undefined;
         setMore(false);
       }

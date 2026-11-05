@@ -1,0 +1,143 @@
+.registry-saved-views {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+.registry-saved-views > .app-select {
+  min-width: 160px;
+  max-width: 230px;
+}
+.registry-saved-views > button {
+  height: 36px;
+  min-height: 36px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+.registry-view-form {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.registry-view-form label {
+  display: grid;
+  gap: 8px;
+}
+.registry-view-form .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 760px) {
+  .registry-saved-views {
+    flex-wrap: wrap;
+  }
+}
+.registry-saved-views .field-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.registry-saved-views > .app-select {
+  width: 200px;
+  min-width: 0;
+}
+.registry-saved-views .select-trigger {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.registry-saved-views .select-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.registry-saved-views {
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.registry-saved-views > .app-select {
+  flex: 0 1 200px;
+}
+.registry-saved-views .select-trigger {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.registry-saved-views .select-trigger > span:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.registry-saved-views > button {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  white-space: nowrap;
+  margin: 0;
+}
+.registry-heading > .actions,
+.registry-heading-tools {
+  min-width: 0;
+  max-width: 100%;
+}
+.app-dialog.registry-view-dialog {
+  width: min(520px, calc(100vw - 40px));
+  box-sizing: border-box;
+}
+.registry-view-dialog .registry-view-form {
+  gap: 20px;
+}
+.registry-view-dialog .registry-view-form .hint {
+  margin: 0;
+  line-height: 1.5;
+}
+.registry-view-dialog .registry-view-form input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.registry-view-dialog .registry-view-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: normal;
+}
+.registry-view-dialog .registry-view-copy input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+.registry-view-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.registry-view-dialog .registry-view-footer > button {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0;
+  white-space: nowrap;
+}
+.registry-view-dialog .registry-view-footer > .registry-view-delete {
+  margin-right: auto;
+  padding-left: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+}

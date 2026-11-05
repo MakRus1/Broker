@@ -69,7 +69,6 @@ export function PaymentRegistry({
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
-    setItems([]);
     setCursor(undefined);
     request<{ items: Payment[]; next_cursor?: Cursor }>(
       '/api/v1/payments/list',
@@ -158,7 +157,11 @@ export function PaymentRegistry({
       render: (item) => (item.archived ? translate('filter.archived') : translate('filter.active')),
     },
   ];
-  const columnState = useRegistryColumns(session.subject, `${kind}-payments`, columns);
+  const columnState = useRegistryColumns(session.subject, `${kind}-payments`, columns, {
+    active,
+    query: query,
+    apply: (raw) => setQuery(restorePaymentQuery(raw)),
+  });
   return (
     <section className="invoice-registry registry-workbench">
       <RegistryHeading

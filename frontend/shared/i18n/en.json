@@ -1180,5 +1180,15 @@
   "views.limit": "You can save up to 20 views per registry.",
   "views.tooLarge": "View storage is full. Reduce filters or delete unused views.",
   "views.modified": " · modified",
-  "views.saveCopy": "Save as a new view"
+  "views.saveCopy": "Save as a new view",
+  "search.title": "Search",
+  "search.query": "Number or name",
+  "search.placeholder": "Shipment, container, company, contract or invoice",
+  "search.type": "Section",
+  "search.all": "All sections",
+  "search.recent": "Open and recent records",
+  "search.minimum": "Enter at least two characters. Use arrow keys to select and Enter to open.",
+  "search.showAll": "Show all",
+  "search.failed": "This group could not be loaded. Change the query to retry.",
+  "search.empty": "No results"
 }

@@ -1,9 +1,9 @@
 import { useLocalization } from '../localization/Localization';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
 import type { BankAccount } from './BankAccounts';
-import { Select } from '../../shared/ui/Select';
+import { LookupField } from '../../shared/ui/LookupField';
 
 export function BankAccountSelect({
   owner,
@@ -22,60 +22,58 @@ export function BankAccountSelect({
 }) {
   const { translate } = useLocalization();
   const [items, setItems] = useState<BankAccount[]>([]);
-  const [failure, setFailure] = useState('');
-  const [loading, setLoading] = useState(false);
+  const fetchAccounts = useCallback(
+    async (signal: AbortSignal) => {
+      if (!owner) return [];
+      const result = await request<{ items: BankAccount[] }>(
+        '/api/v1/counterparties/bank-accounts/list',
+        session,
+        { counterparty_id: owner },
+        signal,
+      );
+      if (!signal.aborted) setItems(result.items);
+      return result.items;
+    },
+    [owner, session],
+  );
   useEffect(() => {
     setItems([]);
-    setFailure('');
-    if (!owner) return;
+    if (!value || !owner) return;
     const controller = new AbortController();
-    setLoading(true);
-    request<{ items: BankAccount[] }>(
-      '/api/v1/counterparties/bank-accounts/list',
-      session,
-      { counterparty_id: owner },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted) setItems(result.items);
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
+    void fetchAccounts(controller.signal).catch(() => {
+      // The field retains its value; opening the directory offers a retry.
+    });
     return () => controller.abort();
-  }, [owner, session]);
+  }, [fetchAccounts, !!value]);
+  const title = (item: BankAccount) =>
+    `${item.name} · ${item.number} · ${item.currency}${item.archived ? translate('finance.archivedAccountSuffix') : ''}`;
+  const load = useCallback(
+    async (query: string, signal: AbortSignal) => {
+      const accounts = await fetchAccounts(signal);
+      const search = query.toLocaleLowerCase();
+      return {
+        items: accounts.filter(
+          (item) =>
+            ((item.currency === currency && !item.archived) || item.id === value) &&
+            `${item.name} ${item.number} ${item.bank_name}`.toLocaleLowerCase().includes(search),
+        ),
+      };
+    },
+    [fetchAccounts, currency, value],
+  );
+  const selected = items.find((item) => item.id === value);
   return (
-    <>
-      <Select
-        label={label}
-        value={value ?? ''}
-        onChange={(id) => onChange(id || null)}
-        disabled={!owner || loading}
-        searchable
-        options={[
-          {
-            value: '',
-            label: loading ? translate('finance.loadingAccounts') : translate('ui.notChosen'),
-          },
-          ...items
-            .filter((item) => (item.currency === currency && !item.archived) || item.id === value)
-            .map((item) => ({
-              value: item.id,
-              label: `${item.name} · ${item.number} · ${item.currency}${item.archived ? translate('finance.archivedAccountSuffix') : ''}`,
-            })),
-          ...(value && !items.some((item) => item.id === value)
-            ? [{ value, label: translate('finance.accountUnavailable') }]
-            : []),
-        ]}
-      />
-      {failure && (
-        <span className="error" role="alert">
-          {failure}
-        </span>
-      )}
-    </>
+    <LookupField
+      label={label}
+      value={value ?? ''}
+      selectedLabel={
+        selected ? title(selected) : value ? translate('finance.accountUnavailable') : ''
+      }
+      placeholder={translate('finance.lookupPlaceholder')}
+      load={load}
+      itemLabel={title}
+      disabled={!owner}
+      onChange={(item) => onChange(item?.id ?? null)}
+    />
   );
 }

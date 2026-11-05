@@ -1,4 +1,4 @@
-import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
+import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -13,7 +13,7 @@ import { registryValueLabel } from '../../registry/registryLabels';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useLocalization } from '../../localization/Localization';
 import { VatRateSelect } from '../services/VatRateSelect';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import {
@@ -95,8 +95,6 @@ export function FinancialLabelsPage({
   const initial = useRef('');
   const title = useRef(onTitle);
   title.current = onTitle;
-  const [items, setItems] = useState<FinancialLabel[]>([]);
-  const [cursor, setCursor] = useState<Cursor>();
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -194,39 +192,28 @@ export function FinancialLabelsPage({
       });
     return () => controller.abort();
   }, [creating, creationId, id, read, session]);
-  const cache = useRegistryFreshness([read, id, creating, query, session, version]);
-  useEffect(() => {
-    if (!active || !read || id || creating) return;
-    if (cache.isFresh()) return;
-    cache.clear();
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setCursor(undefined);
-    request<{ items: FinancialLabel[]; next_cursor?: Cursor }>(
-      '/api/v1/financial-labels/list',
-      session,
-      { ...query, filters: filterRequest(query.filters), limit: 50 },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted) {
-          cache.complete();
-          setItems(result.items);
-          setCursor(result.next_cursor);
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setFailure(error.message);
-          onError(error);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [active, read, id, creating, query, session, version, cache.version]);
+  const loadPage = useCallback(
+    (cursor: Cursor | undefined, signal: AbortSignal) => {
+      setFailure('');
+      return request<{ items: FinancialLabel[]; next_cursor?: Cursor }>(
+        '/api/v1/financial-labels/list',
+        session,
+        { ...query, filters: filterRequest(query.filters), limit: 50, cursor },
+        signal,
+      );
+    },
+    [query, session],
+  );
+  const page = useRegistryPage({
+    active: active && read && !id && !creating,
+    refreshVersion: version,
+    loadPage,
+    onError: (error) => {
+      setFailure((error as Error).message);
+      onError(error);
+    },
+  });
+  const items = page.items;
   const columns: RegistryColumn<FinancialLabel>[] = [
     {
       id: 'name',
@@ -318,25 +305,6 @@ export function FinancialLabelsPage({
       setBusy(false);
     }
   }
-  async function more() {
-    if (!cursor || loading) return;
-    setLoading(true);
-    setFailure('');
-    try {
-      const result = await request<{ items: FinancialLabel[]; next_cursor?: Cursor }>(
-        '/api/v1/financial-labels/list',
-        session,
-        { ...query, filters: filterRequest(query.filters), limit: 50, cursor },
-      );
-      setItems((old) => [...old, ...result.items]);
-      setCursor(result.next_cursor);
-    } catch (error) {
-      setFailure(saveErrorMessage(error, translate('forms.couldNotLoadFinancialLabels')));
-      onError(error);
-    } finally {
-      setLoading(false);
-    }
-  }
   if (!read)
     return (
       <section className="record-page financial-label-page">
@@ -350,8 +318,8 @@ export function FinancialLabelsPage({
         <RegistryHeading
           columns={columnState}
           title={translate('nav.financialLabels')}
-          count={items.length}
-          loading={loading}
+          count={page.count}
+          loading={page.loading}
           onRefresh={() => setVersion((value) => value + 1)}
         >
           {write && (
@@ -366,6 +334,7 @@ export function FinancialLabelsPage({
           </p>
         )}
         <RegistryTable
+          pageSource={page.source}
           items={items}
           columns={columnState}
           definitions={columns}
@@ -384,7 +353,7 @@ export function FinancialLabelsPage({
           }}
           emptyMessage={
             <RegistryResultState
-              loading={loading}
+              loading={page.loading}
               failed={Boolean(failure)}
               failureMessage={failure}
               filtered={Boolean(query.filters?.length)}
@@ -406,7 +375,12 @@ export function FinancialLabelsPage({
             />
           }
         />
-        <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
+        <AutoLoadMore
+          enabled={page.more}
+          loading={page.loading}
+          failed={!!failure}
+          onLoad={page.loadMore}
+        />
       </section>
     );
   return (

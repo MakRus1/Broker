@@ -89,3 +89,8 @@
   background: transparent;
   pointer-events: none;
 }
+
+.personal-registry-table .registry-page-placeholder {
+  color: var(--text-muted);
+  cursor: default;
+}

@@ -1,14 +1,14 @@
-import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
+import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
-import { useRowSelection } from '../../registry/useRowSelection';
+import { usePagedRowSelection } from '../../registry/usePagedRowSelection';
 import { ServiceInvoiceActions } from '../invoices/ServiceInvoiceActions';
 import { attachBulkInvoice, bulkInvoiceProblem } from '../invoices/bulkInvoices';
 import './bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -65,14 +65,48 @@ export function ServiceChargeRegistry({
   onCreate: (direction: 'income' | 'expense') => void;
 }) {
   const { translate, locale } = useLocalization();
-  const [items, setItems] = useState<Row[]>([]);
-  const selection = useRowSelection(items.map((item) => item.id));
+  const [failure, setFailure] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const [query, setQuery] = useRegistryPreference(
+    preferenceKey(session.subject, 'service-charges', 'query'),
+    initial,
+    restore,
+  );
+  const loadPage = useCallback(
+    async (cursor: Cursor | undefined, signal: AbortSignal) => {
+      setFailure('');
+      const result = await request<Page>(
+        '/api/v1/service-charges/registry',
+        session,
+        { ...query, filters: filterRequest(query.filters), limit: 50, cursor },
+        signal,
+      );
+      return { items: rows(result), next_cursor: result.next_cursor };
+    },
+    [query, session, version],
+  );
+  const page = useRegistryPage({
+    active,
+    refreshVersion: refresh,
+    loadPage,
+    onError: (error) => setFailure((error as Error).message),
+  });
+  const items = page.items;
+  const loading = page.loading;
+  const cursor = page.more;
+  const more = page.loadMore;
+  const selection = usePagedRowSelection(page, 500, active);
   const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] }>();
   const [bulk, setBulk] = useState<{ mode: 'new' | 'existing'; items: Row[] }>();
   const [notice, setNotice] = useState('');
-  const selectedItems = items.filter((item) => selection.selected.has(item.id));
+  const selectedItems = selection.items;
   const canInvoice = session.permissions.includes('finance.write_invoices');
-  const problem = bulkInvoiceProblem(selectedItems, locale);
+  const problem =
+    selection.selected.size > 500
+      ? translate('bulk.chargeLimit')
+      : selection.resolving
+        ? translate('ui.loadingRecords')
+        : selection.error || bulkInvoiceProblem(selectedItems, locale);
   function openBulk(mode: 'new' | 'existing', chosen = selectedItems) {
     if (bulkInvoiceProblem(chosen, locale)) return;
     setMenu(undefined);
@@ -128,15 +162,6 @@ export function ServiceChargeRegistry({
     }
     return () => controller.abort();
   }, [referenceIds, session]);
-  const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(false);
-  const [failure, setFailure] = useState('');
-  const [refresh, setRefresh] = useState(0);
-  const [query, setQuery] = useRegistryPreference(
-    preferenceKey(session.subject, 'service-charges', 'query'),
-    initial,
-    restore,
-  );
   useEffect(() => {
     selection.clear();
     setMenu(undefined);
@@ -148,54 +173,6 @@ export function ServiceChargeRegistry({
     onChange: (filters) => setQuery((old) => ({ ...old, filters })),
     onSort: (sort, descending) => setQuery((old) => ({ ...old, sort, descending })),
   });
-  const cache = useRegistryFreshness([query, session, version, refresh]);
-  useEffect(() => {
-    if (!active || cache.isFresh()) return;
-    cache.clear();
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setCursor(undefined);
-    request<Page>(
-      '/api/v1/service-charges/registry',
-      session,
-      { ...query, filters: filterRequest(query.filters), limit: 50 },
-      controller.signal,
-    )
-      .then((page) => {
-        if (!controller.signal.aborted) {
-          cache.complete();
-          setItems(rows(page));
-          setCursor(page.next_cursor);
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [active, query, session, version, refresh, cache.version]);
-  async function more() {
-    if (!cursor || loading) return;
-    setLoading(true);
-    setFailure('');
-    try {
-      const page = await request<Page>('/api/v1/service-charges/registry', session, {
-        ...query,
-        filters: filterRequest(query.filters),
-        limit: 50,
-        cursor,
-      });
-      setItems((old) => [...old, ...rows(page)]);
-      setCursor(page.next_cursor);
-    } catch (error) {
-      setFailure((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
   const write = session.permissions.includes('finance.write_service_charges');
   const columns: RegistryColumn<Row>[] = [
     {
@@ -348,7 +325,7 @@ export function ServiceChargeRegistry({
       <RegistryHeading
         columns={state}
         title={translate('nav.serviceCharges')}
-        count={items.length}
+        count={page.count}
         loading={loading}
         onRefresh={() => setRefresh((v) => v + 1)}
       >
@@ -370,7 +347,7 @@ export function ServiceChargeRegistry({
       )}
       {canInvoice && (
         <RegistrySelectionActions
-          count={selectedItems.length}
+          count={selection.selected.size}
           problem={problem}
           actions={[
             { label: translate('ui.createInvoice'), onClick: () => openBulk('new') },
@@ -422,6 +399,7 @@ export function ServiceChargeRegistry({
         </p>
       )}
       <RegistryTable
+        pageSource={page.source}
         selectionColumn={
           canInvoice
             ? {
@@ -432,13 +410,11 @@ export function ServiceChargeRegistry({
                     ref={(node) => {
                       if (node)
                         node.indeterminate =
-                          selectedItems.length > 0 && selectedItems.length < items.length;
+                          selection.selected.size > 0 && selection.selected.size < page.count;
                     }}
-                    checked={items.length > 0 && selectedItems.length === items.length}
+                    checked={selection.allSelected}
                     onChange={(event) =>
-                      selection.setSelected(
-                        event.target.checked ? new Set(items.map((item) => item.id)) : new Set(),
-                      )
+                      selection.setSelected(event.target.checked ? new Set(page.ids) : new Set())
                     }
                   />
                 ),

@@ -1,3 +1,4 @@
+import type { RegistryPageSource } from './registryPageCache';
 import { Fragment } from 'react';
 import { VIRTUAL_COLUMN_THRESHOLD } from './virtualColumns';
 import { useVirtualColumns } from './useVirtualColumns';
@@ -271,8 +272,10 @@ export function RegistryTable<T extends { id: string }>({
   rowAttributes,
   selectionColumn,
   virtualize = true,
+  pageSource,
 }: {
   virtualize?: boolean;
+  pageSource?: RegistryPageSource<T>;
   selectionColumn?: { header: ReactNode; render: (item: T) => ReactNode };
   rowAttributes?: (item: T) => HTMLAttributes<HTMLTableRowElement>;
   emptyMessage?: ReactNode;
@@ -326,8 +329,9 @@ export function RegistryTable<T extends { id: string }>({
       )
     : visible.map((column) => column.width);
 
+  const logicalRows = pageSource?.rows ?? items;
   const virtual = useVirtualRows(
-    items,
+    logicalRows,
     body,
     visible.map((column, index) => `${column.id}:${columnWidths[index]}`).join('|'),
     virtualize,
@@ -348,6 +352,9 @@ export function RegistryTable<T extends { id: string }>({
   );
   const physicalColumns = slots.length + (selectionColumn ? 1 : 0);
 
+  useEffect(() => {
+    pageSource?.ensure(virtual.indices);
+  }, [pageSource, virtual.indices.join(',')]);
   function targetAt(x: number) {
     const headers = Array.from(
       scroll.current?.querySelectorAll<HTMLElement>('th[data-column]') ?? [],
@@ -481,7 +488,7 @@ export function RegistryTable<T extends { id: string }>({
       >
         <table
           className={`personal-registry-table${virtual.enabled ? ' virtual-registry-table' : ''}`}
-          aria-rowcount={virtual.enabled ? items.length + 1 : undefined}
+          aria-rowcount={virtual.enabled ? logicalRows.length + 1 : undefined}
           aria-colcount={horizontal ? visible.length + (selectionColumn ? 1 : 0) : undefined}
           style={{
             width: columnWidths.reduce((sum, width) => sum + width, selectionColumn ? 48 : 0),
@@ -667,55 +674,80 @@ export function RegistryTable<T extends { id: string }>({
           </thead>
           <tbody ref={body}>
             {virtual.indices.map((index, position) => {
-              const item = items[index];
+              const identity = logicalRows[index];
+              const item = pageSource ? pageSource.get(index) : items[index];
               const previousEnd = position ? virtual.offsets[virtual.indices[position - 1] + 1] : 0;
               const gap = virtual.offsets[index] - previousEnd;
               return (
-                <Fragment key={item.id}>
+                <Fragment key={identity.id}>
                   {virtual.enabled && gap > 0 && (
                     <tr aria-hidden="true" className="registry-virtual-spacer">
                       <td colSpan={physicalColumns} style={{ height: gap }} />
                     </tr>
                   )}
                   <tr
-                    style={horizontal ? { height: virtual.retainedHeight(item.id) } : undefined}
+                    style={
+                      !item
+                        ? { height: virtual.offsets[index + 1] - virtual.offsets[index] }
+                        : horizontal
+                          ? { height: virtual.retainedHeight(identity.id) }
+                          : undefined
+                    }
                     data-virtual-index={virtual.enabled || horizontal ? index : undefined}
                     aria-rowindex={virtual.enabled ? index + 2 : undefined}
-                    {...(rowAttributes
+                    {...(item && rowAttributes
                       ? rowAttributes(item)
-                      : { className: 'clickable', onClick: () => onOpen(item) })}
+                      : { className: 'clickable', onClick: item ? () => onOpen(item) : undefined })}
                   >
-                    {selectionColumn && (
+                    {!item ? (
                       <td
-                        className="registry-selection-cell"
-                        aria-colindex={horizontal ? 1 : undefined}
+                        colSpan={physicalColumns}
+                        className="registry-page-placeholder"
+                        aria-busy={!pageSource?.failed(index)}
                       >
-                        {selectionColumn.render(item)}
+                        {pageSource?.failed(index) ? (
+                          <button onClick={() => pageSource.retry(index)}>
+                            {translate('filter.retry')}
+                          </button>
+                        ) : (
+                          translate('ui.loadingRecords')
+                        )}
                       </td>
-                    )}
-                    {slots.map((slot, position) => {
-                      if (slot.index === undefined)
-                        return (
+                    ) : (
+                      <>
+                        {selectionColumn && (
                           <td
-                            key={`gap-${position}`}
-                            aria-hidden="true"
-                            className="registry-column-spacer"
-                          />
-                        );
-                      const column = visible[slot.index];
-                      return (
-                        <td
-                          key={column.id}
-                          data-column-index={horizontal ? slot.index : undefined}
-                          aria-colindex={
-                            horizontal ? slot.index + (selectionColumn ? 2 : 1) : undefined
-                          }
-                          className={definitionsById.get(column.id)!.cellClassName}
-                        >
-                          {definitionsById.get(column.id)!.render(item)}
-                        </td>
-                      );
-                    })}
+                            className="registry-selection-cell"
+                            aria-colindex={horizontal ? 1 : undefined}
+                          >
+                            {selectionColumn.render(item)}
+                          </td>
+                        )}
+                        {slots.map((slot, position) => {
+                          if (slot.index === undefined)
+                            return (
+                              <td
+                                key={`gap-${position}`}
+                                aria-hidden="true"
+                                className="registry-column-spacer"
+                              />
+                            );
+                          const column = visible[slot.index];
+                          return (
+                            <td
+                              key={column.id}
+                              data-column-index={horizontal ? slot.index : undefined}
+                              aria-colindex={
+                                horizontal ? slot.index + (selectionColumn ? 2 : 1) : undefined
+                              }
+                              className={definitionsById.get(column.id)!.cellClassName}
+                            >
+                              {definitionsById.get(column.id)!.render(item)}
+                            </td>
+                          );
+                        })}
+                      </>
+                    )}
                   </tr>
                 </Fragment>
               );
@@ -726,7 +758,7 @@ export function RegistryTable<T extends { id: string }>({
                   colSpan={physicalColumns}
                   style={{
                     height:
-                      virtual.offsets[items.length] -
+                      virtual.offsets[logicalRows.length] -
                       (virtual.indices.length
                         ? virtual.offsets[virtual.indices[virtual.indices.length - 1] + 1]
                         : 0),
@@ -737,7 +769,7 @@ export function RegistryTable<T extends { id: string }>({
           </tbody>
         </table>
       </div>
-      {!items.length && emptyMessage && (
+      {!logicalRows.length && emptyMessage && (
         <div
           className="registry-empty"
           role={typeof emptyMessage === 'string' ? 'status' : undefined}

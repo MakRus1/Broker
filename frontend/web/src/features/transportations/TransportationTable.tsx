@@ -1,3 +1,4 @@
+import type { RegistryPageSource } from '../registry/registryPageCache';
 import { useLocalization } from '../localization/Localization';
 import { registryValueLabel } from '../registry/registryLabels';
 import type { ColumnFilterController } from '../registry/RegistryColumnFilters';
@@ -86,6 +87,7 @@ function RouteRegistrySummary({ item }: { item: Transportation }) {
 
 export function TransportationTable({
   items,
+  pageSource,
   sort,
   descending = false,
   onSort,
@@ -98,6 +100,7 @@ export function TransportationTable({
   filters?: ColumnFilterController;
   routeFilter?: { active: boolean; expanded?: boolean; onOpen: (anchor: HTMLElement) => void };
   items: Transportation[];
+  pageSource?: RegistryPageSource<Transportation>;
   sort?: RegistrySort;
   descending?: boolean;
   onSort?: (sort: RegistrySort) => void;
@@ -107,6 +110,7 @@ export function TransportationTable({
   return (
     <RegistryTable
       items={items}
+      pageSource={pageSource}
       filters={filters}
       customFilters={routeFilter ? { route: routeFilter } : undefined}
       filterSummary={routeFilterSummary}

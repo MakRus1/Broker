@@ -3,7 +3,7 @@ import { VIRTUAL_COLUMN_THRESHOLD } from './virtualColumns';
 import { rowAt, rowOffsets, visibleRowIndices, VIRTUAL_ROW_THRESHOLD } from './virtualRows';
 
 export function useVirtualRows<T extends { id: string }>(
-  items: T[],
+  items: readonly T[],
   body: RefObject<HTMLTableSectionElement | null>,
   layout: string,
   virtualize = true,

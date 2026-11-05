@@ -8,6 +8,11 @@ export default defineConfig({
   build: {
     outDir: '/tmp/broker-registry-benchmark',
     emptyOutDir: true,
-    rollupOptions: { input: fileURLToPath(new URL('./registry.html', import.meta.url)) },
+    rollupOptions: {
+      input: {
+        registry: fileURLToPath(new URL('./registry.html', import.meta.url)),
+        pages: fileURLToPath(new URL('./pages.html', import.meta.url)),
+      },
+    },
   },
 });

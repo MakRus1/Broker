@@ -1,3 +1,4 @@
+import { VisitedPanel } from '../../shared/ui/VisitedPanel';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
@@ -611,14 +612,16 @@ function ShipmentCard({
           </button>
         ))}
       </div>
-      {initial && !editing && (tab === 'details' || tab === 'route') && (
-        <ShipmentSummary
-          shipment={initial}
-          customers={props.customers}
-          session={props.session}
-          routeOnly={tab === 'route'}
-          dictionaries={dictionaries}
-        />
+      {initial && (
+        <div hidden={editing || (tab !== 'details' && tab !== 'route')}>
+          <ShipmentSummary
+            shipment={initial}
+            customers={props.customers}
+            session={props.session}
+            routeOnly={tab === 'route'}
+            dictionaries={dictionaries}
+          />
+        </div>
       )}
       <form
         hidden={!editing}
@@ -940,14 +943,15 @@ function ShipmentCard({
           </fieldset>
         </fieldset>
       </form>
-      {initial && tab === 'finance' && (
-        <div className="panel-content">
+      {initial && (
+        <VisitedPanel active={tab === 'finance'} className="panel-content">
           <ServiceCharges
+            active={props.active !== false && tab === 'finance'}
             scope={{ shipment_id: initial.id, transportation_id: null }}
             session={props.session}
             customers={props.customers}
           />
-        </div>
+        </VisitedPanel>
       )}
       {initial && (
         <div

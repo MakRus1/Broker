@@ -1,3 +1,4 @@
+import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { openServiceCharge } from './services/ServiceChargePage';
@@ -8,7 +9,7 @@ import { preferenceKey, useRegistryPreference } from '../registry/registryPrefer
 import { Chevron } from '../../shared/ui/Select';
 import type { ServiceChargeInvoice } from './invoices/invoices';
 import { CalendarDate } from '../../shared/dates/CalendarDate';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
 import type { Counterparty } from '../counterparties/CustomerSelect';
@@ -59,10 +60,12 @@ function Totals({ title, items }: { title: string; items: CurrencyTotal[] }) {
   );
 }
 export function ServiceCharges({
+  active = true,
   scope,
   session,
   customers,
 }: {
+  active?: boolean;
   scope: ServiceChargeScope;
   session: Session;
   customers: Counterparty[];
@@ -96,44 +99,57 @@ export function ServiceCharges({
     window.addEventListener('finance-charges-changed', refresh);
     return () => window.removeEventListener('finance-charges-changed', refresh);
   }, []);
-  useEffect(() => {
-    if (!read || !scope.shipment_id) return;
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setItems([]);
-    setSummary(emptySummary);
-    setReporting(undefined);
-    setAfter(null);
-    request<{
-      items: ServiceCharge[];
-      next_after: string | null;
-      invoices: typeof invoices;
-      summary: ServiceChargeSummary;
-      reporting: ReportingSummary;
-    }>(
-      '/api/v1/service-charges/list',
-      session,
-      { scope, after: null, limit: 50, include_archived: archived },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted) {
-          setItems(result.items);
-          setInvoices(result.invoices);
-          setSummary(result.summary);
-          setReporting(result.reporting);
-          setAfter(result.next_after);
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [scope.shipment_id, scope.transportation_id, session, read, archived, version]);
+  const loadedScope = useRef('');
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!scope.shipment_id) return;
+      setLoading(true);
+      setFailure('');
+      const scopeKey = JSON.stringify([
+        session.subject,
+        session.organization_id,
+        scope.shipment_id,
+        scope.transportation_id,
+        archived,
+      ]);
+      if (loadedScope.current !== scopeKey) {
+        setItems([]);
+        setInvoices([]);
+        setSummary(emptySummary);
+        setReporting(undefined);
+        setAfter(null);
+      }
+      await request<{
+        items: ServiceCharge[];
+        next_after: string | null;
+        invoices: typeof invoices;
+        summary: ServiceChargeSummary;
+        reporting: ReportingSummary;
+      }>(
+        '/api/v1/service-charges/list',
+        session,
+        { scope, after: null, limit: 50, include_archived: archived },
+        signal,
+      )
+        .then((result) => {
+          if (!signal.aborted) {
+            loadedScope.current = scopeKey;
+            setItems(result.items);
+            setInvoices(result.invoices);
+            setSummary(result.summary);
+            setReporting(result.reporting);
+            setAfter(result.next_after);
+          }
+        })
+        .finally(() => {
+          if (!signal.aborted) setLoading(false);
+        });
+    },
+    [scope.shipment_id, scope.transportation_id, session, archived, version],
+  );
+  useActivationLoad(active && read && Boolean(scope.shipment_id), load, (error) => {
+    setFailure(error instanceof Error ? error.message : String(error));
+  });
   async function more() {
     if (loading || !after) return;
     setLoading(true);

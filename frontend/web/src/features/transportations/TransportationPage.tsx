@@ -1,3 +1,5 @@
+import { useActivationLoad } from '../../shared/api/useActivationLoad';
+import { VisitedPanel } from '../../shared/ui/VisitedPanel';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordHeading, RecordSection } from '../../shared/ui/record/RecordLayout';
@@ -138,17 +140,10 @@ export function TransportationPage({
     },
     [id, session],
   );
-  useEffect(() => {
-    if (!active) return;
-    const controller = new AbortController();
-    void refresh(controller.signal).catch((error) => {
-      if (!controller.signal.aborted) {
-        setFailure(error.message);
-        onError(error);
-      }
-    });
-    return () => controller.abort();
-  }, [refresh, onError, active]);
+  useActivationLoad(active, refresh, (error) => {
+    setFailure(error instanceof Error ? error.message : String(error));
+    onError(error);
+  });
   const write = session.permissions.includes('transportations.write');
   if (!transportation)
     return (
@@ -278,76 +273,77 @@ export function TransportationPage({
               </button>
             </CardNavigation>
             <div className="panel-content">
-              {tab === 'details' ? (
-                <div className="record-layout-content">
-                  <RecordSection title={translate('transport.details')}>
-                    <dl className="record-layout-details">
-                      <div>
-                        <dt>{translate('registryField.type')}</dt>
-                        <dd>
-                          {registryValueLabel('type', transportation.type, locale) ??
-                            transportationTypes[transportation.type]}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{translate('registryValue.roles.customer')}</dt>
-                        <dd>{customerName || '—'}</dd>
-                      </div>
-                      {transportation.type === 'container' && (
-                        <>
-                          <div>
-                            <dt>{translate('registryField.container_number')}</dt>
-                            <dd>{transportation.container_number || '—'}</dd>
-                          </div>
-                          <div>
-                            <dt>{translate('registryField.container_type')}</dt>
-                            <dd>{transportation.container_type_code || '—'}</dd>
-                          </div>
-                          <div>
-                            <dt>{translate('forms.containerOwnership')}</dt>
-                            <dd>{transportation.container_ownership || '—'}</dd>
-                          </div>
-                        </>
-                      )}
-                      <div>
-                        <dt>{translate('registryField.hazardous')}</dt>
-                        <dd>
-                          {translate(
-                            transportation.hazardous
-                              ? 'transport.hazardousYes'
-                              : 'transport.hazardousNo',
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </RecordSection>
-                  <RecordSection
-                    title={translate('transport.shipmentTerms')}
-                    description={translate('transport.shipmentTermsHint')}
-                  >
-                    <dl className="record-layout-details">
-                      <div>
-                        <dt>Incoterms</dt>
-                        <dd>{transportation.incoterms || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt>{translate('shipment.loading')}</dt>
-                        <dd>{transportation.loading || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt>{translate('shipment.carriageTerms')}</dt>
-                        <dd>{transportation.carriage_terms || '—'}</dd>
-                      </div>
-                    </dl>
-                  </RecordSection>
-                </div>
-              ) : tab === 'finance' ? (
+              <VisitedPanel active={tab === 'details'} className="record-layout-content">
+                <RecordSection title={translate('transport.details')}>
+                  <dl className="record-layout-details">
+                    <div>
+                      <dt>{translate('registryField.type')}</dt>
+                      <dd>
+                        {registryValueLabel('type', transportation.type, locale) ??
+                          transportationTypes[transportation.type]}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{translate('registryValue.roles.customer')}</dt>
+                      <dd>{customerName || '—'}</dd>
+                    </div>
+                    {transportation.type === 'container' && (
+                      <>
+                        <div>
+                          <dt>{translate('registryField.container_number')}</dt>
+                          <dd>{transportation.container_number || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>{translate('registryField.container_type')}</dt>
+                          <dd>{transportation.container_type_code || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>{translate('forms.containerOwnership')}</dt>
+                          <dd>{transportation.container_ownership || '—'}</dd>
+                        </div>
+                      </>
+                    )}
+                    <div>
+                      <dt>{translate('registryField.hazardous')}</dt>
+                      <dd>
+                        {translate(
+                          transportation.hazardous
+                            ? 'transport.hazardousYes'
+                            : 'transport.hazardousNo',
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </RecordSection>
+                <RecordSection
+                  title={translate('transport.shipmentTerms')}
+                  description={translate('transport.shipmentTermsHint')}
+                >
+                  <dl className="record-layout-details">
+                    <div>
+                      <dt>Incoterms</dt>
+                      <dd>{transportation.incoterms || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>{translate('shipment.loading')}</dt>
+                      <dd>{transportation.loading || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>{translate('shipment.carriageTerms')}</dt>
+                      <dd>{transportation.carriage_terms || '—'}</dd>
+                    </div>
+                  </dl>
+                </RecordSection>
+              </VisitedPanel>
+              <VisitedPanel active={tab === 'finance'}>
                 <ServiceCharges
+                  active={active && tab === 'finance'}
                   scope={{ shipment_id: transportation.shipment_id, transportation_id: id }}
                   session={session}
                   customers={customers}
                 />
-              ) : tab === 'history' ? (
+              </VisitedPanel>
+              <VisitedPanel active={tab === 'history'}>
                 <History
                   key={transportation.revision}
                   id={id}
@@ -355,29 +351,26 @@ export function TransportationPage({
                   customers={customers}
                   onError={onError}
                 />
-              ) : (
-                <>
-                  <div className="section-heading">
-                    <div>
-                      <h2>{translate('forms.transportationRoute')}</h2>
-                      <p className="hint">
-                        {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
-                        {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-                      </p>
-                    </div>
+              </VisitedPanel>
+              <VisitedPanel active={tab === 'route'}>
+                <div className="section-heading">
+                  <div>
+                    <h2>{translate('forms.transportationRoute')}</h2>
+                    <p className="hint">
+                      {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
+                      {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+                    </p>
                   </div>
-                  <RouteView
-                    route_segments={transportation.route_segments}
-                    customers={customers}
-                    session={session}
-                    onActual={
-                      write
-                        ? (route_segment, kind) => setActual({ route_segment, kind })
-                        : undefined
-                    }
-                  />
-                </>
-              )}
+                </div>
+                <RouteView
+                  route_segments={transportation.route_segments}
+                  customers={customers}
+                  session={session}
+                  onActual={
+                    write ? (route_segment, kind) => setActual({ route_segment, kind }) : undefined
+                  }
+                />
+              </VisitedPanel>
             </div>
           </>
         )}

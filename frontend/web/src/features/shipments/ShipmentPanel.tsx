@@ -1,3 +1,4 @@
+import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { useLocalization } from '../localization/Localization';
@@ -110,21 +111,20 @@ export function ShipmentPanel({
     },
     [session, initial.id, canReadTransportations],
   );
-  useEffect(() => {
-    if (!active) return;
-    const controller = new AbortController();
-    void refresh(controller.signal)
-      .catch((value) => {
-        if (!controller.signal.aborted) {
-          setFailure(value.message);
-          onError(value);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [refresh, onError, active]);
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      try {
+        await refresh(signal);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    },
+    [refresh],
+  );
+  useActivationLoad(active, load, (value) => {
+    setFailure(value instanceof Error ? value.message : String(value));
+    onError(value);
+  });
   useEffect(() => {
     if (!active || !ids.length) return;
     const controller = new AbortController();

@@ -1834,39 +1834,6 @@ main > header {
   color: var(--text-secondary);
 }
 
-.directory-lookup {
-  display: grid;
-  gap: 8px;
-  position: relative;
-  min-width: 0;
-  align-content: start;
-}
-.directory-lookup-control {
-  position: relative;
-  min-width: 0;
-}
-.directory-lookup input.has-clear {
-  padding-right: 40px;
-}
-.directory-lookup-clear {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 20px;
-}
-.directory-lookup-clear:hover {
-  background: var(--accent-soft);
-}
-.directory-lookup .shipment-lookup-options {
-  z-index: 40;
-}
-
 .transportation-editor fieldset {
   border: 0;
   padding: 0;
@@ -2182,27 +2149,6 @@ input[aria-invalid='true'] {
   font-weight: 400;
 }
 
-.station-lookup {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-}
-.station-input {
-  position: relative;
-}
-.station-input input {
-  padding-right: 36px;
-}
-.station-input > button {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  padding: 4px 8px;
-  border: 0;
-  background: transparent;
-}
 .route-stage-summary {
   cursor: pointer;
   list-style: none;

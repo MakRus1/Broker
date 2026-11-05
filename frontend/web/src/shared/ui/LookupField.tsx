@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocalization } from '../../features/localization/Localization';
 import { Chevron } from './Select';
@@ -22,6 +22,9 @@ export function LookupField<T extends { id: string }>({
   required = false,
   validationMessage = '',
   error = '',
+  onTextChange,
+  minQueryLength = 0,
+  footer,
 }: {
   label: string;
   name?: string;
@@ -36,6 +39,9 @@ export function LookupField<T extends { id: string }>({
   required?: boolean;
   validationMessage?: string;
   error?: string;
+  onTextChange?: (value: string) => void;
+  minQueryLength?: number;
+  footer?: ReactNode;
 }) {
   const { translate } = useLocalization();
   const id = useId();
@@ -68,6 +74,13 @@ export function LookupField<T extends { id: string }>({
   }, [required, value, validationMessage]);
   useEffect(() => {
     if (!visible) return;
+    if (query.trim().length < minQueryLength) {
+      setLoading(false);
+      setFailure('');
+      setPage({ items: [] });
+      setActive(-1);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setFailure('');
@@ -93,7 +106,7 @@ export function LookupField<T extends { id: string }>({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [visible, query, load, retry, translate]);
+  }, [visible, query, load, retry, translate, minQueryLength]);
   useEffect(() => {
     if (!visible) return;
     const update = () => {
@@ -175,11 +188,12 @@ export function LookupField<T extends { id: string }>({
           value={visible ? query : selectedLabel}
           placeholder={placeholder}
           onFocus={() => {
-            setQuery('');
+            setQuery(onTextChange ? selectedLabel : '');
             setOpen(true);
           }}
           onChange={(event) => {
             setQuery(event.target.value);
+            onTextChange?.(event.target.value);
             setOpen(true);
           }}
           onKeyDown={(event) => {
@@ -229,7 +243,7 @@ export function LookupField<T extends { id: string }>({
             if (visible) close();
             else {
               input.current?.focus();
-              setQuery('');
+              setQuery(onTextChange ? selectedLabel : '');
               setOpen(true);
             }
           }}
@@ -258,9 +272,13 @@ export function LookupField<T extends { id: string }>({
                 </button>
               </div>
             )}
-            {!loading && !failure && !page.items.length && (
-              <p role="status">{translate('ui.noMatches')}</p>
+            {query.trim().length < minQueryLength && (
+              <p role="status">{translate('lookup.minimumQuery', { count: minQueryLength })}</p>
             )}
+            {!loading &&
+              !failure &&
+              query.trim().length >= minQueryLength &&
+              !page.items.length && <p role="status">{translate('ui.noMatches')}</p>}
             <div role="listbox" id={`${id}-list`} aria-label={label} aria-busy={loading}>
               {!loading &&
                 !failure &&
@@ -281,6 +299,7 @@ export function LookupField<T extends { id: string }>({
                 ))}
             </div>
             {!loading && !failure && page.hasMore && <p>{translate('lookup.moreResults')}</p>}
+            {footer && <div className="lookup-field-footer">{footer}</div>}
           </div>,
           input.current?.closest('dialog') ?? document.body,
         )}

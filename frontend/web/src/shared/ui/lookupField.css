@@ -2,6 +2,7 @@
   display: grid;
   gap: 8px;
   min-width: 0;
+  align-content: start;
 }
 .lookup-field-control {
   position: relative;
@@ -75,4 +76,11 @@
 }
 .lookup-field-failure {
   padding: 4px;
+}
+.lookup-field-footer {
+  padding: 8px 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  border-top: 1px solid var(--divider);
 }

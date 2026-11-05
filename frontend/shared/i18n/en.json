@@ -503,6 +503,7 @@
   "lookup.counterpartyUnavailable": "Counterparty unavailable",
   "route.emptySegment": "Segment details have not been entered yet.",
   "lookup.counterpartyPlaceholder": "Select from the directory or enter a name / tax ID",
+  "lookup.minimumQuery": "Enter at least {count} characters to search. You can also enter a value manually.",
   "lookup.moreResults": "Some results are shown. Refine your search.",
   "lookup.directorySearching": "Searching the directory…",
   "lookup.directoryNoMatches": "No matches. Refine your search or add a record to the counterparty directory.",

@@ -503,6 +503,7 @@
   "lookup.counterpartyUnavailable": "Контрагент недоступен",
   "route.emptySegment": "Данные участка пока не указаны.",
   "lookup.counterpartyPlaceholder": "Выберите из справочника или начните вводить название / ИНН",
+  "lookup.minimumQuery": "Для поиска введите не менее {count} символов. Можно указать значение вручную.",
   "lookup.moreResults": "Показана часть записей. Уточните поисковый запрос.",
   "lookup.directorySearching": "Ищем в справочнике…",
   "lookup.directoryNoMatches": "Совпадений нет. Измените запрос или добавьте запись в справочнике контрагентов.",

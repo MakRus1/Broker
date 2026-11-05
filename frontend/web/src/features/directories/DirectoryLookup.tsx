@@ -1,7 +1,8 @@
 import { useLocalization } from '../localization/Localization';
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
+import { LookupField } from '../../shared/ui/LookupField';
 
 type Choice = { id: string; label: string; value: string; country?: string };
 export function DirectoryLookup({
@@ -17,19 +18,12 @@ export function DirectoryLookup({
   value: string;
   onChange: (value: string, country?: string) => void;
 }) {
-  const { translate, locale } = useLocalization();
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [name, setName] = useState('');
-  const [items, setItems] = useState<Choice[]>([]);
-  const [failure, setFailure] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [active, setActive] = useState(-1);
+  const { translate } = useLocalization();
+  const [selected, setSelected] = useState<Choice>();
   const employees = kind === 'employees';
   useEffect(() => {
     if (!employees || !value) {
-      setName('');
+      setSelected(undefined);
       return;
     }
     const controller = new AbortController();
@@ -41,171 +35,72 @@ export function DirectoryLookup({
     )
       .then(({ items }) => {
         if (!controller.signal.aborted)
-          setName(items[0]?.display_name ?? translate('ui.employeeUnavailable'));
+          setSelected({
+            id: value,
+            value,
+            label: items[0]?.display_name ?? translate('ui.employeeUnavailable'),
+          });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setName(translate('ui.employeeLoadError'));
+        if (!controller.signal.aborted)
+          setSelected({ id: value, value, label: translate('ui.employeeLoadError') });
       });
     return () => controller.abort();
-  }, [employees, value, session, locale]);
-  useEffect(() => {
-    if (!open || (!employees && query.trim().length < 2)) {
-      setItems([]);
-      setLoading(false);
-      setFailure('');
-      return;
-    }
-    const controller = new AbortController();
-    setItems([]);
-    setActive(-1);
-    setFailure('');
-    setLoading(true);
-    const timer = setTimeout(() => {
-      request<{
-        items: (
-          | { subject: string; display_name: string }
-          | { name: string; label: string; country_code: string }
-        )[];
-      }>(
-        employees ? '/api/organizations/employees/list' : '/api/geography/cities',
-        session,
-        { query: query.trim() },
-        controller.signal,
-      )
-        .then(({ items }) => {
-          if (!controller.signal.aborted)
-            setItems(
-              items.map((item) =>
-                'subject' in item
-                  ? { id: item.subject, value: item.subject, label: item.display_name }
-                  : {
-                      id: `${item.country_code}:${item.label}`,
-                      value: item.name,
-                      label: item.label,
-                      country: item.country_code,
-                    },
-              ),
-            );
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted) setFailure(error.message);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setLoading(false);
-        });
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [open, query, kind, employees, session]);
-  function choose(item: Choice) {
-    setName(item.label);
-    onChange(item.value, item.country);
-    setOpen(false);
-    setQuery('');
-  }
+  }, [employees, value, session, translate]);
+  const load = useCallback(
+    async (query: string, signal: AbortSignal) => {
+      if (employees) {
+        const result = await request<{ items: { subject: string; display_name: string }[] }>(
+          '/api/organizations/employees/list',
+          session,
+          { query },
+          signal,
+        );
+        return {
+          items: result.items.map((item) => ({
+            id: item.subject,
+            value: item.subject,
+            label: item.display_name,
+          })),
+        };
+      }
+      const result = await request<{
+        items: { name: string; label: string; country_code: string }[];
+      }>('/api/geography/cities', session, { query }, signal);
+      return {
+        items: result.items.map((item) => ({
+          id: `${item.country_code}:${item.label}`,
+          value: item.name,
+          label: item.label,
+          country: item.country_code,
+        })),
+      };
+    },
+    [employees, session],
+  );
   return (
-    <div
-      className="directory-lookup"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setOpen(false);
-          setQuery('');
-        }
+    <LookupField<Choice>
+      label={label}
+      value={value}
+      selectedLabel={
+        employees
+          ? selected?.id === value
+            ? selected.label
+            : value
+              ? translate('ui.employeeUnavailable')
+              : ''
+          : value
+      }
+      placeholder={translate(employees ? 'lookup.employeePlaceholder' : 'lookup.cityPlaceholder')}
+      load={load}
+      itemLabel={(item) => item.label}
+      onChange={(item) => {
+        setSelected(item ?? undefined);
+        onChange(item?.value ?? '', item?.country);
       }}
-    >
-      <label htmlFor={id}>{label}</label>
-      <div className="directory-lookup-control">
-        <input
-          id={id}
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={open ? `${id}-results` : undefined}
-          aria-activedescendant={
-            open && active >= 0 && items[active] ? `${id}-${active}` : undefined
-          }
-          className={employees && value ? 'has-clear' : undefined}
-          maxLength={200}
-          value={open ? query : employees ? name : value}
-          placeholder={
-            employees
-              ? translate('lookup.employeePlaceholder')
-              : translate('lookup.cityPlaceholder')
-          }
-          onFocus={() => {
-            setOpen(true);
-            setQuery(employees ? '' : value);
-          }}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setOpen(true);
-            if (!employees) onChange(event.target.value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              setOpen(false);
-            }
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault();
-              setOpen(true);
-              setActive((old) =>
-                Math.max(0, Math.min(items.length - 1, old + (event.key === 'ArrowDown' ? 1 : -1))),
-              );
-            }
-            if (event.key === 'Enter' && open && active >= 0 && items[active]) {
-              event.preventDefault();
-              choose(items[active]);
-            }
-          }}
-        />
-        {employees && value && (
-          <button
-            type="button"
-            className="directory-lookup-clear"
-            aria-label={translate('lookup.clearField', { label })}
-            onClick={() => {
-              onChange('');
-              setName('');
-              setOpen(false);
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      {open && (employees || query.trim().length >= 2) && (
-        <div
-          className="cargo-suggestions shipment-lookup-options"
-          id={`${id}-results`}
-          role="listbox"
-        >
-          {loading && <p role="status">{translate('lookup.searching')}</p>}
-          {failure && <p role="status">{failure}</p>}
-          {!loading && !failure && !items.length && (
-            <p>
-              {employees
-                ? translate('lookup.directoryEmployeesEmpty')
-                : translate('lookup.directoryCitiesEmpty')}
-            </p>
-          )}
-          {items.map((item, index) => (
-            <button
-              key={item.id}
-              id={`${id}-${index}`}
-              type="button"
-              role="option"
-              aria-selected={active === index}
-              onClick={() => choose(item)}
-            >
-              {item.label}
-            </button>
-          ))}
-          {!employees && <small>{translate('lookup.dadata')}</small>}
-        </div>
-      )}
-    </div>
+      onTextChange={employees ? undefined : (text) => onChange(text)}
+      minQueryLength={employees ? 0 : 2}
+      footer={employees ? undefined : translate('lookup.dadata')}
+    />
   );
 }

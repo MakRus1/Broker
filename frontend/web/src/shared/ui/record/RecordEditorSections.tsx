@@ -1,3 +1,4 @@
+import { scrollIntent } from '../scrollIntent';
 import {
   createContext,
   useCallback,
@@ -92,6 +93,7 @@ export function RecordEditorSections({ children }: { children: ReactNode }) {
                 const target = node.getBoundingClientRect().top + window.scrollY - margin;
                 selected.current = target >= limit ? { id: entry.id, limit } : null;
                 setActive(entry.id);
+                scrollIntent();
                 node.scrollIntoView({
                   block: 'start',
                   behavior:

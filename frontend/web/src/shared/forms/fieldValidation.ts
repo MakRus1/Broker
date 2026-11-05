@@ -1,3 +1,4 @@
+import { scrollIntent } from '../ui/scrollIntent';
 import { interfaceText } from '../localization/interfaceText';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
@@ -11,6 +12,7 @@ export function useFieldValidation(reveal?: (field: Field) => void) {
     reveal?.(field);
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
+      scrollIntent();
       field.scrollIntoView({ block: 'center' });
       field.focus({ preventScroll: true });
     });

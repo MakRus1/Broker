@@ -1,3 +1,5 @@
+import { sectionForCard } from '../../app/workspaceSections';
+import { restoreRecentCards } from './recentCards';
 import { useEffect, useRef, useState } from 'react';
 import type { Session } from '../../shared/api/session';
 import type { WorkspaceTab } from '../../app/workspace';
@@ -6,23 +8,9 @@ import { Dialog } from '../../shared/ui/Dialog';
 import { Select } from '../../shared/ui/Select';
 import { usePreferences } from '../preferences/UserPreferences';
 import { preferenceKey, useRegistryPreference } from '../registry/registryPreferences';
-import { permittedSources, searchRequest, sourceForRoute, type SearchHit } from './searchSources';
+import { permittedSources, searchRequest, type SearchHit } from './searchSources';
 import './globalSearch.css';
 
-function restoreRecent(raw: unknown): SearchHit[] {
-  return Array.isArray(raw)
-    ? raw
-        .filter(
-          (v) =>
-            v &&
-            typeof v.title === 'string' &&
-            v.title.length <= 300 &&
-            typeof v.route === 'string' &&
-            typeof v.id === 'string',
-        )
-        .slice(0, 12)
-    : [];
-}
 export function GlobalSearch({
   session,
   tabs,
@@ -38,7 +26,7 @@ export function GlobalSearch({
   const [recent, setRecent] = useRegistryPreference(
     preferenceKey(session.subject, 'search', 'recent'),
     [],
-    restoreRecent,
+    restoreRecentCards,
   );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -51,7 +39,7 @@ export function GlobalSearch({
   const current = tabs.find((tab) => tab.route === route);
   const sourceSignature = sources.map((s) => s.id).join('|');
   useEffect(() => {
-    if (!current || !sourceForRoute(route, sources)) return;
+    if (!current || !sectionForCard(route, session.permissions)) return;
     const hit = {
       id: current.id,
       title: current.title,
@@ -114,12 +102,14 @@ export function GlobalSearch({
     };
   }, [open, term, kind, session, sourceSignature]);
   const openHits = tabs
-    .filter((tab) => sourceForRoute(tab.route, sources))
+    .filter((tab) => sectionForCard(tab.route, session.permissions))
     .map((tab) => ({ id: tab.id, title: tab.title, detail: '', route: tab.route }));
   const emptyHits = [
     ...openHits,
     ...recent.filter(
-      (v) => sourceForRoute(v.route, sources) && !openHits.some((tab) => tab.route === v.route),
+      (v) =>
+        sectionForCard(v.route, session.permissions) &&
+        !openHits.some((tab) => tab.route === v.route),
     ),
   ].filter((v) => !kind || v.route.startsWith('/' + kind + '/'));
   const hits = term.length < 2 ? emptyHits : sources.flatMap((source) => groups[source.id] ?? []);
@@ -155,8 +145,7 @@ export function GlobalSearch({
       >
         <strong>{hit.title}</strong>
         <span>
-          {hit.detail ||
-            translate(sources.find((s) => hit.route.startsWith('/' + s.id + '/'))!.label)}
+          {hit.detail || translate(sectionForCard(hit.route, session.permissions)!.title)}
         </span>
       </button>
     );

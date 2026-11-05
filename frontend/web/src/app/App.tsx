@@ -348,9 +348,22 @@ function WorkspaceApp() {
         <span className="nav-label">{translate('workspace.title')}</span>
         <nav aria-label={translate('workspace.sections')}>
           <button
+            aria-label={translate('home.navigation')}
+            title={translate('home.navigation')}
+            aria-current={route === '/' ? 'page' : undefined}
+            onClick={() => {
+              location.hash = '/';
+            }}
+          >
+            <span className="navigation-icon" aria-hidden="true">
+              ⌂
+            </span>
+            <span className="navigation-text">{translate('home.navigation')}</span>
+          </button>
+          <button
             aria-label={translate('nav.shipments')}
             title={translate('nav.shipments')}
-            aria-current={tab === 'shipments' ? 'page' : undefined}
+            aria-current={route !== '/' && tab === 'shipments' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/shipments';
             }}
@@ -363,7 +376,7 @@ function WorkspaceApp() {
           <button
             aria-label={translate('nav.transportations')}
             title={translate('nav.transportations')}
-            aria-current={tab === 'transportations' ? 'page' : undefined}
+            aria-current={route !== '/' && tab === 'transportations' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/transportations';
             }}
@@ -376,7 +389,7 @@ function WorkspaceApp() {
           <button
             aria-label={translate('nav.counterparties')}
             title={translate('nav.counterparties')}
-            aria-current={tab === 'counterparties' ? 'page' : undefined}
+            aria-current={route !== '/' && tab === 'counterparties' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/counterparties';
             }}
@@ -389,7 +402,7 @@ function WorkspaceApp() {
           <button
             aria-label={translate('nav.contracts')}
             title={translate('nav.contracts')}
-            aria-current={tab === 'contracts' ? 'page' : undefined}
+            aria-current={route !== '/' && tab === 'contracts' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/contracts';
             }}
@@ -413,7 +426,7 @@ function WorkspaceApp() {
                     ? translate('nav.receipts')
                     : translate('nav.disbursements')
                 }
-                aria-current={tab === section ? 'page' : undefined}
+                aria-current={route !== '/' && tab === section ? 'page' : undefined}
                 onClick={() => {
                   location.hash = `/${section}`;
                 }}
@@ -442,7 +455,7 @@ function WorkspaceApp() {
                     ? translate('nav.incomingInvoices')
                     : translate('nav.outgoingInvoices')
                 }
-                aria-current={tab === `${direction}-invoices` ? 'page' : undefined}
+                aria-current={route !== '/' && tab === `${direction}-invoices` ? 'page' : undefined}
                 onClick={() => {
                   location.hash = `/${direction}-invoices`;
                 }}
@@ -461,7 +474,7 @@ function WorkspaceApp() {
             <button
               aria-label={translate('nav.serviceCharges')}
               title={translate('nav.serviceCharges')}
-              aria-current={tab === 'service-charges' ? 'page' : undefined}
+              aria-current={route !== '/' && tab === 'service-charges' ? 'page' : undefined}
               onClick={() => {
                 location.hash = '/service-charges';
               }}
@@ -475,7 +488,7 @@ function WorkspaceApp() {
           <button
             aria-label={translate('nav.financialLabels')}
             title={translate('nav.financialLabels')}
-            aria-current={tab === 'financial-labels' ? 'page' : undefined}
+            aria-current={route !== '/' && tab === 'financial-labels' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/financial-labels';
             }}
@@ -526,7 +539,7 @@ function WorkspaceApp() {
           ref={workspaceContent}
           className={`workspace-content${workspaces.length ? '' : ' without-tabs'}${route === '/' ? ' home-screen' : ''}`}
         >
-          {route === '/' && <WorkspaceHome permissions={session.permissions} />}
+          {route === '/' && <WorkspaceHome session={session} />}
           <ShipmentRegistry
             session={session}
             active={route === '/shipments'}

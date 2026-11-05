@@ -25,6 +25,9 @@ export function LookupField<T extends { id: string }>({
   onTextChange,
   minQueryLength = 0,
   footer,
+  onCreate,
+  createLabel,
+  clearLabel,
 }: {
   label: string;
   name?: string;
@@ -42,6 +45,9 @@ export function LookupField<T extends { id: string }>({
   onTextChange?: (value: string) => void;
   minQueryLength?: number;
   footer?: ReactNode;
+  onCreate?: () => void;
+  createLabel?: string;
+  clearLabel?: string;
 }) {
   const { translate } = useLocalization();
   const id = useId();
@@ -225,6 +231,7 @@ export function LookupField<T extends { id: string }>({
         {value && (
           <ClearSelectionButton
             label={label}
+            actionLabel={clearLabel}
             disabled={disabled}
             onClick={() => {
               input.current?.focus();
@@ -263,6 +270,21 @@ export function LookupField<T extends { id: string }>({
             className="lookup-field-popup"
             style={{ position: 'fixed', ...position, zIndex: 1000 }}
           >
+            {onCreate && (
+              <div className="lookup-field-create-row">
+                <button
+                  type="button"
+                  className="lookup-field-create"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    close();
+                    onCreate();
+                  }}
+                >
+                  {createLabel}
+                </button>
+              </div>
+            )}
             {loading && <p role="status">{translate('lookup.directorySearching')}</p>}
             {failure && (
               <div className="lookup-field-failure" role="alert">

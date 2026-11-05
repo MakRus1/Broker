@@ -39,6 +39,28 @@ const accountFields = [
   ['iban', 'IBAN', 34, 'bank'],
 ] as const;
 
+function newBankAccount(
+  owner: string,
+  currency = 'RUB',
+  id: string = crypto.randomUUID(),
+): BankAccount {
+  return {
+    id,
+    counterparty_id: owner,
+    name: '',
+    number: '',
+    currency,
+    bank_name: '',
+    bic: null,
+    swift: null,
+    correspondent_account: null,
+    iban: null,
+    is_primary: false,
+    archived: false,
+    revision: 0,
+  };
+}
+
 export function BankAccounts({
   counterpartyId,
   session,
@@ -46,6 +68,7 @@ export function BankAccounts({
   version,
   onError,
   onDirty,
+  creation,
 }: {
   counterpartyId: string;
   session: Session;
@@ -53,6 +76,12 @@ export function BankAccounts({
   version: number;
   onError: (error: unknown) => void;
   onDirty: (dirty: boolean) => void;
+  creation?: {
+    id: string;
+    currency: string;
+    onSaved: (value: BankAccount) => void;
+    onCancel: () => void;
+  };
 }) {
   const { translate, locale } = useLocalization();
   const validation = useFieldValidation();
@@ -61,13 +90,17 @@ export function BankAccounts({
   const [failure, setFailure] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
-  const [editing, setEditing] = useState<BankAccount>();
-  const [draft, setDraft] = useState<BankAccount>();
+  const [editing, setEditing] = useState<BankAccount | undefined>(() =>
+    creation ? newBankAccount(counterpartyId, creation.currency, creation.id) : undefined,
+  );
+  const [draft, setDraft] = useState<BankAccount | undefined>(() =>
+    creation ? newBankAccount(counterpartyId, creation.currency, creation.id) : undefined,
+  );
   const [busy, setBusy] = useState(false);
   const dirty = !!draft && JSON.stringify(draft) !== JSON.stringify(editing);
   const write =
     session.permissions.includes('counterparties.write_bank_accounts') && !archivedOwner;
-  const storageKey = draftStorageKey(session, 'bank-account', counterpartyId);
+  const storageKey = draftStorageKey(session, 'bank-account', creation?.id ?? counterpartyId);
   const recovery = useDraftRecovery({
     storageKey,
     revision: draft?.revision ?? 0,
@@ -124,21 +157,7 @@ export function BankAccounts({
     return () => controller.abort();
   }, [counterpartyId, session, version, refresh, onError]);
   function edit(value?: BankAccount) {
-    const next = value ?? {
-      id: crypto.randomUUID(),
-      counterparty_id: counterpartyId,
-      name: '',
-      number: '',
-      currency: 'RUB',
-      bank_name: '',
-      bic: null,
-      swift: null,
-      correspondent_account: null,
-      iban: null,
-      is_primary: false,
-      archived: false,
-      revision: 0,
-    };
+    const next = value ?? newBankAccount(counterpartyId);
     validation.reset();
     setEditing(next);
     setDraft({ ...next });
@@ -151,6 +170,7 @@ export function BankAccounts({
         setDraft(undefined);
         setEditing(undefined);
         setFailure('');
+        creation?.onCancel();
       });
   }
   async function save(event: FormEvent) {
@@ -168,12 +188,20 @@ export function BankAccounts({
             : (draft[field] ?? '').trim() || null,
         ]),
       );
-      await request('/api/v1/counterparties/bank-accounts/save', session, {
-        ...body,
-        ...account,
-        expected_revision: revision,
-      });
+      const result = await request<{ account: BankAccount }>(
+        '/api/v1/counterparties/bank-accounts/save',
+        session,
+        {
+          ...body,
+          ...account,
+          expected_revision: revision,
+        },
+      );
       recovery.markSaved();
+      if (creation) {
+        creation.onSaved(result.account);
+        return;
+      }
       setDraft(undefined);
       setEditing(undefined);
       setRefresh((value) => value + 1);
@@ -191,38 +219,44 @@ export function BankAccounts({
   return (
     <section className="bank-accounts">
       {write && !loading && <DraftRecovery recovery={recovery} />}
-      <div className="section-heading">
-        <h2>
-          {draft
-            ? translate(
-                draft.revision ? 'counterparty.editBankAccount' : 'counterparty.newBankAccount',
-              )
-            : translate('counterparty.bankAccounts')}
-        </h2>
-        {!draft && (
-          <div className="bank-accounts-actions">
-            <label className="bank-archive-toggle">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(event) => setShowArchived(event.target.checked)}
-              />
-              {translate('finance.showArchived')}
-            </label>
-            {write && (
-              <button className="primary" onClick={() => edit()}>
-                {translate('counterparty.addBankAccount')}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {!creation && (
+        <div className="section-heading">
+          <h2>
+            {draft
+              ? translate(
+                  draft.revision ? 'counterparty.editBankAccount' : 'counterparty.newBankAccount',
+                )
+              : translate('counterparty.bankAccounts')}
+          </h2>
+          {!draft && (
+            <div className="bank-accounts-actions">
+              <label className="bank-archive-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(event) => setShowArchived(event.target.checked)}
+                />
+                {translate('finance.showArchived')}
+              </label>
+              {write && (
+                <button className="primary" onClick={() => edit()}>
+                  {translate('counterparty.addBankAccount')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {failure && !draft && (
         <p className="error" role="alert">
           {failure}
         </p>
       )}
-      {draft ? (
+      {creation && !write ? (
+        <p role="alert" className="error">
+          {translate('counterparty.restoreBeforeEditing')}
+        </p>
+      ) : draft ? (
         <form
           data-recovery-key={storageKey}
           className="bank-account-editor"
@@ -257,7 +291,7 @@ export function BankAccounts({
                             value={draft.currency}
                             searchable
                             options={currenciesWithCurrent(draft.currency, locale)}
-                            disabled={busy}
+                            disabled={busy || !!creation}
                             onChange={(currency) => setDraft({ ...draft, currency })}
                           />
                         ) : (
@@ -306,6 +340,7 @@ export function BankAccounts({
                     <input
                       type="checkbox"
                       checked={draft.archived}
+                      disabled={!!creation}
                       onChange={(event) =>
                         setDraft({
                           ...draft,
@@ -338,7 +373,9 @@ export function BankAccounts({
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy || !!recovery.candidate}>
-              {busy ? translate('shipment.saving') : translate('action.save')}
+              {busy
+                ? translate('shipment.saving')
+                : translate(creation ? 'related.createAndSelect' : 'action.save')}
             </button>
           </RecordActions>
         </form>

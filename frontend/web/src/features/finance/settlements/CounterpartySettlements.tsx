@@ -145,6 +145,7 @@ export function CounterpartySettlements({
         onSubmit={apply}
       >
         <CustomerSelect
+          allowCreate={false}
           items={[]}
           label={translate('forms.ownLegalEntityLabel')}
           ownCompany
@@ -158,6 +159,7 @@ export function CounterpartySettlements({
         />
         {session.permissions.includes('contracts.read') && (
           <ServiceChargeLookup<Contract>
+            allowCreate={false}
             session={session}
             kind="contracts"
             label={translate('registryField.contract_id')}

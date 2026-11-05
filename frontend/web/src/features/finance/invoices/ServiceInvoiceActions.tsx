@@ -1,23 +1,13 @@
 import { useLocalization } from '../../localization/Localization';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRelatedCreate } from '../../../shared/forms/RelatedCreation';
+import { LookupField } from '../../../shared/ui/LookupField';
 import { request } from '../../../shared/api/http';
-import { type Session } from '../../../shared/api/session';
-import { Dialog, DialogActions } from '../../../shared/ui/Dialog';
-import { Chevron } from '../../../shared/ui/Select';
-import { AutoLoadMore } from '../../../shared/ui/AutoLoadMore';
+import type { Session } from '../../../shared/api/session';
+import { Dialog } from '../../../shared/ui/Dialog';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
-import { DateInput } from '../../../shared/dates/DateInput';
-import { CustomerSelect, type Counterparty } from '../../counterparties/CustomerSelect';
-import { BankAccountSelect } from '../../counterparties/BankAccountSelect';
-import type { Contract } from '../../contracts/ContractsPage';
 import { formatFixed, type ServiceCharge } from '../services/serviceCharges';
-import {
-  type Invoice,
-  type InvoiceDetails,
-  type InvoiceRegistryItem,
-  type InvoiceDirection,
-  type ServiceChargeInvoice,
-} from './invoices';
+import type { Invoice, InvoiceDetails, InvoiceRegistryItem, InvoiceDirection } from './invoices';
 
 type ServiceContext = Pick<
   ServiceCharge,
@@ -45,14 +35,6 @@ type Creation = {
 };
 export type ServiceInvoiceSelection =
   { kind: 'existing'; invoice: Invoice } | { kind: 'new'; body: Creation };
-type Cursor = { id: string; scope: string; text_value?: string; date_value?: string };
-const emptyParties: Counterparty[] = [];
-function today() {
-  const d = new Date();
-  return CalendarDate.fromISO(
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-  );
-}
 export async function attachServiceInvoice(
   serviceChargeId: string,
   selection: ServiceInvoiceSelection,
@@ -88,172 +70,7 @@ export async function attachServiceInvoice(
     throw error;
   }
 }
-function CreateInvoice({
-  service,
-  session,
-  onChoose,
-  onCancel,
-}: {
-  service: ServiceContext;
-  session: Session;
-  onChoose: (selection: ServiceInvoiceSelection) => Promise<void>;
-  onCancel: () => void;
-}) {
-  const { translate } = useLocalization();
-  const [number, setNumber] = useState('');
-  const [date, setDate] = useState<CalendarDate | null>(today);
-  const [due, setDue] = useState<CalendarDate | null>(null);
-  const [paymentDelay, setPaymentDelay] = useState<number | null>(null);
-  const automaticDue = useRef(true);
-  useEffect(() => {
-    if (automaticDue.current)
-      setDue(paymentDelay !== null && date ? date.addDays(paymentDelay) : null);
-  }, [date, paymentDelay]);
-  const [own, setOwn] = useState('');
-  const [ownAccount, setOwnAccount] = useState<string | null>(null);
-  const [partyAccount, setPartyAccount] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState('');
-  const [loading, setLoading] = useState(!!service.contract_id);
-  const [id] = useState(() => crypto.randomUUID());
-  useEffect(() => {
-    if (!service.contract_id) return;
-    const controller = new AbortController();
-    setLoading(true);
-    request<{ contract: Contract }>(
-      '/api/v1/contracts/get',
-      session,
-      { id: service.contract_id },
-      controller.signal,
-    )
-      .then(({ contract }) => {
-        if (!controller.signal.aborted) {
-          setPaymentDelay(contract.payment_delay_days);
-          setOwn(contract.own_company_id);
-          setOwnAccount(contract.own_bank_account_id);
-          setPartyAccount(contract.counterparty_bank_account_id);
-        }
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted) setFailure(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [service.contract_id, session]);
-  async function choose(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!date || !own) return;
-    setBusy(true);
-    setFailure('');
-    try {
-      await onChoose({
-        kind: 'new',
-        body: {
-          id,
-          direction: service.direction === 'income' ? 'outgoing' : 'incoming',
-          number: number.trim() || null,
-          invoice_date: date.toString(),
-          due_date: due?.toString() ?? null,
-          own_company_id: own,
-          counterparty_id: service.counterparty_id,
-          own_bank_account_id: ownAccount,
-          counterparty_bank_account_id: partyAccount,
-          contract_id: service.contract_id,
-          currency: service.invoice_currency,
-          note: null,
-          archived: false,
-        },
-      });
-    } catch (e) {
-      setFailure((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form
-      onSubmit={choose}
-      className="service-invoice-create"
-      data-busy={busy}
-      data-dirty={!!number || !!own}
-    >
-      <div className="form-grid">
-        <label>
-          {translate('registryField.invoiceNumber')}
-          <input
-            placeholder={translate('finance.automaticOnSave')}
-            maxLength={100}
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            disabled={busy}
-          />
-        </label>
-        <label>
-          {translate('finance.invoiceDateRequired')}
-          <DateInput required value={date} onChange={setDate} disabled={busy} />
-        </label>
-        <CustomerSelect
-          items={emptyParties}
-          value={own}
-          onChange={(id) => {
-            setOwn(id);
-            setOwnAccount(null);
-          }}
-          session={session}
-          required
-          ownCompany
-          disabled={busy || loading || !!service.contract_id}
-          label={translate('finance.ownCompany')}
-        />
-        <label>
-          {translate('finance.dueDate')}
-          <DateInput
-            value={due}
-            onChange={(value) => {
-              automaticDue.current = false;
-              setDue(value);
-            }}
-            disabled={busy}
-          />
-        </label>
-        <BankAccountSelect
-          owner={own}
-          label={translate('finance.ownBankAccount')}
-          value={ownAccount}
-          currency={service.invoice_currency}
-          session={session}
-          onChange={setOwnAccount}
-        />
-        <BankAccountSelect
-          owner={service.counterparty_id}
-          label={translate('finance.counterpartyBankAccount')}
-          value={partyAccount}
-          currency={service.invoice_currency}
-          session={session}
-          onChange={setPartyAccount}
-        />
-      </div>
-      <p className="hint">
-        {service.counterparty_name || translate('finance.chosenCounterparty')} ·{' '}
-        {service.invoice_currency}
-        {service.contract_number
-          ? translate('finance.contractSuffix', { number: service.contract_number })
-          : ''}
-      </p>
-      <DialogActions error={failure}>
-        <button type="button" disabled={busy} onClick={onCancel}>
-          {translate('finance.backToChoice')}
-        </button>
-        <button type="submit" className="primary" disabled={busy || loading}>
-          {busy ? translate('shipment.saving') : translate('finance.useInvoice')}
-        </button>
-      </DialogActions>
-    </form>
-  );
-}
+
 export function ServiceInvoiceActions({
   service,
   session,
@@ -277,178 +94,129 @@ export function ServiceInvoiceActions({
 }) {
   const { translate } = useLocalization();
   const [open, setOpen] = useState(!!initialMode);
-  const [creating, setCreating] = useState(initialMode === 'new');
-  const [query, setQuery] = useState('');
-  const [items, setItems] = useState<Invoice[]>([]);
-  const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const direction = service.direction === 'income' ? 'outgoing' : 'incoming';
-  const filters = [
-    { field: 'archived', values: ['false'] },
-    { field: 'counterparty_id', values: [service.counterparty_id] },
-    { field: 'currency', values: [service.invoice_currency] },
-    service.contract_id
-      ? { field: 'contract_id', values: [service.contract_id] }
-      : { field: 'contract_id', empty: true },
-    ...(query.trim() ? [{ field: 'number', query: query.trim() }] : []),
-  ];
-  useEffect(() => {
-    if (!open || creating) return;
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setItems([]);
-    setCursor(undefined);
-    const timer = setTimeout(() => {
-      request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
-        '/api/v1/invoices/list',
-        session,
-        { direction, filters, sort: 'invoice_date', descending: true, limit: 40 },
-        controller.signal,
-      )
-        .then((r) => {
-          if (!controller.signal.aborted) {
-            setItems(r.items.map((item) => item.invoice));
-            setCursor(r.next_cursor);
-          }
-        })
-        .catch((e) => {
-          if (!controller.signal.aborted) setFailure(e.message);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setLoading(false);
-        });
-    }, 200);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [
-    open,
-    creating,
-    query,
-    service.counterparty_id,
-    service.invoice_currency,
-    service.contract_id,
-    session,
-  ]);
-  async function more() {
-    if (!cursor || loading) return;
-    setLoading(true);
-    try {
-      const r = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
-        '/api/v1/invoices/list',
-        session,
-        { direction, filters, sort: 'invoice_date', descending: true, limit: 40, cursor },
-      );
-      setItems((old) => [...old, ...r.items.map((item) => item.invoice)]);
-      setCursor(r.next_cursor);
-    } catch (e) {
-      setFailure((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-  async function choose(value: ServiceInvoiceSelection) {
+  const choose = async (value: ServiceInvoiceSelection | undefined) => {
     if (busy) return;
     setBusy(true);
     setFailure('');
     try {
       await onSelect(value);
       setOpen(false);
-      setCreating(false);
       onClose?.();
-    } catch (e) {
-      setFailure((e as Error).message);
-      throw e;
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
-  }
-  const chosen = selection?.kind === 'existing' ? selection.invoice : (selection?.body ?? current);
-  const chosenLabel = chosen
-    ? translate(chosen.number ? 'finance.invoiceNumberDate' : 'finance.invoiceAutoDate', {
-        number: chosen.number ?? '',
-        date: CalendarDate.fromISO(chosen.invoice_date).toDisplayString(),
-      })
-    : translate('finance.chooseInvoice');
+  };
+  const create = useRelatedCreate({
+    kind: 'invoice',
+    defaults: {
+      direction,
+      counterparty_id: service.counterparty_id,
+      counterparty_name: service.counterparty_name,
+      contract_id: service.contract_id,
+      contract_number: service.contract_number,
+      currency: service.invoice_currency,
+    },
+    scope: JSON.stringify([
+      session.subject,
+      session.organization_id,
+      direction,
+      service.counterparty_id,
+      service.contract_id,
+      service.invoice_currency,
+    ]),
+    enabled:
+      !busy &&
+      !!service.counterparty_id &&
+      !!service.invoice_currency &&
+      session.permissions.includes('finance.write_invoices') &&
+      session.permissions.includes('finance.read_invoices'),
+    onCreated(invoice) {
+      void choose({ kind: 'existing', invoice });
+    },
+  });
+  const started = useRef(false);
+  useEffect(() => {
+    if (initialMode === 'new' && !started.current && create) {
+      started.current = true;
+      create();
+    }
+  }, [initialMode, create]);
+  const load = useCallback(
+    async (query: string, signal: AbortSignal) => {
+      const result = await request<{ items: InvoiceRegistryItem[]; next_cursor?: unknown }>(
+        '/api/v1/invoices/list',
+        session,
+        {
+          direction,
+          sort: 'invoice_date',
+          descending: true,
+          limit: 100,
+          filters: [
+            { field: 'archived', values: ['false'] },
+            { field: 'counterparty_id', values: [service.counterparty_id] },
+            { field: 'currency', values: [service.invoice_currency] },
+            service.contract_id
+              ? { field: 'contract_id', values: [service.contract_id] }
+              : { field: 'contract_id', empty: true },
+            ...(query ? [{ field: 'number', query }] : []),
+          ],
+        },
+        signal,
+      );
+      return { items: result.items.map((item) => item.invoice), hasMore: !!result.next_cursor };
+    },
+    [session, direction, service.counterparty_id, service.invoice_currency, service.contract_id],
+  );
+  const chosen =
+    selection?.kind === 'existing'
+      ? selection.invoice
+      : selection?.kind === 'new'
+        ? selection.body
+        : current;
+  const label = (invoice: { number: string | null; invoice_date: string }) =>
+    translate(invoice.number ? 'finance.invoiceNumberDate' : 'finance.invoiceAutoDate', {
+      number: invoice.number ?? '',
+      date: CalendarDate.fromISO(invoice.invoice_date).toDisplayString(),
+    });
+  const field = (
+    <LookupField<Invoice>
+      label={translate('registryField.invoice_number')}
+      value={chosen ? ('id' in chosen ? chosen.id : chosen.invoice_id) : ''}
+      selectedLabel={chosen ? label(chosen) : ''}
+      placeholder={translate('finance.chooseInvoice')}
+      load={load}
+      itemLabel={label}
+      itemDescription={(invoice) =>
+        `${invoice.own_company_name} · ${formatFixed(invoice.total_minor, 2)} ${invoice.currency}`
+      }
+      disabled={busy || !service.counterparty_id || !service.invoice_currency}
+      error={failure}
+      clearLabel={current ? translate('finance.unlink') : undefined}
+      onChange={(invoice) => {
+        void choose(invoice ? { kind: 'existing', invoice } : undefined);
+      }}
+      onCreate={create}
+      createLabel={translate('related.createInvoice')}
+    />
+  );
   return (
     <div
       className={
-        initialMode
-          ? 'bulk-invoice-picker'
-          : compact
-            ? 'service-invoice-field compact'
-            : 'service-invoice-field'
+        initialMode ? 'bulk-invoice-picker' : `service-invoice-field${compact ? ' compact' : ''}`
       }
     >
-      {!initialMode && (
-        <>
-          {!compact && (
-            <span className="service-invoice-label">
-              {translate('registryField.invoice_number')}
-            </span>
-          )}
-          <button
-            type="button"
-            className={compact ? 'service-invoice-trigger compact' : 'service-invoice-trigger'}
-            disabled={busy || !service.counterparty_id || !service.invoice_currency}
-            aria-label={chosen ? chosenLabel : translate('finance.chooseInvoice')}
-            onClick={() => {
-              setCreating(false);
-              setOpen(true);
-            }}
-          >
-            <span className={chosen ? '' : 'service-invoice-placeholder'}>
-              {chosen
-                ? chosenLabel
-                : compact
-                  ? translate('ui.invoiceSelect')
-                  : translate('finance.chooseInvoice')}
-            </span>
-            {!compact && <Chevron />}
-          </button>
-          {selection?.kind === 'new' && (
-            <span className="service-secondary">{translate('finance.createOnChargeSave')}</span>
-          )}
-          {chosen && (
-            <button
-              className="service-invoice-clear"
-              disabled={busy}
-              type="button"
-              onClick={async () => {
-                setBusy(true);
-                setFailure('');
-                try {
-                  await onSelect(undefined);
-                } catch (e) {
-                  setFailure((e as Error).message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {current ? translate('finance.unlink') : translate('lookup.clearSelection')}
-            </button>
-          )}
-          {!open && failure && (
-            <p className="error" role="alert">
-              {failure}
-            </p>
-          )}
-        </>
+      {!initialMode && field}
+      {selection?.kind === 'new' && (
+        <span className="service-secondary">{translate('finance.createOnChargeSave')}</span>
       )}
-      {open && (
+      {initialMode && open && (
         <Dialog
-          title={
-            creating
-              ? translate('entity.newInvoice')
-              : initialMode
-                ? translate('finance.selectedChargesInvoice')
-                : translate('finance.chargeInvoice')
-          }
+          title={translate('finance.selectedChargesInvoice')}
           onClose={() => {
             if (!busy) {
               setOpen(false);
@@ -458,69 +226,7 @@ export function ServiceInvoiceActions({
           className="service-invoice-dialog"
         >
           {summary}
-          {creating ? (
-            <CreateInvoice
-              service={service}
-              session={session}
-              onChoose={choose}
-              onCancel={() => setCreating(false)}
-            />
-          ) : (
-            <>
-              <div className="section-heading">
-                <p className="hint">
-                  {service.counterparty_name || translate('finance.chosenCounterparty')} ·{' '}
-                  {service.invoice_currency}
-                </p>
-                <button className="primary" type="button" onClick={() => setCreating(true)}>
-                  {translate('ui.createInvoice')}
-                </button>
-              </div>
-              <label className="invoice-link-search">
-                {translate('finance.findInvoice')}
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={translate('finance.invoiceSearch')}
-                  disabled={busy}
-                />
-              </label>
-              <div className="invoice-link-list">
-                {items.map((item) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    disabled={busy}
-                    onClick={() => {
-                      void choose({ kind: 'existing', invoice: item }).catch(() => {});
-                    }}
-                  >
-                    <span>
-                      <strong>
-                        {translate('finance.invoiceNumberDate', {
-                          number: item.number,
-                          date: CalendarDate.fromISO(item.invoice_date).toDisplayString(),
-                        })}
-                      </strong>
-                      <small>{item.own_company_name}</small>
-                    </span>
-                    <span>
-                      {formatFixed(item.total_minor, 2)} {item.currency}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {!loading && !items.length && (
-                <p className="hint">{translate('finance.noInvoices')}</p>
-              )}
-              {failure && (
-                <p className="error" role="alert">
-                  {failure}
-                </p>
-              )}
-              <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
-            </>
-          )}
+          {field}
         </Dialog>
       )}
     </div>

@@ -8,7 +8,7 @@ import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { RegistryLookup } from './RegistryLookup';
 import { ApiError, request } from '../../shared/api/http';
@@ -27,12 +27,20 @@ import {
 
 export function CounterpartyForm({
   initial,
+  creationId,
+  ownCompany = false,
+  creationHint,
+  relatedCreation = false,
   session,
   onSaved,
   onError,
   onCancel,
 }: {
   initial?: Counterparty;
+  creationId?: string;
+  ownCompany?: boolean;
+  creationHint?: ReactNode;
+  relatedCreation?: boolean;
   onCancel?: () => void;
   session: Session;
   onSaved: (value: Counterparty) => void;
@@ -40,16 +48,20 @@ export function CounterpartyForm({
 }) {
   const { translate, locale } = useLocalization();
   const validation = useFieldValidation();
-  const storageKey = draftStorageKey(session, 'counterparty', initial?.id ?? 'new');
-  const [id, setId] = useState(() => initial?.id ?? crypto.randomUUID());
-  const [draft, setDraft] = useState(() => counterpartyDetails(initial));
+  const storageKey = draftStorageKey(session, 'counterparty', initial?.id ?? creationId ?? 'new');
+  const [id, setId] = useState(() => initial?.id ?? creationId ?? crypto.randomUUID());
+  const initialDetails = () => ({
+    ...counterpartyDetails(initial),
+    ...(!initial ? { own_company: ownCompany } : {}),
+  });
+  const [draft, setDraft] = useState(initialDetails);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState('');
   const dirty =
     !saved &&
     JSON.stringify(counterpartyPayload(draft)) !==
-      JSON.stringify(counterpartyPayload(counterpartyDetails(initial)));
+      JSON.stringify(counterpartyPayload(initialDetails()));
   const recovery = useDraftRecovery({
     storageKey,
     revision: initial?.revision ?? 0,
@@ -146,6 +158,7 @@ export function CounterpartyForm({
             {translate('counterparty.draftConflict')}
           </p>
         )}
+        {creationHint}
         <RecordEditorSections>
           <fieldset disabled={busy || !!recovery.candidate}>
             <RecordSection title={translate('counterparty.legalEntity')}>
@@ -153,6 +166,7 @@ export function CounterpartyForm({
                 <input
                   type="checkbox"
                   role="switch"
+                  disabled={ownCompany && !initial}
                   checked={draft.own_company}
                   onChange={(event) => set('own_company', event.target.checked)}
                 />
@@ -335,7 +349,9 @@ export function CounterpartyForm({
               ? translate('shipment.saving')
               : initial
                 ? translate('shipment.saveChanges')
-                : translate('counterparty.createCounterparty')}
+                : translate(
+                    relatedCreation ? 'related.createAndSelect' : 'counterparty.createCounterparty',
+                  )}
           </button>
         </RecordActions>
       </form>

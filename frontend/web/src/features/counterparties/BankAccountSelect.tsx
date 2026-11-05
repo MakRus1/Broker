@@ -1,3 +1,4 @@
+import { useRelatedCreate } from '../../shared/forms/RelatedCreation';
 import { useLocalization } from '../localization/Localization';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -62,6 +63,19 @@ export function BankAccountSelect({
     [fetchAccounts, currency, value],
   );
   const selected = items.find((item) => item.id === value);
+  const create = useRelatedCreate({
+    kind: 'bankAccount',
+    defaults: { owner, currency },
+    scope: JSON.stringify([session.subject, session.organization_id, owner, currency]),
+    enabled:
+      !!owner &&
+      session.permissions.includes('counterparties.write_bank_accounts') &&
+      session.permissions.includes('counterparties.read_bank_accounts'),
+    onCreated(item) {
+      setItems((old) => [...old.filter((value) => value.id !== item.id), item]);
+      onChange(item.id);
+    },
+  });
   return (
     <LookupField
       label={label}
@@ -71,6 +85,8 @@ export function BankAccountSelect({
       }
       placeholder={translate('finance.lookupPlaceholder')}
       load={load}
+      onCreate={create}
+      createLabel={translate('related.createBankAccount')}
       itemLabel={title}
       disabled={!owner}
       onChange={(item) => onChange(item?.id ?? null)}

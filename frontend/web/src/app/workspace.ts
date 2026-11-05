@@ -1,7 +1,7 @@
 import { translate, type Locale } from '../../../shared/i18n/catalog';
 export type WorkspaceTab = { id: string; route: string; title: string };
 export function isWorkspaceRoute(route: string): boolean {
-  return /^\/(shipments|transportations|counterparties|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+  return /^\/(shipments|transportations|counterparties|bank-accounts|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
     route,
   );
 }
@@ -19,7 +19,8 @@ export function workspaceTitle(route: string, locale: Locale = 'ru') {
   if (route === '/service-charges') return translate(locale, 'nav.serviceCharges');
   if (route.startsWith('/service-charges/')) return translate(locale, 'entity.serviceCharge');
   if (route === '/financial-labels') return translate(locale, 'nav.financialLabels');
-  if (route === '/financial-labels/new') return translate(locale, 'entity.newFinancialLabel');
+  if (/^\/financial-labels\/new(?:\/|$)/.test(route))
+    return translate(locale, 'entity.newFinancialLabel');
   if (route.startsWith('/financial-labels/')) return translate(locale, 'entity.financialLabel');
   if (route === '/incoming-invoices') return translate(locale, 'nav.incomingInvoices');
   if (route === '/outgoing-invoices') return translate(locale, 'nav.outgoingInvoices');
@@ -33,14 +34,17 @@ export function workspaceTitle(route: string, locale: Locale = 'ru') {
   if (route === '/receipts/new') return translate(locale, 'entity.newReceipt');
   if (route.startsWith('/receipts/')) return translate(locale, 'entity.receipt');
   if (route === '/contracts') return translate(locale, 'nav.contracts');
-  if (route === '/contracts/new') return translate(locale, 'entity.newContract');
+  if (/^\/contracts\/new(?:\/|$)/.test(route)) return translate(locale, 'entity.newContract');
   if (route.startsWith('/contracts/')) return translate(locale, 'entity.contract');
   if (route === '/shipments') return translate(locale, 'nav.shipments');
   if (route.startsWith('/transportations/new/'))
     return translate(locale, 'entity.newTransportation');
   if (route === '/transportations') return translate(locale, 'nav.transportations');
+  if (route.startsWith('/bank-accounts/new/'))
+    return translate(locale, 'counterparty.newBankAccount');
   if (route === '/counterparties') return translate(locale, 'nav.counterparties');
-  if (route === '/counterparties/new') return translate(locale, 'entity.newCounterparty');
+  if (/^\/counterparties\/new(?:\/|$)/.test(route))
+    return translate(locale, 'entity.newCounterparty');
   if (route.startsWith('/shipments/')) return translate(locale, 'field.shipment');
   if (route.startsWith('/transportations/')) return translate(locale, 'entity.transportation');
   return translate(locale, 'entity.counterparty');

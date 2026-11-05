@@ -2,10 +2,12 @@ import { useLocalization } from '../../features/localization/Localization';
 
 export function ClearSelectionButton({
   label,
+  actionLabel,
   disabled,
   onClick,
 }: {
   label: string;
+  actionLabel?: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -15,8 +17,8 @@ export function ClearSelectionButton({
       type="button"
       className="lookup-field-clear"
       disabled={disabled}
-      aria-label={translate('lookup.clearField', { label })}
-      title={translate('lookup.clearField', { label })}
+      aria-label={actionLabel ?? translate('lookup.clearField', { label })}
+      title={actionLabel ?? translate('lookup.clearField', { label })}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >

@@ -1,3 +1,4 @@
+import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
@@ -160,7 +161,9 @@ export function ContractsPage({
   const titleCallback = useRef(onTitle);
   titleCallback.current = onTitle;
   const id = /^\/contracts\/([0-9a-f-]{36})/i.exec(route)?.[1];
-  const creating = route === '/contracts/new';
+  const creating = /^\/contracts\/new(?:\/|$)/.test(route);
+  const related = useRelatedRequests()?.pending.get(route);
+  const creationId = creating ? route.split('/')[3] : undefined;
   const editing = creating || route.endsWith('/edit');
   const [value, setValue] = useState<Contract>();
   const [draft, setDraft] = useState<Draft>();
@@ -220,7 +223,11 @@ export function ContractsPage({
     if (creating) {
       setDraft((old) => {
         if (old) return old;
-        const next = newContract();
+        const next = {
+          ...newContract(),
+          ...(related?.kind === 'contract' ? related.defaults : {}),
+          ...(creationId ? { id: creationId } : {}),
+        };
         initialDraft.current = JSON.stringify(next);
         return next;
       });
@@ -370,7 +377,7 @@ export function ContractsPage({
     !!draft &&
     JSON.stringify(draft) !== (creating ? initialDraft.current : JSON.stringify(value));
   const recovery = useDraftRecovery({
-    storageKey: draftStorageKey(session, 'contract', id ?? 'new'),
+    storageKey: draftStorageKey(session, 'contract', id ?? creationId ?? 'new'),
     revision: value?.revision ?? 0,
     value: draft,
     dirty,
@@ -583,13 +590,14 @@ export function ContractsPage({
         <form
           className="counterparty-form document-editor"
           onSubmit={save}
-          data-recovery-key={draftStorageKey(session, 'contract', id ?? 'new')}
+          data-recovery-key={draftStorageKey(session, 'contract', id ?? creationId ?? 'new')}
           data-dirty={dirty}
           data-busy={busy}
           data-validation-attempted={validation.attempted}
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
+          <RelatedCreationHint route={route} />
           <RecordEditorSections>
             <fieldset disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('record.identification')}>
@@ -645,7 +653,9 @@ export function ContractsPage({
                     label={translate('finance.counterpartyRequired')}
                     required
                     session={session}
-                    disabled={busy}
+                    disabled={
+                      busy || (related?.kind === 'contract' && !!related.defaults.counterparty_id)
+                    }
                     excludeId={draft.own_company_id}
                     value={draft.counterparty_id}
                     onChange={(counterparty_id) =>
@@ -721,6 +731,7 @@ export function ContractsPage({
                     <input
                       type="checkbox"
                       checked={draft.archived}
+                      disabled={!!related}
                       onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
                     />
                     {translate('filter.archived')}
@@ -756,7 +767,9 @@ export function ContractsPage({
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy || !!recovery.candidate}>
-              {busy ? translate('shipment.saving') : translate('action.save')}
+              {busy
+                ? translate('shipment.saving')
+                : translate(related ? 'related.createAndSelect' : 'action.save')}
             </button>
           </RecordActions>
         </form>

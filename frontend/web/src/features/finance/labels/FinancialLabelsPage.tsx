@@ -1,3 +1,4 @@
+import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
@@ -82,7 +83,9 @@ export function FinancialLabelsPage({
 }) {
   const { translate, locale, catalogVersion } = useLocalization();
   const id = /^\/financial-labels\/([0-9a-f-]{36})/i.exec(route)?.[1];
-  const creating = route === '/financial-labels/new';
+  const creating = /^\/financial-labels\/new(?:\/|$)/.test(route);
+  const creationId = creating ? route.split('/')[3] : undefined;
+  const relatedCreation = useRelatedRequests()?.pending.get(route)?.kind === 'financialLabel';
   const editing = creating || route.endsWith('/edit');
   const read = session.permissions.includes('finance.read_financial_labels');
   const write = session.permissions.includes('finance.write_financial_labels');
@@ -116,7 +119,7 @@ export function FinancialLabelsPage({
     !!draft &&
     JSON.stringify(draft) !==
       (creating ? initial.current : value ? JSON.stringify(draftOf(value)) : '');
-  const storageKey = draftStorageKey(session, 'financial-label', id ?? 'new');
+  const storageKey = draftStorageKey(session, 'financial-label', id ?? creationId ?? 'new');
   const recovery = useDraftRecovery({
     storageKey,
     revision: value?.revision ?? 0,
@@ -157,7 +160,7 @@ export function FinancialLabelsPage({
     if (creating) {
       setDraft((old) => {
         if (old) return old;
-        const next = newLabel();
+        const next = { ...newLabel(), ...(creationId ? { id: creationId } : {}) };
         initial.current = JSON.stringify(next);
         return next;
       });
@@ -189,7 +192,7 @@ export function FinancialLabelsPage({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [creating, id, read, session]);
+  }, [creating, creationId, id, read, session]);
   useEffect(() => {
     if (!active || !read || id || creating) return;
     const controller = new AbortController();
@@ -443,6 +446,7 @@ export function FinancialLabelsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
+          <RelatedCreationHint route={route} />
           <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
             <RecordSection title={translate('record.calculation')}>
               <div className="record-fields">
@@ -513,7 +517,7 @@ export function FinancialLabelsPage({
                 <input
                   type="checkbox"
                   checked={draft.archived}
-                  disabled={busy}
+                  disabled={busy || relatedCreation}
                   onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
                 />
                 {translate('filter.archived')}
@@ -536,7 +540,9 @@ export function FinancialLabelsPage({
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy || !!recovery.candidate}>
-              {busy ? translate('shipment.saving') : translate('action.save')}
+              {busy
+                ? translate('shipment.saving')
+                : translate(relatedCreation ? 'related.createAndSelect' : 'action.save')}
             </button>
           </RecordActions>
         </form>

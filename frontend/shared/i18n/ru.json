@@ -1151,5 +1151,19 @@
   "shipment.additional": "Дополнительно",
   "shipment.editShipment": "Редактировать поставку",
   "shipment.editingShipment": "Редактирование поставки",
-  "shipment.createMode": "Создание поставки"
+  "shipment.createMode": "Создание поставки",
+  "related.createCounterparty": "Создать контрагента…",
+  "related.createOwnCompany": "Создать своё юрлицо…",
+  "related.createContract": "Создать договор…",
+  "related.createBankAccount": "Создать банковский счёт…",
+  "related.createAndSelect": "Создать и выбрать",
+  "related.contextLost": "Связь с исходной формой потеряна. Закройте эту вкладку и начните создание из поля выбора снова.",
+  "related.counterpartyReturnHint": "После сохранения контрагент будет выбран в форме «{title}».",
+  "related.contractReturnHint": "После сохранения договор будет выбран в форме «{title}».",
+  "related.accountReturnHint": "После сохранения банковский счёт будет выбран в форме «{title}».",
+  "related.accountOwner": "Владелец счёта: {name}",
+  "related.invoiceReturnHint": "После сохранения счёт будет выбран в форме «{title}».",
+  "related.createInvoice": "Создать счёт…",
+  "related.createLabel": "Создать финансовую метку…",
+  "related.labelReturnHint": "После сохранения финансовая метка будет выбрана в форме «{title}»."
 }

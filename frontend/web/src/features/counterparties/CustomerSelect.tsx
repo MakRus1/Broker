@@ -1,3 +1,4 @@
+import { useRelatedCreate } from '../../shared/forms/RelatedCreation';
 import { useLocalization } from '../localization/Localization';
 import { LookupField } from '../../shared/ui/LookupField';
 import { useCallback, useEffect, useState } from 'react';
@@ -17,6 +18,7 @@ export function CustomerSelect({
   error = '',
   ownCompany = false,
   excludeId,
+  allowCreate = true,
 }: {
   items: Counterparty[];
   value: string;
@@ -28,6 +30,7 @@ export function CustomerSelect({
   error?: string;
   ownCompany?: boolean;
   excludeId?: string;
+  allowCreate?: boolean;
 }) {
   const { translate } = useLocalization();
   label ??= translate('field.customer');
@@ -51,6 +54,20 @@ export function CustomerSelect({
     return () => controller.abort();
   }, [value, items, session]);
   const current = items.find((item) => item.id === value) ?? selected;
+  const create = useRelatedCreate({
+    kind: 'counterparty',
+    defaults: { ownCompany },
+    scope: JSON.stringify([session.subject, session.organization_id, ownCompany, excludeId]),
+    enabled:
+      allowCreate &&
+      !disabled &&
+      session.permissions.includes('counterparties.write') &&
+      session.permissions.includes('counterparties.read'),
+    onCreated(item) {
+      setSelected(item);
+      onChange(item.id);
+    },
+  });
   const load = useCallback(
     async (query: string, signal: AbortSignal) => {
       if (!session.permissions.includes('counterparties.read')) return { items: [] };
@@ -82,6 +99,10 @@ export function CustomerSelect({
       selectedLabel={current?.name ?? (value ? translate('lookup.counterpartyUnavailable') : '')}
       placeholder={translate('lookup.counterpartyPlaceholder')}
       load={load}
+      onCreate={create}
+      createLabel={translate(
+        ownCompany ? 'related.createOwnCompany' : 'related.createCounterparty',
+      )}
       itemLabel={(item) => item.name}
       itemDescription={(item) => [item.country_code, item.tax_id].filter(Boolean).join(' · ')}
       disabled={disabled}

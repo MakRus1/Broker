@@ -84,3 +84,29 @@
   line-height: 1.5;
   border-top: 1px solid var(--divider);
 }
+
+.lookup-field-create-row .lookup-field-create {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--accent-text);
+  border: 0;
+  border-radius: 5px;
+  padding: 8px 4px;
+}
+.lookup-field-create-row .lookup-field-create:hover {
+  background: var(--accent-soft);
+}
+
+.lookup-field-create-row {
+  position: sticky;
+  top: -5px;
+  z-index: 1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--divider);
+  padding: 4px;
+}
+.related-creation-hint {
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+}

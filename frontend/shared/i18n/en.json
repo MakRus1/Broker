@@ -1208,5 +1208,12 @@
   "roleView.title": "Default registry view",
   "roleView.description": "Use the current columns, filters and sort order as the default for this role. Personal settings will be preserved.",
   "roleView.role": "Role",
-  "roleView.saved": "Role default saved"
+  "roleView.saved": "Role default saved",
+  "views.role": "Role view",
+  "views.builtin": "Built-in view",
+  "roleView.reset": "Reset to built-in",
+  "views.inheritRole": "Restore role view",
+  "views.inheritBuiltin": "Restore built-in view",
+  "views.deleteNamed": "Delete view “{name}”",
+  "views.undoDelete": "Restore “{name}”"
 }

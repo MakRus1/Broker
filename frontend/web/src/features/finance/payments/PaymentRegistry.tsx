@@ -141,6 +141,11 @@ export function PaymentRegistry({
     },
   ];
   const columnState = useRegistryColumns(session.subject, `${kind}-payments`, columns, {
+    preferenceKey: preferenceKey(
+      session.subject,
+      `${kind}-payments${scope ? `:${scope.key}` : ''}`,
+      'query',
+    ),
     active,
     query: query,
     apply: (raw) => setQuery(restorePaymentQuery(raw)),

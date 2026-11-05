@@ -28,6 +28,9 @@ export function LookupField<T extends { id: string }>({
   onCreate,
   createLabel,
   clearLabel,
+  itemActions,
+  popupClassName,
+  clearable = true,
 }: {
   label: string;
   name?: string;
@@ -48,6 +51,9 @@ export function LookupField<T extends { id: string }>({
   onCreate?: () => void;
   createLabel?: string;
   clearLabel?: string;
+  itemActions?: (item: T) => ReactNode;
+  popupClassName?: string;
+  clearable?: boolean;
 }) {
   const { translate } = useLocalization();
   const id = useId();
@@ -173,7 +179,7 @@ export function LookupField<T extends { id: string }>({
       }}
     >
       <label htmlFor={id}>{label}</label>
-      <div className="lookup-field-control" data-clearable={!!value}>
+      <div className="lookup-field-control" data-clearable={!!value && clearable}>
         <input
           ref={input}
           id={id}
@@ -228,7 +234,7 @@ export function LookupField<T extends { id: string }>({
             }
           }}
         />
-        {value && (
+        {value && clearable && (
           <ClearSelectionButton
             label={label}
             actionLabel={clearLabel}
@@ -267,7 +273,15 @@ export function LookupField<T extends { id: string }>({
         createPortal(
           <div
             ref={popup}
-            className="lookup-field-popup"
+            className={['lookup-field-popup', popupClassName].filter(Boolean).join(' ')}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                input.current?.focus();
+                close();
+              }
+            }}
             style={{ position: 'fixed', ...position, zIndex: 1000 }}
           >
             {onCreate && (
@@ -305,19 +319,21 @@ export function LookupField<T extends { id: string }>({
               {!loading &&
                 !failure &&
                 page.items.map((item, index) => (
-                  <button
-                    type="button"
-                    role="option"
-                    id={`${id}-option-${index}`}
-                    key={item.id}
-                    aria-selected={item.id === value}
-                    className={active === index ? 'active' : ''}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => choose(item)}
-                  >
-                    <span>{itemLabel(item)}</span>
-                    {itemDescription?.(item) && <small>{itemDescription(item)}</small>}
-                  </button>
+                  <div className="lookup-field-option-row" key={item.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      id={`${id}-option-${index}`}
+                      aria-selected={item.id === value}
+                      className={active === index ? 'active' : ''}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => choose(item)}
+                    >
+                      <span>{itemLabel(item)}</span>
+                      {itemDescription?.(item) && <small>{itemDescription(item)}</small>}
+                    </button>
+                    {itemActions?.(item)}
+                  </div>
                 ))}
             </div>
             {!loading && !failure && page.hasMore && <p>{translate('lookup.moreResults')}</p>}

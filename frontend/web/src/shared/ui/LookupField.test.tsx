@@ -76,3 +76,21 @@ it('localizes the clear action and directory limit for both languages', () => {
   }
   locale = 'ru';
 });
+
+it('can keep a required current choice without a clearing button', () => {
+  const html = renderToStaticMarkup(
+    <LookupField
+      label="View"
+      value="current"
+      selectedLabel="Role view"
+      placeholder="View"
+      load={async () => ({ items: [] as { id: string }[] })}
+      itemLabel={(item) => item.id}
+      onChange={() => {}}
+      clearable={false}
+    />,
+  );
+  expect(html).toContain('value="Role view"');
+  expect(html).not.toContain('class="lookup-field-clear"');
+  expect(html).toContain('data-clearable="false"');
+});

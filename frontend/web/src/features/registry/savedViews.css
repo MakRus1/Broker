@@ -1,17 +1,56 @@
 .registry-saved-views {
-  display: flex;
-  align-items: end;
-  gap: 8px;
+  width: 220px;
+  flex: 0 0 220px;
+  min-width: 0;
+  max-width: 100%;
 }
-.registry-saved-views > .app-select {
-  min-width: 160px;
-  max-width: 230px;
+.registry-saved-views > .lookup-field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
 }
-.registry-saved-views > button {
+.registry-saved-views .lookup-field-control input {
   height: 36px;
   min-height: 36px;
+  padding: 0 36px 0 12px;
   font-size: 12px;
-  padding: 0 12px;
+  border-radius: 7px;
+  margin: 0;
+  text-overflow: ellipsis;
+}
+.registry-view-menu-actions {
+  display: grid;
+  gap: 4px;
+}
+.registry-view-menu-actions > button {
+  width: 100%;
+  text-align: left;
+  min-height: 32px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+}
+.registry-view-menu-actions > button:hover {
+  background: var(--accent-soft);
+}
+.registry-view-remove {
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.registry-view-remove:hover {
+  color: var(--text-primary);
+  background: var(--accent-soft);
 }
 .registry-view-form {
   display: grid;
@@ -21,71 +60,6 @@
 .registry-view-form label {
   display: grid;
   gap: 8px;
-}
-.registry-view-form .actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-@media (max-width: 760px) {
-  .registry-saved-views {
-    flex-wrap: wrap;
-  }
-}
-.registry-saved-views .field-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-.registry-saved-views > .app-select {
-  width: 200px;
-  min-width: 0;
-}
-.registry-saved-views .select-trigger {
-  height: 36px;
-  min-height: 36px;
-  padding: 0 12px;
-  font-size: 12px;
-  border-radius: 7px;
-}
-.registry-saved-views .select-trigger > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.registry-saved-views {
-  align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
-}
-.registry-saved-views > .app-select {
-  flex: 0 1 200px;
-}
-.registry-saved-views .select-trigger {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-}
-.registry-saved-views .select-trigger > span:first-child {
-  min-width: 0;
-  flex: 1;
-}
-.registry-saved-views > button {
-  flex: 0 0 auto;
-  box-sizing: border-box;
-  white-space: nowrap;
-  margin: 0;
-}
-.registry-heading > .actions,
-.registry-heading-tools {
-  min-width: 0;
-  max-width: 100%;
 }
 .app-dialog.registry-view-dialog {
   width: min(520px, calc(100vw - 40px));
@@ -140,4 +114,70 @@
   border-color: transparent;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+/* Компактное меню представлений: выбор и команды имеют разную иерархию. */
+.lookup-field-popup.registry-view-popup {
+  padding: 6px;
+}
+.registry-view-popup .lookup-field-option-row {
+  gap: 0;
+  border-radius: 5px;
+}
+.registry-view-popup .lookup-field-option-row:hover {
+  background: var(--accent-soft);
+}
+.registry-view-popup [role='option'] {
+  position: relative;
+  min-height: 34px;
+  padding: 8px 10px 8px 28px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  border-radius: 0;
+  color: var(--text-primary);
+}
+.registry-view-popup [role='option']:hover,
+.registry-view-popup [role='option'].active,
+.registry-view-popup [role='option'][aria-selected='true'] {
+  background: transparent;
+}
+.registry-view-popup [role='option'][aria-selected='true'] {
+  color: var(--accent-text);
+}
+.registry-view-popup [role='option'][aria-selected='true']::before {
+  content: '✓';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  font-size: 13px;
+}
+.registry-view-popup [role='option'].active {
+  outline: 1px solid var(--divider);
+  outline-offset: -2px;
+}
+.registry-view-popup .registry-view-remove {
+  margin-right: 3px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+.registry-view-popup .lookup-field-footer {
+  margin-top: 5px;
+  padding: 6px 0 0;
+}
+.registry-view-popup .registry-view-menu-actions {
+  gap: 0;
+}
+.registry-view-popup .registry-view-menu-actions > button {
+  padding: 7px 10px;
+  min-height: 32px;
+  line-height: 18px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  border-radius: 5px;
+}
+.registry-view-popup .registry-view-menu-actions > button:hover {
+  color: var(--text-primary);
 }

@@ -1215,5 +1215,19 @@
   "views.inheritRole": "Вернуть вид роли",
   "views.inheritBuiltin": "Вернуть встроенный вид",
   "views.deleteNamed": "Удалить представление «{name}»",
-  "views.undoDelete": "Восстановить «{name}»"
+  "views.undoDelete": "Восстановить «{name}»",
+  "notifications.title": "Уведомления",
+  "notifications.count": "Уведомления: непрочитанных {count}",
+  "notifications.success": "Готово",
+  "notifications.warning": "Требует внимания",
+  "notifications.error": "Ошибка",
+  "notifications.resolved": "Решено",
+  "notifications.dismiss": "Скрыть сообщение",
+  "notifications.open": "Открыть",
+  "notifications.markRead": "Прочитано",
+  "notifications.unread": "Непрочитанные",
+  "notifications.readAll": "Прочитать все",
+  "notifications.clearRead": "Убрать прочитанные",
+  "notifications.empty": "Новых уведомлений нет",
+  "notifications.session": "События текущей сессии. Последние 100 записей."
 }

@@ -1215,5 +1215,19 @@
   "views.inheritRole": "Restore role view",
   "views.inheritBuiltin": "Restore built-in view",
   "views.deleteNamed": "Delete view “{name}”",
-  "views.undoDelete": "Restore “{name}”"
+  "views.undoDelete": "Restore “{name}”",
+  "notifications.title": "Notifications",
+  "notifications.count": "Notifications: {count} unread",
+  "notifications.success": "Done",
+  "notifications.warning": "Needs attention",
+  "notifications.error": "Error",
+  "notifications.resolved": "Resolved",
+  "notifications.dismiss": "Dismiss message",
+  "notifications.open": "Open",
+  "notifications.markRead": "Mark as read",
+  "notifications.unread": "Unread",
+  "notifications.readAll": "Read all",
+  "notifications.clearRead": "Clear read",
+  "notifications.empty": "No new notifications",
+  "notifications.session": "Current session. Last 100 events."
 }

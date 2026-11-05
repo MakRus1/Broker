@@ -1,3 +1,4 @@
+import { NotificationCenter, useNotifications } from '../features/notifications/Notifications';
 import { GlobalSearch } from '../features/search/GlobalSearch';
 import { RelatedCreationProvider, useRelatedRequests } from '../shared/forms/RelatedCreation';
 import { BankAccountCreation } from '../features/counterparties/BankAccountCreation';
@@ -52,6 +53,7 @@ export function App() {
   );
 }
 function WorkspaceApp() {
+  const notifications = useNotifications();
   const related = useRelatedRequests()!;
   const { translate, locale, catalogVersion } = useLocalization();
   const [session, setSession] = usePreferencesSession();
@@ -239,16 +241,18 @@ function WorkspaceApp() {
   const error = useCallback(
     (value: unknown) => {
       if (value instanceof ApiError && value.status === 401) setSession(null);
-      setNotice(
+      const message =
         value instanceof Error
           ? value.message +
-              (value instanceof ApiError && value.traceId
-                ? ` · ${interfaceText('errors.trace', { id: value.traceId })}`
-                : '')
-          : interfaceText('errors.request'),
-      );
+            (value instanceof ApiError && value.traceId
+              ? ` · ${interfaceText('errors.trace', { id: value.traceId })}`
+              : '')
+          : interfaceText('errors.request');
+      if (session && !(value instanceof ApiError && value.status === 401))
+        notifications.publish({ id: `application:${message}`, level: 'error', message });
+      else setNotice(message);
     },
-    [setSession],
+    [setSession, session, notifications],
   );
   useEffect(() => {
     if (!session?.permissions.includes('counterparties.read')) return;
@@ -534,6 +538,7 @@ function WorkspaceApp() {
               tabs={localizedTabs}
               route={route}
             />
+            <NotificationCenter />
             <LanguageControl />
             <ThemeControl />
           </div>

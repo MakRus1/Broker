@@ -1151,5 +1151,19 @@
   "shipment.additional": "Additional details",
   "shipment.editShipment": "Edit shipment",
   "shipment.editingShipment": "Editing shipment",
-  "shipment.createMode": "Creating a shipment"
+  "shipment.createMode": "Creating a shipment",
+  "related.createCounterparty": "Create counterparty…",
+  "related.createOwnCompany": "Create own legal entity…",
+  "related.createContract": "Create contract…",
+  "related.createBankAccount": "Create bank account…",
+  "related.createAndSelect": "Create and select",
+  "related.contextLost": "The link to the source form was lost. Close this tab and start creation from the selection field again.",
+  "related.counterpartyReturnHint": "After saving, the counterparty will be selected in “{title}”.",
+  "related.contractReturnHint": "After saving, the contract will be selected in “{title}”.",
+  "related.accountReturnHint": "After saving, the bank account will be selected in “{title}”.",
+  "related.accountOwner": "Account holder: {name}",
+  "related.invoiceReturnHint": "After saving, the invoice will be selected in “{title}”.",
+  "related.createInvoice": "Create invoice…",
+  "related.createLabel": "Create financial label…",
+  "related.labelReturnHint": "After saving, the financial label will be selected in “{title}”."
 }

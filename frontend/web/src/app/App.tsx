@@ -1,3 +1,5 @@
+import { RelatedCreationProvider, useRelatedRequests } from '../shared/forms/RelatedCreation';
+import { BankAccountCreation } from '../features/counterparties/BankAccountCreation';
 import { interfaceText } from '../shared/localization/interfaceText';
 import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
 import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
@@ -42,8 +44,19 @@ import { useLocalization } from '../features/localization/Localization';
 import { LanguageControl } from '../features/localization/LanguageControl';
 
 export function App() {
+  return (
+    <RelatedCreationProvider>
+      <WorkspaceApp />
+    </RelatedCreationProvider>
+  );
+}
+function WorkspaceApp() {
+  const related = useRelatedRequests()!;
   const { translate, locale, catalogVersion } = useLocalization();
   const [session, setSession] = usePreferencesSession();
+  useEffect(() => {
+    related.clear();
+  }, [related, session?.subject, session?.organization_id]);
   const [tab, setTab] = useState<
     | 'home'
     | 'shipments'
@@ -132,10 +145,20 @@ export function App() {
     });
   }, []);
   function dismissWorkspace(id: string) {
+    const origin = related.cancel(id);
     const next = workspaceAfterClose(workspaces, id, workspaceHistory.current);
     workspaceHistory.current = workspaceHistory.current.filter((entry) => entry !== id);
     setWorkspaces((old) => old.filter((tab) => tab.id !== id));
-    if (activeWorkspace === id) location.hash = next;
+    if (activeWorkspace === id) location.hash = origin ?? next;
+  }
+  function finishRelated(route: string, value: unknown) {
+    const origin = related.finish(route, value);
+    if (origin === undefined) return false;
+    const id = workspaceId(route);
+    workspaceHistory.current = workspaceHistory.current.filter((entry) => entry !== id);
+    setWorkspaces((old) => old.filter((entry) => entry.id !== id));
+    location.hash = origin;
+    return true;
   }
   function cancelWorkspaceEdit(entry: { id: string; route: string }) {
     if (/\/new(?:\/|$)/.test(entry.route)) {
@@ -155,6 +178,7 @@ export function App() {
     const nodes = [...workspaceNodes.current.values()];
     if (nodes.some((node) => node.querySelector('form[data-busy="true"]'))) return;
     confirmClose(nodes, () => {
+      related.clear();
       setWorkspaces([]);
       workspaceHistory.current = [];
       location.hash = '/';
@@ -169,7 +193,7 @@ export function App() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|bank-accounts|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -190,7 +214,8 @@ export function App() {
       else if (next.startsWith('/receipts')) setTab('receipts');
       else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
       else if (next.startsWith('/contracts')) setTab('contracts');
-      else if (next.startsWith('/counterparties')) setTab('counterparties');
+      else if (next.startsWith('/counterparties') || next.startsWith('/bank-accounts'))
+        setTab('counterparties');
       else if (next.startsWith('/shipments')) setTab('shipments');
       else setTab('home');
     }
@@ -521,7 +546,18 @@ export function App() {
                   else workspaceNodes.current.delete(entry.id);
                 }}
               >
-                {entry.route.startsWith('/receipts') || entry.route.startsWith('/disbursements') ? (
+                {entry.route.startsWith('/bank-accounts/new/') ? (
+                  <BankAccountCreation
+                    route={entry.route}
+                    session={session}
+                    onError={error}
+                    onCancel={() => dismissWorkspace(entry.id)}
+                    onSaved={(value) => {
+                      if (!finishRelated(entry.route, value)) dismissWorkspace(entry.id);
+                    }}
+                  />
+                ) : entry.route.startsWith('/receipts') ||
+                  entry.route.startsWith('/disbursements') ? (
                   <PaymentsPage
                     route={entry.route}
                     active={activeWorkspace === entry.id}
@@ -544,6 +580,7 @@ export function App() {
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
+                      if (finishRelated(entry.route, value)) return;
                       const next = `/${value.direction}-invoices/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
@@ -572,6 +609,7 @@ export function App() {
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
+                      if (finishRelated(entry.route, value)) return;
                       const next = `/financial-labels/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
                       location.hash = next;
@@ -586,6 +624,7 @@ export function App() {
                     onTitle={(title) => renameWorkspace(entry.id, title)}
                     onCancel={() => cancelWorkspaceEdit(entry)}
                     onSaved={(value) => {
+                      if (finishRelated(entry.route, value)) return;
                       const next = `/contracts/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.number));
                       location.hash = next;
@@ -603,6 +642,7 @@ export function App() {
                       setCustomers((old) => [...old.filter((item) => item.id !== value.id), value])
                     }
                     onSaved={(value) => {
+                      if (finishRelated(entry.route, value)) return;
                       const next = `/counterparties/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
                       location.hash = next;

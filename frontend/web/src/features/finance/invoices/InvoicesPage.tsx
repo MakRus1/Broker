@@ -1,3 +1,4 @@
+import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
@@ -106,7 +107,10 @@ export function InvoicesPage({
   const base = invoiceRegistry(direction);
   const id = route.split('/')[2];
   const creating = id === 'new';
-  const sourceEntry = creating ? route.split('/')[3] : undefined;
+  const related = useRelatedRequests()?.pending.get(route);
+  const relatedInvoice = related?.kind === 'invoice' ? related : undefined;
+  const creationId = relatedInvoice ? route.split('/')[3] : undefined;
+  const sourceEntry = creating && !relatedInvoice ? route.split('/')[3] : undefined;
   const registry = !id;
   const read = session.permissions.includes('finance.read_invoices');
   const write = session.permissions.includes('finance.write_invoices');
@@ -134,7 +138,7 @@ export function InvoicesPage({
   const storageKey = draftStorageKey(
     session,
     'invoice',
-    creating ? `${direction}-new-${sourceEntry ?? ''}` : (id ?? 'registry'),
+    creating ? `${direction}-new-${creationId ?? sourceEntry ?? ''}` : (id ?? 'registry'),
   );
   const recovery = useDraftRecovery({
     storageKey,
@@ -186,7 +190,11 @@ export function InvoicesPage({
     if (creating) {
       setDraft(undefined);
       void (async () => {
-        const d = newInvoice(direction);
+        const d = {
+          ...newInvoice(direction),
+          ...(relatedInvoice?.defaults ?? {}),
+          ...(creationId ? { id: creationId } : {}),
+        };
         let services: ServiceCharge[] = [];
         if (sourceEntry) {
           const { charge } = await request<{ charge: ServiceCharge }>(
@@ -203,20 +211,20 @@ export function InvoicesPage({
           d.contract_id = charge.contract_id;
           d.contract_number = charge.contract_number;
           services = [charge];
-          if (charge.contract_id) {
-            const { contract } = await request<{ contract: Contract }>(
-              '/api/v1/contracts/get',
-              session,
-              { id: charge.contract_id },
-              controller.signal,
-            );
-            paymentDelay.current = contract.payment_delay_days;
-            if (contract.payment_delay_days !== null && d.invoice_date)
-              d.due_date = d.invoice_date.addDays(contract.payment_delay_days);
-            d.own_company_id = contract.own_company_id;
-            d.own_bank_account_id = contract.own_bank_account_id;
-            d.counterparty_bank_account_id = contract.counterparty_bank_account_id;
-          }
+        }
+        if (d.contract_id) {
+          const { contract } = await request<{ contract: Contract }>(
+            '/api/v1/contracts/get',
+            session,
+            { id: d.contract_id },
+            controller.signal,
+          );
+          paymentDelay.current = contract.payment_delay_days;
+          if (contract.payment_delay_days !== null && d.invoice_date)
+            d.due_date = d.invoice_date.addDays(contract.payment_delay_days);
+          d.own_company_id = contract.own_company_id;
+          d.own_bank_account_id = contract.own_bank_account_id;
+          d.counterparty_bank_account_id = contract.counterparty_bank_account_id;
         }
         if (controller.signal.aborted) return;
         setDraft(d);
@@ -255,7 +263,7 @@ export function InvoicesPage({
     return () => controller.abort();
     // onTitle updates workspace state; it is deliberately not a loading dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, sourceEntry, direction, read, session, version]);
+  }, [id, sourceEntry, creationId, direction, read, session, version]);
   useEffect(() => {
     if (!active || !dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -498,6 +506,7 @@ export function InvoicesPage({
               onInvalid={validation.onInvalid}
               onInput={validation.onInput}
             >
+              <RelatedCreationHint route={route} />
               <RecordEditorSections>
                 <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
                   <RecordSection title={translate('record.identification')}>
@@ -553,7 +562,7 @@ export function InvoicesPage({
                         required
                         label={translate('registryField.counterparty_id')}
                         items={emptyParties}
-                        disabled={busy}
+                        disabled={busy || !!relatedInvoice}
                         value={draft.counterparty_id}
                         session={session}
                         onChange={(counterparty_id) =>
@@ -570,6 +579,7 @@ export function InvoicesPage({
                     <div className="record-fields">
                       <Select
                         label={translate('registryField.currency')}
+                        disabled={busy || !!relatedInvoice}
                         value={draft.currency}
                         searchable
                         options={currenciesWithCurrent(draft.currency, locale)}
@@ -589,7 +599,9 @@ export function InvoicesPage({
                         name={draft.contract_number ?? ''}
                         session={session}
                         counterparty={draft.counterparty_id}
-                        disabled={busy || !draft.counterparty_id}
+                        ownCompany={draft.own_company_id}
+                        currency={draft.currency}
+                        disabled={busy || !!relatedInvoice || !draft.counterparty_id}
                         onChange={(contract) => {
                           paymentDelay.current = contract?.payment_delay_days ?? null;
                           changeParties({
@@ -781,7 +793,9 @@ export function InvoicesPage({
                   className="primary"
                   disabled={busy || !!newService || !!recovery.candidate}
                 >
-                  {busy ? translate('shipment.saving') : translate('action.save')}
+                  {busy
+                    ? translate('shipment.saving')
+                    : translate(relatedInvoice ? 'related.createAndSelect' : 'action.save')}
                 </button>
               </RecordActions>
             </form>

@@ -389,6 +389,7 @@ export function ServiceChargeEditor({
                   value={draft.contract_id ?? ''}
                   name={draft.contract_number ?? ''}
                   counterparty={draft.counterparty_id}
+                  currency={draft.invoice_currency}
                   disabled={busy || !!invoice || !draft.counterparty_id}
                   onChange={(contract) =>
                     setDraft((old) =>

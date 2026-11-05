@@ -1,3 +1,4 @@
+import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordHeading } from '../../shared/ui/record/RecordLayout';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../registry/registryLabels';
@@ -102,7 +103,9 @@ export function CounterpartiesPage({
   ];
   const columnState = useRegistryColumns(session.subject, 'counterparties', columns);
   const id = /^\/counterparties\/([a-f0-9-]{36})(?:\/edit)?$/i.exec(route)?.[1];
-  const creating = route === '/counterparties/new';
+  const creating = /^\/counterparties\/new(?:\/|$)/.test(route);
+  const related = useRelatedRequests()?.pending.get(route);
+  const creationId = creating ? route.split('/')[3] : undefined;
   const editing = creating || route.endsWith('/edit');
   const [tab, setTab] = useState<'details' | 'history' | 'accounts' | 'settlements'>('details');
   const [accountsDirty, setAccountsDirty] = useState(false);
@@ -275,8 +278,12 @@ export function CounterpartiesPage({
             <p>{translate('counterparty.restoreBeforeEditing')}</p>
           ) : (
             <CounterpartyForm
-              key={creating ? 'new' : item?.id}
+              key={creating ? route : item?.id}
               initial={creating ? undefined : item}
+              creationId={creationId}
+              ownCompany={related?.kind === 'counterparty' && related.defaults.ownCompany}
+              creationHint={<RelatedCreationHint route={route} />}
+              relatedCreation={!!related}
               session={session}
               onCancel={onCancel}
               onError={onError}

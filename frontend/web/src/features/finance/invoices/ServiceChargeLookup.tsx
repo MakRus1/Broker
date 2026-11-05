@@ -1,3 +1,4 @@
+import { useRelatedCreate } from '../../../shared/forms/RelatedCreation';
 import { useLocalization } from '../../localization/Localization';
 import { useCallback } from 'react';
 import { request } from '../../../shared/api/http';
@@ -14,6 +15,9 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
   value,
   name,
   counterparty,
+  ownCompany,
+  currency,
+  allowCreate = true,
   disabled,
   required,
   onChange,
@@ -24,11 +28,48 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
   value: string;
   name: string;
   counterparty?: string;
+  ownCompany?: string;
+  currency?: string;
+  allowCreate?: boolean;
   disabled: boolean;
   required?: boolean;
   onChange: (value: T | null) => void;
 }) {
   const { translate } = useLocalization();
+  const create = useRelatedCreate({
+    kind: 'contract',
+    defaults: { counterparty_id: counterparty, own_company_id: ownCompany, currency },
+    scope: JSON.stringify([
+      session.subject,
+      session.organization_id,
+      counterparty,
+      ownCompany,
+      currency,
+    ]),
+    enabled:
+      allowCreate &&
+      kind === 'contracts' &&
+      !disabled &&
+      session.permissions.includes('contracts.write') &&
+      session.permissions.includes('contracts.read'),
+    onCreated(item) {
+      onChange(item as T);
+    },
+  });
+  const createLabel = useRelatedCreate({
+    kind: 'financialLabel',
+    defaults: {},
+    scope: JSON.stringify([session.subject, session.organization_id, kind]),
+    enabled:
+      allowCreate &&
+      kind === 'labels' &&
+      !disabled &&
+      session.permissions.includes('finance.read_financial_labels') &&
+      session.permissions.includes('finance.write_financial_labels'),
+    onCreated(item) {
+      onChange(item as T);
+    },
+  });
   const load = useCallback(
     async (query: string, signal: AbortSignal) => {
       const field = kind === 'labels' ? 'name' : 'number';
@@ -59,6 +100,8 @@ export function ServiceChargeLookup<T extends FinancialLabel | Contract>({
       selectedLabel={name}
       placeholder={translate('finance.lookupPlaceholder')}
       load={load}
+      onCreate={kind === 'labels' ? createLabel : create}
+      createLabel={translate(kind === 'labels' ? 'related.createLabel' : 'related.createContract')}
       itemLabel={(item) => ('name' in item ? item.name : item.number)}
       disabled={disabled}
       required={required}

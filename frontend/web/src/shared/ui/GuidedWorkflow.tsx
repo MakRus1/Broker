@@ -19,7 +19,10 @@ export function restoreWorkflow(raw: unknown, steps: readonly WorkflowStep[]): P
       value && ['active', 'skipped', 'completed'].includes(value.status ?? '')
         ? (value.status as Progress['status'])
         : 'ready',
-    step: steps.some((step) => step.id === value?.step) ? value!.step! : (steps[0]?.id ?? ''),
+    step:
+      value?.status !== 'ready' && steps.some((step) => step.id === value?.step)
+        ? value!.step!
+        : (steps[0]?.id ?? ''),
   };
 }
 
@@ -63,7 +66,7 @@ export function GuidedWorkflow({
   const [position, setPosition] = useState({ left: 16, top: 16 });
   const index = Math.max(
     0,
-    steps.findIndex((step) => step.id === progress.step),
+    progress.status === 'ready' ? 0 : steps.findIndex((step) => step.id === progress.step),
   );
   const step = steps[index];
   const visible = open && active && !!step;

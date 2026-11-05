@@ -1,8 +1,9 @@
 #include <helpers/registry_defaults.hpp>
 #include <views/api/organizations/registry_defaults/list/view.hpp>
+
 namespace organizations::views::api::organizations::registry_defaults::list {
-Response View::Handle(Request&& request, userver::server::request::RequestContext& context,
-                      Deps deps) {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::organizations::helpers;
     const auto& identity = platform::auth::GetIdentity(context);
     auto transaction =

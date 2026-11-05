@@ -2,8 +2,8 @@
 #include <views/api/preferences/list/view.hpp>
 
 namespace web_bff::views::api::preferences::list {
-Response View::Handle(Request&& request, userver::server::request::RequestContext& context,
-                      Deps deps) {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::user_preferences::ApiV1PreferencesList;
     const auto result = deps.user_preferences.ApiV1PreferencesList(
@@ -18,9 +18,9 @@ Response View::Handle(Request&& request, userver::server::request::RequestContex
         session.Access);
     for (const auto& item : role.items)
         response.role_defaults.push_back({.registry = item.registry,
-                                          .revision = item.revision,
-                                          .role = item.role,
-                                          .value = item.value});
+            .revision = item.revision,
+            .role = item.role,
+            .value = item.value});
     return response;
 }
 }  // namespace web_bff::views::api::preferences::list

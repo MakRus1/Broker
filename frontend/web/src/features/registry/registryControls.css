@@ -72,3 +72,20 @@
 .registry-column-heading > .registry-column-name {
   flex: 1;
 }
+
+.virtual-registry-table {
+  overflow-anchor: none;
+}
+.personal-registry-table .registry-virtual-spacer > td {
+  padding: 0;
+  border: 0;
+  line-height: 0;
+  background: transparent;
+}
+
+.personal-registry-table .registry-column-spacer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}

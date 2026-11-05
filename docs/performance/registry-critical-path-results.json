@@ -1,0 +1,921 @@
+{
+  "browser": {
+    "synthetic": [
+      {
+        "rowsPerTab": 100000,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 59.2,
+        "domElements": 2402,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 62.9,
+        "domElements": 2402,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 61.9,
+        "domElements": 2402,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 62.8,
+        "domElements": 2402,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.4,
+        "domElements": 2402,
+        "renderedRows": 19
+      }
+    ],
+    "wide": [
+      {
+        "ttfbMs": 28.299999952316284,
+        "receiveMs": 276.40000009536743,
+        "parseMs": 272.09999990463257,
+        "bytes": 232567296,
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 2,
+        "longestTaskMs": 565,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 951.8,
+        "domElements": 2403,
+        "renderedRows": 19
+      },
+      {
+        "ttfbMs": 30.700000047683716,
+        "receiveMs": 291.6999999284744,
+        "parseMs": 259.10000002384186,
+        "bytes": 232567296,
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 1,
+        "longestTaskMs": 515,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 902.4,
+        "domElements": 2403,
+        "renderedRows": 19
+      }
+    ],
+    "actual": [
+      {
+        "navigationToRowsMs": 153,
+        "rows": 50,
+        "dom": 927,
+        "requests": [
+          {
+            "url": "/localization/catalog?locale=ru",
+            "status": 200,
+            "headersMs": 5.300000071525574,
+            "totalMs": 5.5,
+            "bytes": 15
+          },
+          {
+            "url": "/api/session",
+            "status": 200,
+            "headersMs": 5.299999952316284,
+            "totalMs": 5.699999928474426,
+            "bytes": 811
+          },
+          {
+            "url": "/api/preferences/list",
+            "status": 200,
+            "headersMs": 5,
+            "totalMs": 5.199999928474426,
+            "bytes": 604
+          },
+          {
+            "url": "/api/localization/catalog",
+            "status": 200,
+            "headersMs": 6.299999952316284,
+            "totalMs": 6.399999976158142,
+            "bytes": 15
+          },
+          {
+            "url": "/api/v1/shipments/filter-values",
+            "status": 200,
+            "headersMs": 6.100000023841858,
+            "totalMs": 6.900000095367432,
+            "bytes": 435
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 6.5,
+            "totalMs": 7,
+            "bytes": 521
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 7.100000023841858,
+            "totalMs": 7.100000023841858,
+            "bytes": 738
+          },
+          {
+            "url": "/api/v1/counterparties/list",
+            "status": 200,
+            "headersMs": 8.300000071525574,
+            "totalMs": 8.5,
+            "bytes": 2782
+          },
+          {
+            "url": "/api/v1/transportations/list",
+            "status": 200,
+            "headersMs": 38,
+            "totalMs": 38.200000047683716,
+            "bytes": 21357
+          }
+        ]
+      },
+      {
+        "navigationToRowsMs": 121.20000004768372,
+        "rows": 50,
+        "dom": 927,
+        "requests": [
+          {
+            "url": "/localization/catalog?locale=ru",
+            "status": 200,
+            "headersMs": 5,
+            "totalMs": 5.200000047683716,
+            "bytes": 15
+          },
+          {
+            "url": "/api/session",
+            "status": 200,
+            "headersMs": 5.199999928474426,
+            "totalMs": 5.399999976158142,
+            "bytes": 811
+          },
+          {
+            "url": "/api/preferences/list",
+            "status": 200,
+            "headersMs": 4.100000023841858,
+            "totalMs": 4.299999952316284,
+            "bytes": 604
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 5.100000023841858,
+            "totalMs": 5.100000023841858,
+            "bytes": 521
+          },
+          {
+            "url": "/api/v1/shipments/filter-values",
+            "status": 200,
+            "headersMs": 5.799999952316284,
+            "totalMs": 5.899999976158142,
+            "bytes": 435
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 5.5,
+            "totalMs": 5.600000023841858,
+            "bytes": 738
+          },
+          {
+            "url": "/api/localization/catalog",
+            "status": 200,
+            "headersMs": 6,
+            "totalMs": 6.600000023841858,
+            "bytes": 15
+          },
+          {
+            "url": "/api/v1/counterparties/list",
+            "status": 200,
+            "headersMs": 6.699999928474426,
+            "totalMs": 6.899999976158142,
+            "bytes": 2782
+          },
+          {
+            "url": "/api/v1/transportations/list",
+            "status": 200,
+            "headersMs": 35.800000071525574,
+            "totalMs": 36,
+            "bytes": 21357
+          }
+        ]
+      },
+      {
+        "navigationToRowsMs": 117.70000004768372,
+        "rows": 50,
+        "dom": 927,
+        "requests": [
+          {
+            "url": "/localization/catalog?locale=ru",
+            "status": 200,
+            "headersMs": 4.700000047683716,
+            "totalMs": 4.899999976158142,
+            "bytes": 15
+          },
+          {
+            "url": "/api/session",
+            "status": 200,
+            "headersMs": 4.899999976158142,
+            "totalMs": 5.100000023841858,
+            "bytes": 811
+          },
+          {
+            "url": "/api/preferences/list",
+            "status": 200,
+            "headersMs": 4,
+            "totalMs": 4.100000023841858,
+            "bytes": 604
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 4.5,
+            "totalMs": 4.700000047683716,
+            "bytes": 521
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 4.899999976158142,
+            "totalMs": 6.299999952316284,
+            "bytes": 738
+          },
+          {
+            "url": "/api/localization/catalog",
+            "status": 200,
+            "headersMs": 5.5,
+            "totalMs": 6.799999952316284,
+            "bytes": 15
+          },
+          {
+            "url": "/api/v1/counterparties/list",
+            "status": 200,
+            "headersMs": 6.199999928474426,
+            "totalMs": 6.799999952316284,
+            "bytes": 2782
+          },
+          {
+            "url": "/api/v1/shipments/filter-values",
+            "status": 200,
+            "headersMs": 8.899999976158142,
+            "totalMs": 9,
+            "bytes": 435
+          },
+          {
+            "url": "/api/v1/transportations/list",
+            "status": 200,
+            "headersMs": 37.90000009536743,
+            "totalMs": 38,
+            "bytes": 21357
+          }
+        ]
+      },
+      {
+        "navigationToRowsMs": 119.60000002384186,
+        "rows": 50,
+        "dom": 927,
+        "requests": [
+          {
+            "url": "/localization/catalog?locale=ru",
+            "status": 200,
+            "headersMs": 4.5,
+            "totalMs": 4.600000023841858,
+            "bytes": 15
+          },
+          {
+            "url": "/api/session",
+            "status": 200,
+            "headersMs": 4.699999928474426,
+            "totalMs": 4.899999976158142,
+            "bytes": 811
+          },
+          {
+            "url": "/api/preferences/list",
+            "status": 200,
+            "headersMs": 4.100000023841858,
+            "totalMs": 4.200000047683716,
+            "bytes": 604
+          },
+          {
+            "url": "/api/v1/shipments/filter-values",
+            "status": 200,
+            "headersMs": 4.799999952316284,
+            "totalMs": 4.899999976158142,
+            "bytes": 435
+          },
+          {
+            "url": "/api/localization/catalog",
+            "status": 200,
+            "headersMs": 5.5,
+            "totalMs": 5.600000023841858,
+            "bytes": 15
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 5.100000023841858,
+            "totalMs": 5.700000047683716,
+            "bytes": 738
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 5.700000047683716,
+            "totalMs": 6,
+            "bytes": 521
+          },
+          {
+            "url": "/api/v1/counterparties/list",
+            "status": 200,
+            "headersMs": 6.699999928474426,
+            "totalMs": 6.899999976158142,
+            "bytes": 2782
+          },
+          {
+            "url": "/api/v1/transportations/list",
+            "status": 200,
+            "headersMs": 35.5,
+            "totalMs": 35.60000002384186,
+            "bytes": 21357
+          }
+        ]
+      },
+      {
+        "navigationToRowsMs": 122.5,
+        "rows": 50,
+        "dom": 927,
+        "requests": [
+          {
+            "url": "/localization/catalog?locale=ru",
+            "status": 200,
+            "headersMs": 5.100000023841858,
+            "totalMs": 5.300000071525574,
+            "bytes": 15
+          },
+          {
+            "url": "/api/session",
+            "status": 200,
+            "headersMs": 5.199999928474426,
+            "totalMs": 5.399999976158142,
+            "bytes": 811
+          },
+          {
+            "url": "/api/preferences/list",
+            "status": 200,
+            "headersMs": 4.600000023841858,
+            "totalMs": 4.700000047683716,
+            "bytes": 604
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 4.599999904632568,
+            "totalMs": 4.699999928474426,
+            "bytes": 521
+          },
+          {
+            "url": "/api/v1/shipments/filter-values",
+            "status": 200,
+            "headersMs": 5.299999952316284,
+            "totalMs": 5.399999976158142,
+            "bytes": 435
+          },
+          {
+            "url": "/api/v1/transportations/filter-values",
+            "status": 200,
+            "headersMs": 5,
+            "totalMs": 5.100000023841858,
+            "bytes": 738
+          },
+          {
+            "url": "/api/localization/catalog",
+            "status": 200,
+            "headersMs": 5.600000023841858,
+            "totalMs": 6,
+            "bytes": 15
+          },
+          {
+            "url": "/api/v1/counterparties/list",
+            "status": 200,
+            "headersMs": 6.100000023841858,
+            "totalMs": 6.200000047683716,
+            "bytes": 2782
+          },
+          {
+            "url": "/api/v1/transportations/list",
+            "status": 200,
+            "headersMs": 34.799999952316284,
+            "totalMs": 34.89999997615814,
+            "bytes": 21357
+          }
+        ]
+      }
+    ]
+  },
+  "sustained": {
+    "10": {
+      "requests": 3077,
+      "seconds": 15.024991416954435,
+      "rps": 204.79213029884764,
+      "p50_ms": 47.96283401083201,
+      "p95_ms": 79.20254208147526,
+      "p99_ms": 86.1396660329774,
+      "max_ms": 100.22837505675852,
+      "statuses": {
+        "200": 3077
+      }
+    },
+    "25": {
+      "requests": 2877,
+      "seconds": 15.098009292036295,
+      "rps": 190.55492312602584,
+      "p50_ms": 130.9219169197604,
+      "p95_ms": 228.26162492856383,
+      "p99_ms": 262.17941707000136,
+      "max_ms": 368.0560839129612,
+      "statuses": {
+        "200": 2877
+      }
+    },
+    "50": {
+      "requests": 3026,
+      "seconds": 15.239041666965932,
+      "rps": 198.56891700477067,
+      "p50_ms": 255.72602049214765,
+      "p95_ms": 382.36437493469566,
+      "p99_ms": 425.874957931228,
+      "max_ms": 593.4969999361783,
+      "statuses": {
+        "200": 3026
+      }
+    }
+  },
+  "deep": {
+    "deep_cursor": {
+      "p50_ms": 28.957062459085137,
+      "p95_ms": 34.732375061139464,
+      "max_ms": 35.3237499948591,
+      "statuses": [
+        200
+      ],
+      "rows": 50,
+      "error": null
+    },
+    "route_absent": {
+      "p50_ms": 3.312874468974769,
+      "p95_ms": 4.736499977298081,
+      "max_ms": 5.194124998524785,
+      "statuses": [
+        200
+      ],
+      "rows": 0,
+      "error": null
+    },
+    "route_two_groups": {
+      "p50_ms": 28.99181196698919,
+      "p95_ms": 31.938584055751562,
+      "max_ms": 32.312292023561895,
+      "statuses": [
+        200
+      ],
+      "rows": 50,
+      "error": null
+    },
+    "route_pol": {
+      "p50_ms": 51.88452050788328,
+      "p95_ms": 54.625791031867266,
+      "max_ms": 56.92654103040695,
+      "statuses": [
+        200
+      ],
+      "rows": 50,
+      "error": null
+    },
+    "route_values": {
+      "p50_ms": 58.203229506034404,
+      "p95_ms": 61.65470799896866,
+      "max_ms": 66.15320802666247,
+      "statuses": [
+        200
+      ],
+      "rows": 20,
+      "error": null
+    }
+  },
+  "trace": {
+    "web_bff": [
+      {
+        "span_id": "bb8aebbb0a9844d1",
+        "parent_id": "1287b76585ee16d5",
+        "stopwatch_name": "POST /api/v1/transportations/list",
+        "total_time": 27.093916,
+        "start_timestamp": "1793886792.608723"
+      },
+      {
+        "span_id": "1287b76585ee16d5",
+        "parent_id": "",
+        "stopwatch_name": "POST /api/v1/transportations/list",
+        "total_time": 39.1275,
+        "start_timestamp": "1793886792.608531"
+      }
+    ],
+    "transportations": [
+      {
+        "span_id": "2a2056f0f1e622c4",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "POST organizations",
+        "total_time": 1.091584,
+        "start_timestamp": "1793886792.609624"
+      },
+      {
+        "span_id": "ef530e658d60e1d8",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "pg_query:begin",
+        "total_time": 0.008875,
+        "start_timestamp": "1793886792.610886"
+      },
+      {
+        "span_id": "1935748e69800802",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "pg_query",
+        "total_time": 0.301834,
+        "start_timestamp": "1793886792.610909"
+      },
+      {
+        "span_id": "53d0f78da728bb41",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "pg_query:select",
+        "total_time": 2.277459,
+        "start_timestamp": "1793886792.611240"
+      },
+      {
+        "span_id": "b97a6bffad9dbe49",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "pg_query:select",
+        "total_time": 1.43325,
+        "start_timestamp": "1793886792.613590"
+      },
+      {
+        "span_id": "4b8ffa0a1deee920",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "pg_query:commit",
+        "total_time": 0.124625,
+        "start_timestamp": "1793886792.615682"
+      },
+      {
+        "span_id": "0bb2956efa46f7ab",
+        "parent_id": "d96c38d2ec35b180",
+        "stopwatch_name": "POST /api/v1/shipments/transportation-contexts",
+        "total_time": 9.011792,
+        "start_timestamp": "1793886792.616460"
+      },
+      {
+        "span_id": "d96c38d2ec35b180",
+        "parent_id": "bb8aebbb0a9844d1",
+        "stopwatch_name": "POST /api/v1/transportations/list",
+        "total_time": 26.157959,
+        "start_timestamp": "1793886792.609396"
+      }
+    ],
+    "shipments": [
+      {
+        "span_id": "c44b406edc958635",
+        "parent_id": "58a8497511085200",
+        "stopwatch_name": "POST organizations",
+        "total_time": 0.736125,
+        "start_timestamp": "1793886792.617212"
+      },
+      {
+        "span_id": "26b4a6b3f0cb694b",
+        "parent_id": "58a8497511085200",
+        "stopwatch_name": "pg_query:select",
+        "total_time": 1.840875,
+        "start_timestamp": "1793886792.618605"
+      },
+      {
+        "span_id": "58a8497511085200",
+        "parent_id": "0bb2956efa46f7ab",
+        "stopwatch_name": "POST /api/v1/shipments/transportation-contexts",
+        "total_time": 8.230917,
+        "start_timestamp": "1793886792.617077"
+      }
+    ]
+  },
+  "http": {
+    "first": {
+      "first_sample_ms": 41.239375015720725,
+      "p50_ms": 29.69308302272111,
+      "p95_ms": 36.70775005593896,
+      "statuses": [
+        200
+      ],
+      "bytes": 21357,
+      "rows": 50
+    },
+    "type_sort": {
+      "first_sample_ms": 42.308208998292685,
+      "p50_ms": 40.82129197195172,
+      "p95_ms": 53.66529198363423,
+      "statuses": [
+        200
+      ],
+      "bytes": 23316,
+      "rows": 50
+    },
+    "container_sort": {
+      "first_sample_ms": 40.266291005536914,
+      "p50_ms": 39.548874949105084,
+      "p95_ms": 40.229458012618124,
+      "statuses": [
+        200
+      ],
+      "bytes": 23154,
+      "rows": 50
+    },
+    "short_contains": {
+      "first_sample_ms": 33.420333988033235,
+      "p50_ms": 32.59854204952717,
+      "p95_ms": 42.60262497700751,
+      "statuses": [
+        200
+      ],
+      "bytes": 23317,
+      "rows": 50
+    },
+    "absent": {
+      "first_sample_ms": 9.534209035336971,
+      "p50_ms": 3.7696249783039093,
+      "p95_ms": 8.487374987453222,
+      "statuses": [
+        200
+      ],
+      "bytes": 12,
+      "rows": 0
+    },
+    "combined": {
+      "first_sample_ms": 35.59154202230275,
+      "p50_ms": 35.78720905352384,
+      "p95_ms": 37.788082961924374,
+      "statuses": [
+        200
+      ],
+      "bytes": 23269,
+      "rows": 50
+    }
+  },
+  "horizontal": {
+    "100 \u00d7 100": [
+      {
+        "rowsPerTab": 100,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.4,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.6,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.3,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 62,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.1,
+        "domElements": 400,
+        "renderedRows": 19
+      }
+    ],
+    "1000 \u00d7 100": [
+      {
+        "rowsPerTab": 1000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 61.1,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 1000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.5,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 1000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 62.7,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 1000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.5,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 1000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.6,
+        "domElements": 400,
+        "renderedRows": 19
+      }
+    ],
+    "100000 \u00d7 100": [
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 61.9,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.5,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.3,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.4,
+        "domElements": 400,
+        "renderedRows": 19
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 1,
+        "elapsedToTwoFramesMs": 63.3,
+        "domElements": 400,
+        "renderedRows": 19
+      }
+    ],
+    "10 \u0432\u043a\u043b\u0430\u0434\u043e\u043a \u00d7 100000 \u00d7 100": [
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 10,
+        "elapsedToTwoFramesMs": 62.8,
+        "domElements": 3073,
+        "renderedRows": 172
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 10,
+        "elapsedToTwoFramesMs": 63.9,
+        "domElements": 3073,
+        "renderedRows": 172
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 10,
+        "elapsedToTwoFramesMs": 64,
+        "domElements": 3073,
+        "renderedRows": 172
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 10,
+        "elapsedToTwoFramesMs": 63.5,
+        "domElements": 3073,
+        "renderedRows": 172
+      },
+      {
+        "rowsPerTab": 100000,
+        "longTaskObserverSupported": true,
+        "longTasks": 0,
+        "longestTaskMs": 0,
+        "columns": 100,
+        "tabs": 10,
+        "elapsedToTwoFramesMs": 63.7,
+        "domElements": 3073,
+        "renderedRows": 172
+      }
+    ]
+  }
+}

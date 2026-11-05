@@ -1,3 +1,7 @@
+import { Fragment } from 'react';
+import { VIRTUAL_COLUMN_THRESHOLD } from './virtualColumns';
+import { useVirtualColumns } from './useVirtualColumns';
+import { useVirtualRows } from './useVirtualRows';
 import './registryControls.css';
 import { fitRegistryWidths } from './registryColumnWidths';
 import { useLocalization } from '../localization/Localization';
@@ -266,7 +270,9 @@ export function RegistryTable<T extends { id: string }>({
   emptyMessage,
   rowAttributes,
   selectionColumn,
+  virtualize = true,
 }: {
+  virtualize?: boolean;
   selectionColumn?: { header: ReactNode; render: (item: T) => ReactNode };
   rowAttributes?: (item: T) => HTMLAttributes<HTMLTableRowElement>;
   emptyMessage?: ReactNode;
@@ -292,6 +298,7 @@ export function RegistryTable<T extends { id: string }>({
   } | null>(null);
   const drag = useRef<{ id: string; x: number; width: number } | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLTableSectionElement>(null);
   const moving = useRef<string | null>(null);
   const pointerX = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
@@ -318,6 +325,28 @@ export function RegistryTable<T extends { id: string }>({
         availableWidth - (selectionColumn ? 48 : 0),
       )
     : visible.map((column) => column.width);
+
+  const virtual = useVirtualRows(
+    items,
+    body,
+    visible.map((column, index) => `${column.id}:${columnWidths[index]}`).join('|'),
+    virtualize,
+    visible.length,
+  );
+  const horizontal = virtualize && visible.length >= VIRTUAL_COLUMN_THRESHOLD;
+  const slots = useVirtualColumns(
+    scroll,
+    columnWidths,
+    visible.flatMap((column, index) =>
+      column.id === source ||
+      column.id === drag.current?.id ||
+      column.id === filterEditor?.anchor.dataset.columnFilter
+        ? [index]
+        : [],
+    ),
+    horizontal,
+  );
+  const physicalColumns = slots.length + (selectionColumn ? 1 : 0);
 
   function targetAt(x: number) {
     const headers = Array.from(
@@ -367,13 +396,9 @@ export function RegistryTable<T extends { id: string }>({
     frame.current = requestAnimationFrame(autoScroll);
   }
   function renderedWidths() {
-    return new Map(
-      [...(scroll.current?.querySelectorAll<HTMLElement>('th[data-column]') ?? [])].map((cell) => [
-        cell.dataset.column!,
-        cell.getBoundingClientRect().width,
-      ]),
-    );
+    return new Map(visible.map((column, index) => [column.id, columnWidths[index]]));
   }
+
   function resize(id: string, width: number) {
     const widths = renderedWidths();
     state.setColumns((old) =>
@@ -455,7 +480,9 @@ export function RegistryTable<T extends { id: string }>({
         }}
       >
         <table
-          className="personal-registry-table"
+          className={`personal-registry-table${virtual.enabled ? ' virtual-registry-table' : ''}`}
+          aria-rowcount={virtual.enabled ? items.length + 1 : undefined}
+          aria-colcount={horizontal ? visible.length + (selectionColumn ? 1 : 0) : undefined}
           style={{
             width: columnWidths.reduce((sum, width) => sum + width, selectionColumn ? 48 : 0),
             minWidth: standardWidths ? '100%' : 0,
@@ -463,16 +490,30 @@ export function RegistryTable<T extends { id: string }>({
         >
           <colgroup>
             {selectionColumn && <col style={{ width: 48 }} />}
-            {visible.map((column, index) => (
-              <col key={column.id} style={{ width: columnWidths[index] }} />
+            {slots.map((slot, position) => (
+              <col
+                key={slot.index === undefined ? `gap-${position}` : visible[slot.index].id}
+                style={{ width: slot.width }}
+              />
             ))}
           </colgroup>
           <thead>
             <tr>
               {selectionColumn && (
-                <th className="registry-selection-cell">{selectionColumn.header}</th>
+                <th className="registry-selection-cell" aria-colindex={horizontal ? 1 : undefined}>
+                  {selectionColumn.header}
+                </th>
               )}
-              {visible.map((column) => {
+              {slots.map((slot, position) => {
+                if (slot.index === undefined)
+                  return (
+                    <th
+                      key={`gap-${position}`}
+                      aria-hidden="true"
+                      className="registry-column-spacer"
+                    />
+                  );
+                const column = visible[slot.index];
                 const definition = definitionsById.get(column.id)!;
                 const filterFields =
                   definition.filterFields === false
@@ -488,6 +529,8 @@ export function RegistryTable<T extends { id: string }>({
                   <th
                     key={column.id}
                     data-column={column.id}
+                    data-column-index={horizontal ? slot.index : undefined}
+                    aria-colindex={horizontal ? slot.index + (selectionColumn ? 2 : 1) : undefined}
                     className={source === column.id ? 'column-dragging' : undefined}
                     data-drop-side={
                       drop?.id === column.id && drop.id !== source ? drop.side : undefined
@@ -622,24 +665,75 @@ export function RegistryTable<T extends { id: string }>({
               })}
             </tr>
           </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.id}
-                {...(rowAttributes
-                  ? rowAttributes(item)
-                  : { className: 'clickable', onClick: () => onOpen(item) })}
-              >
-                {selectionColumn && (
-                  <td className="registry-selection-cell">{selectionColumn.render(item)}</td>
-                )}
-                {visible.map((column) => (
-                  <td key={column.id} className={definitionsById.get(column.id)!.cellClassName}>
-                    {definitionsById.get(column.id)!.render(item)}
-                  </td>
-                ))}
+          <tbody ref={body}>
+            {virtual.indices.map((index, position) => {
+              const item = items[index];
+              const previousEnd = position ? virtual.offsets[virtual.indices[position - 1] + 1] : 0;
+              const gap = virtual.offsets[index] - previousEnd;
+              return (
+                <Fragment key={item.id}>
+                  {virtual.enabled && gap > 0 && (
+                    <tr aria-hidden="true" className="registry-virtual-spacer">
+                      <td colSpan={physicalColumns} style={{ height: gap }} />
+                    </tr>
+                  )}
+                  <tr
+                    style={horizontal ? { height: virtual.retainedHeight(item.id) } : undefined}
+                    data-virtual-index={virtual.enabled || horizontal ? index : undefined}
+                    aria-rowindex={virtual.enabled ? index + 2 : undefined}
+                    {...(rowAttributes
+                      ? rowAttributes(item)
+                      : { className: 'clickable', onClick: () => onOpen(item) })}
+                  >
+                    {selectionColumn && (
+                      <td
+                        className="registry-selection-cell"
+                        aria-colindex={horizontal ? 1 : undefined}
+                      >
+                        {selectionColumn.render(item)}
+                      </td>
+                    )}
+                    {slots.map((slot, position) => {
+                      if (slot.index === undefined)
+                        return (
+                          <td
+                            key={`gap-${position}`}
+                            aria-hidden="true"
+                            className="registry-column-spacer"
+                          />
+                        );
+                      const column = visible[slot.index];
+                      return (
+                        <td
+                          key={column.id}
+                          data-column-index={horizontal ? slot.index : undefined}
+                          aria-colindex={
+                            horizontal ? slot.index + (selectionColumn ? 2 : 1) : undefined
+                          }
+                          className={definitionsById.get(column.id)!.cellClassName}
+                        >
+                          {definitionsById.get(column.id)!.render(item)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </Fragment>
+              );
+            })}
+            {virtual.enabled && (
+              <tr aria-hidden="true" className="registry-virtual-spacer">
+                <td
+                  colSpan={physicalColumns}
+                  style={{
+                    height:
+                      virtual.offsets[items.length] -
+                      (virtual.indices.length
+                        ? virtual.offsets[virtual.indices[virtual.indices.length - 1] + 1]
+                        : 0),
+                  }}
+                />
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

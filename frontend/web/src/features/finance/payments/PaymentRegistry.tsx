@@ -1,8 +1,8 @@
-import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
+import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { useLocalization } from '../../localization/Localization';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -40,17 +40,43 @@ export function PaymentRegistry({
   refreshVersion?: number;
 }) {
   const { translate } = useLocalization();
-  const [items, setItems] = useState<Payment[]>([]);
-  const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState('');
   const [version, setVersion] = useState(0);
-  const base = paymentBase(kind);
   const [query, setQuery] = useRegistryPreference(
     preferenceKey(session.subject, `${kind}-payments${scope ? `:${scope.key}` : ''}`, 'query'),
     initialPaymentQuery,
     restorePaymentQuery,
   );
+  const loadPage = useCallback(
+    async (cursor: Cursor | undefined, signal: AbortSignal) => {
+      setFailure('');
+      const result = await request<{ items: Payment[]; next_cursor?: Cursor }>(
+        '/api/v1/payments/list',
+        session,
+        {
+          ...query,
+          kind,
+          filters: filterRequest(scopedFilters(query.filters, scope)),
+          limit: 50,
+          cursor,
+        },
+        signal,
+      );
+      return { items: result.items, next_cursor: result.next_cursor };
+    },
+    [query, session, kind, scope, refreshVersion],
+  );
+  const page = useRegistryPage({
+    active,
+    refreshVersion: version + refreshVersion,
+    loadPage,
+    onError: (error) => setFailure((error as Error).message),
+  });
+  const items = page.items;
+  const loading = page.loading;
+  const cursor = page.more;
+  const more = page.loadMore;
+  const base = paymentBase(kind);
   const registryRequest = { ...query, kind, filters: scopedFilters(query.filters, scope) };
   const filters = useColumnFilters({
     registry: 'payments',
@@ -65,54 +91,6 @@ export function PaymentRegistry({
     fields: filters.fields.filter((field) => !scopedFields.has(field.id)),
     filters: filters.filters.filter((filter) => !scopedFields.has(filter.field)),
   };
-  const cache = useRegistryFreshness([kind, query, session, version, scope, refreshVersion]);
-  useEffect(() => {
-    if (!active) return;
-    if (cache.isFresh()) return;
-    cache.clear();
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setCursor(undefined);
-    request<{ items: Payment[]; next_cursor?: Cursor }>(
-      '/api/v1/payments/list',
-      session,
-      { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50 },
-      controller.signal,
-    )
-      .then((r) => {
-        if (!controller.signal.aborted) {
-          cache.complete();
-          setItems(r.items);
-          setCursor(r.next_cursor);
-        }
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted) setFailure(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [active, kind, query, session, version, scope, refreshVersion, cache.version]);
-  async function more() {
-    if (!cursor || loading) return;
-    setLoading(true);
-    setFailure('');
-    try {
-      const r = await request<{ items: Payment[]; next_cursor?: Cursor }>(
-        '/api/v1/payments/list',
-        session,
-        { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50, cursor },
-      );
-      setItems((old) => [...old, ...r.items]);
-      setCursor(r.next_cursor);
-    } catch (e) {
-      setFailure((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
   const columns: RegistryColumn<Payment>[] = [
     {
       id: 'number',
@@ -178,7 +156,7 @@ export function PaymentRegistry({
               ? translate('nav.receipts')
               : translate('nav.disbursements')
         }
-        count={items.length}
+        count={page.count}
         loading={loading}
         onRefresh={() => setVersion((v) => v + 1)}
       >
@@ -196,6 +174,7 @@ export function PaymentRegistry({
         </p>
       )}
       <RegistryTable
+        pageSource={page.source}
         items={items}
         columns={columnState}
         definitions={columns}

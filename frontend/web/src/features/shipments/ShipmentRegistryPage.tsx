@@ -149,7 +149,7 @@ export function ShipmentRegistry({
       <RegistryHeading
         columns={columnState}
         title={translate('nav.shipments')}
-        count={page.items.length}
+        count={page.count}
         loading={page.loading}
         onRefresh={() => void page.refresh()}
       >
@@ -162,6 +162,7 @@ export function ShipmentRegistry({
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         <RegistryTable
           items={page.items}
+          pageSource={page.source}
           columns={columnState}
           definitions={columns}
           filters={filters}

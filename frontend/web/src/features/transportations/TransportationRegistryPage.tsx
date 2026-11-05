@@ -72,7 +72,7 @@ export function TransportationRegistry({
       <RegistryHeading
         columns={columns}
         title={translate('nav.transportations')}
-        count={page.items.length}
+        count={page.count}
         loading={page.loading}
         onRefresh={() => void page.refresh()}
       />
@@ -82,6 +82,7 @@ export function TransportationRegistry({
           routeFilter={routeFilters.button}
           routeFilterSummary={routeFilters.toolbar}
           items={page.items}
+          pageSource={page.source}
           filters={filters}
           columns={columns}
           sort={query.sort}

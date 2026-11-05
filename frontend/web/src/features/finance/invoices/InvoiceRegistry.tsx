@@ -1,15 +1,15 @@
-import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
+import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { InvoicePdfArchiveDialog } from './print/InvoicePdfArchiveDialog';
-import { useRowSelection } from '../../registry/useRowSelection';
+import { usePagedRowSelection } from '../../registry/usePagedRowSelection';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { InvoicePaymentPicker } from './InvoicePaymentPicker';
 import { invoicePaymentProblem, type PaymentTarget } from './invoicePayments';
 import '../services/bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -52,9 +52,44 @@ export function InvoiceRegistry({
   refreshVersion?: number;
 }) {
   const { translate, locale } = useLocalization();
-  const [items, setItems] = useState<InvoiceRow[]>([]);
-  const selection = useRowSelection(items.map((item) => item.id));
-  const chosen = items.filter((item) => selection.selected.has(item.id));
+  const [failure, setFailure] = useState('');
+  const [version, setVersion] = useState(0);
+  const [query, setQuery] = useRegistryPreference(
+    preferenceKey(session.subject, `${direction}-invoices${scope ? `:${scope.key}` : ''}`, 'query'),
+    initialInvoiceQuery,
+    restoreInvoiceQuery,
+  );
+  const loadPage = useCallback(
+    async (cursor: Cursor | undefined, signal: AbortSignal) => {
+      setFailure('');
+      const result = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
+        '/api/v1/invoices/list',
+        session,
+        {
+          ...query,
+          direction,
+          filters: filterRequest(scopedFilters(query.filters, scope)),
+          limit: 50,
+          cursor,
+        },
+        signal,
+      );
+      return { items: result.items.map(flatten), next_cursor: result.next_cursor };
+    },
+    [query, session, direction, scope, refreshVersion],
+  );
+  const page = useRegistryPage({
+    active,
+    refreshVersion: version + refreshVersion,
+    loadPage,
+    onError: (error) => setFailure((error as Error).message),
+  });
+  const items = page.items;
+  const loading = page.loading;
+  const cursor = page.more;
+  const more = page.loadMore;
+  const selection = usePagedRowSelection(page, 100, active);
+  const chosen = selection.items;
   const targets = chosen.map((item) => ({
     invoice: item,
     outstanding_minor: item.outstanding_minor,
@@ -67,23 +102,18 @@ export function InvoiceRegistry({
     direction === 'outgoing' && session.permissions.includes('finance.read_invoices');
   const canSelect = canPay || canDownload;
   const [pdfInvoices, setPdfInvoices] = useState<Invoice[]>();
-  const archiveProblem = chosen.length > 100 ? translate('ui.maxInvoices') : undefined;
-  const problem = invoicePaymentProblem(targets, locale);
+  const archiveProblem = selection.selected.size > 100 ? translate('ui.maxInvoices') : undefined;
+  const selectionProblem = selection.resolving ? translate('ui.loadingRecords') : selection.error;
+  const problem =
+    selection.selected.size > 100
+      ? translate('bulk.invoiceLimit')
+      : selectionProblem || invoicePaymentProblem(targets, locale);
   function distribute() {
     if (problem) return;
     setMenu(undefined);
     setPaying(targets);
   }
-  const [cursor, setCursor] = useState<Cursor>();
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState('');
-  const [version, setVersion] = useState(0);
   const base = invoiceRegistry(direction);
-  const [query, setQuery] = useRegistryPreference(
-    preferenceKey(session.subject, `${direction}-invoices${scope ? `:${scope.key}` : ''}`, 'query'),
-    initialInvoiceQuery,
-    restoreInvoiceQuery,
-  );
   useEffect(() => {
     selection.clear();
     setMenu(undefined);
@@ -102,54 +132,6 @@ export function InvoiceRegistry({
     fields: filters.fields.filter((field) => !scopedFields.has(field.id)),
     filters: filters.filters.filter((filter) => !scopedFields.has(filter.field)),
   };
-  const cache = useRegistryFreshness([direction, query, session, version, scope, refreshVersion]);
-  useEffect(() => {
-    if (!active) return;
-    if (cache.isFresh()) return;
-    cache.clear();
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setCursor(undefined);
-    request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
-      '/api/v1/invoices/list',
-      session,
-      { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50 },
-      controller.signal,
-    )
-      .then((r) => {
-        if (!controller.signal.aborted) {
-          cache.complete();
-          setItems(r.items.map(flatten));
-          setCursor(r.next_cursor);
-        }
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted) setFailure(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [active, direction, query, session, version, scope, refreshVersion, cache.version]);
-  async function more() {
-    if (!cursor || loading) return;
-    setLoading(true);
-    setFailure('');
-    try {
-      const r = await request<{ items: InvoiceRegistryItem[]; next_cursor?: Cursor }>(
-        '/api/v1/invoices/list',
-        session,
-        { ...registryRequest, filters: filterRequest(registryRequest.filters), limit: 50, cursor },
-      );
-      setItems((old) => [...old, ...r.items.map(flatten)]);
-      setCursor(r.next_cursor);
-    } catch (e) {
-      setFailure((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
   const columns: RegistryColumn<InvoiceRow>[] = [
     {
       id: 'number',
@@ -259,7 +241,7 @@ export function InvoiceRegistry({
             ? undefined
             : translate(direction === 'incoming' ? 'nav.incomingInvoices' : 'nav.outgoingInvoices')
         }
-        count={items.length}
+        count={page.count}
         loading={loading}
         onRefresh={() => setVersion((v) => v + 1)}
       >
@@ -276,7 +258,7 @@ export function InvoiceRegistry({
       )}
       {canSelect && (
         <RegistrySelectionActions
-          count={chosen.length}
+          count={selection.selected.size}
           actions={[
             ...(canPay
               ? [
@@ -295,7 +277,7 @@ export function InvoiceRegistry({
               ? [
                   {
                     label: translate('ui.downloadZip'),
-                    problem: archiveProblem,
+                    problem: archiveProblem || selectionProblem,
                     onClick: () => {
                       setMenu(undefined);
                       setPdfInvoices([...chosen]);
@@ -338,6 +320,7 @@ export function InvoiceRegistry({
         </p>
       )}
       <RegistryTable
+        pageSource={page.source}
         selectionColumn={
           canSelect
             ? {
@@ -345,15 +328,14 @@ export function InvoiceRegistry({
                   <input
                     type="checkbox"
                     aria-label={translate('ui.selectInvoices')}
-                    checked={items.length > 0 && chosen.length === items.length}
+                    checked={selection.allSelected}
                     ref={(node) => {
                       if (node)
-                        node.indeterminate = chosen.length > 0 && chosen.length < items.length;
+                        node.indeterminate =
+                          selection.selected.size > 0 && selection.selected.size < page.count;
                     }}
                     onChange={(event) =>
-                      selection.setSelected(
-                        event.target.checked ? new Set(items.map((item) => item.id)) : new Set(),
-                      )
+                      selection.setSelected(event.target.checked ? new Set(page.ids) : new Set())
                     }
                   />
                 ),

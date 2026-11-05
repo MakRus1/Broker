@@ -124,3 +124,40 @@ it('виртуализирует широкую таблицу по обеим �
   expect((html.match(/data-column=/g) ?? []).length).toBeLessThan(16);
   expect((html.match(/<td/g) ?? []).length).toBeLessThan(500);
 });
+
+it('сохраняет позиции выгруженных строк без вызова рендера отсутствующих данных', () => {
+  const definitions: RegistryColumn<{ id: string; name: string }>[] = [
+    {
+      id: 'name',
+      labelKey: 'registryField.name',
+      width: 200,
+      render: (item) => item.name,
+    },
+  ];
+  const html = renderToStaticMarkup(
+    <RegistryTable
+      items={[]}
+      pageSource={{
+        rows: [{ id: '1' }, { id: '2' }],
+        get: (i) => (i === 1 ? { id: '2', name: 'Вторая' } : undefined),
+        ensure: () => {},
+        failed: () => false,
+        retry: () => {},
+      }}
+      definitions={definitions}
+      columns={{
+        columns: restoreColumns(null, definitions),
+        definitions,
+        setColumns: () => {},
+        newColumns: [],
+        acknowledgeColumns: () => {},
+        guidanceKey: '',
+      }}
+      onOpen={() => {}}
+      emptyMessage="Пустой реестр"
+    />,
+  );
+  expect(html).toContain('registry-page-placeholder');
+  expect(html).toContain('Вторая');
+  expect(html).not.toContain('Пустой реестр');
+});

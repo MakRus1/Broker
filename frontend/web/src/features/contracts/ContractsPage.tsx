@@ -1,4 +1,4 @@
-import { useRegistryFreshness } from '../registry/useRegistryFreshness';
+import { useRegistryPage } from '../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
@@ -9,7 +9,7 @@ import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { useLocalization } from '../localization/Localization';
 import { BankAccountSelect } from '../counterparties/BankAccountSelect';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
@@ -171,8 +171,6 @@ export function ContractsPage({
   const initialDraft = useRef('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
-  const [items, setItems] = useState<Contract[]>([]);
-  const [after, setAfter] = useState<Cursor>();
   const [registryQuery, setRegistryQuery] = useRegistryPreference(
     preferenceKey(session.subject, 'contracts', 'query'),
     initialContractQuery,
@@ -185,6 +183,29 @@ export function ContractsPage({
     onChange: (filters) => setRegistryQuery((old) => ({ ...old, filters })),
     onSort: (sort, descending) => setRegistryQuery((old) => ({ ...old, sort, descending })),
   });
+  const [version, setVersion] = useState(0);
+  const loadPage = useCallback(
+    (cursor: Cursor | undefined, signal: AbortSignal) => {
+      setFailure('');
+      return request<{ items: Contract[]; next_cursor?: Cursor }>(
+        '/api/v1/contracts/list',
+        session,
+        { ...registryQuery, filters: filterRequest(registryQuery.filters), limit: 50, cursor },
+        signal,
+      );
+    },
+    [registryQuery, session],
+  );
+  const page = useRegistryPage({
+    active: active && session.permissions.includes('contracts.read') && !id && !creating,
+    refreshVersion: version,
+    loadPage,
+    onError: (error) => {
+      setFailure((error as Error).message);
+      onError(error);
+    },
+  });
+  const items = page.items;
   const [partyNames, setPartyNames] = useState<Record<string, string>>({});
   const names = useRef<Record<string, string>>({});
   const [namesFailed, setNamesFailed] = useState(false);
@@ -215,7 +236,6 @@ export function ContractsPage({
     return () => controller.abort();
   }, [items, session]);
   const [loading, setLoading] = useState(false);
-  const [version, setVersion] = useState(0);
   const validation = useFieldValidation();
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const read = session.permissions.includes('contracts.read');
@@ -272,39 +292,6 @@ export function ContractsPage({
             (id ? translate('registryField.contract_id') : translate('nav.contracts'))),
     );
   }, [creating, id, value?.id, value?.number, locale, catalogVersion]);
-  const cache = useRegistryFreshness([id, creating, read, registryQuery, session, version]);
-  useEffect(() => {
-    if (!active || !read || id || creating) return;
-    if (cache.isFresh()) return;
-    cache.clear();
-    const controller = new AbortController();
-    setLoading(true);
-    setFailure('');
-    setAfter(undefined);
-    request<{ items: Contract[]; next_cursor?: Cursor }>(
-      '/api/v1/contracts/list',
-      session,
-      { ...registryQuery, filters: filterRequest(registryQuery.filters), limit: 50 },
-      controller.signal,
-    )
-      .then((result) => {
-        if (!controller.signal.aborted) {
-          cache.complete();
-          setItems(result.items);
-          setAfter(result.next_cursor);
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setFailure(error.message);
-          onError(error);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [id, creating, read, active, registryQuery, session, version, cache.version]);
   const columns: RegistryColumn<Contract>[] = [
     {
       id: 'number',
@@ -474,38 +461,14 @@ export function ContractsPage({
       setBusy(false);
     }
   }
-  async function more() {
-    if (!after || loading) return;
-    setLoading(true);
-    setFailure('');
-    try {
-      const result = await request<{ items: Contract[]; next_cursor?: Cursor }>(
-        '/api/v1/contracts/list',
-        session,
-        {
-          ...registryQuery,
-          filters: filterRequest(registryQuery.filters),
-          limit: 50,
-          cursor: after,
-        },
-      );
-      setItems((old) => [...old, ...result.items]);
-      setAfter(result.next_cursor);
-    } catch (error) {
-      setFailure(saveErrorMessage(error, translate('forms.couldNotLoadContracts')));
-      onError(error);
-    } finally {
-      setLoading(false);
-    }
-  }
   if (!id && !creating)
     return (
       <section className="card record-page registry-page contracts-page registry-workbench">
         <RegistryHeading
           columns={columnState}
           title={translate('nav.contracts')}
-          count={items.length}
-          loading={loading}
+          count={page.count}
+          loading={page.loading}
           onRefresh={() => setVersion((value) => value + 1)}
         >
           {write && (
@@ -520,10 +483,11 @@ export function ContractsPage({
           </p>
         )}
         <RegistryTable
+          pageSource={page.source}
           items={items}
           emptyMessage={
             <RegistryResultState
-              loading={loading}
+              loading={page.loading}
               failed={Boolean(failure)}
               failureMessage={failure}
               filtered={Boolean(registryQuery.filters?.length)}
@@ -560,7 +524,12 @@ export function ContractsPage({
             location.hash = `/contracts/${item.id}`;
           }}
         />
-        <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
+        <AutoLoadMore
+          enabled={page.more}
+          loading={page.loading}
+          failed={!!failure}
+          onLoad={page.loadMore}
+        />
       </section>
     );
   return (

@@ -17,13 +17,13 @@
 .counterparty-requisites .counterparty-field-legal_address {
   grid-column: span 8;
 }
-.financial-record-workbench .document-editor .counterparty-requisites textarea {
+.counterparty-form.document-editor .counterparty-requisites textarea {
   min-height: 44px;
   box-sizing: border-box;
   padding: 10px 12px;
   line-height: 22px;
 }
-.financial-record-workbench .document-editor .record-toggle {
+.counterparty-form.document-editor .record-toggle {
   margin-bottom: 16px;
 }
 @media (max-width: 760px) {
@@ -45,7 +45,7 @@
   }
 }
 
-.financial-record-workbench .document-editor .counterparty-requisites textarea {
+.counterparty-form.document-editor .counterparty-requisites textarea {
   field-sizing: content;
   max-height: 160px;
   resize: vertical;
@@ -53,4 +53,21 @@
 
 .counterparty-form .multi-select {
   width: 100%;
+}
+
+.counterparty-form .counterparty-field-name,
+.counterparty-form .counterparty-field-legal_name {
+  align-self: start;
+}
+.counterparty-form .counterparty-requisites label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.counterparty-form .counterparty-requisites input {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+.counterparty-form .counterparty-requisites textarea {
+  height: 44px;
 }

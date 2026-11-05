@@ -71,3 +71,13 @@ it('starts filling guidance at editable fields rather than a view-mode introduct
     'guide.shipmentCustomerView',
   );
 });
+
+it('starts an unvisited guide at the first step after its targets finish loading', () => {
+  const loading = [
+    { id: 'overview', title: 'guide.overview', description: 'guide.overviewDescription' },
+  ] as const;
+  const initial = restoreWorkflow(null, loading);
+  const loaded = [...shipmentWorkflow(true), ...loading];
+  expect(restoreWorkflow(initial, loaded)).toEqual({ status: 'ready', step: loaded[0].id });
+  expect(restoreWorkflow({ status: 'active', step: 'route' }, loaded).step).toBe('route');
+});

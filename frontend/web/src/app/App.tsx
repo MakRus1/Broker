@@ -20,6 +20,7 @@ import {
   type WorkspaceTab,
 } from './workspace';
 import { WorkspaceTabs } from './WorkspaceTabs';
+import { useWorkspaceScroll } from './workspaceScroll';
 import { ShipmentWorkspace } from '../features/shipments/ShipmentWorkspace';
 import { useDiscardConfirmation } from '../shared/ui/Dialog';
 import { profileName } from '../shared/profile/profile';
@@ -111,8 +112,8 @@ export function App() {
     }
   }, [storageKey, restoredFor, workspaces, route]);
   const workspaceNodes = useRef(new Map<string, HTMLDivElement>());
-  const workspaceScroll = useRef(new Map<string, number>());
-  const lastWorkspace = useRef(activeWorkspace);
+  const workspaceContent = useRef<HTMLDivElement>(null);
+  useWorkspaceScroll(workspaceContent, activeWorkspace, storageKey);
   const workspaceHistory = useRef<string[]>([activeWorkspace]);
   useEffect(() => {
     workspaceHistory.current = [activeWorkspace];
@@ -122,20 +123,8 @@ export function App() {
     setWorkspaces((old) => openWorkspace(old, route));
   }, [route]);
   useEffect(() => {
-    const old = lastWorkspace.current;
     workspaceHistory.current = rememberWorkspace(workspaceHistory.current, activeWorkspace);
-    if (old !== activeWorkspace) {
-      window.scrollTo(0, workspaceScroll.current.get(activeWorkspace) ?? 0);
-      lastWorkspace.current = activeWorkspace;
-    }
   }, [activeWorkspace]);
-  useEffect(() => {
-    function rememberScroll() {
-      workspaceScroll.current.set(lastWorkspace.current, window.scrollY);
-    }
-    window.addEventListener('scroll', rememberScroll, { passive: true });
-    return () => window.removeEventListener('scroll', rememberScroll);
-  }, []);
   const renameWorkspace = useCallback((id: string, title: string) => {
     setWorkspaces((old) => {
       if (!old.some((tab) => tab.id === id && tab.title !== title)) return old;
@@ -502,6 +491,7 @@ export function App() {
           onCloseAll={closeAllWorkspaces}
         />
         <div
+          ref={workspaceContent}
           className={`workspace-content${workspaces.length ? '' : ' without-tabs'}${route === '/' ? ' home-screen' : ''}`}
         >
           {route === '/' && <WorkspaceHome permissions={session.permissions} />}

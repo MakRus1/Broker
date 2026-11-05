@@ -1,3 +1,4 @@
+import { scrollIntent } from './scrollIntent';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRegistryPreference } from '../../features/registry/registryPreferences';
@@ -96,6 +97,7 @@ export function GuidedWorkflow({
     if (!visible) return;
     const target = targetFor.current(step.id);
     target?.classList.add('workflow-target');
+    scrollIntent();
     target?.scrollIntoView({
       block: 'nearest',
       inline: 'nearest',

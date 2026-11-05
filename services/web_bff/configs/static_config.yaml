@@ -37,6 +37,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-notifications-list:
+            path: /api/notifications/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-notifications-read:
+            path: /api/notifications/read
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-organizations-employees-list:
             path: /api/organizations/employees/list
             method: POST
@@ -497,6 +509,8 @@ components_manager:
             base-url: $client-finance-base-url
         client-localization:
             base-url: $client-localization-base-url
+        client-notifications:
+            base-url: $client-notifications-base-url
         client-organizations:
             base-url: $client-organizations-base-url
         client-shipments:

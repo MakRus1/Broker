@@ -1,0 +1,5 @@
+notifications.publish_shipments:
+  name: Публикация событий поставок сервисом
+  group: Уведомления
+  scope: service
+  requires: []

@@ -158,6 +158,9 @@ function ShipmentCard({
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
+  useEffect(() => {
+    if (props.route.endsWith('/route')) setTab('route');
+  }, [props.route]);
   const [editing, setEditing] = useState(!initial);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
@@ -601,6 +604,9 @@ function ShipmentCard({
                   setFailure('');
                 }
                 setTab(key);
+                // Ссылка на маршрут должна работать и для уже открытой карточки.
+                if (initial)
+                  location.hash = `/shipments/${initial.id}${key === 'route' ? '/route' : ''}`;
               };
               confirmDiscard(
                 dirty || Boolean(section?.querySelector('form[data-dirty="true"]')),

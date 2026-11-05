@@ -28,6 +28,12 @@ TransportationDispatcher::TransportationDispatcher(
             const auto organization = message.Payload["organization_id"].As<std::string>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
         });
+    outbox.RegisterHandler(std::string{helpers::kShipmentRouteChanged},
+        [this](const platform::outbox::Message& message) {
+            namespace api = clients::notifications::ApiInternalV1EventsShipmentRouteChanged;
+            deps_.notifications.ApiInternalV1EventsShipmentRouteChanged(
+                api::Request{.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
+        });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},
         [this](const auto& message) { SendRouteProjection(message); });
 }

@@ -8,6 +8,7 @@ libs:
     - counterparties
     - finance
     - localization
+    - notifications
     - organizations
     - shipments
     - transport_locations

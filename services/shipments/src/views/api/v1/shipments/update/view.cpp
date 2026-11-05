@@ -4,6 +4,7 @@
 #include <helpers/revision.hpp>
 #include <helpers/route_counterparties.hpp>
 #include <helpers/route_locations.hpp>
+#include <helpers/route_notifications.hpp>
 #include <helpers/route_projection.hpp>
 #include <helpers/route_usage.hpp>
 #include <helpers/shipment_card.hpp>
@@ -88,6 +89,7 @@ Response View::Handle(
         WriteAudit(transaction, organization, identity, "update_shipment", result.id, request.body,
             result);
         QueueRouteProjection(transaction, organization, result);
+        QueueRouteChanged(transaction, organization, identity, Convert(previous), result);
         transaction.Commit();
         return Response200{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {

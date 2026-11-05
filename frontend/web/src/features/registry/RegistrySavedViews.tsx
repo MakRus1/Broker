@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalization } from '../localization/Localization';
 import { Dialog } from '../../shared/ui/Dialog';
-import { Select } from '../../shared/ui/Select';
+import { LookupField } from '../../shared/ui/LookupField';
+import { RegistryRoleDefaults } from './RegistryRoleDefaults';
 import { restoreColumns, useRegistryPreference } from './registryPreferences';
 import type { RegistryColumns } from './RegistryTable';
 import { maxSavedViews, restoreSavedViews, sameViewState, snapshotView } from './savedViews';
@@ -24,6 +25,23 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [saveCopy, setSaveCopy] = useState(false);
+  const [removed, setRemoved] = useState<{ view: (typeof views)[number]; active: boolean }>();
+  const sourceLabel = translate(
+    state.inheritance?.source() === 'role'
+      ? 'views.role'
+      : state.inheritance?.source() === 'builtin'
+        ? 'views.builtin'
+        : 'views.current',
+  );
+  const choices = [{ id: '__current', name: sourceLabel }, ...views];
+  const loadChoices = useCallback(
+    async (query: string) => ({
+      items: choices.filter((item) =>
+        item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+      ),
+    }),
+    [JSON.stringify(choices)],
+  );
   const selected = views.find((view) => view.id === selectedId);
   const binding = state.view;
   const currentSignature = JSON.stringify({ query: binding?.query, columns: state.columns });
@@ -107,44 +125,120 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
   }
   return (
     <div className="registry-saved-views">
-      <Select
-        label={translate('views.title')}
-        value={selected?.id ?? ''}
-        options={[
-          { value: '', label: translate('views.current') },
-          ...views.map((view) => ({
-            value: view.id,
-            label: view.name,
-          })),
-        ]}
-        onChange={(id) => {
-          const previous = snapshotView(
-            selected?.id ?? 'personal',
-            selected?.name ?? 'personal',
-            binding?.query,
-            state.columns,
-          );
-          if (selected)
-            setViews((old) => old.map((item) => (item.id === selected.id ? previous : item)));
-          else setPersonal([previous]);
-          const view = views.find((item) => item.id === id) ?? (!id ? personal[0] : undefined);
-          setSelectedId(id);
-          if (!view) return;
-          binding.apply(view.query);
-          state.setColumns(restoreColumns(view.columns, state.definitions));
-        }}
+      <RegistryRoleDefaults
+        state={state}
+        trigger={(openRole) => (
+          <LookupField
+            label={translate('views.title')}
+            value={selected?.id ?? '__current'}
+            selectedLabel={selected?.name ?? sourceLabel}
+            placeholder={selected?.name ?? sourceLabel}
+            popupClassName="registry-view-popup"
+            load={loadChoices}
+            itemLabel={(item) => item.name}
+            clearable={false}
+            onChange={(item) => {
+              if (!item) return;
+              const id = item.id === '__current' ? '' : item.id;
+              const previous = snapshotView(
+                selected?.id ?? 'personal',
+                selected?.name ?? 'personal',
+                binding.query,
+                state.columns,
+              );
+              if (selected)
+                setViews((old) =>
+                  old.map((entry) => (entry.id === selected.id ? previous : entry)),
+                );
+              else setPersonal([previous]);
+              const view =
+                views.find((entry) => entry.id === id) ?? (!id ? personal[0] : undefined);
+              setSelectedId(id);
+              if (!view) return;
+              binding.apply(view.query);
+              state.setColumns(restoreColumns(view.columns, state.definitions));
+            }}
+            itemActions={(item) =>
+              item.id !== '__current' && (
+                <button
+                  type="button"
+                  className="registry-view-remove"
+                  aria-label={translate('views.deleteNamed', { name: item.name })}
+                  title={translate('views.deleteNamed', { name: item.name })}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    const view = views.find((entry) => entry.id === item.id);
+                    if (!view) return;
+                    setRemoved({ view, active: selectedId === view.id });
+                    setViews((old) => old.filter((entry) => entry.id !== view.id));
+                    if (selectedId === view.id) setSelectedId('');
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+                  </svg>
+                </button>
+              )
+            }
+            footer={
+              <div className="registry-view-menu-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setName(selected?.name ?? '');
+                    setSaveCopy(true);
+                    setError('');
+                    setEditing(true);
+                  }}
+                >
+                  {translate('views.save')}
+                </button>
+                {state.inheritance && (selected || state.inheritance.source() === 'personal') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId('');
+                      setPersonal([]);
+                      state.inheritance!.reset();
+                    }}
+                  >
+                    {translate(
+                      state.inheritance.inheritedSource() === 'role'
+                        ? 'views.inheritRole'
+                        : 'views.inheritBuiltin',
+                    )}
+                  </button>
+                )}
+                {openRole && (
+                  <button type="button" onClick={openRole}>
+                    {translate('roleView.action')}
+                  </button>
+                )}
+                {removed && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViews((old) => [...old, removed.view]);
+                      if (removed.active) setSelectedId(removed.view.id);
+                      setRemoved(undefined);
+                    }}
+                  >
+                    {translate('views.undoDelete', { name: removed.view.name })}
+                  </button>
+                )}
+              </div>
+            }
+          />
+        )}
       />
-      <button
-        type="button"
-        onClick={() => {
-          setName(selected?.name ?? '');
-          setSaveCopy(true);
-          setError('');
-          setEditing(true);
-        }}
-      >
-        {translate('views.save')}
-      </button>
       {error && !editing && (
         <span role="alert" className="error">
           {error}

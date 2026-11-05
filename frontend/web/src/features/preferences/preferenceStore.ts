@@ -105,7 +105,19 @@ export class PreferenceStore {
   }
   read(legacyKey: string): unknown {
     const personal = this.readPersonal(legacyKey);
-    return personal === undefined ? this.defaults[this.key(legacyKey)] : personal;
+    return personal == null ? this.defaults[this.key(legacyKey)] : personal;
+  }
+  source(legacyKey: string): 'personal' | 'role' | 'builtin' {
+    if (this.readPersonal(legacyKey) != null) return 'personal';
+    return this.inheritedSource(legacyKey);
+  }
+  inheritedSource(legacyKey: string): 'role' | 'builtin' {
+    return this.defaults[this.key(legacyKey)] != null ? 'role' : 'builtin';
+  }
+  reset(legacyKey: string) {
+    // null сохраняет ревизию и явно отключает личное переопределение.
+    // Так устаревший локальный кэш не импортируется повторно.
+    this.set(legacyKey, null);
   }
   import(legacyKey: string) {
     const key = this.key(legacyKey);

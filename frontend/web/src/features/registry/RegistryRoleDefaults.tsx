@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLocalization } from '../localization/Localization';
 import { usePreferencesSession, type RoleRegistryDefault } from '../preferences/UserPreferences';
 import { request } from '../../shared/api/http';
 import { Dialog, DialogActions } from '../../shared/ui/Dialog';
 import { Select } from '../../shared/ui/Select';
 import type { RegistryColumns } from './RegistryTable';
-export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
+export function RegistryRoleDefaults({
+  state,
+  trigger,
+}: {
+  state: RegistryColumns;
+  trigger?: (open?: () => void) => ReactNode;
+}) {
   const { translate } = useLocalization();
   const [session] = usePreferencesSession();
   const [open, setOpen] = useState(false);
@@ -16,7 +22,7 @@ export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   if (!session?.permissions.includes('organizations.manage') || !state.view || !state.registry)
-    return null;
+    return trigger?.() ?? null;
   async function start() {
     setOpen(true);
     setBusy(true);
@@ -37,7 +43,7 @@ export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
       setBusy(false);
     }
   }
-  async function save() {
+  async function save(reset = false) {
     setBusy(true);
     setError('');
     try {
@@ -48,7 +54,7 @@ export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
         expected_revision:
           items.find((item) => item.role === role && item.registry === state.registry)?.revision ??
           0,
-        value: { columns: state.columns, query: state.view!.query },
+        value: reset ? {} : { columns: state.columns, query: state.view!.query },
       });
       setOpen(false);
       setNotice(translate('roleView.saved'));
@@ -60,10 +66,14 @@ export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
   }
   return (
     <>
-      <button type="button" onClick={() => void start()}>
-        {translate('roleView.action')}
-      </button>
-      {notice && (
+      {trigger ? (
+        trigger(() => void start())
+      ) : (
+        <button type="button" onClick={() => void start()}>
+          {translate('roleView.action')}
+        </button>
+      )}
+      {notice && !trigger && (
         <span role="status" className="hint">
           {notice}
         </span>
@@ -92,6 +102,22 @@ export function RegistryRoleDefaults({ state }: { state: RegistryColumns }) {
             </div>
           )}
           <DialogActions>
+            <button
+              type="button"
+              disabled={
+                busy ||
+                !!error ||
+                !items.some(
+                  (item) =>
+                    item.role === role &&
+                    item.registry === state.registry &&
+                    item.value.columns !== undefined,
+                )
+              }
+              onClick={() => void save(true)}
+            >
+              {translate('roleView.reset')}
+            </button>
             <button type="button" disabled={busy} onClick={() => setOpen(false)}>
               {translate('action.cancel')}
             </button>

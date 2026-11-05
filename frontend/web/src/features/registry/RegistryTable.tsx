@@ -1,3 +1,4 @@
+import { usePreferences } from '../preferences/UserPreferences';
 import type { RegistryPageSource } from './registryPageCache';
 import { Fragment } from 'react';
 import { VIRTUAL_COLUMN_THRESHOLD } from './virtualColumns';
@@ -27,8 +28,40 @@ export function useRegistryColumns(
   subject: string,
   registry: string,
   definitions: readonly ColumnDefinition[],
-  view?: { query: unknown; apply: (raw: unknown) => void; active?: boolean },
+  view?: {
+    query: unknown;
+    apply: (raw: unknown) => void;
+    active?: boolean;
+    preferenceKey?: string;
+  },
 ) {
+  const preferences = usePreferences();
+  const columnsKey = preferenceKey(subject, registry, 'columns');
+  const queryKey = view?.preferenceKey ?? preferenceKey(subject, registry, 'query');
+  const inheritance =
+    preferences && subject
+      ? {
+          source: () => {
+            const sources = [preferences.source(columnsKey), preferences.source(queryKey)];
+            return sources.includes('personal')
+              ? 'personal'
+              : sources.includes('role')
+                ? 'role'
+                : 'builtin';
+          },
+          inheritedSource: () =>
+            [
+              preferences.inheritedSource(columnsKey),
+              preferences.inheritedSource(queryKey),
+            ].includes('role')
+              ? 'role'
+              : 'builtin',
+          reset: () => {
+            preferences.reset(columnsKey);
+            preferences.reset(queryKey);
+          },
+        }
+      : undefined;
   const [columns, setColumns] = useRegistryPreference(
     preferenceKey(subject, registry, 'columns'),
     restoreColumns(null, definitions),
@@ -48,6 +81,7 @@ export function useRegistryColumns(
   const acknowledgeColumns = () => setKnownColumns(definitions.map((column) => column.id));
   return {
     view,
+    inheritance,
     registry,
     viewsKey: preferenceKey(subject, registry, 'saved-views'),
     columns,
@@ -59,8 +93,11 @@ export function useRegistryColumns(
   };
 }
 type RegistryColumnState = ReturnType<typeof useRegistryColumns>;
-export type RegistryColumns = Omit<RegistryColumnState, 'view' | 'viewsKey' | 'registry'> &
-  Partial<Pick<RegistryColumnState, 'view' | 'viewsKey' | 'registry'>>;
+export type RegistryColumns = Omit<
+  RegistryColumnState,
+  'view' | 'viewsKey' | 'registry' | 'inheritance'
+> &
+  Partial<Pick<RegistryColumnState, 'view' | 'viewsKey' | 'registry' | 'inheritance'>>;
 export function RegistryColumnSettings({
   columns,
   setColumns,

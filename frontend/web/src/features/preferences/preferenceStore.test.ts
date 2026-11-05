@@ -198,3 +198,47 @@ it('uses role defaults only when no personal value exists and never imports defa
   expect(personal.read(key)).toEqual(['personal']);
   personal.dispose();
 });
+
+it('persists inheritance and does not restore a personal value after reload', async () => {
+  vi.useFakeTimers();
+  const transport: PreferenceTransport = {
+    list: vi.fn(async () => []),
+    save: vi.fn(async (_key, value, revision) => entry(value.value, revision + 1)),
+  };
+  const cache = storage();
+  const store = new PreferenceStore(
+    'actor',
+    'author',
+    'org',
+    transport,
+    [entry(['personal'])],
+    cache,
+    true,
+    {
+      'shipments:columns:v1': ['role'],
+    },
+  );
+  expect(store.source(key)).toBe('personal');
+  store.reset(key);
+  expect(store.read(key)).toEqual(['role']);
+  expect(store.source(key)).toBe('role');
+  await vi.advanceTimersByTimeAsync(400);
+  expect(transport.save).toHaveBeenCalledWith('shipments:columns:v1', { value: null }, 1);
+  store.dispose();
+  const reloaded = new PreferenceStore(
+    'actor',
+    'author',
+    'org',
+    transport,
+    [entry(null, 2)],
+    cache,
+    true,
+    {
+      'shipments:columns:v1': ['updated role'],
+    },
+  );
+  expect(reloaded.read(key)).toEqual(['updated role']);
+  expect(reloaded.source(key)).toBe('role');
+  reloaded.dispose();
+  vi.useRealTimers();
+});

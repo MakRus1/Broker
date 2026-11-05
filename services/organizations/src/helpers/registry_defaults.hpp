@@ -26,6 +26,9 @@ inline std::vector<models::RegistryDefault> RegistryDefaults(const pg::ResultSet
 inline void ValidateRegistryDefault(const userver::formats::json::Value& value) {
     if (userver::formats::json::ToString(value).size() > 24 * 1024)
         throw ApiError<400>{"registry_default_too_large", "Вид реестра не должен превышать 24 КиБ"};
+    // Пустое значение снимает переопределение, сохраняя ревизию для защиты от гонок.
+    if (value.IsObject() && value.GetSize() == 0)
+        return;
     if (!value.HasMember("columns") || !value["columns"].IsArray() || !value.HasMember("query") ||
         !value["query"].IsObject())
         throw ApiError<400>{"invalid_registry_default", "Укажите столбцы и условия реестра"};

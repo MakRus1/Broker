@@ -1,4 +1,3 @@
-import { RegistryRoleDefaults } from '../../features/registry/RegistryRoleDefaults';
 import { useDelayedBusy } from './useDelayedBusy';
 import { RegistrySavedViews } from '../../features/registry/RegistrySavedViews';
 import './registryExperience.css';
@@ -43,7 +42,6 @@ export function RegistryHeading({
       <div className="actions">
         <div className="registry-heading-tools">
           <RegistrySavedViews state={columns} />
-          <RegistryRoleDefaults state={columns} />
           <RegistryGuide />
           <RegistryColumnSettings {...columns} />
           <button

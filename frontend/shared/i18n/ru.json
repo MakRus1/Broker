@@ -1208,5 +1208,12 @@
   "roleView.title": "Исходный вид реестра",
   "roleView.description": "Текущие столбцы, фильтры и сортировка будут исходным видом для выбранной роли. Личные настройки пользователей сохранятся.",
   "roleView.role": "Роль",
-  "roleView.saved": "Вид роли сохранён"
+  "roleView.saved": "Вид роли сохранён",
+  "views.role": "Вид роли",
+  "views.builtin": "Встроенный вид",
+  "roleView.reset": "Сбросить к встроенному",
+  "views.inheritRole": "Вернуть вид роли",
+  "views.inheritBuiltin": "Вернуть встроенный вид",
+  "views.deleteNamed": "Удалить представление «{name}»",
+  "views.undoDelete": "Восстановить «{name}»"
 }

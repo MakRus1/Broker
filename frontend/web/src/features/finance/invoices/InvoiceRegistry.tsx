@@ -228,6 +228,11 @@ export function InvoiceRegistry({
     },
   ];
   const columnState = useRegistryColumns(session.subject, `${direction}-invoices`, columns, {
+    preferenceKey: preferenceKey(
+      session.subject,
+      `${direction}-invoices${scope ? `:${scope.key}` : ''}`,
+      'query',
+    ),
     active,
     query: query,
     apply: (raw) => setQuery(restoreInvoiceQuery(raw)),

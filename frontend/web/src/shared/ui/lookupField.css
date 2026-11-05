@@ -110,3 +110,17 @@
   color: var(--text-secondary);
   margin: 0 0 20px;
 }
+
+.lookup-field-option-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.lookup-field-option-row > [role='option'] {
+  flex: 1;
+  min-width: 0;
+}
+.lookup-field-option-row > [role='option'] > span {
+  overflow-wrap: anywhere;
+}

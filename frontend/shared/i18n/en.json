@@ -137,7 +137,7 @@
   "workspace.operations": "Operations",
   "workspace.pin": "Pin navigation",
   "workspace.unpin": "Unpin navigation",
-  "home.title": "Getting started",
+  "home.title": "Workspace",
   "home.hint": "Choose a section from the menu or below.",
   "home.logistics": "Logistics",
   "home.finance": "Finance",
@@ -1190,5 +1190,18 @@
   "search.minimum": "Enter at least two characters. Use arrow keys to select and Enter to open.",
   "search.showAll": "Show all",
   "search.failed": "This group could not be loaded. Change the query to retry.",
-  "search.empty": "No results"
+  "search.empty": "No results",
+  "home.favorites": "Favorites",
+  "home.recent": "Recent records",
+  "home.savedViews": "Saved views",
+  "home.allSections": "All sections",
+  "home.sectionKind": "Section",
+  "home.viewKind": "Saved view",
+  "home.pin": "Add to favorites",
+  "home.unpin": "Remove from favorites",
+  "home.favoritesHint": "Pin the sections and views you use most.",
+  "home.chooseSections": "Choose sections",
+  "home.recentHint": "Records you open will appear here.",
+  "home.viewsHint": "Save filters and columns with Save as in a registry. The view will appear here.",
+  "home.navigation": "Home"
 }

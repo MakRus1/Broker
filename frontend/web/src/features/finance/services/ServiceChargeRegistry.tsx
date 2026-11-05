@@ -1,3 +1,4 @@
+import { useNotifications } from '../../notifications/Notifications';
 import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
@@ -98,7 +99,9 @@ export function ServiceChargeRegistry({
   const selection = usePagedRowSelection(page, 500, active);
   const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] }>();
   const [bulk, setBulk] = useState<{ mode: 'new' | 'existing'; items: Row[] }>();
-  const [notice, setNotice] = useState('');
+  const notifications = useNotifications();
+  const setNotice = (message: string) =>
+    notifications.publish({ level: 'success', message, route: '/service-charges' });
   const selectedItems = selection.items;
   const canInvoice = session.permissions.includes('finance.write_invoices');
   const problem =
@@ -340,11 +343,6 @@ export function ServiceChargeRegistry({
           </>
         )}
       </RegistryHeading>
-      {notice && (
-        <p role="status" className="hint">
-          {notice}
-        </p>
-      )}
       {canInvoice && (
         <RegistrySelectionActions
           count={selection.selected.size}

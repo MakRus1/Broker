@@ -1,3 +1,4 @@
+import { NotificationProvider } from '../features/notifications/Notifications';
 import React from 'react';
 import { PreferenceNotice } from '../features/preferences/PreferenceNotice';
 import { createRoot } from 'react-dom/client';
@@ -14,8 +15,10 @@ createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <UserPreferences>
       <Localization>
-        <PreferenceNotice />
-        <App />
+        <NotificationProvider>
+          <PreferenceNotice />
+          <App />
+        </NotificationProvider>
       </Localization>
     </UserPreferences>
   </React.StrictMode>,

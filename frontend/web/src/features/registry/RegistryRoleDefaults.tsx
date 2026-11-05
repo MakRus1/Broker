@@ -1,3 +1,4 @@
+import { useNotifications } from '../notifications/Notifications';
 import { useState, type ReactNode } from 'react';
 import { useLocalization } from '../localization/Localization';
 import { usePreferencesSession, type RoleRegistryDefault } from '../preferences/UserPreferences';
@@ -13,6 +14,7 @@ export function RegistryRoleDefaults({
   trigger?: (open?: () => void) => ReactNode;
 }) {
   const { translate } = useLocalization();
+  const notifications = useNotifications();
   const [session] = usePreferencesSession();
   const [open, setOpen] = useState(false);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
@@ -20,14 +22,12 @@ export function RegistryRoleDefaults({
   const [role, setRole] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   if (!session?.permissions.includes('organizations.manage') || !state.view || !state.registry)
     return trigger?.() ?? null;
   async function start() {
     setOpen(true);
     setBusy(true);
     setError('');
-    setNotice('');
     try {
       const data = await request<{ roles: typeof roles; items: RoleRegistryDefault[] }>(
         '/api/preferences/roles/list',
@@ -57,7 +57,7 @@ export function RegistryRoleDefaults({
         value: reset ? {} : { columns: state.columns, query: state.view!.query },
       });
       setOpen(false);
-      setNotice(translate('roleView.saved'));
+      notifications.publish({ level: 'success', message: translate('roleView.saved') });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -72,11 +72,6 @@ export function RegistryRoleDefaults({
         <button type="button" onClick={() => void start()}>
           {translate('roleView.action')}
         </button>
-      )}
-      {notice && !trigger && (
-        <span role="status" className="hint">
-          {notice}
-        </span>
       )}
       {open && (
         <Dialog

@@ -1,3 +1,4 @@
+import { useNotifications } from '../../../notifications/Notifications';
 import { useLocalization } from '../../../localization/Localization';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogActions } from '../../../../shared/ui/Dialog';
@@ -15,6 +16,7 @@ export function InvoicePdfArchiveDialog({
   onClose: () => void;
 }) {
   const { translate } = useLocalization();
+  const notifications = useNotifications();
   const [completed, setCompleted] = useState(0);
   const [result, setResult] = useState<ArchiveResult>();
   const [failure, setFailure] = useState('');
@@ -31,10 +33,28 @@ export function InvoicePdfArchiveDialog({
         }),
       )
       .then((value) => {
-        if (!controller.signal.aborted) setResult(value);
+        if (!controller.signal.aborted) {
+          setResult(value);
+          notifications.publish({
+            level: value.failures.length ? 'warning' : 'success',
+            message:
+              translate('print.readyCount', { done: value.ready, total: invoices.length }) +
+              (value.failures.length
+                ? ` · ${translate('print.failedCount', { count: value.failures.length })}`
+                : ''),
+            route: `/${invoices[0].direction}-invoices`,
+          });
+        }
       })
       .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
+        if (!controller.signal.aborted) {
+          setFailure(error.message);
+          notifications.publish({
+            level: 'error',
+            message: error.message,
+            route: `/${invoices[0].direction}-invoices`,
+          });
+        }
       });
     return () => controller.abort();
   }, [invoices, session, attempt]);

@@ -1,3 +1,4 @@
+import { useNotifications } from '../../notifications/Notifications';
 import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
@@ -96,7 +97,9 @@ export function InvoiceRegistry({
   }));
   const [paying, setPaying] = useState<PaymentTarget[]>();
   const [menu, setMenu] = useState<{ x: number; y: number }>();
-  const [notice, setNotice] = useState('');
+  const notifications = useNotifications();
+  const setNotice = (message: string) =>
+    notifications.publish({ level: 'success', message, route: base });
   const canPay = session.permissions.includes('finance.write_payments');
   const canDownload =
     direction === 'outgoing' && session.permissions.includes('finance.read_invoices');
@@ -256,11 +259,6 @@ export function InvoiceRegistry({
           </a>
         )}
       </RegistryHeading>
-      {notice && (
-        <p className="hint" role="status">
-          {notice}
-        </p>
-      )}
       {canSelect && (
         <RegistrySelectionActions
           count={selection.selected.size}

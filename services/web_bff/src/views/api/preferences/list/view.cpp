@@ -12,6 +12,15 @@ Response View::Handle(
     for (const auto& preference : result.preferences)
         response.preferences.push_back(
             {.key = preference.key, .revision = preference.revision, .value = preference.value});
+    namespace defaults = clients::organizations::ApiOrganizationsRegistryDefaultsGet;
+    const auto role = deps.organizations.ApiOrganizationsRegistryDefaultsGet(
+        defaults::Request{.body = {.organization_id = request.body.organization_id}},
+        session.Access);
+    for (const auto& item : role.items)
+        response.role_defaults.push_back({.registry = item.registry,
+            .revision = item.revision,
+            .role = item.role,
+            .value = item.value});
     return response;
 }
 }  // namespace web_bff::views::api::preferences::list

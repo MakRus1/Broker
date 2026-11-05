@@ -1,0 +1,31 @@
+RegistryDefault:
+  type: object
+  additionalProperties: false
+  properties:
+    role:
+      type: string
+    registry:
+      type: string
+      pattern: ^(shipments|transportations|counterparties|contracts|service-charges|financial_labels|outgoing-invoices|incoming-invoices|receipt-payments|disbursement-payments)$
+    value:
+      type: object
+      additionalProperties: true
+    revision:
+      type: integer
+      minimum: 1
+  required:
+  - role
+  - registry
+  - value
+  - revision
+RegistryRole:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+  required:
+  - id
+  - name

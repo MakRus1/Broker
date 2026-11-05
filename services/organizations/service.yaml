@@ -31,6 +31,9 @@ auth:
     /api/organizations/employees/list: authenticated
     /api/organizations/administration/check: authenticated
     /api/organizations/membership/get: authenticated
+    /api/organizations/registry-defaults/get: authenticated
+    /api/organizations/registry-defaults/list: authenticated
+    /api/organizations/registry-defaults/save: authenticated
   service-clients:
     organizations.register_permissions: permission-publisher
 http_logging:

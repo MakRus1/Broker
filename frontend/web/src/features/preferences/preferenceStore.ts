@@ -31,6 +31,7 @@ export class PreferenceStore {
     entries: Preference[],
     private storage?: Storage,
     private ready = true,
+    private defaults: Record<string, unknown> = {},
   ) {
     this.replace(entries);
     if (!ready) this.error = 'preferences.unavailable';
@@ -82,7 +83,7 @@ export class PreferenceStore {
       if (!this.pending.has(entry.key)) this.cache(entry.key, entry.value.value);
     }
   }
-  read(legacyKey: string): unknown {
+  readPersonal(legacyKey: string): unknown {
     const key = this.key(legacyKey);
     if (!key) return undefined;
     if (this.pending.has(key)) return this.pending.get(key);
@@ -102,10 +103,14 @@ export class PreferenceStore {
     }
     return undefined;
   }
+  read(legacyKey: string): unknown {
+    const personal = this.readPersonal(legacyKey);
+    return personal === undefined ? this.defaults[this.key(legacyKey)] : personal;
+  }
   import(legacyKey: string) {
     const key = this.key(legacyKey);
     if (!key || !this.ready || this.entries.has(key) || this.pending.has(key)) return;
-    const value = this.read(legacyKey);
+    const value = this.readPersonal(legacyKey);
     if (value === undefined) return;
     try {
       this.storage?.setItem(`broker:registry-import:${this.actor}`, this.organization);

@@ -2,7 +2,7 @@ RegistryDefault:
   type: object
   additionalProperties: false
   properties:
-    role: &id001
+    role:
       type: string
     registry:
       type: string
@@ -22,8 +22,10 @@ RegistryRole:
   type: object
   additionalProperties: false
   properties:
-    id: *id001
-    name: *id001
+    id:
+      type: string
+    name:
+      type: string
   required:
   - id
   - name

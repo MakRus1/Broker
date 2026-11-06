@@ -136,3 +136,100 @@ class InstantModelTest(unittest.TestCase):
         code = validator(value, 'Instant')
         self.assertNotIn('Utf8Length', code)
         self.assertNotIn('CheckFormat', code)
+
+
+class CompositionTest(unittest.TestCase):
+    def schemas(self):
+        return {
+            'Base': {'type': 'object', 'required': ['id'], 'properties': {'id': {'type': 'integer', 'minimum': 1}}},
+            'Extended': {'allOf': [
+                {'$ref': '#/components/schemas/Base'},
+                {'type': 'object', 'required': ['name'], 'properties': {'name': {'type': 'string'}}},
+            ]},
+            'Choice': {'oneOf': [{'$ref': '#/components/schemas/Base'}, {'$ref': '#/components/schemas/Extended'}]},
+        }
+
+    def test_all_of_fields_constraints_and_required(self):
+        models = {m.name: m for m in collect_models(parse_spec(specification(self.schemas())))}
+        fields = {f.name: f for f in models['Extended'].body.fields}
+        self.assertEqual(set(fields), {'id', 'name'})
+        self.assertTrue(all(f.required for f in fields.values()))
+        self.assertEqual(fields['id'].type.schema['minimum'], 1)
+
+    def test_dependency_order_and_exactly_one_validation(self):
+        operations = parse_spec(specification(self.schemas()))
+        names = [m.name for m in collect_models(operations)]
+        self.assertLess(names.index('Extended'), names.index('Choice'))
+        header = outputs('example', operations, set())['include/openapi/models.hpp']
+        self.assertIn('std::variant<::example::models::Base, ::example::models::Extended>', header)
+        self.assertIn('matches != 1', header)
+        self.assertIn('catch (const std::bad_alloc&)', header)
+
+    def test_all_of_rejects_silent_semantic_changes(self):
+        cases = [
+            [], [{'type': 'integer'}],
+            [{'type': 'object', 'required': ['missing']}],
+            [{'type': 'object', 'properties': {'id': {'type': 'integer'}}},
+             {'type': 'object', 'properties': {'id': {'type': 'string'}}}],
+            [{'type': 'object', 'additionalProperties': False, 'properties': {'a': {'type': 'string'}}},
+             {'type': 'object', 'properties': {'b': {'type': 'string'}}}],
+            [{'$ref': '#/components/schemas/Bad'}],
+        ]
+        for parts in cases:
+            with self.subTest(parts=parts), self.assertRaises(ValueError):
+                parse_spec(specification({'Bad': {'allOf': parts}}))
+
+    def test_one_of_requires_nonempty_valid_branches(self):
+        for branches in [[], 'bad', [{}], [{'$ref': '#/components/schemas/Missing'}], [{'$ref': '#/components/schemas/Bad'}]]:
+            with self.subTest(branches=branches), self.assertRaises(ValueError):
+                parse_spec(specification({'Bad': {'oneOf': branches}}))
+
+    def test_discriminator_mapping_validated(self):
+        schemas = {
+            'A': {'type': 'object', 'required': ['kind'], 'properties': {'kind': {'type': 'string', 'enum': ['a']}}},
+            'Union': {'oneOf': [{'$ref': '#/components/schemas/A'}],
+                      'discriminator': {'propertyName': 'kind', 'mapping': {'a': '#/components/schemas/A'}}},
+        }
+        parse_spec(specification(schemas))
+        for discriminator in [{}, {'propertyName': 'missing'}, {'propertyName': 'kind', 'mapping': {'wrong': 'A'}},
+                              {'propertyName': 'kind', 'mapping': {'a': 'Missing'}}]:
+            invalid = deepcopy(schemas)
+            invalid['Union']['discriminator'] = discriminator
+            with self.subTest(discriminator=discriminator), self.assertRaises(ValueError):
+                parse_spec(specification(invalid))
+
+    def test_union_query_parameter_is_rejected(self):
+        data = specification(self.schemas())
+        data['paths']['/example']['get']['parameters'] = [
+            {'in': 'query', 'name': 'choice', 'schema': {'$ref': '#/components/schemas/Choice'}}]
+        with self.assertRaises(ValueError):
+            parse_spec(data)
+
+    def test_inline_union_names_are_local_to_operation(self):
+        data = specification(self.schemas())
+        union = {'oneOf': [{'$ref': '#/components/schemas/Base'}]}
+        operation = {'post': {'requestBody': {'content': {'application/json': {'schema': union}}},
+                              'responses': {'200': {'description': 'OK', 'content': {'application/json': {'schema': union}}}}}}
+        data['paths'] = {'/first': deepcopy(operation), '/second': deepcopy(operation)}
+        names = [m.name for m in collect_models(parse_spec(data))]
+        self.assertIn('first_RequestBody', names)
+        self.assertIn('second_RequestBody', names)
+        generated = outputs('example', parse_spec(data), set())
+        self.assertIn('ParseJson<RequestBody>(json)', generated['src/views/first/handler.cpp'])
+
+    def test_generated_union_validator_name_conflicts_are_rejected(self):
+        schemas = self.schemas()
+        schemas['Validate_Choice_alternative_0'] = {'type': 'string'}
+        with self.assertRaisesRegex(ValueError, 'validation name'):
+            parse_spec(specification(schemas))
+
+    def test_all_of_inline_unions_keep_owner_names(self):
+        schemas = self.schemas()
+        for owner, variant in [('First', 'Base'), ('Second', 'Extended')]:
+            schemas[owner] = {'allOf': [{'type': 'object', 'properties': {
+                'choice': {'oneOf': [{'$ref': '#/components/schemas/' + variant}]},
+            }}]}
+        models = {m.name: m for m in collect_models(parse_spec(specification(schemas)))}
+        self.assertEqual(models['First'].body.fields[0].type.model_name, 'First_choice')
+        self.assertEqual(models['Second'].body.fields[0].type.model_name, 'Second_choice')
+        self.assertNotIn('Schema_choice', models)

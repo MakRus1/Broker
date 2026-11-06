@@ -294,3 +294,40 @@ UTEST(CalendarDateClient, InstantPreservesMomentAndPrecision) {
     EXPECT_EQ(json["instant"].As<std::chrono::system_clock::time_point>(), instant);
     EXPECT_EQ(platform::http::Scalar(instant).substr(0, 19), "2026-10-25T09:34:56");
 }
+
+UTEST(ClientContract, ComposedModelsRoundTrip) {
+    MockTransport transport;
+    api::Client client(transport);
+    const auto json = userver::formats::json::FromString(R"({"kind":"rail","station":"A"})");
+    auto body = api::CompositionEcho::ParseBody(json);
+    EXPECT_TRUE(std::holds_alternative<api::models::RailEvent>(body.value));
+    transport.reply = {200, "application/json", R"({"kind":"rail","station":"A"})"};
+    const auto result = client.CompositionEcho({.body = body});
+    EXPECT_EQ(std::get<api::models::RailEvent>(result.value.value).station, "A");
+    EXPECT_EQ(userver::formats::json::FromString(transport.last.body.value()), json);
+    transport.reply.body = R"({"kind":"unknown"})";
+    EXPECT_THROW(client.CompositionEcho({.body = body}), platform::http::ContractError);
+    EXPECT_THROW(api::CompositionAmbiguous::ParseBody(userver::formats::json::FromString("{}")),
+        std::invalid_argument);
+}
+
+UTEST(ClientContract, OneOfSerializationRejectsAmbiguity) {
+    api::models::Ambiguous value{.value = api::models::OverlapA{}};
+    EXPECT_THROW(userver::formats::json::ValueBuilder(value).ExtractValue(), std::invalid_argument);
+    auto scalar = api::CompositionScalar::ParseBody(userver::formats::json::FromString("5"));
+    EXPECT_EQ(std::get<0>(scalar.value), 5);
+    EXPECT_THROW(api::CompositionScalar::ParseBody(userver::formats::json::FromString("0")),
+        std::invalid_argument);
+}
+
+UTEST(ClientContract, SerializationValidatesChosenVariant) {
+    using Signed = api::models::SignedChoice;
+    Signed positive{.value = decltype(Signed::value){std::in_place_index<0>, 5}};
+    EXPECT_EQ(userver::formats::json::ValueBuilder(positive).ExtractValue().As<int>(), 5);
+    // Both alternatives have the same C++ type. An invalid positive value must
+    // not silently serialize as the negative alternative.
+    Signed wrong{.value = decltype(Signed::value){std::in_place_index<0>, -5}};
+    EXPECT_THROW(userver::formats::json::ValueBuilder(wrong).ExtractValue(), std::invalid_argument);
+    auto negative = broker_codegen::ParseJson<Signed>(userver::formats::json::FromString("-5"));
+    EXPECT_EQ(negative.value.index(), 1);
+}

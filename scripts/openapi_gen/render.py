@@ -82,8 +82,14 @@ def responses(service, op):
     text = preamble(service, op)
     for r in op.responses:
         name = f'Response{r.status}'
-        text += struct(name, r.body.fields if r.body else (), scope=f'::{service}::views::{op.ns}') if r.media != 'text/plain' else f'struct {name} {{ std::string body; }};'
+        if r.body and r.body.union:
+            text += f'struct {name} {{ ::{service}::models::{r.body.model_name} value; }};'
+        else:
+            text += struct(name, r.body.fields if r.body else (), scope=f'::{service}::views::{op.ns}') if r.media != 'text/plain' else f'struct {name} {{ std::string body; }};'
         text += '\n'
+        if r.body and r.body.union:
+            text += f'inline std::string ToJson(const {name}& value) {{ return userver::formats::json::ToString(userver::formats::json::ValueBuilder(value.value).ExtractValue()); }}\n'
+            continue
         if r.media == 'application/json':
             text += f'inline std::string ToJson(const {name}& value) {{\n    userver::formats::json::ValueBuilder out(userver::formats::json::Type::kObject);\n'
             for f in r.body.fields:
@@ -275,7 +281,11 @@ public:
                   *(['const auto content_type = http.GetHeader("Content-Type");',
                      'if (content_type != "application/json" && content_type.rfind("application/json;", 0) != 0) throw std::invalid_argument("content type");'] if op.body.validate_content_type else []),
                   'const auto json = userver::formats::json::FromString(http.RequestBody());',
-                  'if (!json.IsObject()) throw std::invalid_argument("object body");', 'RequestBody body;']
+                  ]
+        if op.body.union:
+            parse.append('auto body = broker_codegen::ParseJson<RequestBody>(json);')
+        else:
+            parse += ['if (!json.IsObject()) throw std::invalid_argument("object body");', 'RequestBody body;']
         if op.body.strict:
             allowed = ' && '.join(f'it.GetName() != {quote(f.name)}' for f in op.body.fields) or 'true'
             parse += [f'for (auto it = json.begin(); it != json.end(); ++it) if ({allowed}) throw std::invalid_argument("unknown field");']

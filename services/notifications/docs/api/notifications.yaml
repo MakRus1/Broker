@@ -3,15 +3,15 @@ info:
   title: Уведомления
   version: '1'
 paths:
-  /api/internal/v1/events/shipment-route-changed:
+  /api/internal/v1/events/publish:
     post:
-      summary: Принять факт изменения маршрута поставки
+      summary: Надёжно принять событие
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: ../components/schemas/notifications.yaml#/ShipmentRouteChanged
+              $ref: ../components/schemas/notifications.yaml#/PublishedEvent
       responses:
         '200':
           description: Успех
@@ -205,3 +205,6 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+  schemas:
+    ShipmentRouteChanged:
+      $ref: ../components/schemas/notifications.yaml#/ShipmentRouteChanged

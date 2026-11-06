@@ -2,7 +2,7 @@ name: NOTIFICATIONS_HTTP_CLIENT_CONFIG
 mode: http-client
 generated: true
 paths:
-- /api/internal/v1/events/shipment-route-changed
+- /api/internal/v1/events/publish
 - /api/v1/notifications/list
 - /api/v1/notifications/read
 default:

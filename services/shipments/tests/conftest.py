@@ -234,7 +234,7 @@ def route_projection_receiver(mockserver):
 
 @pytest.fixture(autouse=True)
 def notifications_receiver(mockserver):
-    @mockserver.json_handler('/api/internal/v1/events/shipment-route-changed')
+    @mockserver.json_handler('/api/internal/v1/events/publish')
     def receive(request):
         return {'accepted': True}
     return receive

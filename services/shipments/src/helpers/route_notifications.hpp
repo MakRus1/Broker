@@ -22,8 +22,13 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
         .revision = after.revision,
         .shipment_id = after.id,
         .shipment_number = after.number};
-    platform::outbox::Enqueue(transaction, kShipmentRouteChanged,
-        organization + ":" + after.id + ":" + std::to_string(after.revision),
-        json::ValueBuilder(event).ExtractValue());
+    const auto id = organization + ":" + after.id + ":" + std::to_string(after.revision);
+    const clients::notifications::models::PublishedEvent envelope{.id = id,
+        .organization_id = organization,
+        .payload = json::ValueBuilder(event).ExtractValue(),
+        .type = "shipment.route_changed",
+        .version = 1};
+    platform::outbox::Enqueue(
+        transaction, kShipmentRouteChanged, id, json::ValueBuilder(envelope).ExtractValue());
 }
 }  // namespace shipments::helpers

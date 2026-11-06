@@ -2,7 +2,7 @@ import asyncio
 import pytest
 from conftest import ISSUER, ORGANIZATION, OTHER_ORGANIZATION
 
-EVENT_PATH = '/api/internal/v1/events/shipment-route-changed'
+EVENT_PATH = '/api/internal/v1/events/publish'
 LIST_PATH = '/api/v1/notifications/list'
 READ_PATH = '/api/v1/notifications/read'
 SHIPMENT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -23,11 +23,15 @@ def event(**changes):
 
 @pytest.fixture
 def publish(service_client, auth_key):
-    async def call(body, *, client='shipments-dispatcher', roles=None):
+    async def call(body, *, client='shipments-dispatcher', roles=None, envelope_changes=None):
         token = auth_key.token('service-account-' + client,
             roles=['notifications.publish_shipments'] if roles is None else roles,
             claims={'azp': client})
-        return await service_client.post(EVENT_PATH, json=body,
+        envelope = {'id': body['organization_id'] + ':' + body['shipment_id'] + ':' + str(body['revision']),
+            'type': 'shipment.route_changed', 'version': 1,
+            'organization_id': body['organization_id'], 'payload': body}
+        envelope.update(envelope_changes or {})
+        return await service_client.post(EVENT_PATH, json=envelope,
             headers={'Authorization': 'Bearer ' + token})
     return call
 
@@ -116,3 +120,23 @@ async def test_author_does_not_receive_own_route_change(api, publish, pgsql):
     assert (await publish(event(revision=3))).status == 200
     items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
     assert len(items) == 1 and items[0]['shipment_revision'] == 3
+
+
+@pytest.mark.parametrize('changes', [
+    {'type': 'unknown.event'},
+    {'version': 2},
+    {'payload': {}},
+    {'payload': {**event(), 'revision': 0}},
+    {'payload': {**event(), 'unexpected': True}},
+    {'organization_id': OTHER_ORGANIZATION},
+])
+async def test_event_envelope_rejects_invalid_payload_and_unknown_types(publish, changes, pgsql):
+    assert (await publish(event(), envelope_changes=changes)).status == 400
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM notification_events')
+        assert cursor.fetchone()[0] == 0
+
+
+async def test_event_identity_cannot_be_reused_with_different_payload(publish):
+    assert (await publish(event(), envelope_changes={'id': 'stable-event'})).status == 200
+    assert (await publish(event(revision=3), envelope_changes={'id': 'stable-event'})).status == 409

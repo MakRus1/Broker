@@ -7,8 +7,8 @@ components_manager:
     default_task_processor: main-task-processor
     components:
         # OPENAPI_HANDLERS_BEGIN
-        handler-api-internal-v1-events-shipment_route_changed:
-            path: /api/internal/v1/events/shipment-route-changed
+        handler-api-internal-v1-events-publish:
+            path: /api/internal/v1/events/publish
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
@@ -53,7 +53,7 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
-                /api/internal/v1/events/shipment-route-changed: notifications.publish_shipments
+                /api/internal/v1/events/publish: notifications.publish_shipments
                 /api/v1/notifications/list: authenticated
                 /api/v1/notifications/read: authenticated
             service-clients:

@@ -75,3 +75,30 @@ Notification:
   - shipment_revision
   - created_at
   - read
+PublishedEvent:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - type
+  - version
+  - organization_id
+  - payload
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200
+    type:
+      type: string
+      minLength: 1
+      maxLength: 100
+    version:
+      type: integer
+      minimum: 1
+    organization_id:
+      type: string
+      format: uuid
+    payload:
+      type: object
+      additionalProperties: true

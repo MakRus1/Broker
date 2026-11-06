@@ -30,8 +30,8 @@ TransportationDispatcher::TransportationDispatcher(
         });
     outbox.RegisterHandler(std::string{helpers::kShipmentRouteChanged},
         [this](const platform::outbox::Message& message) {
-            namespace api = clients::notifications::ApiInternalV1EventsShipmentRouteChanged;
-            deps_.notifications.ApiInternalV1EventsShipmentRouteChanged(
+            namespace api = clients::notifications::ApiInternalV1EventsPublish;
+            deps_.notifications.ApiInternalV1EventsPublish(
                 api::Request{.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
         });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},

@@ -12,7 +12,7 @@ async def test_route_event_retries_and_only_follows_route_changes(api, mockserve
     def token(request):
         return {'access_token': 'notification-delivery-token'}
 
-    @mockserver.json_handler('/api/internal/v1/events/shipment-route-changed')
+    @mockserver.json_handler('/api/internal/v1/events/publish')
     def accept(request):
         received.append(request.json)
         if len(received) == 1:
@@ -41,10 +41,10 @@ async def test_route_event_retries_and_only_follows_route_changes(api, mockserve
     assert len(received) >= 2
     assert received[0] == received[1]
     assert received[0]['organization_id'] == ORGANIZATION
-    assert received[0]['shipment_id'] == shipment['id']
-    assert received[0]['revision'] == updated['revision']
-    assert received[0]['recipient_subject'] == 'logist-author'
-    assert received[0]['actor_subject'] == 'author'
+    assert received[0]['payload']['shipment_id'] == shipment['id']
+    assert received[0]['payload']['revision'] == updated['revision']
+    assert received[0]['payload']['recipient_subject'] == 'logist-author'
+    assert received[0]['payload']['actor_subject'] == 'author'
     # Конфликт версии не должен создавать событие.
     await api.post('/api/v1/shipments/update', {
         'shipment_id': shipment['id'], 'expected_revision': unchanged['revision'],
@@ -58,4 +58,4 @@ async def test_route_event_retries_and_only_follows_route_changes(api, mockserve
         await asyncio.sleep(0.05)
     else:
         pytest.fail('Принятое событие осталось в outbox')
-    assert all(value['revision'] == updated['revision'] for value in received)
+    assert all(value['payload']['revision'] == updated['revision'] for value in received)

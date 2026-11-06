@@ -102,7 +102,7 @@ def validator(typ, name):
     calendar_date = typ.kind == 'string' and schema.get('format') == 'date'
     if calendar_date:
         checks.append('if (value < userver::utils::datetime::Date{1, 1, 1} || value > userver::utils::datetime::Date{9999, 12, 31}) throw std::invalid_argument("date");')
-    if typ.kind == 'record':
+    if typ.kind in {'record', 'union'}:
         checks.append('ValidateModel(value);')
     if typ.kind == 'object':
         checks.append('if (!value.IsObject()) throw std::invalid_argument("object");')

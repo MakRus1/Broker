@@ -4,8 +4,8 @@ defaults:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 384Mi
       limits:
-        memory: 512Mi
+        memory: 1Gi
 environments:
   staging: {}

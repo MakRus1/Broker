@@ -112,6 +112,8 @@ def configure_cluster(
     import json
     import subprocess
     import uuid
+    import warnings
+    from keycloak_command import run, CLEANUP_TIMEOUT
     from urllib.parse import parse_qsl, urlsplit
 
     folder = '/tmp/broker-organizations-' + uuid.uuid4().hex
@@ -128,18 +130,6 @@ def configure_cluster(
         'sh',
         '-c',
     ]
-    subprocess.run(
-        command
-        + [
-            'umask 077; mkdir "$1"; /opt/keycloak/bin/kcadm.sh config credentials '
-            '--server http://localhost:8080 --realm master --user admin '
-            '--password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config "$1/session" >/dev/null',
-            'sh',
-            folder,
-        ],
-        check=True,
-        capture_output=True,
-    )
 
     def api(path, value=None, method=None):
         parsed = urlsplit(path)
@@ -159,7 +149,7 @@ def configure_cluster(
             args += ['-q', key + '=' + item]
         if value is not None:
             args += ['-f', folder + '/request.json']
-        result = subprocess.run(
+        result = run(
             command
             + [
                 'umask 077; folder=$1; shift; cat > "$folder/request.json"; exec "$@"',
@@ -169,14 +159,27 @@ def configure_cluster(
             ],
             input='' if value is None else json.dumps(value),
             text=True,
-            check=True,
+            operation="запрос к Admin API",
             capture_output=True,
         )
         return json.loads(result.stdout) if verb == 'get' else None
 
+    import sys
+
     try:
+        run(
+            command
+            + [
+                'umask 077; mkdir "$1"; /opt/keycloak/bin/kcadm.sh config credentials '
+                '--server http://localhost:8080 --realm master --user admin '
+                '--password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config "$1/session" >/dev/null',
+                'sh',
+                folder,
+            ],
+            operation="авторизация служебной настройки",
+            capture_output=True,
+        )
         from pathlib import Path
-        import sys
 
         root = Path(__file__).resolve().parents[1]
         sys.path.insert(0, str(root / 'scripts/openapi_gen'))
@@ -195,7 +198,15 @@ def configure_cluster(
         if configure_users:
             configure(api, platform_admin=platform_admin)
     finally:
-        subprocess.run(command + ['rm -rf "$1"', 'sh', folder], check=True, capture_output=True)
+        # Очистка тоже ограничена и не маскирует исходную ошибку синхронизации.
+        failed = sys.exc_info()[0] is not None
+        try:
+            run(command + ['rm -rf "$1"', 'sh', folder], operation="очистка временных файлов",
+                timeout=CLEANUP_TIMEOUT, capture_output=True)
+        except (RuntimeError, subprocess.CalledProcessError):
+            if not failed:
+                raise
+            warnings.warn('Keycloak: не удалось удалить временные файлы настройки', RuntimeWarning)
 
 
 if __name__ == '__main__':

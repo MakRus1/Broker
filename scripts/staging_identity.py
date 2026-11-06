@@ -4,7 +4,7 @@ import base64
 import json
 from pathlib import Path
 import shlex
-import subprocess
+from keycloak_command import run
 from urllib.parse import urlsplit
 
 
@@ -76,7 +76,7 @@ fi
 
 def sync_keycloak(context, namespace, admin_origin, web_origin):
     script = keycloak_script(admin_origin, web_origin)
-    subprocess.run(
+    run(
         [
             'kubectl',
             '--context',
@@ -90,5 +90,5 @@ def sync_keycloak(context, namespace, admin_origin, web_origin):
             '-c',
             script,
         ],
-        check=True,
+        operation="синхронизация браузерных клиентов",
     )

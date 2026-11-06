@@ -122,11 +122,12 @@ def parallel_outbox(configure_dispatcher):
         configure_dispatcher(config, config_vars)
         config["components_manager"]["components"]["platform-outbox"].update(
             {
-                "max-concurrency": 3,
+                "max-concurrency": 4,
                 "default-topic-concurrency": 1,
                 "topic-concurrency": {
                     "transportations.create": 2,
                     "shipment.route.project": 1,
+                    "notifications.publish": 1,
                 },
                 "idle-pause-ms": 20,
                 "busy-pause-ms": 1,

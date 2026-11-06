@@ -186,3 +186,20 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
+  postgres-notifications:
+    image: postgres:16.8-alpine
+    environment:
+      POSTGRES_USER: testsuite
+      POSTGRES_PASSWORD: testsuite
+      POSTGRES_DB: notifications_db_1
+    ports:
+    - 127.0.0.1:15444:5432
+    volumes:
+    - ./services/notifications/postgresql/schemas/db_1:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U testsuite -d notifications_db_1
+      interval: 2s
+      timeout: 5s
+      retries: 10

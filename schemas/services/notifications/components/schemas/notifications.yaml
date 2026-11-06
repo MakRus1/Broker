@@ -1,0 +1,105 @@
+ApiError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+    message:
+      type: string
+  required:
+  - error
+  - message
+Notification:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    shipment_id:
+      type: string
+      format: uuid
+    shipment_number:
+      type: string
+      minLength: 1
+      maxLength: 200
+    shipment_revision:
+      type: integer
+    created_at:
+      type: string
+      format: date-time
+    read:
+      type: boolean
+  required:
+  - id
+  - shipment_id
+  - shipment_number
+  - shipment_revision
+  - created_at
+  - read
+PublishedEvent:
+  oneOf:
+  - $ref: '#/ShipmentRouteChanged'
+ShipmentRouteChangedPayload:
+  type: object
+  additionalProperties: false
+  properties:
+    shipment_id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      minimum: 1
+    shipment_number:
+      type: string
+      minLength: 1
+      maxLength: 200
+    recipient_issuer:
+      type: string
+      minLength: 1
+      maxLength: 500
+    recipient_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+      nullable: true
+    actor_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+  required:
+  - shipment_id
+  - revision
+  - shipment_number
+  - recipient_issuer
+  - recipient_subject
+  - actor_subject
+ShipmentRouteChanged:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - type
+  - version
+  - organization_id
+  - payload
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200
+    type:
+      type: string
+      enum:
+      - shipment.route_changed
+      default: shipment.route_changed
+    version:
+      type: integer
+      enum:
+      - 1
+      default: 1
+    organization_id:
+      type: string
+      format: uuid
+    payload:
+      $ref: '#/ShipmentRouteChangedPayload'

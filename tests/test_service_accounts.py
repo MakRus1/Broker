@@ -92,9 +92,9 @@ class ServiceAccountsTest(unittest.TestCase):
                         'clients/worker/service-account-user': {'id': 'subject'},
                         'clients?clientId=broker-logistics': [{'id': 'resource'}],
                         'clients/resource/roles': [],
-                        'clients/resource/roles/transportations.create': {
-                            'id': 'role',
-                            'name': 'transportations.create',
+                        **{
+                            'clients/resource/roles/' + code: {'id': 'role-' + code, 'name': code}
+                            for code in account['permissions']
                         },
                     }[path]
 
@@ -103,10 +103,11 @@ class ServiceAccountsTest(unittest.TestCase):
                     api, {'worker': account}, {'shipments-dispatcher-secret': 'private'}
                 )
                 self.assertEqual(subjects, {'shipments-dispatcher': 'subject'})
-                api.assert_any_call('clients/resource/roles', {'name': 'transportations.create'})
+                for code in account['permissions']:
+                    api.assert_any_call('clients/resource/roles', {'name': code})
                 api.assert_any_call(
                     'users/subject/role-mappings/clients/resource',
-                    [{'id': 'role', 'name': 'transportations.create'}],
+                    [{'id': 'role-' + code, 'name': code} for code in account['permissions']],
                 )
                 desired = next(
                     item.args[1]

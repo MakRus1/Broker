@@ -1229,5 +1229,7 @@
   "notifications.readAll": "Прочитать все",
   "notifications.clearRead": "Убрать прочитанные",
   "notifications.empty": "Новых уведомлений нет",
-  "notifications.session": "События текущей сессии. Последние 100 записей."
+  "notifications.session": "События поставок сохраняются на сервере. Показаны последние 100 событий и сообщения этой сессии.",
+  "notifications.info": "Событие",
+  "notifications.shipmentRouteChanged": "Изменён маршрут поставки {number}"
 }

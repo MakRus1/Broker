@@ -1229,5 +1229,7 @@
   "notifications.readAll": "Read all",
   "notifications.clearRead": "Clear read",
   "notifications.empty": "No new notifications",
-  "notifications.session": "Current session. Last 100 events."
+  "notifications.session": "Shipment events are saved on the server. Showing the latest 100 events and messages from this session.",
+  "notifications.info": "Event",
+  "notifications.shipmentRouteChanged": "Route updated for shipment {number}"
 }

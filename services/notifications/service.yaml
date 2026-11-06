@@ -1,0 +1,24 @@
+version: 1
+libraries:
+- common
+postgresql:
+  enabled: true
+grpc:
+  enabled: false
+clients:
+  organizations:
+    service: organizations
+    transport: http
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/notifications/list: authenticated
+    /api/v1/notifications/read: authenticated
+    /api/internal/v1/events/publish: notifications.publish_shipments
+  service-clients:
+    notifications.publish_shipments: shipments-dispatcher
+http_logging:
+  exclude_paths:
+  - /api/**

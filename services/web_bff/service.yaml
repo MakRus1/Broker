@@ -31,6 +31,9 @@ clients:
   localization:
     service: localization
     transport: http
+  notifications:
+    service: notifications
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

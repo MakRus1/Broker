@@ -35,3 +35,4 @@ client-contracts-base-url: http://localhost:8080
 client-finance-base-url: http://localhost:8080
 client-user_preferences-base-url: http://localhost:8080
 client-localization-base-url: http://localhost:8080
+client-notifications-base-url: http://localhost:8080

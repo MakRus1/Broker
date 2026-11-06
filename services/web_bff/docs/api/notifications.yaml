@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: Уведомления
+  version: '1'
+paths:
+  /api/notifications/list:
+    post:
+      summary: Уведомления текущего сотрудника
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+                before:
+                  type: string
+                  format: uuid
+              required:
+              - organization_id
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/notifications.yaml#/Notification
+                required:
+                - items
+        '400':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '502':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+  /api/notifications/read:
+    post:
+      summary: Отметить выбранные уведомления прочитанными
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                organization_id:
+                  type: string
+                  format: uuid
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 100
+                dismiss:
+                  type: boolean
+                  default: false
+              required:
+              - organization_id
+              - ids
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  updated:
+                    type: integer
+                required:
+                - updated
+        '400':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError
+        '502':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/notifications.yaml#/ApiError

@@ -7,6 +7,8 @@ paths:
 - /api/geography/route-locations
 - /api/localization/catalog
 - /api/logout
+- /api/notifications/list
+- /api/notifications/read
 - /api/organizations/employees/list
 - /api/preferences/list
 - /api/preferences/roles/list

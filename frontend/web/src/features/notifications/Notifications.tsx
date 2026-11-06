@@ -13,6 +13,7 @@ import { usePreferencesSession } from '../preferences/UserPreferences';
 import { useLocalization } from '../localization/Localization';
 import { NotificationStore, type NotificationItem } from './notificationStore';
 import './notifications.css';
+import { request, ApiError } from '../../shared/api/http';
 const Context = createContext<NotificationStore | undefined>(undefined);
 export function useNotifications() {
   const store = useContext(Context);
@@ -27,10 +28,96 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
   return (
     <Context.Provider value={store}>
+      {session && <ServerNotifications />}
       {children}
       {session && <NotificationToasts />}
     </Context.Provider>
   );
+}
+interface ServerNotification {
+  id: string;
+  shipment_id: string;
+  shipment_number: string;
+  shipment_revision: number;
+  created_at: string;
+  read: boolean;
+}
+function ServerNotifications() {
+  const [session] = usePreferencesSession();
+  const store = useNotifications();
+  const { translate } = useLocalization();
+  useEffect(() => {
+    if (!session || !session.permissions.includes('shipments.read')) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let running = false;
+    let failures = 0;
+    store.setRemoteRead(async (ids, dismiss = false) => {
+      await request(
+        '/api/notifications/read',
+        session,
+        {
+          organization_id: session.organization_id,
+          ids: ids.map((id) => id.slice(7)),
+          dismiss,
+        },
+        controller.signal,
+      );
+    });
+    const refresh = async () => {
+      if (running || controller.signal.aborted) return;
+      if (timer) clearTimeout(timer);
+      if (document.visibilityState === 'hidden') return;
+      running = true;
+      try {
+        const result = await request<{ items: ServerNotification[] }>(
+          '/api/notifications/list',
+          session,
+          { organization_id: session.organization_id, limit: 100 },
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        store.mergeRemote(
+          result.items.map((item) => ({
+            id: `server:${item.id}`,
+            remote: true,
+            message: translate('notifications.shipmentRouteChanged', {
+              number: item.shipment_number,
+            }),
+            level: 'info',
+            route: `/shipments/${item.shipment_id}/route`,
+            createdAt: Date.parse(item.created_at),
+            read: item.read,
+            toast: false,
+            resolved: false,
+          })),
+        );
+        failures = 0;
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403))
+          store.clearRemote();
+        failures = Math.min(failures + 1, 4);
+      } finally {
+        running = false;
+        if (!controller.signal.aborted)
+          timer = setTimeout(
+            () => void refresh(),
+            Math.min(20000 * 2 ** failures, 120000) + Math.random() * 2000,
+          );
+      }
+    };
+    const visible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    void refresh();
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [session, store, translate]);
+  return null;
 }
 function Bell() {
   return (
@@ -78,8 +165,8 @@ function NotificationCard({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   useEffect(() => {
-    if (!toast || item.level !== 'success') return;
-    const timer = setTimeout(() => store.hideToast(item.id), 4500);
+    if (!toast || (item.level !== 'success' && item.level !== 'info')) return;
+    const timer = setTimeout(() => store.hideToast(item.id), item.level === 'info' ? 7000 : 4500);
     return () => clearTimeout(timer);
   }, [toast, item.id, item.createdAt, item.level, store]);
   const level = item.resolved

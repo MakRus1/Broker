@@ -46,6 +46,7 @@ def configure_auth(mockserver_info):
         config_vars['client-counterparties-base-url'] = mockserver_info.base_url
         config_vars['client-transportations-base-url'] = mockserver_info.base_url
         config_vars['client-transport_locations-base-url'] = mockserver_info.base_url
+        config_vars['client-notifications-base-url'] = mockserver_info.base_url
 
     return patch
 
@@ -228,4 +229,12 @@ def route_projection_receiver(mockserver):
     @mockserver.json_handler('/api/internal/v1/shipments/route-projection')
     def receive(request):
         return {'applied': True}
+    return receive
+
+
+@pytest.fixture(autouse=True)
+def notifications_receiver(mockserver):
+    @mockserver.json_handler('/api/internal/v1/events/publish')
+    def receive(request):
+        return {'accepted': True}
     return receive

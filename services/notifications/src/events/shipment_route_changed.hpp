@@ -8,10 +8,6 @@
 namespace notifications::events {
 inline void Validate(
     const platform::auth::Identity& identity, const models::ShipmentRouteChanged& event) {
-    if (identity.ClientId != "shipments-dispatcher" ||
-        !identity.Permissions.contains("notifications.publish_shipments"))
-        throw platform::http::HandlerError<403>{
-            "event_producer_forbidden", "Отправителю не разрешён этот тип события"};
     if (event.payload.recipient_issuer != identity.Issuer)
         throw platform::http::HandlerError<400>{"invalid_recipient_issuer",
             "Получатель должен принадлежать провайдеру пользователей отправителя"};

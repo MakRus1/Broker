@@ -71,6 +71,7 @@ async def test_recipient_and_organization_isolation(api, publish):
 async def test_trusted_producer_only(publish):
     assert (await publish(event(), client='broker-web')).status == 403
     assert (await publish(event(), roles=[])).status == 403
+    assert (await publish(event(), client='unknown-service')).status == 403
     assert (await publish(event(revision=0))).status == 400
 
 

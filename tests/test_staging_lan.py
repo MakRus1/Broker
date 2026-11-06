@@ -20,6 +20,27 @@ from test_deployment import RELEASE
 
 
 class LanTest(unittest.TestCase):
+    def test_http_clients_resolve_declared_providers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            phases = staging_manifest.render(RELEASE, Path(directory))
+        for name in staging_manifest.SERVICES:
+            manifest = staging_manifest.read_yaml(
+                staging_manifest.ROOT / f'services/{name}/service.yaml'
+            )
+            secret = next(obj for obj in phases['services']
+                if obj['kind'] == 'Secret'
+                and obj['metadata']['name'].startswith(name.replace('_', '-') + '-vars-'))
+            values = yaml.safe_load(base64.b64decode(secret['data']['config_vars.yaml']))
+            for alias, client in manifest.get('clients', {}).items():
+                provider = client['service']
+                defaults = staging_manifest.read_yaml(
+                    staging_manifest.ROOT / f'services/{provider}/configs/config_vars.yaml'
+                )
+                with self.subTest(service=name, client=alias):
+                    self.assertEqual(values[f'client-{alias}-base-url'],
+                        f'http://{provider.replace("_", "-")}.broker-staging.svc.cluster.local:'
+                        f'{defaults["server-port"]}')
+
     def test_self_approval_is_an_environment_override(self):
         defaults = staging_manifest.read_yaml(
             staging_manifest.ROOT / 'services/configs/configs/config_vars.yaml')

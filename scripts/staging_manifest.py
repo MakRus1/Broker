@@ -398,14 +398,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'web-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
                 'web-revoke-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/revoke',
                 'web-secure-cookie': False,
-                'client-transport_locations-base-url': f'http://{addresses["transport_locations"]}:8080',
-                'client-contracts-base-url': f'http://{addresses["contracts"]}:8080',
-                'client-user_preferences-base-url': f'http://{addresses["user_preferences"]}:8080',
-                'client-finance-base-url': f'http://{addresses["finance"]}:8080',
-                'client-counterparties-base-url': f'http://{addresses["counterparties"]}:8080',
-                'client-shipments-base-url': f'http://{addresses["shipments"]}:8080',
-                'client-transportations-base-url': f'http://{addresses["transportations"]}:8080',
-                'client-organizations-base-url': f'http://{addresses["organizations"]}:8080',
                 'organization-access-url': f'http://{addresses["organizations"]}:8080/api/organizations/access',
                 'platform-access-url': f'http://{addresses["organizations"]}:8080/api/platform/access',
                 'users-token-url': f'http://{addresses["keycloak"]}:8080/realms/broker/protocol/openid-connect/token',
@@ -424,6 +416,15 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 ),
             }
         )
+        manifest = read_yaml(root / f'services/{name}/service.yaml')
+        for alias, client in manifest.get('clients', {}).items():
+            provider = client['service']
+            provider_variables = read_yaml(
+                root / f'services/{provider}/configs/config_vars.yaml'
+            )
+            variables[f'client-{alias}-base-url'] = (
+                f'http://{addresses[provider]}:{provider_variables["server-port"]}'
+            )
         if lan:
             internal_auth = f'https://{addresses["keycloak"]}:8443'
             variables.update(

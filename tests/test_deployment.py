@@ -321,8 +321,10 @@ class DeploymentTest(unittest.TestCase):
                 return subprocess.CompletedProcess(args, 0, stdout='')
 
             with patch('organization_identity.configure_cluster'), patch(
-                'staging.subprocess.run', side_effect=run
-            ), self.assertRaises(subprocess.CalledProcessError):
+                'staging_postgres.install'
+            ), patch('staging.subprocess.run', side_effect=run), self.assertRaises(
+                subprocess.CalledProcessError
+            ):
                 staging.apply(path, 'staging-test')
             self.assertFalse(any('services.yaml' in str(part) for args in calls for part in args))
 

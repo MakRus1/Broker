@@ -24,7 +24,15 @@ compactor:
   working_directory: /loki/compactor
   retention_enabled: true
   delete_request_store: filesystem
+# Один процесс обслуживает и приём логов, и поиск: оставляем память для обоих.
+querier:
+  max_concurrent: 2
+ingester:
+  wal:
+    replay_memory_ceiling: 128MB
 limits_config:
+  max_query_parallelism: 4
+  tsdb_max_query_parallelism: 4
   retention_period: 24h
   allow_structured_metadata: true
   otlp_config:

@@ -1,0 +1,164 @@
+openapi: 3.0.3
+info:
+  title: Композиция схем
+  version: '1'
+components:
+  schemas:
+    EventBase:
+      type: object
+      required:
+      - id
+      properties:
+        id:
+          type: integer
+          minimum: 1
+    SeaEvent:
+      allOf:
+      - $ref: '#/components/schemas/EventBase'
+      - type: object
+        required:
+        - kind
+        - voyage
+        properties:
+          kind:
+            type: string
+            enum:
+            - sea
+          voyage:
+            type: string
+            minLength: 1
+    RailEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - station
+      properties:
+        kind:
+          type: string
+          enum:
+          - rail
+        station:
+          type: string
+          minLength: 1
+    Event:
+      oneOf:
+      - $ref: '#/components/schemas/SeaEvent'
+      - $ref: '#/components/schemas/RailEvent'
+      discriminator:
+        propertyName: kind
+        mapping:
+          sea: '#/components/schemas/SeaEvent'
+          rail: '#/components/schemas/RailEvent'
+    EventAlias:
+      $ref: '#/components/schemas/Event'
+    OverlapA:
+      type: object
+      properties:
+        a:
+          type: string
+    OverlapB:
+      type: object
+      properties:
+        b:
+          type: string
+    Ambiguous:
+      oneOf:
+      - $ref: '#/components/schemas/OverlapA'
+      - $ref: '#/components/schemas/OverlapB'
+    Positive:
+      type: integer
+      minimum: 1
+    Text:
+      type: string
+      minLength: 1
+    ScalarChoice:
+      oneOf:
+      - $ref: '#/components/schemas/Positive'
+      - $ref: '#/components/schemas/Text'
+    WrappedEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - event
+      - events
+      properties:
+        event:
+          $ref: '#/components/schemas/EventAlias'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        optional:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SeaEvent'
+          - $ref: '#/components/schemas/RailEvent'
+    Negative:
+      type: integer
+      maximum: -1
+    SignedChoice:
+      oneOf:
+      - $ref: '#/components/schemas/Positive'
+      - $ref: '#/components/schemas/Negative'
+paths:
+  /composition/echo:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Echo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+  /composition/wrapped:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WrappedEvent'
+      responses:
+        '200':
+          description: Echo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WrappedEvent'
+  /composition/scalar:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScalarChoice'
+      responses:
+        '200':
+          description: Echo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScalarChoice'
+  /composition/ambiguous:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ambiguous'
+      responses:
+        '200':
+          description: Echo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ambiguous'

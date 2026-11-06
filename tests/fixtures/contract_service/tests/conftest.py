@@ -32,3 +32,12 @@ def config_service_defaults(config_service_defaults):
 async def service_http_ping_url(monitor_baseurl):
     # Testsuite ожидает живость: готовность может намеренно отсутствовать в тесте.
     return monitor_baseurl.rstrip('/') + '/ping'
+
+
+@pytest.fixture(name='service_client')
+async def _fresh_config_client(service_client):
+    # Testsuite disables periodic updates. Refresh before every HTTP test so
+    # the five-second readiness policy does not depend on the suite duration.
+    # Tests of expiration can still advance time after this preparation.
+    await service_client.invalidate_caches(cache_names=['dynamic-config-client-updater'])
+    return service_client

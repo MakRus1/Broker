@@ -205,6 +205,3 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-  schemas:
-    ShipmentRouteChanged:
-      $ref: components/schemas/notifications.yaml#/ShipmentRouteChanged

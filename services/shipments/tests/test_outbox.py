@@ -127,7 +127,7 @@ def parallel_outbox(configure_dispatcher):
                 "topic-concurrency": {
                     "transportations.create": 2,
                     "shipment.route.project": 1,
-                    "shipment.route.changed": 1,
+                    "notifications.publish": 1,
                 },
                 "idle-pause-ms": 20,
                 "busy-pause-ms": 1,

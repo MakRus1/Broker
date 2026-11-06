@@ -52,7 +52,7 @@ async def test_route_event_retries_and_only_follows_route_changes(api, mockserve
     }, expected=409)
     for _ in range(60):
         with pgsql['db_1'].cursor() as cursor:
-            cursor.execute("SELECT count(*) FROM outbox WHERE topic = 'shipment.route.changed'")
+            cursor.execute("SELECT count(*) FROM outbox WHERE topic = 'notifications.publish'")
             if cursor.fetchone()[0] == 0:
                 break
         await asyncio.sleep(0.05)

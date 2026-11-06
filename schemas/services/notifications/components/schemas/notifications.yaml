@@ -9,44 +9,6 @@ ApiError:
   required:
   - error
   - message
-ShipmentRouteChanged:
-  type: object
-  additionalProperties: false
-  properties:
-    organization_id:
-      type: string
-      format: uuid
-    shipment_id:
-      type: string
-      format: uuid
-    revision:
-      type: integer
-      minimum: 1
-    shipment_number:
-      type: string
-      minLength: 1
-      maxLength: 200
-    recipient_issuer:
-      type: string
-      minLength: 1
-      maxLength: 500
-    recipient_subject:
-      type: string
-      minLength: 1
-      maxLength: 200
-      nullable: true
-    actor_subject:
-      type: string
-      minLength: 1
-      maxLength: 200
-  required:
-  - organization_id
-  - shipment_id
-  - revision
-  - shipment_number
-  - recipient_issuer
-  - recipient_subject
-  - actor_subject
 Notification:
   type: object
   additionalProperties: false
@@ -76,6 +38,43 @@ Notification:
   - created_at
   - read
 PublishedEvent:
+  oneOf:
+  - $ref: '#/ShipmentRouteChanged'
+ShipmentRouteChangedPayload:
+  type: object
+  additionalProperties: false
+  properties:
+    shipment_id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      minimum: 1
+    shipment_number:
+      type: string
+      minLength: 1
+      maxLength: 200
+    recipient_issuer:
+      type: string
+      minLength: 1
+      maxLength: 500
+    recipient_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+      nullable: true
+    actor_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+  required:
+  - shipment_id
+  - revision
+  - shipment_number
+  - recipient_issuer
+  - recipient_subject
+  - actor_subject
+ShipmentRouteChanged:
   type: object
   additionalProperties: false
   required:
@@ -91,14 +90,16 @@ PublishedEvent:
       maxLength: 200
     type:
       type: string
-      minLength: 1
-      maxLength: 100
+      enum:
+      - shipment.route_changed
+      default: shipment.route_changed
     version:
       type: integer
-      minimum: 1
+      enum:
+      - 1
+      default: 1
     organization_id:
       type: string
       format: uuid
     payload:
-      type: object
-      additionalProperties: true
+      $ref: '#/ShipmentRouteChangedPayload'

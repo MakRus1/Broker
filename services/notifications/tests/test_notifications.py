@@ -29,7 +29,8 @@ def publish(service_client, auth_key):
             claims={'azp': client})
         envelope = {'id': body['organization_id'] + ':' + body['shipment_id'] + ':' + str(body['revision']),
             'type': 'shipment.route_changed', 'version': 1,
-            'organization_id': body['organization_id'], 'payload': body}
+            'organization_id': body['organization_id'],
+            'payload': {key: value for key, value in body.items() if key != 'organization_id'}}
         envelope.update(envelope_changes or {})
         return await service_client.post(EVENT_PATH, json=envelope,
             headers={'Authorization': 'Bearer ' + token})
@@ -126,9 +127,10 @@ async def test_author_does_not_receive_own_route_change(api, publish, pgsql):
     {'type': 'unknown.event'},
     {'version': 2},
     {'payload': {}},
-    {'payload': {**event(), 'revision': 0}},
-    {'payload': {**event(), 'unexpected': True}},
-    {'organization_id': OTHER_ORGANIZATION},
+    {'payload': {key: value for key, value in event(revision=0).items() if key != 'organization_id'}},
+    {'payload': {**{key: value for key, value in event().items() if key != 'organization_id'}, 'unexpected': True}},
+    {'organization_id': 'not-a-uuid'},
+    {'unexpected': True},
 ])
 async def test_event_envelope_rejects_invalid_payload_and_unknown_types(publish, changes, pgsql):
     assert (await publish(event(), envelope_changes=changes)).status == 400
@@ -140,3 +142,40 @@ async def test_event_envelope_rejects_invalid_payload_and_unknown_types(publish,
 async def test_event_identity_cannot_be_reused_with_different_payload(publish):
     assert (await publish(event(), envelope_changes={'id': 'stable-event'})).status == 200
     assert (await publish(event(revision=3), envelope_changes={'id': 'stable-event'})).status == 409
+
+
+async def test_typed_envelope_is_stored_without_duplicate_organization(publish, pgsql):
+    assert (await publish(event())).status == 200
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT event_type, event_version, payload FROM notification_events')
+        event_type, version, document = cursor.fetchone()
+    assert event_type == 'shipment.route_changed' and version == 1
+    assert document['organization_id'] == ORGANIZATION
+    assert 'organization_id' not in document['payload']
+    assert document['payload']['shipment_id'] == SHIPMENT
+
+
+async def test_recipient_issuer_is_checked_before_transaction(publish, pgsql):
+    response = await publish(event(recipient_issuer='https://other-issuer.invalid'))
+    assert response.status == 400
+    assert response.json()['error'] == 'invalid_recipient_issuer'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM notification_events')
+        assert cursor.fetchone()[0] == 0
+
+
+async def test_notification_write_failure_rolls_back_event(publish, api, pgsql):
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('ALTER TABLE notifications ADD CONSTRAINT test_reject_write CHECK (false) NOT VALID')
+    try:
+        assert (await publish(event())).status == 500
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute('SELECT count(*) FROM notification_events')
+            assert cursor.fetchone()[0] == 0
+    finally:
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute('ALTER TABLE notifications DROP CONSTRAINT test_reject_write')
+    # Повтор того же ID после устранения ошибки должен создать уведомление.
+    assert (await publish(event())).status == 200
+    items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
+    assert len(items) == 1

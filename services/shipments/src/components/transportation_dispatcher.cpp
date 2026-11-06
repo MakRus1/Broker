@@ -28,7 +28,7 @@ TransportationDispatcher::TransportationDispatcher(
             const auto organization = message.Payload["organization_id"].As<std::string>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
         });
-    outbox.RegisterHandler(std::string{helpers::kShipmentRouteChanged},
+    outbox.RegisterHandler(std::string{helpers::kPublishNotificationEvent},
         [this](const platform::outbox::Message& message) {
             namespace api = clients::notifications::ApiInternalV1EventsPublish;
             deps_.notifications.ApiInternalV1EventsPublish(

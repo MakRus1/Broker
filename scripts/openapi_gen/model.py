@@ -30,6 +30,7 @@ class Type:
     enum_values: tuple | None = None
     model_name: str | None = None
     nullable: bool = False
+    alternatives: tuple['Type', ...] = ()
 
     @property
     def cpp(self):
@@ -73,6 +74,7 @@ class Body:
     strict: bool = False
     validate_content_type: bool = True
     model_name: str | None = None
+    union: bool = False
 
 
 @dataclass(frozen=True)
@@ -136,7 +138,7 @@ def enum_types(operation):
 def resolve(schema, schemas):
     if '$ref' in schema:
         keys(schema, {'$ref'}, 'reference')
-        ref = schema['$ref']
+        ref = schema.get('$ref')
         prefix = '#/components/schemas/'
         if not isinstance(ref, str) or not ref.startswith(prefix) or ref[len(prefix):] not in schemas:
             raise ValueError(f'Unsupported or unresolved reference: {ref}')
@@ -165,6 +167,10 @@ def parse_type(schema, prefix='Value', registry=None):
         if registry is None:
             raise ValueError('References require components.schemas')
         return registry.reference(schema)
+    if 'oneOf' in schema:
+        if registry is None:
+            raise ValueError('oneOf requires components.schemas')
+        return registry.union_type(schema, prefix)
     kind = schema.get('type')
     if kind == 'object':
         keys(schema, {'type', 'additionalProperties', 'description', 'title'}, 'free-form object')
@@ -179,7 +185,7 @@ def parse_type(schema, prefix='Value', registry=None):
         item = parse_type(schema.get('items', {}), prefix + '_item', registry)
         if item.kind == 'array':
             raise ValueError('Nested arrays are unsupported')
-        if item.kind in {'object', 'record'} and ('default' in schema or schema.get('uniqueItems')):
+        if item.kind in {'object', 'record', 'union'} and ('default' in schema or schema.get('uniqueItems')):
             raise ValueError('default and uniqueItems for arrays of objects are unsupported')
     elif 'items' in schema:
         raise ValueError('items is only valid for arrays')
@@ -188,14 +194,23 @@ def parse_type(schema, prefix='Value', registry=None):
 
 
 def parse_body(schema, schemas, required=True, prefix='Schema', registry=None):
+    if 'oneOf' in schema:
+        if registry is None:
+            raise ValueError('oneOf requires a schema registry')
+        typ = registry.union_type(schema, prefix)
+        return Body((), required=required, model_name=typ.model_name, union=True)
     if '$ref' in schema and registry is not None:
         model = registry.get(registry.reference_name(schema))
         while model.alias:
             model = registry.get(model.alias)
+        if model.type.kind == 'union':
+            return Body((), required=required, model_name=registry.reference_name(schema), union=True)
         if model.body is None:
             raise ValueError('JSON body must reference an object with properties')
         return replace(model.body, required=required, model_name=registry.reference_name(schema))
     schema = resolve(schema, schemas)
+    if 'allOf' in schema:
+        schema = registry.compose_object(schema)
     keys(schema, {'type', 'properties', 'required', 'additionalProperties', 'description', 'title'}, 'object schema')
     if schema.get('type') != 'object':
         raise ValueError('JSON body must be a flat object')
@@ -210,7 +225,7 @@ def parse_body(schema, schemas, required=True, prefix='Schema', registry=None):
     extra = schema.get('additionalProperties', True)
     if not isinstance(extra, bool):
         raise ValueError('Typed additionalProperties is unsupported')
-    return Body(tuple(Field(identifier(n), parse_type(s, n, registry), n in req) for n, s in sorted(props.items())), required, not extra)
+    return Body(tuple(Field(identifier(n), parse_type(s, prefix + '_' + n if 'oneOf' in s or 'oneOf' in s.get('items', {}) else n, registry), n in req) for n, s in sorted(props.items())), required, not extra)
 
 
 @dataclass(frozen=True)
@@ -231,7 +246,7 @@ class SchemaRegistry:
 
     def reference_name(self, schema):
         keys(schema, {'$ref'}, 'reference')
-        ref = schema['$ref']
+        ref = schema.get('$ref')
         prefix = '#/components/schemas/'
         if not isinstance(ref, str) or not ref.startswith(prefix) or ref[len(prefix):] not in self.schemas:
             raise ValueError(f'Unsupported or unresolved reference: {ref}')
@@ -256,6 +271,96 @@ class SchemaRegistry:
         self.models[enum_name] = NamedModel(enum_name, enum_type)
         return replace(enum_type, model_name=enum_name, nullable=typ.nullable)
 
+    def compose_object(self, schema, visiting=()):
+        if not isinstance(schema, dict):
+            raise ValueError('allOf alternatives must be schemas')
+        if '$ref' in schema:
+            name = self.reference_name(schema)
+            if name in visiting:
+                raise ValueError('Recursive allOf reference: ' + name)
+            return self.compose_object(self.schemas[name], (*visiting, name))
+        if 'allOf' not in schema:
+            return schema
+        keys(schema, {'allOf', 'type', 'properties', 'required', 'additionalProperties', 'description', 'title'}, 'allOf schema')
+        parts = schema['allOf']
+        if not isinstance(parts, list) or not parts:
+            raise ValueError('allOf must be a non-empty list')
+        parts = [self.compose_object(part, visiting) for part in parts]
+        siblings = {key: value for key, value in schema.items()
+                    if key not in {'allOf', 'description', 'title'}}
+        if siblings:
+            parts.append({'type': 'object', **siblings})
+        properties = {}
+        required = set()
+        for part in parts:
+            keys(part, {'type', 'properties', 'required', 'additionalProperties', 'description', 'title'}, 'allOf object')
+            if part.get('type') != 'object':
+                raise ValueError('allOf currently supports object schemas only')
+            # Check branch-local constraints without registering temporary models.
+            props = part.get('properties', {})
+            req = part.get('required', [])
+            if not isinstance(props, dict):
+                raise ValueError('allOf properties must be an object')
+            if (not isinstance(req, list) or not all(isinstance(key, str) for key in req)
+                    or len(set(req)) != len(req) or not set(req) <= set(props)):
+                raise ValueError('allOf required must list unique declared properties')
+            if not isinstance(part.get('additionalProperties', True), bool):
+                raise ValueError('Typed additionalProperties is unsupported')
+            for name, value in part.get('properties', {}).items():
+                if name in properties and properties[name] != value:
+                    raise ValueError('allOf has incompatible constraints for property: ' + name)
+                properties[name] = value
+            required.update(part.get('required', []))
+        for part in parts:
+            if part.get('additionalProperties') is False and set(properties) - set(part.get('properties', {})):
+                raise ValueError('allOf cannot extend an object with additionalProperties: false')
+        return {'type': 'object', 'properties': properties, 'required': sorted(required),
+                'additionalProperties': all(part.get('additionalProperties', True) for part in parts)}
+
+    def validate_discriminator(self, discriminator, alternatives):
+        keys(discriminator, {'propertyName', 'mapping'}, 'discriminator')
+        property_name = discriminator.get('propertyName')
+        if not isinstance(property_name, str) or not property_name:
+            raise ValueError('discriminator requires propertyName')
+        mapping = discriminator.get('mapping', {})
+        if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in mapping.items()):
+            raise ValueError('discriminator.mapping must map strings to schemas')
+        names = {typ.model_name for typ in alternatives}
+        resolved = {}
+        for tag, ref in mapping.items():
+            target = self.reference_name({'$ref': ref}) if ref.startswith('#/') else ref
+            if target not in names:
+                raise ValueError('discriminator mapping must refer to a oneOf alternative')
+            resolved[tag] = target
+        for typ in alternatives:
+            model = self.get(typ.model_name)
+            while model.alias:
+                model = self.get(model.alias)
+            field = next((f for f in model.body.fields if f.name == property_name), None) if model.body else None
+            tags = {tag for tag, target in resolved.items() if target == typ.model_name}
+            if not tags:
+                tags = {typ.model_name}
+            if (field is None or not field.required or field.type.nullable or field.type.kind != 'string'
+                    or set(field.type.schema.get('enum', [])) != tags):
+                raise ValueError('discriminator property must be required and have an enum matching its mapping')
+
+    def union_type(self, schema, name):
+        keys(schema, {'oneOf', 'discriminator', 'description', 'title'}, 'oneOf schema')
+        branches = schema['oneOf']
+        if not isinstance(branches, list) or not branches:
+            raise ValueError('oneOf must be a non-empty list')
+        alternatives = tuple(self.reference(branch) for branch in branches)
+        if 'discriminator' in schema:
+            self.validate_discriminator(schema['discriminator'], alternatives)
+        if name in self.schemas and self.schemas[name] != schema:
+            raise ValueError('Conflicting inline oneOf name: ' + name)
+        typ = Type('union', schema=schema, model_name=name, alternatives=alternatives)
+        if name not in self.schemas:
+            if name in self.models and self.models[name].type != typ:
+                raise ValueError('Conflicting inline oneOf name: ' + name)
+            self.models[name] = NamedModel(name, typ)
+        return typ
+
     def get(self, name):
         for part in name.split("::"):
             identifier(part)
@@ -274,7 +379,9 @@ class SchemaRegistry:
             target = self.reference_name(schema)
             source = self.get(target)
             model = NamedModel(name, replace(source.type, model_name=name), source.body, target)
-        elif schema.get('type') == 'object' and ('properties' in schema or schema.get('additionalProperties') is False):
+        elif 'oneOf' in schema:
+            model = NamedModel(name, self.union_type(schema, name))
+        elif 'allOf' in schema or schema.get('type') == 'object' and ('properties' in schema or schema.get('additionalProperties') is False):
             body = parse_body(schema, self.schemas, prefix=name, registry=self)
             fields = tuple(replace(field, type=self.name_inline_enum(field.type, name))
                            for field in body.fields)
@@ -312,6 +419,9 @@ def collect_models(operations):
         elif typ.item:
             validation_functions(typ.item, name + '_item')
     for model in models.values():
+        if model.type.kind == 'union' and not model.alias:
+            for index, alternative in enumerate(model.type.alternatives):
+                validation_functions(alternative, model.name + '_alternative_' + str(index))
         if model.body and not model.alias:
             for field in model.body.fields:
                 validation_functions(field.type, '::'.join([*model.name.split('::')[:-1], model.name.split('::')[-1] + '_' + field.name]))
@@ -329,6 +439,8 @@ def collect_models(operations):
                 add(typ.model_name)
             if typ.item:
                 dependencies(typ.item)
+            for alternative in typ.alternatives:
+                dependencies(alternative)
         if model.alias:
             add(model.alias)
         elif model.body:
@@ -411,7 +523,7 @@ def parse_spec(spec):
                     if loc == 'path' and (not p.get('required') or name not in placeholders):
                         raise ValueError('Path parameters must be required and present in URL')
                     typ = parse_type(p['schema'], name, registry)
-                    if typ.kind in {'array', 'object', 'record'} or typ.nullable:
+                    if typ.kind in {'array', 'object', 'record', 'union'} or typ.nullable:
                         raise ValueError('Array/object parameters are unsupported; arrays are supported in JSON bodies')
                     if (loc, name) in seen:
                         raise ValueError('Duplicate parameter')
@@ -432,7 +544,7 @@ def parse_spec(spec):
                 if set(rb['content']) != {'application/json'}:
                     raise ValueError('Request body supports only application/json')
                 keys(rb['content']['application/json'], {'schema'}, 'request media')
-                body = parse_body(rb['content']['application/json']['schema'], schemas, rb.get('required', False), 'RequestBody', registry)
+                body = parse_body(rb['content']['application/json']['schema'], schemas, rb.get('required', False), ('_'.join(names) or 'Root') + '_RequestBody', registry)
                 body = replace(body, validate_content_type=rb.get('x-validate-content-type', True))
             responses = []
             for raw, response in op.get('responses', {}).items():
@@ -450,7 +562,7 @@ def parse_spec(spec):
                     keys(content[media], {'schema'}, 'response media')
                     schema = content[media]['schema']
                     if media == 'application/json':
-                        rb = parse_body(schema, schemas, prefix=f'Response{status}', registry=registry)
+                        rb = parse_body(schema, schemas, prefix=('_'.join(names) or 'Root') + f'_Response{status}', registry=registry)
                     elif media != 'text/plain' or schema != {'type': 'string'}:
                         raise ValueError(f'Unsupported response media/schema: {media}')
                 responses.append(Response(status, media, rb))

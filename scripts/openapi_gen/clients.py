@@ -51,6 +51,8 @@ def json_write(name, items):
 
 
 def json_fields(name, body):
+    if body.union:
+        return [f'{name} value{{broker_codegen::ParseJson<decltype({name}::value)>(json)}};']
     lines = ['if (!json.IsObject()) throw std::invalid_argument("object expected");', f'{name} value;']
     if body.strict:
         allowed = ' && '.join(f'it.GetName() != {quoted(f.name)}' for f in body.fields) or 'true'
@@ -74,6 +76,7 @@ def json_read(response, finish):
 def operation_code(scope, op):
     if op.cookie_name:
         raise ValueError(f'{op.path}: cookie-authenticated browser APIs are not supported by C++ clients')
+    models_scope = scope.rsplit('::', 1)[0] + '::models'
     text = f'namespace {op.name} {{\n'
     types = enum_types(op)
     error_names = {f'Error{r.status}' for r in op.responses if r.status >= 300}
@@ -81,17 +84,27 @@ def operation_code(scope, op):
         raise ValueError(f'{op.name}: enum name collides with generated API error')
     text += ''.join(enums(t) for t in types)
     if op.body:
-        text += dto('RequestBody', op.body.fields, scope)
-        text += 'inline std::string ToJson(const RequestBody& value) {\n' + json_write('RequestBody', op.body.fields) + '\n}\n'
-        text += 'inline RequestBody ParseBody(const userver::formats::json::Value& json) {\n' + '\n'.join(json_fields('RequestBody', op.body)) + '\nreturn value;\n}\n'
+        if op.body.union:
+            text += f'using RequestBody = {models_scope}::{op.body.model_name};\n'
+            text += 'inline std::string ToJson(const RequestBody& value) { return userver::formats::json::ToString(userver::formats::json::ValueBuilder(value).ExtractValue()); }\n'
+            text += 'inline RequestBody ParseBody(const userver::formats::json::Value& json) { return broker_codegen::ParseJson<RequestBody>(json); }\n'
+        else:
+            text += dto('RequestBody', op.body.fields, scope)
+            text += 'inline std::string ToJson(const RequestBody& value) {\n' + json_write('RequestBody', op.body.fields) + '\n}\n'
+            text += 'inline RequestBody ParseBody(const userver::formats::json::Value& json) {\n' + '\n'.join(json_fields('RequestBody', op.body)) + '\nreturn value;\n}\n'
     text += declarations('Request', op.params) + 'struct Request {\n' + fields(op.params, scope)
     if op.body:
         text += '\n' + ('RequestBody' if op.body.required else 'std::optional<RequestBody>') + ' body{};'
     text += '\n};\n'
     for response in op.responses:
         name = f'Response{response.status}'
-        text += (f'struct {name} {{ std::string body; }};\n' if response.media == 'text/plain' else dto(name, response.body.fields if response.body else (), scope))
-        if response.media == 'application/json':
+        if response.body and response.body.union:
+            text += f'struct {name} {{ {models_scope}::{response.body.model_name} value; }};\n'
+        else:
+            text += (f'struct {name} {{ std::string body; }};\n' if response.media == 'text/plain' else dto(name, response.body.fields if response.body else (), scope))
+        if response.body and response.body.union:
+            text += f'inline std::string ToJson(const {name}& value) {{ return userver::formats::json::ToString(userver::formats::json::ValueBuilder(value.value).ExtractValue()); }}\n'
+        elif response.media == 'application/json':
             text += f'inline std::string ToJson(const {name}& value) {{\n' + json_write(name, response.body.fields) + '\n}\n'
         if response.status >= 300:
             text += f'''class Error{response.status} final : public platform::http::ErrorByStatus<{response.status}> {{

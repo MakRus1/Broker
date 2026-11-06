@@ -15,20 +15,18 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
     if (json::ValueBuilder(before.route_segments).ExtractValue() ==
         json::ValueBuilder(after.route_segments).ExtractValue())
         return;
-    const clients::notifications::models::ShipmentRouteChanged event{.actor_subject = actor.Subject,
-        .organization_id = organization,
+    const clients::notifications::models::ShipmentRouteChangedPayload payload{
+        .actor_subject = actor.Subject,
         .recipient_issuer = actor.Issuer,
         .recipient_subject = after.logist.value_or(std::nullopt),
         .revision = after.revision,
         .shipment_id = after.id,
         .shipment_number = after.number};
     const auto id = organization + ":" + after.id + ":" + std::to_string(after.revision);
-    const clients::notifications::models::PublishedEvent envelope{.id = id,
-        .organization_id = organization,
-        .payload = json::ValueBuilder(event).ExtractValue(),
-        .type = "shipment.route_changed",
-        .version = 1};
+    const clients::notifications::models::PublishedEvent event{
+        .value = clients::notifications::models::ShipmentRouteChanged{
+            .id = id, .organization_id = organization, .payload = payload}};
     platform::outbox::Enqueue(
-        transaction, kShipmentRouteChanged, id, json::ValueBuilder(envelope).ExtractValue());
+        transaction, kPublishNotificationEvent, id, json::ValueBuilder(event).ExtractValue());
 }
 }  // namespace shipments::helpers

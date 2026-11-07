@@ -3,6 +3,13 @@
 #include <views/api/v1/sales/inquiries/save/view.hpp>
 
 namespace sales::views::api::v1::sales::inquiries::save {
+namespace {
+struct NumberAllocation {
+    userver::utils::datetime::Date Date;
+    std::int64_t Sequence;
+};
+}  // namespace
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
@@ -32,14 +39,12 @@ Response View::Handle(
     std::string number;
     if (value.expected_revision == 0) {
         const auto settings = Settings(transaction.Execute(sql::kGetSettings, organization));
-        const auto date = transaction.Execute(sql::kCurrentNumberDate)
-                              .AsSingleRow<userver::utils::datetime::Date>();
-        const auto sequence =
-            transaction
-                .Execute(sql::kNextDocumentNumber, organization, std::string{"inquiry"},
-                    platform::DocumentNumberPeriod(date, settings.reset_number_yearly))
-                .AsSingleRow<std::int64_t>();
-        number = platform::FormatDocumentNumber(settings.inquiry_number_template, date, sequence);
+        const auto allocation = transaction
+                                    .Execute(sql::kNextDocumentNumber, organization,
+                                        std::string{"inquiry"}, settings.reset_number_yearly)
+                                    .AsSingleRow<NumberAllocation>(pg::kRowTag);
+        number = platform::FormatDocumentNumber(
+            settings.inquiry_number_template, allocation.Date, allocation.Sequence);
         if (number.size() > 128)
             throw ApiError<400>{"number_too_long", "Номер запроса длиннее 128 символов"};
     }

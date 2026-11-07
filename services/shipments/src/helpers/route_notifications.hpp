@@ -29,4 +29,20 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
     platform::outbox::Enqueue(
         transaction, kPublishNotificationEvent, id, json::ValueBuilder(event).ExtractValue());
 }
+
+inline void QueueShipmentCreated(pg::Transaction& transaction, const std::string& organization,
+    const platform::auth::Identity& actor, const models::Shipment& shipment) {
+    const auto id = organization + ":created:" + shipment.id;
+    const clients::notifications::models::PublishedEvent event{
+        .value = clients::notifications::models::ShipmentCreated{.id = id,
+            .organization_id = organization,
+            .payload = {.actor_subject = actor.Subject,
+                .recipient_issuer = actor.Issuer,
+                .recipient_subject = shipment.logist.value_or(std::nullopt),
+                .revision = shipment.revision,
+                .shipment_id = shipment.id,
+                .shipment_number = shipment.number}}};
+    platform::outbox::Enqueue(transaction, kPublishNotificationEvent, id,
+        userver::formats::json::ValueBuilder(event).ExtractValue());
+}
 }  // namespace shipments::helpers

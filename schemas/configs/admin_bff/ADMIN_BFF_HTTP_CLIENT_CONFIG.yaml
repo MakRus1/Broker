@@ -28,6 +28,8 @@ paths:
 - /api/admin/route-locations/archive
 - /api/admin/route-locations/list
 - /api/admin/route-locations/save
+- /api/admin/sales/settings/get
+- /api/admin/sales/settings/update
 - /api/admin/shipments/settings/get
 - /api/admin/shipments/settings/update
 - /api/configs/current

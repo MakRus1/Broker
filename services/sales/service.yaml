@@ -1,0 +1,51 @@
+version: 1
+libraries:
+- common
+- outbox
+postgresql:
+  enabled: true
+  cluster: sales
+clients:
+  counterparties:
+    service: counterparties
+    transport: http
+  organizations:
+    service: organizations
+    transport: http
+  shipments:
+    service: shipments
+    transport: http
+  transport_locations:
+    service: transport_locations
+    transport: http
+auth:
+  audience: broker-logistics
+  roles-client: broker-logistics
+  protected-prefix: /api/
+  permissions:
+    /api/v1/sales/cards/save: sales.write
+    /api/v1/sales/cards/get: sales.read
+    /api/v1/sales/cards/list: sales.read
+    /api/v1/sales/cards/history: sales.read
+    /api/v1/sales/inquiries/save: sales.write
+    /api/v1/sales/inquiries/get: sales.read
+    /api/v1/sales/inquiries/list: sales.read
+    /api/v1/sales/inquiries/history: sales.read
+    /api/v1/sales/inquiries/create-shipment: sales.write
+    /api/v1/sales/settings: sales.read
+    /api/admin/sales/settings/get: authenticated
+    /api/admin/sales/settings/update: authenticated
+    /api/v1/sales/cards/filter-values: sales.read
+    /api/v1/sales/inquiries/filter-values: sales.read
+  organization-access: true
+service_accounts:
+  dispatcher:
+    client_id: sales-dispatcher
+    audience: broker-logistics
+    permissions:
+    - shipments.create
+    config:
+      client_id: dispatcher-client-id
+      client_secret: dispatcher-client-secret
+      token_url: dispatcher-token-url
+      enabled: dispatcher-enabled

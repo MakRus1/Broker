@@ -35,6 +35,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 interface ServerNotification {
+  event_type?: 'shipment.created' | 'shipment.route_changed';
   id: string;
   shipment_id: string;
   shipment_number: string;
@@ -81,11 +82,16 @@ function ServerNotifications() {
           result.items.map((item) => ({
             id: `server:${item.id}`,
             remote: true,
-            message: translate('notifications.shipmentRouteChanged', {
-              number: item.shipment_number,
-            }),
+            message: translate(
+              item.event_type === 'shipment.created'
+                ? 'notifications.shipmentCreated'
+                : 'notifications.shipmentRouteChanged',
+              {
+                number: item.shipment_number,
+              },
+            ),
             level: 'info',
-            route: `/shipments/${item.shipment_id}/route`,
+            route: `/shipments/${item.shipment_id}${item.event_type === 'shipment.created' ? '' : '/route'}`,
             createdAt: Date.parse(item.created_at),
             read: item.read,
             toast: false,

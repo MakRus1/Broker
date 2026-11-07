@@ -1,4 +1,5 @@
 #pragma once
+#include <events/shipment_created.hpp>
 #include <events/shipment_route_changed.hpp>
 #include <notifications/sql_queries.hpp>
 #include <openapi/models.hpp>

@@ -208,10 +208,6 @@
   }
 }
 
-.registry-workbench .registry-heading > .registry-tip {
-  flex-basis: 100%;
-  margin: 0;
-}
 .registry-empty:has(.registry-empty-state) {
   padding: 0;
 }

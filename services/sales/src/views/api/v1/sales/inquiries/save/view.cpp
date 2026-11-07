@@ -1,0 +1,61 @@
+#include <helpers/settings.hpp>
+#include <userver/storages/postgres/io/date.hpp>
+#include <views/api/v1/sales/inquiries/save/view.hpp>
+
+namespace sales::views::api::v1::sales::inquiries::save {
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
+    using namespace ::sales::helpers;
+    const auto organization = Organization(context);
+    const auto& value = request.body;
+    ValidateReferences(deps, context, value.customer_id, value.manager_subject);
+    auto transaction =
+        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const auto previous = transaction.Execute(sql::kLockInquiries, organization, value.id);
+    if (previous.IsEmpty()) {
+        if (value.status != models::InquiryStatus::Draft)
+            throw ApiError<400>{"invalid_status", "Новый запрос должен быть черновиком"};
+    } else {
+        const auto old = Read<models::Inquiry>(previous);
+        if (old.converting || old.shipment_id.has_value())
+            throw ApiError<409>{"conversion_started", "Запрос уже передан в создание поставки"};
+        if (old.status == models::InquiryStatus::Agreed && value.status == old.status)
+            throw ApiError<409>{"agreed_request", "Верните запрос в работу перед изменением"};
+    }
+    if (value.ready_date.has_value() && value.desired_delivery_date.has_value() &&
+        value.desired_delivery_date < value.ready_date)
+        throw ApiError<400>{"invalid_dates", "Дата доставки не может быть раньше готовности груза"};
+    if (value.status == models::InquiryStatus::Agreed &&
+        (!value.cargo_description.has_value() ||
+            userver::utils::text::Trim(value.cargo_description.value()).empty()))
+        throw ApiError<400>{"cargo_required", "Перед согласованием опишите груз"};
+    std::string number;
+    if (value.expected_revision == 0) {
+        const auto settings = Settings(transaction.Execute(sql::kGetSettings, organization));
+        const auto date = transaction.Execute(sql::kCurrentNumberDate)
+                              .AsSingleRow<userver::utils::datetime::Date>();
+        const auto sequence =
+            transaction
+                .Execute(sql::kNextDocumentNumber, organization, std::string{"inquiry"},
+                    platform::DocumentNumberPeriod(date, settings.reset_number_yearly))
+                .AsSingleRow<std::int64_t>();
+        number = platform::FormatDocumentNumber(settings.inquiry_number_template, date, sequence);
+        if (number.size() > 128)
+            throw ApiError<400>{"number_too_long", "Номер запроса длиннее 128 символов"};
+    }
+    const auto document = json::ValueBuilder(value).ExtractValue();
+    const auto changed = value.expected_revision == 0
+        ? transaction.Execute(sql::kCreateInquiries, organization, document, number)
+        : transaction.Execute(
+              sql::kUpdateInquiries, organization, document, value.expected_revision);
+    if (changed.IsEmpty())
+        throw ApiError<409>{
+            "revision_conflict", "Запись уже существует, изменена или передана в поставку"};
+    const auto result =
+        Read<models::Inquiry>(transaction.Execute(sql::kGetInquiries, organization, value.id));
+    Audit(transaction, organization, platform::auth::GetIdentity(context), std::string{"inquiries"},
+        result);
+    transaction.Commit();
+    return Response200{.item = result};
+}
+}  // namespace sales::views::api::v1::sales::inquiries::save

@@ -30,6 +30,12 @@ Notification:
       format: date-time
     read:
       type: boolean
+    event_type:
+      type: string
+      enum:
+      - shipment.route_changed
+      - shipment.created
+      default: shipment.route_changed
   required:
   - id
   - shipment_id
@@ -40,6 +46,7 @@ Notification:
 PublishedEvent:
   oneOf:
   - $ref: '#/ShipmentRouteChanged'
+  - $ref: '#/ShipmentCreated'
 ShipmentRouteChangedPayload:
   type: object
   additionalProperties: false
@@ -93,6 +100,35 @@ ShipmentRouteChanged:
       enum:
       - shipment.route_changed
       default: shipment.route_changed
+    version:
+      type: integer
+      enum:
+      - 1
+      default: 1
+    organization_id:
+      type: string
+      format: uuid
+    payload:
+      $ref: '#/ShipmentRouteChangedPayload'
+ShipmentCreated:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - type
+  - version
+  - organization_id
+  - payload
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200
+    type:
+      type: string
+      enum:
+      - shipment.created
+      default: shipment.created
     version:
       type: integer
       enum:

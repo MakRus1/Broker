@@ -7,6 +7,12 @@
   gap: 20px;
   padding: 0 0 24px;
 }
+.registry-heading > .registry-tip {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  align-self: stretch;
+  margin: 0;
+}
 .registry-heading.page-heading h1 {
   color: var(--text);
   font-size: 25px;

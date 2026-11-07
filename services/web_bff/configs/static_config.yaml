@@ -319,6 +319,78 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-sales-cards-filter_values:
+            path: /api/v1/sales/cards/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-cards-get:
+            path: /api/v1/sales/cards/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-cards-history:
+            path: /api/v1/sales/cards/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-cards-list:
+            path: /api/v1/sales/cards/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-cards-save:
+            path: /api/v1/sales/cards/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-create_shipment:
+            path: /api/v1/sales/inquiries/create-shipment
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-filter_values:
+            path: /api/v1/sales/inquiries/filter-values
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-get:
+            path: /api/v1/sales/inquiries/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-history:
+            path: /api/v1/sales/inquiries/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-list:
+            path: /api/v1/sales/inquiries/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-inquiries-save:
+            path: /api/v1/sales/inquiries/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-settings:
+            path: /api/v1/sales/settings
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-service_charges-filter_values:
             path: /api/v1/service-charges/filter-values
             method: POST
@@ -513,6 +585,8 @@ components_manager:
             base-url: $client-notifications-base-url
         client-organizations:
             base-url: $client-organizations-base-url
+        client-sales:
+            base-url: $client-sales-base-url
         client-shipments:
             base-url: $client-shipments-base-url
         client-transport_locations:

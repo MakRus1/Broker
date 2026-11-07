@@ -1,3 +1,4 @@
+import { ShipmentInquiryLink } from '../sales/ShipmentInquiryLink';
 import { VisitedPanel } from '../../shared/ui/VisitedPanel';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
@@ -426,9 +427,14 @@ function ShipmentCard({
           initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')
         }
         metadata={
-          initial
-            ? `${translate('registryField.shipment_date')}: ${initial.shipment_date ? CalendarDate.fromISO(initial.shipment_date).toDisplayString() : '—'} · ${translate('shipment.revision', { revision: revision ?? 0 })}`
-            : translate('shipment.createHint')
+          initial ? (
+            <>
+              {`${translate('registryField.shipment_date')}: ${initial.shipment_date ? CalendarDate.fromISO(initial.shipment_date).toDisplayString() : '—'} · ${translate('shipment.revision', { revision: revision ?? 0 })}`}
+              <ShipmentInquiryLink shipment={initial.id} session={props.session} />
+            </>
+          ) : (
+            translate('shipment.createHint')
+          )
         }
         mode={
           editing

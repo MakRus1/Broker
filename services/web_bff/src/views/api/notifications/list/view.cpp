@@ -14,6 +14,9 @@ Response View::Handle(
     Response200 response;
     for (const auto& item : result.items)
         response.items.push_back({.created_at = item.created_at,
+            .event_type =
+                models::ParseEnumScalar(clients::notifications::models::EnumValue(item.event_type),
+                    models::Notification_event_type{}),
             .id = item.id,
             .read = item.read,
             .shipment_id = item.shipment_id,

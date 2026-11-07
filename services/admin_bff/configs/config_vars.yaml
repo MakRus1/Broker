@@ -35,3 +35,4 @@ client-transport_locations-base-url: http://localhost:8080
 client-finance-base-url: http://localhost:8080
 client-contracts-base-url: http://localhost:8080
 client-localization-base-url: http://localhost:8080
+client-sales-base-url: http://localhost:8080

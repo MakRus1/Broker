@@ -10,6 +10,7 @@ import {
 } from '../../shared/registry/Registry';
 import { Select } from '../../shared/ui/Select';
 import { FinanceSettings } from './FinanceSettings';
+import { SalesSettings } from './SalesSettings';
 import { ShipmentSettings } from './ShipmentSettings';
 import { EditorPanel } from './EditorPanel';
 import { MemberEditor } from './MemberEditor';
@@ -60,7 +61,9 @@ export function Organizations({
   const [selected, setSelected] = useState<Organization | undefined>(
     access.platform_admin ? undefined : ownOrganizations[0],
   );
-  const [tab, setTab] = useState<'members' | 'roles' | 'shipments' | 'finance'>('members');
+  const [tab, setTab] = useState<'members' | 'roles' | 'shipments' | 'finance' | 'sales'>(
+    'members',
+  );
   const memberList = useRegistry<Member>(
     '/api/admin/organizations/members/list',
     session,
@@ -435,11 +438,16 @@ export function Organizations({
             >
               Правила поставок
             </button>
+            <button role="tab" aria-selected={tab === 'sales'} onClick={() => setTab('sales')}>
+              Продажи
+            </button>
             <button role="tab" aria-selected={tab === 'finance'} onClick={() => setTab('finance')}>
               Финансы
             </button>
           </div>
-          {tab === 'finance' ? (
+          {tab === 'sales' ? (
+            <SalesSettings key={selected.id} session={session} organization={selected.id} />
+          ) : tab === 'finance' ? (
             <>
               <FinanceSettings key={selected.id} session={session} organization={selected.id} />
               <ContractNumberingSettings

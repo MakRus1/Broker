@@ -31,6 +31,7 @@
 #include <clients/finance/client.hpp>
 #include <clients/localization/client.hpp>
 #include <clients/organizations/client.hpp>
+#include <clients/sales/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
 #include <clients/transportations/client.hpp>
@@ -80,6 +81,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<admin_bff::clients::finance::Component>();
     component_list.Append<admin_bff::clients::localization::Component>();
     component_list.Append<admin_bff::clients::organizations::Component>();
+    component_list.Append<admin_bff::clients::sales::Component>();
     component_list.Append<admin_bff::clients::shipments::Component>();
     component_list.Append<admin_bff::clients::transport_locations::Component>();
     component_list.Append<admin_bff::clients::transportations::Component>();

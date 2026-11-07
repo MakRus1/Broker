@@ -30,6 +30,12 @@ Notification:
       format: date-time
     read:
       type: boolean
+    event_type:
+      type: string
+      enum:
+      - shipment.route_changed
+      - shipment.created
+      default: shipment.route_changed
   required:
   - id
   - shipment_id

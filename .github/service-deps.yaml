@@ -10,6 +10,7 @@ libs:
     - localization
     - notifications
     - organizations
+    - sales
     - shipments
     - transport_locations
     - transportations

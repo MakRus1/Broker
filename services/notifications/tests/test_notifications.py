@@ -180,3 +180,13 @@ async def test_notification_write_failure_rolls_back_event(publish, api, pgsql):
     assert (await publish(event())).status == 200
     items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
     assert len(items) == 1
+
+async def test_shipment_created_notifies_logist_and_skips_author(api,publish):
+    changes={'type':'shipment.created','id':'shipment-created-1'}
+    assert (await publish(event(revision=1),envelope_changes=changes)).status==200
+    assert (await publish(event(revision=1),envelope_changes=changes)).status==200
+    items=(await api.post(LIST_PATH,{'organization_id':ORGANIZATION}))['items']
+    assert len(items)==1 and items[0]['event_type']=='shipment.created'
+    own=event(shipment_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',actor_subject='author')
+    assert (await publish(own,envelope_changes={'type':'shipment.created','id':'own-created'})).status==200
+    assert len((await api.post(LIST_PATH,{'organization_id':ORGANIZATION}))['items'])==1

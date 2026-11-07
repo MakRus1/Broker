@@ -79,6 +79,20 @@ export function useColumnFilters({
       const endpoint = `/api/v1/${registry}/filter-values`;
       const source = field.lookup;
       const sourceRequest = async (ids?: string[], cursor?: unknown) => {
+        if (source === 'employees') {
+          const result = await request<{ items: { subject: string; display_name: string }[] }>(
+            '/api/organizations/employees/list',
+            session ?? undefined,
+            { query: search || undefined, limit: 100 },
+            signal,
+          );
+          return {
+            items: result.items
+              .filter((item) => !ids || ids.includes(item.subject))
+              .map((item) => ({ id: item.subject, number: item.display_name })),
+            next_cursor: undefined,
+          };
+        }
         if (source === 'transportations') {
           const result = await request<{
             items: { id: string; container_number: string | null }[];

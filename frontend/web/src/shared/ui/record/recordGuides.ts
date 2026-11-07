@@ -120,13 +120,13 @@ export const sharedRecordGuideSteps: RecordGuideStep[] = [
     id: 'history-empty',
     label: 'finance.history',
     description: 'guide.historyEmpty',
-    selector: '.counterparty-history > .hint, .financial-history > .empty-state',
+    selector: '.counterparty-history > .hint, .record-history > .empty-state',
   },
   {
     id: 'history-list',
     label: 'finance.history',
     description: 'guide.historyEvents',
-    selector: '.financial-history, .counterparty-history',
+    selector: '.record-history, .counterparty-history',
   },
   {
     id: 'settlement-filters',
@@ -187,13 +187,13 @@ export const sharedRecordGuideSteps: RecordGuideStep[] = [
     id: 'history-events',
     label: 'finance.history',
     description: 'guide.historyEvents',
-    selector: '.history-entry, .financial-history-event',
+    selector: '.history-entry, .record-history-event',
   },
   {
     id: 'history-details',
     label: 'forms.stateAfterChange',
     description: 'guide.historyDetails',
-    selector: '.history-detail, .counterparty-diff, .financial-history-diff',
+    selector: '.history-detail, .counterparty-diff, .record-history-diff',
   },
 ];
 

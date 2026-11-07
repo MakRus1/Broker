@@ -163,6 +163,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-admin-sales-settings-get:
+            path: /api/admin/sales/settings/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-admin-sales-settings-update:
+            path: /api/admin/sales/settings/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-admin-shipments-settings-get:
             path: /api/admin/shipments/settings/get
             method: POST
@@ -271,6 +283,8 @@ components_manager:
             base-url: $client-localization-base-url
         client-organizations:
             base-url: $client-organizations-base-url
+        client-sales:
+            base-url: $client-sales-base-url
         client-shipments:
             base-url: $client-shipments-base-url
         client-transport_locations:

@@ -167,7 +167,7 @@ export function RecordGuide({ kind }: { kind: RecordGuideKind }) {
           />
         </RecordGuideMenu>
       )}
-      <RecordGuideNotice kind={kind} context={context} active={active} editing={editing} />
+      <RecordGuideNotice context={context} active={active} editing={editing} />
     </span>
   );
 }

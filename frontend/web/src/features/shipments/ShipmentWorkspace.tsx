@@ -554,7 +554,6 @@ function ShipmentCard({
                   ))}
                 </RecordGuideMenu>
                 <RecordGuideNotice
-                  kind="shipment"
                   context={`${editing ? 'edit' : 'view'}:${tab}`}
                   active={props.active !== false}
                   editing={editing}

@@ -78,14 +78,17 @@
   border-radius: 6px;
   color: var(--text-secondary);
 }
-.home-pin svg {
+.home-dashboard .home-pin svg {
   width: 18px;
   height: 18px;
   stroke: currentColor;
   stroke-width: 1.5;
 }
-.home-pin[aria-pressed='true'] {
-  color: var(--link);
+.home-dashboard .home-pin[aria-pressed='true'] {
+  color: var(--text);
+}
+.home-dashboard .home-pin[aria-pressed='true'] svg {
+  fill: currentColor;
 }
 .home-pin:hover {
   background: var(--surface-hover);

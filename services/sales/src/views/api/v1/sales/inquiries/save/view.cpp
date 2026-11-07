@@ -13,7 +13,7 @@ struct NumberAllocation {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
-    const auto organization = Organization(context);
+    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     const auto& value = request.body;
     ValidateReferences(deps, context, value.customer_id, value.manager_subject);
     auto transaction =
@@ -23,7 +23,8 @@ Response View::Handle(
         if (value.status != models::InquiryStatus::Draft)
             throw ApiError<400>{"invalid_status", "Новый запрос должен быть черновиком"};
     } else {
-        const auto old = Read<models::Inquiry>(previous);
+        const auto old = models::ParseModelJson(
+            previous.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
         if (old.converting || old.shipment_id.has_value())
             throw ApiError<409>{"conversion_started", "Запрос уже передан в создание поставки"};
         if (old.status == models::InquiryStatus::Agreed && value.status == old.status)
@@ -56,10 +57,14 @@ Response View::Handle(
     if (changed.IsEmpty())
         throw ApiError<409>{
             "revision_conflict", "Запись уже существует, изменена или передана в поставку"};
-    const auto result =
-        Read<models::Inquiry>(transaction.Execute(sql::kGetInquiries, organization, value.id));
-    Audit(transaction, organization, platform::auth::GetIdentity(context), std::string{"inquiries"},
-        result);
+    const auto rows = transaction.Execute(sql::kGetInquiries, organization, value.id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    const auto result = models::ParseModelJson(
+        rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
+    transaction.Execute(sql::kWriteHistory, organization, std::string{"inquiries"}, result.id,
+        result.revision, platform::auth::GetIdentity(context).ActorId(),
+        json::ValueBuilder(result).ExtractValue());
     transaction.Commit();
     return Response200{.item = result};
 }

@@ -1,4 +1,4 @@
-SELECT jsonb_strip_nulls(to_jsonb(value) - 'organization_id'),
+SELECT jsonb_strip_nulls(to_jsonb(value)),
     ({sort_key})::TEXT AS text_key,
     {date_key} AS date_key
 FROM sales_cards AS value

@@ -3,6 +3,7 @@ export type SalesStage = { id: string; name: string; enabled: boolean };
 export type SalesSettings = { revision: number; stages: SalesStage[] };
 export type SalesCard = {
   id: string;
+  organization_id: string;
   customer_id: string;
   manager_subject: string;
   stage_id: string;
@@ -15,6 +16,7 @@ export type SalesCard = {
 export type InquiryStatus = 'draft' | 'in_progress' | 'agreed' | 'rejected';
 export type Inquiry = {
   id: string;
+  organization_id: string;
   customer_id: string;
   manager_subject: string;
   status: InquiryStatus;
@@ -39,7 +41,7 @@ export type SalesEntity = SalesCard | Inquiry;
 export type SalesResource = 'cards' | 'inquiries';
 export const statuses: InquiryStatus[] = ['draft', 'in_progress', 'agreed', 'rejected'];
 export function saveSalesBody(value: SalesEntity) {
-  const { revision, ...body } = value;
+  const { revision, organization_id: _organization, ...body } = value;
   if ('number' in body) {
     const {
       number: _number,

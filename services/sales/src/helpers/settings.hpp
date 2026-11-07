@@ -1,22 +1,23 @@
 #pragma once
 #include <helpers/references.hpp>
 #include <platform/document_number.hpp>
+#include <postgresql/types.hpp>
 #include <set>
-#include <tuple>
 
 namespace sales::helpers {
 inline models::SalesSettings Settings(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return {.revision = 0, .stages = {}};
-    const auto [revision, stages, number_template, yearly] =
-        rows.AsSingleRow<std::tuple<std::int64_t, json::Value, std::string, bool>>(pg::kRowTag);
-    json::ValueBuilder value;
-    value["revision"] = revision;
-    value["stages"] = stages;
-    value["inquiry_number_template"] = number_template;
-    value["reset_number_yearly"] = yearly;
-    return models::ParseModelJson(
-        value.ExtractValue(), std::type_identity<models::SalesSettings>{});
+    const auto settings = rows.AsSingleRow<pgtypes::SalesSettingsV1>();
+    models::SalesSettings result{.inquiry_number_template = settings.InquiryNumberTemplate,
+        .reset_number_yearly = settings.ResetNumberYearly,
+        .revision = settings.Revision,
+        .stages = {}};
+    result.stages.reserve(settings.Stages.GetSize());
+    for (const auto& stage : settings.Stages)
+        result.stages.push_back(
+            models::ParseModelJson(stage, std::type_identity<models::SalesStage>{}));
+    return result;
 }
 
 inline void ValidateStages(

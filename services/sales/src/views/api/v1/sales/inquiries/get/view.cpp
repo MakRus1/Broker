@@ -5,8 +5,11 @@ namespace sales::views::api::v1::sales::inquiries::get {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
-    return Response200{
-        .item = Read<models::Inquiry>(deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
-            sql::kGetInquiries, Organization(context), request.body.id))};
+    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetInquiries,
+        platform::auth::GetOrganization(platform::auth::GetIdentity(context)), request.body.id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    return Response200{.item = models::ParseModelJson(
+                           rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{})};
 }
 }  // namespace sales::views::api::v1::sales::inquiries::get

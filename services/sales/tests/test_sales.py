@@ -37,6 +37,7 @@ async def test_card_unique_customer_and_revision(api):
     value = card()
     saved = (await api.post('/api/v1/sales/cards/save', value))['item']
     assert saved['revision'] == 1
+    assert saved['organization_id'] == ORG
     await api.post('/api/v1/sales/cards/save', card(), expected=409)
     await api.post('/api/v1/sales/cards/save', value, expected=409)
     value.update(expected_revision=1, next_action_date='2026-11-11')
@@ -44,6 +45,7 @@ async def test_card_unique_customer_and_revision(api):
     assert saved['next_action_date'] == '2026-11-11'
     history = await api.post('/api/v1/sales/cards/history', {'id': value['id']})
     assert len(history['items']) == 2
+    assert all(item['snapshot']['organization_id'] == ORG for item in history['items'])
     await api.post('/api/v1/sales/cards/get', {'id': value['id']}, user='other', expected=404)
 
 async def test_sales_permissions(api):
@@ -112,6 +114,7 @@ async def test_registry_filters_and_keyset(api):
         await api.post('/api/v1/sales/inquiries/save', value)
     first = await api.post('/api/v1/sales/inquiries/list', {'sort':'number','limit':2})
     assert [item['number'] for item in first['items']] == ['ENQ-1','ENQ-2']
+    assert all(item['organization_id'] == ORG for item in first['items'])
     second = await api.post('/api/v1/sales/inquiries/list', {'sort':'number','limit':2,'cursor':first['next_cursor']})
     assert [item['number'] for item in second['items']] == ['ENQ-3']
     filtered = await api.post('/api/v1/sales/inquiries/list', {'filters':[{'field':'cargo_description','query':'Груз 1'}]})

@@ -7,26 +7,29 @@ Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
     platform::auth::CheckPermission(context, "shipments.write");
-    const auto organization = Organization(context);
+    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     const auto& actor = platform::auth::GetIdentity(context);
     // Справочник читаем до транзакции: назначение логиста фиксируется при постановке.
-    const auto before = Read<models::Inquiry>(deps.pg_cluster->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetInquiries, organization, request.body.id));
+    const auto before_rows = deps.pg_cluster->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetInquiries, organization, request.body.id);
+    if (before_rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    const auto before = models::ParseModelJson(
+        before_rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
     if (before.shipment_id.has_value() || before.converting)
         return Response200{.item = before};
-    const auto party = Reference([&] {
-        return deps.counterparties.ApiV1CounterpartiesGet(
-            {.body = {.id = before.customer_id}}, platform::auth::GetAccessToken(context));
-    });
-    if (party.counterparty.archived)
+    const auto party = GetCounterparty(deps, context, before.customer_id);
+    if (party.archived)
         throw ApiError<409>{"archived_customer", "Клиент находится в архиве"};
     auto segments = before.route_segments;
-    ResolveShipmentReferences(
-        deps, context, segments, party.counterparty.logist.value_or(std::nullopt));
+    ResolveShipmentReferences(deps, context, segments, party.logist.value_or(std::nullopt));
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto inquiry = Read<models::Inquiry>(
-        transaction.Execute(sql::kLockInquiries, organization, request.body.id));
+    const auto locked = transaction.Execute(sql::kLockInquiries, organization, request.body.id);
+    if (locked.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    const auto inquiry = models::ParseModelJson(
+        locked.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
     if (inquiry.shipment_id.has_value() || inquiry.converting) {
         transaction.Commit();
         return Response200{.item = inquiry};
@@ -36,14 +39,15 @@ Response View::Handle(
     if (inquiry.status != models::InquiryStatus::Agreed || inquiry.conversion_error.has_value())
         throw ApiError<409>{"not_agreed", "Сначала согласуйте запрос"};
     json::ValueBuilder shipment(json::ValueBuilder(inquiry).ExtractValue());
-    for (const auto* field : {"id", "revision", "number", "manager_subject", "status", "ready_date",
-             "desired_delivery_date", "note", "converting", "conversion_error"})
+    for (const auto* field :
+        {"organization_id", "id", "revision", "number", "manager_subject", "status", "ready_date",
+            "desired_delivery_date", "note", "converting", "conversion_error"})
         shipment.Remove(field);
     shipment["idempotency_key"] =
         "sales-inquiry:" + inquiry.id + ":" + std::to_string(inquiry.revision);
     shipment["reference"] = inquiry.number;
     shipment["route_segments"] = segments;
-    shipment["logist"] = party.counterparty.logist.value_or(std::nullopt);
+    shipment["logist"] = party.logist.value_or(std::nullopt);
     json::ValueBuilder command;
     command["organization_id"] = organization;
     command["source"]["type"] = "sales.inquiry";
@@ -54,8 +58,11 @@ Response View::Handle(
     const auto document = command.ExtractValue();
     transaction.Execute(sql::kStartConversion, organization, inquiry.id, document);
     platform::outbox::Enqueue(transaction, "shipments.create", inquiry.id, document);
-    const auto result =
-        Read<models::Inquiry>(transaction.Execute(sql::kGetInquiries, organization, inquiry.id));
+    const auto rows = transaction.Execute(sql::kGetInquiries, organization, inquiry.id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    const auto result = models::ParseModelJson(
+        rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
     transaction.Commit();
     return Response200{.item = result};
 }

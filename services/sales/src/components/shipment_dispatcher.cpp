@@ -1,5 +1,5 @@
 #include <components/shipment_dispatcher.hpp>
-#include <helpers/storage.hpp>
+#include <helpers/database.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
@@ -43,8 +43,11 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
                 : transaction.Execute(
                       sql::kRejectConversion, organization, id, result.Rejection.value());
             if (!changed.IsEmpty()) {
-                const auto inquiry = Read<models::Inquiry>(
-                    transaction.Execute(sql::kGetInquiries, organization, id));
+                const auto rows = transaction.Execute(sql::kGetInquiries, organization, id);
+                if (rows.IsEmpty())
+                    throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+                const auto inquiry = models::ParseModelJson(
+                    rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
                 transaction.Execute(sql::kWriteHistory, organization, std::string{"inquiries"}, id,
                     inquiry.revision, actor, json::ValueBuilder(inquiry).ExtractValue());
             }

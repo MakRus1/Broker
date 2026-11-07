@@ -10,8 +10,8 @@ Response View::Handle(
         result.fields = registry::DescribeFields<models::RegistryField>(kInquiriesRegistry.Fields);
         if (!request.body.field.has_value())
             return result;
-        const auto query =
-            registry::BuildFilterValues(kInquiriesRegistry, request.body, Organization(context));
+        const auto query = registry::BuildFilterValues(kInquiriesRegistry, request.body,
+            platform::auth::GetOrganization(platform::auth::GetIdentity(context)));
         const auto rows =
             deps.pg_cluster->Execute(
                                pg::ClusterHostType::kMaster, query.Statement, query.Parameters)

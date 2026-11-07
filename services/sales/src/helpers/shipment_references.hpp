@@ -8,14 +8,16 @@ namespace sales::helpers {
 // Доставка затем использует служебный токен и не зависит от пользовательской сессии.
 inline void ResolveShipmentReferences(const Deps& deps,
     const userver::server::request::RequestContext& context,
-    std::vector<models::ShipmentRouteSegment>& segments, const std::optional<std::string>& logist) {
+    std::vector<models::ShipmentRouteSegment>& segments,
+    const std::optional<std::string>& logist) try {
     const auto token = platform::auth::GetAccessToken(context);
     if (logist.has_value()) {
-        const auto employees = Reference([&] {
-            return deps.organizations.ApiOrganizationsEmployeesList(
-                {.body = {.limit = 1, .organization_id = Organization(context), .subject = logist}},
-                token);
-        });
+        const auto employees = deps.organizations.ApiOrganizationsEmployeesList(
+            {.body = {.limit = 1,
+                 .organization_id =
+                     platform::auth::GetOrganization(platform::auth::GetIdentity(context)),
+                 .subject = logist}},
+            token);
         if (employees.items.empty())
             throw ApiError<400>{
                 "invalid_logist", "В карточке клиента назначен недействующий логист"};
@@ -45,10 +47,8 @@ inline void ResolveShipmentReferences(const Deps& deps,
     }
     std::map<std::string, models::TransportLocation> locations;
     if (!ids.empty()) {
-        const auto response = Reference([&] {
-            return deps.transport_locations.ApiV1RouteLocationsGetBatch(
-                {.body = {.ids = std::vector<std::string>(ids.begin(), ids.end())}}, token);
-        });
+        const auto response = deps.transport_locations.ApiV1RouteLocationsGetBatch(
+            {.body = {.ids = std::vector<std::string>(ids.begin(), ids.end())}}, token);
         for (const auto& location : response.items)
             locations.emplace(location.id,
                 models::ParseModelJson(json::ValueBuilder(location).ExtractValue(),
@@ -74,12 +74,23 @@ inline void ResolveShipmentReferences(const Deps& deps,
         }
     }
     for (const auto& id : parties) {
-        const auto response = Reference([&] {
-            return deps.counterparties.ApiV1CounterpartiesGet({.body = {.id = id}}, token);
-        });
-        if (response.counterparty.archived)
+        const auto party = GetCounterparty(deps, context, id);
+        if (party.archived)
             throw ApiError<400>{
                 "invalid_route_counterparty", "Выберите действующего контрагента участка"};
     }
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к связанным данным"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить связанные данные"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 }  // namespace sales::helpers

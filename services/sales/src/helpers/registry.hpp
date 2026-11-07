@@ -1,5 +1,5 @@
 #pragma once
-#include <helpers/storage.hpp>
+#include <helpers/database.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 #include <userver/storages/postgres/io/date.hpp>
@@ -81,38 +81,4 @@ struct RegistryRow {
     std::optional<Date> DateKey;
 };
 
-template <typename Model> struct Page {
-    std::vector<Model> Items;
-    std::optional<models::SalesRegistryCursor> Cursor;
-};
-
-template <typename Model>
-Page<Model> List(const Deps& deps,
-    const registry::Definition<models::ListSalesRequest, std::string>& definition,
-    const models::ListSalesRequest& body, const std::string& organization) {
-    const auto scope = registry::CursorScope(body, organization);
-    const bool date = registry::RegistryOrderBy(definition.Fields, body.sort).CursorType ==
-        registry::CursorKeyType::Date;
-    if (body.cursor.has_value() &&
-        (body.cursor->scope != scope || date != body.cursor->date_value.has_value() ||
-            date == body.cursor->text_value.has_value()))
-        throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-    const auto query = registry::BuildPage(definition, body, organization);
-    auto rows =
-        deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-            .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
-    const bool more = rows.size() > static_cast<std::size_t>(body.limit);
-    if (more)
-        rows.pop_back();
-    Page<Model> page;
-    for (const auto& row : rows)
-        page.Items.push_back(models::ParseModelJson(row.Document, std::type_identity<Model>{}));
-    if (more)
-        page.Cursor =
-            models::SalesRegistryCursor{.date_value = date ? rows.back().DateKey : std::nullopt,
-                .id = page.Items.back().id,
-                .scope = scope,
-                .text_value = date ? std::nullopt : std::optional{rows.back().TextKey}};
-    return page;
-}
 }  // namespace sales::helpers

@@ -5,8 +5,14 @@ namespace sales::views::api::v1::sales::cards::history {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
-    return Response200{.items = ReadList<models::SalesHistoryEntry>(deps.pg_cluster->Execute(
-                           pg::ClusterHostType::kMaster, sql::kHistoryCards, Organization(context),
-                           request.body.id, request.body.after_revision.value_or(0)))};
+    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kHistoryCards,
+        platform::auth::GetOrganization(platform::auth::GetIdentity(context)), request.body.id,
+        request.body.after_revision.value_or(0));
+    Response200 response;
+    response.items.reserve(rows.Size());
+    for (const auto& row : rows.AsSetOf<json::Value>())
+        response.items.push_back(
+            models::ParseModelJson(row, std::type_identity<models::SalesHistoryEntry>{}));
+    return response;
 }
 }  // namespace sales::views::api::v1::sales::cards::history

@@ -83,6 +83,7 @@ export function SalesPage({
     if (creating) {
       const fields = {
         id: crypto.randomUUID(),
+        organization_id: session.organization_id,
         customer_id: customer,
         manager_subject: session.subject,
         revision: 0,

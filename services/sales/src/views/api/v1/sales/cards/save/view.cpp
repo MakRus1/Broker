@@ -5,17 +5,17 @@ namespace sales::views::api::v1::sales::cards::save {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::sales::helpers;
-    const auto organization = Organization(context);
+    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     const auto& value = request.body;
     ValidateReferences(deps, context, value.customer_id, value.manager_subject);
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockSettings, organization);
     const auto previous = transaction.Execute(sql::kLockCards, organization, value.id);
-    const auto old = previous.IsEmpty() ? std::optional<models::SalesCard>{}
-                                        : std::optional{Read<models::SalesCard>(previous)};
+    const auto previous_stage =
+        previous.IsEmpty() ? std::nullopt : std::optional{previous.AsSingleRow<std::string>()};
     ValidateStage(Settings(transaction.Execute(sql::kGetSettings, organization)), value.stage_id,
-        old.has_value() ? std::optional{old->stage_id} : std::nullopt);
+        previous_stage);
     const auto document = json::ValueBuilder(value).ExtractValue();
     const auto changed = value.expected_revision == 0
         ? transaction.Execute(sql::kCreateCards, organization, document)
@@ -23,10 +23,14 @@ Response View::Handle(
     if (changed.IsEmpty())
         throw ApiError<409>{
             "revision_conflict", "Запись уже существует, изменена или передана в поставку"};
-    const auto result =
-        Read<models::SalesCard>(transaction.Execute(sql::kGetCards, organization, value.id));
-    Audit(transaction, organization, platform::auth::GetIdentity(context), std::string{"cards"},
-        result);
+    const auto rows = transaction.Execute(sql::kGetCards, organization, value.id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Запись не найдена в организации"};
+    const auto result = models::ParseModelJson(
+        rows.AsSingleRow<json::Value>(), std::type_identity<models::SalesCard>{});
+    transaction.Execute(sql::kWriteHistory, organization, std::string{"cards"}, result.id,
+        result.revision, platform::auth::GetIdentity(context).ActorId(),
+        json::ValueBuilder(result).ExtractValue());
     transaction.Commit();
     return Response200{.item = result};
 }

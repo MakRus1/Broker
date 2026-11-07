@@ -11,8 +11,8 @@ Response View::Handle(
         result.fields = registry::DescribeFields<models::RegistryField>(kCardsRegistry.Fields);
         if (!request.body.field.has_value())
             return result;
-        const auto query =
-            registry::BuildFilterValues(kCardsRegistry, request.body, Organization(context));
+        const auto query = registry::BuildFilterValues(kCardsRegistry, request.body,
+            platform::auth::GetOrganization(platform::auth::GetIdentity(context)));
         const auto rows =
             deps.pg_cluster->Execute(
                                pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
@@ -21,8 +21,9 @@ Response View::Handle(
              ++i)
             result.values.push_back({.label = rows[i].Label, .value = rows[i].Value});
         if (request.body.field.value() == "stage_id") {
-            const auto settings = Settings(deps.pg_cluster->Execute(
-                pg::ClusterHostType::kMaster, sql::kGetSettings, Organization(context)));
+            const auto settings =
+                Settings(deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings,
+                    platform::auth::GetOrganization(platform::auth::GetIdentity(context))));
             for (auto& value : result.values)
                 for (const auto& stage : settings.stages)
                     if (stage.id == value.value)

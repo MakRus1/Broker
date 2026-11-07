@@ -6,6 +6,7 @@ async def test_notifications_proxy_uses_current_browser_identity(browser, mockse
         'shipment_id': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
         'shipment_number': 'S-1042', 'shipment_revision': 3,
         'created_at': '2026-11-05T12:00:00Z', 'read': False,
+        'event_type': 'shipment.created',
     }
 
     @mockserver.json_handler('/api/v1/notifications/list')
@@ -24,7 +25,9 @@ async def test_notifications_proxy_uses_current_browser_identity(browser, mockse
 
     result = await browser.post('/api/notifications/list', {'organization_id': organization})
     assert result.status == 200
-    assert result.json()['items'][0]['id'] == notification['id']
+    [item] = result.json()['items']
+    assert item['id'] == notification['id']
+    assert item['event_type'] == notification['event_type']
     result = await browser.post('/api/notifications/read', {'organization_id': organization,
         'ids': [notification['id']], 'dismiss': True})
     assert result.status == 200 and result.json() == {'updated': 1}

@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <boost/uuid/uuid.hpp>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -29,10 +30,10 @@ void EnqueueLatest(pg::Transaction&, std::string_view topic, std::string_view ke
     const userver::formats::json::Value& payload);
 
 struct Message {
-    std::string Id;
+    boost::uuids::uuid Id;
     std::string Topic;
     userver::formats::json::Value Payload;
-    std::string Lease;
+    boost::uuids::uuid Lease;
     std::int64_t Generation;
 };
 

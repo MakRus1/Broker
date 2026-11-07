@@ -1,6 +1,5 @@
 #pragma once
-#include <events/shipment_created.hpp>
-#include <events/shipment_route_changed.hpp>
+#include <events/shipment_notification.hpp>
 #include <notifications/sql_queries.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
@@ -18,7 +17,7 @@ inline void Accept(const pg::ClusterPtr& cluster, const platform::auth::Identity
     std::visit(
         [&](const auto& event) {
             // Кодген проверил форму события. Проверки отправителя и контекста — до транзакции.
-            Validate(identity, event);
+            ValidateShipmentRecipient(identity, event.payload);
             const auto document = userver::formats::json::ValueBuilder(event).ExtractValue();
             const auto type = models::EnumValue(event.type);
             const auto version = models::EnumValue(event.version);
@@ -34,7 +33,7 @@ inline void Accept(const pg::ClusterPtr& cluster, const platform::auth::Identity
                     throw platform::http::HandlerError<409>{
                         "event_conflict", "Событие с этим ключом уже принято с другими данными"};
             } else {
-                Apply(transaction, event);
+                ApplyShipmentNotification(transaction, event.organization_id, event.payload, type);
             }
             transaction.Commit();
         },

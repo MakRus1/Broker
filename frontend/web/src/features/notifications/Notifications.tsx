@@ -35,7 +35,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 interface ServerNotification {
-  event_type?: 'shipment.created' | 'shipment.route_changed';
+  event_type: 'shipment.created' | 'shipment.route_changed';
   id: string;
   shipment_id: string;
   shipment_number: string;

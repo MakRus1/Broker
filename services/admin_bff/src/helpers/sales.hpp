@@ -1,18 +1,24 @@
 #pragma once
+#include <clients/sales/client.hpp>
 #include <openapi/models.hpp>
-#include <userver/formats/json.hpp>
+#include <vector>
 
 namespace admin_bff {
-template <typename T, typename U> T ConvertSales(const U& value) {
-    const auto document = userver::formats::json::ValueBuilder(value).ExtractValue();
-    if constexpr (requires { typename T::value_type; }) {
-        T result;
-        for (const auto& item : document)
-            result.push_back(
-                models::sales::ParseModelJson(item, std::type_identity<typename T::value_type>{}));
-        return result;
-    } else {
-        return models::sales::ParseModelJson(document, std::type_identity<T>{});
-    }
+inline std::vector<models::sales::SalesStage> ToAdminSalesStages(
+    const std::vector<clients::sales::models::SalesStage>& stages) {
+    std::vector<models::sales::SalesStage> result;
+    result.reserve(stages.size());
+    for (const auto& stage : stages)
+        result.push_back({.enabled = stage.enabled, .id = stage.id, .name = stage.name});
+    return result;
+}
+
+inline std::vector<clients::sales::models::SalesStage> ToServiceSalesStages(
+    const std::vector<models::sales::SalesStage>& stages) {
+    std::vector<clients::sales::models::SalesStage> result;
+    result.reserve(stages.size());
+    for (const auto& stage : stages)
+        result.push_back({.enabled = stage.enabled, .id = stage.id, .name = stage.name});
+    return result;
 }
 }  // namespace admin_bff

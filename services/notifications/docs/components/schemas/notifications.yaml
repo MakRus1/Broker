@@ -35,7 +35,6 @@ Notification:
       enum:
       - shipment.route_changed
       - shipment.created
-      default: shipment.route_changed
   required:
   - id
   - shipment_id
@@ -43,6 +42,7 @@ Notification:
   - shipment_revision
   - created_at
   - read
+  - event_type
 PublishedEvent:
   oneOf:
   - $ref: '#/ShipmentRouteChanged'

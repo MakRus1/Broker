@@ -1,4 +1,4 @@
 DELETE FROM outbox
-WHERE id = $1::UUID
-  AND lease_token = $2::UUID
+WHERE id = $1
+  AND lease_token = $2
   AND generation = $3::BIGINT;

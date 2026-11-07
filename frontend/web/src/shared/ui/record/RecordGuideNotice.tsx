@@ -1,18 +1,16 @@
 import { RecordHelpIcon } from './RecordHelpIcon';
-import { useEffect, useState } from 'react';
-import { usePreferencesSession } from '../../../features/preferences/UserPreferences';
+import { useEffect, useRef, useState } from 'react';
 import {
-  preferenceKey,
-  useRegistryPreference,
-} from '../../../features/registry/registryPreferences';
+  usePreferences,
+  usePreferencesSession,
+} from '../../../features/preferences/UserPreferences';
+import { claimGuideNotice } from './guideNotice';
 import { useLocalization } from '../../../features/localization/Localization';
 export function RecordGuideNotice({
-  kind,
   context,
   active,
   editing,
 }: {
-  kind: string;
   context: string;
   active: boolean;
   editing: boolean;
@@ -20,22 +18,31 @@ export function RecordGuideNotice({
   const [session] = usePreferencesSession();
   const { translate } = useLocalization();
   const [visible, setVisible] = useState(false);
-  const [seen, setSeen] = useRegistryPreference<string[]>(
-    preferenceKey(session?.subject ?? '', `guide-${kind}`, 'seen-contexts-v3'),
-    [],
-    (raw) =>
-      Array.isArray(raw) ? raw.filter((value): value is string => typeof value === 'string') : [],
-  );
+  const preferences = usePreferences();
+  const shown = useRef('');
+  const owner = session ? `${session.actor}:${session.subject}:${session.organization_id}` : '';
   useEffect(() => {
     setVisible(false);
-    if (!session || !active || !context || seen.includes(context)) return;
+    if (!session || !preferences || !active || !context) {
+      shown.current = '';
+      return;
+    }
+    const presentation = `${owner}:${context}`;
+    if (
+      shown.current !== presentation &&
+      !claimGuideNotice(preferences, session.subject, editing)
+    ) {
+      shown.current = '';
+      return;
+    }
+    shown.current = presentation;
     setVisible(true);
     const timer = window.setTimeout(() => {
+      shown.current = '';
       setVisible(false);
-      setSeen((old) => [...new Set([...old, context])]);
     }, 10000);
     return () => window.clearTimeout(timer);
-  }, [context, active, session?.subject]);
+  }, [context, active, owner, editing, preferences]);
   if (!visible || !active) return null;
   return (
     <span className="record-guide-notice" role="status">
@@ -49,6 +56,8 @@ export function RecordGuideNotice({
             .closest('.record-guide-control')
             ?.querySelector('details');
           if (menu) menu.open = true;
+          shown.current = '';
+          setVisible(false);
         }}
       >
         <RecordHelpIcon />
@@ -59,7 +68,7 @@ export function RecordGuideNotice({
         aria-label={translate('ui.close')}
         onClick={() => {
           setVisible(false);
-          setSeen((old) => [...new Set([...old, context])]);
+          shown.current = '';
         }}
       >
         <svg

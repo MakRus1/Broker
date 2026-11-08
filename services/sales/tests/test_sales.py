@@ -299,3 +299,41 @@ async def test_contact_corrections_follow_source_and_preserve_newer_action(api):
     await api.post('/api/v1/sales/contacts/update', {**cleared, 'expected_revision': 1})
     current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
     assert 'next_action' not in current and 'next_action_date' not in current
+
+async def test_work_filters_and_contact_presence_are_composable(api):
+    await settings(api)
+    cards = {}
+    for name, action, date in [
+        ('none', None, None), ('blank', '   ', None),
+        ('overdue', 'Позвонить', '2026-11-07'),
+        ('today', 'Встреча', '2026-11-08'), ('future', 'Письмо', '2026-11-09')]:
+        value = {**card(), 'customer_id': str(uuid.uuid4())}
+        if action is not None:
+            value['next_action'] = action
+        if date:
+            value['next_action_date'] = date
+        cards[name] = (await api.post('/api/v1/sales/cards/save', value))['item']
+    await api.post('/api/v1/sales/contacts/add', {'id': str(uuid.uuid4()),
+        'card_id': cards['today']['id'], 'expected_revision': 1, 'kind': 'call',
+        'contact_date': '2026-11-08', 'result': 'Обсудили задачу'})
+    async def selected(filters, user='author'):
+        result = await api.post('/api/v1/sales/cards/list', {'filters': filters}, user=user)
+        return {item['id'] for item in result['items']}
+    assert await selected([{'field': 'next_action', 'empty': True}]) == {
+        cards['none']['id'], cards['blank']['id']}
+    assert await selected([{'field': 'next_action_date', 'date_to': '2026-11-07'}]) == {
+        cards['overdue']['id']}
+    assert await selected([{'field': 'next_action_date', 'date_from': '2026-11-08',
+        'date_to': '2026-11-08'}]) == {cards['today']['id']}
+    no_contacts = {'field': 'has_contacts', 'values': ['false']}
+    assert await selected([no_contacts]) == {item['id'] for name, item in cards.items() if name != 'today'}
+    assert await selected([{'field': 'has_contacts', 'values': ['true']}]) == {cards['today']['id']}
+    assert await selected([no_contacts, {'field': 'next_action_date', 'date_to': '2026-11-08'}]) == {cards['overdue']['id']}
+    assert await selected([{'field': 'manager_subject', 'values': ['author']}]) == {item['id'] for item in cards.values()}
+    assert not await selected([{'field': 'manager_subject', 'values': ['nobody']}])
+    assert not await selected([no_contacts], user='other')
+    metadata = await api.post('/api/v1/sales/cards/filter-values', {'registry': {}})
+    assert any(field['id'] == 'has_contacts' and field['kind'] == 'boolean' for field in metadata['fields'])
+    facet = await api.post('/api/v1/sales/cards/filter-values', {
+        'registry': {'filters': [no_contacts]}, 'field': 'manager_subject'})
+    assert [value['value'] for value in facet['values']] == ['author']

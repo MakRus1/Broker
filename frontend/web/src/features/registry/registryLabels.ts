@@ -7,6 +7,7 @@ const fieldKeys: Readonly<Partial<Record<string, MessageKey>>> = {
   source: 'sales.source',
   next_action: 'sales.nextAction',
   next_action_date: 'sales.nextActionDate',
+  has_contacts: 'sales.hasContacts',
   ready_date: 'sales.readyDate',
   desired_delivery_date: 'sales.deliveryDate',
   payment_delay_days: 'registryField.paymentDelay',

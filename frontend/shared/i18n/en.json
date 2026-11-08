@@ -1303,5 +1303,12 @@
   "sales.actionDue.today": "Today",
   "sales.actionDue.soon": "Due soon",
   "sales.contact.edit": "Edit contact",
-  "sales.contact.editHint": "The correction updates the customer card action if it still comes from this contact. A newer action will remain unchanged."
+  "sales.contact.editHint": "The correction updates the customer card action if it still comes from this contact. A newer action will remain unchanged.",
+  "sales.hasContacts": "Has contacts",
+  "sales.workFilters": "Sales quick filters",
+  "sales.quick.mine": "My customers",
+  "sales.quick.overdue": "Overdue",
+  "sales.quick.today": "Due today",
+  "sales.quick.noAction": "No next action",
+  "sales.quick.noContacts": "No contacts"
 }

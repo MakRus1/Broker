@@ -53,8 +53,14 @@ export function restoreColumnFilters(raw: unknown): ColumnFilter[] | undefined {
     if (typeof value.query === 'string' && value.query.length <= 256) filter.query = value.query;
     if (typeof value.empty === 'boolean') filter.empty = value.empty;
     try {
-      if (value.date_from) filter.date_from = CalendarDate.fromISO(value.date_from);
-      if (value.date_to) filter.date_to = CalendarDate.fromISO(value.date_to);
+      if (value.date_from)
+        filter.date_from = CalendarDate.fromISO(
+          value.date_from instanceof CalendarDate ? value.date_from.toString() : value.date_from,
+        );
+      if (value.date_to)
+        filter.date_to = CalendarDate.fromISO(
+          value.date_to instanceof CalendarDate ? value.date_to.toString() : value.date_to,
+        );
     } catch {
       return undefined;
     }

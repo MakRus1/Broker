@@ -14,7 +14,8 @@ inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer
 inline constexpr registry::Field<std::string> kManager{"manager_subject", "manager_subject"};
 inline constexpr registry::Field<std::string> kStage{"stage_id", "stage_id", "UUID"};
 inline constexpr registry::Field<std::string> kSource{"source", "source"};
-inline constexpr registry::Field<std::string> kAction{"next_action", "next_action"};
+inline constexpr registry::Field<std::string> kAction{
+    "next_action", "COALESCE(btrim(next_action), '')"};
 inline constexpr registry::Field<Date> kActionDate{"next_action_date", "next_action_date", "DATE"};
 inline constexpr auto kNumber =
     registry::Field<std::string>{"number", "lower(number) COLLATE \"C\""}.SortedAs(
@@ -25,7 +26,13 @@ inline constexpr registry::Field<Date> kReady{"ready_date", "ready_date", "DATE"
 inline constexpr registry::Field<Date> kDelivery{
     "desired_delivery_date", "desired_delivery_date", "DATE"};
 inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
-inline constexpr std::array<registry::RegistryField, 7> kCardFields{{
+inline constexpr registry::Field<bool> kHasContacts{"has_contacts", R"(EXISTS (
+    SELECT 1 FROM sales_contacts AS contact
+    WHERE contact.organization_id = sales_cards.organization_id
+        AND contact.card_id = sales_cards.id
+))",
+    "BOOLEAN"};
+inline constexpr std::array<registry::RegistryField, 8> kCardFields{{
     {.Field = kId, .ValueSql = "id", .Visible = false},
     {.Field = kCustomer, .ValueSql = "customer_id", .Sortable = false, .Lookup = "counterparties"},
     {.Field = kManager, .ValueSql = "manager_subject", .Sortable = false, .Lookup = "employees"},
@@ -36,6 +43,7 @@ inline constexpr std::array<registry::RegistryField, 7> kCardFields{{
     {.Field = kSource, .ValueSql = "source"},
     {.Field = kAction, .ValueSql = "next_action"},
     {.Field = kActionDate, .ValueSql = "next_action_date"},
+    {.Field = kHasContacts, .ValueSql = kHasContacts.Expression, .Sortable = false},
 }};
 inline constexpr std::array<registry::RegistryField, 8> kInquiryFields{{
     {.Field = kId, .ValueSql = "id", .Visible = false},

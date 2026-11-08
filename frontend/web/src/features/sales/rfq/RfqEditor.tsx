@@ -77,7 +77,7 @@ export function RfqEditor({
   }
   return (
     <form
-      className="record-editor sales-proposals"
+      className="record-editor sales-proposals rfq-editor"
       onSubmit={save}
       onInvalid={validation.onInvalid}
       onInput={validation.onInput}
@@ -335,8 +335,8 @@ export function RfqEditor({
           </button>
           <RecordSection title={translate('sales.note')}>
             <label>
-              <span className="sr-only">{translate('sales.note')}</span>
               <textarea
+                aria-label={translate('sales.note')}
                 maxLength={4000}
                 value={draft.note ?? ''}
                 onChange={(e) => setDraft({ ...draft, note: e.target.value })}

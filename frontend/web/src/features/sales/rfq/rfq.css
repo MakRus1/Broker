@@ -140,3 +140,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+.rfq-editor > fieldset {
+  display: grid;
+  gap: 24px;
+}
+.rfq-editor fieldset > button {
+  justify-self: start;
+}

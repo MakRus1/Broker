@@ -80,7 +80,8 @@ components_manager:
                 localization.write:
                 - localization.read
             service-clients:
-                localization.register: localization-publisher
+                localization.register:
+                - localization-publisher
             platform-url: $platform-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

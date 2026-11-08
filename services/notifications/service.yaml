@@ -16,9 +16,11 @@ auth:
   permissions:
     /api/v1/notifications/list: authenticated
     /api/v1/notifications/read: authenticated
-    /api/internal/v1/events/publish: notifications.publish_shipments
+    /api/internal/v1/events/publish: notifications.publish
   service-clients:
-    notifications.publish_shipments: shipments-dispatcher
+    notifications.publish:
+    - shipments-dispatcher
+    - sales-dispatcher
 http_logging:
   exclude_paths:
   - /api/**

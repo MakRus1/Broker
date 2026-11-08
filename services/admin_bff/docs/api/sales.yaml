@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Продажи
+  version: '1'
+paths:
+  /api/admin/sales/settings/get:
+    post:
+      summary: Этапы продаж организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/GetSalesSettingsRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/SalesSettings
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+  /api/admin/sales/settings/update:
+    post:
+      summary: Этапы продаж организации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/UpdateSalesSettingsRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/SalesSettings
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+components:
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_admin
+security:
+- BrowserSession: []

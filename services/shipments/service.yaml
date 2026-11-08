@@ -45,14 +45,17 @@ auth:
     /api/v1/shipments/transportation-contexts: transportations.read
     /api/v1/shipments/route-segments/register-usage: transportations.write
     /api/v1/shipments/filter-values: shipments.read
+    /api/internal/v1/shipments/ensure-created: shipments.create
   organization-access: true
+  service-clients:
+    shipments.create: sales-dispatcher
 service_accounts:
   dispatcher:
     client_id: shipments-dispatcher
     audience: broker-logistics
     permissions:
     - transportations.create
-    - notifications.publish_shipments
+    - notifications.publish
     config:
       client_id: dispatcher-client-id
       client_secret: dispatcher-client-secret

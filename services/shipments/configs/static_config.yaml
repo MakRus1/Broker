@@ -19,6 +19,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-internal-v1-shipments-ensure_created:
+            path: /api/internal/v1/shipments/ensure-created
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-shipment_items-add:
             path: /api/v1/shipment-items/add
             method: POST
@@ -155,6 +161,7 @@ components_manager:
             permissions:
                 /api/admin/shipments/settings/get: authenticated
                 /api/admin/shipments/settings/update: authenticated
+                /api/internal/v1/shipments/ensure-created: shipments.create
                 /api/v1/shipment-items/add: shipments.write
                 /api/v1/shipment-items/list: shipments.read
                 /api/v1/shipment-items/update: shipments.write
@@ -179,6 +186,9 @@ components_manager:
                 - shipments.read
                 transportations.write:
                 - transportations.read
+            service-clients:
+                shipments.create:
+                - sales-dispatcher
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

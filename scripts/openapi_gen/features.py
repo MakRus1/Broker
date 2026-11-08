@@ -200,7 +200,10 @@ def pgsql_local(service_source_dir, pgsql_local_create):
         if dependencies:
             components['platform-auth']['permission-dependencies'] = dependencies
         if auth.get('service-clients'):
-            components['platform-auth']['service-clients'] = auth['service-clients']
+            components['platform-auth']['service-clients'] = {
+                code: [names] if isinstance(names, str) else names
+                for code, names in auth['service-clients'].items()
+            }
         if auth.get('platform-access'):
             components['platform-auth']['platform-url'] = '$platform-access-url'
         if auth.get('organization-access'):

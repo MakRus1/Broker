@@ -1,0 +1,641 @@
+ApiError:
+  type: object
+  additionalProperties: false
+  properties:
+    error:
+      type: string
+      maxLength: 200
+    message:
+      type: string
+      maxLength: 2000
+  required:
+  - error
+  - message
+SalesStage:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      minLength: 1
+      maxLength: 100
+    enabled:
+      type: boolean
+  required:
+  - id
+  - name
+  - enabled
+SalesSettings:
+  type: object
+  additionalProperties: false
+  properties:
+    revision:
+      type: integer
+      format: int64
+      minimum: 0
+    stages:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/SalesStage'
+    inquiry_number_template:
+      type: string
+      minLength: 1
+      maxLength: 128
+      default: ENQ-{sequence}
+    reset_number_yearly:
+      type: boolean
+      default: false
+  required:
+  - revision
+  - stages
+SalesCard:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    id:
+      type: string
+      format: uuid
+    customer_id:
+      type: string
+      format: uuid
+    manager_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    stage_id:
+      type: string
+      format: uuid
+    source:
+      type: string
+      maxLength: 200
+    note:
+      type: string
+      maxLength: 10000
+    next_action:
+      type: string
+      maxLength: 1000
+    next_action_date:
+      type: string
+      format: date
+    revision:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - organization_id
+  - id
+  - customer_id
+  - manager_subject
+  - stage_id
+  - revision
+SaveSalesCardRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    customer_id:
+      type: string
+      format: uuid
+    manager_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    stage_id:
+      type: string
+      format: uuid
+    source:
+      type: string
+      maxLength: 200
+    note:
+      type: string
+      maxLength: 10000
+    next_action:
+      type: string
+      maxLength: 1000
+    next_action_date:
+      type: string
+      format: date
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - id
+  - customer_id
+  - manager_subject
+  - stage_id
+  - expected_revision
+InquiryStatus:
+  type: string
+  enum:
+  - draft
+  - in_progress
+  - agreed
+  - rejected
+Inquiry:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    id:
+      type: string
+      format: uuid
+    customer_id:
+      type: string
+      format: uuid
+    manager_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    status:
+      $ref: '#/InquiryStatus'
+    cargo_description:
+      type: string
+      maxLength: 2000
+    incoterms:
+      type: string
+      maxLength: 16
+    carriage_terms:
+      type: string
+      maxLength: 32
+    loading:
+      type: string
+      maxLength: 32
+    delivery_city:
+      type: string
+      maxLength: 200
+    delivery_country:
+      type: string
+      pattern: ^[A-Z]{2}$
+    delivery_address:
+      type: string
+      maxLength: 1000
+    ready_date:
+      type: string
+      format: date
+    desired_delivery_date:
+      type: string
+      format: date
+    note:
+      type: string
+      maxLength: 10000
+    route_segments:
+      type: array
+      maxItems: 30
+      items:
+        $ref: '#/ShipmentRouteSegment'
+    revision:
+      type: integer
+      format: int64
+      minimum: 0
+    number:
+      type: string
+      maxLength: 200
+    shipment_id:
+      type: string
+      format: uuid
+    converting:
+      type: boolean
+    conversion_error:
+      type: string
+      maxLength: 2000
+  required:
+  - organization_id
+  - id
+  - customer_id
+  - manager_subject
+  - status
+  - route_segments
+  - revision
+  - number
+  - converting
+SaveInquiryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    customer_id:
+      type: string
+      format: uuid
+    manager_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    status:
+      $ref: '#/InquiryStatus'
+    cargo_description:
+      type: string
+      maxLength: 2000
+    incoterms:
+      type: string
+      maxLength: 16
+    carriage_terms:
+      type: string
+      maxLength: 32
+    loading:
+      type: string
+      maxLength: 32
+    delivery_city:
+      type: string
+      maxLength: 200
+    delivery_country:
+      type: string
+      pattern: ^[A-Z]{2}$
+    delivery_address:
+      type: string
+      maxLength: 1000
+    ready_date:
+      type: string
+      format: date
+    desired_delivery_date:
+      type: string
+      format: date
+    note:
+      type: string
+      maxLength: 10000
+    route_segments:
+      type: array
+      maxItems: 30
+      items:
+        $ref: '#/ShipmentRouteSegment'
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - id
+  - customer_id
+  - manager_subject
+  - status
+  - route_segments
+  - expected_revision
+IdRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+  required:
+  - id
+CreateShipmentRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - id
+  - expected_revision
+ListSalesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    customer_id:
+      type: string
+      format: uuid
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 50
+    sort:
+      type: string
+      default: id
+      maxLength: 64
+    descending:
+      type: boolean
+      default: false
+    cursor:
+      $ref: '#/SalesRegistryCursor'
+    filters:
+      type: array
+      maxItems: 32
+      items:
+        $ref: '#/RegistryFilter'
+    shipment_id:
+      type: string
+      format: uuid
+  required: []
+SalesHistoryEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    revision:
+      type: integer
+      format: int64
+      minimum: 0
+    actor:
+      type: string
+      maxLength: 200
+    created_at:
+      type: string
+      format: date-time
+    snapshot:
+      $ref: '#/SalesCard'
+  required:
+  - revision
+  - actor
+  - created_at
+  - snapshot
+InquiryHistoryEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    revision:
+      type: integer
+      format: int64
+      minimum: 0
+    actor:
+      type: string
+      maxLength: 200
+    created_at:
+      type: string
+      format: date-time
+    snapshot:
+      $ref: '#/Inquiry'
+  required:
+  - revision
+  - actor
+  - created_at
+  - snapshot
+HistoryRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    after_revision:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - id
+UpdateSalesSettingsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+    stages:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/SalesStage'
+    inquiry_number_template:
+      type: string
+      minLength: 1
+      maxLength: 128
+      default: ENQ-{sequence}
+    reset_number_yearly:
+      type: boolean
+      default: false
+  required:
+  - organization_id
+  - expected_revision
+  - stages
+GetSalesSettingsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+  required:
+  - organization_id
+ShipmentRouteSegment:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    type:
+      type: string
+      minLength: 1
+      maxLength: 64
+    sea:
+      $ref: '#/SeaDetails'
+    air:
+      $ref: '#/AirDetails'
+  required:
+  - id
+  - type
+SeaDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    pol:
+      $ref: '#/TransportLocation'
+    pod:
+      $ref: '#/TransportLocation'
+    eta:
+      type: string
+      format: date
+    departure_terminal_id:
+      type: string
+      format: uuid
+    arrival_terminal_id:
+      type: string
+      format: uuid
+    departure_date:
+      type: string
+      format: date
+    vessel:
+      type: string
+      maxLength: 128
+    voyage:
+      type: string
+      maxLength: 128
+  required: []
+TransportLocation:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/TransportLocationKind'
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    code:
+      type: string
+      minLength: 1
+      maxLength: 16
+  required:
+  - id
+  - kind
+  - name
+  - country_code
+TransportLocationKind:
+  type: string
+  enum:
+  - sea_port
+  - airport
+AirDetails:
+  type: object
+  additionalProperties: false
+  properties:
+    carrier_id:
+      type: string
+      format: uuid
+    origin_airport:
+      $ref: '#/TransportLocation'
+    destination_airport:
+      $ref: '#/TransportLocation'
+    eta:
+      type: string
+      format: date
+    etd:
+      type: string
+      format: date
+    departure_date:
+      type: string
+      format: date
+    arrival_date:
+      type: string
+      format: date
+    flight_number:
+      type: string
+      maxLength: 64
+  required: []
+RegistryFilter:
+  additionalProperties: false
+  properties:
+    date_from:
+      format: date
+      type: string
+    date_to:
+      format: date
+      type: string
+    empty:
+      type: boolean
+    field:
+      maxLength: 64
+      minLength: 1
+      type: string
+    query:
+      maxLength: 256
+      type: string
+    values:
+      items:
+        maxLength: 2000
+        type: string
+      maxItems: 200
+      type: array
+      uniqueItems: true
+  required:
+  - field
+  type: object
+RegistryField:
+  additionalProperties: false
+  properties:
+    case_insensitive:
+      type: boolean
+    id:
+      type: string
+    kind:
+      enum:
+      - values
+      - set
+      - date
+      - boolean
+      type: string
+    lookup:
+      type: string
+    sortable:
+      type: boolean
+  required:
+  - id
+  - kind
+  - sortable
+  - case_insensitive
+  type: object
+RegistryValue:
+  additionalProperties: false
+  properties:
+    label:
+      type: string
+    value:
+      type: string
+  required:
+  - value
+  - label
+  type: object
+SalesRegistryCursor:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - scope
+  properties:
+    id:
+      type: string
+      format: uuid
+    scope:
+      type: string
+      pattern: ^[a-f0-9]{64}$
+    text_value:
+      type: string
+      maxLength: 2048
+    date_value:
+      type: string
+      format: date
+SalesFilterValuesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - registry
+  properties:
+    registry:
+      $ref: '#/ListSalesRequest'
+    field:
+      type: string
+      maxLength: 64
+    query:
+      type: string
+      maxLength: 256
+    after:
+      type: string
+      maxLength: 2000
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+    candidates:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        maxLength: 2000

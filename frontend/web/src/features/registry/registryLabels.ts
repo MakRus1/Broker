@@ -2,6 +2,13 @@ import type { RegistryField, RegistryFieldMetadata } from './registryFilters';
 import { translate, type Locale, type MessageKey } from '../../../../shared/i18n/catalog';
 
 const fieldKeys: Readonly<Partial<Record<string, MessageKey>>> = {
+  manager_subject: 'sales.manager',
+  stage_id: 'sales.stage',
+  source: 'sales.source',
+  next_action: 'sales.nextAction',
+  next_action_date: 'sales.nextActionDate',
+  ready_date: 'sales.readyDate',
+  desired_delivery_date: 'sales.deliveryDate',
   payment_delay_days: 'registryField.paymentDelay',
 
   vat: 'registryField.vat_minor',
@@ -96,6 +103,12 @@ export function localizeRegistryFields(
 }
 
 const valueKeys: Readonly<Record<string, Readonly<Record<string, MessageKey>>>> = {
+  status: {
+    draft: 'sales.status.draft',
+    in_progress: 'sales.status.in_progress',
+    agreed: 'sales.status.agreed',
+    rejected: 'sales.status.rejected',
+  },
   direction: {
     income: 'registryValue.direction.income',
     expense: 'registryValue.direction.expense',

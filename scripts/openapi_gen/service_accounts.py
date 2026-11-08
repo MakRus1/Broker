@@ -108,16 +108,17 @@ def load(root, loader=Loader):
                 auth = provider.get('auth', {})
                 if (
                     auth.get('roles-client') != account['audience']
-                    or auth.get('service-clients', {}).get(code) != client_id
+                    or client_id not in ([auth.get('service-clients', {}).get(code)]
+                        if isinstance(auth.get('service-clients', {}).get(code), str)
+                        else auth.get('service-clients', {}).get(code, []))
                 ):
                     raise ValueError(f'{path}: {owner} не доверяет клиенту {client_id} для {code}')
             result[client_id] = {**account, 'service': path.parent.name, 'alias': alias}
     for service, spec in manifests.items():
-        for code, client_id in spec.get('auth', {}).get('service-clients', {}).items():
-            if client_id not in result or code not in result[client_id].get('permissions', []):
-                raise ValueError(
-                    f'{service}: нет объявления служебного клиента {client_id} для {code}'
-                )
+        for code, names in spec.get('auth', {}).get('service-clients', {}).items():
+            for client_id in [names] if isinstance(names, str) else names:
+                if client_id not in result or code not in result[client_id].get('permissions', []):
+                    raise ValueError(f'{service}: нет объявления служебного клиента {client_id} для {code}')
     return result
 
 

@@ -80,7 +80,7 @@ class ImageSelectionTest(unittest.TestCase):
             ('frontend/shared/i18n/ru.json', {'admin_bff', 'web_bff'}),
             (
                 'schemas/services/shipments/models.yaml',
-                {'shipments', 'configs', 'admin_bff', 'web_bff', 'transportations', 'finance'},
+                {'shipments', 'configs', 'admin_bff', 'web_bff', 'transportations', 'finance', 'sales'},
             ),
             ('libs/common/include/shared.hpp', set(self.services)),
             ('tools/deploy/Dockerfile', set(self.services)),

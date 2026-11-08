@@ -2,6 +2,18 @@
 #include <views/api/v1/notifications/list/view.hpp>
 
 namespace notifications::views::api::v1::notifications::list {
+namespace {
+struct NotificationRow {
+    std::string Id;
+    std::string EntityId;
+    std::string EntityNumber;
+    std::int64_t EntityRevision;
+    userver::storages::postgres::TimePointTz CreatedAt;
+    bool Read;
+    std::string EventType;
+};
+}  // namespace
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     using namespace ::notifications::helpers;
@@ -10,17 +22,16 @@ Response View::Handle(
     const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
         sql::kListNotifications, request.body.organization_id, identity.Issuer, identity.Subject,
         request.body.before, request.body.limit);
-    using Row =
-        std::tuple<std::string, std::string, std::string, std::int64_t, pg::TimePointTz, bool>;
     Response200 response;
-    for (const auto& [id, shipment, number, revision, created, read] :
-        rows.AsContainer<std::vector<Row>>(pg::kRowTag))
-        response.items.push_back({.created_at = created.GetUnderlying(),
-            .id = id,
-            .read = read,
-            .shipment_id = shipment,
-            .shipment_number = number,
-            .shipment_revision = revision});
+    response.items.reserve(rows.Size());
+    for (const auto& row : rows.AsSetOf<NotificationRow>(pg::kRowTag))
+        response.items.push_back({.created_at = row.CreatedAt.GetUnderlying(),
+            .entity_id = row.EntityId,
+            .entity_number = row.EntityNumber,
+            .entity_revision = row.EntityRevision,
+            .event_type = models::ParseEnumScalar(row.EventType, models::Notification_event_type{}),
+            .id = row.Id,
+            .read = row.Read});
     return response;
 }
 }  // namespace notifications::views::api::v1::notifications::list

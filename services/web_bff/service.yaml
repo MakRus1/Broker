@@ -34,6 +34,9 @@ clients:
   notifications:
     service: notifications
     transport: http
+  sales:
+    service: sales
+    transport: http
 dashboard:
   title: Broker · Пользовательский BFF
   tags:

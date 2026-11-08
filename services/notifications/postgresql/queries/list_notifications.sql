@@ -1,5 +1,5 @@
-SELECT id::TEXT, shipment_id::TEXT, shipment_number, shipment_revision,
-    created_at, read_at IS NOT NULL
+SELECT id::TEXT, entity_id::TEXT, entity_number, entity_revision,
+    created_at, read_at IS NOT NULL, event_type
 FROM notifications
 WHERE organization_id = $1::UUID
     AND recipient_issuer = $2

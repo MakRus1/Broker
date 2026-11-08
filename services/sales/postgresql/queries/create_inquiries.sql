@@ -1,0 +1,56 @@
+INSERT INTO sales_inquiries (
+    organization_id,
+    id,
+    number,
+    customer_id,
+    manager_subject,
+    status,
+    cargo_description,
+    incoterms,
+    carriage_terms,
+    loading,
+    delivery_city,
+    delivery_country,
+    delivery_address,
+    ready_date,
+    desired_delivery_date,
+    note,
+    route_segments
+)
+SELECT
+    $1::UUID,
+    value.id,
+    $3::TEXT,
+    value.customer_id,
+    value.manager_subject,
+    value.status,
+    value.cargo_description,
+    value.incoterms,
+    value.carriage_terms,
+    value.loading,
+    value.delivery_city,
+    value.delivery_country,
+    value.delivery_address,
+    value.ready_date,
+    value.desired_delivery_date,
+    value.note,
+    value.route_segments
+FROM jsonb_to_record($2::JSONB) AS value (
+    id UUID,
+    customer_id UUID,
+    manager_subject TEXT,
+    status TEXT,
+    cargo_description TEXT,
+    incoterms TEXT,
+    carriage_terms TEXT,
+    loading TEXT,
+    delivery_city TEXT,
+    delivery_country TEXT,
+    delivery_address TEXT,
+    ready_date DATE,
+    desired_delivery_date DATE,
+    note TEXT,
+    route_segments JSONB
+)
+ON CONFLICT DO NOTHING
+RETURNING id::TEXT;

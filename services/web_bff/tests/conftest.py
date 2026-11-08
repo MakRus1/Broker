@@ -42,6 +42,7 @@ def configure_web(mockserver_info, service_source_dir):
         config_vars['client-user_preferences-base-url'] = mockserver_info.base_url
         config_vars['client-notifications-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-localization-base-url'] = mockserver_info.base_url.rstrip('/')
+        config_vars['client-sales-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-finance-base-url'] = mockserver_info.base_url.rstrip('/')
         config_vars['client-shipments-base-url'] = mockserver_info.base_url
         config_vars['client-transport_locations-base-url'] = mockserver_info.base_url.rstrip('/')

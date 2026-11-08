@@ -11,3 +11,8 @@ shipments.write:
   scope: organization
   requires:
   - shipments.read
+shipments.create:
+  name: Создание поставок служебной командой
+  group: Служебные операции
+  scope: service
+  requires: []

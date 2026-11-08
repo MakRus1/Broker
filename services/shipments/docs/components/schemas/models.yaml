@@ -969,3 +969,44 @@ RegistryValue:
       type: string
     label:
       type: string
+EnsureShipmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - organization_id
+  - actor_subject
+  - actor_issuer
+  - shipment
+  - source
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    actor_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    actor_issuer:
+      type: string
+      minLength: 1
+      maxLength: 500
+    shipment:
+      $ref: '#/CreateShipmentRequest'
+    source:
+      $ref: '#/ShipmentSource'
+ShipmentSource:
+  type: object
+  additionalProperties: false
+  required:
+  - type
+  - id
+  properties:
+    type:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: ^[a-z][a-z0-9_.-]*$
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200

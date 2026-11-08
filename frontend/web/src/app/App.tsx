@@ -31,6 +31,7 @@ import { profileName } from '../shared/profile/profile';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, request } from '../shared/api/http';
 import { FinancialLabelsPage } from '../features/finance/labels/FinancialLabelsPage';
+import { SalesPage } from '../features/sales/SalesPage';
 import { ContractsPage } from '../features/contracts/ContractsPage';
 import { CounterpartiesPage } from '../features/counterparties/CounterpartiesPage';
 import { type Counterparty } from '../features/counterparties/CustomerSelect';
@@ -66,6 +67,8 @@ function WorkspaceApp() {
     | 'transportations'
     | 'counterparties'
     | 'contracts'
+    | 'sales'
+    | 'inquiries'
     | 'service-charges'
     | 'financial-labels'
     | 'incoming-invoices'
@@ -196,7 +199,7 @@ function WorkspaceApp() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|bank-accounts|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|bank-accounts|sales|inquiries|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -216,6 +219,8 @@ function WorkspaceApp() {
       else if (next.startsWith('/disbursements')) setTab('disbursements');
       else if (next.startsWith('/receipts')) setTab('receipts');
       else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
+      else if (next.startsWith('/sales')) setTab('sales');
+      else if (next.startsWith('/inquiries')) setTab('inquiries');
       else if (next.startsWith('/contracts')) setTab('contracts');
       else if (next.startsWith('/counterparties') || next.startsWith('/bank-accounts'))
         setTab('counterparties');
@@ -415,6 +420,24 @@ function WorkspaceApp() {
             </span>{' '}
             <span className="navigation-text">{translate('nav.counterparties')}</span>
           </button>
+          {session.permissions.includes('sales.read') &&
+            (['sales', 'inquiries'] as const).map((section) => (
+              <button
+                key={section}
+                aria-label={translate(section === 'sales' ? 'sales.funnel' : 'sales.inquiries')}
+                aria-current={tab === section ? 'page' : undefined}
+                onClick={() => {
+                  location.hash = `/${section}`;
+                }}
+              >
+                <span className="navigation-icon" aria-hidden="true">
+                  ▤
+                </span>
+                <span className="navigation-text">
+                  {translate(section === 'sales' ? 'sales.funnel' : 'sales.inquiries')}
+                </span>
+              </button>
+            ))}
           <button
             aria-label={translate('nav.contracts')}
             title={translate('nav.contracts')}
@@ -650,6 +673,18 @@ function WorkspaceApp() {
                       if (finishRelated(entry.route, value)) return;
                       const next = `/financial-labels/${value.id}`;
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
+                      location.hash = next;
+                    }}
+                  />
+                ) : entry.route.startsWith('/sales') || entry.route.startsWith('/inquiries') ? (
+                  <SalesPage
+                    route={entry.route}
+                    session={session}
+                    active={activeWorkspace === entry.id}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
+                    onCancel={() => cancelWorkspaceEdit(entry)}
+                    onSaved={(next, title) => {
+                      setWorkspaces((old) => replaceWorkspace(old, entry.id, next, title));
                       location.hash = next;
                     }}
                   />

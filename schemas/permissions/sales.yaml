@@ -1,0 +1,13 @@
+sales.read:
+  name: Просмотр продаж и входящих запросов
+  group: Продажи
+  scope: organization
+  requires:
+  - counterparties.read
+  - organizations.read_employees
+sales.write:
+  name: Изменение продаж и входящих запросов
+  group: Продажи
+  scope: organization
+  requires:
+  - sales.read

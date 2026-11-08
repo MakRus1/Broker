@@ -25,7 +25,7 @@ def event(**changes):
 def publish(service_client, auth_key):
     async def call(body, *, client='shipments-dispatcher', roles=None, envelope_changes=None):
         token = auth_key.token('service-account-' + client,
-            roles=['notifications.publish_shipments'] if roles is None else roles,
+            roles=['notifications.publish'] if roles is None else roles,
             claims={'azp': client})
         envelope = {'id': body['organization_id'] + ':' + body['shipment_id'] + ':' + str(body['revision']),
             'type': 'shipment.route_changed', 'version': 1,
@@ -42,7 +42,8 @@ async def test_duplicate_after_processing_and_read(api, publish):
     result = await api.post(LIST_PATH, {'organization_id': ORGANIZATION})
     assert len(result['items']) == 1
     item = result['items'][0]
-    assert item['shipment_number'] == 'S-1042'
+    assert item['entity_number'] == 'S-1042'
+    assert item['event_type'] == 'shipment.route_changed'
     assert item['read'] is False
     assert await api.post(READ_PATH, {'organization_id': ORGANIZATION, 'ids': [item['id']]}) == {'updated': 1}
     # Событие уже обработано; поздний повтор не создаёт новое уведомление и не сбрасывает прочтение.
@@ -82,7 +83,7 @@ async def test_pagination_is_scoped_and_stable(api, publish):
     second = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION, 'limit': 3, 'before': first[-1]['id']}))['items']
     assert len(first) == len(second) == 3
     assert len({item['id'] for item in first + second}) == 6
-    assert [item['shipment_revision'] for item in first + second] == [6, 5, 4, 3, 2, 1]
+    assert [item['entity_revision'] for item in first + second] == [6, 5, 4, 3, 2, 1]
     assert (await api.post(LIST_PATH, {'organization_id': ORGANIZATION, 'before': first[0]['id']}, user='colleague'))['items'] == []
 
 
@@ -121,7 +122,7 @@ async def test_author_does_not_receive_own_route_change(api, publish, pgsql):
     # Другой автор по-прежнему уведомляет назначенного логиста.
     assert (await publish(event(revision=3))).status == 200
     items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
-    assert len(items) == 1 and items[0]['shipment_revision'] == 3
+    assert len(items) == 1 and items[0]['entity_revision'] == 3
 
 
 @pytest.mark.parametrize('changes', [
@@ -180,3 +181,29 @@ async def test_notification_write_failure_rolls_back_event(publish, api, pgsql):
     assert (await publish(event())).status == 200
     items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
     assert len(items) == 1
+
+async def test_shipment_created_notifies_logist_and_skips_author(api,publish):
+    changes={'type':'shipment.created','id':'shipment-created-1'}
+    assert (await publish(event(revision=1),envelope_changes=changes)).status==200
+    assert (await publish(event(revision=1),envelope_changes=changes)).status==200
+    items=(await api.post(LIST_PATH,{'organization_id':ORGANIZATION}))['items']
+    assert len(items)==1 and items[0]['event_type']=='shipment.created'
+    own=event(shipment_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',actor_subject='author')
+    assert (await publish(own,envelope_changes={'type':'shipment.created','id':'own-created'})).status==200
+    assert len((await api.post(LIST_PATH,{'organization_id':ORGANIZATION}))['items'])==1
+
+
+async def test_inquiry_creation_failure_notifies_requester_once(api, publish):
+    envelope = {
+        'id': 'failed-inquiry:1',
+        'type': 'sales.inquiry.shipment_creation_failed',
+        'payload': {'inquiry_id': SHIPMENT, 'inquiry_number': 'ENQ-12',
+            'revision': 3, 'recipient_issuer': ISSUER, 'recipient_subject': 'author'},
+    }
+    for _ in range(2):
+        assert (await publish(event(), client='sales-dispatcher', envelope_changes=envelope)).status == 200
+    items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']
+    assert len(items) == 1
+    assert items[0]['event_type'] == 'sales.inquiry.shipment_creation_failed'
+    assert items[0]['entity_id'] == SHIPMENT
+    assert items[0]['entity_number'] == 'ENQ-12'

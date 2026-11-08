@@ -35,10 +35,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 interface ServerNotification {
+  event_type:
+    'shipment.created' | 'shipment.route_changed' | 'sales.inquiry.shipment_creation_failed';
   id: string;
-  shipment_id: string;
-  shipment_number: string;
-  shipment_revision: number;
+  entity_id: string;
+  entity_number: string;
+  entity_revision: number;
   created_at: string;
   read: boolean;
 }
@@ -47,7 +49,7 @@ function ServerNotifications() {
   const store = useNotifications();
   const { translate } = useLocalization();
   useEffect(() => {
-    if (!session || !session.permissions.includes('shipments.read')) return;
+    if (!session) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let running = false;
@@ -81,11 +83,21 @@ function ServerNotifications() {
           result.items.map((item) => ({
             id: `server:${item.id}`,
             remote: true,
-            message: translate('notifications.shipmentRouteChanged', {
-              number: item.shipment_number,
-            }),
-            level: 'info',
-            route: `/shipments/${item.shipment_id}/route`,
+            message: translate(
+              item.event_type === 'sales.inquiry.shipment_creation_failed'
+                ? 'notifications.shipmentCreationFailed'
+                : item.event_type === 'shipment.created'
+                  ? 'notifications.shipmentCreated'
+                  : 'notifications.shipmentRouteChanged',
+              {
+                number: item.entity_number,
+              },
+            ),
+            level: item.event_type === 'sales.inquiry.shipment_creation_failed' ? 'error' : 'info',
+            route:
+              item.event_type === 'sales.inquiry.shipment_creation_failed'
+                ? `/inquiries/${item.entity_id}`
+                : `/shipments/${item.entity_id}${item.event_type === 'shipment.created' ? '' : '/route'}`,
             createdAt: Date.parse(item.created_at),
             read: item.read,
             toast: false,

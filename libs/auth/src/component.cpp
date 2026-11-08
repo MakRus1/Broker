@@ -95,7 +95,7 @@ struct Component::State {
     std::string Prefix;
     std::string OrganizationUrl;
     std::string PlatformUrl;
-    std::map<std::string, std::string> ServiceClients;
+    std::map<std::string, std::vector<std::string>> ServiceClients;
     std::map<std::string, std::string> Permissions;
     std::map<std::string, std::vector<std::string>> Dependencies;
     std::chrono::seconds MaxAge;
@@ -113,7 +113,8 @@ struct Component::State {
           Prefix(config["protected-prefix"].As<std::string>()),
           OrganizationUrl(config["organization-url"].As<std::string>("")),
           PlatformUrl(config["platform-url"].As<std::string>("")),
-          ServiceClients(config["service-clients"].As<std::map<std::string, std::string>>({})),
+          ServiceClients(
+              config["service-clients"].As<std::map<std::string, std::vector<std::string>>>({})),
           Permissions(config["permissions"].As<std::map<std::string, std::string>>()),
           Dependencies(
               config["permission-dependencies"].As<std::map<std::string, std::vector<std::string>>>(
@@ -243,7 +244,8 @@ Identity Component::Authorize(const std::string& path, const std::string& author
         throw Forbidden{};
     }
     if (service_client != state_->ServiceClients.end() &&
-        identity.ClientId != service_client->second)
+        std::find(service_client->second.begin(), service_client->second.end(),
+            identity.ClientId) == service_client->second.end())
         throw Forbidden{};
     bool changed = true;
     while (changed) {
@@ -327,9 +329,12 @@ properties:
         default: {}
     service-clients:
         type: object
-        description: Доверенный OAuth клиент для служебных разрешений
+        description: Доверенные OAuth клиенты для служебных разрешений
         properties: {}
-        additionalProperties: {type: string, description: Client ID}
+        additionalProperties:
+            type: array
+            description: Доверенные Client ID
+            items: {type: string, description: Client ID}
         default: {}
     platform-url: {type: string, description: Центральная проверка платформенных прав, default: ""}
     organization-url: {type: string, description: Центральная проверка членства и прав, default: ""}

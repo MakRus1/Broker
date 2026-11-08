@@ -14,6 +14,8 @@ async def test_route_event_retries_and_only_follows_route_changes(api, mockserve
 
     @mockserver.json_handler('/api/internal/v1/events/publish')
     def accept(request):
+        if request.json['type'] != 'shipment.route_changed':
+            return {'accepted': True}
         received.append(request.json)
         if len(received) == 1:
             return mockserver.make_response(status=503,

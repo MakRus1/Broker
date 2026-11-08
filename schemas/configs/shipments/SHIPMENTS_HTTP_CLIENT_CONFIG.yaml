@@ -4,6 +4,7 @@ generated: true
 paths:
 - /api/admin/shipments/settings/get
 - /api/admin/shipments/settings/update
+- /api/internal/v1/shipments/ensure-created
 - /api/v1/shipment-items/add
 - /api/v1/shipment-items/list
 - /api/v1/shipment-items/update

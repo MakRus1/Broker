@@ -14,6 +14,7 @@ import {
   type HistoryKind,
   type HistoryPage,
 } from './historyTypes';
+import { RecordHistoryEntry, RecordHistoryDiff } from '../../../shared/ui/record/RecordHistory';
 import './financialHistory.css';
 
 export function FinancialHistory({
@@ -74,7 +75,7 @@ export function FinancialHistory({
     }
   }
   return (
-    <section className="financial-history" aria-label={translate('forms.changeHistory')}>
+    <section className="record-history" aria-label={translate('forms.changeHistory')}>
       <div className="section-heading">
         <h2>{translate('forms.changeHistory')}</h2>
         <button type="button" disabled={busy} onClick={() => setVersion((old) => old + 1)}>
@@ -123,76 +124,50 @@ function HistoryRecord({
 }) {
   const { translate, locale } = useLocalization();
   return (
-    <details className="financial-history-event" open={initiallyOpen || undefined}>
-      <summary>
-        <span className="financial-history-title">{historyTitle(event, locale)}</span>
-        <span
-          className="financial-history-actor"
-          title={event.actor_name ? undefined : translate('history.actorFallback')}
-        >
-          {event.actor_name || (
-            <EmployeeName
-              subject={event.actor.split('#').at(-1)}
-              session={session}
-              fallback={event.actor.split('#').at(-1) || translate('forms.nameNotRecorded')}
-            />
-          )}
-        </span>
-        <time dateTime={event.cursor.occurred_at}>
-          {new Date(event.cursor.occurred_at).toLocaleString(locale)}
-        </time>
-        <span className="hint">
-          {translate(
-            event.cursor.source === 'service_charge'
-              ? 'history.chargeRevision'
-              : event.cursor.source === 'invoice'
-                ? 'history.invoiceRevision'
-                : 'history.paymentRevision',
-            { revision: event.cursor.revision },
-          )}
-        </span>
-      </summary>
+    <RecordHistoryEntry
+      title={historyTitle(event, locale)}
+      initiallyOpen={initiallyOpen}
+      actor={
+        event.actor_name || (
+          <EmployeeName
+            subject={event.actor.split('#').at(-1)}
+            session={session}
+            fallback={event.actor.split('#').at(-1) || translate('forms.nameNotRecorded')}
+          />
+        )
+      }
+      actorTitle={event.actor_name ? undefined : translate('history.actorFallback')}
+      occurredAt={event.cursor.occurred_at}
+      revision={translate(
+        event.cursor.source === 'service_charge'
+          ? 'history.chargeRevision'
+          : event.cursor.source === 'invoice'
+            ? 'history.invoiceRevision'
+            : 'history.paymentRevision',
+        { revision: event.cursor.revision },
+      )}
+    >
       {!event.has_previous && event.cursor.revision > 1 && (
         <p className="route-notice">{translate('history.previousMissing')}</p>
       )}
-      {event.changes.length ? (
-        <div className="table-scroll">
-          <table className="financial-history-diff">
-            <thead>
-              <tr>
-                <th>{translate('counterparty.field')}</th>
-                <th>{translate('counterparty.before')}</th>
-                <th>{translate('counterparty.after')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {event.changes.map((change) => (
-                <tr key={historyChangeKey(change)}>
-                  <th scope="row">{historyFieldLabel(change, event.document, locale)}</th>
-                  <td>
-                    {historyValue(
-                      change.before,
-                      locale,
-                      change.field,
-                      historyReferenceIdsDiffer(change),
-                    )}
-                  </td>
-                  <td>
-                    {historyValue(
-                      change.after,
-                      locale,
-                      change.field,
-                      historyReferenceIdsDiffer(change),
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="hint">{translate('counterparty.noFieldValuesChanged')}</p>
-      )}
-    </details>
+      <RecordHistoryDiff
+        rows={event.changes.map((change) => ({
+          key: historyChangeKey(change),
+          label: historyFieldLabel(change, event.document, locale),
+          before: historyValue(
+            change.before,
+            locale,
+            change.field,
+            historyReferenceIdsDiffer(change),
+          ),
+          after: historyValue(
+            change.after,
+            locale,
+            change.field,
+            historyReferenceIdsDiffer(change),
+          ),
+        }))}
+      />
+    </RecordHistoryEntry>
   );
 }

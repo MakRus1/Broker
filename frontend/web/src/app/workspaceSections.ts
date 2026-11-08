@@ -1,5 +1,22 @@
 export const workspaceGroups = [
   {
+    title: 'home.salesGroup',
+    items: [
+      {
+        route: '/sales',
+        title: 'sales.funnel',
+        description: 'home.sales',
+        permission: 'sales.read',
+      },
+      {
+        route: '/inquiries',
+        title: 'sales.inquiries',
+        description: 'home.inquiries',
+        permission: 'sales.read',
+      },
+    ],
+  },
+  {
     title: 'home.logistics',
     items: [
       {

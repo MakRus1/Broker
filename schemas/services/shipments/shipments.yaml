@@ -720,6 +720,70 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
+  /api/internal/v1/shipments/ensure-created:
+    post:
+      summary: Идемпотентно создать поставку из фоновой команды
+      description: Общая доставка команд создания из других сервисов, независимо от
+        источника. Доступна доверенному сервису; организация и автор передаются в
+        команде. Для пользовательского создания используется /api/v1/shipments/create,
+        где организация и автор определяются из пользовательской сессии.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/models.yaml#/EnsureShipmentRequest
+      responses:
+        '400':
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '401':
+          description: Отсутствует действительный Bearer-токен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '403':
+          description: Нет требуемого права или доверенной привязки к клиенту
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '404':
+          description: Объект не найден в доступном клиенте
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ключ идемпотентности уже использован с другим запросом или
+            изменена редакция родительской поставки
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '503':
+          description: Недоступны ключи проверки авторизации
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/ApiError
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - shipment
+                properties:
+                  shipment:
+                    $ref: components/schemas/models.yaml#/Shipment
 components:
   securitySchemes:
     BearerAuth:

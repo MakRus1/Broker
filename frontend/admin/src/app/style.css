@@ -1641,3 +1641,65 @@ textarea::placeholder {
     flex-basis: 100%;
   }
 }
+
+.sales-stage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 12px 20px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sales-stage-name {
+  display: grid;
+  gap: 8px;
+}
+.sales-stage-row input,
+.sales-stage-row label,
+.sales-numbering input {
+  margin-bottom: 0;
+}
+.sales-stage-row .checkbox,
+.sales-numbering .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-stage-row .sales-stage-name input,
+.sales-stage-row .checkbox,
+.sales-stage-order {
+  height: 40px;
+}
+.sales-stage-order {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-stage-order button {
+  display: inline-flex;
+  margin: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+@media (max-width: 640px) {
+  .sales-stage-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .sales-stage-row .sales-stage-name {
+    grid-column: 1 / -1;
+  }
+}
+.sales-numbering {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.sales-numbering h3,
+.sales-numbering .hint {
+  margin: 0;
+}

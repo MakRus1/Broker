@@ -45,12 +45,14 @@ def policy(spec):
         ):
             raise ValueError(f'service.yaml: неверное право для {path}')
     clients = section.get('service-clients', {})
-    if not isinstance(clients, dict) or any(
-        permission not in permissions.values() or not isinstance(client, str)
-        or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]*', client)
-        for permission, client in clients.items()
-    ):
-        raise ValueError('auth.service-clients: ожидается таблица разрешение: доверенный OAuth клиент')
+    if not isinstance(clients, dict):
+        raise ValueError('auth.service-clients: ожидается таблица разрешение: доверенные OAuth клиенты')
+    for permission, value in clients.items():
+        names = [value] if isinstance(value, str) else value
+        if (permission not in permissions.values() or not isinstance(names, list) or not names
+            or any(not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]*', name) for name in names)
+            or len(set(names)) != len(names)):
+            raise ValueError('auth.service-clients: неверный список доверенных OAuth клиентов')
     return section
 
 

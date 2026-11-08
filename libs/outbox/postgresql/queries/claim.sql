@@ -13,5 +13,5 @@ SET available_at = now() + make_interval(secs => $2::DOUBLE PRECISION),
     attempts = message.attempts + 1
 FROM candidate
 WHERE message.id = candidate.id
-RETURNING message.id::TEXT, message.topic, message.payload,
-          message.lease_token::TEXT, message.generation;
+RETURNING message.id, message.topic, message.payload,
+          message.lease_token, message.generation;

@@ -102,7 +102,7 @@ async def test_creation_retry_freezes_snapshot(api, mockserver):
         await asyncio.sleep(0.05)
     assert result['item']['shipment_id'] == SHIPMENT
     assert calls[0] == calls[1]
-    assert calls[0]['shipment']['idempotency_key'] == 'sales-inquiry:' + value['id'] + ':2'
+    assert calls[0]['shipment']['idempotency_key'] == calls[0]['source']['type'] + ':' + value['id'] + ':2'
     assert calls[0]['shipment']['logist'] is None
     assert calls[0]['source'] == {'type': 'sales.inquiry', 'id': value['id']}
     assert calls[0]['shipment']['customer_id'] == CUSTOMER

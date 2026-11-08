@@ -44,7 +44,7 @@ Response View::Handle(
     shipment_models::CreateShipmentRequest shipment;
     shipment.customer_id = inquiry.customer_id;
     shipment.idempotency_key =
-        "sales-inquiry:" + inquiry.id + ":" + std::to_string(inquiry.revision);
+        std::string{kInquirySourceType} + ":" + inquiry.id + ":" + std::to_string(inquiry.revision);
     shipment.reference = inquiry.number;
     shipment.cargo_description = inquiry.cargo_description;
     shipment.carriage_terms = inquiry.carriage_terms;

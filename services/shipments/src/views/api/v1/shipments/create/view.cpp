@@ -24,8 +24,7 @@ Response View::Handle(
             FindSavedReplay<models::Shipment>(deps, organization, "create_shipment", request.body);
         if (saved.has_value())
             return Response201{.shipment = saved.value()};
-        const ShipmentSource source{
-            .Producer = "web", .Type = "manual", .Id = request.body.idempotency_key};
+        const auto source = ShipmentSource::Manual(request.body.idempotency_key);
         if (const auto replay =
                 FindCreatedShipment(deps, organization, source, Document(request.body)))
             return Response201{.shipment = *replay};
@@ -41,9 +40,8 @@ Response View::Handle(
         }
         auto body = request.body;
         body.logist = logist;
-        const auto result = CreateShipment(deps, organization, identity, body,
-            {.Producer = "web", .Type = "manual", .Id = request.body.idempotency_key},
-            Document(request.body));
+        const auto result =
+            CreateShipment(deps, organization, identity, body, source, Document(request.body));
         return Response201{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         return Response409{.error = "number_exists", .message = "Номер поставки уже занят"};

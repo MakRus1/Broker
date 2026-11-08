@@ -1,5 +1,4 @@
 #include <helpers/registry.hpp>
-#include <helpers/settings.hpp>
 #include <views/api/v1/sales/cards/filter_values/view.hpp>
 
 namespace sales::views::api::v1::sales::cards::filter_values {
@@ -20,15 +19,6 @@ Response View::Handle(
         for (std::size_t i = 0; i < rows.size() && i < static_cast<std::size_t>(request.body.limit);
              ++i)
             result.values.push_back({.label = rows[i].Label, .value = rows[i].Value});
-        if (request.body.field.value() == "stage_id") {
-            const auto settings =
-                Settings(deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings,
-                    platform::auth::GetOrganization(platform::auth::GetIdentity(context))));
-            for (auto& value : result.values)
-                for (const auto& stage : settings.stages)
-                    if (stage.id == value.value)
-                        value.label = stage.name;
-        }
         if (rows.size() > static_cast<std::size_t>(request.body.limit))
             result.next_after = result.values.back().value;
         return result;

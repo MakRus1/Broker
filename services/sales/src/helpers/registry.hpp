@@ -29,7 +29,10 @@ inline constexpr std::array<registry::RegistryField, 7> kCardFields{{
     {.Field = kId, .ValueSql = "id", .Visible = false},
     {.Field = kCustomer, .ValueSql = "customer_id", .Sortable = false, .Lookup = "counterparties"},
     {.Field = kManager, .ValueSql = "manager_subject", .Sortable = false, .Lookup = "employees"},
-    {.Field = kStage, .ValueSql = "stage_id"},
+    {.Field = kStage, .ValueSql = R"((SELECT stage->>'name'
+            FROM sales_settings, jsonb_array_elements(stages) AS stage
+            WHERE sales_settings.organization_id = sales_cards.organization_id
+                AND stage->>'id' = sales_cards.stage_id::TEXT))"},
     {.Field = kSource, .ValueSql = "source"},
     {.Field = kAction, .ValueSql = "next_action"},
     {.Field = kActionDate, .ValueSql = "next_action_date"},

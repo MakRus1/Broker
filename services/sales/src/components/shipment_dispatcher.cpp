@@ -1,5 +1,6 @@
 #include <components/shipment_dispatcher.hpp>
 #include <helpers/database.hpp>
+#include <helpers/shipment_command.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
@@ -15,12 +16,16 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
     : ComponentBase(config, context), deps_(ResolveDeps(context)),
       tokens_(context.FindComponent<platform::auth::ServiceTokenProvider>()) {
     context.FindComponent<platform::outbox::Component>().RegisterHandler(
-        "shipments.create",
-        [this](const platform::outbox::Message& message) -> DeliveryResult {
-            namespace api = clients::shipments::ApiInternalV1ShipmentsEnsureCreated;
+        kCreateShipment,
+        [this](const ShipmentCommand& command) -> DeliveryResult {
             try {
                 const auto result = deps_.shipments.ApiInternalV1ShipmentsEnsureCreated(
-                    {.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
+                    {.body = {.actor_issuer = command.actor_issuer,
+                         .actor_subject = command.actor_subject,
+                         .organization_id = command.organization_id,
+                         .shipment = command.shipment,
+                         .source = command.source}},
+                    tokens_.GetAccessToken());
                 return {.ShipmentId = result.shipment.id, .Rejection = std::nullopt};
             } catch (const platform::http::ErrorByStatus<400>& error) {
                 return {.ShipmentId = std::nullopt,
@@ -29,13 +34,12 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
             // Недоступность, 403 и конфликты протокола требуют повтора/исправления сервиса,
             // а не изменения уже отправленной команды пользователем.
         },
-        [](helpers::pg::Transaction& transaction, const platform::outbox::Message& message,
+        [](helpers::pg::Transaction& transaction, const ShipmentCommand& command,
             const DeliveryResult& result) {
             using namespace helpers;
-            const auto organization = message.Payload["organization_id"].As<std::string>();
-            const auto id = message.Payload["source"]["id"].As<std::string>();
-            const auto actor = message.Payload["actor_issuer"].As<std::string>() + "#" +
-                message.Payload["actor_subject"].As<std::string>();
+            const auto organization = command.organization_id;
+            const auto id = command.source.id;
+            const auto actor = command.actor_issuer + "#" + command.actor_subject;
             transaction.Execute(sql::kLockInquiries, organization, id);
             const auto changed = result.ShipmentId.has_value()
                 ? transaction.Execute(

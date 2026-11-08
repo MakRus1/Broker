@@ -1,3 +1,4 @@
+#include <helpers/shipment_command.hpp>
 #include <helpers/shipment_references.hpp>
 #include <platform/outbox/component.hpp>
 #include <views/api/v1/sales/inquiries/create_shipment/view.hpp>
@@ -67,7 +68,7 @@ Response View::Handle(
     command.shipment = std::move(shipment);
     const auto document = json::ValueBuilder(command).ExtractValue();
     transaction.Execute(sql::kStartConversion, organization, inquiry.id, document);
-    platform::outbox::Enqueue(transaction, "shipments.create", inquiry.id, document);
+    platform::outbox::Enqueue(transaction, kCreateShipment, inquiry.id, command);
     const auto rows = transaction.Execute(sql::kGetInquiries, organization, inquiry.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Запись не найдена в организации"};

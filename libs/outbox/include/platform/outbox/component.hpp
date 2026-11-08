@@ -10,8 +10,10 @@
 #include <platform/outbox/worker.hpp>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <userver/components/component_base.hpp>
 #include <userver/formats/json/value.hpp>
+#include <userver/formats/json/value_builder.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 #include <userver/testsuite/periodic_task_control.hpp>
@@ -28,6 +30,22 @@ void Enqueue(pg::Transaction&, std::string_view topic, std::string_view key,
 // Заменяет недоставленное состояние, инвалидируя старый lease и подтверждение.
 void EnqueueLatest(pg::Transaction&, std::string_view topic, std::string_view key,
     const userver::formats::json::Value& payload);
+
+// Имя хранится в БД; Payload связывает отправителя и обработчик на этапе компиляции.
+template <typename Payload> struct Task {
+    std::string_view Name;
+
+    Payload Parse(const userver::formats::json::Value& value) const {
+        return ParseModelJson(value, std::type_identity<Payload>{});
+    }
+};
+
+template <typename Payload>
+void Enqueue(pg::Transaction& transaction, Task<Payload> task, std::string_view key,
+    const Payload& payload) {
+    Enqueue(
+        transaction, task.Name, key, userver::formats::json::ValueBuilder(payload).ExtractValue());
+}
 
 struct Message {
     boost::uuids::uuid Id;
@@ -63,6 +81,26 @@ class Component final : public userver::components::ComponentBase {
                     [message, result = std::move(result), complete](pg::Transaction& transaction) {
                         std::invoke(complete, transaction, message, result);
                     }};
+            });
+    }
+
+    template <typename Payload, typename Send> void RegisterHandler(Task<Payload> task, Send send) {
+        RegisterHandler(
+            std::string{task.Name}, [task, send = std::move(send)](const Message& message) {
+                std::invoke(send, task.Parse(message.Payload));
+            });
+    }
+
+    template <typename Payload, typename Send, typename Complete>
+    void RegisterHandler(Task<Payload> task, Send send, Complete complete) {
+        Register(std::string{task.Name},
+            [task, send = std::move(send), complete = std::move(complete)](const Message& message) {
+                auto payload = task.Parse(message.Payload);
+                auto result = std::invoke(send, payload);
+                return Completion{[payload = std::move(payload), result = std::move(result),
+                                      complete](pg::Transaction& transaction) {
+                    std::invoke(complete, transaction, payload, result);
+                }};
             });
     }
 

@@ -177,3 +177,14 @@ async def test_inquiry_numbering_settings(api):
     await api.post('/api/admin/sales/settings/update', {
         'organization_id': ORG, 'expected_revision': 2, 'stages': [],
         'inquiry_number_template': 'invalid'}, expected=400)
+
+async def test_stage_filter_labels_and_search(api):
+    await settings(api, [{'id': STAGE, 'name': 'First contact', 'enabled': True}])
+    await api.post('/api/v1/sales/cards/save', card())
+    body = {'registry': {}, 'field': 'stage_id'}
+    values = await api.post('/api/v1/sales/cards/filter-values', body)
+    assert values['values'] == [{'value': STAGE, 'label': 'First contact'}]
+    found = await api.post('/api/v1/sales/cards/filter-values', {**body, 'query': 'FIRST'})
+    assert found['values'] == values['values']
+    missing = await api.post('/api/v1/sales/cards/filter-values', {**body, 'query': 'нет такого'})
+    assert missing['values'] == []

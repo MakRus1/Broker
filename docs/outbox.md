@@ -49,6 +49,28 @@ transaction.Commit();
 
 Для события можно использовать сгенерированную сериализуемую модель вместо заполнения JSON вручную. Payload сохраняется вместе с изменением данных; его не нужно заново собирать из изменяемой записи при повторе.
 
+Для типизированной доставки опишите имя и модель один раз в общем заголовке
+отправителя и обработчика. Модель должна поддерживать сгенерированные
+`Serialize` и `ParseModelJson`:
+
+```cpp
+inline constexpr platform::outbox::Task<models::OrderCreated> kOrderCreatedTask{
+    "order.created"};
+
+platform::outbox::Enqueue(transaction, kOrderCreatedTask, order.id, event);
+
+outbox.RegisterHandler(kOrderCreatedTask,
+    [](const models::OrderCreated& event) { return Send(event); },
+    [](pg::Transaction& tx, const models::OrderCreated& event, const auto& result) {
+        SaveDeliveryResult(tx, event.order_id, result);
+    });
+```
+
+Отправитель передаёт модель вместо JSON. Компонент разбирает её один раз и передаёт
+обработчику доставки и подтверждения. Тип payload при постановке проверяет
+компилятор; старые сообщения из БД проверяет парсер модели. Строковое имя остаётся
+стабильным ключом хранения, маршрутизации и настроек параллельности.
+
 Если требуется доставить только последнее состояние сущности, используется `EnqueueLatest` с ключом сущности. Он заменяет ожидающее состояние и инвалидирует старый lease. Такое объединение не подходит для событий, каждое из которых обязательно должно быть обработано.
 
 ## 3. Зарегистрировать обработчик

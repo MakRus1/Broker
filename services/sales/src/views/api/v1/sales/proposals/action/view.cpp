@@ -18,17 +18,12 @@ Response View::Handle(
         throw ApiError<409>{"revision_conflict", "Предложение изменено"};
     const bool has_cargo_description = inquiry.cargo_description &&
         !userver::utils::text::Trim(*inquiry.cargo_description).empty();
-    if (inquiry.revision != value.inquiry_revision) {
-        const bool only_added_cargo_description = has_cargo_description &&
-            transaction
-                .Execute(sql::kInquiryOnlyAddedCargoDescription, organization, inquiry.id,
-                    value.inquiry_revision, json::ValueBuilder(inquiry).ExtractValue())
-                .AsSingleRow<bool>();
-        if (!only_added_cargo_description)
-            throw ApiError<409>{
-                "inquiry_changed", "Запрос изменился после расчёта. Создайте копию предложения"};
-        value.inquiry_revision = inquiry.revision;
-    }
+    if (inquiry.revision != value.inquiry_revision)
+        throw ApiError<409>{
+            "inquiry_changed", "Запрос изменился после расчёта. Создайте копию предложения"};
+    if (!has_cargo_description)
+        throw ApiError<400>{
+            "cargo_required", "Перед предложением клиенту опишите груз во входящем запросе"};
     if (request.body.action == models::ProposalActionRequest_action::Offer) {
         if (value.status != models::ProposalStatus::Draft)
             throw ApiError<409>{"invalid_status", "Предложение уже зафиксировано"};
@@ -39,16 +34,13 @@ Response View::Handle(
         for (const auto& line : value.input.lines)
             if (line.purchase && !line.supplier_id)
                 throw ApiError<400>{"supplier_required", "Для переноса закупки укажите поставщика"};
-        if (!has_cargo_description)
-            throw ApiError<400>{
-                "cargo_required", "Перед согласованием опишите груз во входящем запросе"};
         value.status = models::ProposalStatus::Accepted;
     }
     ++value.revision;
     StoreProposal(
         transaction, organization, value, request.body.expected_revision, identity.ActorId());
     if (value.status == models::ProposalStatus::Accepted) {
-        transaction.Execute(sql::kAcceptProposal, organization, value.input.inquiry_id,
+        transaction.Execute(sql::kAcceptInquiryProposal, organization, value.input.inquiry_id,
             value.input.id, value.revision);
         const auto current =
             transaction.Execute(sql::kGetInquiries, organization, value.input.inquiry_id)

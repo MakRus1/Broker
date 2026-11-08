@@ -1,10 +1,10 @@
 #pragma once
-#include <boost/multiprecision/cpp_int.hpp>
 #include <helpers/database.hpp>
 #include <helpers/references.hpp>
 #include <map>
 #include <platform/charge_amounts.hpp>
 #include <set>
+#include <userver/decimal64/decimal64.hpp>
 #include <userver/utils/text_light.hpp>
 
 namespace sales::helpers {
@@ -52,12 +52,13 @@ inline void AddAmounts(models::ProposalAmounts& target, const models::ProposalAm
 }
 
 inline std::int64_t ConvertProposalAmount(std::int64_t amount, std::int64_t rate) {
-    const boost::multiprecision::cpp_int result =
-        (boost::multiprecision::cpp_int{amount} * rate + 500000) / 1000000;
-    // Keep totals exactly representable by consumers using integer JSON numbers.
+    using Amount = userver::decimal64::Decimal<0, userver::decimal64::HalfUpRoundPolicy>;
+    using Rate = userver::decimal64::Decimal<6, userver::decimal64::HalfUpRoundPolicy>;
+    const auto result = (Amount{amount} * Rate::FromUnbiased(rate)).AsUnbiased();
+    // Ограничиваем сумму для точного представления целых чисел в JSON у потребителей.
     if (result > 90000000000000LL)
         throw ApiError<400>{"amount_overflow", "Сумма предложения слишком велика"};
-    return result.convert_to<std::int64_t>();
+    return result;
 }
 
 inline models::Proposal CalculateProposal(const Deps& deps,
@@ -76,6 +77,10 @@ inline models::Proposal CalculateProposal(const Deps& deps,
         throw ApiError<404>{"not_found", "Входящий запрос не найден"};
     const auto inquiry = models::ParseModelJson(
         inquiry_rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
+    if (!inquiry.cargo_description ||
+        userver::utils::text::Trim(*inquiry.cargo_description).empty())
+        throw ApiError<400>{
+            "cargo_required", "Перед расчётом предложения опишите груз во входящем запросе"};
     result.inquiry_revision = inquiry.revision;
     result.customer_name = GetCounterparty(deps, context, inquiry.customer_id).name;
     result.input = std::move(input);

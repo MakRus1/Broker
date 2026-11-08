@@ -1312,6 +1312,7 @@
   "sales.quick.noAction": "Без следующего действия",
   "sales.quick.noContacts": "Без контактов",
   "proposal.title": "Предложения",
+  "proposal.cargoRequired": "Перед расчётом предложения заполните описание груза во входящем запросе.",
   "proposal.new": "Новый вариант",
   "proposal.details": "Условия предложения",
   "proposal.name": "Название варианта",

@@ -1312,6 +1312,7 @@
   "sales.quick.noAction": "No next action",
   "sales.quick.noContacts": "No contacts",
   "proposal.title": "Proposals",
+  "proposal.cargoRequired": "Enter the cargo description in the inquiry before calculating a proposal.",
   "proposal.new": "New option",
   "proposal.details": "Proposal details",
   "proposal.name": "Option name",

@@ -41,7 +41,7 @@ Response View::Handle(
         if (labels.IsEmpty())
             throw ApiError<404>{"label_not_found", "Метка не найдена в организации"};
         auto label = Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>());
-        // Names, amounts and VAT are the approved snapshot, not today's directory defaults.
+        // Названия, суммы и НДС берём из согласованного снимка, а не текущего справочника.
         label.name = item.label_name;
         label.archived = false;
         label.direction = models::FinancialLabelDirection::Both;

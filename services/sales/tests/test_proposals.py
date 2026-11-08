@@ -62,25 +62,21 @@ async def test_proposal_rounding_history_and_frozen_snapshot(api,finance):
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':4,'action':'accept'},user='other',expected=404)
     await api.post(BASE+'save',value,roles=['sales.read'],expected=403)
 
-async def test_accept_after_filling_missing_cargo_description(api):
+async def test_cargo_required_before_calculating_proposal(api):
     incoming, value = await draft(api, cargo_description='')
+    response = await api.post(BASE + 'save', value, expected=400)
+    assert response['error'] == 'cargo_required'
+    incoming.update(expected_revision=1, cargo_description='Оборудование')
+    await api.post('/api/v1/sales/inquiries/save', incoming)
     await api.post(BASE + 'save', value)
     await api.post(BASE + 'action', {
         'id': value['id'], 'expected_revision': 1, 'action': 'offer',
     })
-    accept = {'id': value['id'], 'expected_revision': 2, 'action': 'accept'}
-    await api.post(BASE + 'action', accept, expected=400)
-
-    incoming.update(expected_revision=1, cargo_description='Оборудование', ready_date='2026-11-11')
-    await api.post('/api/v1/sales/inquiries/save', incoming)
-    await api.post(BASE + 'action', accept, expected=409)
-
-    incoming.update(expected_revision=2, ready_date='2026-11-10')
-    await api.post('/api/v1/sales/inquiries/save', incoming)
-    accepted = (await api.post(BASE + 'action', accept))['item']
+    accepted = (await api.post(BASE + 'action', {
+        'id': value['id'], 'expected_revision': 2, 'action': 'accept',
+    }))['item']
     assert accepted['status'] == 'accepted'
-    assert accepted['inquiry_revision'] == 3
-    assert accepted['revision'] == 3
+    assert accepted['inquiry_revision'] == 2
 
 
 async def test_proposal_validation(api):
@@ -128,3 +124,15 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
     assert {line['charge']['direction'] for line in lines}=={'income','expense'}
     assert all(line['charge']['shipment_id']==SHIPMENT for line in lines)
     assert lines[0]['counterparty_name']=='Клиент'
+
+
+@pytest.mark.parametrize('rate,price,expected', [(500000, 1, 1), (1499999, 1, 1), (1500000, 1, 2), (90000000, 100000000, 9000000000)])
+async def test_reporting_conversion_rounds_half_up(api, finance, rate, price, expected):
+    _, value = await draft(api)
+    finance['rate'] = rate
+    line = value['lines'][0]
+    line.pop('purchase')
+    line['sale'].update(price_minor=price, price_mode='net', vat_mode='exempt')
+    line['sale'].pop('vat_rate_basis_points')
+    saved = (await api.post(BASE + 'save', value))['item']
+    assert saved['reporting']['sale']['total_minor'] == expected

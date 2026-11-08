@@ -202,6 +202,10 @@ export function SalesProposals({
     });
   }
   function start() {
+    if (!inquiry.cargo_description?.trim()) {
+      setFailure(translate('proposal.cargoRequired'));
+      return;
+    }
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     edit(

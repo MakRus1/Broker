@@ -1,9 +1,9 @@
 #pragma once
-#include <boost/uuid/name_generator_sha1.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <helpers/proposals.hpp>
 #include <helpers/shipment_command.hpp>
+#include <userver/utils/boost_uuid5.hpp>
 
 namespace sales::helpers {
 inline void TransferProposal(const Deps& deps, const ShipmentCommand& command,
@@ -22,20 +22,22 @@ inline void TransferProposal(const Deps& deps, const ShipmentCommand& command,
         proposal.revision != *inquiry.accepted_proposal_revision)
         throw ApiError<409>{"proposal_changed", "Согласованная версия предложения изменилась"};
     namespace fm = clients::finance::models;
-    const boost::uuids::name_generator_sha1 make_id{
-        boost::uuids::string_generator{}(proposal.input.id)};
-    fm::ImportServiceChargesRequest batch;
+    const auto namespace_id = boost::uuids::string_generator{}(proposal.input.id);
+    clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody batch;
     batch.organization_id = command.organization_id;
     batch.source = {
         .id = proposal.input.id, .revision = proposal.revision, .type = "sales.proposal"};
-    batch.id = boost::uuids::to_string(make_id(std::to_string(proposal.revision)));
+    batch.id = boost::uuids::to_string(userver::utils::generators::GenerateBoostUuidV5(
+        namespace_id, std::to_string(proposal.revision)));
     batch.actor_subject = command.actor_subject;
     batch.actor_issuer = command.actor_issuer;
     for (const auto& line : proposal.lines) {
         const auto add = [&](const models::ProposalPrice& price, bool income) {
             fm::SaveServiceChargeRequest charge;
-            charge.id = boost::uuids::to_string(make_id(line.input.id +
-                (income ? ":sale:" : ":purchase:") + std::to_string(proposal.revision)));
+            charge.id = boost::uuids::to_string(
+                userver::utils::generators::GenerateBoostUuidV5(namespace_id,
+                    line.input.id + (income ? ":sale:" : ":purchase:") +
+                        std::to_string(proposal.revision)));
             charge.shipment_id = shipment_id;
             charge.label_id = line.input.label_id;
             charge.unit =
@@ -64,9 +66,6 @@ inline void TransferProposal(const Deps& deps, const ShipmentCommand& command,
         if (line.input.purchase)
             add(*line.input.purchase, false);
     }
-    deps.finance.ApiInternalV1ServiceChargesApplyImport(
-        {.body = clients::finance::ApiInternalV1ServiceChargesApplyImport::ParseBody(
-             json::ValueBuilder(batch).ExtractValue())},
-        token);
+    deps.finance.ApiInternalV1ServiceChargesApplyImport({.body = std::move(batch)}, token);
 }
 }  // namespace sales::helpers

@@ -205,3 +205,45 @@ async def test_stage_filter_labels_and_search(api):
     assert found['values'] == values['values']
     missing = await api.post('/api/v1/sales/cards/filter-values', {**body, 'query': 'нет такого'})
     assert missing['values'] == []
+
+async def test_contact_history_updates_next_action_once_and_checks_access(api):
+    await settings(api)
+    value = card()
+    saved = (await api.post('/api/v1/sales/cards/save', value))['item']
+    contact = {'id': str(uuid.uuid4()), 'card_id': saved['id'], 'expected_revision': 1,
+        'kind': 'call', 'contact_date': '2026-11-08', 'result': 'Обсудили сроки',
+        'next_action': 'Отправить предложение', 'next_action_date': '2026-11-10'}
+    result = await api.post('/api/v1/sales/contacts/add', contact)
+    assert result['card']['revision'] == 2
+    assert result['card']['next_action'] == contact['next_action']
+    assert result['item']['author_subject'] == 'author'
+    assert (await api.post('/api/v1/sales/contacts/add', contact)) == result
+    await api.post('/api/v1/sales/contacts/add', {**contact, 'result': 'Другая запись'}, expected=409)
+    await api.post('/api/v1/sales/contacts/add', {**contact, 'id': str(uuid.uuid4())}, expected=409)
+    records = await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id']})
+    assert records['items'] == [result['item']]
+    assert 'request' not in records['items'][0]
+    await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id']}, user='other', expected=404)
+    await api.post('/api/v1/sales/contacts/add', contact, roles=['sales.read'], expected=403)
+    await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id']}, roles=[], expected=403)
+    history = (await api.post('/api/v1/sales/cards/history', {'id': saved['id']}))['items']
+    assert len(history) == 2
+    assert history[-1]['snapshot']['next_action'] == contact['next_action']
+
+async def test_contacts_pagination_and_optional_next_action(api):
+    await settings(api)
+    value = card()
+    saved = (await api.post('/api/v1/sales/cards/save', value))['item']
+    base = {'card_id': saved['id'], 'expected_revision': 1, 'kind': 'email',
+        'contact_date': '2026-11-07', 'result': 'Написали клиенту'}
+    for day in ['07', '08', '06']:
+        await api.post('/api/v1/sales/contacts/add', {**base, 'id': str(uuid.uuid4()), 'contact_date': f'2026-11-{day}'})
+    first = await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id'], 'limit': 2})
+    assert [item['contact_date'] for item in first['items']] == ['2026-11-08', '2026-11-07']
+    second = await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id'], 'limit': 2, 'before': first['next_before']})
+    assert [item['contact_date'] for item in second['items']] == ['2026-11-06']
+    assert 'next_before' not in second
+    current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
+    assert current['revision'] == 1
+    for extra in [{'next_action': 'Позвонить'}, {'result': '   '}, {'kind': 'unknown'}]:
+        await api.post('/api/v1/sales/contacts/add', {**base, 'id': str(uuid.uuid4()), **extra}, expected=400)

@@ -723,6 +723,130 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/sales/models.yaml#/ApiError
+  /api/v1/sales/contacts/add:
+    post:
+      summary: Записать контакт с клиентом
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/AddSalesContactRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: components/schemas/sales/models.yaml#/SalesContact
+                  card:
+                    $ref: components/schemas/sales/models.yaml#/SalesCard
+                required:
+                - item
+                - card
+        '400':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+  /api/v1/sales/contacts/list:
+    post:
+      summary: История контактов с клиентом
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/ListSalesContactsRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: components/schemas/sales/models.yaml#/SalesContact
+                  next_before:
+                    type: string
+                    format: uuid
+                required:
+                - items
+        '400':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса или доступа
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

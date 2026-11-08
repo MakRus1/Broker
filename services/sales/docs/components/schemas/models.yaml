@@ -639,3 +639,105 @@ SalesFilterValuesRequest:
       items:
         type: string
         maxLength: 2000
+ContactKind:
+  type: string
+  enum:
+  - call
+  - email
+  - meeting
+  - other
+SalesContact:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    card_id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/ContactKind'
+    contact_date:
+      type: string
+      format: date
+    result:
+      type: string
+      minLength: 1
+      maxLength: 10000
+    author_subject:
+      type: string
+    author_issuer:
+      type: string
+    created_at:
+      type: string
+      format: date-time
+    next_action:
+      type: string
+      maxLength: 1000
+    next_action_date:
+      type: string
+      format: date
+  required:
+  - id
+  - card_id
+  - kind
+  - contact_date
+  - result
+  - author_subject
+  - author_issuer
+  - created_at
+AddSalesContactRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    card_id:
+      type: string
+      format: uuid
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 1
+    kind:
+      $ref: '#/ContactKind'
+    contact_date:
+      type: string
+      format: date
+    result:
+      type: string
+      minLength: 1
+      maxLength: 10000
+    next_action:
+      type: string
+      minLength: 1
+      maxLength: 1000
+    next_action_date:
+      type: string
+      format: date
+  required:
+  - id
+  - card_id
+  - expected_revision
+  - kind
+  - contact_date
+  - result
+ListSalesContactsRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    card_id:
+      type: string
+      format: uuid
+    before:
+      type: string
+      format: uuid
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+  required:
+  - card_id

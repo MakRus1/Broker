@@ -1283,5 +1283,20 @@
   "home.salesGroup": "Sales",
   "notifications.shipmentCreated": "You have been assigned shipment {number}",
   "sales.route": "Route",
-  "notifications.shipmentCreationFailed": "Shipment creation failed for inquiry {number}. Open the inquiry to correct it."
+  "notifications.shipmentCreationFailed": "Shipment creation failed for inquiry {number}. Open the inquiry to correct it.",
+  "sales.contacts": "Contacts",
+  "sales.contact.add": "Record contact",
+  "sales.contact.kind": "Contact type",
+  "sales.contact.date": "Contact date",
+  "sales.contact.result": "Outcome",
+  "sales.contact.nextAction": "Next action",
+  "sales.contact.nextDate": "Next action due date",
+  "sales.contact.nextHint": "An action and due date will replace the next action in the client card.",
+  "sales.contact.save": "Save contact",
+  "sales.contact.empty": "No contacts yet. Record the outcome of a call, email or meeting.",
+  "sales.contact.more": "Show more",
+  "sales.contact.call": "Call",
+  "sales.contact.email": "Email",
+  "sales.contact.meeting": "Meeting",
+  "sales.contact.other": "Other"
 }

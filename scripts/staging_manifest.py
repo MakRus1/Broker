@@ -382,6 +382,15 @@ def render(release, directory, *, root=ROOT, environment='staging'):
         overrides = root / f'services/{name}/configs/config_vars.{environment}.yaml'
         if overrides.is_file():
             variables.update(read_yaml(overrides))
+        manifest = read_yaml(root / f'services/{name}/service.yaml')
+        for alias, client in manifest.get('clients', {}).items():
+            provider = client['service']
+            provider_variables = read_yaml(
+                root / f'services/{provider}/configs/config_vars.yaml'
+            )
+            variables[f'client-{alias}-base-url'] = (
+                f'http://{addresses[provider]}:{provider_variables["server-port"]}'
+            )
         variables.update(
             {
                 'environment': environment,
@@ -416,15 +425,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 ),
             }
         )
-        manifest = read_yaml(root / f'services/{name}/service.yaml')
-        for alias, client in manifest.get('clients', {}).items():
-            provider = client['service']
-            provider_variables = read_yaml(
-                root / f'services/{provider}/configs/config_vars.yaml'
-            )
-            variables[f'client-{alias}-base-url'] = (
-                f'http://{addresses[provider]}:{provider_variables["server-port"]}'
-            )
         if lan:
             internal_auth = f'https://{addresses["keycloak"]}:8443'
             variables.update(

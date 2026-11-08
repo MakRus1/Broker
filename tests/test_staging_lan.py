@@ -36,10 +36,12 @@ class LanTest(unittest.TestCase):
                 defaults = staging_manifest.read_yaml(
                     staging_manifest.ROOT / f'services/{provider}/configs/config_vars.yaml'
                 )
+                # Административные ручки configs работают на отдельном listener.
+                port = defaults['monitor-port' if alias == 'config_admin' else 'server-port']
                 with self.subTest(service=name, client=alias):
                     self.assertEqual(values[f'client-{alias}-base-url'],
                         f'http://{provider.replace("_", "-")}.broker-staging.svc.cluster.local:'
-                        f'{defaults["server-port"]}')
+                        f'{port}')
 
     def test_self_approval_is_an_environment_override(self):
         defaults = staging_manifest.read_yaml(

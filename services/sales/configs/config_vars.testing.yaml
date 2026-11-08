@@ -26,3 +26,4 @@ dispatcher-token-max-retries: 0
 client-transport_locations-base-url: http://localhost:8080
 organization-access-url: http://localhost:8130/api/organizations/access
 client-notifications-base-url: http://localhost:8080
+client-finance-base-url: http://localhost:8080

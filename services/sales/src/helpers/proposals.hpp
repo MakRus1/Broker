@@ -1,0 +1,160 @@
+#pragma once
+#include <boost/multiprecision/cpp_int.hpp>
+#include <helpers/database.hpp>
+#include <helpers/references.hpp>
+#include <map>
+#include <platform/charge_amounts.hpp>
+#include <set>
+#include <userver/utils/text_light.hpp>
+
+namespace sales::helpers {
+inline models::Proposal ReadProposal(const pg::ResultSet& rows) {
+    if (rows.IsEmpty())
+        throw ApiError<404>{"proposal_not_found", "Предложение не найдено"};
+    return models::ParseModelJson(
+        rows.AsSingleRow<json::Value>(), std::type_identity<models::Proposal>{});
+}
+
+inline models::Inquiry LockProposalInquiry(
+    pg::Transaction& transaction, const std::string& organization, const std::string& id) {
+    const auto rows = transaction.Execute(sql::kLockInquiries, organization, id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Входящий запрос не найден"};
+    auto inquiry = models::ParseModelJson(
+        rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
+    if (inquiry.converting || inquiry.shipment_id)
+        throw ApiError<409>{"conversion_started", "Запрос уже передан в поставку"};
+    return inquiry;
+}
+
+inline void StoreProposal(pg::Transaction& transaction, const std::string& organization,
+    const models::Proposal& value, std::int64_t expected, const std::string& actor) {
+    const auto document = json::ValueBuilder(value).ExtractValue();
+    const auto changed =
+        transaction.Execute(expected == 0 ? sql::kSaveProposal : sql::kUpdateProposal, organization,
+            document, expected);
+    if (changed.IsEmpty())
+        throw ApiError<409>{"revision_conflict", "Предложение изменено. Откройте его заново"};
+    transaction.Execute(sql::kWriteProposalHistory, organization, document, actor);
+}
+
+inline models::ProposalAmounts Amounts(std::int64_t quantity, const models::ProposalPrice& value) {
+    const auto a = platform::CalculateChargeAmounts(quantity, value.price_minor,
+        value.price_mode == models::PriceMode::Gross, value.vat_mode == models::VatMode::Exempt,
+        value.vat_rate_basis_points);
+    return {.net_minor = a.Net, .total_minor = a.Total, .vat_minor = a.Vat};
+}
+
+inline void AddAmounts(models::ProposalAmounts& target, const models::ProposalAmounts& value) {
+    target.net_minor += value.net_minor;
+    target.vat_minor += value.vat_minor;
+    target.total_minor += value.total_minor;
+}
+
+inline std::int64_t ConvertProposalAmount(std::int64_t amount, std::int64_t rate) {
+    const boost::multiprecision::cpp_int result =
+        (boost::multiprecision::cpp_int{amount} * rate + 500000) / 1000000;
+    // Keep totals exactly representable by consumers using integer JSON numbers.
+    if (result > 90000000000000LL)
+        throw ApiError<400>{"amount_overflow", "Сумма предложения слишком велика"};
+    return result.convert_to<std::int64_t>();
+}
+
+inline models::Proposal CalculateProposal(const Deps& deps,
+    const userver::server::request::RequestContext& context, models::ProposalInput input) try {
+    if (userver::utils::text::Trim(input.title).empty())
+        throw ApiError<400>{"empty_title", "Укажите название предложения"};
+    if (input.valid_until && *input.valid_until < input.calculation_date)
+        throw ApiError<400>{"invalid_dates", "Срок действия не может быть раньше даты расчёта"};
+    const auto token = platform::auth::GetAccessToken(context);
+    const auto settings = deps.finance.ApiV1FinanceSettingsGet({}, token);
+    models::Proposal result;
+    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
+    const auto inquiry_rows = deps.pg_cluster->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetInquiries, organization, input.inquiry_id);
+    if (inquiry_rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Входящий запрос не найден"};
+    const auto inquiry = models::ParseModelJson(
+        inquiry_rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
+    result.inquiry_revision = inquiry.revision;
+    result.customer_name = GetCounterparty(deps, context, inquiry.customer_id).name;
+    result.input = std::move(input);
+    result.status = models::ProposalStatus::Draft;
+    result.reporting_currency = settings.reporting_currency;
+    result.reporting.currency = result.reporting_currency;
+    std::map<std::string, models::ProposalTotal> totals;
+    std::map<std::string, std::int64_t> rates;
+    std::set<std::string> ids;
+    const auto accumulate = [&](const models::ProposalPrice& price,
+                                const models::ProposalAmounts& amount, bool sale) {
+        auto& total = totals[price.currency];
+        total.currency = price.currency;
+        AddAmounts(sale ? total.sale : total.purchase, amount);
+        if (!rates.contains(price.currency)) {
+            rates[price.currency] = price.currency == result.reporting_currency
+                ? 1000000
+                : deps.finance
+                      .ApiV1ExchangeRatesGet({.body = {.date = result.input.calculation_date,
+                                                  .from_currency = price.currency,
+                                                  .to_currency = result.reporting_currency}},
+                          token)
+                      .rate_millionths;
+        }
+        const auto rate = rates.at(price.currency);
+        const auto net = ConvertProposalAmount(amount.net_minor, rate);
+        const auto gross = ConvertProposalAmount(amount.total_minor, rate);
+        AddAmounts(sale ? result.reporting.sale : result.reporting.purchase,
+            {.net_minor = net, .total_minor = gross, .vat_minor = gross - net});
+    };
+    for (const auto& line : result.input.lines) {
+        if (!ids.insert(line.id).second)
+            throw ApiError<400>{
+                "duplicate_line", "Строки предложения должны иметь разные идентификаторы"};
+        const auto label =
+            deps.finance.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
+        if (label.archived ||
+            label.direction == clients::finance::models::FinancialLabelDirection::Expense ||
+            (line.purchase &&
+                label.direction != clients::finance::models::FinancialLabelDirection::Both))
+            throw ApiError<400>{
+                "invalid_label", "Выберите действующую метку, подходящую для дохода и расхода"};
+        models::CalculatedProposalLine row;
+        row.input = line;
+        row.label_name = label.name;
+        row.sale = Amounts(line.quantity_milli, line.sale);
+        accumulate(line.sale, row.sale, true);
+        if (line.purchase) {
+            row.purchase = Amounts(line.quantity_milli, *line.purchase);
+            accumulate(*line.purchase, *row.purchase, false);
+        }
+        if (line.supplier_id) {
+            const auto party = GetCounterparty(deps, context, *line.supplier_id);
+            if (party.archived)
+                throw ApiError<400>{"archived_supplier", "Поставщик находится в архиве"};
+            row.supplier_name = party.name;
+        }
+        result.lines.push_back(std::move(row));
+    }
+    for (const auto& [_, total] : totals)
+        result.totals.push_back(total);
+    for (const auto& [currency, rate] : rates)
+        result.rates.push_back({.currency = currency, .rate_millionths = rate});
+    if (result.reporting.sale.total_minor > 9000000000000000LL ||
+        result.reporting.purchase.total_minor > 9000000000000000LL)
+        throw ApiError<400>{"amount_overflow", "Сумма предложения слишком велика"};
+    return result;
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к справочникам расчёта"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить данные для расчёта"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис справочников недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
+}
+}  // namespace sales::helpers

@@ -15,7 +15,12 @@ import { type Session } from '../../shared/api/session';
 import type { Counterparty } from '../counterparties/CustomerSelect';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
 import { vatLabel, financialLabelUnits } from './labels/financialLabels';
-import { ServiceInvoiceActions, attachServiceInvoice } from './invoices/ServiceInvoiceActions';
+import {
+  BulkServiceInvoiceDialog,
+  type BulkServiceInvoice,
+} from './invoices/BulkServiceInvoiceDialog';
+import { bulkInvoiceProblem } from './invoices/bulkInvoices';
+import { RegistrySelectionActions } from '../registry/RegistrySelectionActions';
 import {
   formatFixed,
   type ServiceChargeScope,
@@ -93,6 +98,20 @@ export function ServiceCharges({
   const [archived, setArchived] = useState(false);
   const [version, setVersion] = useState(0);
   const [editing, setEditing] = useState<ServiceCharge | ReturnType<typeof newCharge>>();
+  const canInvoice = session.permissions.includes('finance.write_invoices');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [menu, setMenu] = useState<{ x: number; y: number }>();
+  const [bulk, setBulk] = useState<BulkServiceInvoice>();
+  const invoiceByCharge = new Map(invoices.map((invoice) => [invoice.service_charge_id, invoice]));
+  const selectedItems = items
+    .filter((item) => selected.has(item.id))
+    .map((item) => ({ ...item, invoice: invoiceByCharge.get(item.id) }));
+  const selectionProblem = bulkInvoiceProblem(selectedItems, locale);
+  function openBulk(mode: BulkServiceInvoice['mode']) {
+    if (selectionProblem) return;
+    setMenu(undefined);
+    setBulk({ mode, items: selectedItems });
+  }
   const edit = setEditing;
   useEffect(() => {
     const refresh = () => setVersion((old) => old + 1);
@@ -113,6 +132,9 @@ export function ServiceCharges({
         archived,
       ]);
       if (loadedScope.current !== scopeKey) {
+        setSelected(new Set());
+        setMenu(undefined);
+        setBulk(undefined);
         setItems([]);
         setInvoices([]);
         setSummary(emptySummary);
@@ -350,11 +372,55 @@ export function ServiceCharges({
               {failure}
             </p>
           )}
+          {canInvoice && (
+            <RegistrySelectionActions
+              count={selectedItems.length}
+              problem={selectionProblem}
+              actions={[
+                { label: translate('ui.createInvoice'), onClick: () => openBulk('new') },
+                { label: translate('ui.addToInvoice'), onClick: () => openBulk('existing') },
+              ]}
+              onClear={() => setSelected(new Set())}
+              menu={menu}
+              onCloseMenu={() => setMenu(undefined)}
+            />
+          )}
+          {canInvoice && bulk && (
+            <BulkServiceInvoiceDialog
+              selection={bulk}
+              session={session}
+              onClose={() => setBulk(undefined)}
+              onSaved={() => {
+                setSelected(new Set());
+                window.dispatchEvent(new Event('finance-charges-changed'));
+              }}
+            />
+          )}
           <div className="finance-services-table-wrap">
             <table className="finance-services-table">
               <thead>
                 <tr>
-                  <th>{translate('finance.serviceCounterparty')}</th>
+                  {canInvoice && (
+                    <th className="service-select-cell">
+                      <input
+                        type="checkbox"
+                        aria-label={translate('ui.selectCharges')}
+                        disabled={!items.length}
+                        checked={items.length > 0 && selectedItems.length === items.length}
+                        ref={(node) => {
+                          if (node)
+                            node.indeterminate =
+                              selectedItems.length > 0 && selectedItems.length < items.length;
+                        }}
+                        onChange={(event) =>
+                          setSelected(
+                            new Set(event.target.checked ? items.map((item) => item.id) : []),
+                          )
+                        }
+                      />
+                    </th>
+                  )}
+                  <th className="service-name-cell">{translate('finance.serviceCounterparty')}</th>
                   <th>{translate('registryField.direction')}</th>
                   <th>{translate('registryField.quantityPrice')}</th>
                   <th>{translate('finance.net')}</th>
@@ -365,17 +431,50 @@ export function ServiceCharges({
               </thead>
               <tbody>
                 {items.map((item) => {
-                  const invoice = invoices.find((x) => x.service_charge_id === item.id);
+                  const invoice = invoiceByCharge.get(item.id);
                   const editable = write && !invoice?.read_only;
                   return (
                     <tr
                       key={item.id}
                       {...serviceChargeRow(item, openServiceCharge, !editable, locale)}
+                      aria-selected={canInvoice ? selected.has(item.id) : undefined}
+                      onContextMenu={
+                        canInvoice
+                          ? (event) => {
+                              if ((event.target as HTMLElement).closest('a,input,button,summary'))
+                                return;
+                              event.preventDefault();
+                              if (!selected.has(item.id)) setSelected(new Set([item.id]));
+                              setMenu({
+                                x: Math.max(8, Math.min(event.clientX, innerWidth - 320)),
+                                y: Math.max(8, Math.min(event.clientY, innerHeight - 240)),
+                              });
+                            }
+                          : undefined
+                      }
                       title={
                         invoice?.read_only ? translate('finance.paidChargeReadonly') : undefined
                       }
                     >
-                      <td>
+                      {canInvoice && (
+                        <td className="service-select-cell">
+                          <input
+                            type="checkbox"
+                            aria-label={translate('ui.selectCharge', { name: item.label_name })}
+                            checked={selected.has(item.id)}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              setSelected((old) => {
+                                const next = new Set(old);
+                                if (checked) next.add(item.id);
+                                else next.delete(item.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </td>
+                      )}
+                      <td className="service-name-cell">
                         <strong>{item.label_name}</strong>
                         <span className="service-secondary">
                           {item.counterparty_name}
@@ -468,19 +567,6 @@ export function ServiceCharges({
                               })}
                             </span>
                           </a>
-                        ) : !item.archived &&
-                          session.permissions.includes('finance.write_invoices') ? (
-                          <ServiceInvoiceActions
-                            compact
-                            service={item}
-                            session={session}
-                            onSelect={async (selection) => {
-                              if (selection) {
-                                await attachServiceInvoice(item.id, selection, session);
-                                setVersion((v) => v + 1);
-                              }
-                            }}
-                          />
                         ) : (
                           <span className="hint">{translate('ui.notChosen')}</span>
                         )}

@@ -12,6 +12,24 @@ SET manager_subject = value.manager_subject,
     desired_delivery_date = value.desired_delivery_date,
     note = value.note,
     route_segments = value.route_segments,
+    accepted_proposal_id = CASE WHEN
+        (target.cargo_description, target.route_segments, target.ready_date, target.desired_delivery_date,
+         target.incoterms, target.carriage_terms, target.loading, target.delivery_city,
+         target.delivery_country, target.delivery_address)
+        IS NOT DISTINCT FROM
+        (value.cargo_description, value.route_segments, value.ready_date, value.desired_delivery_date,
+         value.incoterms, value.carriage_terms, value.loading, value.delivery_city,
+         value.delivery_country, value.delivery_address)
+        THEN target.accepted_proposal_id ELSE NULL END,
+    accepted_proposal_revision = CASE WHEN
+        (target.cargo_description, target.route_segments, target.ready_date, target.desired_delivery_date,
+         target.incoterms, target.carriage_terms, target.loading, target.delivery_city,
+         target.delivery_country, target.delivery_address)
+        IS NOT DISTINCT FROM
+        (value.cargo_description, value.route_segments, value.ready_date, value.desired_delivery_date,
+         value.incoterms, value.carriage_terms, value.loading, value.delivery_city,
+         value.delivery_country, value.delivery_address)
+        THEN target.accepted_proposal_revision ELSE NULL END,
     conversion = NULL,
     conversion_error = NULL,
     revision = target.revision + 1

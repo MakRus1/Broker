@@ -3,6 +3,7 @@
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
+#include <clients/finance/client.hpp>
 #include <clients/notifications/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
@@ -25,6 +26,7 @@ struct Deps {
     platform::Readiness* readiness;
     platform::configs::Source configs;
     clients::counterparties::Client counterparties;
+    clients::finance::Client finance;
     clients::notifications::Client notifications;
     clients::organizations::Client organizations;
     clients::shipments::Client shipments;
@@ -42,6 +44,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
                 component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},
         .counterparties =
             component_context.FindComponent<clients::counterparties::Component>().GetClient(),
+        .finance = component_context.FindComponent<clients::finance::Component>().GetClient(),
         .notifications =
             component_context.FindComponent<clients::notifications::Component>().GetClient(),
         .organizations =

@@ -42,7 +42,11 @@ auth:
     /api/v1/service-charges/history: finance.read_service_charges
     /api/v1/invoices/history: finance.read_invoices
     /api/v1/payments/history: finance.read_payments
+    /api/internal/v1/service-charges/apply-import: finance.import_service_charges
   organization-access: true
+  service-clients:
+    finance.import_service_charges:
+    - sales-dispatcher
 clients:
   shipments:
     service: shipments

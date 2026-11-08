@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '../../shared/api/session';
 import type { ColumnFilter } from '../registry/registryFilters';
 import { useLocalization } from '../localization/Localization';
-import { hasWorkFilter, salesWorkFilters } from './salesWorkFilters';
+import { hasWorkFilter, salesWorkFilters } from './salesWorkFilterState';
 import './salesWorkFilters.css';
 
 export function SalesWorkFilters({

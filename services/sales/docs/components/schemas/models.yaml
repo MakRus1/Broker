@@ -210,6 +210,14 @@ Inquiry:
     conversion_error:
       type: string
       maxLength: 2000
+    accepted_proposal_id: &id001
+      type: string
+      format: uuid
+    accepted_proposal_revision:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
   required:
   - organization_id
   - id
@@ -799,6 +807,313 @@ SalesContactHistoryEntry:
       $ref: '#/SalesContact'
   required:
   - revision
+  - actor
+  - created_at
+  - snapshot
+FinancialLabelUnit:
+  type: string
+  enum:
+  - container
+  - transportation
+  - ton
+  - day
+  - piece
+VatMode:
+  type: string
+  enum:
+  - exempt
+  - rate
+PriceMode:
+  type: string
+  enum:
+  - net
+  - gross
+ProposalStatus:
+  type: string
+  enum:
+  - draft
+  - offered
+  - accepted
+ProposalPrice:
+  type: object
+  additionalProperties: false
+  properties:
+    price_minor:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 100000000
+    currency: &id002
+      type: string
+      pattern: ^[A-Z]{3}$
+    price_mode:
+      $ref: '#/PriceMode'
+    vat_mode:
+      $ref: '#/VatMode'
+    vat_rate_basis_points:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 10000
+  required:
+  - price_minor
+  - currency
+  - price_mode
+  - vat_mode
+ProposalLine:
+  type: object
+  additionalProperties: false
+  properties:
+    id: *id001
+    label_id: *id001
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    quantity_milli:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 10000000
+    supplier_id: *id001
+    route_segment_id: *id001
+    sale:
+      $ref: '#/ProposalPrice'
+    purchase:
+      $ref: '#/ProposalPrice'
+    note:
+      type: string
+      maxLength: 4000
+  required:
+  - id
+  - label_id
+  - unit
+  - quantity_milli
+  - sale
+ProposalRate:
+  type: object
+  additionalProperties: false
+  properties:
+    currency: *id002
+    rate_millionths:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 1000000000000
+  required:
+  - currency
+  - rate_millionths
+ProposalInput:
+  type: object
+  additionalProperties: false
+  properties:
+    id: *id001
+    inquiry_id: *id001
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    calculation_date: &id003
+      type: string
+      format: date
+    valid_until: *id003
+    delivery_days:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 3650
+    note:
+      type: string
+      maxLength: 4000
+    lines:
+      type: array
+      minItems: 1
+      maxItems: 100
+      items:
+        $ref: '#/ProposalLine'
+  required:
+  - id
+  - inquiry_id
+  - title
+  - calculation_date
+  - lines
+SaveProposalRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id: &id004
+      type: string
+      format: uuid
+    inquiry_id: *id004
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    calculation_date: &id005
+      type: string
+      format: date
+    valid_until: *id005
+    delivery_days:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 3650
+    note:
+      type: string
+      maxLength: 4000
+    lines:
+      type: array
+      minItems: 1
+      maxItems: 100
+      items:
+        $ref: '#/ProposalLine'
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 9000000000000000
+  required:
+  - id
+  - inquiry_id
+  - title
+  - calculation_date
+  - lines
+  - expected_revision
+ProposalAmounts:
+  type: object
+  additionalProperties: false
+  properties:
+    net_minor:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 9000000000000000
+    vat_minor:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 9000000000000000
+    total_minor:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 9000000000000000
+  required:
+  - net_minor
+  - vat_minor
+  - total_minor
+CalculatedProposalLine:
+  type: object
+  additionalProperties: false
+  properties:
+    input:
+      $ref: '#/ProposalLine'
+    label_name:
+      type: string
+      maxLength: 256
+    supplier_name:
+      type: string
+      maxLength: 256
+    sale:
+      $ref: '#/ProposalAmounts'
+    purchase:
+      $ref: '#/ProposalAmounts'
+  required:
+  - input
+  - label_name
+  - sale
+ProposalTotal:
+  type: object
+  additionalProperties: false
+  properties:
+    currency: *id002
+    sale:
+      $ref: '#/ProposalAmounts'
+    purchase:
+      $ref: '#/ProposalAmounts'
+  required:
+  - currency
+  - sale
+  - purchase
+Proposal:
+  type: object
+  additionalProperties: false
+  properties:
+    input:
+      $ref: '#/ProposalInput'
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
+    status:
+      $ref: '#/ProposalStatus'
+    reporting_currency: *id002
+    rates:
+      type: array
+      maxItems: 200
+      items:
+        $ref: '#/ProposalRate'
+    lines:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/CalculatedProposalLine'
+    totals:
+      type: array
+      maxItems: 200
+      items:
+        $ref: '#/ProposalTotal'
+    reporting:
+      $ref: '#/ProposalTotal'
+    customer_name:
+      type: string
+      maxLength: 256
+    inquiry_revision:
+      type: integer
+      format: int64
+      minimum: 1
+  required:
+  - input
+  - revision
+  - status
+  - reporting_currency
+  - rates
+  - lines
+  - totals
+  - reporting
+  - customer_name
+  - inquiry_revision
+ProposalActionRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id: *id001
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 9000000000000000
+    action:
+      type: string
+      enum:
+      - offer
+      - accept
+  required:
+  - id
+  - expected_revision
+  - action
+ProposalHistoryEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    actor:
+      type: string
+      maxLength: 256
+    created_at:
+      type: string
+      format: date-time
+    snapshot:
+      $ref: '#/Proposal'
+  required:
   - actor
   - created_at
   - snapshot

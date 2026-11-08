@@ -1825,3 +1825,68 @@ ReconciliationResponse:
   required:
   - totals
   - operations
+ImportedServiceCharge:
+  type: object
+  additionalProperties: false
+  properties:
+    charge:
+      $ref: '#/SaveServiceChargeRequest'
+    label_name:
+      type: string
+      maxLength: 256
+    counterparty_name:
+      type: string
+      maxLength: 256
+  required:
+  - charge
+  - label_name
+  - counterparty_name
+ImportServiceChargesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    id:
+      type: string
+      format: uuid
+    actor_subject:
+      type: string
+      maxLength: 256
+    actor_issuer:
+      type: string
+      maxLength: 256
+    items:
+      type: array
+      minItems: 1
+      maxItems: 200
+      items:
+        $ref: '#/ImportedServiceCharge'
+    source:
+      $ref: '#/ServiceChargeImportSource'
+  required:
+  - organization_id
+  - id
+  - actor_subject
+  - actor_issuer
+  - items
+  - source
+ServiceChargeImportSource:
+  type: object
+  additionalProperties: false
+  properties:
+    type:
+      type: string
+      maxLength: 100
+    id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+  required:
+  - type
+  - id
+  - revision

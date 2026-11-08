@@ -1,3 +1,4 @@
+import { SalesProposals } from './SalesProposals';
 import { NextActionDate } from './NextActionDate';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
@@ -289,27 +290,31 @@ export function SalesPage({
       />
       {!editing && (
         <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
-          {['main', ...(resource === 'cards' ? ['contacts', 'inquiries'] : []), 'history'].map(
-            (name) => (
-              <button
-                key={name}
-                role="tab"
-                aria-selected={tab === name}
-                aria-pressed={tab === name}
-                onClick={() => setTab(name)}
-              >
-                {translate(
-                  name === 'contacts'
+          {[
+            'main',
+            ...(resource === 'cards' ? ['contacts', 'inquiries'] : ['proposals']),
+            'history',
+          ].map((name) => (
+            <button
+              key={name}
+              role="tab"
+              aria-selected={tab === name}
+              aria-pressed={tab === name}
+              onClick={() => setTab(name)}
+            >
+              {translate(
+                name === 'proposals'
+                  ? 'proposal.title'
+                  : name === 'contacts'
                     ? 'sales.contacts'
                     : name === 'main'
                       ? 'sales.main'
                       : name === 'history'
                         ? 'sales.history'
                         : 'sales.inquiries',
-                )}
-              </button>
-            ),
-          )}
+              )}
+            </button>
+          ))}
         </div>
       )}
       {failure && !editing && (
@@ -327,6 +332,21 @@ export function SalesPage({
             setValue(card);
             setDraft(card);
             initial.current = JSON.stringify(card);
+          }}
+        />
+      ) : tab === 'proposals' && inquiry && !editing ? (
+        <SalesProposals
+          inquiry={inquiry}
+          session={session}
+          onChanged={() => {
+            void request<{ item: Inquiry }>('/api/v1/sales/inquiries/get', session, {
+              id: inquiry.id,
+            })
+              .then(({ item }) => {
+                setValue(item);
+                setDraft(item);
+              })
+              .catch((e) => setFailure(e.message));
           }}
         />
       ) : tab === 'history' && !editing ? (

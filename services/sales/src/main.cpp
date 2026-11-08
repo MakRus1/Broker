@@ -10,6 +10,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/rfq.hpp>
 #include <components/shipment_dispatcher.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -75,6 +76,7 @@ int main(int argc, char* argv[]) {
 
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<sales::ShipmentDispatcher>();
+    component_list.Append<sales::RfqComponent>();
     component_list = sales::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

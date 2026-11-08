@@ -36,6 +36,8 @@ Notification:
       - shipment.route_changed
       - shipment.created
       - sales.inquiry.shipment_creation_failed
+      - sales.rfq.assigned
+      - sales.rfq.ready
   required:
   - id
   - entity_id
@@ -49,6 +51,8 @@ PublishedEvent:
   - $ref: '#/ShipmentRouteChanged'
   - $ref: '#/ShipmentCreated'
   - $ref: '#/InquiryShipmentCreationFailed'
+  - $ref: '#/RfqAssigned'
+  - $ref: '#/RfqReady'
 ShipmentNotificationPayload:
   type: object
   additionalProperties: false
@@ -198,3 +202,95 @@ InquiryShipmentCreationFailedPayload:
       type: string
       minLength: 1
       maxLength: 200
+RfqAssigned:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - type
+  - version
+  - organization_id
+  - payload
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200
+    type:
+      type: string
+      enum:
+      - sales.rfq.assigned
+      default: sales.rfq.assigned
+    version:
+      type: integer
+      enum:
+      - 1
+      default: 1
+    organization_id:
+      type: string
+      format: uuid
+    payload:
+      $ref: '#/RfqNotificationPayload'
+RfqReady:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - type
+  - version
+  - organization_id
+  - payload
+  properties:
+    id:
+      type: string
+      minLength: 1
+      maxLength: 200
+    type:
+      type: string
+      enum:
+      - sales.rfq.ready
+      default: sales.rfq.ready
+    version:
+      type: integer
+      enum:
+      - 1
+      default: 1
+    organization_id:
+      type: string
+      format: uuid
+    payload:
+      $ref: '#/RfqNotificationPayload'
+RfqNotificationPayload:
+  type: object
+  additionalProperties: false
+  properties:
+    rfq_id:
+      type: string
+      format: uuid
+    rfq_title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+    recipient_issuer:
+      type: string
+      minLength: 1
+      maxLength: 500
+    recipient_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    actor_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+  required:
+  - rfq_id
+  - rfq_title
+  - revision
+  - recipient_issuer
+  - recipient_subject
+  - actor_subject

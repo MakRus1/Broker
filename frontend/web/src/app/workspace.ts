@@ -1,7 +1,7 @@
 import { translate, type Locale } from '../../../shared/i18n/catalog';
 export type WorkspaceTab = { id: string; route: string; title: string };
 export function isWorkspaceRoute(route: string): boolean {
-  return /^\/(shipments|transportations|counterparties|bank-accounts|sales|inquiries|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+  return /^\/(shipments|transportations|counterparties|bank-accounts|sales|inquiries|rfqs|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
     route,
   );
 }
@@ -34,6 +34,7 @@ export function workspaceTitle(route: string, locale: Locale = 'ru') {
   if (route === '/receipts/new') return translate(locale, 'entity.newReceipt');
   if (route.startsWith('/receipts/')) return translate(locale, 'entity.receipt');
   if (route.startsWith('/sales')) return translate(locale, 'sales.funnel');
+  if (route.startsWith('/rfqs/')) return translate(locale, 'rfq.title');
   if (route.startsWith('/inquiries')) return translate(locale, 'sales.inquiries');
   if (route === '/contracts') return translate(locale, 'nav.contracts');
   if (/^\/contracts\/new(?:\/|$)/.test(route)) return translate(locale, 'entity.newContract');

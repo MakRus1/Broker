@@ -1,5 +1,7 @@
 #pragma once
+#include <components/rfq.hpp>
 #include <helpers/database.hpp>
+#include <helpers/editable_inquiry.hpp>
 #include <helpers/references.hpp>
 #include <map>
 #include <platform/charge_amounts.hpp>
@@ -13,18 +15,6 @@ inline models::Proposal ReadProposal(const pg::ResultSet& rows) {
         throw ApiError<404>{"proposal_not_found", "Предложение не найдено"};
     return models::ParseModelJson(
         rows.AsSingleRow<json::Value>(), std::type_identity<models::Proposal>{});
-}
-
-inline models::Inquiry LockProposalInquiry(
-    pg::Transaction& transaction, const std::string& organization, const std::string& id) {
-    const auto rows = transaction.Execute(sql::kLockInquiries, organization, id);
-    if (rows.IsEmpty())
-        throw ApiError<404>{"not_found", "Входящий запрос не найден"};
-    auto inquiry = models::ParseModelJson(
-        rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
-    if (inquiry.converting || inquiry.shipment_id)
-        throw ApiError<409>{"conversion_started", "Запрос уже передан в поставку"};
-    return inquiry;
 }
 
 inline void StoreProposal(pg::Transaction& transaction, const std::string& organization,
@@ -111,7 +101,8 @@ inline models::Proposal CalculateProposal(const Deps& deps,
         AddAmounts(sale ? result.reporting.sale : result.reporting.purchase,
             {.net_minor = net, .total_minor = gross, .vat_minor = gross - net});
     };
-    for (const auto& line : result.input.lines) {
+    for (auto& line : result.input.lines) {
+        deps.rfq->ResolveQuote(organization, result.input, inquiry, line);
         if (!ids.insert(line.id).second)
             throw ApiError<400>{
                 "duplicate_line", "Строки предложения должны иметь разные идентификаторы"};

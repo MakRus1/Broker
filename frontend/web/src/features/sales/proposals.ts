@@ -15,6 +15,7 @@ export type ProposalLine = {
   route_segment_id?: string;
   sale: ProposalPrice;
   purchase?: ProposalPrice;
+  quote_source?: { rfq_id: string; revision: number; quote_id: string; line_id: string };
   note?: string;
 };
 export type ProposalInput = {

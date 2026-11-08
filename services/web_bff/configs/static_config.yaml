@@ -433,6 +433,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-sales-rfqs-get:
+            path: /api/v1/sales/rfqs/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-rfqs-history:
+            path: /api/v1/sales/rfqs/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-rfqs-list:
+            path: /api/v1/sales/rfqs/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-rfqs-save:
+            path: /api/v1/sales/rfqs/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-sales-settings:
             path: /api/v1/sales/settings
             method: POST

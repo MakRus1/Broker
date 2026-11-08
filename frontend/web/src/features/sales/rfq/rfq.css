@@ -1,0 +1,32 @@
+.rfq-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.rfq-quote-line {
+  display: grid;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rfq-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding-block: 20px;
+}
+.rfq-import > :first-child {
+  flex: 1 1 300px;
+}
+.rfq-comparison {
+  width: 100%;
+}
+.rfq-comparison th,
+.rfq-comparison td {
+  text-align: left;
+  padding: 12px;
+  vertical-align: top;
+}

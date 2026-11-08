@@ -36,6 +36,8 @@ Notification:
       - shipment.route_changed
       - shipment.created
       - sales.inquiry.shipment_creation_failed
+      - sales.rfq.assigned
+      - sales.rfq.ready
   required:
   - id
   - entity_id

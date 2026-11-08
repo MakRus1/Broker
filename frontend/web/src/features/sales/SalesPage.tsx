@@ -1,3 +1,4 @@
+import { SalesRfqs } from './rfq/SalesRfqs';
 import { SalesProposals } from './SalesProposals';
 import { NextActionDate } from './NextActionDate';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -292,7 +293,7 @@ export function SalesPage({
         <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
           {[
             'main',
-            ...(resource === 'cards' ? ['contacts', 'inquiries'] : ['proposals']),
+            ...(resource === 'cards' ? ['contacts', 'inquiries'] : ['rfqs', 'proposals']),
             'history',
           ].map((name) => (
             <button
@@ -303,15 +304,17 @@ export function SalesPage({
               onClick={() => setTab(name)}
             >
               {translate(
-                name === 'proposals'
-                  ? 'proposal.title'
-                  : name === 'contacts'
-                    ? 'sales.contacts'
-                    : name === 'main'
-                      ? 'sales.main'
-                      : name === 'history'
-                        ? 'sales.history'
-                        : 'sales.inquiries',
+                name === 'rfqs'
+                  ? 'rfq.title'
+                  : name === 'proposals'
+                    ? 'proposal.title'
+                    : name === 'contacts'
+                      ? 'sales.contacts'
+                      : name === 'main'
+                        ? 'sales.main'
+                        : name === 'history'
+                          ? 'sales.history'
+                          : 'sales.inquiries',
               )}
             </button>
           ))}
@@ -334,6 +337,8 @@ export function SalesPage({
             initial.current = JSON.stringify(card);
           }}
         />
+      ) : tab === 'rfqs' && inquiry && !editing ? (
+        <SalesRfqs inquiry={inquiry} session={session} />
       ) : tab === 'proposals' && inquiry && !editing ? (
         <SalesProposals
           inquiry={inquiry}

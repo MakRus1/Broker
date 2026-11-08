@@ -1830,10 +1830,12 @@ ImportedServiceCharge:
   properties:
     charge:
       $ref: '#/SaveServiceChargeRequest'
-    label_name: &id001
+    label_name:
       type: string
       maxLength: 256
-    counterparty_name: *id001
+    counterparty_name:
+      type: string
+      maxLength: 256
   required:
   - charge
   - label_name
@@ -1842,12 +1844,18 @@ ImportServiceChargesRequest:
   type: object
   additionalProperties: false
   properties:
-    organization_id: &id002
+    organization_id:
       type: string
       format: uuid
-    id: *id002
-    actor_subject: *id001
-    actor_issuer: *id001
+    id:
+      type: string
+      format: uuid
+    actor_subject:
+      type: string
+      maxLength: 256
+    actor_issuer:
+      type: string
+      maxLength: 256
     items:
       type: array
       minItems: 1

@@ -210,7 +210,7 @@ Inquiry:
     conversion_error:
       type: string
       maxLength: 2000
-    accepted_proposal_id: &id001
+    accepted_proposal_id:
       type: string
       format: uuid
     accepted_proposal_revision:
@@ -843,7 +843,7 @@ ProposalPrice:
       format: int64
       minimum: 0
       maximum: 100000000
-    currency: &id002
+    currency:
       type: string
       pattern: ^[A-Z]{3}$
     price_mode:
@@ -864,8 +864,12 @@ ProposalLine:
   type: object
   additionalProperties: false
   properties:
-    id: *id001
-    label_id: *id001
+    id:
+      type: string
+      format: uuid
+    label_id:
+      type: string
+      format: uuid
     unit:
       $ref: '#/FinancialLabelUnit'
     quantity_milli:
@@ -873,8 +877,12 @@ ProposalLine:
       format: int64
       minimum: 1
       maximum: 10000000
-    supplier_id: *id001
-    route_segment_id: *id001
+    supplier_id:
+      type: string
+      format: uuid
+    route_segment_id:
+      type: string
+      format: uuid
     sale:
       $ref: '#/ProposalPrice'
     purchase:
@@ -892,7 +900,9 @@ ProposalRate:
   type: object
   additionalProperties: false
   properties:
-    currency: *id002
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
     rate_millionths:
       type: integer
       format: int64
@@ -905,16 +915,22 @@ ProposalInput:
   type: object
   additionalProperties: false
   properties:
-    id: *id001
-    inquiry_id: *id001
+    id:
+      type: string
+      format: uuid
+    inquiry_id:
+      type: string
+      format: uuid
     title:
       type: string
       minLength: 1
       maxLength: 200
-    calculation_date: &id003
+    calculation_date:
       type: string
       format: date
-    valid_until: *id003
+    valid_until:
+      type: string
+      format: date
     delivery_days:
       type: integer
       format: int64
@@ -939,18 +955,22 @@ SaveProposalRequest:
   type: object
   additionalProperties: false
   properties:
-    id: &id004
+    id:
       type: string
       format: uuid
-    inquiry_id: *id004
+    inquiry_id:
+      type: string
+      format: uuid
     title:
       type: string
       minLength: 1
       maxLength: 200
-    calculation_date: &id005
+    calculation_date:
       type: string
       format: date
-    valid_until: *id005
+    valid_until:
+      type: string
+      format: date
     delivery_days:
       type: integer
       format: int64
@@ -1024,7 +1044,9 @@ ProposalTotal:
   type: object
   additionalProperties: false
   properties:
-    currency: *id002
+    currency:
+      type: string
+      pattern: ^[A-Z]{3}$
     sale:
       $ref: '#/ProposalAmounts'
     purchase:
@@ -1046,7 +1068,9 @@ Proposal:
       maximum: 9000000000000000
     status:
       $ref: '#/ProposalStatus'
-    reporting_currency: *id002
+    reporting_currency:
+      type: string
+      pattern: ^[A-Z]{3}$
     rates:
       type: array
       maxItems: 200
@@ -1086,7 +1110,9 @@ ProposalActionRequest:
   type: object
   additionalProperties: false
   properties:
-    id: *id001
+    id:
+      type: string
+      format: uuid
     expected_revision:
       type: integer
       format: int64

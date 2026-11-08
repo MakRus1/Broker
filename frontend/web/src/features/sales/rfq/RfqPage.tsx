@@ -1,3 +1,5 @@
+import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
+import { registryValueLabel } from '../../registry/registryLabels';
 import { useEffect, useRef, useState } from 'react';
 import type { Session } from '../../../shared/api/session';
 import { request } from '../../../shared/api/http';
@@ -124,6 +126,13 @@ export function RfqPage({
               <RecordSection title={translate('rfq.quotes')}>
                 <dl className="rfq-card-meta">
                   <div>
+                    <dt>{translate('rfq.segment')}</dt>
+                    <dd>
+                      {registryValueLabel('mode', value.route_segment.type, locale)} ·{' '}
+                      {sharedRouteDirection(value.route_segment, locale)}
+                    </dd>
+                  </div>
+                  <div>
                     <dt>{translate('rfq.responsible')}</dt>
                     <dd>
                       <EmployeeName session={session} subject={value.input.responsible_subject} />
@@ -138,7 +147,7 @@ export function RfqPage({
                     </dd>
                   </div>
                 </dl>
-                <RfqDetails value={value} />
+                <RfqDetails value={value} showRoute={false} />
               </RecordSection>
             ) : (
               history.map((entry, i) => (

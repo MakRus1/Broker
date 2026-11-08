@@ -1362,6 +1362,7 @@
   "rfq.servicesHint": "Enter the services and prices offered by the supplier. Each line can be added to the proposal separately.",
   "rfq.addService": "Add another service",
   "rfq.priceNet": "Price before tax",
+  "rfq.serviceCount": "Services: {count}",
   "rfq.title": "Requests for quotation",
   "rfq.details": "Route leg and owner",
   "rfq.segment": "Route leg",
@@ -1377,7 +1378,8 @@
   "rfq.removeLine": "Remove line",
   "rfq.removeQuote": "Remove quotation",
   "rfq.addQuote": "Add quotation",
-  "rfq.import": "Purchase from quotations",
+  "rfq.importHint": "Choose a ready quotation to import its services and purchase prices. Set selling prices separately.",
+  "rfq.import": "Add services from a quotation",
   "rfq.chooseQuote": "Select a supplier option",
   "rfq.addToProposal": "Add to proposal",
   "rfq.create": "Create RFQ",
@@ -1387,7 +1389,7 @@
   "notifications.rfqAssigned": "You were assigned RFQ “{number}”",
   "notifications.rfqReady": "Quotations are ready for “{number}”",
   "rfq.unit": "Unit",
-  "rfq.source": "Source quotation",
+  "rfq.source": "From quotation",
   "rfq.snapshotHint": "Purchase uses the selected quotation snapshot.",
-  "rfq.detachSource": "Edit purchase manually"
+  "rfq.detachSource": "Edit manually"
 }

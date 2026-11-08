@@ -146,7 +146,7 @@ export function SharedRouteFields({
     </div>
   );
 }
-function CompanyName({
+export function CompanyName({
   id,
   customers,
   session,

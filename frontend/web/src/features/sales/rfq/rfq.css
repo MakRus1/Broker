@@ -122,7 +122,7 @@
 }
 .rfq-comparison {
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 480px;
 }
 .rfq-comparison small {
   display: block;
@@ -147,4 +147,85 @@
 }
 .rfq-editor fieldset > button {
   justify-self: start;
+}
+
+.sales-proposals.rfq-editor {
+  display: block;
+}
+.rfq-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.rfq-quotations {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.rfq-quotation {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: clip;
+}
+.rfq-quotation > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.rfq-quotation > summary::-webkit-details-marker {
+  display: none;
+}
+.rfq-quotation > summary .hint {
+  margin-left: auto;
+}
+.rfq-quotation-body {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+.rfq-quotation-editor-group {
+  display: grid;
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 0;
+}
+.rfq-quotation-editor-group > h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.rfq-quotation-editor-group > button {
+  justify-self: start;
+}
+
+.rfq-import > .rfq-import-hint {
+  flex: 1 0 100%;
+  margin: 0;
+}
+.rfq-import > .app-select {
+  flex: 1 1 300px;
+}
+
+.sales-workbench:has(.rfq-editor) {
+  overflow: visible;
+}
+.rfq-quotation > summary {
+  line-height: 20px;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+.rfq-quotation > summary > * {
+  margin-block: 0;
+}
+.rfq-quotation > summary > svg {
+  flex: 0 0 16px;
+  transform: rotate(-90deg);
+}
+.rfq-quotation[open] > summary > svg {
+  transform: none;
 }

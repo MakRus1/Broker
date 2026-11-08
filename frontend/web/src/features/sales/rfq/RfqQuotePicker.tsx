@@ -1,3 +1,4 @@
+import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
 import { quotationLines } from './quotationImport';
 import { useEffect, useState } from 'react';
 import type { Session } from '../../../shared/api/session';
@@ -17,7 +18,7 @@ export function RfqQuotePicker({
   session: Session;
   onAdd: (lines: ProposalLine[], names: Record<string, string>) => void;
 }) {
-  const { translate } = useLocalization();
+  const { translate, locale } = useLocalization();
   const [items, setItems] = useState<Rfq[]>([]);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
@@ -40,6 +41,7 @@ export function RfqQuotePicker({
   );
   return (
     <div className="rfq-import">
+      <p className="rfq-import-hint hint">{translate('rfq.importHint')}</p>
       <Select
         label={translate('rfq.import')}
         value={selected}
@@ -47,7 +49,7 @@ export function RfqQuotePicker({
           { value: '', label: translate('rfq.chooseQuote') },
           ...choices.map(({ rfq, quote, value }) => ({
             value,
-            label: `${rfq.input.title} · ${quote.supplier_name ?? ''} · ${quote.title} · ${quote.lines.map((l) => `${formatFixed(l.price.price_minor, 2)} ${l.price.currency}`).join(' + ')}`,
+            label: `${sharedRouteDirection(rfq.route_segment, locale)} · ${rfq.input.title} · ${quote.supplier_name ?? ''} · ${quote.title} · ${quote.lines.map((l) => `${formatFixed(l.price.price_minor, 2)} ${l.price.currency}`).join(' + ')}`,
           })),
         ]}
         onChange={setSelected}

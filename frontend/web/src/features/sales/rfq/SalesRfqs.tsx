@@ -79,9 +79,7 @@ export function SalesRfqs({ inquiry, session }: { inquiry: Inquiry; session: Ses
       {items.map((value) => (
         <article key={value.input.id} className="rfq-card">
           <div className="rfq-card-heading">
-            <h3>
-              <a href={`#/rfqs/${value.input.id}`}>{value.input.title}</a>
-            </h3>
+            <h3>{value.input.title}</h3>
             <span className="record-layout-status">
               {translate(`rfq.status.${value.input.status}`)}
             </span>

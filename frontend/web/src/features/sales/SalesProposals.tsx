@@ -1,3 +1,4 @@
+import { CompanyName } from '../routes/SharedRouteDetails';
 import { NumberField, PriceFields } from './ProposalFields';
 import { RfqQuotePicker } from './rfq/RfqQuotePicker';
 import { registryValueLabel } from '../registry/registryLabels';
@@ -299,19 +300,6 @@ export function SalesProposals({
                     key={line.id}
                     title={`${translate('proposal.service')} ${index + 1}`}
                   >
-                    {line.quote_source && (
-                      <p className="hint">
-                        <a href={`#/rfqs/${line.quote_source.rfq_id}`}>{translate('rfq.source')}</a>
-                        {' · '}
-                        {translate('rfq.snapshotHint')}
-                        <button
-                          type="button"
-                          onClick={() => update({ ...line, quote_source: undefined })}
-                        >
-                          {translate('rfq.detachSource')}
-                        </button>
-                      </p>
-                    )}
                     <fieldset disabled={!!line.quote_source}>
                       <div className="record-fields record-fields-two">
                         <ServiceChargeLookup<FinancialLabel>
@@ -379,36 +367,94 @@ export function SalesProposals({
                         />
                       </div>
                     </fieldset>
-                    <h3>{translate('proposal.sale')}</h3>
-                    <PriceFields value={line.sale} onChange={(sale) => update({ ...line, sale })} />
+                    <div className="proposal-price-section">
+                      <h3>{translate('proposal.sale')}</h3>
+                      <PriceFields
+                        value={line.sale}
+                        onChange={(sale) => update({ ...line, sale })}
+                      />
+                    </div>
                     {line.purchase ? (
-                      <>
+                      <div className="proposal-price-section">
                         <h3>{translate('proposal.purchase')}</h3>
-                        <fieldset disabled={!!line.quote_source}>
-                          <PriceFields
-                            value={line.purchase}
-                            onChange={(purchase) => update({ ...line, purchase })}
-                          />
-                          <CustomerSelect
-                            disabled={busy}
-                            items={noParties}
-                            session={session}
-                            value={line.supplier_id ?? ''}
-                            label={translate('proposal.supplier')}
-                            onChange={(supplier_id) =>
-                              update({ ...line, supplier_id: supplier_id || undefined })
-                            }
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              update({ ...line, purchase: undefined, supplier_id: undefined })
-                            }
-                          >
-                            {translate('proposal.removePurchase')}
-                          </button>
-                        </fieldset>
-                      </>
+                        {line.quote_source && (
+                          <div className="proposal-source" title={translate('rfq.snapshotHint')}>
+                            <a href={`#/rfqs/${line.quote_source.rfq_id}`}>
+                              {translate('rfq.source')}
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => update({ ...line, quote_source: undefined })}
+                            >
+                              {translate('rfq.detachSource')}
+                            </button>
+                          </div>
+                        )}
+                        {line.quote_source ? (
+                          <dl className="proposal-purchase-snapshot">
+                            <div>
+                              <dt>{translate('proposal.price')}</dt>
+                              <dd>
+                                {formatFixed(line.purchase.price_minor, 2)} {line.purchase.currency}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('finance.priceMode')}</dt>
+                              <dd>
+                                {translate(
+                                  line.purchase.price_mode === 'gross'
+                                    ? 'proposal.priceGross'
+                                    : 'rfq.priceNet',
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('proposal.vat')}</dt>
+                              <dd>
+                                {line.purchase.vat_mode === 'exempt'
+                                  ? translate('ui.noVat')
+                                  : `${(line.purchase.vat_rate_basis_points ?? 0) / 100}%`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('proposal.supplier')}</dt>
+                              <dd>
+                                <CompanyName
+                                  id={line.supplier_id}
+                                  customers={noParties}
+                                  session={session}
+                                />
+                              </dd>
+                            </div>
+                          </dl>
+                        ) : (
+                          <fieldset disabled={!!line.quote_source}>
+                            <PriceFields
+                              value={line.purchase}
+                              onChange={(purchase) => update({ ...line, purchase })}
+                            />
+                            <CustomerSelect
+                              disabled={busy}
+                              items={noParties}
+                              session={session}
+                              value={line.supplier_id ?? ''}
+                              label={translate('proposal.supplier')}
+                              onChange={(supplier_id) =>
+                                update({ ...line, supplier_id: supplier_id || undefined })
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                update({ ...line, purchase: undefined, supplier_id: undefined })
+                              }
+                            >
+                              {translate('proposal.removePurchase')}
+                            </button>
+                          </fieldset>
+                        )}
+                      </div>
                     ) : (
                       <button
                         type="button"

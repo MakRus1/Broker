@@ -109,6 +109,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-sales-proposals-action:
+            path: /api/v1/sales/proposals/action
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-proposals-history:
+            path: /api/v1/sales/proposals/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-proposals-list:
+            path: /api/v1/sales/proposals/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-proposals-save:
+            path: /api/v1/sales/proposals/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-sales-settings:
             path: /api/v1/sales/settings
             method: POST
@@ -119,6 +143,8 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-finance:
+            base-url: $client-finance-base-url
         client-notifications:
             base-url: $client-notifications-base-url
         client-organizations:
@@ -170,6 +196,10 @@ components_manager:
                 /api/v1/sales/inquiries/history: sales.read
                 /api/v1/sales/inquiries/list: sales.read
                 /api/v1/sales/inquiries/save: sales.write
+                /api/v1/sales/proposals/action: sales.write
+                /api/v1/sales/proposals/history: sales.read
+                /api/v1/sales/proposals/list: sales.read
+                /api/v1/sales/proposals/save: sales.write
                 /api/v1/sales/settings: sales.read
             permission-dependencies:
                 sales.read:

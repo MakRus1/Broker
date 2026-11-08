@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Перенос согласованных услуг
+  version: '1'
+paths:
+  /api/internal/v1/service-charges/apply-import:
+    post:
+      summary: Идемпотентный перенос согласованного расчёта в услуги поставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/ImportServiceChargesRequest
+      responses:
+        '200':
+          description: Услуги перенесены
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  imported:
+                    type: boolean
+                required:
+                - imported
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/FinancialLabelError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/FinancialLabelError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/FinancialLabelError
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

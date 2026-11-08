@@ -21,6 +21,9 @@ clients:
   transport_locations:
     service: transport_locations
     transport: http
+  finance:
+    service: finance
+    transport: http
 auth:
   audience: broker-logistics
   roles-client: broker-logistics
@@ -44,6 +47,10 @@ auth:
     /api/v1/sales/contacts/list: sales.read
     /api/v1/sales/contacts/update: sales.write
     /api/v1/sales/contacts/history: sales.read
+    /api/v1/sales/proposals/save: sales.write
+    /api/v1/sales/proposals/list: sales.read
+    /api/v1/sales/proposals/action: sales.write
+    /api/v1/sales/proposals/history: sales.read
   organization-access: true
 service_accounts:
   dispatcher:
@@ -52,6 +59,7 @@ service_accounts:
     permissions:
     - shipments.create
     - notifications.publish
+    - finance.import_service_charges
     config:
       client_id: dispatcher-client-id
       client_secret: dispatcher-client-secret

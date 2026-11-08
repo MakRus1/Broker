@@ -3599,9 +3599,12 @@ details[open] > .route-stage-summary::after {
   padding: 16px 14px;
   border-bottom: 1px solid var(--divider);
 }
-.finance-services-table th:first-child,
-.finance-services-table td:first-child {
+.finance-services-table .service-name-cell {
   min-width: 220px;
+}
+.finance-services-table .service-select-cell {
+  width: 40px;
+  padding-inline: 12px 0;
 }
 .finance-services-table .service-numeric {
   white-space: nowrap;
@@ -3626,9 +3629,6 @@ details[open] > .route-stage-summary::after {
   font-size: 12px;
   padding: 7px 10px;
   white-space: nowrap;
-}
-.service-invoice-field.compact .actions {
-  margin: 0;
 }
 .service-invoice-label {
   display: block;

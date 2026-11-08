@@ -1,5 +1,5 @@
 import { SalesWorkFilters } from './SalesWorkFilters';
-import { toggleWorkFilter } from './salesWorkFilters';
+import { toggleWorkFilter } from './salesWorkFilterState';
 import { NextActionDate } from './NextActionDate';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';

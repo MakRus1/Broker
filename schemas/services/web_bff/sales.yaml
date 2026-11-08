@@ -971,6 +971,266 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/sales/models.yaml#/ApiError
+  /api/v1/sales/proposals/save:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/SaveProposalRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: components/schemas/sales/models.yaml#/Proposal
+                required:
+                - item
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Сохранить черновик предложения
+  /api/v1/sales/proposals/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/IdRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  items:
+                    items:
+                      $ref: components/schemas/sales/models.yaml#/Proposal
+                    type: array
+                required:
+                - items
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Предложения входящего запроса
+  /api/v1/sales/proposals/action:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/ProposalActionRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: components/schemas/sales/models.yaml#/Proposal
+                required:
+                - item
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Предложить или согласовать вариант
+  /api/v1/sales/proposals/history:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: components/schemas/sales/models.yaml#/HistoryRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  items:
+                    items:
+                      $ref: components/schemas/sales/models.yaml#/ProposalHistoryEntry
+                    type: array
+                required:
+                - items
+                type: object
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Версии предложения
 components:
   securitySchemes:
     BrowserSession:

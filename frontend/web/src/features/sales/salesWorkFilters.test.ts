@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasWorkFilter, salesWorkFilters, toggleWorkFilter } from './salesWorkFilters';
+import { hasWorkFilter, salesWorkFilters, toggleWorkFilter } from './salesWorkFilterState';
 import {
   filterRequest,
   restoreColumnFilters,

@@ -76,7 +76,6 @@ export function ServiceInvoiceActions({
   session,
   selection,
   onSelect,
-  compact = false,
   current,
   initialMode,
   onClose,
@@ -87,7 +86,6 @@ export function ServiceInvoiceActions({
   summary?: ReactNode;
   service: ServiceContext;
   session: Session;
-  compact?: boolean;
   current?: { invoice_id: string; number: string; invoice_date: string };
   selection?: ServiceInvoiceSelection;
   onSelect: (selection: ServiceInvoiceSelection | undefined) => Promise<void> | void;
@@ -205,11 +203,7 @@ export function ServiceInvoiceActions({
     />
   );
   return (
-    <div
-      className={
-        initialMode ? 'bulk-invoice-picker' : `service-invoice-field${compact ? ' compact' : ''}`
-      }
-    >
+    <div className={initialMode ? 'bulk-invoice-picker' : 'service-invoice-field'}>
       {!initialMode && field}
       {selection?.kind === 'new' && (
         <span className="service-secondary">{translate('finance.createOnChargeSave')}</span>

@@ -25,6 +25,8 @@ export type Inquiry = {
   conversion_error?: string;
   shipment_id?: string;
   converting: boolean;
+  accepted_proposal_id?: string;
+  accepted_proposal_revision?: number;
   cargo_description?: string;
   incoterms?: string;
   carriage_terms?: string;
@@ -44,6 +46,8 @@ export function saveSalesBody(value: SalesEntity) {
   const { revision, organization_id: _organization, ...body } = value;
   if ('number' in body) {
     const {
+      accepted_proposal_id: _proposal,
+      accepted_proposal_revision: _proposalRevision,
       number: _number,
       conversion_error: _conversionError,
       shipment_id: _shipment,

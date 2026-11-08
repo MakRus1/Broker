@@ -1,9 +1,9 @@
 #pragma once
 #include <helpers/exchange_amounts.hpp>
 #include <helpers/financial_labels.hpp>
-#include <helpers/service_charge_amounts.hpp>
 #include <helpers/service_charge_references.hpp>
 #include <limits>
+#include <platform/charge_amounts.hpp>
 #include <platform/date_validation.hpp>
 
 namespace finance::helpers {
@@ -72,7 +72,9 @@ inline pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceCh
         throw ApiError<400>{"invalid_service_date", "Укажите дату услуги не раньше 01.01.1900"};
     ValidateCurrency(value.currency);
     ValidateCurrency(value.invoice_currency);
-    const auto amounts = CalculateAmounts(value);
+    const auto amounts = platform::CalculateChargeAmounts(value.quantity_milli, value.price_minor,
+        value.price_mode == models::PriceMode::Gross, value.vat_mode == models::VatMode::Exempt,
+        value.vat_rate_basis_points);
     const auto invoice_net = ConvertAmount(amounts.Net, exchange_rate.Millionths);
     const auto invoice_total = ConvertAmount(amounts.Total, exchange_rate.Millionths);
     auto note = value.note;

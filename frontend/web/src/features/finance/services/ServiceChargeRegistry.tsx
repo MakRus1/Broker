@@ -1,12 +1,14 @@
-import { useNotifications } from '../../notifications/Notifications';
 import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { RegistrySelectionActions } from '../../registry/RegistrySelectionActions';
 import { usePagedRowSelection } from '../../registry/usePagedRowSelection';
-import { ServiceInvoiceActions } from '../invoices/ServiceInvoiceActions';
-import { attachBulkInvoice, bulkInvoiceProblem } from '../invoices/bulkInvoices';
+import {
+  BulkServiceInvoiceDialog,
+  type BulkServiceInvoice,
+} from '../invoices/BulkServiceInvoiceDialog';
+import { bulkInvoiceProblem } from '../invoices/bulkInvoices';
 import './bulkServices.css';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -98,10 +100,7 @@ export function ServiceChargeRegistry({
   const more = page.loadMore;
   const selection = usePagedRowSelection(page, 500, active);
   const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] }>();
-  const [bulk, setBulk] = useState<{ mode: 'new' | 'existing'; items: Row[] }>();
-  const notifications = useNotifications();
-  const setNotice = (message: string) =>
-    notifications.publish({ level: 'success', message, route: '/service-charges' });
+  const [bulk, setBulk] = useState<BulkServiceInvoice>();
   const selectedItems = selection.items;
   const canInvoice = session.permissions.includes('finance.write_invoices');
   const problem =
@@ -357,35 +356,11 @@ export function ServiceChargeRegistry({
         />
       )}
       {bulk && (
-        <ServiceInvoiceActions
-          service={bulk.items[0]}
+        <BulkServiceInvoiceDialog
+          selection={bulk}
           session={session}
-          initialMode={bulk.mode}
           onClose={() => setBulk(undefined)}
-          summary={
-            <p className="hint">
-              {translate('bulk.chargeCount', { count: bulk.items.length })} ·{' '}
-              {bulk.items[0].counterparty_name} · {translate('registryField.total_minor')}:{' '}
-              {formatFixed(
-                bulk.items.reduce((sum, item) => sum + BigInt(item.invoice_total_minor), 0n),
-                2,
-              )}{' '}
-              {bulk.items[0].invoice_currency}
-            </p>
-          }
-          onSelect={async (value) => {
-            if (!value) return;
-            const saved = await attachBulkInvoice(
-              bulk.items.map((item) => item.id),
-              value,
-              session,
-            );
-            setNotice(
-              translate('bulk.invoiceSaved', {
-                number: saved.invoice.number,
-                count: bulk.items.length,
-              }),
-            );
+          onSaved={() => {
             selection.clear();
             setRefresh((old) => old + 1);
           }}

@@ -54,3 +54,8 @@ finance.write_payments:
   - finance.read_payments
   - counterparties.read
   - counterparties.read_bank_accounts
+finance.import_service_charges:
+  name: Перенос согласованных услуг сервисом
+  group: Финансы
+  scope: service
+  requires: []

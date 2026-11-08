@@ -1,5 +1,6 @@
 #include <components/shipment_dispatcher.hpp>
 #include <helpers/database.hpp>
+#include <helpers/proposal_transfer.hpp>
 #include <helpers/shipment_command.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -18,6 +19,7 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
     context.FindComponent<platform::outbox::Component>().RegisterHandler(
         kCreateShipment,
         [this](const ShipmentCommand& command) -> DeliveryResult {
+            std::string shipment_id;
             try {
                 const auto result = deps_.shipments.ApiInternalV1ShipmentsEnsureCreated(
                     {.body = {.actor_issuer = command.actor_issuer,
@@ -26,11 +28,13 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
                          .shipment = command.shipment,
                          .source = command.source}},
                     tokens_.GetAccessToken());
-                return {.ShipmentId = result.shipment.id, .Rejection = std::nullopt};
+                shipment_id = result.shipment.id;
             } catch (const platform::http::ErrorByStatus<400>& error) {
                 return {.ShipmentId = std::nullopt,
                     .Rejection = std::string{error.what()}.substr(0, 2000)};
             }
+            helpers::TransferProposal(deps_, command, shipment_id, tokens_.GetAccessToken());
+            return {.ShipmentId = shipment_id, .Rejection = std::nullopt};
             // Недоступность, 403 и конфликты протокола требуют повтора/исправления сервиса,
             // а не изменения уже отправленной команды пользователем.
         },

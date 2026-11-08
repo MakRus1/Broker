@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import yaml
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,35 @@ from test_deployment import RELEASE
 
 
 class PostgresTest(unittest.TestCase):
+    def test_operator_install_uses_verified_local_manifest_without_network(self):
+        with patch('urllib.request.urlopen', side_effect=AssertionError('network forbidden')), patch.object(
+            postgres.subprocess, 'run'
+        ) as run:
+            postgres.install(ROOT, ['kubectl'])
+        self.assertEqual(run.call_count, 3)
+        self.assertEqual(run.call_args_list[0].args[0],
+            ['kubectl', 'apply', '--server-side', '-f', '-'])
+        objects = list(yaml.safe_load_all(run.call_args_list[0].kwargs['input']))
+        deployment = next(obj for obj in objects if obj['kind'] == 'Deployment'
+            and obj['metadata']['name'] == 'cnpg-controller-manager')
+        profile = load(ROOT / 'tools/deploy/postgres/platform.yaml', 'staging')['application']
+        self.assertEqual(deployment['spec']['replicas'], profile['replicas'])
+        self.assertEqual(deployment['spec']['template']['spec']['containers'][0]['resources'],
+            profile['resources'])
+
+    def test_operator_checksum_mismatch_stops_before_cluster_mutations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / 'tools/deploy/postgres'
+            target.mkdir(parents=True)
+            (target / 'operator.json').write_text(
+                (ROOT / 'tools/deploy/postgres/operator.json').read_text())
+            (target / 'operator.yaml').write_text('changed manifest')
+            with patch.object(postgres.subprocess, 'run') as run:
+                with self.assertRaisesRegex(ValueError, 'SHA256'):
+                    postgres.install(root, ['kubectl'])
+            run.assert_not_called()
+
     def test_each_owner_has_independent_cluster_secret_and_connection(self):
         with tempfile.TemporaryDirectory() as directory:
             phases = render(RELEASE, Path(directory))

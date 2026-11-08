@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 import re
 import subprocess
-import urllib.request
 
 
 def cluster_name(owner):
@@ -61,10 +60,9 @@ def render(owner, profile, namespace, storage_class, image, password):
 
 
 def install(root, kubectl, *, environment='staging'):
-    """Загрузка только закреплённого официального манифеста с проверкой SHA256."""
+    """Установка сохранённого официального манифеста с проверкой SHA256."""
     lock = json.loads((root / 'tools/deploy/postgres/operator.json').read_text())
-    with urllib.request.urlopen(lock['url'], timeout=60) as response:
-        manifest = response.read()
+    manifest = (root / 'tools/deploy/postgres/operator.yaml').read_bytes()
     if hashlib.sha256(manifest).hexdigest() != lock['sha256']:
         raise ValueError('SHA256 манифеста CloudNativePG не совпал')
     import yaml

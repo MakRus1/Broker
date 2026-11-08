@@ -71,7 +71,11 @@ Service текущего primary. Отдельный кластер Keycloak о�
 primary всех кластеров, а verify проверяет восстановление дампов отдельно от них.
 
 Версии оператора, SHA256 официального установочного манифеста и digest образа
-PostgreSQL закреплены в `tools/deploy/postgres/operator.json`. Оператор общий
+PostgreSQL закреплены в `tools/deploy/postgres/operator.json`. Официальный манифест
+сохранён без изменений в `tools/deploy/postgres/operator.yaml`; установка и проверка
+релиза не скачивают его из интернета. При обновлении версии нужно заменить манифест
+по URL из lock-файла и обновить SHA256. Перед применением checksum проверяется.
+Оператор общий
 для Kubernetes-кластера, но данные и настройки PostgreSQL принадлежат сервисам.
 Документация: [CloudNativePG](https://cloudnative-pg.io/docs/1.30/).
 

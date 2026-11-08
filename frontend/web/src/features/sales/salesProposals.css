@@ -151,3 +151,7 @@
 .proposal-price-fields .vat-rate-select {
   align-self: start;
 }
+
+.sales-proposals .proposal-add-service {
+  margin-top: 16px;
+}

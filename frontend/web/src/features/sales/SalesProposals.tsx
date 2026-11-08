@@ -493,6 +493,7 @@ export function SalesProposals({
                 );
               })}
               <button
+                className="proposal-add-service"
                 type="button"
                 disabled={draft.lines.length >= 100}
                 onClick={() =>

@@ -1,3 +1,5 @@
+import { SalesWorkFilters } from './SalesWorkFilters';
+import { toggleWorkFilter } from './salesWorkFilters';
 import { NextActionDate } from './NextActionDate';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -239,6 +241,15 @@ export function SalesRegistry({
           </a>
         )}
       </RegistryHeading>
+      {resource === 'cards' && (
+        <SalesWorkFilters
+          session={session}
+          filters={query.filters}
+          onToggle={(filter) =>
+            setQuery((old) => ({ ...old, filters: toggleWorkFilter(old.filters, filter) }))
+          }
+        />
+      )}
       <RegistryTable
         filters={filters}
         sort={query.sort}
@@ -262,10 +273,10 @@ export function SalesRegistry({
             loading={page.loading}
             failed={!!error}
             failureMessage={error}
-            filtered={false}
+            filtered={!!query.filters?.length}
             title={translate('sales.empty')}
             onRetry={() => setVersion((v) => v + 1)}
-            onReset={() => {}}
+            onReset={() => setQuery((old) => ({ ...old, filters: [] }))}
           />
         }
       />

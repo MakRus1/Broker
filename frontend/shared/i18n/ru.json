@@ -1303,5 +1303,12 @@
   "sales.actionDue.today": "Сегодня",
   "sales.actionDue.soon": "Скоро",
   "sales.contact.edit": "Редактирование контакта",
-  "sales.contact.editHint": "Исправление обновит действие в карточке клиента, если оно связано с этим контактом. Более новое действие останется прежним."
+  "sales.contact.editHint": "Исправление обновит действие в карточке клиента, если оно связано с этим контактом. Более новое действие останется прежним.",
+  "sales.hasContacts": "Есть контакты",
+  "sales.workFilters": "Быстрые фильтры продаж",
+  "sales.quick.mine": "Мои клиенты",
+  "sales.quick.overdue": "Просрочено",
+  "sales.quick.today": "На сегодня",
+  "sales.quick.noAction": "Без следующего действия",
+  "sales.quick.noContacts": "Без контактов"
 }

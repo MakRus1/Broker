@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
-import { RecordSection } from '../../../shared/ui/record/RecordLayout';
+import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
 import { EmployeeName } from '../../../shared/profile/EmployeeName';
 import { useLocalization } from '../../localization/Localization';
 import { registryValueLabel } from '../../registry/registryLabels';
@@ -40,7 +40,7 @@ export function SalesRfqs({ inquiry, session }: { inquiry: Inquiry; session: Ses
       />
     );
   return (
-    <div>
+    <div className="rfq-list">
       <div className="proposal-toolbar">
         <h2>{translate('rfq.title')}</h2>
         {write && (
@@ -77,22 +77,47 @@ export function SalesRfqs({ inquiry, session }: { inquiry: Inquiry; session: Ses
       )}
       {!items.length && <p className="hint">{translate('rfq.empty')}</p>}
       {items.map((value) => (
-        <RecordSection key={value.input.id} title={value.input.title}>
-          <div className="rfq-actions">
-            <a href={`#/rfqs/${value.input.id}`}>{translate('rfq.open')}</a>
-            <span>
-              {registryValueLabel('mode', value.route_segment.type, locale)} ·{' '}
+        <article key={value.input.id} className="rfq-card">
+          <div className="rfq-card-heading">
+            <h3>
+              <a href={`#/rfqs/${value.input.id}`}>{value.input.title}</a>
+            </h3>
+            <span className="record-layout-status">
               {translate(`rfq.status.${value.input.status}`)}
             </span>
-            <EmployeeName session={session} subject={value.input.responsible_subject} />
-            {value.input.answer_by && (
-              <time>
-                {new Date(`${value.input.answer_by}T12:00:00`).toLocaleDateString(locale)}
-              </time>
-            )}
+            <a className="rfq-open" href={`#/rfqs/${value.input.id}`}>
+              {translate('rfq.open')} <span aria-hidden="true">→</span>
+            </a>
           </div>
-          <RfqDetails value={value} />
-        </RecordSection>
+          <dl className="rfq-card-meta">
+            <div>
+              <dt>{translate('rfq.segment')}</dt>
+              <dd>
+                {registryValueLabel('mode', value.route_segment.type, locale)} ·{' '}
+                {sharedRouteDirection(value.route_segment, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt>{translate('rfq.responsible')}</dt>
+              <dd>
+                <EmployeeName session={session} subject={value.input.responsible_subject} />
+              </dd>
+            </div>
+            <div>
+              <dt>{translate('rfq.answerBy')}</dt>
+              <dd>
+                {value.input.answer_by ? (
+                  <time>
+                    {new Date(`${value.input.answer_by}T12:00:00`).toLocaleDateString(locale)}
+                  </time>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+          </dl>
+          <RfqDetails value={value} showRoute={false} />
+        </article>
       ))}
     </div>
   );

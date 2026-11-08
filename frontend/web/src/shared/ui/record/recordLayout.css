@@ -951,6 +951,7 @@
   min-width: 0;
 }
 .sales-workbench .record-fields {
+  align-items: start;
   gap: 18px 24px;
 }
 .sales-workbench .record-layout-section-body > label,

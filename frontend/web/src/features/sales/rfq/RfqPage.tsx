@@ -21,7 +21,7 @@ export function RfqPage({
   onTitle: (title: string) => void;
 }) {
   const id = route.split('/')[2];
-  const { translate } = useLocalization();
+  const { translate, locale } = useLocalization();
   const [value, setValue] = useState<Rfq>();
   const [inquiry, setInquiry] = useState<Inquiry>();
   const [editing, setEditing] = useState(false);
@@ -122,9 +122,22 @@ export function RfqPage({
             </div>
             {tab === 'main' ? (
               <RecordSection title={translate('rfq.quotes')}>
-                <p>
-                  <EmployeeName session={session} subject={value.input.responsible_subject} />
-                </p>
+                <dl className="rfq-card-meta">
+                  <div>
+                    <dt>{translate('rfq.responsible')}</dt>
+                    <dd>
+                      <EmployeeName session={session} subject={value.input.responsible_subject} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{translate('rfq.answerBy')}</dt>
+                    <dd>
+                      {value.input.answer_by
+                        ? new Date(`${value.input.answer_by}T12:00:00`).toLocaleDateString(locale)
+                        : '—'}
+                    </dd>
+                  </div>
+                </dl>
                 <RfqDetails value={value} />
               </RecordSection>
             ) : (

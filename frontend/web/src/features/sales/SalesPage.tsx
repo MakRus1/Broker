@@ -531,6 +531,7 @@ export function SalesPage({
                     </RecordSection>
                     <RecordSection title={translate('sales.route')}>
                       <ShipmentRoute
+                        planningOnly
                         segments={draft.route_segments}
                         onChange={(segments) => set('route_segments', segments)}
                         allowedTypes={[
@@ -670,6 +671,7 @@ export function SalesPage({
               </RecordSection>
               <RecordSection title={translate('sales.route')}>
                 <ShipmentRoute
+                  planningOnly
                   segments={draft.route_segments}
                   allowedTypes={[]}
                   types={[]}

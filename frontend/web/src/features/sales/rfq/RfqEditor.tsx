@@ -93,7 +93,7 @@ export function RfqEditor({
           <RecordSection title={translate('rfq.details')}>
             <div className="record-fields record-fields-two">
               <label>
-                {translate('proposal.name')}
+                {translate('rfq.name')}
                 <input
                   required
                   maxLength={200}
@@ -135,18 +135,21 @@ export function RfqEditor({
                 }))}
                 onChange={(status) => setDraft({ ...draft, status: status as RfqInput['status'] })}
               />
-              <label>
-                {translate('sales.note')}
-                <textarea
-                  maxLength={4000}
-                  value={draft.note ?? ''}
-                  onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-                />
-              </label>
             </div>
           </RecordSection>
           {draft.quotes.map((quote, index) => (
             <RecordSection key={quote.id} title={`${translate('rfq.quote')} ${index + 1}`}>
+              <div className="rfq-quote-actions">
+                {' '}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraft({ ...draft, quotes: draft.quotes.filter((_, i) => i !== index) })
+                  }
+                >
+                  {translate('rfq.removeQuote')}
+                </button>
+              </div>
               <div className="record-fields record-fields-two">
                 <CustomerSelect
                   session={session}
@@ -194,6 +197,10 @@ export function RfqEditor({
                   />
                 </label>
               </div>
+              <div className="rfq-services-heading">
+                <h3>{translate('rfq.services')}</h3>
+                <p className="hint">{translate('rfq.servicesHint')}</p>
+              </div>
               {quote.lines.map((line, i) => {
                 const update = (next: typeof line) =>
                   updateQuote(index, {
@@ -202,7 +209,24 @@ export function RfqEditor({
                   });
                 return (
                   <div className="rfq-quote-line" key={line.id}>
-                    <div className="record-fields record-fields-two">
+                    <div className="rfq-line-heading">
+                      <strong>
+                        {translate('proposal.service')} {i + 1}
+                      </strong>
+                      <button
+                        type="button"
+                        disabled={quote.lines.length === 1}
+                        onClick={() =>
+                          updateQuote(index, {
+                            ...quote,
+                            lines: quote.lines.filter((_, j) => i !== j),
+                          })
+                        }
+                      >
+                        {translate('rfq.removeLine')}
+                      </button>{' '}
+                    </div>
+                    <div className="record-fields rfq-service-fields">
                       <ServiceChargeLookup<FinancialLabel>
                         session={session}
                         kind="labels"
@@ -236,18 +260,6 @@ export function RfqEditor({
                       value={line.price}
                       onChange={(price) => update({ ...line, price })}
                     />
-                    <button
-                      type="button"
-                      disabled={quote.lines.length === 1}
-                      onClick={() =>
-                        updateQuote(index, {
-                          ...quote,
-                          lines: quote.lines.filter((_, j) => i !== j),
-                        })
-                      }
-                    >
-                      {translate('rfq.removeLine')}
-                    </button>
                   </div>
                 );
               })}
@@ -275,15 +287,7 @@ export function RfqEditor({
                     })
                   }
                 >
-                  {translate('proposal.addLine')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraft({ ...draft, quotes: draft.quotes.filter((_, i) => i !== index) })
-                  }
-                >
-                  {translate('rfq.removeQuote')}
+                  + {translate('rfq.addService')}
                 </button>
               </div>
               <label>
@@ -329,6 +333,16 @@ export function RfqEditor({
           >
             {translate('rfq.addQuote')}
           </button>
+          <RecordSection title={translate('sales.note')}>
+            <label>
+              <span className="sr-only">{translate('sales.note')}</span>
+              <textarea
+                maxLength={4000}
+                value={draft.note ?? ''}
+                onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+              />
+            </label>
+          </RecordSection>
         </fieldset>
       </RecordEditorSections>
       <RecordActions

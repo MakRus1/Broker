@@ -30,3 +30,113 @@
   padding: 12px;
   vertical-align: top;
 }
+
+.rfq-list {
+  display: grid;
+  gap: 20px;
+}
+.rfq-card {
+  display: grid;
+  gap: 16px;
+  padding-block: 20px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.rfq-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rfq-card-heading h3 {
+  margin: 0;
+}
+.rfq-card-heading a {
+  color: var(--accent-text);
+}
+.rfq-card-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+.rfq-card-meta > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+.rfq-card-meta dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.rfq-card-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.rfq-card .rfq-empty {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .rfq-card-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rfq-open {
+  margin-left: auto;
+  color: var(--accent-text);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rfq-services-heading {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.rfq-services-heading h3,
+.rfq-services-heading p,
+.rfq-route {
+  margin: 0;
+}
+.rfq-quote-line {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.rfq-line-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rfq-line-heading button {
+  font-size: 12px;
+}
+.rfq-quote-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.rfq-comparison {
+  border-collapse: collapse;
+  min-width: 980px;
+}
+.rfq-comparison small {
+  display: block;
+  margin-top: 6px;
+}
+.rfq-card .table-scroll {
+  min-width: 0;
+}
+
+.sales-workbench .rfq-service-fields {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .sales-workbench .rfq-service-fields {
+    grid-template-columns: 1fr;
+  }
+}

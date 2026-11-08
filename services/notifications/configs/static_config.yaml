@@ -53,11 +53,13 @@ components_manager:
             protected-prefix: /api/
             allow-http: $auth-allow-http
             permissions:
-                /api/internal/v1/events/publish: notifications.publish_shipments
+                /api/internal/v1/events/publish: notifications.publish
                 /api/v1/notifications/list: authenticated
                 /api/v1/notifications/read: authenticated
             service-clients:
-                notifications.publish_shipments: shipments-dispatcher
+                notifications.publish:
+                - shipments-dispatcher
+                - sales-dispatcher
         auth-http-client:
             wait-for-dynamic-configs: false
         dynamic-config:

@@ -1282,5 +1282,6 @@
   "home.inquiries": "Customer transportation inquiries",
   "home.salesGroup": "Sales",
   "notifications.shipmentCreated": "You have been assigned shipment {number}",
-  "sales.route": "Route"
+  "sales.route": "Route",
+  "notifications.shipmentCreationFailed": "Shipment creation failed for inquiry {number}. Open the inquiry to correct it."
 }

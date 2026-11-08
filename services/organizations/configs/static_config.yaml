@@ -219,7 +219,8 @@ components_manager:
                 organizations.manage:
                 - organizations.read_employees
             service-clients:
-                organizations.register_permissions: permission-publisher
+                organizations.register_permissions:
+                - permission-publisher
         auth-http-client:
             wait-for-dynamic-configs: false
         # SERVICE_CONFIG_END

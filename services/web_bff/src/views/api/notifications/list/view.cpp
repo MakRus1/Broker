@@ -14,14 +14,14 @@ Response View::Handle(
     Response200 response;
     for (const auto& item : result.items)
         response.items.push_back({.created_at = item.created_at,
+            .entity_id = item.entity_id,
+            .entity_number = item.entity_number,
+            .entity_revision = item.entity_revision,
             .event_type =
                 models::ParseEnumScalar(clients::notifications::models::EnumValue(item.event_type),
                     models::Notification_event_type{}),
             .id = item.id,
-            .read = item.read,
-            .shipment_id = item.shipment_id,
-            .shipment_number = item.shipment_number,
-            .shipment_revision = item.shipment_revision});
+            .read = item.read});
     return response;
 }
 }  // namespace web_bff::views::api::notifications::list

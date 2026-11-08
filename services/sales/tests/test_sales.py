@@ -145,6 +145,13 @@ async def test_permanent_rejection_can_be_corrected(api,mockserver):
     @mockserver.handler('/api/internal/v1/shipments/ensure-created')
     def create(request):
         return mockserver.make_response(status=400,json={'error':'invalid_route','message':'Исправьте маршрут'})
+    notifications = []
+    @mockserver.handler('/api/internal/v1/events/publish')
+    def notify(request):
+        notifications.append(request.json)
+        if len(notifications) == 1:
+            return mockserver.make_response(status=503, json={'error': 'unavailable', 'message': 'Повторите'})
+        return mockserver.make_response(status=200, json={'accepted': True})
     value=inquiry()
     await api.post('/api/v1/sales/inquiries/save',value)
     value.update(status='agreed',expected_revision=1)
@@ -156,6 +163,16 @@ async def test_permanent_rejection_can_be_corrected(api,mockserver):
         await asyncio.sleep(.05)
     assert result['conversion_error']
     assert not result['converting']
+    for _ in range(100):
+        if len(notifications) >= 2:
+            break
+        await asyncio.sleep(.05)
+    assert len(notifications) == 2
+    assert notifications[0] == notifications[1]
+    assert notifications[0]['type'] == 'sales.inquiry.shipment_creation_failed'
+    assert notifications[0]['payload']['inquiry_id'] == value['id']
+    assert notifications[0]['payload']['recipient_subject'] == 'author'
+
     value.update(status='in_progress',expected_revision=result['revision'])
     corrected=(await api.post('/api/v1/sales/inquiries/save',value))['item']
     assert not corrected.get('conversion_error')

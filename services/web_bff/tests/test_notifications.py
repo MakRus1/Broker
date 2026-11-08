@@ -3,8 +3,8 @@ async def test_notifications_proxy_uses_current_browser_identity(browser, mockse
     organization = '11111111-1111-4111-8111-111111111111'
     notification = {
         'id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-        'shipment_id': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-        'shipment_number': 'S-1042', 'shipment_revision': 3,
+        'entity_id': 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        'entity_number': 'S-1042', 'entity_revision': 3,
         'created_at': '2026-11-05T12:00:00Z', 'read': False,
         'event_type': 'shipment.created',
     }

@@ -95,6 +95,8 @@ components_manager:
         # SERVICE_CONFIG_BEGIN
         client-counterparties:
             base-url: $client-counterparties-base-url
+        client-notifications:
+            base-url: $client-notifications-base-url
         client-organizations:
             base-url: $client-organizations-base-url
         client-shipments:

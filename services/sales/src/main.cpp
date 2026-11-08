@@ -21,6 +21,7 @@
 
 // SERVICE_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
+#include <clients/notifications/client.hpp>
 #include <clients/organizations/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <clients/transport_locations/client.hpp>
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
     component_list.Append<platform::configs::ConfigReadiness>();
     component_list.Append<sales::clients::counterparties::Component>();
+    component_list.Append<sales::clients::notifications::Component>();
     component_list.Append<sales::clients::organizations::Component>();
     component_list.Append<sales::clients::shipments::Component>();
     component_list.Append<sales::clients::transport_locations::Component>();

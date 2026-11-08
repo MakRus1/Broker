@@ -139,7 +139,8 @@ components_manager:
                 transportations.write:
                 - transportations.read
             service-clients:
-                transportations.create: shipments-dispatcher
+                transportations.create:
+                - shipments-dispatcher
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

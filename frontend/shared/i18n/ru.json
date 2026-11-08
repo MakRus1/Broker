@@ -1282,5 +1282,6 @@
   "home.inquiries": "Запросы клиентов на перевозку",
   "home.salesGroup": "Продажи",
   "notifications.shipmentCreated": "Вам назначена новая поставка {number}",
-  "sales.route": "Маршрут"
+  "sales.route": "Маршрут",
+  "notifications.shipmentCreationFailed": "Не удалось создать поставку по запросу {number}. Откройте запрос для исправления."
 }

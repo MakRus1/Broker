@@ -299,6 +299,7 @@ export function SalesProposals({
                   <RecordSection
                     key={line.id}
                     collapsible
+                    initiallyOpen={!line.label_id}
                     title={
                       names[line.label_id] ??
                       items

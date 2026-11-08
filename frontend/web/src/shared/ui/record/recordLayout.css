@@ -1007,3 +1007,17 @@
 .record-layout-collapsible > details > .record-layout-section-body {
   padding-top: 16px;
 }
+
+.sales-workbench .record-layout-section.record-layout-collapsible {
+  display: block;
+  padding: 0;
+  margin: 0;
+}
+.record-layout-collapsible > details > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  box-sizing: border-box;
+}
+.record-layout-collapsible > details[open] > .record-layout-section-body {
+  padding-bottom: 20px;
+}

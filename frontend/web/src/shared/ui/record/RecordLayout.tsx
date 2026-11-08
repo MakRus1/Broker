@@ -2,7 +2,7 @@ import { useLocalization } from '../../../features/localization/Localization';
 import { useEditorSection } from './RecordEditorSections';
 import { RecordGuide } from './RecordGuide';
 import type { RecordGuideKind } from './recordGuides';
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import './recordLayout.css';
 
 export function RecordHeading({
@@ -45,15 +45,18 @@ export function RecordHeading({
 export function RecordSection({
   title,
   collapsible = false,
+  initiallyOpen = false,
   description,
   children,
 }: {
   title: string;
   collapsible?: boolean;
+  initiallyOpen?: boolean;
   description?: string;
   children: ReactNode;
 }) {
   const id = useId();
+  const [expanded, setExpanded] = useState(initiallyOpen);
   useEditorSection(id, title);
   if (collapsible)
     return (
@@ -63,9 +66,11 @@ export function RecordSection({
         aria-labelledby={`${id}-heading`}
       >
         <details
-          open
+          open={expanded}
+          onToggle={(event) => setExpanded(event.currentTarget.open)}
           onInvalidCapture={(event) => {
             event.currentTarget.open = true;
+            setExpanded(true);
           }}
         >
           <summary>

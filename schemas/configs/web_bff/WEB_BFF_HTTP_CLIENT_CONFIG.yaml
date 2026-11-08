@@ -59,6 +59,10 @@ paths:
 - /api/v1/sales/cards/history
 - /api/v1/sales/cards/list
 - /api/v1/sales/cards/save
+- /api/v1/sales/contacts/add
+- /api/v1/sales/contacts/history
+- /api/v1/sales/contacts/list
+- /api/v1/sales/contacts/update
 - /api/v1/sales/inquiries/create-shipment
 - /api/v1/sales/inquiries/filter-values
 - /api/v1/sales/inquiries/get

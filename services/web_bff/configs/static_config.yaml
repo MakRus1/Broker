@@ -349,6 +349,30 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-sales-contacts-add:
+            path: /api/v1/sales/contacts/add
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-contacts-history:
+            path: /api/v1/sales/contacts/history
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-contacts-list:
+            path: /api/v1/sales/contacts/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-sales-contacts-update:
+            path: /api/v1/sales/contacts/update
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-sales-inquiries-create_shipment:
             path: /api/v1/sales/inquiries/create-shipment
             method: POST

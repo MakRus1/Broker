@@ -1,3 +1,4 @@
+import { NextActionDate } from './NextActionDate';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
@@ -17,6 +18,7 @@ import { useLocalization } from '../localization/Localization';
 import { ShipmentRoute } from '../shipments/ShipmentRoute';
 import { SalesRegistry } from './SalesRegistry';
 import { SalesHistory } from './SalesHistory';
+import { SalesContacts } from './SalesContacts';
 import { InquiryShipmentLink } from './InquiryShipmentLink';
 import {
   saveSalesBody,
@@ -287,23 +289,27 @@ export function SalesPage({
       />
       {!editing && (
         <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
-          {['main', ...(resource === 'cards' ? ['inquiries'] : []), 'history'].map((name) => (
-            <button
-              key={name}
-              role="tab"
-              aria-selected={tab === name}
-              aria-pressed={tab === name}
-              onClick={() => setTab(name)}
-            >
-              {translate(
-                name === 'main'
-                  ? 'sales.main'
-                  : name === 'history'
-                    ? 'sales.history'
-                    : 'sales.inquiries',
-              )}
-            </button>
-          ))}
+          {['main', ...(resource === 'cards' ? ['contacts', 'inquiries'] : []), 'history'].map(
+            (name) => (
+              <button
+                key={name}
+                role="tab"
+                aria-selected={tab === name}
+                aria-pressed={tab === name}
+                onClick={() => setTab(name)}
+              >
+                {translate(
+                  name === 'contacts'
+                    ? 'sales.contacts'
+                    : name === 'main'
+                      ? 'sales.main'
+                      : name === 'history'
+                        ? 'sales.history'
+                        : 'sales.inquiries',
+                )}
+              </button>
+            ),
+          )}
         </div>
       )}
       {failure && !editing && (
@@ -313,6 +319,16 @@ export function SalesPage({
       )}
       {!draft ? (
         <p>{translate('common.loading')}</p>
+      ) : tab === 'contacts' && resource === 'cards' && !editing ? (
+        <SalesContacts
+          card={draft as SalesCard}
+          session={session}
+          onSaved={(card) => {
+            setValue(card);
+            setDraft(card);
+            initial.current = JSON.stringify(card);
+          }}
+        />
       ) : tab === 'history' && !editing ? (
         <SalesHistory
           key={`${resource}:${id}`}
@@ -581,7 +597,9 @@ export function SalesPage({
                 </div>
                 <div>
                   <dt>{translate('sales.nextActionDate')}</dt>
-                  <dd>{draft.next_action_date || '—'}</dd>
+                  <dd>
+                    <NextActionDate date={draft.next_action_date} />
+                  </dd>
                 </div>
               </dl>
             </RecordSection>

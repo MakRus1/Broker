@@ -1,3 +1,4 @@
+import { NextActionDate } from './NextActionDate';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
@@ -156,7 +157,15 @@ export function SalesRegistry({
             filterFields: ['next_action', 'next_action_date'],
             labelKey: 'sales.nextAction' as const,
             width: 260,
-            render: (item: SalesEntity) => (item as SalesCard).next_action || '—',
+            render: (item: SalesEntity) => {
+              const card = item as SalesCard;
+              return (
+                <div className="sales-registry-action">
+                  <span>{card.next_action || '—'}</span>
+                  {card.next_action_date && <NextActionDate date={card.next_action_date} />}
+                </div>
+              );
+            },
           },
         ]
       : [

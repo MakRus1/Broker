@@ -678,6 +678,10 @@ SalesContact:
     next_action_date:
       type: string
       format: date
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
   required:
   - id
   - card_id
@@ -687,6 +691,7 @@ SalesContact:
   - author_subject
   - author_issuer
   - created_at
+  - revision
 AddSalesContactRequest:
   type: object
   additionalProperties: false
@@ -741,3 +746,59 @@ ListSalesContactsRequest:
       default: 40
   required:
   - card_id
+UpdateSalesContactRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    card_id:
+      type: string
+      format: uuid
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 1
+    kind:
+      $ref: '#/ContactKind'
+    contact_date:
+      type: string
+      format: date
+    result:
+      type: string
+      minLength: 1
+      maxLength: 10000
+    next_action:
+      type: string
+      minLength: 1
+      maxLength: 1000
+    next_action_date:
+      type: string
+      format: date
+  required:
+  - id
+  - card_id
+  - expected_revision
+  - kind
+  - contact_date
+  - result
+SalesContactHistoryEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    revision:
+      type: integer
+      format: int64
+    actor:
+      type: string
+    created_at:
+      type: string
+      format: date-time
+    snapshot:
+      $ref: '#/SalesContact'
+  required:
+  - revision
+  - actor
+  - created_at
+  - snapshot

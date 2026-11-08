@@ -48,9 +48,11 @@ Response View::Handle(
             .Execute(sql::kAddContact, organization, document, identity.Subject, identity.Issuer)
             .AsSingleRow<json::Value>(),
         std::type_identity<models::SalesContact>{});
+    transaction.Execute(sql::kWriteHistory, organization, std::string{"contacts"}, contact.id,
+        contact.revision, identity.ActorId(), json::ValueBuilder(contact).ExtractValue());
     if (body.next_action.has_value()) {
         transaction.Execute(sql::kUpdateContactNextAction, organization, body.card_id,
-            body.next_action.value(), body.next_action_date.value());
+            body.next_action.value(), body.next_action_date.value(), contact.id);
         card =
             models::ParseModelJson(transaction.Execute(sql::kGetCards, organization, body.card_id)
                                        .AsSingleRow<json::Value>(),

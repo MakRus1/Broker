@@ -1,3 +1,4 @@
+import { RecordHistoryEntry, RecordHistoryDiff } from '../../shared/ui/record/RecordHistory';
 import { useEffect, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
@@ -14,6 +15,7 @@ import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 type ContactKind = 'call' | 'email' | 'meeting' | 'other';
 interface Contact {
   id: string;
+  revision: number;
   card_id: string;
   kind: ContactKind;
   contact_date: string;
@@ -42,18 +44,31 @@ export function SalesContacts({
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<{
     id: string;
+    revision?: number;
     kind: ContactKind;
     contact_date: string;
     result: string;
     next_action: string;
     next_action_date: string;
   }>();
+  const [history, setHistory] = useState<
+    { revision: number; actor: string; created_at: string; snapshot: Contact }[]
+  >([]);
+  const [historyError, setHistoryError] = useState('');
+  const original = form?.revision ? items.find((item) => item.id === form.id) : undefined;
+  const dirty =
+    !!form &&
+    (form.revision
+      ? (['kind', 'contact_date', 'result', 'next_action', 'next_action_date'] as const).some(
+          (field) => form[field] !== (original?.[field] ?? ''),
+        )
+      : !!form.result || !!form.next_action || !!form.next_action_date);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const recovery = useDraftRecovery({
     storageKey: draftStorageKey(session, 'sales-contact', card.id),
     revision: card.revision,
     value: form ?? {},
-    dirty: !!form && (!!form.result || !!form.next_action),
+    dirty,
     enabled: session.permissions.includes('sales.write'),
     onRestore(raw) {
       const restored = raw as NonNullable<typeof form>;
@@ -94,12 +109,12 @@ export function SalesContacts({
     setFailure('');
     try {
       const result = await request<{ item: Contact; card: SalesCard }>(
-        '/api/v1/sales/contacts/add',
+        form.revision ? '/api/v1/sales/contacts/update' : '/api/v1/sales/contacts/add',
         session,
         {
           id: form.id,
           card_id: card.id,
-          expected_revision: card.revision,
+          expected_revision: form.revision ?? card.revision,
           kind: form.kind,
           contact_date: form.contact_date,
           result: form.result.trim(),
@@ -119,12 +134,43 @@ export function SalesContacts({
         ),
       );
       recovery.markSaved();
-      onSaved(result.card);
+      if (!form.revision) onSaved(result.card);
+      else {
+        const current = await request<{ item: SalesCard }>('/api/v1/sales/cards/get', session, {
+          id: card.id,
+        });
+        onSaved(current.item);
+      }
       setForm(undefined);
     } catch (error) {
       setFailure((error as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+  async function edit(item: Contact) {
+    if (!session.permissions.includes('sales.write') || form || busy) return;
+    setForm({
+      id: item.id,
+      revision: item.revision,
+      kind: item.kind,
+      contact_date: item.contact_date,
+      result: item.result,
+      next_action: item.next_action ?? '',
+      next_action_date: item.next_action_date ?? '',
+    });
+    setFailure('');
+    setHistory([]);
+    setHistoryError('');
+    try {
+      const result = await request<{ items: typeof history }>(
+        '/api/v1/sales/contacts/history',
+        session,
+        { id: item.id },
+      );
+      setHistory(result.items);
+    } catch (error) {
+      setHistoryError((error as Error).message);
     }
   }
   async function loadMore() {
@@ -176,6 +222,7 @@ export function SalesContacts({
       <DraftRecovery recovery={recovery} />
       {form && (
         <form className="document-editor" onSubmit={save}>
+          <h3>{translate(form.revision ? 'sales.contact.edit' : 'sales.contact.add')}</h3>
           <div className="sales-contact-fields">
             <div>
               <Select
@@ -222,7 +269,9 @@ export function SalesContacts({
               />
             </label>
           </div>
-          <p className="muted">{translate('sales.contact.nextHint')}</p>
+          <p className="muted">
+            {translate(form.revision ? 'sales.contact.editHint' : 'sales.contact.nextHint')}
+          </p>
           {failure && (
             <p className="error" role="alert">
               {failure}
@@ -233,7 +282,7 @@ export function SalesContacts({
               type="button"
               disabled={busy}
               onClick={() => {
-                confirmDiscard(!!form.result || !!form.next_action, () => {
+                confirmDiscard(dirty, () => {
                   recovery.discard();
                   setForm(undefined);
                   setFailure('');
@@ -243,10 +292,63 @@ export function SalesContacts({
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              {translate('sales.contact.save')}
+              {translate(form.revision ? 'action.save' : 'sales.contact.save')}
             </button>
           </div>
         </form>
+      )}
+      {form?.revision && (
+        <section className="record-history" aria-label={translate('forms.changeHistory')}>
+          <h3>{translate('forms.changeHistory')}</h3>
+          {historyError && (
+            <p className="error" role="alert">
+              {historyError}
+            </p>
+          )}
+          {history.map((entry, index) => (
+            <RecordHistoryEntry
+              key={entry.revision}
+              initiallyOpen={index === history.length - 1}
+              title={translate(entry.revision === 1 ? 'history.created' : 'history.updated')}
+              actor={<EmployeeName subject={entry.actor.split('#').at(-1)} session={session} />}
+              occurredAt={entry.created_at}
+              revision={translate('sales.revision', { revision: entry.revision })}
+            >
+              <RecordHistoryDiff
+                rows={(
+                  ['kind', 'contact_date', 'result', 'next_action', 'next_action_date'] as const
+                )
+                  .filter(
+                    (field) =>
+                      index === 0 || history[index - 1].snapshot[field] !== entry.snapshot[field],
+                  )
+                  .map((field) => ({
+                    key: field,
+                    label: translate(
+                      (
+                        {
+                          kind: 'sales.contact.kind',
+                          contact_date: 'sales.contact.date',
+                          result: 'sales.contact.result',
+                          next_action: 'sales.contact.nextAction',
+                          next_action_date: 'sales.contact.nextDate',
+                        } as const
+                      )[field],
+                    ),
+                    before: index
+                      ? field === 'kind'
+                        ? translate(`sales.contact.${history[index - 1].snapshot.kind}`)
+                        : (history[index - 1].snapshot[field] ?? '—')
+                      : '—',
+                    after:
+                      field === 'kind'
+                        ? translate(`sales.contact.${entry.snapshot.kind}`)
+                        : (entry.snapshot[field] ?? '—'),
+                  }))}
+              />
+            </RecordHistoryEntry>
+          ))}
+        </section>
       )}
       {!form && failure && (
         <p className="error" role="alert">
@@ -257,7 +359,24 @@ export function SalesContacts({
       {loaded && items.length === 0 && <p className="muted">{translate('sales.contact.empty')}</p>}
       <div className="sales-contact-list">
         {items.map((item) => (
-          <article className="sales-contact" key={item.id}>
+          <article
+            className={`sales-contact${session.permissions.includes('sales.write') && !form ? ' sales-contact-editable' : ''}`}
+            key={item.id}
+            role={session.permissions.includes('sales.write') && !form ? 'button' : undefined}
+            tabIndex={session.permissions.includes('sales.write') && !form ? 0 : undefined}
+            aria-label={
+              session.permissions.includes('sales.write') && !form
+                ? `${translate('sales.contact.edit')}: ${item.result}`
+                : undefined
+            }
+            onClick={() => void edit(item)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                void edit(item);
+              }
+            }}
+          >
             <div className="sales-contact-meta">
               <strong>{translate(`sales.contact.${item.kind}`)}</strong>
               <time dateTime={item.contact_date}>

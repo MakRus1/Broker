@@ -1,0 +1,21 @@
+.sales-action-date {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.65rem;
+}
+.sales-action-date--overdue {
+  color: var(--danger);
+}
+.sales-action-date--today,
+.sales-action-date--soon {
+  color: var(--warning);
+}
+.sales-action-date-label {
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.sales-registry-action {
+  display: grid;
+  gap: 0.35rem;
+}

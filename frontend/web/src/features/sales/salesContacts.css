@@ -36,11 +36,11 @@
   display: grid;
 }
 .sales-contact {
-  padding: 1.25rem 0;
+  padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
 .sales-contact:first-child {
-  padding-top: 0;
+  padding-top: 1rem;
 }
 .sales-contact-meta {
   flex-wrap: wrap;
@@ -59,4 +59,16 @@
   .sales-contact-fields {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.sales-contact-editable {
+  cursor: pointer;
+}
+.sales-contact-editable:hover {
+  background: color-mix(in srgb, var(--surface-hover) 35%, transparent);
+  box-shadow: inset 2px 0 var(--accent-border);
+}
+.sales-contact-editable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }

@@ -247,3 +247,55 @@ async def test_contacts_pagination_and_optional_next_action(api):
     assert current['revision'] == 1
     for extra in [{'next_action': 'Позвонить'}, {'result': '   '}, {'kind': 'unknown'}]:
         await api.post('/api/v1/sales/contacts/add', {**base, 'id': str(uuid.uuid4()), **extra}, expected=400)
+
+async def test_contact_corrections_follow_source_and_preserve_newer_action(api):
+    await settings(api)
+    value = card()
+    saved = (await api.post('/api/v1/sales/cards/save', value))['item']
+    original = {'id': str(uuid.uuid4()), 'card_id': saved['id'], 'expected_revision': 1,
+        'kind': 'call', 'contact_date': '2026-11-08', 'result': 'Опечатка',
+        'next_action': 'Позвонить', 'next_action_date': '2026-11-10'}
+    created = (await api.post('/api/v1/sales/contacts/add', original))['item']
+    correction = {**original, 'expected_revision': created['revision'], 'kind': 'meeting',
+        'result': 'Исправленный результат встречи', 'contact_date': '2026-11-07',
+        'next_action': 'Написать', 'next_action_date': '2026-11-11'}
+    updated = (await api.post('/api/v1/sales/contacts/update', correction))['item']
+    assert updated['revision'] == 2
+    assert updated['result'] == correction['result']
+    assert updated['author_subject'] == created['author_subject']
+    assert updated['created_at'] == created['created_at']
+    current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
+    assert current['next_action'] == correction['next_action']
+    assert current['next_action_date'] == correction['next_action_date']
+    assert current['revision'] == 3
+    history = (await api.post('/api/v1/sales/contacts/history', {'id': created['id']}))['items']
+    assert [item['revision'] for item in history] == [1, 2]
+    assert history[0]['snapshot']['result'] == 'Опечатка'
+    assert history[1]['snapshot']['result'] == correction['result']
+    await api.post('/api/v1/sales/contacts/update', correction, expected=409)
+    await api.post('/api/v1/sales/contacts/update', correction, roles=['sales.read'], expected=403)
+    await api.post('/api/v1/sales/contacts/update', correction, user='other', expected=404)
+    assert (await api.post('/api/v1/sales/contacts/history', {'id': created['id']}, user='other'))['items'] == []
+    invalid = {**correction, 'expected_revision': 2, 'result': '   '}
+    await api.post('/api/v1/sales/contacts/update', invalid, expected=400)
+
+    manual = {**value, 'expected_revision': current['revision'],
+        'next_action': 'Новое самостоятельное действие', 'next_action_date': '2026-11-20'}
+    await api.post('/api/v1/sales/cards/save', manual)
+    await api.post('/api/v1/sales/contacts/update', {**correction, 'expected_revision': 2,
+        'next_action': 'Исправление старого контакта'})
+    current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
+    assert current['next_action'] == manual['next_action']
+    assert current['next_action_date'] == manual['next_action_date']
+    newer = {**original, 'id': str(uuid.uuid4()), 'expected_revision': current['revision'],
+        'next_action': manual['next_action'], 'next_action_date': manual['next_action_date']}
+    await api.post('/api/v1/sales/contacts/add', newer)
+    await api.post('/api/v1/sales/contacts/update', {**correction, 'expected_revision': 3,
+        'next_action': 'Не должно затереть новый контакт'})
+    current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
+    assert current['next_action'] == newer['next_action']
+    cleared = {key: value for key, value in newer.items()
+        if key not in ('next_action', 'next_action_date')}
+    await api.post('/api/v1/sales/contacts/update', {**cleared, 'expected_revision': 1})
+    current = (await api.post('/api/v1/sales/cards/get', {'id': saved['id']}))['item']
+    assert 'next_action' not in current and 'next_action_date' not in current

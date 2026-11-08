@@ -17,6 +17,7 @@ Response View::Handle(
     ValidateStage(Settings(transaction.Execute(sql::kGetSettings, organization)), value.stage_id,
         previous_stage);
     const auto document = json::ValueBuilder(value).ExtractValue();
+    transaction.Execute(sql::kClearChangedActionSource, organization, document);
     const auto changed = value.expected_revision == 0
         ? transaction.Execute(sql::kCreateCards, organization, document)
         : transaction.Execute(sql::kUpdateCards, organization, document, value.expected_revision);

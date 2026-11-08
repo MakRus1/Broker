@@ -1,3 +1,4 @@
+import { NextActionDate } from './NextActionDate';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
@@ -596,7 +597,9 @@ export function SalesPage({
                 </div>
                 <div>
                   <dt>{translate('sales.nextActionDate')}</dt>
-                  <dd>{draft.next_action_date || '—'}</dd>
+                  <dd>
+                    <NextActionDate date={draft.next_action_date} />
+                  </dd>
                 </div>
               </dl>
             </RecordSection>

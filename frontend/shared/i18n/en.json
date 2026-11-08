@@ -1298,5 +1298,10 @@
   "sales.contact.call": "Call",
   "sales.contact.email": "Email",
   "sales.contact.meeting": "Meeting",
-  "sales.contact.other": "Other"
+  "sales.contact.other": "Other",
+  "sales.actionDue.overdue": "Overdue",
+  "sales.actionDue.today": "Today",
+  "sales.actionDue.soon": "Due soon",
+  "sales.contact.edit": "Edit contact",
+  "sales.contact.editHint": "The correction updates the customer card action if it still comes from this contact. A newer action will remain unchanged."
 }

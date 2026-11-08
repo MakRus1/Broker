@@ -1298,5 +1298,10 @@
   "sales.contact.call": "Звонок",
   "sales.contact.email": "Письмо",
   "sales.contact.meeting": "Встреча",
-  "sales.contact.other": "Другое"
+  "sales.contact.other": "Другое",
+  "sales.actionDue.overdue": "Просрочено",
+  "sales.actionDue.today": "Сегодня",
+  "sales.actionDue.soon": "Скоро",
+  "sales.contact.edit": "Редактирование контакта",
+  "sales.contact.editHint": "Исправление обновит действие в карточке клиента, если оно связано с этим контактом. Более новое действие останется прежним."
 }

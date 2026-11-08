@@ -973,3 +973,37 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.record-layout-collapsible > details {
+  min-width: 0;
+  width: 100%;
+}
+.record-layout-collapsible > details > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.record-layout-collapsible > details > summary::-webkit-details-marker {
+  display: none;
+}
+.record-layout-collapsible > details > summary::before {
+  content: '›';
+  font-size: 20px;
+  line-height: 20px;
+  flex: 0 0 16px;
+  text-align: center;
+}
+.record-layout-collapsible > details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.record-layout-collapsible > details > summary h2 {
+  font-size: 15px;
+  line-height: 20px;
+  margin: 0;
+}
+.record-layout-collapsible > details > .record-layout-section-body {
+  padding-top: 16px;
+}

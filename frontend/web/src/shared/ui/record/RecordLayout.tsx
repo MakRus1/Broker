@@ -44,15 +44,39 @@ export function RecordHeading({
 }
 export function RecordSection({
   title,
+  collapsible = false,
   description,
   children,
 }: {
   title: string;
+  collapsible?: boolean;
   description?: string;
   children: ReactNode;
 }) {
   const id = useId();
   useEditorSection(id, title);
+  if (collapsible)
+    return (
+      <section
+        id={id}
+        className="record-layout-section record-layout-collapsible"
+        aria-labelledby={`${id}-heading`}
+      >
+        <details
+          open
+          onInvalidCapture={(event) => {
+            event.currentTarget.open = true;
+          }}
+        >
+          <summary>
+            <h2 id={`${id}-heading`} tabIndex={-1}>
+              {title}
+            </h2>
+          </summary>
+          <div className="record-layout-section-body">{children}</div>
+        </details>
+      </section>
+    );
   return (
     <section id={id} className="record-layout-section" aria-labelledby={`${id}-heading`}>
       <div className="record-layout-section-heading">

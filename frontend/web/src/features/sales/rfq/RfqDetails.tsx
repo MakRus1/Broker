@@ -25,7 +25,7 @@ export function RfqDetails({ value, showRoute = true }: { value: Rfq; showRoute?
                 <Chevron />
                 <strong>{quote.supplier_name}</strong>
                 <span>{quote.title}</span>
-                <span className="hint">
+                <span className="rfq-service-count">
                   {translate('rfq.serviceCount', { count: quote.lines.length })}
                 </span>
               </summary>

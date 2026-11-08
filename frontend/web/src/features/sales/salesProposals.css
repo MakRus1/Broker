@@ -134,3 +134,20 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.proposal-price-fields {
+  align-items: start;
+}
+.proposal-price-fields label,
+.proposal-price-fields .app-select {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  grid-template-rows: 18px auto;
+}
+.proposal-price-fields .field-label {
+  line-height: 18px;
+}
+.proposal-price-fields .vat-rate-select {
+  align-self: start;
+}

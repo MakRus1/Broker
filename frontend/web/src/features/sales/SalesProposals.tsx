@@ -298,7 +298,14 @@ export function SalesProposals({
                 return (
                   <RecordSection
                     key={line.id}
-                    title={`${translate('proposal.service')} ${index + 1}`}
+                    collapsible
+                    title={
+                      names[line.label_id] ??
+                      items
+                        .flatMap((value) => value.lines)
+                        .find((value) => value.input.label_id === line.label_id)?.label_name ??
+                      translate('proposal.newService')
+                    }
                   >
                     <fieldset disabled={!!line.quote_source}>
                       <div className="record-fields record-fields-two">
@@ -659,14 +666,19 @@ export function SalesProposals({
                 </table>
               </div>
               <p className="hint">{translate('proposal.netHint')}</p>
-              <p>
-                {show.rates
-                  .map(
-                    (rate) =>
-                      `${rate.currency}: ${inputFixed(rate.rate_millionths, 6)} ${show.reporting_currency}`,
-                  )
-                  .join(' · ')}
-              </p>
+              {show.rates
+                .filter((rate) => rate.currency !== show.reporting_currency)
+                .map((rate) => (
+                  <p className="hint" key={rate.currency}>
+                    {translate('proposal.exchangeRate', {
+                      currency: rate.currency,
+                      rate: new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(
+                        rate.rate_millionths / 1000000,
+                      ),
+                      reportingCurrency: show.reporting_currency,
+                    })}
+                  </p>
+                ))}
               {history && (
                 <RecordSection title={translate('sales.history')}>
                   {history.map((entry, index) => {

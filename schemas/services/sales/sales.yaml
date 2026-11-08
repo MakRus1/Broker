@@ -5,7 +5,7 @@ info:
 paths:
   /api/v1/sales/cards/save:
     post:
-      summary: cards save
+      summary: Создать или изменить карточку работы с клиентом
       requestBody:
         required: true
         content:
@@ -69,7 +69,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/cards/get:
     post:
-      summary: cards get
+      summary: Получить карточку работы с клиентом
       requestBody:
         required: true
         content:
@@ -133,7 +133,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/cards/list:
     post:
-      summary: cards list
+      summary: Список карточек работы с клиентами
       requestBody:
         required: true
         content:
@@ -201,7 +201,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/cards/history:
     post:
-      summary: cards history
+      summary: История изменений карточки работы с клиентом
       requestBody:
         required: true
         content:
@@ -267,7 +267,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/inquiries/save:
     post:
-      summary: inquiries save
+      summary: Создать или изменить входящий запрос
       requestBody:
         required: true
         content:
@@ -331,7 +331,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/inquiries/get:
     post:
-      summary: inquiries get
+      summary: Получить входящий запрос
       requestBody:
         required: true
         content:
@@ -395,7 +395,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/inquiries/list:
     post:
-      summary: inquiries list
+      summary: Список входящих запросов
       requestBody:
         required: true
         content:
@@ -463,7 +463,7 @@ paths:
                 $ref: components/schemas/models.yaml#/ApiError
   /api/v1/sales/inquiries/history:
     post:
-      summary: inquiries history
+      summary: История изменений входящего запроса
       requestBody:
         required: true
         content:

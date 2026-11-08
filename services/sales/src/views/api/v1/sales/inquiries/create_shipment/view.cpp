@@ -38,24 +38,34 @@ Response View::Handle(
         throw ApiError<409>{"revision_conflict", "Запрос изменён. Обновите карточку"};
     if (inquiry.status != models::InquiryStatus::Agreed || inquiry.conversion_error.has_value())
         throw ApiError<409>{"not_agreed", "Сначала согласуйте запрос"};
-    json::ValueBuilder shipment(json::ValueBuilder(inquiry).ExtractValue());
-    for (const auto* field :
-        {"organization_id", "id", "revision", "number", "manager_subject", "status", "ready_date",
-            "desired_delivery_date", "note", "converting", "conversion_error"})
-        shipment.Remove(field);
-    shipment["idempotency_key"] =
+    namespace shipment_models = clients::shipments::models;
+    constexpr auto kInquirySourceType = "sales.inquiry";
+    shipment_models::CreateShipmentRequest shipment;
+    shipment.customer_id = inquiry.customer_id;
+    shipment.idempotency_key =
         "sales-inquiry:" + inquiry.id + ":" + std::to_string(inquiry.revision);
-    shipment["reference"] = inquiry.number;
-    shipment["route_segments"] = segments;
-    shipment["logist"] = party.logist.value_or(std::nullopt);
-    json::ValueBuilder command;
-    command["organization_id"] = organization;
-    command["source"]["type"] = "sales.inquiry";
-    command["source"]["id"] = inquiry.id;
-    command["actor_subject"] = actor.Subject;
-    command["actor_issuer"] = actor.Issuer;
-    command["shipment"] = shipment.ExtractValue();
-    const auto document = command.ExtractValue();
+    shipment.reference = inquiry.number;
+    shipment.cargo_description = inquiry.cargo_description;
+    shipment.carriage_terms = inquiry.carriage_terms;
+    shipment.delivery_address = inquiry.delivery_address;
+    shipment.delivery_city = inquiry.delivery_city;
+    shipment.delivery_country = inquiry.delivery_country;
+    shipment.incoterms = inquiry.incoterms;
+    shipment.loading = inquiry.loading;
+    shipment.logist = party.logist.value_or(std::nullopt);
+    shipment.route_segments.emplace();
+    for (const auto& segment : segments)
+        shipment.route_segments->push_back(
+            shipment_models::ParseModelJson(json::ValueBuilder(segment).ExtractValue(),
+                std::type_identity<shipment_models::ShipmentRouteSegment>{}));
+    shipment_models::EnsureShipmentRequest command;
+    command.organization_id = organization;
+    command.source.type = kInquirySourceType;
+    command.source.id = inquiry.id;
+    command.actor_subject = actor.Subject;
+    command.actor_issuer = actor.Issuer;
+    command.shipment = std::move(shipment);
+    const auto document = json::ValueBuilder(command).ExtractValue();
     transaction.Execute(sql::kStartConversion, organization, inquiry.id, document);
     platform::outbox::Enqueue(transaction, "shipments.create", inquiry.id, document);
     const auto rows = transaction.Execute(sql::kGetInquiries, organization, inquiry.id);

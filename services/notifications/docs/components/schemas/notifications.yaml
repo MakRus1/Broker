@@ -47,7 +47,7 @@ PublishedEvent:
   oneOf:
   - $ref: '#/ShipmentRouteChanged'
   - $ref: '#/ShipmentCreated'
-ShipmentRouteChangedPayload:
+ShipmentNotificationPayload:
   type: object
   additionalProperties: false
   properties:
@@ -109,7 +109,7 @@ ShipmentRouteChanged:
       type: string
       format: uuid
     payload:
-      $ref: '#/ShipmentRouteChangedPayload'
+      $ref: '#/ShipmentNotificationPayload'
 ShipmentCreated:
   type: object
   additionalProperties: false
@@ -138,4 +138,4 @@ ShipmentCreated:
       type: string
       format: uuid
     payload:
-      $ref: '#/ShipmentRouteChangedPayload'
+      $ref: '#/ShipmentNotificationPayload'

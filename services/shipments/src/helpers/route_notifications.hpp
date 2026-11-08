@@ -15,7 +15,7 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
     if (json::ValueBuilder(before.route_segments).ExtractValue() ==
         json::ValueBuilder(after.route_segments).ExtractValue())
         return;
-    const clients::notifications::models::ShipmentRouteChangedPayload payload{
+    const clients::notifications::models::ShipmentNotificationPayload payload{
         .actor_subject = actor.Subject,
         .recipient_issuer = actor.Issuer,
         .recipient_subject = after.logist.value_or(std::nullopt),

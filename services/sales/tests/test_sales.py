@@ -104,6 +104,12 @@ async def test_creation_retry_freezes_snapshot(api, mockserver):
     assert calls[0] == calls[1]
     assert calls[0]['shipment']['idempotency_key'] == 'sales-inquiry:' + value['id'] + ':2'
     assert calls[0]['shipment']['logist'] is None
+    assert calls[0]['source'] == {'type': 'sales.inquiry', 'id': value['id']}
+    assert calls[0]['shipment']['customer_id'] == CUSTOMER
+    assert calls[0]['shipment']['cargo_description'] == value['cargo_description']
+    assert calls[0]['shipment']['reference'] == result['item']['number']
+    assert 'organization_id' not in calls[0]['shipment']
+    assert 'status' not in calls[0]['shipment']
     await api.post('/api/v1/sales/inquiries/create-shipment', command)
     assert len(calls) == 2
 

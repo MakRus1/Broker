@@ -8,14 +8,14 @@
 
 namespace notifications::events {
 inline void ValidateShipmentRecipient(
-    const platform::auth::Identity& identity, const models::ShipmentRouteChangedPayload& payload) {
+    const platform::auth::Identity& identity, const models::ShipmentNotificationPayload& payload) {
     if (payload.recipient_issuer != identity.Issuer)
         throw platform::http::HandlerError<400>{"invalid_recipient_issuer",
             "Получатель должен принадлежать провайдеру пользователей отправителя"};
 }
 
 inline void ApplyShipmentNotification(userver::storages::postgres::Transaction& transaction,
-    const std::string& organization, const models::ShipmentRouteChangedPayload& payload,
+    const std::string& organization, const models::ShipmentNotificationPayload& payload,
     const std::string& event_type) {
     if (!payload.recipient_subject.has_value() ||
         payload.recipient_subject.value() == payload.actor_subject)

@@ -22,7 +22,7 @@ Shipments пишет `notifications.publish` в стандартный outbox в
 Общий конверт содержит `id`, `type`, `version`, `organization_id` и `payload`.
 Сейчас поддерживается `shipment.route_changed`, версия 1. `PublishedEvent` —
 `oneOf` типизированных конвертов. У `ShipmentRouteChanged` поля `type` и `version`
-заданы singleton-enum, а `payload` имеет тип `ShipmentRouteChangedPayload`.
+заданы singleton-enum, а `payload` имеет тип `ShipmentNotificationPayload`.
 Организация находится только в конверте. Кодген проверяет все обязательные поля,
 типы, ограничения, неизвестные поля и ровно один подходящий вариант до вызова ручки.
 Для разных версий одного события можно добавить отдельные варианты с одинаковым

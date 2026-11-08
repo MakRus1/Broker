@@ -26,6 +26,20 @@ RELEASE = {
 
 
 class DeploymentTest(unittest.TestCase):
+    def test_config_admin_uses_monitor_listener_instead_of_public_listener(self):
+        import base64
+        import yaml
+
+        with tempfile.TemporaryDirectory() as directory:
+            phases = staging.render(RELEASE, Path(directory))
+        secret = next(obj for obj in phases['services'] if obj['kind'] == 'Secret'
+            and obj['metadata']['name'].startswith('admin-bff-vars'))
+        variables = yaml.safe_load(base64.b64decode(secret['data']['config_vars.yaml']))
+        self.assertEqual(variables['client-config_admin-base-url'],
+            'http://configs.broker-staging.svc.cluster.local:8092')
+        self.assertEqual(variables['client-organizations-base-url'],
+            'http://organizations.broker-staging.svc.cluster.local:8080')
+
     def test_keycloak_theme_and_organization_backend_are_provisioned(self):
         with tempfile.TemporaryDirectory() as directory:
             phases = staging.render(RELEASE, Path(directory))

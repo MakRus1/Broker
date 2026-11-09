@@ -11,33 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - registry
-              properties:
-                registry:
-                  $ref: components/schemas/models.yaml#/ListCounterpartiesRequest
-                field:
-                  type: string
-                  maxLength: 64
-                query:
-                  type: string
-                  maxLength: 256
-                after:
-                  type: string
-                  maxLength: 2000
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 40
-                candidates:
-                  type: array
-                  maxItems: 100
-                  items:
-                    type: string
-                    maxLength: 2000
+              $ref: components/schemas/models.yaml#/CounterpartyFilterValuesRequest
       responses:
         '200':
           description: Каталог полей и очередная страница значений

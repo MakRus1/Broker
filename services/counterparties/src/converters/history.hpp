@@ -1,7 +1,7 @@
 #pragma once
-#include <helpers/converters.hpp>
+#include <converters/counterparties.hpp>
 
-namespace counterparties::helpers {
+namespace counterparties::converters {
 inline models::CounterpartySnapshot ReadSnapshot(const userver::formats::json::Value& document) {
     // Старые записи содержат только известные на тот момент поля.
     userver::formats::json::ValueBuilder snapshot(document);
@@ -43,4 +43,4 @@ inline std::vector<models::CounterpartyEvent> Convert(
         result.push_back(Convert(row));
     return result;
 }
-}  // namespace counterparties::helpers
+}  // namespace counterparties::converters

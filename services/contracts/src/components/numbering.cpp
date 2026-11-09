@@ -49,7 +49,7 @@ void NumberingComponent::RequireAdministrator(
 models::ContractNumbering NumberingComponent::Get(
     const std::string& organization, userver::server::request::RequestContext& context) const {
     RequireAdministrator(context, organization);
-    return helpers::ConvertNumbering(
+    return helpers::ReadNumbering(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetNumbering, organization));
 }
 
@@ -66,6 +66,6 @@ models::ContractNumbering NumberingComponent::Update(
             body.number_template, body.reset_number_yearly, body.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Настройки изменены. Обновите форму"};
-    return helpers::ConvertNumbering(rows);
+    return helpers::ReadNumbering(rows);
 }
 }  // namespace contracts

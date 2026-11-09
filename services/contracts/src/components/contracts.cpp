@@ -2,6 +2,7 @@
 #include <boost/uuid/string_generator.hpp>
 #include <components/contracts.hpp>
 #include <contracts/sql_queries.hpp>
+#include <converters/contracts.hpp>
 #include <helpers/numbering.hpp>
 #include <limits>
 #include <models/errors.hpp>
@@ -21,40 +22,10 @@
 
 namespace contracts {
 namespace pg = userver::storages::postgres;
-using helpers::ConvertNumbering;
+using helpers::ReadNumbering;
 
 namespace {
-std::optional<boost::uuids::uuid> ConvertId(const std::optional<std::string>& value) {
-    if (!value.has_value())
-        return std::nullopt;
-    return boost::uuids::string_generator{}(value.value());
-}
-
-std::optional<std::string> ConvertId(const std::optional<boost::uuids::uuid>& value) {
-    if (!value.has_value())
-        return std::nullopt;
-    return boost::uuids::to_string(value.value());
-}
-
-models::Contract Convert(const pgtypes::ContractV1& value) {
-    models::Contract result;
-    result.id = boost::uuids::to_string(value.Id);
-    result.own_company_id = boost::uuids::to_string(value.OwnCompanyId);
-    result.counterparty_id = boost::uuids::to_string(value.CounterpartyId);
-    result.number = value.Number;
-    result.contract_date = value.ContractDate;
-    result.valid_until = value.ValidUntil;
-    result.currency = value.Currency;
-    result.own_bank_account_id = ConvertId(value.OwnBankAccountId);
-    result.counterparty_bank_account_id = ConvertId(value.CounterpartyBankAccountId);
-    result.payment_delay_days = value.PaymentDelayDays;
-    result.note = value.Note;
-    result.archived = value.Archived;
-    result.revision = value.Revision;
-    return result;
-}
-
-pgtypes::ContractV1 Prepare(const models::SaveContractRequest& value) {
+void NormalizeAndValidate(models::SaveContractRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция договора"};
     const auto number = userver::utils::text::Trim(value.number.value_or(""));
@@ -73,25 +44,12 @@ pgtypes::ContractV1 Prepare(const models::SaveContractRequest& value) {
     const auto counterparty = boost::uuids::string_generator{}(value.counterparty_id);
     if (own == counterparty)
         throw ApiError<400>{"same_parties", "Выберите разные стороны договора"};
-    auto note = value.note;
-    if (note.has_value()) {
-        note = userver::utils::text::Trim(note.value());
-        if (note.value().empty())
-            note.reset();
+    value.number = number;
+    if (value.note.has_value()) {
+        value.note = userver::utils::text::Trim(value.note.value());
+        if (value.note.value().empty())
+            value.note.reset();
     }
-    return {.Id = boost::uuids::string_generator{}(value.id),
-        .OwnCompanyId = own,
-        .CounterpartyId = counterparty,
-        .Number = number,
-        .ContractDate = value.contract_date,
-        .ValidUntil = value.valid_until,
-        .Currency = value.currency,
-        .OwnBankAccountId = ConvertId(value.own_bank_account_id),
-        .CounterpartyBankAccountId = ConvertId(value.counterparty_bank_account_id),
-        .PaymentDelayDays = value.payment_delay_days,
-        .Note = note,
-        .Archived = value.archived,
-        .Revision = value.expected_revision + 1};
 }
 
 struct RegistryRow {
@@ -99,14 +57,6 @@ struct RegistryRow {
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };
-
-std::vector<models::Contract> Convert(const std::vector<RegistryRow>& rows) {
-    std::vector<models::Contract> result;
-    result.reserve(rows.size());
-    for (const auto& row : rows)
-        result.push_back(Convert(row.Contract));
-    return result;
-}
 
 registry::QueryBuilder BuildRegistryFilters(const models::ListContractsRequest& request,
     const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
@@ -123,7 +73,7 @@ const registry::Definition kRegistry{
 
 std::string GenerateContractNumber(pg::Transaction& transaction, const std::string& organization,
     userver::utils::datetime::Date date) {
-    const auto settings = ConvertNumbering(transaction.Execute(sql::kGetNumbering, organization));
+    const auto settings = ReadNumbering(transaction.Execute(sql::kGetNumbering, organization));
     const auto sequence =
         transaction
             .Execute(sql::kNextDocumentNumber, organization, std::string{"contract"},
@@ -202,7 +152,7 @@ models::Contract ContractsComponent::Get(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Договор не найден"};
-    return Convert(rows.AsSingleRow<pgtypes::ContractV1>());
+    return converters::Convert(rows.AsSingleRow<pgtypes::ContractV1>());
 }
 
 models::Contract ContractsComponent::Save(const models::SaveContractRequest& request,
@@ -211,7 +161,9 @@ models::Contract ContractsComponent::Save(const models::SaveContractRequest& req
     const auto& identity = platform::auth::GetIdentity(context);
     platform::auth::CheckPermission(context, permissions::CONTRACTS_WRITE);
     const auto organization = platform::auth::GetOrganization(identity);
-    auto value = Prepare(request);
+    auto normalized = request;
+    NormalizeAndValidate(normalized);
+    auto value = converters::Convert(normalized);
     ValidateParties(context, request);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     if (value.Number.empty())
@@ -221,7 +173,7 @@ models::Contract ContractsComponent::Save(const models::SaveContractRequest& req
         : transaction.Execute(sql::kUpdateContract, organization, value, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Договор изменён. Обновите карточку"};
-    const auto result = Convert(rows.AsSingleRow<pgtypes::ContractV1>());
+    const auto result = converters::Convert(rows.AsSingleRow<pgtypes::ContractV1>());
     transaction.Execute(sql::kWriteHistory, organization, result.id, result.revision,
         identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
     transaction.Commit();
@@ -266,7 +218,11 @@ ContractsComponent::ListResult ContractsComponent::List(const models::ListContra
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
         transaction.Commit();
-        return ListResult{.items = Convert(rows), .next_cursor = cursor};
+        std::vector<models::Contract> items;
+        items.reserve(rows.size());
+        for (const auto& row : rows)
+            items.push_back(converters::Convert(row.Contract));
+        return ListResult{.items = std::move(items), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }

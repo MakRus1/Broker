@@ -1,18 +1,9 @@
-#include <helpers/settings.hpp>
+#include <components/cards.hpp>
 #include <views/api/v1/sales/cards/history/view.hpp>
 
 namespace sales::views::api::v1::sales::cards::history {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::sales::helpers;
-    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kHistoryCards,
-        platform::auth::GetOrganization(platform::auth::GetIdentity(context)), request.body.id,
-        request.body.after_revision.value_or(0));
-    Response200 response;
-    response.items.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<json::Value>())
-        response.items.push_back(
-            models::ParseModelJson(row, std::type_identity<models::SalesHistoryEntry>{}));
-    return response;
+    return Response200{.items = deps.cards->History(request.body, context)};
 }
 }  // namespace sales::views::api::v1::sales::cards::history

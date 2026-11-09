@@ -362,3 +362,8 @@ components_manager:
             path: /tests/{action}
             method: POST
             task_processor: main-task-processor
+        sales-cards: {}
+        sales-contacts: {}
+        sales-inquiries: {}
+        sales-proposals: {}
+        sales-settings: {}

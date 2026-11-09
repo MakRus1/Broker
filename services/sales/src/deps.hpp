@@ -1,5 +1,11 @@
 #pragma once
 
+#include <components/cards.hpp>
+#include <components/contacts.hpp>
+#include <components/inquiries.hpp>
+#include <components/proposals.hpp>
+#include <components/settings.hpp>
+
 #include <components/rfq.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -23,6 +29,11 @@
 namespace sales {
 
 struct Deps {
+    CardsComponent* cards;
+    ContactsComponent* contacts;
+    InquiriesComponent* inquiries;
+    ProposalsComponent* proposals;
+    SettingsComponent* settings;
     RfqComponent* rfq;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
@@ -39,6 +50,11 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .cards = &component_context.FindComponent<CardsComponent>(),
+        .contacts = &component_context.FindComponent<ContactsComponent>(),
+        .inquiries = &component_context.FindComponent<InquiriesComponent>(),
+        .proposals = &component_context.FindComponent<ProposalsComponent>(),
+        .settings = &component_context.FindComponent<SettingsComponent>(),
         .rfq = &component_context.FindComponent<RfqComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),

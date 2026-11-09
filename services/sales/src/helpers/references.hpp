@@ -1,6 +1,5 @@
 #pragma once
 #include <helpers/database.hpp>
-#include <platform/auth/organization_admin.hpp>
 #include <platform/http_client.hpp>
 #include <userver/utils/text_light.hpp>
 
@@ -57,21 +56,4 @@ inline void ValidateReferences(const Dependencies& deps,
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 
-inline void RequireAdministrator(const Deps& deps,
-    const userver::server::request::RequestContext& context, const std::string& organization) try {
-    platform::auth::RequireOrganizationAdministrator(deps.organizations, context, organization);
-} catch (const platform::http::ErrorByStatus<403>&) {
-
-    throw ApiError<403>{"reference_forbidden", "Нет доступа к связанным данным"};
-} catch (const platform::http::ErrorByStatus<404>&) {
-    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const platform::http::ApiError&) {
-    throw ApiError<502>{"reference_unavailable", "Не удалось получить связанные данные"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
-}
 }  // namespace sales::helpers

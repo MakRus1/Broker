@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <components/rfq.hpp>
+#include <events/shipment_command.hpp>
 #include <helpers/editable_inquiry.hpp>
 #include <helpers/references.hpp>
-#include <helpers/shipment_command.hpp>
 #include <map>
 #include <platform/charge_amounts.hpp>
 #include <set>

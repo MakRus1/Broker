@@ -1,8 +1,6 @@
 #pragma once
-#include <helpers/references.hpp>
-#include <platform/document_number.hpp>
+#include <helpers/database.hpp>
 #include <postgresql/types.hpp>
-#include <set>
 
 namespace sales::helpers {
 inline models::SalesSettings Settings(const pg::ResultSet& rows) {
@@ -20,24 +18,4 @@ inline models::SalesSettings Settings(const pg::ResultSet& rows) {
     return result;
 }
 
-inline void ValidateStages(
-    const models::UpdateSalesSettingsRequest& request, const models::SalesSettings& previous) {
-    std::set<std::string> ids;
-    for (const auto& stage : request.stages) {
-        if (!ids.insert(stage.id).second || userver::utils::text::Trim(stage.name).empty())
-            throw ApiError<400>{"invalid_stage", "Этапы должны иметь уникальные коды и названия"};
-    }
-    // Отключение сохраняет ссылки и историю существующих карточек.
-    for (const auto& stage : previous.stages)
-        if (!ids.contains(stage.id))
-            throw ApiError<409>{"stage_in_use", "Отключите этап вместо его удаления"};
-}
-
-inline void ValidateStage(const models::SalesSettings& settings, const std::string& id,
-    const std::optional<std::string>& previous) {
-    for (const auto& stage : settings.stages)
-        if (stage.id == id && (stage.enabled || previous == id))
-            return;
-    throw ApiError<400>{"invalid_stage", "Выберите действующий этап продаж"};
-}
 }  // namespace sales::helpers

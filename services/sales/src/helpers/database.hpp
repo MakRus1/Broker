@@ -1,5 +1,4 @@
 #pragma once
-#include <deps.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/handler_error.hpp>

@@ -1,16 +1,19 @@
 #include <components/inquiries.hpp>
-#include <components/internal/settings.hpp>
-#include <components/internal/shipment_references.hpp>
 #include <events/shipment_command.hpp>
+#include <helpers/references.hpp>
+#include <helpers/settings.hpp>
+#include <map>
+#include <platform/document_number.hpp>
 #include <platform/outbox/component.hpp>
 #include <registry/fields.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/date.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
-using namespace detail;
+using namespace helpers;
 
 InquiriesComponent::InquiriesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -183,7 +186,7 @@ models::Inquiry InquiriesComponent::CreateShipment(const models::CreateShipmentR
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Клиент находится в архиве"};
     auto segments = before.route_segments;
-    ResolveShipmentReferences(deps, context, segments, party.logist.value_or(std::nullopt));
+    ResolveShipmentReferences(context, segments, party.logist.value_or(std::nullopt));
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto locked = transaction.Execute(sql::kLockInquiries, organization, request.id);
@@ -262,4 +265,96 @@ InquiriesComponent::FilterValuesResult InquiriesComponent::FilterValues(
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
+
+// Проверяем ссылки с правами автора до фиксации неизменяемой команды.
+// Доставка затем использует служебный токен и не зависит от пользовательской сессии.
+void InquiriesComponent::ResolveShipmentReferences(
+    const userver::server::request::RequestContext& context,
+    std::vector<models::ShipmentRouteSegment>& segments,
+    const std::optional<std::string>& logist) const try {
+    const auto& deps = deps_;
+    const auto token = platform::auth::GetAccessToken(context);
+    if (logist.has_value()) {
+        const auto employees = deps.organizations.ApiOrganizationsEmployeesList(
+            {.body = {.limit = 1,
+                 .organization_id =
+                     platform::auth::GetOrganization(platform::auth::GetIdentity(context)),
+                 .subject = logist}},
+            token);
+        if (employees.items.empty())
+            throw ApiError<400>{
+                "invalid_logist", "В карточке клиента назначен недействующий логист"};
+    }
+    std::set<std::string> ids;
+    std::set<std::string> parties;
+    const auto addLocation = [&](const auto& value) {
+        if (value)
+            ids.insert(value->id);
+    };
+    const auto addParty = [&](const auto& value) {
+        if (value)
+            parties.insert(*value);
+    };
+    for (const auto& segment : segments) {
+        if (segment.sea) {
+            addLocation(segment.sea->pol);
+            addLocation(segment.sea->pod);
+            addParty(segment.sea->departure_terminal_id);
+            addParty(segment.sea->arrival_terminal_id);
+        }
+        if (segment.air) {
+            addLocation(segment.air->origin_airport);
+            addLocation(segment.air->destination_airport);
+            addParty(segment.air->carrier_id);
+        }
+    }
+    std::map<std::string, models::TransportLocation> locations;
+    if (!ids.empty()) {
+        const auto response = deps.transport_locations.ApiV1RouteLocationsGetBatch(
+            {.body = {.ids = std::vector<std::string>(ids.begin(), ids.end())}}, token);
+        for (const auto& location : response.items)
+            locations.emplace(location.id,
+                models::ParseModelJson(json::ValueBuilder(location).ExtractValue(),
+                    std::type_identity<models::TransportLocation>{}));
+    }
+    const auto resolve = [&](auto& value, models::TransportLocationKind kind) {
+        if (!value)
+            return;
+        const auto found = locations.find(value->id);
+        if (found == locations.end() || found->second.kind != kind)
+            throw ApiError<400>{
+                "invalid_route_location", "Выберите транспортный пункт из справочника"};
+        value = found->second;
+    };
+    for (auto& segment : segments) {
+        if (segment.sea) {
+            resolve(segment.sea->pol, models::TransportLocationKind::SeaPort);
+            resolve(segment.sea->pod, models::TransportLocationKind::SeaPort);
+        }
+        if (segment.air) {
+            resolve(segment.air->origin_airport, models::TransportLocationKind::Airport);
+            resolve(segment.air->destination_airport, models::TransportLocationKind::Airport);
+        }
+    }
+    for (const auto& id : parties) {
+        const auto party = GetCounterparty(deps, context, id);
+        if (party.archived)
+            throw ApiError<400>{
+                "invalid_route_counterparty", "Выберите действующего контрагента участка"};
+    }
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к связанным данным"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить связанные данные"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
+}
+
 }  // namespace sales

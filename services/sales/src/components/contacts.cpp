@@ -1,12 +1,12 @@
 #include <components/contacts.hpp>
-#include <components/internal/database.hpp>
+#include <helpers/database.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/date.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
-using namespace detail;
+using namespace helpers;
 
 ContactsComponent::ContactsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)

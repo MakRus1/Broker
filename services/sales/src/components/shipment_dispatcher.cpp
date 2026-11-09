@@ -1,9 +1,9 @@
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <components/internal/database.hpp>
-#include <components/internal/proposal_storage.hpp>
 #include <components/shipment_dispatcher.hpp>
 #include <events/shipment_command.hpp>
+#include <helpers/database.hpp>
+#include <helpers/proposal_storage.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/boost_uuid5.hpp>
@@ -12,7 +12,7 @@
 namespace sales {
 namespace json = userver::formats::json;
 
-using namespace detail;
+using namespace helpers;
 
 void ShipmentDispatcher::TransferProposal(const ShipmentCommand& command,
     const std::string& shipment_id, const std::string& token) const {
@@ -114,9 +114,9 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
             // Недоступность, 403 и конфликты протокола требуют повтора/исправления сервиса,
             // а не изменения уже отправленной команды пользователем.
         },
-        [](detail::pg::Transaction& transaction, const ShipmentCommand& command,
+        [](helpers::pg::Transaction& transaction, const ShipmentCommand& command,
             const DeliveryResult& result) {
-            using namespace detail;
+            using namespace helpers;
             const auto organization = command.organization_id;
             const auto id = command.source.id;
             const auto actor = command.actor_issuer + "#" + command.actor_subject;

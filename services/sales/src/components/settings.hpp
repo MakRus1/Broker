@@ -20,6 +20,9 @@ class SettingsComponent final : public userver::components::ComponentBase {
         const models::UpdateSalesSettingsRequest&, userver::server::request::RequestContext&) const;
 
   private:
+    void RequireAdministrator(
+        const userver::server::request::RequestContext&, const std::string& organization) const;
+
     struct Dependencies {
         clients::organizations::Client organizations;
         userver::storages::postgres::ClusterPtr pg_cluster;

@@ -1,12 +1,23 @@
 #include <components/cards.hpp>
-#include <components/internal/settings.hpp>
+#include <helpers/references.hpp>
+#include <helpers/settings.hpp>
 #include <registry/fields.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
-using namespace detail;
+using namespace helpers;
+
+namespace {
+void ValidateStage(const models::SalesSettings& settings, const std::string& id,
+    const std::optional<std::string>& previous) {
+    for (const auto& stage : settings.stages)
+        if (stage.id == id && (stage.enabled || previous == id))
+            return;
+    throw ApiError<400>{"invalid_stage", "Выберите действующий этап продаж"};
+}
+}  // namespace
 
 CardsComponent::CardsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)

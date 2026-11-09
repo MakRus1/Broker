@@ -39,6 +39,9 @@ class InquiriesComponent final : public userver::components::ComponentBase {
         const models::SalesFilterValuesRequest&, userver::server::request::RequestContext&) const;
 
   private:
+    void ResolveShipmentReferences(const userver::server::request::RequestContext&,
+        std::vector<models::ShipmentRouteSegment>&, const std::optional<std::string>& logist) const;
+
     struct Dependencies {
         clients::counterparties::Client counterparties;
         clients::organizations::Client organizations;

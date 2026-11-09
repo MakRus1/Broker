@@ -1,8 +1,8 @@
-#include <components/internal/database.hpp>
-#include <components/internal/editable_inquiry.hpp>
-#include <components/internal/proposal_storage.hpp>
-#include <components/internal/references.hpp>
 #include <components/proposals.hpp>
+#include <helpers/database.hpp>
+#include <helpers/editable_inquiry.hpp>
+#include <helpers/proposal_storage.hpp>
+#include <helpers/references.hpp>
 #include <map>
 #include <platform/charge_amounts.hpp>
 #include <set>
@@ -13,7 +13,7 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
-using namespace detail;
+using namespace helpers;
 
 namespace {
 void StoreProposal(pg::Transaction& transaction, const std::string& organization,

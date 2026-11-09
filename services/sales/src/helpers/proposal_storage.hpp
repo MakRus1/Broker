@@ -1,7 +1,7 @@
 #pragma once
-#include <components/internal/database.hpp>
+#include <helpers/database.hpp>
 
-namespace sales::detail {
+namespace sales::helpers {
 inline models::Proposal ReadProposal(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         throw ApiError<404>{"proposal_not_found", "Предложение не найдено"};
@@ -9,4 +9,4 @@ inline models::Proposal ReadProposal(const pg::ResultSet& rows) {
         rows.AsSingleRow<json::Value>(), std::type_identity<models::Proposal>{});
 }
 
-}  // namespace sales::detail
+}  // namespace sales::helpers

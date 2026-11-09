@@ -7,9 +7,9 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
-namespace sales::detail {
+namespace sales::helpers {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 template <int Status> using ApiError = platform::http::HandlerError<Status>;
 
-}  // namespace sales::detail
+}  // namespace sales::helpers

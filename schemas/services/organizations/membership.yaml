@@ -11,28 +11,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - organization_id
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
+              $ref: components/schemas/operations.yaml#/OrganizationIdentity
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - organization_id
-                properties:
-                  organization_id:
-                    type: string
-                    format: uuid
+                $ref: components/schemas/operations.yaml#/OrganizationIdentity
         '400':
           description: Некорректные данные
           content:

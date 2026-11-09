@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <converters/permissions.hpp>
 #include <helpers/errors.hpp>
 #include <openapi/models.hpp>
 #include <organizations/sql_queries.hpp>
@@ -11,12 +12,7 @@
 namespace organizations::helpers {
 enum class PermissionScope { Organization, Platform };
 
-struct PermissionRow {
-    std::string Group;
-    std::string Id;
-    std::string Name;
-    std::vector<std::string> Requires;
-};
+using converters::PermissionRow;
 
 inline std::vector<PermissionRow> LoadPermissions(
     userver::storages::postgres::Transaction& transaction,
@@ -32,8 +28,7 @@ inline std::vector<models::Permission> PermissionCatalog(
     PermissionScope scope = PermissionScope::Organization) {
     std::vector<models::Permission> result;
     for (const auto& row : LoadPermissions(transaction, scope))
-        result.push_back(
-            {.dependencies = row.Requires, .group = row.Group, .id = row.Id, .name = row.Name});
+        result.push_back(converters::Convert(row));
     return result;
 }
 

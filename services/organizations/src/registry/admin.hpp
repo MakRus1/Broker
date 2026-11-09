@@ -1,9 +1,9 @@
 #pragma once
+#include <converters/organizations.hpp>
 #include <helpers/access.hpp>
-#include <helpers/converters.hpp>
 #include <platform/registry_query.hpp>
 
-namespace organizations::helpers {
+namespace organizations::registry_query {
 namespace registry = platform::registry;
 
 namespace organization_fields {
@@ -58,4 +58,4 @@ template <typename Request> registry::BuiltQuery MemberQuery(const Request& requ
         request.cursor.has_value() ? request.cursor.value().value : "");
     return std::move(query).Build(request.limit + 1);
 }
-}  // namespace organizations::helpers
+}  // namespace organizations::registry_query

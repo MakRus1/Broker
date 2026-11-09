@@ -1,15 +1,11 @@
-#include <helpers/permission_releases.hpp>
+#include <components/permission_releases.hpp>
+#include <utility>
 #include <views/api/internal/permissions/releases/reconcile/view.hpp>
 
 namespace organizations::views::api::internal::permissions::releases::reconcile {
-Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
-    using namespace ::organizations::helpers;
-    namespace pg = userver::storages::postgres;
-    auto tx = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    tx.Execute(sql::kLockPermissionReleases);
-    RequirePermissionReleases(tx, request.body.owner, request.body.versions);
-    tx.Execute(sql::kReconcilePermissionReleases, request.body.owner, request.body.versions);
-    tx.Commit();
-    return Response200{.success = true};
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
+    auto result = deps.permission_releases->Reconcile(request.body, context);
+    return Response200{.success = std::move(result.success)};
 }
 }  // namespace organizations::views::api::internal::permissions::releases::reconcile

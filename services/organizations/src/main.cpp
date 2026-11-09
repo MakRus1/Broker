@@ -10,7 +10,14 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/access.hpp>
+#include <components/members.hpp>
+#include <components/organizations.hpp>
+#include <components/permission_releases.hpp>
+#include <components/registry_defaults.hpp>
+#include <components/roles.hpp>
 #include <components/users.hpp>
+
 #include <platform/auth/service_token.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -54,6 +61,12 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-organizations");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<organizations::AccessComponent>();
+    component_list.Append<organizations::MembersComponent>();
+    component_list.Append<organizations::OrganizationsComponent>();
+    component_list.Append<organizations::PermissionReleasesComponent>();
+    component_list.Append<organizations::RegistryDefaultsComponent>();
+    component_list.Append<organizations::RolesComponent>();
     component_list = organizations::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

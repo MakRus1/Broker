@@ -11,18 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - permission
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                permission:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
+              $ref: ../components/schemas/operations.yaml#/AccessResolveOrganizationRequest
       responses:
         '200':
           description: Успех
@@ -75,24 +64,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - platform_admin
-                - organizations
-                - managed_organization_ids
-                properties:
-                  platform_admin:
-                    type: boolean
-                  organizations:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/Organization
-                  managed_organization_ids:
-                    type: array
-                    items:
-                      type: string
-                      format: uuid
+                $ref: ../components/schemas/operations.yaml#/AccessMineResult
         '400':
           description: Некорректные данные
           content:
@@ -144,17 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - items
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/Organization
-                  next_cursor:
-                    $ref: ../components/schemas/organizations.yaml#/OrganizationListCursor
+                $ref: ../components/schemas/operations.yaml#/OrganizationsListResult
         '400':
           description: Некорректные данные
           content:
@@ -206,13 +168,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - organization
-                properties:
-                  organization:
-                    $ref: ../components/schemas/organizations.yaml#/Organization
+                $ref: ../components/schemas/operations.yaml#/OrganizationResult
         '400':
           description: Некорректные данные
           content:
@@ -264,13 +220,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - organization
-                properties:
-                  organization:
-                    $ref: ../components/schemas/organizations.yaml#/Organization
+                $ref: ../components/schemas/operations.yaml#/OrganizationResult
         '400':
           description: Некорректные данные
           content:
@@ -322,17 +272,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - items
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/Member
-                  next_cursor:
-                    $ref: ../components/schemas/organizations.yaml#/MemberListCursor
+                $ref: ../components/schemas/operations.yaml#/MembersListResult
         '400':
           description: Некорректные данные
           content:
@@ -384,13 +324,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - member
-                properties:
-                  member:
-                    $ref: ../components/schemas/organizations.yaml#/Member
+                $ref: ../components/schemas/operations.yaml#/MemberResult
         '400':
           description: Некорректные данные
           content:
@@ -442,13 +376,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - member
-                properties:
-                  member:
-                    $ref: ../components/schemas/organizations.yaml#/Member
+                $ref: ../components/schemas/operations.yaml#/MemberResult
         '400':
           description: Некорректные данные
           content:
@@ -500,13 +428,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - member
-                properties:
-                  member:
-                    $ref: ../components/schemas/organizations.yaml#/Member
+                $ref: ../components/schemas/operations.yaml#/MemberResult
         '400':
           description: Некорректные данные
           content:
@@ -551,34 +473,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - organization_id
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
+              $ref: ../components/schemas/operations.yaml#/OrganizationIdentity
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - items
-                - permissions
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/OrganizationRole
-                  permissions:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/Permission
+                $ref: ../components/schemas/operations.yaml#/RolesListResult
         '400':
           description: Неверные параметры или разрешения
           content:
@@ -623,48 +525,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - organization_id
-              - id
-              - name
-              - description
-              - permissions
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                id:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                  pattern: ^[a-z][a-z0-9_-]*$
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                description:
-                  type: string
-                  maxLength: 500
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                  maxItems: 100
+              $ref: ../components/schemas/operations.yaml#/RolesCreateRequest
       responses:
         '201':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - role
-                properties:
-                  role:
-                    $ref: ../components/schemas/organizations.yaml#/OrganizationRole
+                $ref: ../components/schemas/operations.yaml#/OrganizationRoleResult
         '400':
           description: Неверные параметры или разрешения
           content:
@@ -709,53 +577,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - organization_id
-              - id
-              - name
-              - description
-              - permissions
-              - expected_revision
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                id:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                  pattern: ^[a-z][a-z0-9_-]*$
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                description:
-                  type: string
-                  maxLength: 500
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                  maxItems: 100
-                expected_revision:
-                  type: integer
-                  format: int64
-                  minimum: 1
+              $ref: ../components/schemas/operations.yaml#/RolesUpdateRequest
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - role
-                properties:
-                  role:
-                    $ref: ../components/schemas/organizations.yaml#/OrganizationRole
+                $ref: ../components/schemas/operations.yaml#/OrganizationRoleResult
         '400':
           description: Неверные параметры или разрешения
           content:
@@ -800,15 +629,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - subject
-              properties:
-                subject:
-                  type: string
-                  minLength: 1
-                  maxLength: 200
+              $ref: ../components/schemas/operations.yaml#/AccessGetPlatformRequest
       responses:
         '200':
           description: Успех
@@ -860,24 +681,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - subject
-              - permissions
-              - expected_revision
-              properties:
-                subject:
-                  type: string
-                  minLength: 1
-                  maxLength: 200
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                expected_revision:
-                  type: integer
-                  minimum: 0
+              $ref: ../components/schemas/operations.yaml#/AccessUpdatePlatformRequest
       responses:
         '200':
           description: Успех
@@ -929,15 +733,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - permission
-              properties:
-                permission:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
+              $ref: ../components/schemas/operations.yaml#/AccessResolvePlatformRequest
       responses:
         '200':
           description: Успех
@@ -996,13 +792,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - member
-                properties:
-                  member:
-                    $ref: ../components/schemas/organizations.yaml#/Member
+                $ref: ../components/schemas/operations.yaml#/MemberResult
         '400':
           description: Некорректные данные
           content:
@@ -1047,39 +837,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                query:
-                  type: string
-                  maxLength: 200
-                subject:
-                  type: string
-                  maxLength: 200
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 20
-              required: []
+              $ref: ../components/schemas/operations.yaml#/AccessEmployeesRequest
       responses:
         '200':
           description: Результат поиска
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/organizations.yaml#/OrganizationEmployee
-                required:
-                - items
+                $ref: ../components/schemas/operations.yaml#/AccessEmployeesResult
         '400':
           description: Некорректные параметры поиска
           content:
@@ -1112,28 +877,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: ../components/schemas/operations.yaml#/OrganizationIdentity
       responses:
         '200':
           description: Результат операции
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  organization_id:
-                    type: string
-                    format: uuid
-                required:
-                - organization_id
+                $ref: ../components/schemas/operations.yaml#/OrganizationIdentity
         '400':
           description: Некорректные параметры
           content:

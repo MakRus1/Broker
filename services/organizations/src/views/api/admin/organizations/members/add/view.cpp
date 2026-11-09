@@ -1,37 +1,11 @@
-#include <helpers/access.hpp>
-#include <helpers/audit.hpp>
-#include <helpers/converters.hpp>
-#include <userver/storages/postgres/exceptions.hpp>
-#include <userver/utils/text.hpp>
+#include <components/members.hpp>
+#include <utility>
 #include <views/api/admin/organizations/members/add/view.hpp>
 
 namespace organizations::views::api::admin::organizations::members::add {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::organizations::helpers;
-    const auto& identity = platform::auth::GetIdentity(context);
-    try {
-        {
-            auto transaction =
-                deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-            RequireAdministrator(transaction, request.body.organization_id, identity);
-            RequireRole(transaction, request.body.organization_id, request.body.role);
-            transaction.Commit();
-        }
-        // Сетевое обращение выполняется без открытой транзакции и блокировок БД.
-        const auto user = deps.users->Find(request.body.username);
-        auto transaction =
-            deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        RequireAdministrator(transaction, request.body.organization_id, identity);
-        const auto member = Convert(transaction
-                                        .Execute(sql::kAddMember, request.body.organization_id,
-                                            identity.Issuer, Convert(user, request.body.role))
-                                        .AsSingleRow<pgtypes::MemberV2>());
-        WriteAudit(transaction, request.body.organization_id, identity, "member.added", member);
-        transaction.Commit();
-        return Response201{.member = member};
-    } catch (const userver::storages::postgres::UniqueViolation&) {
-        return Response409{.error = "already_exists", .message = "Такая запись уже существует"};
-    }
+    auto result = deps.members->Add(request.body, context);
+    return Response201{.member = std::move(result.member)};
 }
 }  // namespace organizations::views::api::admin::organizations::members::add

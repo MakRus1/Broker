@@ -11,39 +11,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - owner
-              - version
-              - entries
-              properties:
-                owner:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                version:
-                  type: string
-                  minLength: 1
-                  maxLength: 1000
-                entries:
-                  type: array
-                  maxItems: 1000
-                  items:
-                    $ref: '#/components/schemas/ReleasePermission'
+              $ref: ../components/schemas/operations.yaml#/PermissionReleasesUpsertRequest
       responses:
         '200':
           description: Операция выполнена
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - success
-                properties:
-                  success:
-                    type: boolean
+                $ref: ../components/schemas/operations.yaml#/PermissionReleaseResult
         '400':
           description: Некорректный каталог
           content:
@@ -78,33 +53,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - owner
-              - version
-              properties:
-                owner:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                version:
-                  type: string
-                  minLength: 1
-                  maxLength: 1000
+              $ref: ../components/schemas/operations.yaml#/PermissionReleasesActivateRequest
       responses:
         '200':
           description: Операция выполнена
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - success
-                properties:
-                  success:
-                    type: boolean
+                $ref: ../components/schemas/operations.yaml#/PermissionReleaseResult
         '400':
           description: Некорректный каталог
           content:
@@ -139,37 +95,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - owner
-              - versions
-              properties:
-                owner:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                versions:
-                  type: array
-                  minItems: 1
-                  maxItems: 100
-                  items:
-                    type: string
-                    minLength: 1
-                    maxLength: 1000
+              $ref: ../components/schemas/operations.yaml#/PermissionReleasesReconcileRequest
       responses:
         '200':
           description: Операция выполнена
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - success
-                properties:
-                  success:
-                    type: boolean
+                $ref: ../components/schemas/operations.yaml#/PermissionReleaseResult
         '400':
           description: Некорректный каталог
           content:
@@ -197,42 +130,6 @@ paths:
       security:
       - bearerAuth: []
 components:
-  schemas:
-    ReleasePermission:
-      type: object
-      additionalProperties: false
-      required:
-      - code
-      - name
-      - group
-      - scope
-      - dependencies
-      properties:
-        code:
-          type: string
-          minLength: 3
-          maxLength: 200
-        name:
-          type: string
-          minLength: 1
-          maxLength: 500
-        group:
-          type: string
-          minLength: 1
-          maxLength: 200
-        scope:
-          type: string
-          enum:
-          - organization
-          - platform
-          - service
-        dependencies:
-          type: array
-          maxItems: 100
-          items:
-            type: string
-            minLength: 3
-            maxLength: 200
   securitySchemes:
     bearerAuth:
       type: http

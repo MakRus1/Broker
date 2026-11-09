@@ -6,6 +6,12 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        organizations-access: {}
+        organizations-members: {}
+        organizations-organizations: {}
+        organizations-permission-releases: {}
+        organizations-registry-defaults: {}
+        organizations-roles: {}
         service-token-provider:
             endpoint: $users-token-url
             client-id: $users-client-id

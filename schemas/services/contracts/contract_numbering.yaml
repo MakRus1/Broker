@@ -72,26 +72,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                expected_revision:
-                  type: integer
-                  format: int64
-                number_template:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
-                reset_number_yearly:
-                  type: boolean
-              required:
-              - organization_id
-              - expected_revision
-              - number_template
-              - reset_number_yearly
+              $ref: components/schemas/models.yaml#/UpdateContractNumberingRequest
       responses:
         '200':
           description: Результат

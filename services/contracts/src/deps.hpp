@@ -1,4 +1,6 @@
 #pragma once
+#include <components/contracts.hpp>
+#include <components/numbering.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -18,6 +20,8 @@
 namespace contracts {
 
 struct Deps {
+    ContractsComponent* documents;
+    NumberingComponent* numbering;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -29,6 +33,8 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .documents = &component_context.FindComponent<ContractsComponent>(),
+        .numbering = &component_context.FindComponent<NumberingComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

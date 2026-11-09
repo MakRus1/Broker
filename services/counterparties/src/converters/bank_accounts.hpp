@@ -1,8 +1,9 @@
 #pragma once
-#include <helpers/details.hpp>
-#include <limits>
+#include <boost/uuid/string_generator.hpp>
+#include <openapi/models.hpp>
+#include <postgresql/types.hpp>
 
-namespace counterparties::helpers {
+namespace counterparties::converters {
 inline models::BankAccount Convert(const pgtypes::BankAccountV1& row) {
     return {.archived = row.Archived,
         .bank_name = row.BankName,
@@ -35,15 +36,7 @@ inline pgtypes::BankAccountV1 Convert(const models::BankAccount& value) {
         .Revision = value.revision};
 }
 
-inline std::vector<models::BankAccount> ConvertBankAccounts(const pg::ResultSet& rows) {
-    std::vector<models::BankAccount> result;
-    result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::BankAccountV1>())
-        result.push_back(Convert(row));
-    return result;
-}
-
-inline models::BankAccount Prepare(const models::SaveBankAccountRequest& input) {
+inline models::BankAccount Convert(const models::SaveBankAccountRequest& input) {
     models::BankAccount value;
     value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
     value.counterparty_id =
@@ -58,32 +51,7 @@ inline models::BankAccount Prepare(const models::SaveBankAccountRequest& input) 
     value.iban = input.iban;
     value.is_primary = input.is_primary;
     value.archived = input.archived;
-    if (input.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError<400>{"invalid_revision", "Некорректная редакция счёта"};
     value.revision = input.expected_revision + 1;
-    value.name = userver::utils::text::Trim(value.name);
-    value.bank_name = userver::utils::text::Trim(value.bank_name);
-    value.number = userver::utils::text::Trim(value.number);
-    auto uppercase = [](std::string& text) {
-        std::transform(text.begin(), text.end(), text.begin(),
-            [](unsigned char c) { return std::toupper(c); });
-    };
-    std::erase(value.number, ' ');
-    uppercase(value.number);
-    uppercase(value.currency);
-    for (auto* field : {&value.bic, &value.swift, &value.correspondent_account, &value.iban})
-        field->emplace(Normalize(field->value_or(std::nullopt)));
-    if (value.swift.value().has_value())
-        uppercase(value.swift.value().value());
-    if (value.iban.value().has_value()) {
-        auto& iban = value.iban.value().value();
-        std::erase(iban, ' ');
-        uppercase(iban);
-    }
-    if (value.name.empty() || value.number.empty() || value.bank_name.empty())
-        throw ApiError<400>{"empty_bank_requisites", "Укажите название счёта, номер и банк"};
-    if (value.archived && value.is_primary)
-        throw ApiError<400>{"archived_primary", "Архивный счёт не может быть основным"};
     return value;
 }
-}  // namespace counterparties::helpers
+}  // namespace counterparties::converters

@@ -659,3 +659,31 @@ ListBankAccountsRequest:
       format: uuid
   required:
   - counterparty_id
+CounterpartyFilterValuesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - registry
+  properties:
+    registry:
+      $ref: '#/ListCounterpartiesRequest'
+    field:
+      type: string
+      maxLength: 64
+    query:
+      type: string
+      maxLength: 256
+    after:
+      type: string
+      maxLength: 2000
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+    candidates:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        maxLength: 2000

@@ -10,6 +10,8 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/bank_accounts.hpp>
+#include <components/counterparties.hpp>
 #include <components/dadata.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -64,6 +66,8 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-counterparties");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<counterparties::CounterpartiesComponent>();
+    component_list.Append<counterparties::BankAccountsComponent>();
     component_list = counterparties::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

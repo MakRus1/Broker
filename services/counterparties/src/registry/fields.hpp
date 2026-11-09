@@ -1,8 +1,8 @@
 #pragma once
-#include <helpers/registry.hpp>
-#include <platform/registry_page.hpp>
+#include <array>
+#include <platform/registry.hpp>
 
-namespace counterparties::helpers {
+namespace counterparties {
 namespace registry = platform::registry;
 
 namespace registry_fields {
@@ -48,21 +48,6 @@ inline constexpr std::array<registry::RegistryField, 8> kFields{{
         .Visible = false},
 }};
 
-inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 }  // namespace registry_fields
 
-// Общие условия страницы и списка вариантов: организация и применённые фильтры.
-inline registry::QueryBuilder BuildRegistryFilters(const models::ListCounterpartiesRequest& request,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
-    using namespace registry_fields;
-    registry::QueryBuilder query{sql::kListCounterparties,
-        registry::RegistryOrderBy(kFields, request.sort), request.descending};
-    query.WhereEqual(kOrganization, organization);
-    registry::ApplyFilters(query, kFields, request.filters, exclude);
-    return query;
-}
-
-inline const registry::Definition kRegistry{
-    registry_fields::kFields, sql::kRegistryFilterValues, &BuildRegistryFilters};
-
-}  // namespace counterparties::helpers
+}  // namespace counterparties

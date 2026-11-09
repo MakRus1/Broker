@@ -6,6 +6,8 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        counterparties-cards: {}
+        counterparties-bank-accounts: {}
         dadata-http-client: {}
         dadata:
             endpoint: https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party

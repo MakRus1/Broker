@@ -1,4 +1,6 @@
 #pragma once
+#include <components/bank_accounts.hpp>
+#include <components/counterparties.hpp>
 
 #include <components/dadata.hpp>
 #include <userver/components/component_context.hpp>
@@ -18,6 +20,8 @@
 namespace counterparties {
 
 struct Deps {
+    CounterpartiesComponent* cards;
+    BankAccountsComponent* bank_accounts;
     DaData& dadata;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
@@ -29,6 +33,8 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .cards = &component_context.FindComponent<CounterpartiesComponent>(),
+        .bank_accounts = &component_context.FindComponent<BankAccountsComponent>(),
         .dadata = component_context.FindComponent<DaData>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),

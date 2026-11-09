@@ -1,7 +1,7 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <components/internal/database.hpp>
 
-namespace sales::helpers {
+namespace sales::detail {
 inline models::Inquiry LockEditableInquiry(
     pg::Transaction& transaction, const std::string& organization, const std::string& id) {
     const auto rows = transaction.Execute(sql::kLockInquiries, organization, id);
@@ -14,4 +14,4 @@ inline models::Inquiry LockEditableInquiry(
     return inquiry;
 }
 
-}  // namespace sales::helpers
+}  // namespace sales::detail

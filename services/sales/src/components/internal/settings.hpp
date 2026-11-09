@@ -1,10 +1,10 @@
 #pragma once
-#include <helpers/references.hpp>
+#include <components/internal/references.hpp>
 #include <platform/document_number.hpp>
 #include <postgresql/types.hpp>
 #include <set>
 
-namespace sales::helpers {
+namespace sales::detail {
 inline models::SalesSettings Settings(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return {.revision = 0, .stages = {}};
@@ -40,4 +40,4 @@ inline void ValidateStage(const models::SalesSettings& settings, const std::stri
             return;
     throw ApiError<400>{"invalid_stage", "Выберите действующий этап продаж"};
 }
-}  // namespace sales::helpers
+}  // namespace sales::detail

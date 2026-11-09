@@ -1,18 +1,9 @@
-#include <helpers/settings.hpp>
+#include <components/inquiries.hpp>
 #include <views/api/v1/sales/inquiries/history/view.hpp>
 
 namespace sales::views::api::v1::sales::inquiries::history {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::sales::helpers;
-    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kHistoryInquiries,
-        platform::auth::GetOrganization(platform::auth::GetIdentity(context)), request.body.id,
-        request.body.after_revision.value_or(0));
-    Response200 response;
-    response.items.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<json::Value>())
-        response.items.push_back(
-            models::ParseModelJson(row, std::type_identity<models::InquiryHistoryEntry>{}));
-    return response;
+    return Response200{.items = deps.inquiries->History(request.body, context)};
 }
 }  // namespace sales::views::api::v1::sales::inquiries::history

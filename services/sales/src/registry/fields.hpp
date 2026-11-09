@@ -1,10 +1,10 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <components/internal/database.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 #include <userver/storages/postgres/io/date.hpp>
 
-namespace sales::helpers {
+namespace sales::detail {
 namespace registry = platform::registry;
 using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
@@ -92,4 +92,4 @@ struct RegistryRow {
     std::optional<Date> DateKey;
 };
 
-}  // namespace sales::helpers
+}  // namespace sales::detail

@@ -1,10 +1,10 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <components/internal/database.hpp>
 #include <platform/auth/organization_admin.hpp>
 #include <platform/http_client.hpp>
 #include <userver/utils/text_light.hpp>
 
-namespace sales::helpers {
+namespace sales::detail {
 template <typename Dependencies>
 inline auto GetCounterparty(const Dependencies& deps,
     const userver::server::request::RequestContext& context, const std::string& customer) try {
@@ -57,7 +57,8 @@ inline void ValidateReferences(const Dependencies& deps,
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 
-inline void RequireAdministrator(const Deps& deps,
+template <typename Dependencies>
+inline void RequireAdministrator(const Dependencies& deps,
     const userver::server::request::RequestContext& context, const std::string& organization) try {
     platform::auth::RequireOrganizationAdministrator(deps.organizations, context, organization);
 } catch (const platform::http::ErrorByStatus<403>&) {
@@ -74,4 +75,4 @@ inline void RequireAdministrator(const Deps& deps,
 } catch (const platform::http::ContractError&) {
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
-}  // namespace sales::helpers
+}  // namespace sales::detail

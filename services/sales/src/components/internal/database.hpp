@@ -1,5 +1,4 @@
 #pragma once
-#include <deps.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/handler_error.hpp>
@@ -8,9 +7,9 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
-namespace sales::helpers {
+namespace sales::detail {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 template <int Status> using ApiError = platform::http::HandlerError<Status>;
 
-}  // namespace sales::helpers
+}  // namespace sales::detail

@@ -1,12 +1,13 @@
 #pragma once
-#include <helpers/references.hpp>
+#include <components/internal/references.hpp>
 #include <map>
 #include <set>
 
-namespace sales::helpers {
+namespace sales::detail {
 // Проверяем ссылки с правами автора до фиксации неизменяемой команды.
 // Доставка затем использует служебный токен и не зависит от пользовательской сессии.
-inline void ResolveShipmentReferences(const Deps& deps,
+template <typename Dependencies>
+inline void ResolveShipmentReferences(const Dependencies& deps,
     const userver::server::request::RequestContext& context,
     std::vector<models::ShipmentRouteSegment>& segments,
     const std::optional<std::string>& logist) try {
@@ -93,4 +94,4 @@ inline void ResolveShipmentReferences(const Deps& deps,
 } catch (const platform::http::ContractError&) {
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
-}  // namespace sales::helpers
+}  // namespace sales::detail

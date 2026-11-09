@@ -1,29 +1,11 @@
-#include <helpers/registry.hpp>
+#include <components/cards.hpp>
 #include <views/api/v1/sales/cards/filter_values/view.hpp>
 
 namespace sales::views::api::v1::sales::cards::filter_values {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::sales::helpers;
-    try {
-        Response200 result;
-        result.fields = registry::DescribeFields<models::RegistryField>(kCardsRegistry.Fields);
-        if (!request.body.field.has_value())
-            return result;
-        const auto query = registry::BuildFilterValues(kCardsRegistry, request.body,
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context)));
-        const auto rows =
-            deps.pg_cluster->Execute(
-                               pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
-        for (std::size_t i = 0; i < rows.size() && i < static_cast<std::size_t>(request.body.limit);
-             ++i)
-            result.values.push_back({.label = rows[i].Label, .value = rows[i].Value});
-        if (rows.size() > static_cast<std::size_t>(request.body.limit))
-            result.next_after = result.values.back().value;
-        return result;
-    } catch (const registry::FilterError& error) {
-        return Response400{.error = "invalid_filter", .message = error.what()};
-    }
+    const auto result = deps.cards->FilterValues(request.body, context);
+    return Response200{
+        .fields = result.fields, .next_after = result.next_after, .values = result.values};
 }
 }  // namespace sales::views::api::v1::sales::cards::filter_values

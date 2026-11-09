@@ -1,8 +1,12 @@
 #pragma once
-#include <deps.hpp>
+#include <clients/finance/client.hpp>
+#include <clients/notifications/client.hpp>
+#include <clients/shipments/client.hpp>
+#include <events/shipment_command.hpp>
 #include <platform/auth/service_token.hpp>
 #include <platform/outbox/component.hpp>
 #include <userver/components/component_base.hpp>
+#include <userver/storages/postgres/cluster.hpp>
 
 namespace sales {
 class ShipmentDispatcher final : public userver::components::ComponentBase {
@@ -13,7 +17,17 @@ class ShipmentDispatcher final : public userver::components::ComponentBase {
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
   private:
-    Deps deps_;
+    void TransferProposal(
+        const ShipmentCommand&, const std::string& shipment_id, const std::string& token) const;
+
+    struct Dependencies {
+        clients::finance::Client finance;
+        clients::shipments::Client shipments;
+        clients::notifications::Client notifications;
+        userver::storages::postgres::ClusterPtr pg_cluster;
+    };
+
+    Dependencies deps_;
     platform::auth::ServiceTokenProvider& tokens_;
 };
 }  // namespace sales

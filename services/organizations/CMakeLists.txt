@@ -7,6 +7,13 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
     src/components/users.cpp
+    src/components/access.cpp
+    src/components/members.cpp
+    src/components/organizations.cpp
+    src/components/permission_releases.cpp
+    src/components/registry_defaults.cpp
+    src/components/roles.cpp
+
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

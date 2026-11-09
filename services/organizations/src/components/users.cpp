@@ -1,4 +1,5 @@
 #include <components/users.hpp>
+#include <converters/users.hpp>
 #include <helpers/errors.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/clients/http/request.hpp>
@@ -8,36 +9,6 @@
 #include <userver/formats/json.hpp>
 #include <userver/http/url.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
-
-namespace {
-std::optional<std::string> ReadMiddleName(const userver::formats::json::Value& user) {
-    const auto attribute = user["attributes"]["middle_name"];
-    if (attribute.IsMissing() || attribute.IsNull())
-        return std::nullopt;
-    if (!attribute.IsArray() || attribute.GetSize() > 1)
-        throw std::runtime_error("Keycloak вернул некорректный атрибут middle_name");
-    if (attribute.IsEmpty())
-        return std::nullopt;
-    return attribute[0].As<std::string>();
-}
-
-organizations::User Convert(const userver::formats::json::Value& value) {
-    const auto last = value["lastName"].As<std::optional<std::string>>();
-    const auto first = value["firstName"].As<std::optional<std::string>>();
-    const auto middle = ReadMiddleName(value);
-    std::string display;
-    for (const auto& part : {last, first, middle}) {
-        if (part.has_value() && !part.value().empty()) {
-            if (!display.empty())
-                display += " ";
-            display += part.value();
-        }
-    }
-    return {value["id"].As<std::string>(), value["username"].As<std::string>(),
-        display.empty() ? value["username"].As<std::string>() : display,
-        value["email"].As<std::string>(""), last, first, middle};
-}
-}  // namespace
 
 namespace organizations {
 Users::Users(const userver::components::ComponentConfig& config,
@@ -83,7 +54,7 @@ User Users::Find(const std::string& username) const try {
     if (!value["enabled"].As<bool>(false) || !value["serviceAccountClientId"].IsMissing())
         throw ApiError<400>{
             "invalid_user", "Нельзя добавить отключённую или служебную учётную запись"};
-    return Convert(value);
+    return converters::Convert(value);
 } catch (const platform::http::HandlerErrorBase&) {
 
     throw;
@@ -129,7 +100,7 @@ User Users::Create(const std::string& request_id, const std::string& username,
         provisioning[0].As<std::string>() != request_id)
         throw ApiError<409>{
             "username_taken", "Логин уже занят. Используйте добавление существующего пользователя"};
-    return Convert(value);
+    return converters::Convert(value);
 } catch (const platform::http::HandlerErrorBase&) {
 
     throw;
@@ -169,7 +140,7 @@ User Users::UpdateProfile(const std::string& subject, const std::string& last_na
             .perform();
     if (updated->status_code() != 204)
         throw std::runtime_error("Не удалось обновить профиль");
-    return Convert(document);
+    return converters::Convert(document);
 } catch (const platform::http::HandlerErrorBase&) {
 
     throw;

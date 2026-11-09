@@ -11,29 +11,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: ../components/schemas/operations.yaml#/OrganizationIdentity
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/registry_defaults.yaml#/RegistryDefault
-                required:
-                - items
+                $ref: ../components/schemas/operations.yaml#/RegistryDefaultsGetResult
         '400':
           description: Некорректные данные
           content:
@@ -68,34 +53,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: ../components/schemas/operations.yaml#/OrganizationIdentity
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/registry_defaults.yaml#/RegistryDefault
-                  roles:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/registry_defaults.yaml#/RegistryRole
-                required:
-                - items
-                - roles
+                $ref: ../components/schemas/operations.yaml#/RegistryDefaultsListResult
         '400':
           description: Некорректные данные
           content:
@@ -130,44 +95,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                role:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                registry:
-                  type: string
-                  pattern: ^(shipments|transportations|counterparties|contracts|service-charges|financial_labels|outgoing-invoices|incoming-invoices|receipt-payments|disbursement-payments)$
-                value:
-                  type: object
-                  additionalProperties: true
-                expected_revision:
-                  type: integer
-                  minimum: 0
-              required:
-              - organization_id
-              - role
-              - registry
-              - value
-              - expected_revision
+              $ref: ../components/schemas/operations.yaml#/RegistryDefaultsSaveRequest
       responses:
         '200':
           description: Успех
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  item:
-                    $ref: ../components/schemas/registry_defaults.yaml#/RegistryDefault
-                required:
-                - item
+                $ref: ../components/schemas/operations.yaml#/RegistryDefaultsSaveResult
         '400':
           description: Некорректные данные
           content:

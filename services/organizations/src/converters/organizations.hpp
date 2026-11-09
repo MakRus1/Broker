@@ -1,10 +1,10 @@
 #pragma once
-#include <components/users.hpp>
+#include <models/user.hpp>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 
-namespace organizations::helpers {
+namespace organizations::converters {
 inline models::Organization Convert(const pgtypes::OrganizationV1& row) {
     return {.enabled = row.Enabled,
         .id = boost::uuids::to_string(row.Id),
@@ -49,4 +49,4 @@ template <typename Row> auto ConvertRows(const userver::storages::postgres::Resu
         result.push_back(Convert(row));
     return result;
 }
-}  // namespace organizations::helpers
+}  // namespace organizations::converters

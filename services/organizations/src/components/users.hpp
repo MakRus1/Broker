@@ -1,4 +1,5 @@
 #pragma once
+#include <models/user.hpp>
 #include <optional>
 #include <platform/auth/service_token.hpp>
 #include <userver/clients/http/client.hpp>
@@ -7,16 +8,6 @@
 #include <userver/formats/json/value.hpp>
 
 namespace organizations {
-struct User {
-    std::string Subject;
-    std::string Username;
-    std::string DisplayName;
-    std::string Email;
-    std::optional<std::string> LastName;
-    std::optional<std::string> FirstName;
-    std::optional<std::string> MiddleName;
-};
-
 class Users final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "keycloak-users";

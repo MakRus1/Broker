@@ -18,13 +18,6 @@ struct AccessRow {
     std::vector<std::string> Permissions;
 };
 
-struct ProvisioningRow {
-    std::string Organization;
-    std::string Actor;
-    userver::formats::json::Value Payload;
-    std::optional<std::string> Subject;
-};
-
 inline bool IsPlatformAdmin(const platform::auth::Identity& identity) {
     return identity.Permissions.contains("platform.admin");
 }

@@ -1,4 +1,11 @@
 #pragma once
+#include <components/financial_history.hpp>
+#include <components/financial_labels.hpp>
+#include <components/invoices.hpp>
+#include <components/payments.hpp>
+#include <components/service_charges.hpp>
+#include <components/settings.hpp>
+#include <components/settlements.hpp>
 
 #include <components/exchange_rates.hpp>
 #include <userver/components/component_context.hpp>
@@ -22,6 +29,13 @@
 namespace finance {
 
 struct Deps {
+    FinancialLabelsComponent* financial_labels;
+    ServiceChargesComponent* service_charges;
+    InvoicesComponent* invoices;
+    PaymentsComponent* payments;
+    SettingsComponent* settings;
+    SettlementsComponent* settlements;
+    FinancialHistoryComponent* history;
     ExchangeRates& exchange_rates;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
@@ -37,6 +51,13 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .financial_labels = &component_context.FindComponent<FinancialLabelsComponent>(),
+        .service_charges = &component_context.FindComponent<ServiceChargesComponent>(),
+        .invoices = &component_context.FindComponent<InvoicesComponent>(),
+        .payments = &component_context.FindComponent<PaymentsComponent>(),
+        .settings = &component_context.FindComponent<SettingsComponent>(),
+        .settlements = &component_context.FindComponent<SettlementsComponent>(),
+        .history = &component_context.FindComponent<FinancialHistoryComponent>(),
         .exchange_rates = component_context.FindComponent<ExchangeRates>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),

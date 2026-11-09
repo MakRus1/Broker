@@ -126,14 +126,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: components/schemas/models.yaml#/GetFinanceSettingsRequest
       responses:
         '200':
           description: Результат
@@ -187,35 +180,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                reporting_currency:
-                  type: string
-                  pattern: ^[A-Z]{3}$
-                expected_revision:
-                  type: integer
-                  format: int64
-                outgoing_number_template:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                incoming_number_template:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                reset_numbers_yearly:
-                  type: boolean
-              required:
-              - organization_id
-              - reporting_currency
-              - expected_revision
-              - outgoing_number_template
-              - incoming_number_template
-              - reset_numbers_yearly
+              $ref: components/schemas/models.yaml#/UpdateFinanceSettingsRequest
       responses:
         '200':
           description: Результат

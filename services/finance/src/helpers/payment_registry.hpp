@@ -1,5 +1,5 @@
 #pragma once
-#include <helpers/payments.hpp>
+#include <helpers/invoices.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 
@@ -11,14 +11,6 @@ struct RegistryRow {
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };
-
-inline std::vector<models::Payment> Convert(const std::vector<RegistryRow>& rows) {
-    std::vector<models::Payment> result;
-    result.reserve(rows.size());
-    for (const auto& row : rows)
-        result.push_back(::finance::helpers::Convert(row.Payment));
-    return result;
-}
 
 namespace registry_fields {
 

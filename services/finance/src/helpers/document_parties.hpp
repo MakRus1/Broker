@@ -1,9 +1,15 @@
 #pragma once
-#include <helpers/service_charge_references.hpp>
+#include <algorithm>
+#include <helpers/financial_labels.hpp>
+#include <platform/http_client.hpp>
 
 namespace finance::helpers {
-template <typename Request, typename Row>
-void ValidateDocumentParties(const Deps& deps,
+inline bool SameId(const std::string& left, const std::string& right) {
+    return boost::uuids::string_generator{}(left) == boost::uuids::string_generator{}(right);
+}
+
+template <typename Dependencies, typename Request, typename Row>
+void ValidateDocumentParties(const Dependencies& deps,
     const userver::server::request::RequestContext& context, const Request& body, Row& result) {
     const auto token = platform::auth::GetAccessToken(context);
     try {

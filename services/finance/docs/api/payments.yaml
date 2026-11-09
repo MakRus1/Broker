@@ -296,25 +296,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                invoice_id:
-                  type: string
-                  format: uuid
-                query:
-                  type: string
-                  maxLength: 200
-                after:
-                  type: string
-                  format: uuid
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 40
-              required:
-              - invoice_id
+              $ref: ../components/schemas/models.yaml#/PaymentCandidatesRequest
       responses:
         '200':
           description: Платёж, распределение или результат выборки

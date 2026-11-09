@@ -1231,6 +1231,266 @@ paths:
                 $ref: ../components/schemas/sales/models.yaml#/ApiError
           description: Ошибка запроса
       summary: Версии предложения
+  /api/v1/sales/rfqs/save:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/SaveRfqRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: ../components/schemas/sales/models.yaml#/Rfq
+                required:
+                - item
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Сохранить запрос ставок и котировки
+  /api/v1/sales/rfqs/get:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/IdRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: ../components/schemas/sales/models.yaml#/Rfq
+                required:
+                - item
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Открыть запрос ставок
+  /api/v1/sales/rfqs/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/IdRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/sales/models.yaml#/Rfq
+                required:
+                - items
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: Запросы ставок входящего запроса
+  /api/v1/sales/rfqs/history:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/sales/models.yaml#/HistoryRequest
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/sales/models.yaml#/RfqHistoryEntry
+                required:
+                - items
+          description: Успех
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/sales/models.yaml#/ApiError
+          description: Ошибка запроса
+      summary: История запроса ставок
 components:
   securitySchemes:
     BrowserSession:

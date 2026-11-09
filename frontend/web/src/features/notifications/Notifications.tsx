@@ -36,7 +36,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 }
 interface ServerNotification {
   event_type:
-    'shipment.created' | 'shipment.route_changed' | 'sales.inquiry.shipment_creation_failed';
+    | 'shipment.created'
+    | 'shipment.route_changed'
+    | 'sales.inquiry.shipment_creation_failed'
+    | 'sales.rfq.assigned'
+    | 'sales.rfq.ready';
   id: string;
   entity_id: string;
   entity_number: string;
@@ -84,18 +88,23 @@ function ServerNotifications() {
             id: `server:${item.id}`,
             remote: true,
             message: translate(
-              item.event_type === 'sales.inquiry.shipment_creation_failed'
-                ? 'notifications.shipmentCreationFailed'
-                : item.event_type === 'shipment.created'
-                  ? 'notifications.shipmentCreated'
-                  : 'notifications.shipmentRouteChanged',
+              item.event_type === 'sales.rfq.assigned'
+                ? 'notifications.rfqAssigned'
+                : item.event_type === 'sales.rfq.ready'
+                  ? 'notifications.rfqReady'
+                  : item.event_type === 'sales.inquiry.shipment_creation_failed'
+                    ? 'notifications.shipmentCreationFailed'
+                    : item.event_type === 'shipment.created'
+                      ? 'notifications.shipmentCreated'
+                      : 'notifications.shipmentRouteChanged',
               {
                 number: item.entity_number,
               },
             ),
             level: item.event_type === 'sales.inquiry.shipment_creation_failed' ? 'error' : 'info',
-            route:
-              item.event_type === 'sales.inquiry.shipment_creation_failed'
+            route: item.event_type.startsWith('sales.rfq.')
+              ? `/rfqs/${item.entity_id}`
+              : item.event_type === 'sales.inquiry.shipment_creation_failed'
                 ? `/inquiries/${item.entity_id}`
                 : `/shipments/${item.entity_id}${item.event_type === 'shipment.created' ? '' : '/route'}`,
             createdAt: Date.parse(item.created_at),

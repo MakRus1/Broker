@@ -14,7 +14,7 @@ Response View::Handle(
             document.ExtractValue(), std::type_identity<models::ProposalInput>{}));
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto inquiry = LockProposalInquiry(transaction, organization, value.input.inquiry_id);
+    const auto inquiry = LockEditableInquiry(transaction, organization, value.input.inquiry_id);
     if (inquiry.revision != value.inquiry_revision)
         throw ApiError<409>{"inquiry_changed", "Входящий запрос изменился во время расчёта"};
     for (const auto& line : value.input.lines) {

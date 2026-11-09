@@ -890,6 +890,8 @@ ProposalLine:
     note:
       type: string
       maxLength: 4000
+    quote_source:
+      $ref: '#/ProposalQuoteSource'
   required:
   - id
   - label_id
@@ -1143,3 +1145,223 @@ ProposalHistoryEntry:
   - actor
   - created_at
   - snapshot
+RfqStatus:
+  type: string
+  enum:
+  - in_progress
+  - ready
+  - cancelled
+RfqQuoteLine:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    label_id:
+      type: string
+      format: uuid
+    label_name:
+      type: string
+      maxLength: 256
+    unit:
+      $ref: '#/FinancialLabelUnit'
+    quantity_milli:
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 10000000
+    price:
+      $ref: '#/ProposalPrice'
+  required:
+  - id
+  - label_id
+  - unit
+  - quantity_milli
+  - price
+RfqQuote:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    supplier_id:
+      type: string
+      format: uuid
+    supplier_name:
+      type: string
+      maxLength: 256
+    valid_until:
+      type: string
+      format: date
+    delivery_days:
+      type: integer
+      minimum: 1
+      maximum: 3650
+    note:
+      type: string
+      maxLength: 4000
+    lines:
+      type: array
+      minItems: 1
+      maxItems: 100
+      items:
+        $ref: '#/RfqQuoteLine'
+  required:
+  - id
+  - title
+  - supplier_id
+  - lines
+RfqInput:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    inquiry_id:
+      type: string
+      format: uuid
+    route_segment_id:
+      type: string
+      format: uuid
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    responsible_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    answer_by:
+      type: string
+      format: date
+    note:
+      type: string
+      maxLength: 4000
+    status:
+      $ref: '#/RfqStatus'
+    quotes:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/RfqQuote'
+  required:
+  - id
+  - inquiry_id
+  - route_segment_id
+  - title
+  - responsible_subject
+  - status
+  - quotes
+Rfq:
+  type: object
+  additionalProperties: false
+  properties:
+    input:
+      $ref: '#/RfqInput'
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+    route_segment:
+      $ref: '#/ShipmentRouteSegment'
+    inquiry_number:
+      type: string
+      minLength: 1
+      maxLength: 200
+  required:
+  - input
+  - revision
+  - route_segment
+  - inquiry_number
+RfqHistoryEntry:
+  type: object
+  additionalProperties: false
+  properties:
+    snapshot:
+      $ref: '#/Rfq'
+    actor:
+      type: string
+    created_at:
+      type: string
+      format: date-time
+  required:
+  - snapshot
+  - actor
+  - created_at
+ProposalQuoteSource:
+  type: object
+  additionalProperties: false
+  properties:
+    rfq_id:
+      type: string
+      format: uuid
+    revision:
+      type: integer
+      format: int64
+      minimum: 1
+    quote_id:
+      type: string
+      format: uuid
+    line_id:
+      type: string
+      format: uuid
+  required:
+  - rfq_id
+  - revision
+  - quote_id
+  - line_id
+SaveRfqRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    inquiry_id:
+      type: string
+      format: uuid
+    route_segment_id:
+      type: string
+      format: uuid
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    responsible_subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    answer_by:
+      type: string
+      format: date
+    note:
+      type: string
+      maxLength: 4000
+    status:
+      $ref: '#/RfqStatus'
+    quotes:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/RfqQuote'
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 9223372036854775806
+  required:
+  - id
+  - inquiry_id
+  - route_segment_id
+  - title
+  - responsible_subject
+  - status
+  - quotes
+  - expected_revision

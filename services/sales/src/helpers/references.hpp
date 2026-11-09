@@ -5,7 +5,8 @@
 #include <userver/utils/text_light.hpp>
 
 namespace sales::helpers {
-inline auto GetCounterparty(const Deps& deps,
+template <typename Dependencies>
+inline auto GetCounterparty(const Dependencies& deps,
     const userver::server::request::RequestContext& context, const std::string& customer) try {
     return deps.counterparties
         .ApiV1CounterpartiesGet({.body = {.id = customer}}, platform::auth::GetAccessToken(context))
@@ -25,7 +26,8 @@ inline auto GetCounterparty(const Deps& deps,
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 
-inline void ValidateReferences(const Deps& deps,
+template <typename Dependencies>
+inline void ValidateReferences(const Dependencies& deps,
     const userver::server::request::RequestContext& context, const std::string& customer,
     const std::string& manager) try {
     const auto token = platform::auth::GetAccessToken(context);

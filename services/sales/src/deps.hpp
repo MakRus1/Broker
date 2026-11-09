@@ -1,5 +1,6 @@
 #pragma once
 
+#include <components/rfq.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <clients/counterparties/client.hpp>
@@ -22,6 +23,7 @@
 namespace sales {
 
 struct Deps {
+    RfqComponent* rfq;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -37,6 +39,7 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .rfq = &component_context.FindComponent<RfqComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

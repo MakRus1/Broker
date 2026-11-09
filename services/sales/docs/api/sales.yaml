@@ -1355,6 +1355,274 @@ paths:
                 $ref: ../components/schemas/models.yaml#/ApiError
       security:
       - BearerAuth: []
+  /api/v1/sales/rfqs/save:
+    post:
+      summary: Сохранить запрос ставок и котировки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/SaveRfqRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: ../components/schemas/models.yaml#/Rfq
+                required:
+                - item
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+      security:
+      - BearerAuth: []
+  /api/v1/sales/rfqs/get:
+    post:
+      summary: Открыть запрос ставок
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/IdRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: ../components/schemas/models.yaml#/Rfq
+                required:
+                - item
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+      security:
+      - BearerAuth: []
+  /api/v1/sales/rfqs/list:
+    post:
+      summary: Запросы ставок входящего запроса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/IdRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/Rfq
+                required:
+                - items
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+      security:
+      - BearerAuth: []
+  /api/v1/sales/rfqs/history:
+    post:
+      summary: История запроса ставок
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/models.yaml#/HistoryRequest
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: ../components/schemas/models.yaml#/RfqHistoryEntry
+                required:
+                - items
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '401':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '403':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '404':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '409':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '502':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+        '503':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/models.yaml#/ApiError
+      security:
+      - BearerAuth: []
 components:
   securitySchemes:
     BearerAuth:

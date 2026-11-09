@@ -79,3 +79,79 @@
     grid-template-columns: 1fr;
   }
 }
+
+.proposal-source {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.proposal-source a,
+.proposal-source button {
+  color: var(--accent-text);
+  font-size: 13px;
+}
+.proposal-source button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+}
+.proposal-price-section {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.proposal-price-section h3 {
+  margin: 0;
+}
+.proposal-price-section > fieldset {
+  display: grid;
+  gap: 16px;
+}
+.proposal-price-section > fieldset > button {
+  justify-self: start;
+}
+.proposal-purchase-snapshot {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.proposal-purchase-snapshot dt {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.proposal-purchase-snapshot dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .proposal-purchase-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.proposal-price-fields {
+  align-items: start;
+}
+.proposal-price-fields label,
+.proposal-price-fields .app-select {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  grid-template-rows: 18px auto;
+}
+.proposal-price-fields .field-label {
+  line-height: 18px;
+}
+.proposal-price-fields .vat-rate-select {
+  align-self: start;
+}
+
+.sales-proposals .proposal-add-service {
+  margin-top: 16px;
+}

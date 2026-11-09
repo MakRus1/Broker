@@ -1,3 +1,6 @@
+import { CompanyName } from '../routes/SharedRouteDetails';
+import { NumberField, PriceFields } from './ProposalFields';
+import { RfqQuotePicker } from './rfq/RfqQuotePicker';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
@@ -8,19 +11,12 @@ import type { Session } from '../../shared/api/session';
 import { RecordActions, RecordSection } from '../../shared/ui/record/RecordLayout';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
-import { DecimalInput } from '../../shared/ui/DecimalInput';
 import { Select } from '../../shared/ui/Select';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { CustomerSelect } from '../counterparties/CustomerSelect';
 import { ServiceChargeLookup } from '../finance/invoices/ServiceChargeLookup';
-import { VatRateSelect } from '../finance/services/VatRateSelect';
-import { formatFixed, inputFixed, parseFixed } from '../finance/services/serviceCharges';
-import {
-  formatVatRate,
-  parseVatRate,
-  type FinancialLabel,
-  financialLabelUnits,
-} from '../finance/labels/financialLabels';
+import { formatFixed, inputFixed } from '../finance/services/serviceCharges';
+import { type FinancialLabel, financialLabelUnits } from '../finance/labels/financialLabels';
 import { currenciesWithCurrent } from '../finance/currencies';
 import { useLocalization } from '../localization/Localization';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
@@ -35,99 +31,6 @@ import {
 } from './proposals';
 import './salesProposals.css';
 const noParties: never[] = [];
-function NumberField({
-  label,
-  value,
-  digits = 2,
-  max = 100000000,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  digits?: number;
-  max?: number;
-  onChange: (v: number) => void;
-}) {
-  const { translate } = useLocalization();
-  const [text, setText] = useState(inputFixed(value, digits));
-  const focused = useRef(false);
-  useEffect(() => {
-    if (!focused.current) setText(inputFixed(value, digits));
-  }, [value, digits]);
-  return (
-    <label>
-      {label}
-      <DecimalInput
-        required
-        precision={digits}
-        value={text}
-        onFocus={() => {
-          focused.current = true;
-        }}
-        onBlur={() => {
-          focused.current = false;
-        }}
-        onChange={(e) => {
-          const raw = e.target.value;
-          setText(raw);
-          const n = parseFixed(raw, digits, max);
-          e.target.setCustomValidity(n === undefined ? translate('proposal.invalidNumber') : '');
-          if (n !== undefined) onChange(n);
-        }}
-      />
-    </label>
-  );
-}
-function PriceFields({
-  value,
-  onChange,
-}: {
-  value: ProposalPrice;
-  onChange: (v: ProposalPrice) => void;
-}) {
-  const { translate, locale } = useLocalization();
-  return (
-    <div className="proposal-price-fields">
-      <NumberField
-        label={translate('proposal.price')}
-        value={value.price_minor}
-        onChange={(price_minor) => onChange({ ...value, price_minor })}
-      />
-      <Select
-        label={translate('registryField.currency')}
-        searchable
-        value={value.currency}
-        options={currenciesWithCurrent(value.currency, locale)}
-        onChange={(currency) => onChange({ ...value, currency })}
-      />
-      <Select
-        label={translate('finance.priceMode')}
-        value={value.price_mode}
-        options={['net', 'gross'].map((mode) => ({
-          value: mode,
-          label: translate(mode === 'net' ? 'proposal.priceNet' : 'proposal.priceGross'),
-        }))}
-        onChange={(price_mode) =>
-          onChange({ ...value, price_mode: price_mode as ProposalPrice['price_mode'] })
-        }
-      />
-      <VatRateSelect
-        mode={value.vat_mode}
-        value={formatVatRate(value.vat_rate_basis_points ?? 0)}
-        onMode={(vat_mode) =>
-          onChange({
-            ...value,
-            vat_mode,
-            vat_rate_basis_points: vat_mode === 'exempt' ? undefined : 0,
-          })
-        }
-        onChange={(v) =>
-          onChange({ ...value, vat_mode: 'rate', vat_rate_basis_points: parseVatRate(v) })
-        }
-      />
-    </div>
-  );
-}
 export function SalesProposals({
   inquiry,
   session,
@@ -378,6 +281,14 @@ export function SalesProposals({
                   />
                 </label>
               </RecordSection>
+              <RfqQuotePicker
+                inquiry={inquiry}
+                session={session}
+                onAdd={(lines, labels) => {
+                  setDraft({ ...draft, lines: [...draft.lines, ...lines] });
+                  setNames((previous) => ({ ...previous, ...labels }));
+                }}
+              />
               {draft.lines.map((line, index) => {
                 const update = (next: typeof line) =>
                   setDraft({
@@ -387,101 +298,171 @@ export function SalesProposals({
                 return (
                   <RecordSection
                     key={line.id}
-                    title={`${translate('proposal.service')} ${index + 1}`}
+                    collapsible
+                    initiallyOpen={!line.label_id}
+                    title={
+                      names[line.label_id] ??
+                      items
+                        .flatMap((value) => value.lines)
+                        .find((value) => value.input.label_id === line.label_id)?.label_name ??
+                      translate('proposal.newService')
+                    }
                   >
-                    <div className="record-fields record-fields-two">
-                      <ServiceChargeLookup<FinancialLabel>
-                        session={session}
-                        kind="labels"
-                        label={translate('proposal.service')}
-                        value={line.label_id}
-                        name={
-                          names[line.label_id] ??
-                          items
-                            .flatMap((v) => v.lines)
-                            .find((v) => v.input.label_id === line.label_id)?.label_name ??
-                          ''
-                        }
-                        disabled={busy}
-                        required
-                        onChange={(label) => {
-                          if (label) {
-                            setNames({ ...names, [label.id]: label.name });
-                            update({
-                              ...line,
-                              label_id: label.id,
-                              unit: label.unit,
-                              sale: {
-                                ...line.sale,
-                                currency: label.currency,
-                                vat_mode: label.vat_mode,
-                                vat_rate_basis_points: label.vat_rate_basis_points ?? undefined,
-                              },
-                            });
-                          } else update({ ...line, label_id: '' });
-                        }}
-                      />
-                      <NumberField
-                        label={translate('proposal.quantity')}
-                        value={line.quantity_milli}
-                        digits={3}
-                        max={10000000}
-                        onChange={(quantity_milli) => update({ ...line, quantity_milli })}
-                      />
-                      <Select
-                        label={translate('registryField.unit')}
-                        value={line.unit}
-                        options={(
-                          Object.keys(financialLabelUnits) as (keyof typeof financialLabelUnits)[]
-                        ).map((unit) => ({
-                          value: unit,
-                          label: translate(`registryValue.unit.${unit}`),
-                        }))}
-                        onChange={(unit) => update({ ...line, unit: unit as typeof line.unit })}
-                      />
-                      <Select
-                        label={translate('sales.route')}
-                        value={line.route_segment_id ?? ''}
-                        options={[
-                          { value: '', label: translate('proposal.noSegment') },
-                          ...inquiry.route_segments.map((s, i) => ({
-                            value: s.id,
-                            label: `${i + 1} · ${registryValueLabel('mode', s.type, locale) ?? s.type}`,
-                          })),
-                        ]}
-                        onChange={(route_segment_id) =>
-                          update({ ...line, route_segment_id: route_segment_id || undefined })
-                        }
+                    <fieldset disabled={!!line.quote_source}>
+                      <div className="record-fields record-fields-two">
+                        <ServiceChargeLookup<FinancialLabel>
+                          session={session}
+                          kind="labels"
+                          label={translate('proposal.service')}
+                          value={line.label_id}
+                          name={
+                            names[line.label_id] ??
+                            items
+                              .flatMap((v) => v.lines)
+                              .find((v) => v.input.label_id === line.label_id)?.label_name ??
+                            ''
+                          }
+                          disabled={busy}
+                          required
+                          onChange={(label) => {
+                            if (label) {
+                              setNames({ ...names, [label.id]: label.name });
+                              update({
+                                ...line,
+                                label_id: label.id,
+                                unit: label.unit,
+                                sale: {
+                                  ...line.sale,
+                                  currency: label.currency,
+                                  vat_mode: label.vat_mode,
+                                  vat_rate_basis_points: label.vat_rate_basis_points ?? undefined,
+                                },
+                              });
+                            } else update({ ...line, label_id: '' });
+                          }}
+                        />
+                        <NumberField
+                          label={translate('proposal.quantity')}
+                          value={line.quantity_milli}
+                          digits={3}
+                          max={10000000}
+                          onChange={(quantity_milli) => update({ ...line, quantity_milli })}
+                        />
+                        <Select
+                          label={translate('registryField.unit')}
+                          value={line.unit}
+                          options={(
+                            Object.keys(financialLabelUnits) as (keyof typeof financialLabelUnits)[]
+                          ).map((unit) => ({
+                            value: unit,
+                            label: translate(`registryValue.unit.${unit}`),
+                          }))}
+                          onChange={(unit) => update({ ...line, unit: unit as typeof line.unit })}
+                        />
+                        <Select
+                          label={translate('sales.route')}
+                          value={line.route_segment_id ?? ''}
+                          options={[
+                            { value: '', label: translate('proposal.noSegment') },
+                            ...inquiry.route_segments.map((s, i) => ({
+                              value: s.id,
+                              label: `${i + 1} · ${registryValueLabel('mode', s.type, locale) ?? s.type}`,
+                            })),
+                          ]}
+                          onChange={(route_segment_id) =>
+                            update({ ...line, route_segment_id: route_segment_id || undefined })
+                          }
+                        />
+                      </div>
+                    </fieldset>
+                    <div className="proposal-price-section">
+                      <h3>{translate('proposal.sale')}</h3>
+                      <PriceFields
+                        value={line.sale}
+                        onChange={(sale) => update({ ...line, sale })}
                       />
                     </div>
-                    <h3>{translate('proposal.sale')}</h3>
-                    <PriceFields value={line.sale} onChange={(sale) => update({ ...line, sale })} />
                     {line.purchase ? (
-                      <>
+                      <div className="proposal-price-section">
                         <h3>{translate('proposal.purchase')}</h3>
-                        <PriceFields
-                          value={line.purchase}
-                          onChange={(purchase) => update({ ...line, purchase })}
-                        />
-                        <CustomerSelect
-                          disabled={busy}
-                          items={noParties}
-                          session={session}
-                          value={line.supplier_id ?? ''}
-                          label={translate('proposal.supplier')}
-                          onChange={(supplier_id) =>
-                            update({ ...line, supplier_id: supplier_id || undefined })
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            update({ ...line, purchase: undefined, supplier_id: undefined })
-                          }
-                        >
-                          {translate('proposal.removePurchase')}
-                        </button>
-                      </>
+                        {line.quote_source && (
+                          <div className="proposal-source" title={translate('rfq.snapshotHint')}>
+                            <a href={`#/rfqs/${line.quote_source.rfq_id}`}>
+                              {translate('rfq.source')}
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => update({ ...line, quote_source: undefined })}
+                            >
+                              {translate('rfq.detachSource')}
+                            </button>
+                          </div>
+                        )}
+                        {line.quote_source ? (
+                          <dl className="proposal-purchase-snapshot">
+                            <div>
+                              <dt>{translate('proposal.price')}</dt>
+                              <dd>
+                                {formatFixed(line.purchase.price_minor, 2)} {line.purchase.currency}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('finance.priceMode')}</dt>
+                              <dd>
+                                {translate(
+                                  line.purchase.price_mode === 'gross'
+                                    ? 'proposal.priceGross'
+                                    : 'rfq.priceNet',
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('proposal.vat')}</dt>
+                              <dd>
+                                {line.purchase.vat_mode === 'exempt'
+                                  ? translate('ui.noVat')
+                                  : `${(line.purchase.vat_rate_basis_points ?? 0) / 100}%`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{translate('proposal.supplier')}</dt>
+                              <dd>
+                                <CompanyName
+                                  id={line.supplier_id}
+                                  customers={noParties}
+                                  session={session}
+                                />
+                              </dd>
+                            </div>
+                          </dl>
+                        ) : (
+                          <fieldset disabled={!!line.quote_source}>
+                            <PriceFields
+                              value={line.purchase}
+                              onChange={(purchase) => update({ ...line, purchase })}
+                            />
+                            <CustomerSelect
+                              disabled={busy}
+                              items={noParties}
+                              session={session}
+                              value={line.supplier_id ?? ''}
+                              label={translate('proposal.supplier')}
+                              onChange={(supplier_id) =>
+                                update({ ...line, supplier_id: supplier_id || undefined })
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                update({ ...line, purchase: undefined, supplier_id: undefined })
+                              }
+                            >
+                              {translate('proposal.removePurchase')}
+                            </button>
+                          </fieldset>
+                        )}
+                      </div>
                     ) : (
                       <button
                         type="button"
@@ -512,6 +493,7 @@ export function SalesProposals({
                 );
               })}
               <button
+                className="proposal-add-service"
                 type="button"
                 disabled={draft.lines.length >= 100}
                 onClick={() =>
@@ -686,14 +668,19 @@ export function SalesProposals({
                 </table>
               </div>
               <p className="hint">{translate('proposal.netHint')}</p>
-              <p>
-                {show.rates
-                  .map(
-                    (rate) =>
-                      `${rate.currency}: ${inputFixed(rate.rate_millionths, 6)} ${show.reporting_currency}`,
-                  )
-                  .join(' · ')}
-              </p>
+              {show.rates
+                .filter((rate) => rate.currency !== show.reporting_currency)
+                .map((rate) => (
+                  <p className="hint" key={rate.currency}>
+                    {translate('proposal.exchangeRate', {
+                      currency: rate.currency,
+                      rate: new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(
+                        rate.rate_millionths / 1000000,
+                      ),
+                      reportingCurrency: show.reporting_currency,
+                    })}
+                  </p>
+                ))}
               {history && (
                 <RecordSection title={translate('sales.history')}>
                   {history.map((entry, index) => {

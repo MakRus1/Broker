@@ -11,7 +11,7 @@ Response View::Handle(
         pg::ClusterHostType::kMaster, sql::kGetProposal, organization, request.body.id));
     auto transaction =
         deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto inquiry = LockProposalInquiry(transaction, organization, before.input.inquiry_id);
+    const auto inquiry = LockEditableInquiry(transaction, organization, before.input.inquiry_id);
     auto value =
         ReadProposal(transaction.Execute(sql::kGetProposal, organization, request.body.id));
     if (value.revision != request.body.expected_revision)

@@ -14,12 +14,14 @@ import type { Counterparty } from '../counterparties/CustomerSelect';
 type RouteType = { code: string; name: string };
 export function ShipmentRoute({
   segments,
+  planningOnly = false,
   onChange,
   allowedTypes,
   types,
   session,
   customers,
 }: {
+  planningOnly?: boolean;
   segments: ShipmentRouteSegment[];
   onChange?: (segments: ShipmentRouteSegment[]) => void;
   allowedTypes: string[];
@@ -119,6 +121,7 @@ export function ShipmentRoute({
                 </div>
                 {segment.type === 'sea' || segment.type === 'air' ? (
                   <SharedRouteFields
+                    planningOnly={planningOnly}
                     type={segment.type}
                     sea={segment.sea}
                     air={segment.air}
@@ -147,6 +150,7 @@ export function ShipmentRoute({
               </>
             ) : segment.type === 'sea' || segment.type === 'air' ? (
               <SharedRouteDetailsView
+                planningOnly={planningOnly}
                 sea={segment.sea}
                 air={segment.air}
                 customers={customers}

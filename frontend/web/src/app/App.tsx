@@ -1,3 +1,4 @@
+import { RfqPage } from '../features/sales/rfq/RfqPage';
 import { NotificationCenter, useNotifications } from '../features/notifications/Notifications';
 import { GlobalSearch } from '../features/search/GlobalSearch';
 import { RelatedCreationProvider, useRelatedRequests } from '../shared/forms/RelatedCreation';
@@ -199,7 +200,7 @@ function WorkspaceApp() {
           sessionStorage.removeItem('broker:login-return');
           if (
             pending &&
-            /^\/(shipments|transportations|counterparties|bank-accounts|sales|inquiries|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
+            /^\/(shipments|transportations|counterparties|bank-accounts|sales|inquiries|rfqs|contracts|service-charges|financial-labels|incoming-invoices|outgoing-invoices|receipts|disbursements)(?:\/(?:new(?:\/[0-9a-f-]{36})?|[0-9a-f-]{36})(?:\/(?:route|edit))?)?$/i.test(
               pending,
             )
           ) {
@@ -220,7 +221,7 @@ function WorkspaceApp() {
       else if (next.startsWith('/receipts')) setTab('receipts');
       else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
       else if (next.startsWith('/sales')) setTab('sales');
-      else if (next.startsWith('/inquiries')) setTab('inquiries');
+      else if (next.startsWith('/inquiries') || next.startsWith('/rfqs/')) setTab('inquiries');
       else if (next.startsWith('/contracts')) setTab('contracts');
       else if (next.startsWith('/counterparties') || next.startsWith('/bank-accounts'))
         setTab('counterparties');
@@ -675,6 +676,12 @@ function WorkspaceApp() {
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
                       location.hash = next;
                     }}
+                  />
+                ) : entry.route.startsWith('/rfqs/') ? (
+                  <RfqPage
+                    route={entry.route}
+                    session={session}
+                    onTitle={(title) => renameWorkspace(entry.id, title)}
                   />
                 ) : entry.route.startsWith('/sales') || entry.route.startsWith('/inquiries') ? (
                   <SalesPage

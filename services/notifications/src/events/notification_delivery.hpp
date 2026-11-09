@@ -27,6 +27,13 @@ struct NotificationDelivery {
         : RecipientIssuer(payload.recipient_issuer), RecipientSubject(payload.recipient_subject),
           EntityId(payload.inquiry_id), EntityNumber(payload.inquiry_number),
           Revision(payload.revision) {}
+
+    explicit NotificationDelivery(const models::RfqNotificationPayload& payload)
+        : RecipientIssuer(payload.recipient_issuer), RecipientSubject(payload.recipient_subject),
+          EntityId(payload.rfq_id), EntityNumber(payload.rfq_title), Revision(payload.revision) {
+        if (RecipientSubject == payload.actor_subject)
+            RecipientSubject.reset();
+    }
 };
 
 inline void ValidateRecipient(

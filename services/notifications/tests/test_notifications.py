@@ -207,3 +207,23 @@ async def test_inquiry_creation_failure_notifies_requester_once(api, publish):
     assert items[0]['event_type'] == 'sales.inquiry.shipment_creation_failed'
     assert items[0]['entity_id'] == SHIPMENT
     assert items[0]['entity_number'] == 'ENQ-12'
+
+
+async def test_rfq_notifications_replay_actor_and_event_types(api, service_client, auth_key):
+    token = auth_key.token('service-account-sales-dispatcher', roles=['notifications.publish'], claims={'azp':'sales-dispatcher'})
+    body = {'id':'rfq-assigned:1', 'type':'sales.rfq.assigned','version':1,'organization_id':ORGANIZATION,
+            'payload':{'rfq_id':SHIPMENT,'rfq_title':'Морской фрахт','revision':1,
+                       'recipient_issuer':ISSUER,'recipient_subject':'author','actor_subject':'colleague'}}
+    async def send(value):
+        return await service_client.post(EVENT_PATH, json=value, headers={'Authorization':'Bearer '+token})
+    assert (await send(body)).status == 200
+    assert (await send(body)).status == 200
+    ready = {**body,'id':'rfq-ready:1','type':'sales.rfq.ready'}
+    assert (await send(ready)).status == 200
+    items = (await api.post(LIST_PATH, {'organization_id':ORGANIZATION}))['items']
+    assert len(items) == 2
+    assert {v['event_type'] for v in items} == {'sales.rfq.assigned','sales.rfq.ready'}
+    assert all(v['entity_id'] == SHIPMENT for v in items)
+    own = {**body,'id':'rfq-own:2','payload':{**body['payload'],'revision':2,'actor_subject':'author'}}
+    assert (await send(own)).status == 200
+    assert len((await api.post(LIST_PATH, {'organization_id':ORGANIZATION}))['items']) == 2

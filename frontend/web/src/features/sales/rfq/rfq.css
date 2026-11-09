@@ -1,0 +1,239 @@
+.rfq-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.rfq-quote-line {
+  display: grid;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rfq-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding-block: 20px;
+}
+.rfq-import > :first-child {
+  flex: 1 1 300px;
+}
+.rfq-comparison {
+  width: 100%;
+}
+.rfq-comparison th,
+.rfq-comparison td {
+  text-align: left;
+  padding: 12px;
+  vertical-align: top;
+}
+
+.rfq-list {
+  display: grid;
+  gap: 20px;
+}
+.rfq-card {
+  display: grid;
+  gap: 16px;
+  padding-block: 20px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.rfq-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rfq-card-heading h3 {
+  margin: 0;
+}
+.rfq-card-heading a {
+  color: var(--accent-text);
+}
+.rfq-card-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+.rfq-card-meta > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+.rfq-card-meta dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.rfq-card-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.rfq-card .rfq-empty {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .rfq-card-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rfq-open {
+  margin-left: auto;
+  color: var(--accent-text);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rfq-services-heading {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.rfq-services-heading h3,
+.rfq-services-heading p,
+.rfq-route {
+  margin: 0;
+}
+.rfq-quote-line {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.rfq-line-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rfq-line-heading button {
+  font-size: 12px;
+}
+.rfq-quote-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.rfq-comparison {
+  border-collapse: collapse;
+  min-width: 480px;
+}
+.rfq-comparison small {
+  display: block;
+  margin-top: 6px;
+}
+.rfq-card .table-scroll {
+  min-width: 0;
+}
+
+.sales-workbench .rfq-service-fields {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .sales-workbench .rfq-service-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rfq-editor > fieldset {
+  display: grid;
+  gap: 24px;
+}
+.rfq-editor fieldset > button {
+  justify-self: start;
+}
+
+.sales-proposals.rfq-editor {
+  display: block;
+}
+.rfq-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.rfq-quotations {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.rfq-quotation {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: clip;
+}
+.rfq-quotation > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.rfq-quotation > summary::-webkit-details-marker {
+  display: none;
+}
+.rfq-quotation > summary .rfq-service-count {
+  margin-left: auto;
+}
+.rfq-quotation-body {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+.rfq-quotation-editor-group {
+  display: grid;
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 0;
+}
+.rfq-quotation-editor-group > h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.rfq-quotation-editor-group > button {
+  justify-self: start;
+}
+
+.rfq-import > .rfq-import-hint {
+  flex: 1 0 100%;
+  margin: 0;
+}
+.rfq-import > .app-select {
+  flex: 1 1 300px;
+}
+
+.sales-workbench:has(.rfq-editor) {
+  overflow: visible;
+}
+.rfq-quotation > summary {
+  line-height: 20px;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+.rfq-quotation > summary > * {
+  margin-block: 0;
+}
+.rfq-quotation > summary > svg {
+  flex: 0 0 16px;
+  transform: rotate(-90deg);
+}
+.rfq-quotation[open] > summary > svg {
+  transform: none;
+}
+
+.rfq-service-count {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text-muted);
+  margin: 0 0 0 auto;
+  align-self: center;
+}

@@ -17,7 +17,9 @@ export function SharedRouteFields({
   customers,
   onSea,
   onAir,
+  planningOnly = false,
 }: {
+  planningOnly?: boolean;
   type: string;
   sea?: SeaDetails;
   air?: AirDetails;
@@ -80,9 +82,10 @@ export function SharedRouteFields({
           onSea({ ...value, arrival_terminal_id: id }),
         )}
         {date(translate('route.eta'), value.eta, false, (eta) => onSea({ ...value, eta }))}
-        {date(translate('route.vesselDeparture'), value.departure_date, true, (departure_date) =>
-          onSea({ ...value, departure_date }),
-        )}
+        {!planningOnly &&
+          date(translate('route.vesselDeparture'), value.departure_date, true, (departure_date) =>
+            onSea({ ...value, departure_date }),
+          )}
         <label>
           {translate('registryValue.type.vessel')}
           <input
@@ -132,16 +135,18 @@ export function SharedRouteFields({
       </label>
       {date(translate('route.etd'), value.etd, false, (etd) => onAir({ ...value, etd }))}
       {date(translate('route.eta'), value.eta, false, (eta) => onAir({ ...value, eta }))}
-      {date(translate('route.departureDate'), value.departure_date, true, (departure_date) =>
-        onAir({ ...value, departure_date }),
-      )}
-      {date(translate('route.arrivalDate'), value.arrival_date, true, (arrival_date) =>
-        onAir({ ...value, arrival_date }),
-      )}
+      {!planningOnly &&
+        date(translate('route.departureDate'), value.departure_date, true, (departure_date) =>
+          onAir({ ...value, departure_date }),
+        )}
+      {!planningOnly &&
+        date(translate('route.arrivalDate'), value.arrival_date, true, (arrival_date) =>
+          onAir({ ...value, arrival_date }),
+        )}
     </div>
   );
 }
-function CompanyName({
+export function CompanyName({
   id,
   customers,
   session,
@@ -181,11 +186,13 @@ export function sharedRouteDirection(
   return `${from?.name || translateMessage(locale, 'routeFilter.pointNotSet')} → ${to?.name || translateMessage(locale, 'routeFilter.pointNotSet')}`;
 }
 export function SharedRouteDetailsView({
+  planningOnly = false,
   sea,
   air,
   customers,
   session,
 }: {
+  planningOnly?: boolean;
   sea?: SeaDetails;
   air?: AirDetails;
   customers: Counterparty[];
@@ -220,12 +227,22 @@ export function SharedRouteDetailsView({
       : [];
   return Object.values(sea ?? air ?? {}).some(Boolean) ? (
     <dl className="shared-route-values">
-      {rows.map(([label, value]) => (
-        <div key={label}>
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
+      {rows
+        .filter(
+          ([label]) =>
+            !planningOnly ||
+            ![
+              translate('route.vesselDeparture'),
+              translate('route.departureDate'),
+              translate('route.arrivalDate'),
+            ].includes(label),
+        )
+        .map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
     </dl>
   ) : (
     <p className="muted">{translate('route.emptySegment')}</p>

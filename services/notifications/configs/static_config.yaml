@@ -6,6 +6,8 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        notifications-inbox: {}
+        notifications-event-acceptance: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-internal-v1-events-publish:
             path: /api/internal/v1/events/publish

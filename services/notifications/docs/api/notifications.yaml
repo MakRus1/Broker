@@ -65,22 +65,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 100
-                  default: 50
-                before:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: ../components/schemas/notifications.yaml#/ListNotificationsRequest
       responses:
         '200':
           description: Успех
@@ -136,25 +121,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                ids:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
-                  minItems: 1
-                  maxItems: 100
-                dismiss:
-                  type: boolean
-                  default: false
-              required:
-              - organization_id
-              - ids
+              $ref: ../components/schemas/notifications.yaml#/ReadNotificationsRequest
       responses:
         '200':
           description: Успех

@@ -1,3 +1,10 @@
+#include <components/financial_history.hpp>
+#include <components/financial_labels.hpp>
+#include <components/invoices.hpp>
+#include <components/payments.hpp>
+#include <components/service_charges.hpp>
+#include <components/settings.hpp>
+#include <components/settlements.hpp>
 #include <userver/clients/dns/component.hpp>
 #include <userver/clients/http/component_list.hpp>
 #include <userver/components/component.hpp>
@@ -71,6 +78,13 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::HttpClient>("cbr-http-client");
     component_list.Append<finance::ExchangeRates>();
 
+    component_list.Append<finance::FinancialLabelsComponent>();
+    component_list.Append<finance::ServiceChargesComponent>();
+    component_list.Append<finance::InvoicesComponent>();
+    component_list.Append<finance::PaymentsComponent>();
+    component_list.Append<finance::SettingsComponent>();
+    component_list.Append<finance::SettlementsComponent>();
+    component_list.Append<finance::FinancialHistoryComponent>();
     component_list = finance::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

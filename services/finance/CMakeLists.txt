@@ -6,7 +6,15 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
+    src/components/financial_history.cpp
     src/components/exchange_rates.cpp
+    src/components/financial_labels.cpp
+    src/components/service_charges.cpp
+    src/components/invoices.cpp
+    src/components/payments.cpp
+    src/components/settings.cpp
+    src/components/settlements.cpp
+
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

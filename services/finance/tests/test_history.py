@@ -182,3 +182,39 @@ async def test_document_lifecycle_is_structured(api, charge, invoice_references,
     events = (await history(api, kind, id))['items']
     assert [event['action'] for event in events] == ['restored', 'archived', 'created']
     assert {event['document'] for event in events} == {document}
+
+async def test_missing_legacy_fields_are_not_filled_with_current_defaults(api, charge, pgsql):
+    body, item = await saved_entry(api, charge)
+    await api.post('/api/v1/service-charges/save', {**body, 'expected_revision': 1,
+        'note': 'Дополнены условия'})
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("""
+            UPDATE service_charge_history
+            SET snapshot = snapshot - 'invoice_rate' - 'service_date' - 'price_mode'
+            WHERE service_charge_id = %s::UUID AND revision = 1
+        """, (item['id'],))
+    events = (await history(api, 'service-charges', item['id']))['items']
+    changed = fields(events[0])
+    assert events[0]['has_previous']
+    assert changed['invoice_rate.rate_millionths']['after'] == dict(format='rate', value='1000000')
+    assert 'before' not in changed['invoice_rate.rate_millionths']
+    assert 'before' not in changed['service_date']
+    assert 'before' not in changed['price_mode']
+    assert not {'invoice_rate.rate_millionths', 'invoice_rate.date', 'invoice_rate.source',
+        'service_date', 'price_mode'} & fields(events[1]).keys()
+
+async def test_reference_name_change_is_visible_without_changing_id(api, charge, pgsql):
+    body, item = await saved_entry(api, charge)
+    await api.post('/api/v1/service-charges/save', {**body, 'expected_revision': 1,
+        'note': 'Уточнение'})
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("""
+            UPDATE service_charge_history
+            SET snapshot = jsonb_set(snapshot, '{counterparty_name}', to_jsonb(%s::TEXT))
+            WHERE service_charge_id = %s::UUID AND revision = 1
+        """, ('Предыдущее название', item['id']))
+    event = (await history(api, 'service-charges', item['id']))['items'][0]
+    change = fields(event)['counterparty_id']
+    assert change['before']['value'] == change['after']['value'] == body['counterparty_id']
+    assert change['before']['display_name'] == 'Предыдущее название'
+    assert change['after']['display_name'] != 'Предыдущее название'

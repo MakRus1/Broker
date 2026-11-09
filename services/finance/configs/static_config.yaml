@@ -436,3 +436,10 @@ components_manager:
             path: /tests/{action}
             method: POST
             task_processor: main-task-processor
+        finance-financial-labels: {}
+        finance-service-charges: {}
+        finance-invoices: {}
+        finance-payments: {}
+        finance-settings: {}
+        finance-settlements: {}
+        finance-history: {}

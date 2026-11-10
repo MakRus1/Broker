@@ -1,11 +1,11 @@
 #pragma once
 #include <clients/transportations/client.hpp>
-#include <helpers/converters/transportation_shared_route.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters/registry.hpp>
+#include <converters/transportation_shared_route.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
-namespace web_bff {
+namespace web_bff::converters {
 
 inline models::transportations::InternationalRoadDetails Convert(
     const clients::transportations::models::InternationalRoadDetails& value) {
@@ -456,4 +456,4 @@ inline clients::transportations::models::ListTransportationsRequest ConvertRegis
     result.sort = body.sort;
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

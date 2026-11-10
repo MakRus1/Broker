@@ -2,7 +2,7 @@
 #include <clients/finance/client.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::finance::ReconciliationTotal Convert(
     const clients::finance::models::ReconciliationTotal& value) {
     return {.closing_minor = value.closing_minor,
@@ -25,4 +25,4 @@ inline models::finance::ReconciliationOperation Convert(
         .number = value.number,
         .own_company_name = value.own_company_name};
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

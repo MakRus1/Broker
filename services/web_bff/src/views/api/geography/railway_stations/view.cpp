@@ -1,9 +1,11 @@
-#include <helpers/converters.hpp>
-#include <helpers/converters/locations.hpp>
+#include <converters.hpp>
+#include <converters/locations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/geography/railway_stations/view.hpp>
 
 namespace web_bff::views::api::geography::railway_stations {
+using namespace ::web_bff::converters;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

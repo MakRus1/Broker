@@ -2,7 +2,7 @@
 #include <clients/shipments/client.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::shipments::TransportLocation Convert(
     const clients::shipments::models::TransportLocation& value) {
     models::shipments::TransportLocation result;
@@ -134,4 +134,4 @@ inline clients::shipments::models::ShipmentRouteSegment Convert(
         result.air = Convert(value.air.value());
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

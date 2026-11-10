@@ -1,7 +1,7 @@
 #pragma once
-#include <helpers/converters/finance.hpp>
+#include <converters/finance.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::finance::Invoice Convert(const clients::finance::models::Invoice& value) {
     models::finance::Invoice result;
     result.id = value.id;
@@ -137,9 +137,9 @@ inline models::finance::ServiceChargeInvoice Convert(
         .read_only = value.read_only,
         .service_charge_id = value.service_charge_id};
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::finance::InvoicePrintParty Convert(
     const clients::finance::models::InvoicePrintParty& value) {
     return {.kpp = value.kpp,
@@ -160,4 +160,4 @@ inline models::finance::InvoicePrintBank Convert(
         .swift = value.swift};
 }
 
-}  // namespace web_bff
+}  // namespace web_bff::converters

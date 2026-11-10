@@ -1,10 +1,10 @@
 #pragma once
 #include <clients/counterparties/client.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters/registry.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline std::optional<clients::counterparties::models::CounterpartyRegistryCursor> Convert(
     const std::optional<models::counterparties::CounterpartyRegistryCursor>& value) {
     if (!value.has_value())
@@ -264,4 +264,4 @@ inline clients::counterparties::ApiV1CounterpartiesBankAccountsSave::RequestBody
         .number = value.number,
         .swift = value.swift};
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

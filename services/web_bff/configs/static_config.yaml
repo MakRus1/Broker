@@ -6,6 +6,7 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        workspace-preferences: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-geography-cities:
             path: /api/geography/cities

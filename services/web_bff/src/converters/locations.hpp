@@ -2,7 +2,7 @@
 #include <clients/transport_locations/client.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::shipments::TransportLocation Convert(
     const clients::transport_locations::models::TransportLocation& value) {
     return {.code = value.code,
@@ -23,4 +23,4 @@ inline models::transportations::RailwayStation Convert(
         .name = value.name,
         .uic_code = value.uic_code};
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

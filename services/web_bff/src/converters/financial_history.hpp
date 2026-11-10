@@ -2,7 +2,7 @@
 #include <clients/finance/client.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline clients::finance::models::FinancialHistoryCursor Convert(
     const models::finance::FinancialHistoryCursor& value) {
     return {.entity_id = value.entity_id,
@@ -72,4 +72,4 @@ inline models::finance::FinancialHistoryEvent Convert(
     }
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

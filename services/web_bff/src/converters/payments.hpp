@@ -1,7 +1,7 @@
 #pragma once
-#include <helpers/converters/invoices.hpp>
+#include <converters/invoices.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::finance::PaymentAllocation Convert(
     const clients::finance::models::PaymentAllocation& value) {
     models::finance::PaymentAllocation result;
@@ -168,4 +168,4 @@ inline clients::finance::ApiV1PaymentsFilterValues::RequestBody Convert(
     result.candidates = value.candidates;
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

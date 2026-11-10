@@ -1,5 +1,6 @@
 #pragma once
 
+#include <components/session.hpp>
 #include <platform/browser/sessions.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -37,6 +38,7 @@ struct Deps {
     clients::transport_locations::Client transport_locations;
     clients::transportations::Client transportations;
     // SERVICE_DEPS_FIELDS_END
+    AdminSessionComponent& admin_session;
     platform::browser::Sessions* sessions;
 };
 
@@ -62,6 +64,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .transportations =
             component_context.FindComponent<clients::transportations::Component>().GetClient(),
         // SERVICE_DEPS_INIT_END
+        .admin_session = component_context.FindComponent<AdminSessionComponent>(),
         .sessions = &component_context.FindComponent<platform::browser::Sessions>(),
     };
 }

@@ -10,6 +10,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/session.hpp>
 #include <platform/auth/component.hpp>
 #include <platform/browser/assets.hpp>
 #include <platform/browser/login.hpp>
@@ -86,6 +87,8 @@ int main(int argc, char* argv[]) {
     component_list.Append<admin_bff::clients::transport_locations::Component>();
     component_list.Append<admin_bff::clients::transportations::Component>();
     // SERVICE_REGISTRATION_END
+
+    component_list.Append<admin_bff::AdminSessionComponent>();
 
     component_list = admin_bff::openapi::AppendGeneratedHandlers(component_list);
 

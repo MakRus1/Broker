@@ -1,9 +1,12 @@
-#include <helpers/registry.hpp>
-#include <models/organization_conversions.hpp>
+#include <converters/organizations.hpp>
+#include <converters/registry.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/admin/organizations/list/view.hpp>
 
 namespace admin_bff::views::api::admin::organizations::list {
+using converters::ConvertOrganizations;
+using converters::ConvertRegistryCursor;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
 

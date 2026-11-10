@@ -12,27 +12,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - actor
-                - subject
-                - display_name
-                - csrf_token
-                - permissions
-                properties:
-                  actor:
-                    type: string
-                  subject:
-                    type: string
-                  display_name:
-                    type: string
-                  csrf_token:
-                    type: string
-                  permissions:
-                    type: array
-                    items:
-                      type: string
+                $ref: ../../components/schemas/session.yaml#/AdminSession
         '400':
           description: Запрос отклонён
           content:

@@ -2,7 +2,7 @@
 #include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
 
-namespace admin_bff {
+namespace admin_bff::converters {
 inline models::Organization Convert(const clients::organizations::models::Organization& value) {
     return {
         .enabled = value.enabled, .id = value.id, .name = value.name, .revision = value.revision};
@@ -85,4 +85,4 @@ inline clients::organizations::ApiAdminOrganizationsMembersUpdate::RequestBody C
         .role = value.role,
         .subject = value.subject};
 }
-}  // namespace admin_bff
+}  // namespace admin_bff::converters

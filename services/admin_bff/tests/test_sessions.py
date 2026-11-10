@@ -150,3 +150,13 @@ async def test_editor_style_nonce_is_unique_and_bound_to_html(service_client):
         assert response.headers['Cache-Control'] == 'no-store'
         nonces.append(nonce)
     assert nonces[0] != nonces[1]
+
+
+async def test_session_permissions_are_refreshed_from_organizations(browser, platform_access):
+    platform_access['permissions'] = ['organizations.manage']
+    session = await browser.sign_in()
+    assert session['permissions'] == ['organizations.manage']
+    platform_access['permissions'] = []
+    response = await browser.get('/api/session')
+    assert response.status == 200
+    assert response.json() == {**session, 'permissions': []}

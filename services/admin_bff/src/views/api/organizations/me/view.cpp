@@ -1,8 +1,10 @@
-#include <models/organization_conversions.hpp>
+#include <converters/organizations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/organizations/me/view.hpp>
 
 namespace admin_bff::views::api::organizations::me {
+using converters::ConvertOrganizations;
+
 Response View::Handle(Request&&, userver::server::request::RequestContext& context, Deps deps) {
 
     const auto& session = platform::browser::GetBrowserSession(context);

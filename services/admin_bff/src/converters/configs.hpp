@@ -3,7 +3,7 @@
 #include <clients/config_admin/client.hpp>
 #include <openapi/models.hpp>
 
-namespace admin_bff {
+namespace admin_bff::converters {
 inline models::DraftStatus ToBrowserStatus(clients::config_admin::models::DraftStatus status) {
     using Status = clients::config_admin::models::DraftStatus;
     switch (status) {
@@ -87,4 +87,4 @@ template <typename T, typename U> std::vector<T> ConvertEvents(const std::vector
             .snapshot = ToBrowserSnapshot(item.snapshot)});
     return result;
 }
-}  // namespace admin_bff
+}  // namespace admin_bff::converters

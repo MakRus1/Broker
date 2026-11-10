@@ -51,3 +51,12 @@ SavePreferenceRequest:
     organization_id:
       type: string
       format: uuid
+ListPreferencesRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+  required:
+  - organization_id

@@ -16,6 +16,7 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
+#include <components/preferences.hpp>
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
@@ -60,6 +61,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-main");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<user_preferences::PreferencesComponent>();
     component_list = user_preferences::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

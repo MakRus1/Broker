@@ -1,4 +1,5 @@
 #pragma once
+#include <components/preferences.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -17,6 +18,7 @@
 namespace user_preferences {
 
 struct Deps {
+    PreferencesComponent* preferences;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -27,6 +29,7 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .preferences = &component_context.FindComponent<PreferencesComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

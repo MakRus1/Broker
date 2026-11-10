@@ -1,9 +1,14 @@
 #pragma once
-#include <helpers/registry.hpp>
-#include <helpers/route_registry.hpp>
+#include <converters/registry.hpp>
+#include <helpers/database.hpp>
 #include <platform/registry_page.hpp>
+#include <registry/route.hpp>
 
-namespace transportations::helpers {
+namespace transportations::registry_query {
+using namespace helpers;
+using converters::RegistryRow;
+using platform::registry::CursorScope;
+using platform::registry::SearchPattern;
 namespace registry = platform::registry;
 
 namespace registry_fields {
@@ -79,4 +84,4 @@ inline registry::QueryBuilder BuildRegistryFilters(
 inline const registry::Definition kRegistry{
     registry_fields::kFields, sql::kRegistryFilterValues, &BuildRegistryFilters};
 
-}  // namespace transportations::helpers
+}  // namespace transportations::registry_query

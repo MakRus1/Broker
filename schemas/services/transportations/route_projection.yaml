@@ -18,13 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - applied
-                properties:
-                  applied:
-                    type: boolean
+                $ref: components/schemas/operations.yaml#/RouteProjectionResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат

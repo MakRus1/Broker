@@ -1,4 +1,7 @@
 #pragma once
+#include <components/actuals.hpp>
+#include <components/routes.hpp>
+#include <components/transportations.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -19,6 +22,10 @@
 namespace transportations {
 
 struct Deps {
+    TransportationsComponent* transportations;
+    RoutesComponent* routes;
+    ActualsComponent* actuals;
+
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -31,6 +38,10 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .transportations = &component_context.FindComponent<TransportationsComponent>(),
+        .routes = &component_context.FindComponent<RoutesComponent>(),
+        .actuals = &component_context.FindComponent<ActualsComponent>(),
+
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

@@ -18,15 +18,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - operation
-                properties:
-                  operation:
-                    $ref: ../components/schemas/models.yaml#/CreationOperation
+                $ref: ../components/schemas/operations.yaml#/EnsureTransportationsResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:

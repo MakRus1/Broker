@@ -5,7 +5,12 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/helpers/actuals.cpp
+    src/components/transportations.cpp
+    src/components/routes.cpp
+    src/components/actuals.cpp
+    src/components/references.cpp
+    src/domain/inherited_route.cpp
+    src/domain/actuals.cpp
     src/domain/route.cpp
     src/domain/rail.cpp
     src/domain/road.cpp

@@ -1,3 +1,7 @@
+#include <components/actuals.hpp>
+#include <components/references.hpp>
+#include <components/routes.hpp>
+#include <components/transportations.hpp>
 #include <userver/clients/dns/component.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/clients/http/component_list.hpp>
@@ -65,6 +69,10 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-transportations");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<transportations::TransportationsComponent>();
+    component_list.Append<transportations::RoutesComponent>();
+    component_list.Append<transportations::ActualsComponent>();
+    component_list.Append<transportations::ReferencesComponent>();
     component_list = transportations::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

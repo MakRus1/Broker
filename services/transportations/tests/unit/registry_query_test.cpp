@@ -1,8 +1,8 @@
-#include <helpers/registry_query.hpp>
 #include <platform/calendar_date.hpp>
+#include <registry/query.hpp>
 #include <userver/utest/utest.hpp>
 
-namespace transportations::helpers {
+namespace transportations::registry_query {
 namespace {
 const std::string kOrganization = "00000000-0000-0000-0000-000000000001";
 
@@ -180,7 +180,7 @@ UTEST(RegistryQuery, RelatedCollectionReusesParametersAndNativeDates) {
 }
 
 }  // namespace
-}  // namespace transportations::helpers
+}  // namespace transportations::registry_query
 
 UTEST(RegistryQuery, CursorInheritsTheSortCollation) {
     namespace registry = platform::registry;

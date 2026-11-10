@@ -27,7 +27,7 @@
 
 ## Расширение каталога
 
-Поле добавляется в `services/transportations/src/helpers/route_registry.hpp`, в `kFields`. Условия и значения используют одну запись. Пример даты для следующего расширения:
+Поле добавляется в `services/transportations/src/registry/route.hpp`, в `kFields`. Условия и значения используют одну запись. Пример даты для следующего расширения:
 
 ```cpp
 {

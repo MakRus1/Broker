@@ -1,7 +1,7 @@
 // Печать реального SQL API для изолированных бенчмарков; не часть обычной сборки.
-#include <helpers/registry_query.hpp>
 #include <iostream>
 #include <iterator>
+#include <registry/query.hpp>
 #include <userver/formats/json.hpp>
 
 int main() {
@@ -12,21 +12,22 @@ int main() {
         body, std::type_identity<transportations::models::ListTransportationsRequest>{});
     const std::string organization = "00000000-0000-0000-0000-000000000001";
     if (document.HasMember("route_group")) {
-        const auto query = transportations::helpers::route_registry::BuildValues(request,
+        const auto query = transportations::registry_query::route_registry::BuildValues(request,
             organization, document["facet"].As<std::string>(), document["route_group"].As<int>(),
             document["query"].As<std::optional<std::string>>(),
             document["after"].As<std::optional<std::string>>(), 50, [&](auto& builder) {
-                platform::registry::ApplyFilters(
-                    builder, transportations::helpers::registry_fields::kFields, request.filters);
+                platform::registry::ApplyFilters(builder,
+                    transportations::registry_query::registry_fields::kFields, request.filters);
             });
         std::cout << query.Statement.GetStatementView();
         return 0;
     }
     const auto query = document.HasMember("facet")
-        ? platform::registry::BuildFilterValues(transportations::helpers::kRegistry, request,
+        ? platform::registry::BuildFilterValues(transportations::registry_query::kRegistry, request,
               organization, document["facet"].As<std::string>(),
               document["query"].As<std::optional<std::string>>(),
               document["after"].As<std::optional<std::string>>(), 50)
-        : platform::registry::BuildPage(transportations::helpers::kRegistry, request, organization);
+        : platform::registry::BuildPage(
+              transportations::registry_query::kRegistry, request, organization);
     std::cout << query.Statement.GetStatementView();
 }

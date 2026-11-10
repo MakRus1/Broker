@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
+#include <domain/actuals.hpp>
 #include <domain/route.hpp>
-#include <helpers/actuals.hpp>
-#include <helpers/json.hpp>
+#include <models/errors.hpp>
 
-namespace transportations::helpers {
+namespace transportations::domain {
 std::size_t ApplyActual(models::Transportation& transportation, const std::string& route_segment_id,
     models::EventKind event, std::chrono::system_clock::time_point occurred_at,
     ActualChange change) {
@@ -34,15 +34,4 @@ std::size_t ApplyActual(models::Transportation& transportation, const std::strin
     domain::ValidateActualTimes(*found);
     return static_cast<std::size_t>(std::distance(transportation.route_segments.begin(), found));
 }
-
-void UpdateActual(pg::Transaction& transaction, const std::string& organization,
-    models::Transportation& transportation, const std::string& route_segment_id,
-    models::EventKind event, std::chrono::system_clock::time_point occurred_at,
-    ActualChange change) {
-    const auto position = ApplyActual(transportation, route_segment_id, event, occurred_at, change);
-    transaction.Execute(sql::kInsertRouteSegment, organization, transportation.id, route_segment_id,
-        static_cast<std::int64_t>(position), Document(transportation.route_segments.at(position)));
-    transaction.Execute(sql::kBumpTransportationRevision, organization, transportation.id);
-    ++transportation.revision;
-}
-}  // namespace transportations::helpers
+}  // namespace transportations::domain

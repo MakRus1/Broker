@@ -7,7 +7,7 @@ API, фильтры, сортировки и курсоры сохранены. 
 
 - `services/transportations/postgresql/queries/list_transportations.sql` — базовая выборка
   и состав возвращаемой модели, по одному полю на строку.
-- `services/transportations/src/helpers/registry_query.hpp` — разрешённые поля,
+- `services/transportations/src/registry/query.hpp` — разрешённые поля,
   выбор сортировки и применение фильтров запроса.
 - `libs/common/include/platform/registry_query.hpp` — общий построитель SQL и параметров userver.
 - `services/shipments/src/registry/query.hpp` и

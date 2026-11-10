@@ -1,10 +1,12 @@
 #pragma once
-#include <helpers/converters.hpp>
+#include <converters/transportations.hpp>
 #include <helpers/database.hpp>
 #include <helpers/json.hpp>
 #include <openapi/models.hpp>
 
 namespace transportations::helpers {
+using converters::Convert;
+
 inline models::Transportation ReadTransportation(pg::Transaction& transaction,
     const std::string& organization, const std::string& id, bool lock) {
     const auto rows = transaction.Execute(

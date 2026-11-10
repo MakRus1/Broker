@@ -2,7 +2,7 @@
 #include <clients/shipments/client.hpp>
 #include <openapi/models.hpp>
 
-namespace transportations::helpers {
+namespace transportations::converters {
 inline models::TransportLocation Convert(
     const clients::shipments::models::TransportLocation& value) {
     models::TransportLocation result;
@@ -58,4 +58,4 @@ inline models::AirDetails Convert(const clients::shipments::models::AirDetails& 
         result.flight_number = value.flight_number.value();
     return result;
 }
-}  // namespace transportations::helpers
+}  // namespace transportations::converters

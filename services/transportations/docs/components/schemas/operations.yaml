@@ -1,0 +1,139 @@
+TransportationHistoryResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: models.yaml#/TransportationEvent
+  required:
+  - items
+TransportationResult:
+  type: object
+  additionalProperties: false
+  required:
+  - transportation
+  properties:
+    transportation:
+      $ref: models.yaml#/Transportation
+TransportationListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: models.yaml#/Transportation
+    next_cursor:
+      $ref: models.yaml#/RegistryCursor
+  required:
+  - items
+RouteUsageResult:
+  type: object
+  additionalProperties: false
+  properties:
+    segment_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+  required:
+  - segment_ids
+ContainerFactsRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - shipment_id
+  - pending_operation_ids
+  properties:
+    shipment_id:
+      type: string
+      format: uuid
+    pending_operation_ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+ContainerFactsResult:
+  type: object
+  additionalProperties: false
+  required:
+  - groups
+  - operations
+  properties:
+    groups:
+      type: array
+      items:
+        $ref: models.yaml#/ContainerFact
+    operations:
+      type: array
+      items:
+        $ref: models.yaml#/OperationFact
+RouteProjectionResult:
+  type: object
+  additionalProperties: false
+  required:
+  - applied
+  properties:
+    applied:
+      type: boolean
+FilterValuesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - registry
+  properties:
+    scope:
+      $ref: models.yaml#/FilterValuesScope
+    group:
+      type: integer
+      minimum: 0
+      maximum: 7
+      default: 0
+    registry:
+      $ref: models.yaml#/ListTransportationsRequest
+    field:
+      type: string
+      maxLength: 64
+    query:
+      type: string
+      maxLength: 256
+    after:
+      type: string
+      maxLength: 2000
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+    candidates:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        maxLength: 2000
+RegistryValuesResult:
+  type: object
+  additionalProperties: false
+  required:
+  - fields
+  - values
+  properties:
+    fields:
+      type: array
+      items:
+        $ref: models.yaml#/RegistryField
+    values:
+      type: array
+      items:
+        $ref: models.yaml#/RegistryValue
+    next_after:
+      type: string
+EnsureTransportationsResult:
+  type: object
+  additionalProperties: false
+  required:
+  - operation
+  properties:
+    operation:
+      $ref: models.yaml#/CreationOperation

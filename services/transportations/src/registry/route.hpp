@@ -2,8 +2,9 @@
 #include <platform/registry_filters.hpp>
 #include <transportations/sql_queries.hpp>
 
-namespace transportations::helpers::route_registry {
+namespace transportations::registry_query::route_registry {
 namespace registry = platform::registry;
+namespace pg = userver::storages::postgres;
 
 // Фильтры участка используют те же операторы, что поля основного реестра.
 inline constexpr std::array<registry::RegistryField, 7> kFields{{
@@ -116,4 +117,4 @@ inline registry::BuiltQuery BuildValues(const models::ListTransportationsRequest
     return registry::BuildValues(std::move(query), sql::kRegistryRouteFilterValues, candidate,
         search, after, limit + 1, source);
 }
-}  // namespace transportations::helpers::route_registry
+}  // namespace transportations::registry_query::route_registry

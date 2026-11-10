@@ -18,13 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - transportation
-                properties:
-                  transportation:
-                    $ref: components/schemas/models.yaml#/Transportation
+                $ref: components/schemas/operations.yaml#/TransportationResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -77,17 +71,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/Transportation
-                  next_cursor:
-                    $ref: components/schemas/models.yaml#/RegistryCursor
-                required:
-                - items
+                $ref: components/schemas/operations.yaml#/TransportationListResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -140,13 +124,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - transportation
-                properties:
-                  transportation:
-                    $ref: components/schemas/models.yaml#/Transportation
+                $ref: components/schemas/operations.yaml#/TransportationResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -199,13 +177,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - transportation
-                properties:
-                  transportation:
-                    $ref: components/schemas/models.yaml#/Transportation
+                $ref: components/schemas/operations.yaml#/TransportationResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -258,16 +230,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  segment_ids:
-                    type: array
-                    items:
-                      type: string
-                      format: uuid
-                required:
-                - segment_ids
+                $ref: components/schemas/operations.yaml#/RouteUsageResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -313,40 +276,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - shipment_id
-              - pending_operation_ids
-              properties:
-                shipment_id:
-                  type: string
-                  format: uuid
-                pending_operation_ids:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
+              $ref: components/schemas/operations.yaml#/ContainerFactsRequest
       responses:
         '200':
           description: Факт из одного снимка БД
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - groups
-                - operations
-                properties:
-                  groups:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/ContainerFact
-                  operations:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/OperationFact
+                $ref: components/schemas/operations.yaml#/ContainerFactsResult
         '403':
           description: Нет требуемого права или доверенной привязки к клиенту
           content:

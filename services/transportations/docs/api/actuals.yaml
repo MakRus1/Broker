@@ -18,15 +18,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - transportation
-                properties:
-                  transportation:
-                    $ref: ../components/schemas/models.yaml#/Transportation
+                $ref: ../components/schemas/operations.yaml#/TransportationResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -50,8 +45,8 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией; факт уже записан,
-            используйте исправление'
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией;
+            факт уже записан, используйте исправление'
           content:
             application/json:
               schema:
@@ -77,15 +72,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - transportation
-                properties:
-                  transportation:
-                    $ref: ../components/schemas/models.yaml#/Transportation
+                $ref: ../components/schemas/operations.yaml#/TransportationResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -109,8 +99,8 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией; исправляемый
-            факт отсутствует'
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией;
+            исправляемый факт отсутствует'
           content:
             application/json:
               schema:

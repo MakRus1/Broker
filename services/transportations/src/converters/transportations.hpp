@@ -6,7 +6,7 @@
 #include <userver/storages/postgres/result_set.hpp>
 #include <vector>
 
-namespace transportations::helpers {
+namespace transportations::converters {
 inline models::RouteSegment Convert(const userver::formats::json::Value& document) {
     auto result = models::ParseModelJson(document, std::type_identity<models::RouteSegment>{});
     domain::NormalizeRailLocations(result);
@@ -88,4 +88,4 @@ inline std::vector<models::TransportationEvent> Convert(
         result.push_back(Convert(row));
     return result;
 }
-}  // namespace transportations::helpers
+}  // namespace transportations::converters

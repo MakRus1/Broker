@@ -25,20 +25,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/registry_defaults.yaml#/RegistryDefault
-                  roles:
-                    type: array
-                    items:
-                      $ref: components/schemas/registry_defaults.yaml#/RegistryRole
-                required:
-                - items
-                - roles
+                $ref: components/schemas/registry_defaults.yaml#/RegistryDefaultsResult
         '400':
           description: Некорректные данные
           content:
@@ -73,31 +60,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                role:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
-                registry:
-                  type: string
-                  pattern: ^(shipments|transportations|counterparties|contracts|service-charges|financial_labels|outgoing-invoices|incoming-invoices|receipt-payments|disbursement-payments)$
-                value:
-                  type: object
-                  additionalProperties: true
-                expected_revision:
-                  type: integer
-                  minimum: 0
-              required:
-              - organization_id
-              - role
-              - registry
-              - value
-              - expected_revision
+              $ref: components/schemas/registry_defaults.yaml#/SaveRegistryDefaultRequest
       responses:
         '200':
           description: Успех

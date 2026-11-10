@@ -1,11 +1,11 @@
 #pragma once
 #include <clients/shipments/client.hpp>
-#include <helpers/converters/shipment_route.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters/registry.hpp>
+#include <converters/shipment_route.hpp>
 #include <openapi/models.hpp>
 #include <stdexcept>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline std::optional<clients::shipments::models::ShipmentRegistryCursor> Convert(
     const std::optional<models::shipments::ShipmentRegistryCursor>& value) {
     if (!value.has_value())
@@ -249,4 +249,4 @@ inline clients::shipments::models::ListShipmentsRequest ConvertRegistry(
     result.sort = body.sort;
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

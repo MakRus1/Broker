@@ -25,20 +25,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - preferences
-                - role_defaults
-                properties:
-                  preferences:
-                    type: array
-                    items:
-                      $ref: components/schemas/preferences/models.yaml#/Preference
-                  role_defaults:
-                    type: array
-                    items:
-                      $ref: components/schemas/registry_defaults.yaml#/RegistryDefault
+                $ref: components/schemas/preferences/models.yaml#/ListPreferencesResult
         '400':
           description: Некорректная настройка
           content:

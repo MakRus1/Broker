@@ -2,7 +2,7 @@
 #include <optional>
 #include <vector>
 
-namespace web_bff {
+namespace web_bff::converters {
 template <typename Out, typename In>
 std::optional<std::vector<Out>> ConvertRegistryFilters(
     const std::optional<std::vector<In>>& filters) {
@@ -28,4 +28,4 @@ template <typename Out, typename In> Out ConvertRegistryField(const In& field) {
     result.kind = ParseEnumScalar(EnumValue(field.kind), decltype(result.kind){});
     return result;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

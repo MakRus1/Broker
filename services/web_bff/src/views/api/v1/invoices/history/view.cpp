@@ -1,9 +1,11 @@
-#include <helpers/converters.hpp>
-#include <helpers/converters/financial_history.hpp>
+#include <converters.hpp>
+#include <converters/financial_history.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/v1/invoices/history/view.hpp>
 
 namespace web_bff::views::api::v1::invoices::history {
+using namespace ::web_bff::converters;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

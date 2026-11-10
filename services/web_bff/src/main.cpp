@@ -24,6 +24,7 @@
 #include <userver/ugrpc/client/component_list.hpp>
 
 #include <components/cities.hpp>
+#include <components/preferences.hpp>
 #include <components/public_catalog.hpp>
 #include <openapi/handlers.hpp>
 
@@ -95,7 +96,7 @@ int main(int argc, char* argv[]) {
     // SERVICE_REGISTRATION_END
 
     component_list.Append<userver::components::HttpClient>("cities-http-client");
-    component_list.Append<web_bff::Cities>();
+    component_list.Append<web_bff::Cities>().Append<web_bff::PreferencesComponent>();
     component_list = web_bff::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

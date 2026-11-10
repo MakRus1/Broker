@@ -1,8 +1,10 @@
-#include <helpers/converters/locations.hpp>
+#include <converters/locations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/geography/route_locations/view.hpp>
 
 namespace web_bff::views::api::geography::route_locations {
+using namespace ::web_bff::converters;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

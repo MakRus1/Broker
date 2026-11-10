@@ -51,3 +51,19 @@ SavePreferenceRequest:
     organization_id:
       type: string
       format: uuid
+
+ListPreferencesResult:
+  type: object
+  additionalProperties: false
+  required:
+  - preferences
+  - role_defaults
+  properties:
+    preferences:
+      type: array
+      items:
+        $ref: '#/Preference'
+    role_defaults:
+      type: array
+      items:
+        $ref: ../registry_defaults.yaml#/RegistryDefault

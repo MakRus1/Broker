@@ -1,9 +1,11 @@
-#include <helpers/converters.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters.hpp>
+#include <converters/registry.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/v1/transportations/filter_values/view.hpp>
 
 namespace web_bff::views::api::v1::transportations::filter_values {
+using namespace ::web_bff::converters;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     namespace api = clients::transportations::ApiV1TransportationsFilterValues;

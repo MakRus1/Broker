@@ -1,9 +1,9 @@
 #pragma once
 #include <clients/finance/client.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters/registry.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::finance::FinancialLabel Convert(
     const clients::finance::models::FinancialLabel& value) {
     return {.archived = value.archived,
@@ -228,4 +228,4 @@ inline std::optional<models::finance::ServiceChargeRegistryCursor> Convert(
     const std::optional<clients::finance::models::ServiceChargeRegistryCursor>& value) {
     return value.has_value() ? std::optional{Convert(value.value())} : std::nullopt;
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

@@ -1,9 +1,9 @@
 #pragma once
 #include <clients/contracts/client.hpp>
-#include <helpers/registry_filters.hpp>
+#include <converters/registry.hpp>
 #include <openapi/models.hpp>
 
-namespace web_bff {
+namespace web_bff::converters {
 inline models::contracts::Contract Convert(const clients::contracts::models::Contract& value) {
     return {.archived = value.archived,
         .contract_date = value.contract_date,
@@ -63,4 +63,4 @@ inline clients::contracts::ApiV1ContractsList::RequestBody Convert(
         .limit = query.limit,
         .sort = query.sort};
 }
-}  // namespace web_bff
+}  // namespace web_bff::converters

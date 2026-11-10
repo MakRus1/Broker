@@ -1,8 +1,10 @@
-#include <helpers/converters.hpp>
+#include <converters.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/v1/shipment_items/update/view.hpp>
 
 namespace web_bff::views::api::v1::shipment_items::update {
+using namespace ::web_bff::converters;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

@@ -3,7 +3,7 @@
 #include <openapi/models.hpp>
 #include <platform/registry_query.hpp>
 
-namespace transport_locations::helpers {
+namespace transport_locations::registry_query {
 namespace registry = platform::registry;
 
 namespace station_fields {
@@ -18,7 +18,7 @@ inline constexpr registry::Field<std::string> kEsr{"esr_code", "coalesce(esr_cod
 inline constexpr std::array<registry::FieldDefinition, 3> kSorts{kEsr, kName, kCountry};
 }  // namespace station_fields
 
-template <typename Request> registry::BuiltQuery StationQuery(const Request& request) {
+inline registry::BuiltQuery StationQuery(const models::ListStationsRequest& request) {
     using namespace station_fields;
     registry::QueryBuilder query{sql::kListRailwayStations,
         registry::OrderBy(kSorts, EnumValue(request.sort)), request.descending, kId};
@@ -30,4 +30,4 @@ template <typename Request> registry::BuiltQuery StationQuery(const Request& req
         request.cursor.has_value() ? request.cursor.value().value : "");
     return std::move(query).Build(request.limit + 1);
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::registry_query

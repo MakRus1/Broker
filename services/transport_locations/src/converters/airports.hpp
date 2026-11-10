@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace transport_locations::helpers {
+namespace transport_locations::converters {
 inline bool AirportCode(std::string_view value, std::size_t length) {
     return value.size() == length &&
         std::all_of(value.begin(), value.end(), [](char ch) { return ch >= 'A' && ch <= 'Z'; });
@@ -24,7 +24,7 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
     if (csv.starts_with("\xEF\xBB\xBF"))
         csv.remove_prefix(3);
     std::size_t offset = 0;
-    const auto header = ReadCsvRow(csv, offset);
+    const auto header = helpers::ReadCsvRow(csv, offset);
     std::map<std::string, std::size_t> columns;
     for (std::size_t index = 0; index < header.size(); ++index) {
         if (!columns.emplace(header[index], index).second)
@@ -42,7 +42,7 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
     std::vector<pgtypes::AirportSourceV1> result;
     std::size_t count = 0;
     while (offset < csv.size()) {
-        const auto row = ReadCsvRow(csv, offset);
+        const auto row = helpers::ReadCsvRow(csv, offset);
         if (++count > 200000 || row.size() != header.size())
             throw std::runtime_error("Некорректное количество строк или полей OurAirports");
         const auto get = [&](const char* key) -> const std::string& {
@@ -77,4 +77,4 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
         throw std::runtime_error("Выгрузка OurAirports подозрительно мала");
     return result;
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::converters

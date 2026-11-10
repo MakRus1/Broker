@@ -1,31 +1,20 @@
-#include <helpers/converters.hpp>
-#include <helpers/database.hpp>
+#include <components/railway_stations.hpp>
 #include <platform/auth/identity.hpp>
-#include <userver/utils/text.hpp>
+#include <utility>
 #include <views/api/admin/railway_stations/save/view.hpp>
 
 namespace transport_locations::views::api::admin::railway_stations::save {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::transport_locations::helpers;
     if (!platform::auth::GetIdentity(context).Permissions.contains("platform.admin"))
         return Response403{
             .error = "platform_admin_required", .message = "Нужны права администратора платформы"};
-    const auto name = userver::utils::text::Trim(request.body.name);
-    if (name.empty())
-        return Response400{.error = "invalid_name", .message = "Укажите название станции"};
-    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster,
-        sql::kSaveRailwayStation, request.body.id, name, request.body.country_code,
-        request.body.esr_code, request.body.uic_code, request.body.existing.value_or(false));
-    if (rows.IsEmpty())
-        return Response409{
-            .error = "station_exists", .message = "Идентификатор станции уже используется"};
-    const auto row = rows.AsSingleRow<pgtypes::RailwayStationV2>();
-    return Response200{.country_code = row.CountryCode,
-        .esr_code = row.EsrCode,
-        .esr_source = row.EsrSource,
-        .id = boost::uuids::to_string(row.Id),
-        .name = row.Name,
-        .uic_code = row.UicCode};
+    auto result = deps.stations->Save(request.body);
+    return Response200{.country_code = std::move(result.country_code),
+        .esr_code = std::move(result.esr_code),
+        .esr_source = std::move(result.esr_source),
+        .id = std::move(result.id),
+        .name = std::move(result.name),
+        .uic_code = std::move(result.uic_code)};
 }
 }  // namespace transport_locations::views::api::admin::railway_stations::save

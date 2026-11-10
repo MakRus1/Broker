@@ -3,7 +3,7 @@
 #include <openapi/models.hpp>
 #include <platform/registry_query.hpp>
 
-namespace transport_locations::helpers {
+namespace transport_locations::registry_query {
 namespace registry = platform::registry;
 
 namespace location_fields {
@@ -18,7 +18,7 @@ inline constexpr registry::Field<bool> kArchived{"archived", "archived", "BOOLEA
 inline constexpr std::array<registry::FieldDefinition, 4> kSorts{kId, kName, kCountry, kCode};
 }  // namespace location_fields
 
-template <typename Request> registry::BuiltQuery LocationQuery(const Request& request) {
+inline registry::BuiltQuery LocationQuery(const models::ListLocationsRequest& request) {
     using namespace location_fields;
     registry::QueryBuilder query{sql::kListRouteLocations,
         registry::OrderBy(kSorts, EnumValue(request.sort)), request.descending, kId};
@@ -31,4 +31,4 @@ template <typename Request> registry::BuiltQuery LocationQuery(const Request& re
         request.cursor.has_value() ? request.cursor.value().value : "");
     return std::move(query).Build(request.limit + 1);
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::registry_query

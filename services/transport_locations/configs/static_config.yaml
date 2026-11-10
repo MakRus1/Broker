@@ -6,6 +6,9 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        directory-sync: {}
+        route-locations: {}
+        railway-stations: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-admin-railway_stations-archive:
             path: /api/admin/railway-stations/archive

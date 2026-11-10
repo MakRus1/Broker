@@ -2,7 +2,7 @@
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
 
-namespace transport_locations::helpers {
+namespace transport_locations::converters {
 inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& value) {
     return {.code = value.Code,
         .country_code = value.CountryCode,
@@ -19,4 +19,4 @@ inline models::RailwayStation Convert(const pgtypes::RailwayStationV2& value) {
         .name = value.Name,
         .uic_code = value.UicCode};
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::converters

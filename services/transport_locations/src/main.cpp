@@ -11,6 +11,9 @@
 
 #include <bootstrap/ping.hpp>
 #include <components/airport_sync.hpp>
+#include <components/directory_sync.hpp>
+#include <components/locations.hpp>
+#include <components/railway_stations.hpp>
 #include <components/railway_sync.hpp>
 #include <components/sea_port_sync.hpp>
 #include <platform/telemetry.hpp>
@@ -61,7 +64,10 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-transport_locations");
     // SERVICE_REGISTRATION_END
 
-    component_list.Append<transport_locations::AirportSync>()
+    component_list.Append<transport_locations::LocationsComponent>()
+        .Append<transport_locations::RailwayStationsComponent>()
+        .Append<transport_locations::DirectorySyncComponent>()
+        .Append<transport_locations::AirportSync>()
         .Append<transport_locations::SeaPortSync>()
         .Append<transport_locations::RailwaySync>();
 

@@ -12,7 +12,7 @@
 #include <userver/formats/json/value.hpp>
 #include <vector>
 
-namespace transport_locations::helpers {
+namespace transport_locations::converters {
 using RailwaySource = pgtypes::RailwayStationSourceV1;
 
 inline std::optional<std::string> RailwayCode(std::string value, std::size_t length) {
@@ -83,4 +83,4 @@ inline std::vector<RailwaySource> ParseRailwaySource(
         throw std::runtime_error("Выгрузка железнодорожных станций OSM подозрительно мала");
     return result;
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::converters

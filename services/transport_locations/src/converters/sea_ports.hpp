@@ -9,7 +9,7 @@
 #include <set>
 #include <userver/formats/json.hpp>
 
-namespace transport_locations::helpers {
+namespace transport_locations::converters {
 inline bool OfficialLocodeRelease(std::string_view value) {
     return value.size() == 6 && value.starts_with("20") && value[2] >= '0' && value[2] <= '9' &&
         value[3] >= '0' && value[3] <= '9' && value[4] == '-' &&
@@ -74,7 +74,7 @@ inline std::vector<pgtypes::SeaPortSourceV1> ParseSeaPorts(
             csv.remove_prefix(3);
         std::size_t offset = 0;
         while (offset < csv.size()) {
-            const auto row = ReadCsvRow(csv, offset);
+            const auto row = helpers::ReadCsvRow(csv, offset);
             if (++rows > 200000 || row.size() != 12)
                 throw std::runtime_error("UN/LOCODE: некорректная структура CSV");
             // Формат официального выпуска: Change, Country, Location, Name,
@@ -125,4 +125,4 @@ inline std::vector<pgtypes::SeaPortSourceV1> ParseSeaPorts(
     }
     return result;
 }
-}  // namespace transport_locations::helpers
+}  // namespace transport_locations::converters

@@ -6,6 +6,9 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
+    src/components/directory_sync.cpp
+    src/components/locations.cpp
+    src/components/railway_stations.cpp
     src/components/railway_sync.cpp
     src/components/airport_sync.cpp
     src/components/sea_port_sync.cpp

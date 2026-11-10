@@ -18,15 +18,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - item
-                properties:
-                  item:
-                    $ref: ../components/schemas/models.yaml#/ShipmentItem
+                $ref: ../components/schemas/operations.yaml#/ContainerPlanAddResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -50,8 +45,8 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: Ключ идемпотентности уже использован с другим запросом или изменена редакция родительской
-            поставки
+          description: Ключ идемпотентности уже использован с другим запросом или
+            изменена редакция родительской поставки
           content:
             application/json:
               schema:
@@ -77,22 +72,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/models.yaml#/ContainerPlanItem
-                  unplanned_items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/models.yaml#/ContainerFact
-                required:
-                - items
-                - unplanned_items
+                $ref: ../components/schemas/operations.yaml#/ContainerPlanListResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -142,15 +125,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - item
-                properties:
-                  item:
-                    $ref: ../components/schemas/models.yaml#/ShipmentItem
+                $ref: ../components/schemas/operations.yaml#/ContainerPlanUpdateResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -174,8 +152,8 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией; план нельзя
-            уменьшить ниже созданного и зарезервированного количества'
+          description: 'Объект изменен: expected_revision не совпадает с текущей редакцией;
+            план нельзя уменьшить ниже созданного и зарезервированного количества'
           content:
             application/json:
               schema:

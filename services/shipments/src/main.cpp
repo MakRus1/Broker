@@ -17,9 +17,16 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
+#include <components/cargo_suggestions.hpp>
 #include <components/cargo_suggestions_cleanup.hpp>
+#include <components/container_plan.hpp>
+#include <components/references.hpp>
+#include <components/settings.hpp>
+#include <components/shipments.hpp>
 #include <components/transportation_dispatcher.hpp>
+#include <components/transportation_operations.hpp>
 #include <openapi/handlers.hpp>
+
 #include <platform/auth/service_token.hpp>
 
 // SERVICE_INCLUDES_BEGIN
@@ -77,6 +84,12 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<shipments::TransportationDispatcher>();
     component_list.Append<shipments::CargoSuggestionsCleanup>();
+    component_list.Append<shipments::ReferencesComponent>();
+    component_list.Append<shipments::ShipmentsComponent>();
+    component_list.Append<shipments::SettingsComponent>();
+    component_list.Append<shipments::ContainerPlanComponent>();
+    component_list.Append<shipments::TransportationOperationsComponent>();
+    component_list.Append<shipments::CargoSuggestionsComponent>();
     component_list = shipments::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

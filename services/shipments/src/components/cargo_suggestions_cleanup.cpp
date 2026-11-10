@@ -4,14 +4,19 @@
 #include <shipments/sql_queries.hpp>
 #include <userver/components/component_config.hpp>
 #include <userver/components/component_context.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/postgres/component.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
 CargoSuggestionsCleanup::CargoSuggestionsCleanup(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : ComponentBase(config, context), deps_(ResolveDeps(context)),
+    : ComponentBase(config, context),
+      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       registration_(
           context.FindComponent<userver::components::TestsuiteSupport>().GetPeriodicTaskControl(),
           std::string{kName}, task_),
@@ -35,14 +40,14 @@ CargoSuggestionsCleanup::~CargoSuggestionsCleanup() {
 
 void CargoSuggestionsCleanup::Cleanup() {
     const std::lock_guard lock(mutex_);
-    const auto settings = deps_.configs.GetSnapshot().Get(configs::CARGO_SUGGESTIONS_RETENTION);
+    const auto settings = configs_.GetSnapshot().Get(configs::CARGO_SUGGESTIONS_RETENTION);
     if (!settings.Enabled) {
         pending_ = false;
         return;
     }
     // Ограничиваем работу за один проход. Несколько подов безопасно разбирают разные записи.
     for (int batch = 0; batch < 10; ++batch) {
-        const auto removed = deps_.pg_cluster->Execute(
+        const auto removed = cluster_->Execute(
             userver::storages::postgres::ClusterHostType::kMaster, sql::kCleanupCargoSuggestions,
             settings.ActiveDays, settings.RemovedDays, settings.BatchSize);
         if (removed.Size() < static_cast<std::size_t>(settings.BatchSize)) {

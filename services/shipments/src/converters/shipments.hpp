@@ -1,14 +1,14 @@
 #pragma once
 #include <algorithm>
-#include <helpers/converters/route_details.hpp>
-#include <helpers/quantities.hpp>
+#include <converters/route_details.hpp>
 #include <map>
+#include <models/container_totals.hpp>
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 #include <vector>
 
-namespace shipments::helpers {
+namespace shipments::converters {
 inline pgtypes::ShipmentDataV3 ConvertData(const pgtypes::ShipmentV4& row) {
     return {.Number = row.Number,
         .CustomerId = row.CustomerId,
@@ -103,4 +103,4 @@ inline std::vector<models::Shipment> Convert(const userver::storages::postgres::
     return result;
 }
 
-}  // namespace shipments::helpers
+}  // namespace shipments::converters

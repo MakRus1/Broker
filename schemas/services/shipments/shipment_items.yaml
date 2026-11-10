@@ -18,13 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - item
-                properties:
-                  item:
-                    $ref: components/schemas/models.yaml#/ShipmentItem
+                $ref: components/schemas/operations.yaml#/ContainerPlanAddResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -78,20 +72,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/ContainerPlanItem
-                  unplanned_items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/ContainerFact
-                required:
-                - items
-                - unplanned_items
+                $ref: components/schemas/operations.yaml#/ContainerPlanListResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -144,13 +125,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - item
-                properties:
-                  item:
-                    $ref: components/schemas/models.yaml#/ShipmentItem
+                $ref: components/schemas/operations.yaml#/ContainerPlanUpdateResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат

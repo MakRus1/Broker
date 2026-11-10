@@ -1,8 +1,11 @@
 #pragma once
-#include <helpers/registry.hpp>
+#include <converters/registry.hpp>
+#include <helpers/database.hpp>
 #include <platform/registry_page.hpp>
 
-namespace shipments::helpers {
+namespace shipments::registry_query {
+using namespace helpers;
+using converters::RegistryRow;
 namespace registry = platform::registry;
 
 namespace registry_fields {
@@ -56,4 +59,4 @@ inline registry::QueryBuilder BuildRegistryFilters(const models::ListShipmentsRe
 inline const registry::Definition kRegistry{
     registry_fields::kFields, sql::kRegistryFilterValues, &BuildRegistryFilters};
 
-}  // namespace shipments::helpers
+}  // namespace shipments::registry_query

@@ -1,21 +1,64 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <clients/transportations/client.hpp>
-#include <helpers/converters.hpp>
+#include <components/transportation_operations.hpp>
+#include <converters/shipments.hpp>
 #include <helpers/database.hpp>
 #include <helpers/idempotency.hpp>
 #include <helpers/outbox.hpp>
 #include <helpers/revision.hpp>
-#include <operations/request_transportations.hpp>
+#include <models/errors.hpp>
+#include <permissions/permissions.hpp>
+#include <platform/auth/identity.hpp>
 #include <platform/outbox/component.hpp>
+#include <userver/components/component_context.hpp>
+#include <userver/storages/postgres/component.hpp>
+#include <userver/yaml_config/merge_schemas.hpp>
 
-namespace shipments::operations {
-models::CreationOperation RequestTransportations(
-    const userver::storages::postgres::ClusterPtr& cluster,
-    const platform::auth::Identity& identity, const models::CreateOperationRequest& request) {
-    using namespace ::shipments::helpers;
+namespace shipments {
+using namespace helpers;
+using namespace converters;
 
-    auto transaction = cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+TransportationOperationsComponent::TransportationOperationsComponent(
+    const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : ComponentBase(config, context),
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()) {
+}
+
+userver::yaml_config::Schema TransportationOperationsComponent::GetStaticConfigSchema() {
+    return ComponentBase::GetStaticConfigSchema();
+}
+
+models::TransportationOperationsCreateResult TransportationOperationsComponent::Create(
+    const models::CreateOperationRequest& request,
+    userver::server::request::RequestContext& context) const {
+
+    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+    const auto result = RequestTransportations(platform::auth::GetIdentity(context), request);
+    return models::TransportationOperationsCreateResult{.operation = result};
+}
+
+models::TransportationOperationsGetResult TransportationOperationsComponent::Get(
+    const models::GetOperationRequest& request,
+    userver::server::request::RequestContext& context) const {
+
+    platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
+    const auto& identity = platform::auth::GetIdentity(context);
+    const auto organization = platform::auth::GetOrganization(identity);
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetOperation, organization, request.operation_id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Операция не найдена"};
+    const auto result = Convert(rows.AsSingleRow<pgtypes::CreationOperationV1>());
+    return models::TransportationOperationsGetResult{.operation = result};
+}
+
+models::CreationOperation TransportationOperationsComponent::RequestTransportations(
+    const platform::auth::Identity& identity, const models::CreateOperationRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto organization = platform::auth::GetOrganization(identity);
     const auto replay = FindReplay<models::CreationOperation>(
         transaction, organization, "create_operation", request);
@@ -58,4 +101,5 @@ models::CreationOperation RequestTransportations(
     transaction.Commit();
     return result;
 }
-}  // namespace shipments::operations
+
+}  // namespace shipments

@@ -1,31 +1,14 @@
-#include <helpers/database.hpp>
-#include <helpers/dictionaries.hpp>
-#include <postgresql/types.hpp>
+#include <components/settings.hpp>
+#include <utility>
 #include <views/api/v1/shipments/dictionaries/view.hpp>
 
 namespace shipments::views::api::v1::shipments::dictionaries {
-Response View::Handle(Request&&, userver::server::request::RequestContext&, Deps deps) {
-    using namespace ::shipments::helpers;
-    const auto rows =
-        deps.pg_cluster->Execute(pg::ClusterHostType::kSlave, sql::kListShipmentDictionaries);
-    Response200 result;
-    for (const auto& entry : rows.AsSetOf<pgtypes::ShipmentDictionaryValueV1>()) {
-        const models::DictionaryValue value{.code = entry.Code, .name = entry.Name};
-        switch (ParseDictionary(entry.Dictionary)) {
-        case ShipmentDictionary::kIncoterms:
-            result.incoterms.push_back(value);
-            break;
-        case ShipmentDictionary::kCarriageTerms:
-            result.carriage_terms.push_back(value);
-            break;
-        case ShipmentDictionary::kLoading:
-            result.loading.push_back(value);
-            break;
-        case ShipmentDictionary::kRouteType:
-            result.route_types.push_back(value);
-            break;
-        }
-    }
-    return result;
+Response View::Handle(
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
+    auto result = deps.settings->Dictionaries(request.body, context);
+    return Response200{.carriage_terms = std::move(result.carriage_terms),
+        .incoterms = std::move(result.incoterms),
+        .loading = std::move(result.loading),
+        .route_types = std::move(result.route_types)};
 }
 }  // namespace shipments::views::api::v1::shipments::dictionaries

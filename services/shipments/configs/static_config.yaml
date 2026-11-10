@@ -6,6 +6,12 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        shipment-references: {}
+        shipments-shipments: {}
+        shipments-settings: {}
+        shipments-container-plan: {}
+        shipments-transportation-operations: {}
+        shipments-cargo-suggestions: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-admin-shipments-settings-get:
             path: /api/admin/shipments/settings/get

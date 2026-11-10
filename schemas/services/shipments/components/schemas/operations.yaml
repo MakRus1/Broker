@@ -1,0 +1,204 @@
+TransportationOperationsCreateResult:
+  type: object
+  additionalProperties: false
+  required:
+  - operation
+  properties:
+    operation:
+      $ref: models.yaml#/CreationOperation
+TransportationOperationsGetResult:
+  type: object
+  additionalProperties: false
+  required:
+  - operation
+  properties:
+    operation:
+      $ref: models.yaml#/CreationOperation
+ShipmentsFilterValuesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - registry
+  properties:
+    registry:
+      $ref: models.yaml#/ListShipmentsRequest
+    field:
+      type: string
+      maxLength: 64
+    query:
+      type: string
+      maxLength: 256
+    after:
+      type: string
+      maxLength: 2000
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 40
+    candidates:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        maxLength: 2000
+ShipmentsFilterValuesResult:
+  type: object
+  additionalProperties: false
+  required:
+  - fields
+  - values
+  properties:
+    fields:
+      type: array
+      items:
+        $ref: models.yaml#/RegistryField
+    values:
+      type: array
+      items:
+        $ref: models.yaml#/RegistryValue
+    next_after:
+      type: string
+ShipmentsCreateResult:
+  type: object
+  additionalProperties: false
+  required:
+  - shipment
+  properties:
+    shipment:
+      $ref: models.yaml#/Shipment
+ShipmentsGetResult:
+  type: object
+  additionalProperties: false
+  required:
+  - shipment
+  properties:
+    shipment:
+      $ref: models.yaml#/Shipment
+ShipmentsListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: models.yaml#/Shipment
+    next_cursor:
+      $ref: models.yaml#/ShipmentRegistryCursor
+  required:
+  - items
+ShipmentsUpdateResult:
+  type: object
+  additionalProperties: false
+  required:
+  - shipment
+  properties:
+    shipment:
+      $ref: models.yaml#/Shipment
+CargoSuggestionsListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        type: string
+        maxLength: 2000
+  required:
+  - items
+CargoSuggestionsRemoveResult:
+  type: object
+  additionalProperties: false
+  properties:
+    deleted:
+      type: boolean
+  required:
+  - deleted
+SettingsDictionariesRequest:
+  type: object
+  additionalProperties: false
+  properties: {}
+  required: []
+SettingsGetBusinessRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+  required:
+  - organization_id
+SettingsUpdateBusinessRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    expected_revision:
+      type: integer
+      format: int64
+      minimum: 0
+    rules:
+      $ref: models.yaml#/ShipmentBusinessRules
+  required:
+  - organization_id
+  - expected_revision
+  - rules
+ShipmentsTransportationContextsResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: models.yaml#/TransportationContext
+  required:
+  - items
+ShipmentsRegisterRouteUsageResult:
+  type: object
+  additionalProperties: false
+  properties:
+    registered:
+      type: boolean
+  required:
+  - registered
+ShipmentsEnsureCreatedResult:
+  type: object
+  additionalProperties: false
+  required:
+  - shipment
+  properties:
+    shipment:
+      $ref: models.yaml#/Shipment
+ContainerPlanAddResult:
+  type: object
+  additionalProperties: false
+  required:
+  - item
+  properties:
+    item:
+      $ref: models.yaml#/ShipmentItem
+ContainerPlanListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: models.yaml#/ContainerPlanItem
+    unplanned_items:
+      type: array
+      items:
+        $ref: models.yaml#/ContainerFact
+  required:
+  - items
+  - unplanned_items
+ContainerPlanUpdateResult:
+  type: object
+  additionalProperties: false
+  required:
+  - item
+  properties:
+    item:
+      $ref: models.yaml#/ShipmentItem

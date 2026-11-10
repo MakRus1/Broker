@@ -1,4 +1,9 @@
 #pragma once
+#include <components/cargo_suggestions.hpp>
+#include <components/container_plan.hpp>
+#include <components/settings.hpp>
+#include <components/shipments.hpp>
+#include <components/transportation_operations.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -21,6 +26,12 @@
 namespace shipments {
 
 struct Deps {
+    ShipmentsComponent* shipments;
+    SettingsComponent* settings;
+    ContainerPlanComponent* container_plan;
+    TransportationOperationsComponent* transportation_operations;
+    CargoSuggestionsComponent* cargo_suggestions;
+
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -35,6 +46,13 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .shipments = &component_context.FindComponent<ShipmentsComponent>(),
+        .settings = &component_context.FindComponent<SettingsComponent>(),
+        .container_plan = &component_context.FindComponent<ContainerPlanComponent>(),
+        .transportation_operations =
+            &component_context.FindComponent<TransportationOperationsComponent>(),
+        .cargo_suggestions = &component_context.FindComponent<CargoSuggestionsComponent>(),
+
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

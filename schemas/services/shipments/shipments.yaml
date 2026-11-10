@@ -18,13 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - shipment
-                properties:
-                  shipment:
-                    $ref: components/schemas/models.yaml#/Shipment
+                $ref: components/schemas/operations.yaml#/ShipmentsCreateResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -78,13 +72,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - shipment
-                properties:
-                  shipment:
-                    $ref: components/schemas/models.yaml#/Shipment
+                $ref: components/schemas/operations.yaml#/ShipmentsGetResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -137,17 +125,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/Shipment
-                  next_cursor:
-                    $ref: components/schemas/models.yaml#/ShipmentRegistryCursor
-                required:
-                - items
+                $ref: components/schemas/operations.yaml#/ShipmentsListResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -200,13 +178,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - shipment
-                properties:
-                  shipment:
-                    $ref: components/schemas/models.yaml#/Shipment
+                $ref: components/schemas/operations.yaml#/ShipmentsUpdateResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -312,16 +284,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      type: string
-                      maxLength: 2000
-                required:
-                - items
+                $ref: components/schemas/operations.yaml#/CargoSuggestionsListResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -374,13 +337,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  deleted:
-                    type: boolean
-                required:
-                - deleted
+                $ref: components/schemas/operations.yaml#/CargoSuggestionsRemoveResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -426,10 +383,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties: {}
-              required: []
+              $ref: components/schemas/operations.yaml#/SettingsDictionariesRequest
       responses:
         '200':
           description: Успех
@@ -482,14 +436,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-              required:
-              - organization_id
+              $ref: components/schemas/operations.yaml#/SettingsGetBusinessRequest
       responses:
         '200':
           description: Результат операции
@@ -541,22 +488,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                expected_revision:
-                  type: integer
-                  format: int64
-                  minimum: 0
-                rules:
-                  $ref: components/schemas/models.yaml#/ShipmentBusinessRules
-              required:
-              - organization_id
-              - expected_revision
-              - rules
+              $ref: components/schemas/operations.yaml#/SettingsUpdateBusinessRequest
       responses:
         '200':
           description: Результат операции
@@ -615,15 +547,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/TransportationContext
-                required:
-                - items
+                $ref: components/schemas/operations.yaml#/ShipmentsTransportationContextsResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -676,13 +600,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  registered:
-                    type: boolean
-                required:
-                - registered
+                $ref: components/schemas/operations.yaml#/ShipmentsRegisterRouteUsageResult
         '400':
           description: Некорректное тело запроса, значения полей или последовательность
             дат
@@ -777,13 +695,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - shipment
-                properties:
-                  shipment:
-                    $ref: components/schemas/models.yaml#/Shipment
+                $ref: components/schemas/operations.yaml#/ShipmentsEnsureCreatedResult
 components:
   securitySchemes:
     BearerAuth:

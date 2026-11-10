@@ -1,33 +1,11 @@
-#include <helpers/converters.hpp>
-#include <helpers/database.hpp>
-#include <helpers/quantities.hpp>
-#include <helpers/revision.hpp>
-#include <permissions/permissions.hpp>
-#include <platform/auth/identity.hpp>
+#include <components/container_plan.hpp>
+#include <utility>
 #include <views/api/v1/shipment_items/update/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::update {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    using namespace ::shipments::helpers;
-
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-    const auto& identity = platform::auth::GetIdentity(context);
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = platform::auth::GetOrganization(identity);
-    const auto rows = transaction.Execute(sql::kLockItem, organization, request.body.item_id);
-    if (rows.IsEmpty())
-        throw ApiError<404>{"not_found", "Позиция не найдена"};
-    CheckRevision(
-        rows.AsSingleRow<pgtypes::ShipmentItemV1>().Revision, request.body.expected_revision);
-    const auto row = transaction
-                         .Execute(sql::kUpdateItem, organization, request.body.item_id,
-                             request.body.planned_quantity)
-                         .AsSingleRow<pgtypes::ShipmentItemV1>();
-    const auto result = Convert(row);
-    WriteAudit(transaction, organization, identity, "update_item", result.id, request.body, result);
-    transaction.Commit();
-    return Response200{.item = result};
+    auto result = deps.container_plan->Update(request.body, context);
+    return Response200{.item = std::move(result.item)};
 }
 }  // namespace shipments::views::api::v1::shipment_items::update

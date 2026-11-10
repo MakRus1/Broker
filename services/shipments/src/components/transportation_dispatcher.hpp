@@ -1,5 +1,6 @@
 #pragma once
-#include <deps.hpp>
+#include <clients/notifications/client.hpp>
+#include <clients/transportations/client.hpp>
 #include <platform/auth/service_token.hpp>
 #include <platform/outbox/component.hpp>
 #include <postgresql/types.hpp>
@@ -16,7 +17,8 @@ class TransportationDispatcher final : public userver::components::ComponentBase
   private:
     pgtypes::CreationOperationV1 SendOperation(const platform::outbox::Message&);
     void SendRouteProjection(const platform::outbox::Message&);
-    Deps deps_;
+    clients::notifications::Client notifications_;
+    clients::transportations::Client transportations_;
     platform::auth::ServiceTokenProvider& tokens_;
 };
 }  // namespace shipments

@@ -18,15 +18,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - operation
-                properties:
-                  operation:
-                    $ref: ../components/schemas/models.yaml#/CreationOperation
+                $ref: ../components/schemas/operations.yaml#/TransportationOperationsCreateResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:
@@ -50,8 +45,8 @@ paths:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
         '409':
-          description: Превышено доступное количество, изменена редакция позиции или ключ идемпотентности
-            уже использован с другим запросом
+          description: Превышено доступное количество, изменена редакция позиции или
+            ключ идемпотентности уже использован с другим запросом
           content:
             application/json:
               schema:
@@ -77,15 +72,10 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - operation
-                properties:
-                  operation:
-                    $ref: ../components/schemas/models.yaml#/CreationOperation
+                $ref: ../components/schemas/operations.yaml#/TransportationOperationsGetResult
         '400':
-          description: Некорректное тело запроса, значения полей или последовательность дат
+          description: Некорректное тело запроса, значения полей или последовательность
+            дат
           content:
             application/json:
               schema:

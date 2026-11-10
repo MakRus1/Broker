@@ -3,7 +3,7 @@
 #include <openapi/models.hpp>
 #include <postgresql/types.hpp>
 
-namespace shipments::helpers {
+namespace shipments::converters {
 inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& value) {
     models::TransportLocation result;
     result.id = boost::uuids::to_string(value.Id);
@@ -133,4 +133,4 @@ inline pgtypes::ShipmentRouteSegmentV3 Convert(const models::ShipmentRouteSegmen
         result.Air = Convert(value.air.value());
     return result;
 }
-}  // namespace shipments::helpers
+}  // namespace shipments::converters

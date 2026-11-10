@@ -17,7 +17,9 @@ namespace json = userver::formats::json;
 TransportationDispatcher::TransportationDispatcher(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : ComponentBase(config, context), deps_(ResolveDeps(context)),
+    : ComponentBase(config, context),
+      notifications_(context.FindComponent<clients::notifications::Component>().GetClient()),
+      transportations_(context.FindComponent<clients::transportations::Component>().GetClient()),
       tokens_(context.FindComponent<platform::auth::ServiceTokenProvider>()) {
     auto& outbox = context.FindComponent<platform::outbox::Component>();
     outbox.RegisterHandler(
@@ -31,7 +33,7 @@ TransportationDispatcher::TransportationDispatcher(
     outbox.RegisterHandler(std::string{helpers::kPublishNotificationEvent},
         [this](const platform::outbox::Message& message) {
             namespace api = clients::notifications::ApiInternalV1EventsPublish;
-            deps_.notifications.ApiInternalV1EventsPublish(
+            notifications_.ApiInternalV1EventsPublish(
                 api::Request{.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
         });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},
@@ -42,7 +44,7 @@ pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
     const platform::outbox::Message& message) {
     namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
     const auto request = api::Request{.body = api::ParseBody(message.Payload)};
-    const auto result = deps_.transportations.ApiInternalV1TransportationsEnsureCreated(
+    const auto result = transportations_.ApiInternalV1TransportationsEnsureCreated(
         request, tokens_.GetAccessToken());
     const auto& value = result.operation;
     // Ответ обязан относиться к той же операции и количеству, иначе резерв сохраняется.
@@ -70,7 +72,7 @@ pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
 
 void TransportationDispatcher::SendRouteProjection(const platform::outbox::Message& message) {
     namespace api = clients::transportations::ApiInternalV1ShipmentsRouteProjection;
-    deps_.transportations.ApiInternalV1ShipmentsRouteProjection(
+    transportations_.ApiInternalV1ShipmentsRouteProjection(
         api::Request{.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
 }
 

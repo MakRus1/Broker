@@ -10,7 +10,7 @@ API, фильтры, сортировки и курсоры сохранены. 
 - `services/transportations/src/helpers/registry_query.hpp` — разрешённые поля,
   выбор сортировки и применение фильтров запроса.
 - `libs/common/include/platform/registry_query.hpp` — общий построитель SQL и параметров userver.
-- `services/shipments/src/helpers/registry_query.hpp` и
+- `services/shipments/src/registry/query.hpp` и
   `services/counterparties/src/helpers/registry_query.hpp` — описания двух других реестров.
 
 Обработчик проверяет права и курсор, вызывает `BuildRegistryQuery`, затем выполняет

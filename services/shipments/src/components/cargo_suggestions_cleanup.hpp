@@ -1,8 +1,9 @@
 #pragma once
 #include <atomic>
-#include <deps.hpp>
+#include <platform/configs/runtime.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/engine/mutex.hpp>
+#include <userver/storages/postgres/cluster.hpp>
 #include <userver/testsuite/periodic_task_control.hpp>
 #include <userver/utils/periodic_task.hpp>
 
@@ -17,7 +18,8 @@ class CargoSuggestionsCleanup final : public userver::components::ComponentBase 
 
   private:
     void Cleanup();
-    Deps deps_;
+    platform::configs::Source configs_;
+    userver::storages::postgres::ClusterPtr cluster_;
     std::atomic<bool> pending_{false};
     userver::engine::Mutex mutex_;
     userver::utils::PeriodicTask task_;

@@ -1,5 +1,4 @@
 #pragma once
-#include <deps.hpp>
 #include <helpers/database.hpp>
 #include <helpers/json.hpp>
 #include <openapi/models.hpp>
@@ -23,9 +22,9 @@ std::optional<Result> FindReplay(pg::Transaction& transaction, const std::string
 // Быстрый повтор не зависит от доступности внешних справочников. Запись и гонки
 // по-прежнему защищены FindReplay внутри транзакции создания.
 template <typename Result, typename Request>
-std::optional<Result> FindSavedReplay(const Deps& deps, const std::string& organization,
-    const std::string& action, const Request& request) {
-    const auto rows = deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kFindIdempotency,
+std::optional<Result> FindSavedReplay(const pg::ClusterPtr& cluster,
+    const std::string& organization, const std::string& action, const Request& request) {
+    const auto rows = cluster->Execute(pg::ClusterHostType::kMaster, sql::kFindIdempotency,
         organization, action, request.idempotency_key);
     if (rows.IsEmpty())
         return std::nullopt;

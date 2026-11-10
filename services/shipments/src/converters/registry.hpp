@@ -1,9 +1,8 @@
 #pragma once
-#include <helpers/converters.hpp>
-#include <helpers/database.hpp>
+#include <converters/shipments.hpp>
 #include <platform/registry.hpp>
 
-namespace shipments::helpers {
+namespace shipments::converters {
 struct RegistryRow {
     pgtypes::ShipmentV4 Shipment;
     std::string TextKey;
@@ -17,4 +16,4 @@ inline std::vector<models::Shipment> Convert(const std::vector<RegistryRow>& row
         result.push_back(Convert(row.Shipment));
     return result;
 }
-}  // namespace shipments::helpers
+}  // namespace shipments::converters

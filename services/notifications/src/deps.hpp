@@ -1,4 +1,6 @@
 #pragma once
+#include <components/event_acceptance.hpp>
+#include <components/inbox.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -17,6 +19,8 @@
 namespace notifications {
 
 struct Deps {
+    InboxComponent* inbox;
+    EventAcceptanceComponent* event_acceptance;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -27,6 +31,8 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .inbox = &component_context.FindComponent<InboxComponent>(),
+        .event_acceptance = &component_context.FindComponent<EventAcceptanceComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

@@ -4,7 +4,7 @@
 #include <openapi/models.hpp>
 #include <vector>
 
-namespace configs {
+namespace configs::converters {
 inline std::vector<models::ConfigRevision> ToApiHistory(
     const std::vector<RevisionInfo>& revisions) {
     std::vector<models::ConfigRevision> items;
@@ -12,4 +12,4 @@ inline std::vector<models::ConfigRevision> ToApiHistory(
         items.push_back({.created_at = revision.CreatedAt, .revision = revision.Id});
     return items;
 }
-}  // namespace configs
+}  // namespace configs::converters

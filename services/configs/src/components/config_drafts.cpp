@@ -2,8 +2,8 @@
 #include <components/config_store.hpp>
 #include <configs/keys.hpp>
 #include <configs/sql_queries.hpp>
-#include <helpers/converters.hpp>
-#include <repositories/draft_document.hpp>
+#include <converters/draft_document.hpp>
+#include <converters/rows.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/regex.hpp>
@@ -55,7 +55,7 @@ void ConfigStore::ValidateConfig(const std::string& name, const Json& value) con
 
 std::vector<CatalogEntry> ConfigStore::Catalog() const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kCatalog);
-    return helpers::Convert(rows.AsContainer<std::vector<helpers::CatalogRow>>(pg::kRowTag));
+    return converters::Convert(rows.AsContainer<std::vector<converters::CatalogRow>>(pg::kRowTag));
 }
 
 Config ConfigStore::GetConfig(const std::string& name) const {
@@ -80,12 +80,12 @@ Draft ConfigStore::GetDraft(std::int64_t id) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindDraft, id);
     if (rows.IsEmpty())
         throw RevisionNotFound("Draft not found");
-    return storage::ReadDraft(id, rows.AsSingleRow<Json>());
+    return converters::ReadDraft(id, rows.AsSingleRow<Json>());
 }
 
-std::vector<Draft> ConfigStore::ListDrafts(const DraftFilter& filter) const {
-    const auto name = filter.ConfigName.value_or("");
-    const auto before = filter.BeforeId.value_or(0);
+std::vector<Draft> ConfigStore::ListDrafts(const models::ListConfigDraftsRequest& filter) const {
+    const auto name = filter.config_name.value_or("");
+    const auto before = filter.before_id.value_or(0);
     if (!name.empty())
         ValidateName(name);
     if (before < 0)
@@ -93,7 +93,7 @@ std::vector<Draft> ConfigStore::ListDrafts(const DraftFilter& filter) const {
 
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListDrafts, name, before);
-    return helpers::Convert(rows.AsContainer<std::vector<helpers::DraftRow>>(pg::kRowTag));
+    return converters::Convert(rows.AsContainer<std::vector<converters::DraftRow>>(pg::kRowTag));
 }
 
 Draft ConfigStore::LoadActiveDraft(
@@ -102,7 +102,7 @@ Draft ConfigStore::LoadActiveDraft(
     const auto rows = transaction.Execute(sql::kFindDraft, id);
     if (rows.IsEmpty())
         throw RevisionNotFound("Draft not found");
-    auto draft = storage::ReadDraft(id, rows.AsSingleRow<Json>());
+    auto draft = converters::ReadDraft(id, rows.AsSingleRow<Json>());
     if (draft.Version != expected_version)
         throw RevisionConflict("Draft version changed");
     if (draft.Status != DraftStatus::Draft)
@@ -112,133 +112,134 @@ Draft ConfigStore::LoadActiveDraft(
 
 void ConfigStore::SaveDraft(pg::Transaction& transaction, const Draft& draft,
     const std::string& actor, std::string_view action) const {
-    const auto document = storage::WriteDraft(draft);
+    const auto document = converters::WriteDraft(draft);
     transaction.Execute(sql::kUpdateDraft, draft.Id, document);
     WriteDraftEvent(transaction, draft, actor, action);
 }
 
 void ConfigStore::WriteDraftEvent(pg::Transaction& transaction, const Draft& draft,
     const std::string& actor, std::string_view action) const {
-    const auto document = storage::WriteDraft(draft);
-    Builder event;
-    event["action"] = std::string(action);
-    event["actor"] = actor;
-    event["snapshot"] = document;
-    transaction.Execute(sql::kInsertDraftEvent, draft.Id, event.ExtractValue());
+    const auto document = converters::WriteDraft(draft);
+    transaction.Execute(
+        sql::kInsertDraftEvent, draft.Id, converters::WriteDraftEvent(document, actor, action));
 }
 
-Draft ConfigStore::CreateDraft(const CreateDraftRequest& request) const {
-    ValidateText(request.Actor, 2048);
-    ValidateText(request.ConfigName, 256);
-    ValidateText(request.Description, 4096);
-    ValidateName(request.ConfigName);
-    if (static_cast<int>(request.Value.has_value()) +
-            static_cast<int>(request.SourceRevision.has_value()) +
-            static_cast<int>(request.Remove) !=
+Draft ConfigStore::CreateDraft(const models::CreateConfigDraftRequest& request,
+    const platform::auth::Identity& identity) const {
+    ValidateText(identity.ActorId(), 2048);
+    ValidateText(request.config_name, 256);
+    ValidateText(request.description, 4096);
+    ValidateName(request.config_name);
+    if (static_cast<int>(request.value.has_value()) +
+            static_cast<int>(request.source_revision.has_value()) +
+            static_cast<int>(request.remove.value_or(false)) !=
         1)
         throw InvalidRequest("Выберите значение, историческую ревизию или удаление");
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Общая блокировка защищает проверку версии, единственность драфта и публикацию.
     transaction.Execute(sql::kLockRevision);
-    if (!transaction.Execute(sql::kActiveDraft, request.ConfigName).IsEmpty())
+    if (!transaction.Execute(sql::kActiveDraft, request.config_name).IsEmpty())
         throw RevisionConflict("Config already has an active draft");
     const auto current = Current(transaction);
     const auto version =
-        transaction.Execute(sql::kConfigVersion, request.ConfigName).AsSingleRow<std::int64_t>();
-    if (request.ExpectedConfigVersion != version)
+        transaction.Execute(sql::kConfigVersion, request.config_name).AsSingleRow<std::int64_t>();
+    if (request.expected_config_version != version)
         throw RevisionConflict("Config changed while editing");
-    const auto base = current.Values.HasMember(request.ConfigName)
-        ? std::optional{current.Values[request.ConfigName]}
+    const auto base = current.Values.HasMember(request.config_name)
+        ? std::optional{current.Values[request.config_name]}
         : std::nullopt;
-    if (request.Remove && !base.has_value())
+    if (request.remove.value_or(false) && !base.has_value())
         throw RevisionNotFound("Конфиг не опубликован");
     std::optional<Json> value;
-    if (request.Value.has_value()) {
-        value = request.Value.value();
-    } else if (request.SourceRevision.has_value()) {
-        const auto source = request.SourceRevision.value();
+    if (request.value.has_value()) {
+        value = request.value.value();
+    } else if (request.source_revision.has_value()) {
+        const auto source = request.source_revision.value();
         if (source < 0)
             throw InvalidRequest("Invalid source revision");
         const auto rows = transaction.Execute(sql::kFindRevision, source);
         if (rows.IsEmpty())
             throw RevisionNotFound("Revision not found");
         const auto snapshot = rows.AsSingleRow<Revision>(pg::kRowTag).Values;
-        if (!snapshot.HasMember(request.ConfigName))
+        if (!snapshot.HasMember(request.config_name))
             throw RevisionNotFound("Config did not exist in revision");
-        value = snapshot[request.ConfigName];
+        value = snapshot[request.config_name];
     }
     if (value.has_value())
-        ValidateConfig(request.ConfigName, value.value());
+        ValidateConfig(request.config_name, value.value());
     if (base.has_value() && value == base.value())
         throw InvalidRequest("Config value has no changes");
     Draft draft{.Id = 0,
-        .ConfigName = request.ConfigName,
-        .Author = request.Actor,
-        .Description = request.Description,
+        .ConfigName = request.config_name,
+        .Author = identity.ActorId(),
+        .Description = request.description,
         .Version = 1,
         .Status = DraftStatus::Draft,
         .ApprovedBy = std::nullopt,
         .BaseVersion = version,
         .BaseValue = base,
         .Value = value,
-        .SourceRevision = request.SourceRevision,
+        .SourceRevision = request.source_revision,
         .PublishedRevision = std::nullopt,
-        .AuthorName = request.ActorName,
+        .AuthorName = identity.DisplayName,
         .ApprovedByName = std::nullopt};
-    draft.Id = transaction.Execute(sql::kInsertDraft, storage::WriteDraft(draft))
+    draft.Id = transaction.Execute(sql::kInsertDraft, converters::WriteDraft(draft))
                    .AsSingleRow<std::int64_t>();
-    WriteDraftEvent(transaction, draft, request.Actor, "create");
+    WriteDraftEvent(transaction, draft, identity.ActorId(), "create");
     transaction.Commit();
     return draft;
 }
 
-Draft ConfigStore::EditDraft(const EditDraftRequest& request) const {
-    ValidateText(request.Actor, 2048);
+Draft ConfigStore::EditDraft(
+    const models::EditConfigDraftRequest& request, const platform::auth::Identity& identity) const {
+    ValidateText(identity.ActorId(), 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
-    auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
-    if (draft.Author != request.Actor)
+    auto draft = LoadActiveDraft(transaction, request.id, request.expected_version);
+    if (draft.Author != identity.ActorId())
         throw DraftForbidden("Only author can edit");
-    if (!request.Value.has_value() && !request.Description.has_value())
+    if (!request.value.has_value() && !request.description.has_value())
         throw InvalidRequest("Empty edit");
-    if (request.Value.has_value()) {
+    if (request.value.has_value()) {
         if (!draft.Value.has_value())
             throw InvalidRequest("Драфт удаления нельзя заменить изменением значения");
-        ValidateConfig(draft.ConfigName, request.Value.value());
-        if (draft.BaseValue.has_value() && request.Value.value() == draft.BaseValue.value())
+        ValidateConfig(draft.ConfigName, request.value.value());
+        if (draft.BaseValue.has_value() && request.value.value() == draft.BaseValue.value())
             throw InvalidRequest("Config value has no changes");
-        draft.Value = request.Value.value();
+        draft.Value = request.value.value();
     }
-    if (request.Description.has_value()) {
-        ValidateText(request.Description.value(), 4096);
-        draft.Description = request.Description.value();
+    if (request.description.has_value()) {
+        ValidateText(request.description.value(), 4096);
+        draft.Description = request.description.value();
     }
     ++draft.Version;
-    SaveDraft(transaction, draft, request.Actor, "edit");
+    SaveDraft(transaction, draft, identity.ActorId(), "edit");
     transaction.Commit();
     return draft;
 }
 
-Draft ConfigStore::CancelDraft(const DraftActionRequest& request) const {
-    ValidateText(request.Actor, 2048);
+Draft ConfigStore::CancelDraft(const models::ConfigDraftActionRequest& request,
+    const platform::auth::Identity& identity) const {
+    ValidateText(identity.ActorId(), 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
-    auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
-    if (draft.Author != request.Actor)
+    auto draft = LoadActiveDraft(transaction, request.id, request.expected_version);
+    if (draft.Author != identity.ActorId())
         throw DraftForbidden("Only author can cancel");
     draft.Status = DraftStatus::Cancelled;
     ++draft.Version;
-    SaveDraft(transaction, draft, request.Actor, "cancel");
+    SaveDraft(transaction, draft, identity.ActorId(), "cancel");
     transaction.Commit();
     return draft;
 }
 
-Draft ConfigStore::ApproveDraft(const DraftActionRequest& request, bool allow_self_approval) const {
-    ValidateText(request.Actor, 2048);
+Draft ConfigStore::ApproveDraft(const models::ConfigDraftActionRequest& request,
+    const platform::auth::Identity& identity) const {
+    ValidateText(identity.ActorId(), 2048);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockRevision);
-    auto draft = LoadActiveDraft(transaction, request.Id, request.ExpectedVersion);
-    if (draft.Author == request.Actor && !allow_self_approval)
+    auto draft = LoadActiveDraft(transaction, request.id, request.expected_version);
+    if (draft.Author == identity.ActorId() && !allow_self_approval_)
         throw DraftForbidden("Author cannot approve");
     if (draft.Value.has_value())
         ValidateConfig(draft.ConfigName, draft.Value.value());
@@ -258,10 +259,10 @@ Draft ConfigStore::ApproveDraft(const DraftActionRequest& request, bool allow_se
     const auto published = PublishLocked(transaction, current, values.ExtractValue());
     draft.PublishedRevision = published.Id;
     draft.Status = DraftStatus::Published;
-    draft.ApprovedBy = request.Actor;
-    draft.ApprovedByName = request.ActorName;
+    draft.ApprovedBy = identity.ActorId();
+    draft.ApprovedByName = identity.DisplayName;
     ++draft.Version;
-    SaveDraft(transaction, draft, request.Actor, "approve");
+    SaveDraft(transaction, draft, identity.ActorId(), "approve");
     transaction.Commit();
     LOG_INFO() << "Config revision published"
                << userver::logging::LogExtra{{"config_revision", published.Id}};
@@ -274,6 +275,7 @@ std::vector<DraftEvent> ConfigStore::DraftEvents(std::int64_t id) const {
         throw RevisionNotFound("Draft not found");
 
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kDraftEvents, id);
-    return helpers::Convert(id, rows.AsContainer<std::vector<helpers::EventRow>>(pg::kRowTag));
+    return converters::Convert(
+        id, rows.AsContainer<std::vector<converters::EventRow>>(pg::kRowTag));
 }
 }  // namespace configs

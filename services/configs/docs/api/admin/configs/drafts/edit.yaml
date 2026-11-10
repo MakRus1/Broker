@@ -11,25 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - id
-              - expected_version
-              properties:
-                id:
-                  type: integer
-                  minimum: 1
-                expected_version:
-                  type: integer
-                  minimum: 1
-                value:
-                  type: object
-                  additionalProperties: true
-                description:
-                  type: string
-                  minLength: 1
-                  maxLength: 4096
+              $ref: ../../../../components/schemas/drafts.yaml#/EditConfigDraftRequest
       description: Укажите value и/или description. Невалидное значение не сохраняется.
       responses:
         '200':

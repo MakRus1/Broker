@@ -11,6 +11,7 @@
 #include <userver/utils/daemon_run.hpp>
 
 #include <bootstrap/ping.hpp>
+#include <components/config_store.hpp>
 #include <components/draft_policy.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::Postgres>("postgres-configs");
     // SERVICE_REGISTRATION_END
 
+    component_list.Append<configs::ConfigStore>();
     component_list = configs::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

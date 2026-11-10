@@ -4,7 +4,7 @@
 #include <openapi/models.hpp>
 #include <vector>
 
-namespace configs {
+namespace configs::converters {
 inline std::vector<models::ConfigCatalogEntry> ToApiCatalog(
     const std::vector<CatalogEntry>& entries) {
     std::vector<models::ConfigCatalogEntry> items;
@@ -14,4 +14,4 @@ inline std::vector<models::ConfigCatalogEntry> ToApiCatalog(
             .version = entry.Version});
     return items;
 }
-}  // namespace configs
+}  // namespace configs::converters

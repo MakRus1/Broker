@@ -96,22 +96,24 @@ curl -sS http://127.0.0.1:8092/admin/configs/drafts/approve \
 
 
 Ручки вызывают именованные методы `ConfigStore`: `CreateDraft`, `EditDraft`,
-`ApproveDraft`, `CancelDraft`, `GetDraft`, `ListDrafts`. Аргументы и результаты —
-обычные структуры из `src/models/`; строкового диспетчера операций нет.
+`ApproveDraft`, `CancelDraft`, `GetDraft`, `ListDrafts`. Аргументы команд — именованные сгенерированные модели OpenAPI и проверенная identity;
+результаты — структуры хранения. ConfigStore является userver-компонентом,
+который получает БД и политику подтверждения из ComponentContext.
 Ошибки `InvalidRequest`, `DraftForbidden`, `RevisionNotFound`, `RevisionConflict`
-явно переводятся во view в ответы 400/403/404/409. Неожиданные ошибки хранения
+наследуют стандартные HandlerError и переводятся сгенерированным handler в
+объявленные ответы 400/403/404/409. Неожиданные ошибки хранения
 и преобразования данных остаются серверными ошибками, а не ответами 400.
 
-JSONB-документы преобразуются в модели в `src/repositories/draft_document.cpp`.
+JSONB-документы преобразуются в модели в `src/converters/draft_document.cpp`.
 JSON значений конфигов сохраняется, поскольку их схемы задаются отдельно.
 Общие HTTP-схемы описаны в `services/configs/docs/components/schemas/`:
 `drafts.yaml`, `configs.yaml`, `revisions.yaml`, `errors.yaml`. Ручки в `docs/api/`
 ссылаются на них через относительные `$ref` и остаются в отдельных YAML-файлах.
 
 `src/models/draft.hpp`, `config.hpp`, `revision.hpp`, `event.hpp` содержат
-обычные структуры, доступные компонентам, репозиториям и ручкам.
+обычные структуры, доступные компоненту и конвертерам.
 Преобразования в сгенерированные DTO сгруппированы по тем же сущностям в
-`src/models/*_conversions.hpp`; общего файла всех преобразований нет.
+`src/converters/{config,draft,event,revision}.hpp`; общего файла всех преобразований нет.
 JSON-сериализация списков и вложенных снимков выполняется кодгеном.
 Необязательные поля списков, например approved_by до подтверждения, опускаются;
 active_draft_id в каталоге явно содержит null, если активного драфта нет.

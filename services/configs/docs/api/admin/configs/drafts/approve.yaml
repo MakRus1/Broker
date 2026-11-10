@@ -11,18 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required:
-              - id
-              - expected_version
-              properties:
-                id:
-                  type: integer
-                  minimum: 1
-                expected_version:
-                  type: integer
-                  minimum: 1
+              $ref: ../../../../components/schemas/drafts.yaml#/ConfigDraftActionRequest
       responses:
         '200':
           description: Успех

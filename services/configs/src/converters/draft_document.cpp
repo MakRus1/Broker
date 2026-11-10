@@ -1,4 +1,4 @@
-#include <repositories/draft_document.hpp>
+#include <converters/draft_document.hpp>
 
 namespace {
 template <typename T>
@@ -19,7 +19,15 @@ configs::DraftStatus ReadStatus(const std::string& value) {
 }
 }  // namespace
 
-namespace configs::storage {
+namespace configs::converters {
+Json WriteDraftEvent(const Json& document, const std::string& actor, std::string_view action) {
+    userver::formats::json::ValueBuilder event;
+    event["action"] = std::string(action);
+    event["actor"] = actor;
+    event["snapshot"] = document;
+    return event.ExtractValue();
+}
+
 std::string_view StatusName(DraftStatus status) {
     switch (status) {
     case DraftStatus::Draft:
@@ -81,4 +89,4 @@ Json WriteDraft(const Draft& draft) {
         document["published_revision"] = draft.PublishedRevision.value();
     return document.ExtractValue();
 }
-}  // namespace configs::storage
+}  // namespace configs::converters

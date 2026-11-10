@@ -4,7 +4,7 @@
 #include <openapi/models.hpp>
 #include <vector>
 
-namespace configs {
+namespace configs::converters {
 inline models::DraftStatus ToApiStatus(DraftStatus status) {
     switch (status) {
     case DraftStatus::Draft:
@@ -17,7 +17,7 @@ inline models::DraftStatus ToApiStatus(DraftStatus status) {
     throw std::logic_error("Invalid draft status");
 }
 
-inline models::ConfigDraft ToApiDraft(const Draft& draft) {
+template <typename Result = models::ConfigDraft> inline Result ToApiDraft(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
         .approved_by_name = draft.ApprovedByName,
         .author = draft.Author,
@@ -56,4 +56,4 @@ inline std::vector<models::ConfigDraft> ToApiDrafts(const std::vector<Draft>& dr
         items.push_back(ToApiDraft(draft));
     return items;
 }
-}  // namespace configs
+}  // namespace configs::converters

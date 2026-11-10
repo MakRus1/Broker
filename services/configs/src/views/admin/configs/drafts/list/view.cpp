@@ -1,16 +1,10 @@
 #include <components/config_store.hpp>
-#include <models/draft_conversions.hpp>
+#include <converters/draft.hpp>
 #include <views/admin/configs/drafts/list/view.hpp>
 
 namespace configs::views::admin::configs::drafts::list {
 Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
-    const ::configs::ConfigStore store{deps.pg_cluster};
-    try {
-        const auto drafts = store.ListDrafts(
-            {.ConfigName = request.body.config_name, .BeforeId = request.body.before_id});
-        return Response200{.items = ::configs::ToApiDrafts(drafts)};
-    } catch (const ::configs::InvalidRequest& error) {
-        return Response400{.error = "invalid_request", .message = error.what()};
-    }
+    const auto drafts = deps.store->ListDrafts(request.body);
+    return Response200{.items = ::configs::converters::ToApiDrafts(drafts)};
 }
 }  // namespace configs::views::admin::configs::drafts::list

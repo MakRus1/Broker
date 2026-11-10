@@ -167,3 +167,90 @@ ListStationsRequest:
     cursor:
       $ref: '#/StationListCursor'
   required: []
+
+SaveLocationRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    id:
+      type: string
+      format: uuid
+    kind:
+      $ref: '#/TransportLocationKind'
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    code:
+      type: string
+      minLength: 1
+      maxLength: 16
+    existing:
+      type: boolean
+  required:
+  - id
+  - kind
+  - name
+  - country_code
+
+SaveStationRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    esr_code:
+      type: string
+      pattern: ^[0-9]{6}$
+    name:
+      type: string
+      minLength: 1
+      maxLength: 256
+    country_code:
+      type: string
+      pattern: ^[A-Z]{2}$
+    existing:
+      type: boolean
+      description: Явное редактирование существующей записи
+    id:
+      type: string
+      format: uuid
+    uic_code:
+      type: string
+      pattern: ^[0-9]{7}$
+  required:
+  - id
+  - name
+  - country_code
+
+LocationListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/TransportLocation'
+    next:
+      type: string
+      format: uuid
+    next_cursor:
+      $ref: '#/LocationListCursor'
+  required:
+  - items
+
+StationListResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/RailwayStation'
+    next:
+      type: string
+    next_cursor:
+      $ref: '#/StationListCursor'
+  required:
+  - items

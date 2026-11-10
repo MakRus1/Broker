@@ -87,20 +87,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: components/schemas/models.yaml#/TransportLocation
-                  next:
-                    type: string
-                    format: uuid
-                  next_cursor:
-                    $ref: components/schemas/models.yaml#/LocationListCursor
-                required:
-                - items
+                $ref: components/schemas/models.yaml#/LocationListResult
         '400':
           description: Некорректные параметры
           content:
@@ -145,32 +132,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                kind:
-                  $ref: components/schemas/models.yaml#/TransportLocationKind
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 256
-                country_code:
-                  type: string
-                  pattern: ^[A-Z]{2}$
-                code:
-                  type: string
-                  minLength: 1
-                  maxLength: 16
-                existing:
-                  type: boolean
-              required:
-              - id
-              - kind
-              - name
-              - country_code
+              $ref: components/schemas/models.yaml#/SaveLocationRequest
       responses:
         '200':
           description: Успех

@@ -18,19 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: ../components/schemas/models.yaml#/RailwayStation
-                  next:
-                    type: string
-                  next_cursor:
-                    $ref: ../components/schemas/models.yaml#/StationListCursor
-                required:
-                - items
+                $ref: ../components/schemas/models.yaml#/StationListResult
         '400':
           description: Некорректные значения
           content:
@@ -69,32 +57,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                esr_code:
-                  type: string
-                  pattern: ^[0-9]{6}$
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 256
-                country_code:
-                  type: string
-                  pattern: ^[A-Z]{2}$
-                existing:
-                  type: boolean
-                  description: Явное редактирование существующей записи
-                id:
-                  type: string
-                  format: uuid
-                uic_code:
-                  type: string
-                  pattern: ^[0-9]{7}$
-              required:
-              - id
-              - name
-              - country_code
+              $ref: ../components/schemas/models.yaml#/SaveStationRequest
       responses:
         '200':
           description: Успех

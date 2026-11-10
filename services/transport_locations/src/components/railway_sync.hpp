@@ -1,4 +1,5 @@
 #pragma once
+#include <components/directory_sync.hpp>
 #include <platform/configs/runtime.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/components/component_base.hpp>
@@ -21,6 +22,7 @@ class RailwaySync final : public userver::components::ComponentBase {
     std::string url_;
     platform::configs::Source configs_;
     std::size_t minimum_;
+    DirectorySyncComponent& scheduler_;
     userver::utils::PeriodicTask task_;
 };
 }  // namespace transport_locations

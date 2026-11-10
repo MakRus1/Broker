@@ -6,6 +6,9 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        localization-catalog: {}
+        localization-editor: {}
+        localization-sources: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-admin-localization-get:
             path: /api/admin/localization/get

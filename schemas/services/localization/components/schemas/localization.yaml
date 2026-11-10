@@ -50,3 +50,54 @@ CatalogEditorState:
       $ref: '#/EditableCatalog'
     source:
       $ref: '#/EditableCatalog'
+GetCatalogRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    locale:
+      type: string
+      enum:
+      - ru
+      - en
+  required:
+  - organization_id
+  - locale
+GetEditorRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+SaveCatalogRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+    catalog:
+      $ref: '#/EditableCatalog'
+  required:
+  - version
+  - catalog
+PublishCatalogRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    organization_id:
+      type: string
+      format: uuid
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+  required:
+  - version

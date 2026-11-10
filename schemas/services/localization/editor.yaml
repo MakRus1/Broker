@@ -11,12 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
+              $ref: components/schemas/localization.yaml#/GetEditorRequest
       responses:
         '200':
           description: Успех
@@ -64,21 +59,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                version:
-                  type: integer
-                  format: int64
-                  minimum: 0
-                catalog:
-                  $ref: components/schemas/localization.yaml#/EditableCatalog
-              required:
-              - version
-              - catalog
+              $ref: components/schemas/localization.yaml#/SaveCatalogRequest
       responses:
         '200':
           description: Успех
@@ -126,18 +107,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                version:
-                  type: integer
-                  format: int64
-                  minimum: 0
-              required:
-              - version
+              $ref: components/schemas/localization.yaml#/PublishCatalogRequest
       responses:
         '200':
           description: Успех

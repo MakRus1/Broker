@@ -1,4 +1,7 @@
 #pragma once
+#include <components/catalog.hpp>
+#include <components/editor.hpp>
+#include <components/sources.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -17,6 +20,10 @@
 namespace localization {
 
 struct Deps {
+    CatalogComponent* catalog;
+    EditorComponent* editor;
+    SourcesComponent* sources;
+
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     platform::configs::Source configs;
@@ -27,6 +34,10 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .catalog = &component_context.FindComponent<CatalogComponent>(),
+        .editor = &component_context.FindComponent<EditorComponent>(),
+        .sources = &component_context.FindComponent<SourcesComponent>(),
+
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =

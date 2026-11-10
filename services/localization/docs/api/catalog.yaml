@@ -11,20 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                organization_id:
-                  type: string
-                  format: uuid
-                locale:
-                  type: string
-                  enum:
-                  - ru
-                  - en
-              required:
-              - organization_id
-              - locale
+              $ref: ../components/schemas/localization.yaml#/GetCatalogRequest
       responses:
         '200':
           description: Успех

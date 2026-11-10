@@ -1,11 +1,11 @@
 #pragma once
 
-#include <models/draft_conversions.hpp>
+#include <converters/draft.hpp>
 #include <models/event.hpp>
 #include <openapi/models.hpp>
 #include <vector>
 
-namespace configs {
+namespace configs::converters {
 inline std::vector<models::DraftEvent> ToApiDraftEvents(const std::vector<DraftEvent>& events) {
     std::vector<models::DraftEvent> items;
     for (const auto& event : events)
@@ -15,4 +15,4 @@ inline std::vector<models::DraftEvent> ToApiDraftEvents(const std::vector<DraftE
             .snapshot = ToApiSnapshot(event.Snapshot)});
     return items;
 }
-}  // namespace configs
+}  // namespace configs::converters

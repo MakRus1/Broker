@@ -130,3 +130,76 @@ DraftEvent:
     created_at:
       type: string
       format: date-time
+
+CreateConfigDraftRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - config_name
+  - description
+  - expected_config_version
+  properties:
+    config_name:
+      type: string
+      minLength: 1
+      pattern: ^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$
+    description:
+      type: string
+      minLength: 1
+      maxLength: 4096
+    expected_config_version:
+      type: integer
+      minimum: 0
+    value:
+      type: object
+      additionalProperties: true
+    source_revision:
+      type: integer
+      minimum: 0
+    remove:
+      type: boolean
+      description: Создать драфт удаления существующего конфига. Не передавайте value
+        и source_revision.
+EditConfigDraftRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - expected_version
+  properties:
+    id:
+      type: integer
+      minimum: 1
+    expected_version:
+      type: integer
+      minimum: 1
+    value:
+      type: object
+      additionalProperties: true
+    description:
+      type: string
+      minLength: 1
+      maxLength: 4096
+ConfigDraftActionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - id
+  - expected_version
+  properties:
+    id:
+      type: integer
+      minimum: 1
+    expected_version:
+      type: integer
+      minimum: 1
+ListConfigDraftsRequest:
+  type: object
+  additionalProperties: false
+  required: []
+  properties:
+    config_name:
+      type: string
+    before_id:
+      type: integer
+      minimum: 0

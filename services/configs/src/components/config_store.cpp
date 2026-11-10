@@ -1,9 +1,13 @@
 #include <components/config_store.hpp>
 
+#include <components/draft_policy.hpp>
 #include <configs/keys.hpp>
 #include <configs/sql_queries.hpp>
+#include <userver/components/component_context.hpp>
+#include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
+#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace pg = userver::storages::postgres;
@@ -11,6 +15,16 @@ namespace pg = userver::storages::postgres;
 }  // namespace
 
 namespace configs {
+ConfigStore::ConfigStore(const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : ComponentBase(config, context),
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-configs").GetCluster()),
+      allow_self_approval_(context.FindComponent<DraftPolicy>().AllowSelfApproval()) {}
+
+userver::yaml_config::Schema ConfigStore::GetStaticConfigSchema() {
+    return ComponentBase::GetStaticConfigSchema();
+}
 
 Revision ConfigStore::Current() const {
     return cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision)
@@ -24,8 +38,8 @@ Revision ConfigStore::Current(pg::Transaction& transaction) const {
 ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {
     const auto current = Current();
     userver::formats::json::ValueBuilder values{userver::formats::json::Type::kObject};
-    if (ids) {
-        for (const auto& id : *ids)
+    if (ids.has_value()) {
+        for (const auto& id : ids.value())
             if (current.Values.HasMember(id))
                 values[id] = current.Values[id];
     } else {

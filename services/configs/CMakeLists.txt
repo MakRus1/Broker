@@ -8,7 +8,7 @@ add_library(
     src/components/draft_policy.cpp
     src/components/config_store.cpp
     src/components/config_drafts.cpp
-    src/repositories/draft_document.cpp
+    src/converters/draft_document.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )

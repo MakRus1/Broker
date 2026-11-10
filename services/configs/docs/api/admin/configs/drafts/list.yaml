@@ -11,15 +11,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: []
-              properties:
-                config_name:
-                  type: string
-                before_id:
-                  type: integer
-                  minimum: 0
+              $ref: ../../../../components/schemas/drafts.yaml#/ListConfigDraftsRequest
       responses:
         '200':
           description: Успех

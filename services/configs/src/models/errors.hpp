@@ -1,25 +1,25 @@
 #pragma once
-
-#include <stdexcept>
+#include <platform/handler_error.hpp>
 
 namespace configs {
-class InvalidRequest : public std::runtime_error {
+class InvalidRequest : public platform::http::HandlerError<400> {
   public:
-    using std::runtime_error::runtime_error;
+    explicit InvalidRequest(const std::string& message)
+        : HandlerError("invalid_request", message) {}
 };
 
-class RevisionConflict : public std::runtime_error {
+class RevisionConflict : public platform::http::HandlerError<409> {
   public:
-    using std::runtime_error::runtime_error;
+    explicit RevisionConflict(const std::string& message) : HandlerError("conflict", message) {}
 };
 
-class DraftForbidden : public std::runtime_error {
+class DraftForbidden : public platform::http::HandlerError<403> {
   public:
-    using std::runtime_error::runtime_error;
+    explicit DraftForbidden(const std::string& message) : HandlerError("forbidden", message) {}
 };
 
-class RevisionNotFound : public std::runtime_error {
+class RevisionNotFound : public platform::http::HandlerError<404> {
   public:
-    using std::runtime_error::runtime_error;
+    explicit RevisionNotFound(const std::string& message) : HandlerError("not_found", message) {}
 };
 }  // namespace configs

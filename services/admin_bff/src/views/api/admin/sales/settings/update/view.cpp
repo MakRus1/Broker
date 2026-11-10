@@ -1,8 +1,11 @@
-#include <helpers/sales.hpp>
+#include <converters/sales.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/admin/sales/settings/update/view.hpp>
 
 namespace admin_bff::views::api::admin::sales::settings::update {
+using converters::ToAdminSalesStages;
+using converters::ToServiceSalesStages;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

@@ -1,8 +1,10 @@
-#include <models/organization_conversions.hpp>
+#include <converters/organizations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/admin/organizations/members/update_profile/view.hpp>
 
 namespace admin_bff::views::api::admin::organizations::members::update_profile {
+using converters::Convert;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

@@ -1,8 +1,10 @@
-#include <helpers/registry.hpp>
+#include <converters/registry.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/admin/railway_stations/list/view.hpp>
 
 namespace admin_bff::views::api::admin::railway_stations::list {
+using converters::ConvertRegistryCursor;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

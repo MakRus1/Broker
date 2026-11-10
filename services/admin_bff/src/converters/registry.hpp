@@ -1,7 +1,7 @@
 #pragma once
 #include <optional>
 
-namespace admin_bff {
+namespace admin_bff::converters {
 template <typename Target, typename Source>
 std::optional<Target> ConvertRegistryCursor(const std::optional<Source>& value) {
     if (!value.has_value())
@@ -9,4 +9,4 @@ std::optional<Target> ConvertRegistryCursor(const std::optional<Source>& value) 
     return Target{
         .id = value.value().id, .scope = value.value().scope, .value = value.value().value};
 }
-}  // namespace admin_bff
+}  // namespace admin_bff::converters

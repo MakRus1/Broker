@@ -1,8 +1,10 @@
-#include <models/config_conversions.hpp>
+#include <converters/configs.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/configs/drafts/approve/view.hpp>
 
 namespace admin_bff::views::api::configs::drafts::approve {
+using converters::ToBrowserDraft;
+
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& session = platform::browser::GetBrowserSession(context);

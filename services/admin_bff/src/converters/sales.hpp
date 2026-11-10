@@ -3,7 +3,7 @@
 #include <openapi/models.hpp>
 #include <vector>
 
-namespace admin_bff {
+namespace admin_bff::converters {
 inline std::vector<models::sales::SalesStage> ToAdminSalesStages(
     const std::vector<clients::sales::models::SalesStage>& stages) {
     std::vector<models::sales::SalesStage> result;
@@ -21,4 +21,4 @@ inline std::vector<clients::sales::models::SalesStage> ToServiceSalesStages(
         result.push_back({.enabled = stage.enabled, .id = stage.id, .name = stage.name});
     return result;
 }
-}  // namespace admin_bff
+}  // namespace admin_bff::converters

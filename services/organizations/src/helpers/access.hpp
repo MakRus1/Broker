@@ -1,10 +1,10 @@
 #pragma once
 #include <helpers/errors.hpp>
 #include <helpers/permissions.hpp>
+#include <models/pg/organization_role_raw.hpp>
 #include <optional>
 #include <organizations/sql_queries.hpp>
 #include <platform/auth/identity.hpp>
-#include <postgresql/types.hpp>
 #include <set>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
@@ -42,12 +42,12 @@ inline void RequireAdministrator(pg::Transaction& transaction, const std::string
             "Нужны права управления сотрудниками и ролями организации"};
 }
 
-inline pgtypes::OrganizationRoleV1 RequireRole(
+inline models::pg::OrganizationRoleRaw RequireRole(
     pg::Transaction& transaction, const std::string& organization, const std::string& role) {
     const auto rows = transaction.Execute(sql::kGetRole, organization, role);
     if (rows.IsEmpty())
         throw ApiError<400>{"invalid_role", "Выберите существующую роль организации"};
-    return rows.AsSingleRow<pgtypes::OrganizationRoleV1>();
+    return rows.AsSingleRow<models::pg::OrganizationRoleRaw>();
 }
 
 }  // namespace organizations::helpers

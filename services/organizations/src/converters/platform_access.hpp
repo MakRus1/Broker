@@ -1,9 +1,9 @@
 #pragma once
+#include <models/pg/platform_access_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace organizations::converters {
-inline models::PlatformAccess Convert(const pgtypes::PlatformAccessV1& row) {
+inline models::PlatformAccess Convert(const models::pg::PlatformAccessRaw& row) {
     return {.permissions = row.Permissions, .revision = row.Revision};
 }
 

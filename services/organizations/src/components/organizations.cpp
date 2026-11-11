@@ -2,6 +2,7 @@
 #include <converters/organizations.hpp>
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
+#include <models/pg/organization_raw.hpp>
 #include <registry/admin.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -42,7 +43,7 @@ models::OrganizationsListResult OrganizationsComponent::List(
         transaction.Execute(sql::kRegistryPlan);
         auto rows =
             transaction.Execute(query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::Row<pgtypes::OrganizationV1>>>(pg::kRowTag);
+                .AsContainer<std::vector<registry::Row<models::pg::OrganizationRaw>>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         if (more)
             rows.pop_back();
@@ -73,7 +74,7 @@ models::OrganizationResult OrganizationsComponent::Create(
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto organization =
             Convert(transaction.Execute(sql::kCreateOrganization, request.id, name)
-                        .AsSingleRow<pgtypes::OrganizationV1>());
+                        .AsSingleRow<models::pg::OrganizationRaw>());
         transaction.Execute(sql::kCreateDefaultRoles, organization.id);
         WriteAudit(transaction, organization.id, identity, "organization.created", organization);
         transaction.Commit();
@@ -96,11 +97,11 @@ models::OrganizationResult OrganizationsComponent::Update(
         const auto rows = transaction.Execute(sql::kLockOrganization, request.id);
         if (rows.IsEmpty())
             throw ApiError<404>{"organization_not_found", "Организация не найдена"};
-        if (rows.AsSingleRow<pgtypes::OrganizationV1>().Revision != request.expected_revision)
+        if (rows.AsSingleRow<models::pg::OrganizationRaw>().Revision != request.expected_revision)
             throw ApiError<409>{"revision_conflict", "Организация уже изменена"};
         const auto organization =
             Convert(transaction.Execute(sql::kUpdateOrganization, request.id, name, request.enabled)
-                        .AsSingleRow<pgtypes::OrganizationV1>());
+                        .AsSingleRow<models::pg::OrganizationRaw>());
         WriteAudit(transaction, organization.id, identity, "organization.updated", organization);
         transaction.Commit();
         return models::OrganizationResult{.organization = organization};

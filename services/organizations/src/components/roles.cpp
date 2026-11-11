@@ -2,6 +2,7 @@
 #include <converters/organizations.hpp>
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
+#include <models/pg/organization_role_raw.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -29,7 +30,7 @@ models::RolesListResult RolesComponent::List(const models::OrganizationIdentity&
     try {
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
-        const auto roles = ConvertRows<pgtypes::OrganizationRoleV1>(
+        const auto roles = ConvertRows<models::pg::OrganizationRoleRaw>(
             transaction.Execute(sql::kListRoles, request.organization_id));
         const auto permissions = PermissionCatalog(transaction);
         transaction.Commit();
@@ -49,11 +50,11 @@ models::OrganizationRoleResult RolesComponent::Create(const models::RolesCreateR
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
         ValidatePermissions(transaction, request.permissions);
-        const pgtypes::OrganizationRoleV1 value{
+        const models::pg::OrganizationRoleRaw value{
             request.id, name, request.description, request.permissions, 1};
         const auto role =
             Convert(transaction.Execute(sql::kCreateRole, request.organization_id, value)
-                        .AsSingleRow<pgtypes::OrganizationRoleV1>());
+                        .AsSingleRow<models::pg::OrganizationRoleRaw>());
         WriteAudit(transaction, request.organization_id, identity, "role.created", role);
         transaction.Commit();
         return models::OrganizationRoleResult{.role = role};
@@ -85,11 +86,11 @@ models::OrganizationRoleResult RolesComponent::Update(const models::RolesUpdateR
                     .AsSingleRow<std::int64_t>() == 0)
             throw ApiError<409>{"last_administrator",
                 "Нельзя убрать управление у последнего администратора организации"};
-        const pgtypes::OrganizationRoleV1 value{
+        const models::pg::OrganizationRoleRaw value{
             request.id, name, request.description, request.permissions, 1};
         const auto role =
             Convert(transaction.Execute(sql::kUpdateRole, request.organization_id, value)
-                        .AsSingleRow<pgtypes::OrganizationRoleV1>());
+                        .AsSingleRow<models::pg::OrganizationRoleRaw>());
         WriteAudit(transaction, request.organization_id, identity, "role.updated", role);
         transaction.Commit();
         return models::OrganizationRoleResult{.role = role};

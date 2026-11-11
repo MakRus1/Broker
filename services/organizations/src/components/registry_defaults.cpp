@@ -3,6 +3,7 @@
 #include <converters/registry_defaults.hpp>
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
+#include <models/pg/organization_role_raw.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
@@ -67,7 +68,7 @@ models::RegistryDefaultsListResult RegistryDefaultsComponent::List(
         .items = RegistryDefaults(
             transaction.Execute(sql::kListRoleRegistryDefaults, request.organization_id))};
     for (const auto& role : transaction.Execute(sql::kListRoles, request.organization_id)
-                                .AsSetOf<pgtypes::OrganizationRoleV1>())
+                                .AsSetOf<models::pg::OrganizationRoleRaw>())
         response.roles.push_back({.id = role.Id, .name = role.Name});
     transaction.Commit();
     return response;

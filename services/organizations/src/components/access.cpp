@@ -3,6 +3,9 @@
 #include <converters/platform_access.hpp>
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
+#include <models/pg/organization_employee_raw.hpp>
+#include <models/pg/organization_raw.hpp>
+#include <models/pg/platform_access_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -20,7 +23,7 @@ models::PlatformAccess ReadPlatformAccess(
     pg::Transaction& transaction, const std::string& issuer, const std::string& subject) {
     const auto rows = transaction.Execute(sql::kGetPlatformAccess, issuer, subject);
     return rows.IsEmpty() ? models::PlatformAccess{.permissions = {}, .revision = 0}
-                          : converters::Convert(rows.AsSingleRow<pgtypes::PlatformAccessV1>());
+                          : converters::Convert(rows.AsSingleRow<models::pg::PlatformAccessRaw>());
 }
 }  // namespace
 
@@ -76,7 +79,7 @@ models::AccessMineResult AccessComponent::Mine(
             sql::kManagedOrganizations, identity.Issuer, identity.Subject);
         return models::AccessMineResult{
             .managed_organization_ids = managed.AsContainer<std::vector<std::string>>(),
-            .organizations = ConvertRows<pgtypes::OrganizationV1>(rows),
+            .organizations = ConvertRows<models::pg::OrganizationRaw>(rows),
             .platform_admin = IsPlatformAdmin(identity)};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{"already_exists", "Такая запись уже существует"};
@@ -111,7 +114,7 @@ models::PlatformAccessResult AccessComponent::UpdatePlatform(
         identity.Issuer, request.subject, request.permissions, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Платформенные права уже изменены"};
-    const auto access = Convert(rows.AsSingleRow<pgtypes::PlatformAccessV1>());
+    const auto access = Convert(rows.AsSingleRow<models::pg::PlatformAccessRaw>());
     transaction.Execute(sql::kWritePlatformAccessAudit, identity.ActorId(), identity.Issuer,
         request.subject, access.permissions, access.revision);
     const auto catalog = PermissionCatalog(transaction, PermissionScope::Platform);
@@ -126,7 +129,7 @@ models::PlatformAccess AccessComponent::ResolvePlatform(
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kResolvePlatformAccess,
         identity.Issuer, identity.Subject);
     const auto access = rows.IsEmpty() ? models::PlatformAccess{.permissions = {}, .revision = 0}
-                                       : Convert(rows.AsSingleRow<pgtypes::PlatformAccessV1>());
+                                       : Convert(rows.AsSingleRow<models::pg::PlatformAccessRaw>());
     if (request.permission != "authenticated" &&
         std::find(access.permissions.begin(), access.permissions.end(), request.permission) ==
             access.permissions.end())
@@ -149,7 +152,7 @@ models::AccessEmployeesResult AccessComponent::Employees(
         }
         const auto rows = transaction.Execute(sql::kListEmployees, request.organization_id.value(),
             request.subject, request.query, request.limit);
-        const auto items = ConvertRows<pgtypes::OrganizationEmployeeV1>(rows);
+        const auto items = ConvertRows<models::pg::OrganizationEmployeeRaw>(rows);
         transaction.Commit();
         return models::AccessEmployeesResult{.items = items};
     }
@@ -166,7 +169,7 @@ models::AccessEmployeesResult AccessComponent::Employees(
     const auto rows = cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListEmployees,
         granted.Organization, request.subject, request.query, request.limit);
     return models::AccessEmployeesResult{
-        .items = ConvertRows<pgtypes::OrganizationEmployeeV1>(rows)};
+        .items = ConvertRows<models::pg::OrganizationEmployeeRaw>(rows)};
 }
 
 models::OrganizationIdentity AccessComponent::CheckAdministrator(

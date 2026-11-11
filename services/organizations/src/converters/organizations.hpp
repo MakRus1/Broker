@@ -1,22 +1,25 @@
 #pragma once
+#include <models/pg/member_raw.hpp>
+#include <models/pg/organization_employee_raw.hpp>
+#include <models/pg/organization_raw.hpp>
+#include <models/pg/organization_role_raw.hpp>
 #include <models/user.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 
 namespace organizations::converters {
-inline models::Organization Convert(const pgtypes::OrganizationV1& row) {
+inline models::Organization Convert(const models::pg::OrganizationRaw& row) {
     return {.enabled = row.Enabled,
         .id = boost::uuids::to_string(row.Id),
         .name = row.Name,
         .revision = row.Revision};
 }
 
-inline models::OrganizationEmployee Convert(const pgtypes::OrganizationEmployeeV1& row) {
+inline models::OrganizationEmployee Convert(const models::pg::OrganizationEmployeeRaw& row) {
     return {.display_name = row.DisplayName, .subject = row.Subject};
 }
 
-inline models::Member Convert(const pgtypes::MemberV2& row) {
+inline models::Member Convert(const models::pg::MemberRaw& row) {
     return {.display_name = row.DisplayName,
         .email = row.Email,
         .enabled = row.Enabled,
@@ -29,7 +32,7 @@ inline models::Member Convert(const pgtypes::MemberV2& row) {
         .username = row.Username};
 }
 
-inline models::OrganizationRole Convert(const pgtypes::OrganizationRoleV1& row) {
+inline models::OrganizationRole Convert(const models::pg::OrganizationRoleRaw& row) {
     return {.description = row.Description,
         .id = row.Id,
         .name = row.Name,
@@ -37,7 +40,7 @@ inline models::OrganizationRole Convert(const pgtypes::OrganizationRoleV1& row) 
         .revision = row.Revision};
 }
 
-inline pgtypes::MemberV2 Convert(const User& user, const std::string& role) {
+inline models::pg::MemberRaw Convert(const User& user, const std::string& role) {
     return {user.Subject, user.Username, user.DisplayName, user.Email, role, true, 1, user.LastName,
         user.FirstName, user.MiddleName};
 }

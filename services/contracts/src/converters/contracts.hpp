@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/uuid/string_generator.hpp>
+#include <models/pg/contract_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace contracts::converters {
 inline std::optional<boost::uuids::uuid> ConvertId(const std::optional<std::string>& value) {
@@ -16,7 +16,7 @@ inline std::optional<std::string> ConvertId(const std::optional<boost::uuids::uu
     return boost::uuids::to_string(value.value());
 }
 
-inline models::Contract Convert(const pgtypes::ContractV1& value) {
+inline models::Contract Convert(const models::pg::ContractRaw& value) {
     models::Contract result;
     result.id = boost::uuids::to_string(value.Id);
     result.own_company_id = boost::uuids::to_string(value.OwnCompanyId);
@@ -34,7 +34,7 @@ inline models::Contract Convert(const pgtypes::ContractV1& value) {
     return result;
 }
 
-inline pgtypes::ContractV1 Convert(const models::SaveContractRequest& value) {
+inline models::pg::ContractRaw Convert(const models::SaveContractRequest& value) {
     return {.Id = boost::uuids::string_generator{}(value.id),
         .OwnCompanyId = boost::uuids::string_generator{}(value.own_company_id),
         .CounterpartyId = boost::uuids::string_generator{}(value.counterparty_id),

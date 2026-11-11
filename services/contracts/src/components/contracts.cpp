@@ -6,13 +6,13 @@
 #include <helpers/numbering.hpp>
 #include <limits>
 #include <models/errors.hpp>
+#include <models/pg/contract_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/document_number.hpp>
 #include <platform/http_client.hpp>
 #include <platform/registry_page.hpp>
-#include <postgresql/types.hpp>
 #include <registry/fields.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -53,7 +53,7 @@ void NormalizeAndValidate(models::SaveContractRequest& value) {
 }
 
 struct RegistryRow {
-    pgtypes::ContractV1 Contract;
+    models::pg::ContractRaw Contract;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };
@@ -152,7 +152,7 @@ models::Contract ContractsComponent::Get(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Договор не найден"};
-    return converters::Convert(rows.AsSingleRow<pgtypes::ContractV1>());
+    return converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
 }
 
 models::Contract ContractsComponent::Save(const models::SaveContractRequest& request,
@@ -173,7 +173,7 @@ models::Contract ContractsComponent::Save(const models::SaveContractRequest& req
         : transaction.Execute(sql::kUpdateContract, organization, value, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Договор изменён. Обновите карточку"};
-    const auto result = converters::Convert(rows.AsSingleRow<pgtypes::ContractV1>());
+    const auto result = converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
     transaction.Execute(sql::kWriteHistory, organization, result.id, result.revision,
         identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
     transaction.Commit();

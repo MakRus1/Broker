@@ -1,10 +1,10 @@
 #pragma once
 #include <boost/uuid/string_generator.hpp>
+#include <models/pg/bank_account_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace counterparties::converters {
-inline models::BankAccount Convert(const pgtypes::BankAccountV1& row) {
+inline models::BankAccount Convert(const models::pg::BankAccountRaw& row) {
     return {.archived = row.Archived,
         .bank_name = row.BankName,
         .bic = row.Bic,
@@ -20,7 +20,7 @@ inline models::BankAccount Convert(const pgtypes::BankAccountV1& row) {
         .swift = row.Swift};
 }
 
-inline pgtypes::BankAccountV1 Convert(const models::BankAccount& value) {
+inline models::pg::BankAccountRaw Convert(const models::BankAccount& value) {
     return {.Id = boost::uuids::string_generator{}(value.id),
         .CounterpartyId = boost::uuids::string_generator{}(value.counterparty_id),
         .Name = value.name,

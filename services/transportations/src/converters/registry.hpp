@@ -1,15 +1,15 @@
 #pragma once
+#include <models/pg/transportation_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace transportations::converters {
 struct RegistryRow {
-    pgtypes::TransportationV4 Transportation;
+    models::pg::TransportationRaw Transportation;
     std::string SortKey;
 };
 
-inline std::vector<pgtypes::TransportationV4> Convert(const std::vector<RegistryRow>& rows) {
-    std::vector<pgtypes::TransportationV4> result;
+inline std::vector<models::pg::TransportationRaw> Convert(const std::vector<RegistryRow>& rows) {
+    std::vector<models::pg::TransportationRaw> result;
     result.reserve(rows.size());
     for (const auto& row : rows)
         result.push_back(row.Transportation);

@@ -3,6 +3,7 @@
 #include <helpers/database.hpp>
 #include <platform/registry_page.hpp>
 #include <registry/route.hpp>
+#include <userver/storages/postgres/io/date.hpp>
 
 namespace transportations::registry_query {
 using namespace helpers;

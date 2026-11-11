@@ -1,8 +1,10 @@
 #pragma once
 #include <domain/rail.hpp>
 #include <map>
+#include <models/pg/route_segment.hpp>
+#include <models/pg/transportation_event.hpp>
+#include <models/pg/transportation_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 #include <vector>
 
@@ -13,7 +15,7 @@ inline models::RouteSegment Convert(const userver::formats::json::Value& documen
     return result;
 }
 
-inline models::Transportation Convert(const pgtypes::TransportationV4& row) {
+inline models::Transportation Convert(const models::pg::TransportationRaw& row) {
     models::Transportation result;
     result.container_number = row.ContainerNumber;
     result.id = boost::uuids::to_string(row.Id);
@@ -42,8 +44,8 @@ inline std::vector<models::RouteSegment> Convert(
 }
 
 inline std::vector<models::Transportation> Convert(
-    const std::vector<pgtypes::TransportationV4>& rows,
-    const std::vector<pgtypes::RouteSegmentV1>& route_segments) {
+    const std::vector<models::pg::TransportationRaw>& rows,
+    const std::vector<models::pg::RouteSegment>& route_segments) {
     std::vector<models::Transportation> result;
     result.reserve(rows.size());
     std::map<boost::uuids::uuid, std::size_t> indexes;
@@ -57,7 +59,7 @@ inline std::vector<models::Transportation> Convert(
     return result;
 }
 
-inline models::TransportationEvent Convert(const pgtypes::TransportationEventV2& row) {
+inline models::TransportationEvent Convert(const models::pg::TransportationEvent& row) {
     models::TransportationEvent result;
     result.id = row.Id;
     result.actor = row.Actor;
@@ -81,7 +83,7 @@ inline models::TransportationEvent Convert(const pgtypes::TransportationEventV2&
 }
 
 inline std::vector<models::TransportationEvent> Convert(
-    const std::vector<pgtypes::TransportationEventV2>& rows) {
+    const std::vector<models::pg::TransportationEvent>& rows) {
     std::vector<models::TransportationEvent> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

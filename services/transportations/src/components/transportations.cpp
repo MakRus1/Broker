@@ -6,9 +6,13 @@
 #include <helpers/database.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
+#include <models/pg/container_fact.hpp>
+#include <models/pg/route_segment.hpp>
+#include <models/pg/saved_command.hpp>
+#include <models/pg/transportation_event.hpp>
+#include <models/pg/transportation_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
-#include <postgresql/types.hpp>
 #include <registry/query.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -94,7 +98,7 @@ models::TransportationHistoryResult TransportationsComponent::History(
         sql::kListHistory, organization, request.transportation_id, request.before, request.limit);
     transaction.Commit();
     return models::TransportationHistoryResult{
-        .items = Convert(rows.AsContainer<std::vector<pgtypes::TransportationEventV2>>())};
+        .items = Convert(rows.AsContainer<std::vector<models::pg::TransportationEvent>>())};
 }
 
 models::TransportationResult TransportationsComponent::Get(models::GetTransportationRequest request,
@@ -142,9 +146,9 @@ models::TransportationListResult TransportationsComponent::List(
             ids.push_back(boost::uuids::to_string(row.Id));
         // Все плечи страницы читаются одним запросом, без N+1.
         const auto route_segments = ids.empty()
-            ? std::vector<pgtypes::RouteSegmentV1>{}
+            ? std::vector<models::pg::RouteSegment>{}
             : transaction.Execute(sql::kListRouteSegments, organization, ids)
-                  .AsContainer<std::vector<pgtypes::RouteSegmentV1>>();
+                  .AsContainer<std::vector<models::pg::RouteSegment>>();
         auto result = Convert(rows, route_segments);
         transaction.Commit();
         std::set<std::string> unique_shipments;
@@ -174,7 +178,7 @@ models::TransportationResult TransportationsComponent::Create(
     transaction.Execute(sql::kLockCommand, organization, request.id);
     const auto saved = transaction.Execute(sql::kFindCommand, organization, request.id);
     if (!saved.IsEmpty()) {
-        const auto command = saved.AsSingleRow<pgtypes::SavedCommandV1>();
+        const auto command = saved.AsSingleRow<models::pg::SavedCommand>();
         if (command.Payload != Document(request))
             throw ApiError<409>{"idempotency_conflict", "Содержимое команды создания изменено"};
         // Снимки старых команд содержат технический номер, которого больше нет в API.
@@ -192,7 +196,7 @@ models::TransportationResult TransportationsComponent::Create(
                         request.shipment_id, models::EnumValue(request.type), request.hazardous,
                         request.container_type_code, Ownership(request.container_ownership),
                         CleanContainerNumber(request.container_number))
-                    .AsSingleRow<pgtypes::TransportationV4>());
+                    .AsSingleRow<models::pg::TransportationRaw>());
     InheritRoute(result, source);
     transaction.Execute(
         sql::kInsertCommand, organization, request.id, Document(request), Document(result));
@@ -220,7 +224,7 @@ models::TransportationResult TransportationsComponent::Update(
                         models::EnumValue(request.type), request.hazardous,
                         request.container_type_code, Ownership(request.container_ownership),
                         CleanContainerNumber(request.container_number))
-                    .AsSingleRow<pgtypes::TransportationV4>());
+                    .AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(loaded.route_segments);
     result.incoterms = loaded.incoterms;
     result.loading = loaded.loading;
@@ -237,7 +241,7 @@ models::ContainerFactsResult TransportationsComponent::ContainerFacts(
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kContainerFacts,
         organization, request.shipment_id, request.pending_operation_ids);
-    return Convert(rows.AsContainer<std::vector<pgtypes::ContainerFactV1>>());
+    return Convert(rows.AsContainer<std::vector<models::pg::ContainerFact>>());
 }
 
 models::RegistryValuesResult TransportationsComponent::FilterValues(
@@ -297,7 +301,7 @@ models::EnsureTransportationsResult TransportationsComponent::EnsureCreated(
     transaction.Execute(sql::kLockCommand, organization, request.operation_id);
     const auto rows = transaction.Execute(sql::kFindCommand, organization, request.operation_id);
     if (!rows.IsEmpty()) {
-        const auto saved = rows.AsSingleRow<pgtypes::SavedCommandV1>();
+        const auto saved = rows.AsSingleRow<models::pg::SavedCommand>();
         if (saved.Payload != Document(request))
             throw ApiError<409>{"protocol_conflict", "Содержимое операции изменено"};
         const auto result =

@@ -1,12 +1,12 @@
 #pragma once
 #include <helpers/database.hpp>
-#include <postgresql/types.hpp>
+#include <models/pg/sales_settings.hpp>
 
 namespace sales::helpers {
 inline models::SalesSettings Settings(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return {.revision = 0, .stages = {}};
-    const auto settings = rows.AsSingleRow<pgtypes::SalesSettingsV1>();
+    const auto settings = rows.AsSingleRow<models::pg::SalesSettings>();
     models::SalesSettings result{.inquiry_number_template = settings.InquiryNumberTemplate,
         .reset_number_yearly = settings.ResetNumberYearly,
         .revision = settings.Revision,

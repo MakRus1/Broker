@@ -1,6 +1,6 @@
 # PostgreSQL-типы и C++-кодген
 
-В Shipments, Transportations, Contracts, Counterparties и Finance для каждой модели хранения есть отдельный заголовок в `src/models/pg/`.
+В Shipments, Transportations, Contracts, Counterparties, Finance и Sales для каждой модели хранения есть отдельный заголовок в `src/models/pg/`.
 Каждый заголовок объявляет структуру и её специализацию `CppToUserPg`
 с именем составного типа PostgreSQL, например `public.shipment_v4`.
 

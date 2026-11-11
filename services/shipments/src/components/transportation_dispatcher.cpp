@@ -1,7 +1,7 @@
 #include <boost/uuid/string_generator.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <helpers/outbox.hpp>
-#include <postgresql/types.hpp>
+#include <models/pg/creation_operation.hpp>
 #include <set>
 #include <shipments/sql_queries.hpp>
 #include <userver/components/component_config.hpp>
@@ -26,7 +26,7 @@ TransportationDispatcher::TransportationDispatcher(
         std::string{helpers::kCreateTransportations},
         [this](const auto& message) { return SendOperation(message); },
         [](pg::Transaction& transaction, const platform::outbox::Message& message,
-            const pgtypes::CreationOperationV1& result) {
+            const models::pg::CreationOperation& result) {
             const auto organization = message.Payload["organization_id"].As<std::string>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
         });
@@ -40,7 +40,7 @@ TransportationDispatcher::TransportationDispatcher(
         [this](const auto& message) { SendRouteProjection(message); });
 }
 
-pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
+models::pg::CreationOperation TransportationDispatcher::SendOperation(
     const platform::outbox::Message& message) {
     namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
     const auto request = api::Request{.body = api::ParseBody(message.Payload)};
@@ -62,7 +62,7 @@ pgtypes::CreationOperationV1 TransportationDispatcher::SendOperation(
     if (unique_ids.size() != value.transportation_ids.size())
         throw std::runtime_error("Повторяющиеся ID в результате операции");
     const auto document = json::ValueBuilder(value).ExtractValue();
-    return pgtypes::CreationOperationV1{
+    return models::pg::CreationOperation{
         .Id = boost::uuids::string_generator{}(request.body.operation_id),
         .ItemId = boost::uuids::string_generator{}(value.item_id),
         .Quantity = value.quantity,

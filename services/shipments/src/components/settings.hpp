@@ -1,9 +1,10 @@
 #pragma once
 #include <components/references.hpp>
 #include <configs/keys.hpp>
+#include <models/pg/organization_shipment_rules.hpp>
+#include <models/pg/shipment_business_rules.hpp>
 #include <openapi/models.hpp>
 #include <platform/configs/runtime.hpp>
-#include <postgresql/types.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -34,9 +35,9 @@ class SettingsComponent final : public userver::components::ComponentBase {
     ReferencesComponent& references_;
     configs::detail_SHIPMENT_SETTINGS::Value Platform(
         const std::string&, const std::optional<std::string>& = std::nullopt) const;
-    std::optional<pgtypes::OrganizationShipmentRulesV1> LoadRules(const std::string&) const;
+    std::optional<models::pg::OrganizationShipmentRules> LoadRules(const std::string&) const;
     models::ShipmentBusinessSettings Business(const std::string&) const;
-    void ValidateBusinessRules(const std::string&, const pgtypes::ShipmentBusinessRulesV1&) const;
+    void ValidateBusinessRules(const std::string&, const models::pg::ShipmentBusinessRules&) const;
 };
 }  // namespace shipments
 

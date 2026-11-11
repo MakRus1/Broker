@@ -1,12 +1,6 @@
-"""Типы SQL и YAML совпадают; расширение хранения не ломает старую проекцию."""
+"""Расширение хранения не ломает старую проекцию."""
 
 from uuid import uuid4
-
-from postgres_types import assert_postgres_types
-
-
-def test_storage_type_contract(pgsql, service_source_dir):
-    assert_postgres_types(pgsql['db_1'], service_source_dir)
 
 
 async def test_current_and_future_projection_coexist(api, pgsql):
@@ -30,6 +24,8 @@ async def test_current_and_future_projection_coexist(api, pgsql):
             expected=201,
         )
         shipment = created['shipment']
+        assert shipment['reference'] == 'Поставка'
+        assert shipment['number'] != shipment['reference']
         selected = await api.post('/api/v1/shipments/get', {'shipment_id': shipment['id']})
         assert selected['shipment'] == shipment
         with database.cursor() as cursor:

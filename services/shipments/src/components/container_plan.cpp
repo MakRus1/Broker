@@ -7,6 +7,9 @@
 #include <helpers/revision.hpp>
 #include <map>
 #include <models/container_totals.hpp>
+#include <models/pg/pending_container_creation.hpp>
+#include <models/pg/shipment_item.hpp>
+#include <models/pg/shipment_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>
@@ -33,8 +36,8 @@ userver::yaml_config::Schema ContainerPlanComponent::GetStaticConfigSchema() {
 
 ContainerPlan ContainerPlanComponent::ReadContainerPlan(
     const userver::server::request::RequestContext& context, const std::string& shipment,
-    const std::vector<pgtypes::ShipmentItemV1>& items,
-    const std::vector<pgtypes::PendingContainerCreationV1>& pending) const {
+    const std::vector<models::pg::ShipmentItem>& items,
+    const std::vector<models::pg::PendingContainerCreation>& pending) const {
     namespace api = clients::transportations::ApiV1TransportationsContainerFact;
     api::RequestBody request;
     request.shipment_id = shipment;
@@ -92,9 +95,10 @@ models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItem
         transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (shipment.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    CheckRevision(shipment.AsSingleRow<pgtypes::ShipmentV4>().Revision, request.expected_revision);
+    CheckRevision(
+        shipment.AsSingleRow<models::pg::ShipmentRaw>().Revision, request.expected_revision);
     const auto settings = settings_.Effective(organization,
-        boost::uuids::to_string(shipment.AsSingleRow<pgtypes::ShipmentV4>().CustomerId));
+        boost::uuids::to_string(shipment.AsSingleRow<models::pg::ShipmentRaw>().CustomerId));
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};
@@ -105,7 +109,7 @@ models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItem
         transaction
             .Execute(sql::kAddItem, organization, request.shipment_id, request.container_type_code,
                 models::EnumValue(request.container_ownership), request.planned_quantity)
-            .AsSingleRow<pgtypes::ShipmentItemV1>();
+            .AsSingleRow<models::pg::ShipmentItem>();
     transaction.Execute(sql::kBumpShipmentRevision, organization, request.shipment_id);
     const auto result = Convert(row);
     SaveReplay(transaction, organization, "add_item", request, result);
@@ -126,10 +130,10 @@ models::ContainerPlanListResult ContainerPlanComponent::List(
         if (transaction.Execute(sql::kGetShipment, organization, request.shipment_id).IsEmpty())
             throw ApiError<404>{"not_found", "Поставка не найдена"};
         const auto rows = transaction.Execute(sql::kListItems, organization, request.shipment_id)
-                              .AsContainer<std::vector<pgtypes::ShipmentItemV1>>();
+                              .AsContainer<std::vector<models::pg::ShipmentItem>>();
         const auto pending =
             transaction.Execute(sql::kPendingContainerCreations, organization, request.shipment_id)
-                .AsContainer<std::vector<pgtypes::PendingContainerCreationV1>>();
+                .AsContainer<std::vector<models::pg::PendingContainerCreation>>();
         transaction.Commit();
         // Сетевой вызов не держит соединение и транзакцию Shipments.
         auto plan = ReadContainerPlan(context, request.shipment_id, rows, pending);
@@ -171,11 +175,11 @@ models::ContainerPlanUpdateResult ContainerPlanComponent::Update(
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Позиция не найдена"};
-    CheckRevision(rows.AsSingleRow<pgtypes::ShipmentItemV1>().Revision, request.expected_revision);
+    CheckRevision(rows.AsSingleRow<models::pg::ShipmentItem>().Revision, request.expected_revision);
     const auto row =
         transaction
             .Execute(sql::kUpdateItem, organization, request.item_id, request.planned_quantity)
-            .AsSingleRow<pgtypes::ShipmentItemV1>();
+            .AsSingleRow<models::pg::ShipmentItem>();
     const auto result = Convert(row);
     WriteAudit(transaction, organization, identity, "update_item", result.id, request, result);
     transaction.Commit();

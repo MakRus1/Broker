@@ -1,9 +1,10 @@
 #pragma once
+#include <models/pg/railway_station_raw.hpp>
+#include <models/pg/transport_location_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace transport_locations::converters {
-inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& value) {
+inline models::TransportLocation Convert(const models::pg::TransportLocationRaw& value) {
     return {.code = value.Code,
         .country_code = value.CountryCode,
         .id = boost::uuids::to_string(value.Id),
@@ -11,7 +12,7 @@ inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& val
         .name = value.Name};
 }
 
-inline models::RailwayStation Convert(const pgtypes::RailwayStationV2& value) {
+inline models::RailwayStation Convert(const models::pg::RailwayStationRaw& value) {
     return {.country_code = value.CountryCode,
         .esr_code = value.EsrCode,
         .esr_source = value.EsrSource,

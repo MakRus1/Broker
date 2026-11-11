@@ -3,8 +3,8 @@
 #include <boost/uuid/name_generator_sha1.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <map>
+#include <models/pg/railway_station_source.hpp>
 #include <optional>
-#include <postgresql/types.hpp>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace transport_locations::converters {
-using RailwaySource = pgtypes::RailwayStationSourceV1;
+using RailwaySource = models::pg::RailwayStationSource;
 
 inline std::optional<std::string> RailwayCode(std::string value, std::size_t length) {
     if (value.size() != length ||

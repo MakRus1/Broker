@@ -3,6 +3,7 @@
 #include <converters/locations.hpp>
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
+#include <models/pg/railway_station_raw.hpp>
 #include <registry/stations.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -36,7 +37,7 @@ models::StationListResult RailwayStationsComponent::List(
     transaction.Execute(sql::kRegistryPlan);
     auto rows =
         transaction.Execute(query.Statement, query.Parameters)
-            .AsContainer<std::vector<registry::Row<pgtypes::RailwayStationV2>>>(pg::kRowTag);
+            .AsContainer<std::vector<registry::Row<models::pg::RailwayStationRaw>>>(pg::kRowTag);
     const bool more = rows.size() > static_cast<std::size_t>(request.limit);
     if (more)
         rows.pop_back();
@@ -63,7 +64,7 @@ models::RailwayStation RailwayStationsComponent::Save(
         request.existing.value_or(false));
     if (rows.IsEmpty())
         throw ApiError<409>{"station_exists", "Идентификатор станции уже используется"};
-    return Convert(rows.AsSingleRow<pgtypes::RailwayStationV2>());
+    return Convert(rows.AsSingleRow<models::pg::RailwayStationRaw>());
 }
 
 void RailwayStationsComponent::Archive(const std::string& id) const {
@@ -78,7 +79,7 @@ std::vector<models::RailwayStation> RailwayStationsComponent::GetBatch(
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRailwayStations, requested_ids);
     std::vector<models::RailwayStation> result;
-    for (const auto& row : rows.AsSetOf<pgtypes::RailwayStationV2>())
+    for (const auto& row : rows.AsSetOf<models::pg::RailwayStationRaw>())
         result.push_back(Convert(row));
     return result;
 }
@@ -89,7 +90,7 @@ std::vector<models::RailwayStation> RailwayStationsComponent::Search(
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kSlave, sql::kSearchRailwayStations, query);
     std::vector<models::RailwayStation> result;
-    for (const auto& row : rows.AsSetOf<pgtypes::RailwayStationV2>())
+    for (const auto& row : rows.AsSetOf<models::pg::RailwayStationRaw>())
         result.push_back(Convert(row));
     return result;
 }

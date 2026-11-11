@@ -2,6 +2,7 @@
 #include <converters/organizations.hpp>
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
+#include <models/pg/member_raw.hpp>
 #include <platform/contact_validation.hpp>
 #include <registry/admin.hpp>
 #include <userver/components/component_context.hpp>
@@ -48,8 +49,9 @@ models::MembersListResult MembersComponent::List(const models::ListMembersReques
                 "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         const auto query = MemberQuery(request);
         transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<registry::Row<pgtypes::MemberV2>>>(pg::kRowTag);
+        auto rows =
+            transaction.Execute(query.Statement, query.Parameters)
+                .AsContainer<std::vector<registry::Row<models::pg::MemberRaw>>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         if (more)
             rows.pop_back();
@@ -108,7 +110,7 @@ models::MemberResult MembersComponent::Create(const models::CreateMemberRequest&
                 const auto member = Convert(transaction
                                                 .Execute(sql::kGetMembership, organization,
                                                     identity.Issuer, subject.value())
-                                                .AsSingleRow<pgtypes::MemberV2>());
+                                                .AsSingleRow<models::pg::MemberRaw>());
                 transaction.Commit();
                 return models::MemberResult{.member = member};
             }
@@ -125,13 +127,13 @@ models::MemberResult MembersComponent::Create(const models::CreateMemberRequest&
             const auto member = Convert(
                 transaction
                     .Execute(sql::kGetMembership, organization, identity.Issuer, subject.value())
-                    .AsSingleRow<pgtypes::MemberV2>());
+                    .AsSingleRow<models::pg::MemberRaw>());
             transaction.Commit();
             return models::MemberResult{.member = member};
         }
         const auto member = Convert(
             transaction.Execute(sql::kAddMember, organization, identity.Issuer, Convert(user, role))
-                .AsSingleRow<pgtypes::MemberV2>());
+                .AsSingleRow<models::pg::MemberRaw>());
         transaction.Execute(sql::kCompleteProvisioning, request.request_id, user.Subject);
         WriteAudit(transaction, organization, identity, "member.created", member);
         transaction.Commit();
@@ -159,7 +161,7 @@ models::MemberResult MembersComponent::Add(const models::AddMemberRequest& reque
         const auto member = Convert(transaction
                                         .Execute(sql::kAddMember, request.organization_id,
                                             identity.Issuer, Convert(user, request.role))
-                                        .AsSingleRow<pgtypes::MemberV2>());
+                                        .AsSingleRow<models::pg::MemberRaw>());
         WriteAudit(transaction, request.organization_id, identity, "member.added", member);
         transaction.Commit();
         return models::MemberResult{.member = member};
@@ -178,7 +180,7 @@ models::MemberResult MembersComponent::Update(const models::UpdateMemberRequest&
             sql::kGetMembership, request.organization_id, identity.Issuer, request.subject);
         if (rows.IsEmpty())
             throw ApiError<404>{"member_not_found", "Сотрудник не найден"};
-        const auto previous = rows.AsSingleRow<pgtypes::MemberV2>();
+        const auto previous = rows.AsSingleRow<models::pg::MemberRaw>();
         if (previous.Revision != request.expected_revision)
             throw ApiError<409>{"revision_conflict", "Доступ сотрудника уже изменён"};
         const auto role = request.role;
@@ -193,7 +195,7 @@ models::MemberResult MembersComponent::Update(const models::UpdateMemberRequest&
         const auto member = Convert(transaction
                                         .Execute(sql::kUpdateMember, request.organization_id,
                                             identity.Issuer, request.subject, role, request.enabled)
-                                        .AsSingleRow<pgtypes::MemberV2>());
+                                        .AsSingleRow<models::pg::MemberRaw>());
         WriteAudit(transaction, request.organization_id, identity, "member.updated", member);
         transaction.Commit();
         return models::MemberResult{.member = member};
@@ -234,7 +236,7 @@ models::MemberResult MembersComponent::UpdateProfile(
     const auto member = Convert(
         transaction
             .Execute(sql::kGetMembership, request.organization_id, identity.Issuer, request.subject)
-            .AsSingleRow<pgtypes::MemberV2>());
+            .AsSingleRow<models::pg::MemberRaw>());
     WriteAudit(transaction, request.organization_id, identity, "member.profile_updated", member);
     transaction.Commit();
     return models::MemberResult{.member = member};

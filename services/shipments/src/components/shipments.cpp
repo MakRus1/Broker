@@ -12,13 +12,15 @@
 #include <helpers/route_notifications.hpp>
 #include <helpers/route_projection.hpp>
 #include <helpers/route_usage.hpp>
+#include <models/pg/shipment_data.hpp>
+#include <models/pg/shipment_dictionary_value.hpp>
+#include <models/pg/shipment_raw.hpp>
 #include <openapi/models.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/calendar_date.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/document_number.hpp>
-#include <postgresql/types.hpp>
 #include <registry/query.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -65,7 +67,7 @@ void ValidateShipmentDate(userver::utils::datetime::Date value) {
             "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
-template <typename Request> void ApplyCard(const Request& request, pgtypes::ShipmentDataV3& row) {
+template <typename Request> void ApplyCard(const Request& request, models::pg::ShipmentData& row) {
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
     if (request.recipient_id.has_value()) {
@@ -105,9 +107,9 @@ template <typename Request> void ApplyCard(const Request& request, pgtypes::Ship
     ValidateShipmentDate(row.ShipmentDate);
 }
 
-void ValidateCard(const pgtypes::ShipmentDataV3& row, const auto& settings,
-    const std::vector<pgtypes::ShipmentDictionaryValueV1>& dictionaries,
-    const std::optional<pgtypes::ShipmentV4>& previous = std::nullopt) {
+void ValidateCard(const models::pg::ShipmentData& row, const auto& settings,
+    const std::vector<models::pg::ShipmentDictionaryValue>& dictionaries,
+    const std::optional<models::pg::ShipmentRaw>& previous = std::nullopt) {
     if ((!previous.has_value() || previous.value().Status != row.Status) &&
         std::find(settings.Statuses.begin(), settings.Statuses.end(), row.Status) ==
             settings.Statuses.end())
@@ -172,7 +174,7 @@ struct CreatedShipmentRow {
 template <typename Request>
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
     const Request& body, const auto& settings, const std::optional<std::string>& logist) {
-    pgtypes::ShipmentDataV3 card;
+    models::pg::ShipmentData card;
     card.CustomerId = boost::uuids::string_generator{}(body.customer_id);
     card.Reference = body.reference.value_or("");
     card.ShipmentDate = Today();
@@ -180,7 +182,7 @@ models::Shipment InsertShipment(pg::Transaction& transaction, const std::string&
     card.Logist = logist;
     ApplyCard(body, card);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
-                                  .AsContainer<std::vector<pgtypes::ShipmentDictionaryValueV1>>();
+                                  .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
     ValidateCard(card, settings, dictionaries);
     card.Number = body.number.has_value()
         ? userver::utils::text::Trim(body.number.value())
@@ -188,7 +190,7 @@ models::Shipment InsertShipment(pg::Transaction& transaction, const std::string&
     if (card.Number.empty())
         throw ApiError<400>{"invalid_number", "Укажите номер поставки"};
     const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
-                         .AsSingleRow<pgtypes::ShipmentV4>();
+                         .AsSingleRow<models::pg::ShipmentRaw>();
     RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
     const auto result = Convert(row);
     return result;
@@ -207,7 +209,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
     return Convert(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment, organization, stored.Id)
-            .AsSingleRow<pgtypes::ShipmentV4>());
+            .AsSingleRow<models::pg::ShipmentRaw>());
 }
 
 // Один сценарий для ручного создания и команд доверенных сервисов.
@@ -229,7 +231,7 @@ models::Shipment ShipmentsComponent::CreateShipment(const std::string& organizat
             throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
         const auto shipment =
             Convert(transaction.Execute(sql::kGetShipment, organization, stored.Id)
-                        .AsSingleRow<pgtypes::ShipmentV4>());
+                        .AsSingleRow<models::pg::ShipmentRaw>());
         transaction.Commit();
         return shipment;
     }
@@ -314,7 +316,7 @@ models::ShipmentsGetResult ShipmentsComponent::Get(const models::GetShipmentRequ
         pg::ClusterHostType::kMaster, sql::kGetShipment, organization, request.shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    const auto result = Convert(rows.AsSingleRow<pgtypes::ShipmentV4>());
+    const auto result = Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
     return models::ShipmentsGetResult{.shipment = result};
 }
 
@@ -376,7 +378,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
                 pg::ClusterHostType::kMaster, sql::kGetShipment, organization, request.shipment_id);
             if (rows.IsEmpty())
                 throw ApiError<404>{"not_found", "Поставка не найдена"};
-            const auto previous = rows.AsSingleRow<pgtypes::ShipmentV4>();
+            const auto previous = rows.AsSingleRow<models::pg::ShipmentRaw>();
             CheckRevision(previous.Revision, request.expected_revision);
             const auto locations =
                 references_.LoadRouteLocations(context, request.route_segments.value());
@@ -392,7 +394,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
             transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
         if (current.IsEmpty())
             throw ApiError<404>{"not_found", "Поставка не найдена"};
-        const auto previous = current.AsSingleRow<pgtypes::ShipmentV4>();
+        const auto previous = current.AsSingleRow<models::pg::ShipmentRaw>();
         CheckRevision(previous.Revision, request.expected_revision);
         auto card = ConvertData(previous);
         if (request.reference.has_value())
@@ -407,7 +409,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
         ApplyCard(request, card);
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
-                .AsContainer<std::vector<pgtypes::ShipmentDictionaryValueV1>>();
+                .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
         const auto protected_ids =
             transaction.Execute(sql::kGetRouteUsage, organization, request.shipment_id)
                 .AsContainer<std::vector<std::string>>();
@@ -428,7 +430,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
         const auto result = Convert(transaction
                                         .Execute(sql::kUpdateShipment, organization,
                                             request.shipment_id, request.expected_revision, card)
-                                        .AsSingleRow<pgtypes::ShipmentV4>());
+                                        .AsSingleRow<models::pg::ShipmentRaw>());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);
@@ -451,7 +453,7 @@ models::ShipmentsTransportationContextsResult ShipmentsComponent::Transportation
     const auto rows = cluster_
                           ->Execute(pg::ClusterHostType::kMaster, sql::kTransportationContexts,
                               organization, request.shipment_ids)
-                          .AsContainer<std::vector<pgtypes::ShipmentV4>>();
+                          .AsContainer<std::vector<models::pg::ShipmentRaw>>();
     std::vector<models::TransportationContext> items;
     for (const auto& row : rows) {
         const auto shipment = Convert(row);
@@ -475,7 +477,7 @@ models::ShipmentsRegisterRouteUsageResult ShipmentsComponent::RegisterRouteUsage
     const auto rows = transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    const auto shipment = rows.AsSingleRow<pgtypes::ShipmentV4>();
+    const auto shipment = rows.AsSingleRow<models::pg::ShipmentRaw>();
     if (shipment.Revision != request.expected_revision)
         throw ApiError<409>{"shipment_revision_conflict",
             "Поставка изменилась. Обновите перевозку и повторите сохранение"};

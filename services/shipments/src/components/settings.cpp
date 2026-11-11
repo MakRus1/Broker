@@ -4,9 +4,11 @@
 #include <converters/shipments.hpp>
 #include <helpers/database.hpp>
 #include <helpers/dictionaries.hpp>
+#include <models/pg/organization_shipment_rules.hpp>
+#include <models/pg/shipment_business_rules.hpp>
+#include <models/pg/shipment_dictionary_value.hpp>
 #include <platform/auth/organization_admin.hpp>
 #include <platform/document_number.hpp>
-#include <postgresql/types.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
@@ -38,13 +40,13 @@ configs::detail_SHIPMENT_SETTINGS::Value SettingsComponent::Platform(
             .CustomerId = customer, .OrganizationId = organization});
 }
 
-std::optional<pgtypes::OrganizationShipmentRulesV1> SettingsComponent::LoadRules(
+std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
     const std::string& organization) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization);
     if (rows.IsEmpty())
         return std::nullopt;
-    return rows.AsSingleRow<pgtypes::OrganizationShipmentRulesV1>();
+    return rows.AsSingleRow<models::pg::OrganizationShipmentRules>();
 }
 
 configs::detail_SHIPMENT_SETTINGS::Value SettingsComponent::Effective(
@@ -73,7 +75,7 @@ configs::detail_SHIPMENT_SETTINGS::Value SettingsComponent::Effective(
 }
 
 void SettingsComponent::ValidateBusinessRules(
-    const std::string& organization, const pgtypes::ShipmentBusinessRulesV1& rules) const {
+    const std::string& organization, const models::pg::ShipmentBusinessRules& rules) const {
     platform::ValidateNumberTemplate(rules.NumberTemplate);
     const auto limits = Platform(organization);
     const auto unique = [](const auto& values) {
@@ -110,7 +112,7 @@ models::ShipmentBusinessSettings SettingsComponent::Business(
     models::ShipmentBusinessSettings result;
     result.revision = stored.has_value() ? stored.value().Revision : 0;
     result.rules =
-        Convert(pgtypes::ShipmentBusinessRulesV1{.NumberTemplate = effective.NumberTemplate,
+        Convert(models::pg::ShipmentBusinessRules{.NumberTemplate = effective.NumberTemplate,
             .ResetNumberYearly = effective.ResetNumberYearly,
             .Statuses = effective.Statuses,
             .RouteTypes = effective.RouteTypes,
@@ -118,7 +120,7 @@ models::ShipmentBusinessSettings SettingsComponent::Business(
             .ContainerTypes = effective.ContainerTypes});
     result.allowed_container_types = limits.ContainerTypes;
     result.planned_containers_allowed = limits.PlannedContainers;
-    for (const auto& entry : rows.AsSetOf<pgtypes::ShipmentDictionaryValueV1>())
+    for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>())
         if (ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
             std::find(limits.RouteTypes.begin(), limits.RouteTypes.end(), entry.Code) !=
                 limits.RouteTypes.end())
@@ -149,7 +151,7 @@ models::ShipmentDictionaries SettingsComponent::Dictionaries(
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListShipmentDictionaries);
     models::ShipmentDictionaries result;
-    for (const auto& entry : rows.AsSetOf<pgtypes::ShipmentDictionaryValueV1>()) {
+    for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>()) {
         const models::DictionaryValue value{.code = entry.Code, .name = entry.Name};
         switch (ParseDictionary(entry.Dictionary)) {
         case ShipmentDictionary::kIncoterms:

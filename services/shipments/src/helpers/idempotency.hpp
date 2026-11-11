@@ -1,8 +1,8 @@
 #pragma once
 #include <helpers/database.hpp>
 #include <helpers/json.hpp>
+#include <models/pg/idempotent_result.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace shipments::helpers {
 template <typename Result, typename Request>
@@ -13,7 +13,7 @@ std::optional<Result> FindReplay(pg::Transaction& transaction, const std::string
         transaction.Execute(sql::kFindIdempotency, organization, action, request.idempotency_key);
     if (rows.IsEmpty())
         return std::nullopt;
-    const auto saved = rows.template AsSingleRow<pgtypes::IdempotentResultV1>();
+    const auto saved = rows.template AsSingleRow<models::pg::IdempotentResult>();
     if (saved.Request != Document(request))
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});
@@ -28,7 +28,7 @@ std::optional<Result> FindSavedReplay(const pg::ClusterPtr& cluster,
         organization, action, request.idempotency_key);
     if (rows.IsEmpty())
         return std::nullopt;
-    const auto saved = rows.template AsSingleRow<pgtypes::IdempotentResultV1>();
+    const auto saved = rows.template AsSingleRow<models::pg::IdempotentResult>();
     if (saved.Request != Document(request))
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});

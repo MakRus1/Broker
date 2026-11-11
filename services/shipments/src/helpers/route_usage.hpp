@@ -1,11 +1,11 @@
 #pragma once
 #include <algorithm>
+#include <models/pg/shipment_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace shipments::helpers {
-inline std::vector<std::string> ChangedRouteSegments(
-    const pgtypes::ShipmentV4& previous, const std::vector<models::ShipmentRouteSegment>& next) {
+inline std::vector<std::string> ChangedRouteSegments(const models::pg::ShipmentRaw& previous,
+    const std::vector<models::ShipmentRouteSegment>& next) {
     std::vector<std::string> changed;
     for (const auto& stage : previous.RouteSegments) {
         const auto id = boost::uuids::to_string(stage.Id);

@@ -8,7 +8,6 @@
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>
-#include <postgresql/types.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>

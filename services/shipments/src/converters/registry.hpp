@@ -1,10 +1,11 @@
 #pragma once
 #include <converters/shipments.hpp>
+#include <models/pg/shipment_raw.hpp>
 #include <platform/registry.hpp>
 
 namespace shipments::converters {
 struct RegistryRow {
-    pgtypes::ShipmentV4 Shipment;
+    models::pg::ShipmentRaw Shipment;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };

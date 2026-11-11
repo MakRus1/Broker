@@ -8,6 +8,8 @@
 #include <helpers/outbox.hpp>
 #include <helpers/revision.hpp>
 #include <models/errors.hpp>
+#include <models/pg/creation_operation.hpp>
+#include <models/pg/shipment_item.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/outbox/component.hpp>
@@ -51,7 +53,7 @@ models::TransportationOperationsGetResult TransportationOperationsComponent::Get
         pg::ClusterHostType::kMaster, sql::kGetOperation, organization, request.operation_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Операция не найдена"};
-    const auto result = Convert(rows.AsSingleRow<pgtypes::CreationOperationV1>());
+    const auto result = Convert(rows.AsSingleRow<models::pg::CreationOperation>());
     return models::TransportationOperationsGetResult{.operation = result};
 }
 
@@ -70,7 +72,7 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Позиция не найдена"};
-    const auto item = rows.AsSingleRow<pgtypes::ShipmentItemV1>();
+    const auto item = rows.AsSingleRow<models::pg::ShipmentItem>();
     CheckRevision(item.Revision, request.expected_revision);
 
     models::CreationOperation result;

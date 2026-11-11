@@ -1,9 +1,9 @@
 #pragma once
 #include <clients/notifications/client.hpp>
 #include <clients/transportations/client.hpp>
+#include <models/pg/creation_operation.hpp>
 #include <platform/auth/service_token.hpp>
 #include <platform/outbox/component.hpp>
-#include <postgresql/types.hpp>
 #include <userver/components/component_base.hpp>
 
 namespace shipments {
@@ -15,7 +15,7 @@ class TransportationDispatcher final : public userver::components::ComponentBase
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
   private:
-    pgtypes::CreationOperationV1 SendOperation(const platform::outbox::Message&);
+    models::pg::CreationOperation SendOperation(const platform::outbox::Message&);
     void SendRouteProjection(const platform::outbox::Message&);
     clients::notifications::Client notifications_;
     clients::transportations::Client transportations_;

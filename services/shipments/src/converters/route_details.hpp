@@ -1,10 +1,13 @@
 #pragma once
 #include <boost/uuid/string_generator.hpp>
+#include <models/pg/air_details.hpp>
+#include <models/pg/sea_details.hpp>
+#include <models/pg/shipment_route_segment.hpp>
+#include <models/pg/transport_location.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace shipments::converters {
-inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& value) {
+inline models::TransportLocation Convert(const models::pg::TransportLocation& value) {
     models::TransportLocation result;
     result.id = boost::uuids::to_string(value.Id);
     result.kind = models::ParseEnumScalar(value.Kind, models::TransportLocationKind{});
@@ -15,8 +18,8 @@ inline models::TransportLocation Convert(const pgtypes::TransportLocationV1& val
     return result;
 }
 
-inline pgtypes::TransportLocationV1 Convert(const models::TransportLocation& value) {
-    pgtypes::TransportLocationV1 result;
+inline models::pg::TransportLocation Convert(const models::TransportLocation& value) {
+    models::pg::TransportLocation result;
     result.Id = boost::uuids::string_generator{}(value.id);
     result.Kind = models::EnumValue(value.kind);
     result.Name = value.name;
@@ -26,7 +29,7 @@ inline pgtypes::TransportLocationV1 Convert(const models::TransportLocation& val
     return result;
 }
 
-inline models::SeaDetails Convert(const pgtypes::SeaDetailsV2& value) {
+inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
     models::SeaDetails result;
     if (value.Pol.has_value())
         result.pol = Convert(value.Pol.value());
@@ -47,8 +50,8 @@ inline models::SeaDetails Convert(const pgtypes::SeaDetailsV2& value) {
     return result;
 }
 
-inline pgtypes::SeaDetailsV2 Convert(const models::SeaDetails& value) {
-    pgtypes::SeaDetailsV2 result;
+inline models::pg::SeaDetails Convert(const models::SeaDetails& value) {
+    models::pg::SeaDetails result;
     if (value.pol.has_value())
         result.Pol = Convert(value.pol.value());
     if (value.pod.has_value())
@@ -70,7 +73,7 @@ inline pgtypes::SeaDetailsV2 Convert(const models::SeaDetails& value) {
     return result;
 }
 
-inline models::AirDetails Convert(const pgtypes::AirDetailsV2& value) {
+inline models::AirDetails Convert(const models::pg::AirDetails& value) {
     models::AirDetails result;
     if (value.CarrierId.has_value())
         result.carrier_id = boost::uuids::to_string(value.CarrierId.value());
@@ -91,8 +94,8 @@ inline models::AirDetails Convert(const pgtypes::AirDetailsV2& value) {
     return result;
 }
 
-inline pgtypes::AirDetailsV2 Convert(const models::AirDetails& value) {
-    pgtypes::AirDetailsV2 result;
+inline models::pg::AirDetails Convert(const models::AirDetails& value) {
+    models::pg::AirDetails result;
     if (value.carrier_id.has_value())
         result.CarrierId = boost::uuids::string_generator{}(value.carrier_id.value());
     if (value.origin_airport.has_value())
@@ -112,7 +115,7 @@ inline pgtypes::AirDetailsV2 Convert(const models::AirDetails& value) {
     return result;
 }
 
-inline models::ShipmentRouteSegment Convert(const pgtypes::ShipmentRouteSegmentV3& value) {
+inline models::ShipmentRouteSegment Convert(const models::pg::ShipmentRouteSegment& value) {
     models::ShipmentRouteSegment result;
     result.id = boost::uuids::to_string(value.Id);
     result.type = value.Type;
@@ -123,8 +126,8 @@ inline models::ShipmentRouteSegment Convert(const pgtypes::ShipmentRouteSegmentV
     return result;
 }
 
-inline pgtypes::ShipmentRouteSegmentV3 Convert(const models::ShipmentRouteSegment& value) {
-    pgtypes::ShipmentRouteSegmentV3 result;
+inline models::pg::ShipmentRouteSegment Convert(const models::ShipmentRouteSegment& value) {
+    models::pg::ShipmentRouteSegment result;
     result.Id = boost::uuids::string_generator{}(value.id);
     result.Type = value.type;
     if (value.sea.has_value())

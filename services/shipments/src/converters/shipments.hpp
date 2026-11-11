@@ -3,13 +3,16 @@
 #include <converters/route_details.hpp>
 #include <map>
 #include <models/container_totals.hpp>
+#include <models/pg/creation_operation.hpp>
+#include <models/pg/shipment_data.hpp>
+#include <models/pg/shipment_item.hpp>
+#include <models/pg/shipment_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 #include <vector>
 
 namespace shipments::converters {
-inline pgtypes::ShipmentDataV3 ConvertData(const pgtypes::ShipmentV4& row) {
+inline models::pg::ShipmentData ConvertData(const models::pg::ShipmentRaw& row) {
     return {.Number = row.Number,
         .CustomerId = row.CustomerId,
         .Reference = row.Reference,
@@ -27,7 +30,7 @@ inline pgtypes::ShipmentDataV3 ConvertData(const pgtypes::ShipmentV4& row) {
         .RouteSegments = row.RouteSegments};
 }
 
-inline models::Shipment Convert(const pgtypes::ShipmentV4& row) {
+inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     models::Shipment result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
@@ -53,7 +56,7 @@ inline models::Shipment Convert(const pgtypes::ShipmentV4& row) {
     return result;
 }
 
-inline models::ShipmentItem Convert(const pgtypes::ShipmentItemV1& row) {
+inline models::ShipmentItem Convert(const models::pg::ShipmentItem& row) {
     models::ShipmentItem result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
@@ -66,7 +69,7 @@ inline models::ShipmentItem Convert(const pgtypes::ShipmentItemV1& row) {
 }
 
 inline models::ContainerPlanItem Convert(
-    const pgtypes::ShipmentItemV1& row, const ContainerTotals& totals) {
+    const models::pg::ShipmentItem& row, const ContainerTotals& totals) {
     models::ContainerPlanItem result;
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
@@ -83,7 +86,7 @@ inline models::ContainerPlanItem Convert(
     return result;
 }
 
-inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row) {
+inline models::CreationOperation Convert(const models::pg::CreationOperation& row) {
     if (row.Result.has_value())
         return models::ParseModelJson(
             row.Result.value(), std::type_identity<models::CreationOperation>{});
@@ -98,7 +101,7 @@ inline models::CreationOperation Convert(const pgtypes::CreationOperationV1& row
 inline std::vector<models::Shipment> Convert(const userver::storages::postgres::ResultSet& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::ShipmentV4>())
+    for (const auto& row : rows.AsSetOf<models::pg::ShipmentRaw>())
         result.push_back(Convert(row));
     return result;
 }

@@ -2,6 +2,8 @@
 #include <clients/transportations/client.hpp>
 #include <components/settings.hpp>
 #include <models/container_plan.hpp>
+#include <models/pg/pending_container_creation.hpp>
+#include <models/pg/shipment_item.hpp>
 #include <openapi/models.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/server/request/request_context.hpp>
@@ -26,8 +28,8 @@ class ContainerPlanComponent final : public userver::components::ComponentBase {
     SettingsComponent& settings_;
     clients::transportations::Client transportations_;
     ContainerPlan ReadContainerPlan(const userver::server::request::RequestContext&,
-        const std::string&, const std::vector<pgtypes::ShipmentItemV1>&,
-        const std::vector<pgtypes::PendingContainerCreationV1>&) const;
+        const std::string&, const std::vector<models::pg::ShipmentItem>&,
+        const std::vector<models::pg::PendingContainerCreation>&) const;
 };
 }  // namespace shipments
 

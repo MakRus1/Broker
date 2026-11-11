@@ -1,10 +1,10 @@
 #pragma once
 #include <boost/uuid/uuid_io.hpp>
+#include <models/pg/container_fact.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 
 namespace transportations::converters {
-inline models::ContainerFactsResult Convert(const std::vector<pgtypes::ContainerFactV1>& rows) {
+inline models::ContainerFactsResult Convert(const std::vector<models::pg::ContainerFact>& rows) {
     models::ContainerFactsResult result;
     for (const auto& row : rows) {
         if (row.OperationId.has_value()) {

@@ -31,6 +31,10 @@ async def test_inbox_concurrent_replay(api):
         {'filters': [{'field': 'shipment_id', 'values': [body['shipment_id']]}]},
     )
     assert len(listed['items']) == 5
+    assert {item['id'] for item in listed['items']} == set(a['operation']['transportation_ids'])
+    for item in listed['items']:
+        for field in ('shipment_id', 'item_id', 'operation_id'):
+            assert item[field] == body[field]
     assert all(
         'number' not in item and 'container_number' not in item for item in listed['items']
     )

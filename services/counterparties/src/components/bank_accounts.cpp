@@ -5,6 +5,8 @@
 #include <helpers/audit.hpp>
 #include <helpers/normalization.hpp>
 #include <limits>
+#include <models/pg/bank_account_raw.hpp>
+#include <models/pg/counterparty_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
@@ -70,13 +72,13 @@ models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountReq
             transaction.Execute(sql::kLockCounterparty, organization, value.counterparty_id);
         if (owner.IsEmpty())
             throw ApiError<404>{"not_found", "Юридическое лицо не найдено"};
-        if (owner.AsSingleRow<pgtypes::CounterpartyV6>().Archived)
+        if (owner.AsSingleRow<models::pg::CounterpartyRaw>().Archived)
             throw ApiError<409>{
                 "archived_owner", "Сначала восстановите юридическое лицо из архива"};
         const auto stored = transaction.Execute(sql::kGetBankAccount, organization, value.id);
         std::optional<models::BankAccount> previous;
         if (!stored.IsEmpty()) {
-            previous = Convert(stored.AsSingleRow<pgtypes::BankAccountV1>());
+            previous = Convert(stored.AsSingleRow<models::pg::BankAccountRaw>());
             if (previous.value().counterparty_id != value.counterparty_id)
                 throw ApiError<404>{"not_found", "Счёт не найден у этого юридического лица"};
             if (previous.value().revision != request.expected_revision)
@@ -95,7 +97,7 @@ models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountReq
             Convert(value));
         if (saved.IsEmpty())
             throw ApiError<409>{"id_conflict", "Идентификатор счёта уже занят. Обновите список"};
-        const auto result = Convert(saved.AsSingleRow<pgtypes::BankAccountV1>());
+        const auto result = Convert(saved.AsSingleRow<models::pg::BankAccountRaw>());
         WriteAudit(transaction, organization, identity, "save_bank_account", result.id, request,
             result, previous);
         transaction.Commit();
@@ -120,7 +122,7 @@ std::vector<models::BankAccount> BankAccountsComponent::List(
         organization, request.counterparty_id);
     std::vector<models::BankAccount> items;
     items.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::BankAccountV1>())
+    for (const auto& row : rows.AsSetOf<models::pg::BankAccountRaw>())
         items.push_back(Convert(row));
     return items;
 }

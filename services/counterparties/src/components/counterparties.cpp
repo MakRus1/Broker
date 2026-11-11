@@ -6,6 +6,8 @@
 #include <helpers/audit.hpp>
 #include <helpers/normalization.hpp>
 #include <limits>
+#include <models/pg/counterparty_event.hpp>
+#include <models/pg/counterparty_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/contact_validation.hpp>
@@ -72,7 +74,7 @@ void CheckDuplicate(pg::Transaction& transaction, const std::string& organizatio
 }
 
 struct RegistryRow {
-    pgtypes::CounterpartyV6 Counterparty;
+    models::pg::CounterpartyRaw Counterparty;
     std::string SortKey;
 };
 
@@ -138,7 +140,7 @@ models::Counterparty CounterpartiesComponent::Create(
     const auto rows = inserted.IsEmpty()
         ? transaction.Execute(sql::kGetCounterparty, organization, value.id)
         : inserted;
-    const auto result = Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>());
+    const auto result = Convert(rows.AsSingleRow<models::pg::CounterpartyRaw>());
     if (userver::formats::json::ValueBuilder(result).ExtractValue() !=
         userver::formats::json::ValueBuilder(value).ExtractValue())
         throw ApiError<409>{"id_conflict", "Идентификатор занят другим контрагентом"};
@@ -163,7 +165,7 @@ models::Counterparty CounterpartiesComponent::Update(
     const auto rows = transaction.Execute(sql::kLockCounterparty, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Контрагент не найден"};
-    const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>());
+    const auto previous = Convert(rows.AsSingleRow<models::pg::CounterpartyRaw>());
     if (previous.revision != request.expected_revision)
         throw ApiError<409>{
             "revision_conflict", "Контрагент изменился. Обновите карточку перед редактированием"};
@@ -173,7 +175,7 @@ models::Counterparty CounterpartiesComponent::Update(
     CheckDuplicate(transaction, organization, value);
     const auto updated =
         transaction.Execute(sql::kUpdateCounterparty, organization, Convert(value));
-    const auto result = Convert(updated.AsSingleRow<pgtypes::CounterpartyV6>());
+    const auto result = Convert(updated.AsSingleRow<models::pg::CounterpartyRaw>());
     WriteAudit(transaction, organization, identity, "update_counterparty", result.id, request,
         result, std::optional{previous});
     transaction.Commit();
@@ -189,7 +191,7 @@ models::Counterparty CounterpartiesComponent::Get(const models::GetCounterpartyR
         pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Контрагент не найден"};
-    return Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>());
+    return Convert(rows.AsSingleRow<models::pg::CounterpartyRaw>());
 }
 
 models::Counterparty CounterpartiesComponent::SetArchived(
@@ -202,7 +204,7 @@ models::Counterparty CounterpartiesComponent::SetArchived(
     const auto rows = transaction.Execute(sql::kLockCounterparty, organization, request.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Контрагент не найден"};
-    const auto previous = Convert(rows.AsSingleRow<pgtypes::CounterpartyV6>());
+    const auto previous = Convert(rows.AsSingleRow<models::pg::CounterpartyRaw>());
     if (previous.revision != request.expected_revision)
         throw ApiError<409>{"revision_conflict", "Контрагент изменился. Обновите карточку"};
     if (previous.archived == request.archived) {
@@ -211,7 +213,7 @@ models::Counterparty CounterpartiesComponent::SetArchived(
     }
     const auto result =
         Convert(transaction.Execute(sql::kSetArchived, organization, request.id, request.archived)
-                    .AsSingleRow<pgtypes::CounterpartyV6>());
+                    .AsSingleRow<models::pg::CounterpartyRaw>());
     WriteAudit(transaction, organization, identity,
         request.archived ? "archive_counterparty" : "restore_counterparty", result.id, request,
         result, std::optional{previous});
@@ -301,6 +303,6 @@ std::vector<models::CounterpartyEvent> CounterpartiesComponent::History(
         throw ApiError<404>{"not_found", "Контрагент не найден"};
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListHistory,
         organization, request.id, request.before, request.limit);
-    return Convert(rows.AsContainer<std::vector<pgtypes::CounterpartyEventV2>>());
+    return Convert(rows.AsContainer<std::vector<models::pg::CounterpartyEvent>>());
 }
 }  // namespace counterparties

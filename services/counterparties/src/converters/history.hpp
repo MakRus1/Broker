@@ -1,5 +1,6 @@
 #pragma once
 #include <converters/counterparties.hpp>
+#include <models/pg/counterparty_event.hpp>
 
 namespace counterparties::converters {
 inline models::CounterpartySnapshot ReadSnapshot(const userver::formats::json::Value& document) {
@@ -11,7 +12,7 @@ inline models::CounterpartySnapshot ReadSnapshot(const userver::formats::json::V
         snapshot.ExtractValue(), std::type_identity<models::CounterpartySnapshot>{});
 }
 
-inline models::CounterpartyEvent Convert(const pgtypes::CounterpartyEventV2& row) {
+inline models::CounterpartyEvent Convert(const models::pg::CounterpartyEvent& row) {
     models::CounterpartyEvent event;
     event.id = row.Id;
     event.actor = row.Actor;
@@ -36,7 +37,7 @@ inline models::CounterpartyEvent Convert(const pgtypes::CounterpartyEventV2& row
 }
 
 inline std::vector<models::CounterpartyEvent> Convert(
-    const std::vector<pgtypes::CounterpartyEventV2>& rows) {
+    const std::vector<models::pg::CounterpartyEvent>& rows) {
     std::vector<models::CounterpartyEvent> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

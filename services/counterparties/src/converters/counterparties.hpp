@@ -1,11 +1,11 @@
 #pragma once
 #include <boost/uuid/string_generator.hpp>
+#include <models/pg/counterparty_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <vector>
 
 namespace counterparties::converters {
-inline models::Counterparty Convert(const pgtypes::CounterpartyV6& row) {
+inline models::Counterparty Convert(const models::pg::CounterpartyRaw& row) {
     models::Counterparty result;
     result.id = boost::uuids::to_string(row.Id);
     result.name = row.Name;
@@ -34,7 +34,7 @@ inline std::vector<std::string> Convert(const std::vector<models::CounterpartyRo
     return result;
 }
 
-inline pgtypes::CounterpartyV6 Convert(const models::Counterparty& value) {
+inline models::pg::CounterpartyRaw Convert(const models::Counterparty& value) {
     return {.Id = boost::uuids::string_generator{}(value.id),
         .Name = value.name,
         .Revision = value.revision,

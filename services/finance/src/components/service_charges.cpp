@@ -8,6 +8,9 @@
 #include <helpers/service_charges.hpp>
 #include <limits>
 #include <map>
+#include <models/pg/financial_label_raw.hpp>
+#include <models/pg/invoice_raw.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/charge_amounts.hpp>
@@ -66,15 +69,15 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
         transaction.Execute(sql::kGetFinancialLabel, organization, request.label_id);
     if (labels.IsEmpty())
         throw ApiError<404>{"label_not_found", "Финансовая метка не найдена"};
-    const auto value = PrepareServiceCharge(
-        request, Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>()), parties, exchange_rate);
+    const auto value = PrepareServiceCharge(request,
+        Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>()), parties, exchange_rate);
     const auto rows = request.expected_revision == 0
         ? transaction.Execute(sql::kCreateServiceCharge, organization, value)
         : transaction.Execute(
               sql::kUpdateServiceCharge, organization, value, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Услуга изменена. Обновите список"};
-    const auto result = Convert(rows.AsSingleRow<pgtypes::ServiceChargeV1>());
+    const auto result = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
     transaction.Execute(sql::kWriteServiceChargeHistory, organization, result.id, result.revision,
         identity.ActorId(), HistorySnapshot(result, identity));
     const auto assignment =
@@ -84,7 +87,7 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
         const auto invoice_id = assignment.AsSingleRow<boost::uuids::uuid>();
         const auto locked =
             transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id});
-        auto invoice = locked.AsSingleRow<pgtypes::InvoiceV1>();
+        auto invoice = locked.AsSingleRow<models::pg::InvoiceRaw>();
         if (invoice.Revision == std::numeric_limits<std::int64_t>::max())
             throw ApiError<409>{"invalid_revision", "Достигнут предел редакций счёта"};
         if (value.Archived)
@@ -96,7 +99,7 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
         invoice.NetMinor = 0;
         invoice.VatMinor = 0;
         invoice.TotalMinor = 0;
-        for (const auto& line : previous.AsSetOf<pgtypes::ServiceChargeV1>()) {
+        for (const auto& line : previous.AsSetOf<models::pg::ServiceChargeRaw>()) {
             const auto& current = line.Id == value.Id ? value : line;
             invoice.NetMinor += current.InvoiceNetMinor;
             invoice.VatMinor += current.InvoiceVatMinor;
@@ -198,7 +201,7 @@ models::ServiceCharge ServiceChargesComponent::Get(const models::GetServiceCharg
         pg::ClusterHostType::kMaster, sql::kGetServiceCharge, organization, request.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
-    const auto charge = Convert(rows.AsSingleRow<pgtypes::ServiceChargeV1>());
+    const auto charge = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
     ValidateServiceChargeScope(context,
         {.shipment_id = charge.shipment_id, .transportation_id = charge.transportation_id});
     return charge;
@@ -240,7 +243,7 @@ bool ServiceChargesComponent::ApplyImport(const models::ImportServiceChargesRequ
             transaction.Execute(sql::kGetFinancialLabel, command.organization_id, charge.label_id);
         if (labels.IsEmpty())
             throw ApiError<404>{"label_not_found", "Метка не найдена в организации"};
-        auto label = Convert(labels.AsSingleRow<pgtypes::FinancialLabelV1>());
+        auto label = Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>());
         // Названия, суммы и НДС берём из согласованного снимка, а не текущего справочника.
         label.name = item.label_name;
         label.archived = false;
@@ -252,7 +255,7 @@ bool ServiceChargesComponent::ApplyImport(const models::ImportServiceChargesRequ
             transaction.Execute(sql::kCreateServiceCharge, command.organization_id, value);
         if (rows.IsEmpty())
             throw ApiError<409>{"charge_conflict", "Услуга уже существует вне переноса"};
-        const auto result = Convert(rows.AsSingleRow<pgtypes::ServiceChargeV1>());
+        const auto result = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
         transaction.Execute(sql::kWriteServiceChargeHistory, command.organization_id, result.id,
             result.revision, actor.ActorId(), HistorySnapshot(result, actor));
     }
@@ -422,7 +425,7 @@ ServiceChargesComponent::ServiceChargeParties ServiceChargesComponent::ValidateS
     }
 }
 
-pgtypes::ServiceChargeV1 ServiceChargesComponent::PrepareServiceCharge(
+models::pg::ServiceChargeRaw ServiceChargesComponent::PrepareServiceCharge(
     const models::SaveServiceChargeRequest& value, const models::FinancialLabel& label,
     const ServiceChargeParties& parties, const Rate& exchange_rate) const {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())

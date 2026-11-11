@@ -1,8 +1,9 @@
 #pragma once
 #include <helpers/financial_labels.hpp>
+#include <models/pg/service_charge_raw.hpp>
 
 namespace finance::helpers {
-inline models::ServiceCharge Convert(const pgtypes::ServiceChargeV1& value) {
+inline models::ServiceCharge Convert(const models::pg::ServiceChargeRaw& value) {
     models::ServiceCharge result;
     result.id = boost::uuids::to_string(value.Id);
     result.shipment_id = value.ShipmentId.has_value()
@@ -47,7 +48,7 @@ inline models::ServiceCharge Convert(const pgtypes::ServiceChargeV1& value) {
 inline std::vector<models::ServiceCharge> ConvertServiceCharges(const pg::ResultSet& rows) {
     std::vector<models::ServiceCharge> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<pgtypes::ServiceChargeV1>())
+    for (const auto& row : rows.AsSetOf<models::pg::ServiceChargeRaw>())
         result.push_back(Convert(row));
     return result;
 }

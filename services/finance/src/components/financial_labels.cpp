@@ -1,6 +1,7 @@
 #include <components/financial_labels.hpp>
 #include <helpers/financial_labels.hpp>
 #include <helpers/registry_query.hpp>
+#include <models/pg/financial_label_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
@@ -11,7 +12,7 @@ namespace finance {
 using namespace helpers;
 
 namespace {
-pgtypes::FinancialLabelV1 Prepare(const models::SaveFinancialLabelRequest& value) {
+models::pg::FinancialLabelRaw Prepare(const models::SaveFinancialLabelRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция финансовой метки"};
     const auto name = userver::utils::text::Trim(value.name);
@@ -98,7 +99,7 @@ models::FinancialLabel FinancialLabelsComponent::Save(
               sql::kUpdateFinancialLabel, organization, value, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Метка изменена. Обновите карточку"};
-    const auto result = Convert(rows.AsSingleRow<pgtypes::FinancialLabelV1>());
+    const auto result = Convert(rows.AsSingleRow<models::pg::FinancialLabelRaw>());
     transaction.Execute(sql::kWriteHistory, organization, result.id, result.revision,
         identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
     transaction.Commit();
@@ -116,7 +117,7 @@ models::FinancialLabel FinancialLabelsComponent::Get(
         pg::ClusterHostType::kMaster, sql::kGetFinancialLabel, organization, request.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Финансовая метка не найдена"};
-    return Convert(rows.AsSingleRow<pgtypes::FinancialLabelV1>());
+    return Convert(rows.AsSingleRow<models::pg::FinancialLabelRaw>());
 }
 
 FinancialLabelsComponent::ListResult FinancialLabelsComponent::List(

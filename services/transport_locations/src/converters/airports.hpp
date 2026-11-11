@@ -5,7 +5,7 @@
 #include <charconv>
 #include <helpers/csv.hpp>
 #include <map>
-#include <postgresql/types.hpp>
+#include <models/pg/airport_source.hpp>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -17,7 +17,7 @@ inline bool AirportCode(std::string_view value, std::size_t length) {
         std::all_of(value.begin(), value.end(), [](char ch) { return ch >= 'A' && ch <= 'Z'; });
 }
 
-inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
+inline std::vector<models::pg::AirportSource> ParseAirports(
     std::string_view csv, std::size_t minimum) {
     if (csv.size() > 32 * 1024 * 1024)
         throw std::runtime_error("Выгрузка OurAirports превышает 32 МиБ");
@@ -39,7 +39,7 @@ inline std::vector<pgtypes::AirportSourceV1> ParseAirports(
         boost::uuids::string_generator{}("bc10495e-74fb-4c93-926c-bab338185341")};
     std::set<std::int64_t> ids;
     std::set<std::pair<std::string, std::string>> codes;
-    std::vector<pgtypes::AirportSourceV1> result;
+    std::vector<models::pg::AirportSource> result;
     std::size_t count = 0;
     while (offset < csv.size()) {
         const auto row = helpers::ReadCsvRow(csv, offset);

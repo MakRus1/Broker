@@ -1,20 +1,12 @@
-# PostgreSQL-типы и C++-кодген
+# PostgreSQL-модели в C++
 
-В Shipments, Transportations, Contracts, Counterparties, Finance, Sales и Organizations для каждой модели хранения есть отдельный заголовок в `src/models/pg/`.
-Каждый заголовок объявляет структуру и её специализацию `CppToUserPg`
-с именем составного типа PostgreSQL, например `public.shipment_v4`.
+Модели составных типов PostgreSQL описываем вручную в `services/<service>/src/models/pg/`.
+Для каждого типа используем отдельный заголовок. В нём находятся структура и её
+специализация `CppToUserPg`; `postgresql/types.yaml` сервисам больше не нужен.
 
-Поля структуры следуют порядку атрибутов в `CREATE TYPE`. Поля, для которых
-запрос может вернуть NULL, объявляются как `std::optional<T>`.
-При изменении контракта добавьте SQL-тип следующей версии новой миграцией,
-обновите проекции запросов, поля структуры и имя типа в `postgres_name`.
-Вызовы `AsSingleRow`, `AsSetOf` и `AsContainer` продолжают читать composite
-через userver. Интеграционные тесты этих сервисов проверяют работу этих моделей
-на реальных запросах к PostgreSQL.
+## Добавление модели
 
-Для остальных сервисов действует описанный ниже формат YAML.
-
-Миграция и описание для C++ поддерживаются явно: сначала пишем SQL с `CREATE TYPE`, затем добавляем соответствующее определение в `services/<service>/postgresql/types.yaml`. Генератор не разбирает SQL, не создает и не переписывает миграции, не подключается к БД.
+Сначала добавляем SQL-тип новой миграцией:
 
 ```sql
 CREATE TYPE public.example_v1 AS (
@@ -23,18 +15,44 @@ CREATE TYPE public.example_v1 AS (
 );
 ```
 
-```yaml
-version: 1
-types:
-  public.example_v1:
-    fields:
-      - {name: id, type: uuid}
-      - {name: reference, type: text}
+Затем объявляем модель хранения в `src/models/pg/example_raw.hpp`:
+
+```cpp
+#pragma once
+#include <boost/uuid/uuid.hpp>
+#include <optional>
+#include <string>
+#include <userver/storages/postgres/io/composite_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+
+namespace example::models::pg {
+struct ExampleRaw {
+    boost::uuids::uuid Id{};
+    std::optional<std::string> Reference{};
+};
+}
+
+namespace userver::storages::postgres::io {
+template <> struct CppToUserPg<::example::models::pg::ExampleRaw> {
+    static constexpr DBTypeName postgres_name = "public.example_v1";
+};
+}
 ```
 
-`make gen SERVICE=<service>` обновляет проверяемую генерацию. CMake создает `build-<preset>/services/<service>/generated/include/postgresql/types.hpp` со структурой `<service>::pgtypes::ExampleV1` и `CppToUserPg`, связывающим ее с `public.example_v1`. Имена C++-полей образуются из SQL-имен: `customer_id` → `CustomerId`. Нужен `postgresql.enabled: true` в service.yaml.
+Поля структуры следуют порядку атрибутов в `CREATE TYPE`. Поля, для которых запрос
+может вернуть NULL, объявляем как `std::optional<T>`. Составной тип PostgreSQL сам
+по себе не задаёт NOT NULL: ограничения таблиц и бизнес-проверки остаются в
+миграциях и C++-сценариях.
 
-Запрос остается обычным SQL с явной проекцией:
+UUID представлен `boost::uuids::uuid`, дата — `userver::utils::datetime::Date`,
+timestamptz — `userver::storages::postgres::TimePointTz`, jsonb —
+`userver::formats::json::Value`. В заголовке модели подключаем соответствующие
+маппинги из `userver/storages/postgres/io/`, например `date.hpp`, `json_types.hpp`
+или `array_types.hpp`.
+
+## Чтение и запись
+
+Запрос остаётся обычным SQL с явной проекцией:
 
 ```sql
 SELECT ROW(id, reference)::public.example_v1
@@ -43,27 +61,34 @@ WHERE organization_id = $1::UUID AND id = $2::UUID;
 ```
 
 ```cpp
-const auto row = result.AsSingleRow<pgtypes::ExampleV1>();
+const auto row = result.AsSingleRow<models::pg::ExampleRaw>();
 ```
 
-Это один composite-столбец: `kRowTag` не нужен. Для списка используются `AsSetOf<pgtypes::ExampleV1>()` / `AsContainer<std::vector<pgtypes::ExampleV1>>()`. Составные типы можно передавать и параметрами запроса; завершение операции доставки использует этот путь, а testsuite проверяет реальный двусторонний binary I/O.
+Это один composite-столбец: `kRowTag` не нужен. Для списка используем
+`AsSetOf<models::pg::ExampleRaw>()` или
+`AsContainer<std::vector<models::pg::ExampleRaw>>()`. Составные типы также можно
+передавать параметрами запроса. Сериализацию и разбор выполняет userver через
+`CppToUserPg`; отдельный сгенерированный заголовок для модели не требуется.
 
-## Описания и проверка
+Модель хранения не заменяет модель API. Преобразование UUID, enum и вычисляемых
+значений выполняется явно в конвертерах. Интеграционные тесты сервиса проверяют
+чтение и запись моделей реальными запросами к PostgreSQL.
 
-Поддерживаются text, boolean, smallint, integer, bigint, real, double precision, uuid, jsonb, timestamptz, одномерные массивы этих типов и ссылки на другие описанные composite-типы. UUID представлен `boost::uuids::uuid`, timestamptz — `userver::storages::postgres::TimePointTz`, jsonb — JSON Value. `nullable: true` дает `std::optional<T>` для целого поля; nullable-элементы массива пока не описываются. SQL-enum/domain/numeric пока не поддерживаются и отклоняются явно.
+## Изменение типа и откат приложения
 
-Порядок полей в YAML значим и должен совпадать с `CREATE TYPE`. Генератор отклоняет повторения, неизвестные типы и свойства, рекурсию, некорректные имена и конфликты имен C++. Поддерживается одна схема описания формата `version: 1`; это версия YAML-формата, а не конкретного PostgreSQL-типа.
+Опубликованный `example_v1` не меняем через ALTER TYPE. Добавляем `example_v2`
+новой миграцией и обновляем проекции SQL-запросов, поля C++-структуры и
+`postgres_name`. Имя `ExampleRaw` остаётся прежним, поэтому места использования
+модели не нужно переименовывать из-за новой версии SQL-типа.
 
-После применения миграций testsuite сверяет имена, порядок и OID типов атрибутов через `tests/support/postgres_types.py`. Проверка ловит расхождение SQL и YAML, включая перестановку двух UUID-полей: одного совпадения C++-типов недостаточно. Подключение к PostgreSQL требуется для тестов, а не для кодогенерации.
+Тип v1 сохраняем на время канарейки и окна отката: старое приложение продолжает
+использовать v1, новое — v2. Данные могут оставаться в тех же таблицах.
 
-`nullable` не создает ограничение NOT NULL в составном типе. Ограничения таблиц и бизнес-проверки остаются в соответствующих миграциях и C++-сценариях. Прямое отображение типа хранения в API не предполагается: преобразование UUID/enum и вычисляемые значения выполняются явно на границе моделей.
+Изменения таблиц также должны быть совместимыми: добавление поля с подходящим
+default/nullable, согласование поведения старых и новых писателей, удаление
+старого контракта только отдельным поздним этапом. Новый тип сам по себе не
+обеспечивает совместимость изменения бизнес-смысла и не разрешает сразу удалять
+старые колонки.
 
-## Канарейка и откат приложения
-
-Опубликованный `example_v1` не меняем через ALTER TYPE. Добавляем `example_v2` отдельной ручной миграцией и новым элементом YAML; v1 сохраняем на время канарейки и окна отката. Новый код явно выбирает `ROW(...)::public.example_v2` и `pgtypes::ExampleV2`, старый продолжает использовать v1. Данные могут оставаться в тех же таблицах.
-
-Изменения таблиц также должны быть совместимыми: добавление поля с подходящим default/nullable, согласование поведения старых и новых писателей, удаление старого контракта только отдельным поздним этапом. Новый тип сам по себе не обеспечивает совместимость изменения бизнес-смысла и не разрешает сразу удалять старые колонки.
-
-Тест shipments создает v2 и дополнительную колонку, затем проверяет, что работающий код с v1 продолжает создавать, читать и обновлять поставки, сохраняя новое поле. Остальные testsuite-сценарии проверяют чтение UUID/nullable JSON и запись composite-параметра через userver; межсервисный smoke проверяет доставку между репликами.
-
-Основы реализации: [PostgreSQL composite types](https://www.postgresql.org/docs/16/rowtypes.html), [userver v3.2 composite I/O](https://userver.tech/docs/v3.2/d4/dda/composite__types_8hpp.html).
+Основы реализации: [PostgreSQL composite types](https://www.postgresql.org/docs/16/rowtypes.html),
+[userver v3.2 composite I/O](https://userver.tech/docs/v3.2/d4/dda/composite__types_8hpp.html).

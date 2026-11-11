@@ -5,7 +5,7 @@
 #include <boost/uuid/string_generator.hpp>
 #include <helpers/csv.hpp>
 #include <map>
-#include <postgresql/types.hpp>
+#include <models/pg/sea_port_source.hpp>
 #include <set>
 #include <userver/formats/json.hpp>
 
@@ -53,7 +53,7 @@ inline int LocodeDate(std::string_view value, int release_year) {
     return year * 100 + month;
 }
 
-inline std::vector<pgtypes::SeaPortSourceV1> ParseSeaPorts(
+inline std::vector<models::pg::SeaPortSource> ParseSeaPorts(
     const std::array<std::string, 3>& parts, std::size_t minimum, int release_year) {
     struct Port {
         std::string name;
@@ -111,7 +111,7 @@ inline std::vector<pgtypes::SeaPortSourceV1> ParseSeaPorts(
         throw std::runtime_error("UN/LOCODE: выгрузка подозрительно мала");
     const boost::uuids::name_generator_sha1 uuid{
         boost::uuids::string_generator{}("c4e81618-176c-4096-8b4b-c128b00cb913")};
-    std::vector<pgtypes::SeaPortSourceV1> result;
+    std::vector<models::pg::SeaPortSource> result;
     result.reserve(ports.size());
     for (const auto& [code, port] : ports) {
         std::string search = code + " ";

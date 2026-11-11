@@ -3,6 +3,7 @@
 #include <converters/locations.hpp>
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
+#include <models/pg/transport_location_raw.hpp>
 #include <registry/locations.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -35,7 +36,7 @@ models::LocationListResult LocationsComponent::List(
     transaction.Execute(sql::kRegistryPlan);
     auto rows =
         transaction.Execute(query.Statement, query.Parameters)
-            .AsContainer<std::vector<registry::Row<pgtypes::TransportLocationV1>>>(pg::kRowTag);
+            .AsContainer<std::vector<registry::Row<models::pg::TransportLocationRaw>>>(pg::kRowTag);
     const bool more = rows.size() > static_cast<std::size_t>(request.limit);
     if (more)
         rows.pop_back();
@@ -69,7 +70,7 @@ models::TransportLocation LocationsComponent::Save(
             request.existing.value_or(false));
         if (rows.IsEmpty())
             throw ApiError<409>{"location_exists", "Запись уже существует или имеет другой тип"};
-        return Convert(rows.AsSingleRow<pgtypes::TransportLocationV1>());
+        return Convert(rows.AsSingleRow<models::pg::TransportLocationRaw>());
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{"location_code_exists", "Код уже используется в этой стране"};
     }
@@ -90,7 +91,7 @@ std::vector<models::TransportLocation> LocationsComponent::GetBatch(
         ids.push_back(boost::uuids::string_generator{}(id));
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRouteLocations, ids);
     std::vector<models::TransportLocation> result;
-    for (const auto& row : rows.AsSetOf<pgtypes::TransportLocationV1>())
+    for (const auto& row : rows.AsSetOf<models::pg::TransportLocationRaw>())
         result.push_back(Convert(row));
     return result;
 }
@@ -100,7 +101,7 @@ std::vector<models::TransportLocation> LocationsComponent::Search(
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kSearchRouteLocations,
         models::EnumValue(kind), userver::utils::text::Trim(query.value_or("")));
     std::vector<models::TransportLocation> result;
-    for (const auto& row : rows.AsSetOf<pgtypes::TransportLocationV1>()) {
+    for (const auto& row : rows.AsSetOf<models::pg::TransportLocationRaw>()) {
         result.push_back(Convert(row));
     }
     return result;

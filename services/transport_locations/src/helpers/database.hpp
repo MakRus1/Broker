@@ -1,5 +1,4 @@
 #pragma once
-#include <postgresql/types.hpp>
 #include <transport_locations/sql_queries.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>

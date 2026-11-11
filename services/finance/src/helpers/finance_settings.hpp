@@ -1,7 +1,6 @@
 #pragma once
 #include <finance/sql_queries.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <tuple>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>

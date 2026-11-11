@@ -3,9 +3,9 @@
 #include <finance/sql_queries.hpp>
 #include <limits>
 #include <models/errors.hpp>
+#include <models/pg/financial_label_raw.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
-#include <postgresql/types.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/text_light.hpp>
@@ -13,7 +13,7 @@
 namespace finance::helpers {
 namespace pg = userver::storages::postgres;
 
-inline models::FinancialLabel Convert(const pgtypes::FinancialLabelV1& value) {
+inline models::FinancialLabel Convert(const models::pg::FinancialLabelRaw& value) {
     models::FinancialLabel result;
     result.id = boost::uuids::to_string(value.Id);
     result.name = value.Name;

@@ -4,8 +4,8 @@
 #include <clients/shipments/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <components/exchange_rates.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -60,7 +60,7 @@ class ServiceChargesComponent final : public userver::components::ComponentBase 
     models::ReportingSummary BuildReporting(const std::string&,
         const userver::storages::postgres::ResultSet&, bool transportation_scope) const;
 
-    pgtypes::ServiceChargeV1 PrepareServiceCharge(const models::SaveServiceChargeRequest&,
+    models::pg::ServiceChargeRaw PrepareServiceCharge(const models::SaveServiceChargeRequest&,
         const models::FinancialLabel&, const ServiceChargeParties&, const Rate&) const;
 
     void ValidateServiceChargeScope(

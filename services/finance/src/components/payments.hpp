@@ -1,7 +1,7 @@
 #pragma once
 #include <clients/counterparties/client.hpp>
+#include <models/pg/payment_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -51,7 +51,7 @@ class PaymentsComponent final : public userver::components::ComponentBase {
         const models::PaymentCandidatesRequest&, userver::server::request::RequestContext&) const;
 
   private:
-    pgtypes::PaymentV1 Prepare(
+    models::pg::PaymentRaw Prepare(
         const userver::server::request::RequestContext&, const models::SavePaymentRequest&) const;
 
     struct Dependencies {

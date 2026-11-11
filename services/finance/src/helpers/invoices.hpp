@@ -2,6 +2,8 @@
 #include <helpers/document_parties.hpp>
 #include <helpers/history/snapshot.hpp>
 #include <helpers/service_charges.hpp>
+#include <models/pg/invoice_raw.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <platform/date_validation.hpp>
 #include <set>
 
@@ -15,7 +17,7 @@ inline std::optional<std::string> InvoiceId(const std::optional<boost::uuids::uu
     return value.has_value() ? std::optional{boost::uuids::to_string(value.value())} : std::nullopt;
 }
 
-inline models::Invoice Convert(const pgtypes::InvoiceV1& value) {
+inline models::Invoice Convert(const models::pg::InvoiceRaw& value) {
     models::Invoice result;
     result.id = boost::uuids::to_string(value.Id);
     result.direction = models::ParseEnumScalar(value.Direction, models::InvoiceDirection{});
@@ -41,7 +43,7 @@ inline models::Invoice Convert(const pgtypes::InvoiceV1& value) {
 }
 
 inline void ValidateInvoiceServiceCharge(
-    const pgtypes::ServiceChargeV1& charge, const pgtypes::InvoiceV1& invoice) {
+    const models::pg::ServiceChargeRaw& charge, const models::pg::InvoiceRaw& invoice) {
     if (charge.Archived ||
         charge.Direction != (invoice.Direction == "outgoing" ? "income" : "expense") ||
         charge.CounterpartyId != invoice.CounterpartyId ||
@@ -51,7 +53,7 @@ inline void ValidateInvoiceServiceCharge(
 }
 
 inline void ValidateInvoiceSettlement(pg::Transaction& transaction, const std::string& organization,
-    const pgtypes::InvoiceV1& invoice) {
+    const models::pg::InvoiceRaw& invoice) {
     const auto paid = transaction.Execute(sql::kInvoicePaid, organization, invoice.Id)
                           .AsSingleRow<std::int64_t>();
     if (paid > 0)
@@ -66,21 +68,21 @@ inline models::InvoiceDetails LoadInvoice(
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
     return {.charges = ConvertServiceCharges(
                 transaction.Execute(sql::kGetInvoiceServiceCharges, organization, id)),
-        .invoice = Convert(rows.AsSingleRow<pgtypes::InvoiceV1>())};
+        .invoice = Convert(rows.AsSingleRow<models::pg::InvoiceRaw>())};
 }
 
 inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const std::string& organization, const boost::uuids::uuid& invoice_id,
     const boost::uuids::uuid& service_charge_id, const platform::auth::Identity& identity) {
     auto invoice = transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id})
-                       .AsSingleRow<pgtypes::InvoiceV1>();
+                       .AsSingleRow<models::pg::InvoiceRaw>();
     if (invoice.Archived || invoice.Revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<409>{"invoice_unavailable", "Счёт недоступен для изменения"};
     const auto rows = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id);
     invoice.NetMinor = 0;
     invoice.VatMinor = 0;
     invoice.TotalMinor = 0;
-    for (const auto& line : rows.AsSetOf<pgtypes::ServiceChargeV1>()) {
+    for (const auto& line : rows.AsSetOf<models::pg::ServiceChargeRaw>()) {
         if (line.Id == service_charge_id)
             continue;
         invoice.NetMinor += line.InvoiceNetMinor;
@@ -114,7 +116,7 @@ inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::stri
 
 inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
     const std::string& organization, const platform::auth::Identity& identity,
-    const pgtypes::ServiceChargeV1& charge, const std::string& invoice_id,
+    const models::pg::ServiceChargeRaw& charge, const std::string& invoice_id,
     std::int64_t expected_revision,
     const std::optional<std::string>& previous_invoice_id = std::nullopt) {
     CheckInvoiceAssignment(transaction, organization, charge.Id, previous_invoice_id);
@@ -125,7 +127,7 @@ inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
     const auto invoices = transaction.Execute(sql::kGetInvoice, organization, invoice_id);
     if (invoices.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
-    auto value = invoices.AsSingleRow<pgtypes::InvoiceV1>();
+    auto value = invoices.AsSingleRow<models::pg::InvoiceRaw>();
     if (value.Archived)
         throw ApiError<409>{"archived_invoice", "Выберите действующий счёт"};
     if (value.Revision != expected_revision ||

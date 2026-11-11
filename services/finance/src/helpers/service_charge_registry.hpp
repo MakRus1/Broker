@@ -1,5 +1,6 @@
 #pragma once
 #include <helpers/service_charges.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 #include <userver/utils/text.hpp>
@@ -8,7 +9,7 @@ namespace finance::helpers::service_charge_registry {
 namespace registry = platform::registry;
 
 struct RegistryRow {
-    pgtypes::ServiceChargeV1 Charge;
+    models::pg::ServiceChargeRaw Charge;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };

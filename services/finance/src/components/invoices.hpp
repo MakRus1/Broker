@@ -1,8 +1,8 @@
 #pragma once
 #include <clients/contracts/client.hpp>
 #include <clients/counterparties/client.hpp>
+#include <models/pg/invoice_raw.hpp>
 #include <openapi/models.hpp>
-#include <postgresql/types.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -49,7 +49,7 @@ class InvoicesComponent final : public userver::components::ComponentBase {
         const models::InvoiceFilterValuesRequest&, userver::server::request::RequestContext&) const;
 
   private:
-    pgtypes::InvoiceV1 Prepare(
+    models::pg::InvoiceRaw Prepare(
         const userver::server::request::RequestContext&, const models::SaveInvoiceRequest&) const;
 
     struct Dependencies {

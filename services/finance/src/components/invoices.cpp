@@ -3,6 +3,8 @@
 #include <helpers/finance_settings.hpp>
 #include <helpers/invoice_registry.hpp>
 #include <helpers/invoices.hpp>
+#include <models/pg/invoice_raw.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
@@ -30,7 +32,7 @@ std::vector<boost::uuids::uuid> InvoiceServiceChargeIds(const models::SaveInvoic
 
 namespace {
 std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::string& organization,
-    const pgtypes::InvoiceV1& invoice) {
+    const models::pg::InvoiceRaw& invoice) {
     const auto settings =
         ConvertFinanceSettings(transaction.Execute(sql::kGetFinanceSettings, organization));
     const auto& mask = invoice.Direction == "outgoing" ? settings.outgoing_number_template
@@ -165,9 +167,9 @@ models::InvoiceDetails InvoicesComponent::Save(const models::SaveInvoiceRequest&
     if (!transaction.Execute(sql::kConflictingInvoiceServiceCharges, organization, ids, value.Id)
              .IsEmpty())
         throw ApiError<409>{"service_charge_invoiced", "Услуга уже включена в другой счёт"};
-    std::vector<pgtypes::ServiceChargeV1> snapshots;
+    std::vector<models::pg::ServiceChargeRaw> snapshots;
     snapshots.reserve(charges.Size());
-    for (const auto& charge : charges.AsSetOf<pgtypes::ServiceChargeV1>()) {
+    for (const auto& charge : charges.AsSetOf<models::pg::ServiceChargeRaw>()) {
         ValidateInvoiceServiceCharge(charge, value);
         snapshots.push_back(charge);
         value.NetMinor += charge.InvoiceNetMinor;
@@ -288,7 +290,7 @@ models::InvoiceDetails InvoicesComponent::AddServiceCharge(
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
-    const auto charge = charges.AsSingleRow<pgtypes::ServiceChargeV1>();
+    const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
     const auto result = IncludeServiceCharge(transaction, organization, identity, charge,
         request.invoice_id, request.expected_revision, request.previous_invoice_id);
     transaction.Commit();
@@ -308,7 +310,7 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
-    const auto charge = charges.AsSingleRow<pgtypes::ServiceChargeV1>();
+    const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
     CheckInvoiceAssignment(transaction, organization, charge.Id, std::optional{request.invoice_id});
     RemoveInvoiceServiceCharge(transaction, organization,
         boost::uuids::string_generator{}(request.invoice_id), charge.Id, identity);
@@ -346,7 +348,7 @@ InvoicesComponent::FilterValuesResult InvoicesComponent::FilterValues(
     }
 }
 
-pgtypes::InvoiceV1 InvoicesComponent::Prepare(
+models::pg::InvoiceRaw InvoicesComponent::Prepare(
     const userver::server::request::RequestContext& context,
     const models::SaveInvoiceRequest& body) const {
     const auto& deps = deps_;
@@ -362,7 +364,7 @@ pgtypes::InvoiceV1 InvoicesComponent::Prepare(
             throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
     if (SameId(body.own_company_id, body.counterparty_id))
         throw ApiError<400>{"same_parties", "Выберите разные стороны счёта"};
-    auto result = pgtypes::InvoiceV1{.Id = boost::uuids::string_generator{}(body.id),
+    auto result = models::pg::InvoiceRaw{.Id = boost::uuids::string_generator{}(body.id),
         .Direction = models::EnumValue(body.direction),
         .Number = number,
         .InvoiceDate = body.invoice_date,

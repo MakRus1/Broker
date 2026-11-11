@@ -7,6 +7,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/date.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {

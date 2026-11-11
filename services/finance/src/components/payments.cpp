@@ -1,6 +1,8 @@
 #include <components/payments.hpp>
 #include <helpers/invoices.hpp>
 #include <helpers/payment_registry.hpp>
+#include <models/pg/invoice_raw.hpp>
+#include <models/pg/payment_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
@@ -22,7 +24,7 @@ models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
     throw std::logic_error("Неизвестный вид платежа");
 }
 
-models::Payment Convert(const pgtypes::PaymentV1& value) {
+models::Payment Convert(const models::pg::PaymentRaw& value) {
     models::Payment result;
     result.id = boost::uuids::to_string(value.Id);
     result.kind = models::ParseEnumScalar(value.Kind, models::PaymentKind{});
@@ -49,7 +51,7 @@ models::PaymentDetails LoadPayment(
     if (rows.IsEmpty())
         throw ApiError<404>{"payment_not_found", "Платёж не найден"};
     models::PaymentDetails result;
-    result.payment = Convert(rows.AsSingleRow<pgtypes::PaymentV1>());
+    result.payment = Convert(rows.AsSingleRow<models::pg::PaymentRaw>());
     for (const auto& row : transaction.Execute(sql::kGetPaymentAllocations, organization, id)) {
         const auto [invoice, amount] = row.As<boost::uuids::uuid, std::int64_t>();
         result.allocations.push_back(
@@ -66,12 +68,12 @@ models::PaymentInvoice LoadInvoiceBalance(
     const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
-    const auto invoice = helpers::Convert(rows.AsSingleRow<pgtypes::InvoiceV1>());
+    const auto invoice = helpers::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>());
     const auto paid =
         transaction.Execute(sql::kInvoicePaid, organization, id).AsSingleRow<std::int64_t>();
     std::vector<models::InvoicePayment> payments;
     for (const auto& row : transaction.Execute(sql::kInvoicePayments, organization, id)) {
-        const auto [payment, amount] = row.As<pgtypes::PaymentV1, std::int64_t>();
+        const auto [payment, amount] = row.As<models::pg::PaymentRaw, std::int64_t>();
         payments.push_back({.amount_minor = amount, .payment = Convert(payment)});
     }
     return {.invoice = invoice,
@@ -143,7 +145,7 @@ models::PaymentDetails PaymentsComponent::Save(const models::SavePaymentRequest&
         sql::kLockInvoices, organization, std::vector<boost::uuids::uuid>{ids.begin(), ids.end()});
     if (invoices.Size() != ids.size())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден в организации"};
-    for (const auto& invoice : invoices.AsSetOf<pgtypes::InvoiceV1>()) {
+    for (const auto& invoice : invoices.AsSetOf<models::pg::InvoiceRaw>()) {
         const auto found = allocations.find(invoice.Id);
         if (value.Archived || found == allocations.end())
             continue;
@@ -281,7 +283,7 @@ PaymentsComponent::InvoiceCandidatesResult PaymentsComponent::InvoiceCandidates(
     InvoiceCandidatesResult result;
     for (std::size_t index = 0; index < rows.Size() && index < static_cast<std::size_t>(body.limit);
          ++index) {
-        const auto [row, paid] = rows[index].As<pgtypes::InvoiceV1, std::int64_t>();
+        const auto [row, paid] = rows[index].As<models::pg::InvoiceRaw, std::int64_t>();
         const auto invoice = Convert(row);
         result.items.push_back({.invoice = invoice,
             .outstanding_minor = invoice.total_minor - paid,
@@ -333,7 +335,7 @@ PaymentsComponent::PaymentCandidatesResult PaymentsComponent::PaymentCandidates(
     PaymentCandidatesResult response;
     for (std::size_t index = 0; index < rows.Size() && index < static_cast<std::size_t>(body.limit);
          ++index) {
-        const auto [payment, available] = rows[index].As<pgtypes::PaymentV1, std::int64_t>();
+        const auto [payment, available] = rows[index].As<models::pg::PaymentRaw, std::int64_t>();
         response.items.push_back({.payment = Convert(payment), .unallocated_minor = available});
     }
     if (rows.Size() > static_cast<std::size_t>(body.limit))
@@ -342,7 +344,7 @@ PaymentsComponent::PaymentCandidatesResult PaymentsComponent::PaymentCandidates(
     return response;
 }
 
-pgtypes::PaymentV1 PaymentsComponent::Prepare(
+models::pg::PaymentRaw PaymentsComponent::Prepare(
     const userver::server::request::RequestContext& context,
     const models::SavePaymentRequest& body) const {
     const auto& deps = deps_;
@@ -353,7 +355,7 @@ pgtypes::PaymentV1 PaymentsComponent::Prepare(
         throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
     if (SameId(body.own_company_id, body.counterparty_id))
         throw ApiError<400>{"same_parties", "Выберите разные стороны платежа"};
-    pgtypes::PaymentV1 value{.Id = boost::uuids::string_generator{}(body.id),
+    models::pg::PaymentRaw value{.Id = boost::uuids::string_generator{}(body.id),
         .Kind = models::EnumValue(body.kind),
         .Number = userver::utils::text::Trim(body.number),
         .PaymentDate = body.payment_date,

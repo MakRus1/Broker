@@ -1,5 +1,6 @@
 #pragma once
 #include <helpers/invoices.hpp>
+#include <models/pg/payment_raw.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 
@@ -7,7 +8,7 @@ namespace finance::helpers::payment_registry {
 namespace registry = platform::registry;
 
 struct RegistryRow {
-    pgtypes::PaymentV1 Payment;
+    models::pg::PaymentRaw Payment;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };

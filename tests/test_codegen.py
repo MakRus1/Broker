@@ -1,6 +1,7 @@
 """Контрактные проверки генерации и неизменности ручного кода."""
 from copy import deepcopy
 import importlib.util
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -157,7 +158,14 @@ class CodegenTest(unittest.TestCase):
             run(service, output=base / 'generated')
             self.assertEqual(before, self.snapshot(service))
             first = self.snapshot(base / 'generated')
+            obsolete = base / 'generated/include/postgresql/types.hpp'
+            obsolete.parent.mkdir(parents=True, exist_ok=True)
+            obsolete.write_text('// Старый сгенерированный заголовок\n')
+            manifest = base / 'generated/manifest.json'
+            manifest.write_text(json.dumps(json.loads(manifest.read_text()) +
+                                           ['include/postgresql/types.hpp']))
             run(service, output=base / 'generated')
+            self.assertFalse(obsolete.exists())
             self.assertEqual(first, self.snapshot(base / 'generated'))
             spec_path = service / 'docs/api/api.yaml'
             spec_path.write_text(spec_path.read_text() + '\n# Изменение контракта\n')

@@ -49,7 +49,6 @@ GENERATOR_TESTS = {
     'test_export_clients',
     'test_http_logging',
     'test_models',
-    'test_pg_types',
     'test_runtime',
     'test_service_accounts',
     'test_service_catalog',

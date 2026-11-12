@@ -72,6 +72,7 @@ SQL находятся в `postgresql/queries/*.sql`; userver генерируе
 
 ## Типы PostgreSQL
 
-При наличии `postgresql/types.yaml` общий кодген также создает C++-структуры
-и userver bindings для составных типов БД. Миграции с `CREATE TYPE` пишутся вручную.
+Модели составных типов БД и их `CppToUserPg` описываются вручную в отдельных
+заголовках `src/models/pg/`. Миграции с `CREATE TYPE` пишутся вручную.
+Сериализацию и разбор моделей выполняет userver.
 См. `docs/architecture/postgresql-types.md` в корне репозитория.

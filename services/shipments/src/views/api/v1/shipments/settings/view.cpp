@@ -1,17 +1,24 @@
 #include <components/settings.hpp>
+#include <components/shipment_card_integrations.hpp>
+#include <platform/auth/identity.hpp>
 #include <utility>
 #include <views/api/v1/shipments/settings/view.hpp>
 
 namespace shipments::views::api::v1::shipments::settings {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    auto result = deps.settings->Get(request.body, context);
-    return Response200{.container_types = std::move(result.container_types),
-        .customer_logist = std::move(result.customer_logist),
-        .number_template = std::move(result.number_template),
-        .planned_containers = std::move(result.planned_containers),
-        .reset_number_yearly = std::move(result.reset_number_yearly),
-        .route_types = std::move(result.route_types),
-        .statuses = std::move(result.statuses)};
+    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
+    const auto& customer = request.body.customer_id;
+    auto settings = deps.settings->Effective(organization, customer);
+    auto customer_logist = customer.has_value()
+        ? deps.shipment_card_integrations->CustomerLogist(context, customer.value())
+        : std::nullopt;
+    return Response200{.container_types = std::move(settings.ContainerTypes),
+        .customer_logist = std::move(customer_logist),
+        .number_template = std::move(settings.NumberTemplate),
+        .planned_containers = settings.PlannedContainers,
+        .reset_number_yearly = settings.ResetNumberYearly,
+        .route_types = std::move(settings.RouteTypes),
+        .statuses = std::move(settings.Statuses)};
 }
 }  // namespace shipments::views::api::v1::shipments::settings

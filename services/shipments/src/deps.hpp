@@ -2,6 +2,7 @@
 #include <components/cargo_suggestions.hpp>
 #include <components/container_plan.hpp>
 #include <components/settings.hpp>
+#include <components/shipment_card_integrations.hpp>
 #include <components/shipment_registry.hpp>
 #include <components/shipments.hpp>
 #include <components/transportation_operations.hpp>
@@ -30,6 +31,7 @@ struct Deps {
     ShipmentsComponent* shipments;
     ShipmentRegistryComponent* shipment_registry;
     SettingsComponent* settings;
+    ShipmentCardIntegrations* shipment_card_integrations;
     ContainerPlanComponent* container_plan;
     TransportationOperationsComponent* transportation_operations;
     CargoSuggestionsComponent* cargo_suggestions;
@@ -51,6 +53,7 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .shipments = &component_context.FindComponent<ShipmentsComponent>(),
         .shipment_registry = &component_context.FindComponent<ShipmentRegistryComponent>(),
         .settings = &component_context.FindComponent<SettingsComponent>(),
+        .shipment_card_integrations = &component_context.FindComponent<ShipmentCardIntegrations>(),
         .container_plan = &component_context.FindComponent<ContainerPlanComponent>(),
         .transportation_operations =
             &component_context.FindComponent<TransportationOperationsComponent>(),

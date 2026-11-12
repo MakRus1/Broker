@@ -1,11 +1,30 @@
+#include <components/shipment_card.hpp>
 #include <components/shipments.hpp>
+#include <helpers/revision.hpp>
+#include <permissions/permissions.hpp>
+#include <platform/auth/identity.hpp>
+#include <platform/text.hpp>
 #include <utility>
 #include <views/api/v1/shipments/update/view.hpp>
 
 namespace shipments::views::api::v1::shipments::update {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    auto result = deps.shipments->UpdateShipment(request.body, context);
-    return Response200{.shipment = std::move(result.shipment)};
+    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+    const auto& actor = platform::auth::GetIdentity(context);
+    const auto organization = platform::auth::GetOrganization(actor);
+    auto& body = request.body;
+    if (body.logist.has_value())
+        deps.shipment_card_integrations->ValidateLogist(
+            context, platform::TrimToOptional(body.logist.value()));
+    if (body.route_segments.has_value()) {
+        const auto previous = deps.shipments->GetShipment(organization, body.shipment_id);
+        helpers::CheckRevision(previous.revision, body.expected_revision);
+        auto& route = body.route_segments.value();
+        deps.shipment_card_integrations->ResolveRoute(context, route, previous.route_segments);
+        deps.shipment_card_integrations->CheckExistingRouteUsage(context, body.shipment_id,
+            shipment_card::ChangedRouteSegments(previous.route_segments, route));
+    }
+    return Response200{.shipment = deps.shipments->UpdateShipment(organization, actor, body)};
 }
 }  // namespace shipments::views::api::v1::shipments::update

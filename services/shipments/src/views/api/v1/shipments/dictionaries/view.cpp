@@ -3,9 +3,8 @@
 #include <views/api/v1/shipments/dictionaries/view.hpp>
 
 namespace shipments::views::api::v1::shipments::dictionaries {
-Response View::Handle(
-    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    auto result = deps.settings->Dictionaries(request.body, context);
+Response View::Handle(Request&&, userver::server::request::RequestContext&, Deps deps) {
+    auto result = deps.settings->GetDictionaries();
     return Response200{.carriage_terms = std::move(result.carriage_terms),
         .incoterms = std::move(result.incoterms),
         .loading = std::move(result.loading),

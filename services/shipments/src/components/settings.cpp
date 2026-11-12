@@ -26,7 +26,7 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
-      references_(context.FindComponent<ReferencesComponent>()) {}
+      card_integrations_(context.FindComponent<ShipmentCardIntegrations>()) {}
 
 userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -90,24 +90,39 @@ void ValidateBusinessRules(
             "platform_limit", "Настройки выходят за доступные организации возможности"};
 }
 
-}  // namespace
-
-std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
-    const std::string& organization) const {
-    const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization);
+std::optional<models::pg::OrganizationShipmentRules> ReadStoredRules(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return std::nullopt;
     return rows.AsSingleRow<models::pg::OrganizationShipmentRules>();
 }
 
-configs::ShipmentSettings SettingsComponent::Effective(
-    const std::string& organization, const std::optional<std::string>& customer) const {
-    const auto snapshot = configs_.GetSnapshot();
+configs::ShipmentSettings ResolveEffectiveSettings(const platform::configs::Snapshot& snapshot,
+    const std::string& organization, const std::optional<std::string>& customer,
+    const std::optional<models::pg::OrganizationShipmentRules>& stored) {
     const auto limits = ReadPlatformSettings(snapshot, organization);
     auto defaults =
         customer.has_value() ? ReadPlatformSettings(snapshot, organization, customer) : limits;
-    return ResolveShipmentSettings(std::move(defaults), limits, LoadRules(organization));
+    return ResolveShipmentSettings(std::move(defaults), limits, stored);
+}
+
+}  // namespace
+
+std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
+    const std::string& organization) const {
+    return ReadStoredRules(cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization));
+}
+
+configs::ShipmentSettings SettingsComponent::Effective(
+    const std::string& organization, const std::optional<std::string>& customer) const {
+    return ResolveEffectiveSettings(
+        configs_.GetSnapshot(), organization, customer, LoadRules(organization));
+}
+
+configs::ShipmentSettings SettingsComponent::Effective(pg::Transaction& transaction,
+    const std::string& organization, const std::optional<std::string>& customer) const {
+    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization, customer,
+        ReadStoredRules(transaction.Execute(sql::kGetOrganizationShipmentRules, organization)));
 }
 
 models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
@@ -134,7 +149,7 @@ models::ShipmentSettings SettingsComponent::Get(const models::GetShipmentSetting
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     const auto settings = Effective(organization, request.customer_id);
     const auto customer_logist = request.customer_id.has_value()
-        ? references_.CustomerLogist(context, request.customer_id.value())
+        ? card_integrations_.CustomerLogist(context, request.customer_id.value())
         : std::nullopt;
     return models::ShipmentSettings{.container_types = settings.ContainerTypes,
         .customer_logist = customer_logist,

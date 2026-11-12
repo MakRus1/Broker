@@ -5,8 +5,10 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/components/references.cpp
     src/components/shipments.cpp
+    src/components/shipment_card.cpp
+    src/components/shipment_card_integrations.cpp
+    src/components/route_details.cpp
     src/components/shipment_registry.cpp
     src/components/settings.cpp
     src/components/container_plan.cpp
@@ -15,8 +17,6 @@ add_library(
     src/components/transportation_dispatcher.cpp
     src/components/cargo_suggestions_cleanup.cpp
     src/bootstrap/ping.cpp
-    src/domain/route_details.cpp
-    src/domain/shipment_card.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

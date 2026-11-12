@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
+#include <components/shipment_card.hpp>
 #include <converters/shipments.hpp>
-#include <domain/shipment_card.hpp>
 #include <helpers/dictionaries.hpp>
 #include <models/errors.hpp>
 #include <platform/calendar_date.hpp>
@@ -56,7 +56,7 @@ void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row)
 
 }  // namespace
 
-namespace shipments::domain {
+namespace shipments::shipment_card {
 models::pg::ShipmentData CreateShipmentCard(
     const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings) {
     models::pg::ShipmentData card;
@@ -155,4 +155,4 @@ void ValidateRouteUsage(const models::pg::ShipmentRaw& previous,
                 "Нельзя удалить или изменить тип участка с данными перевозок"};
     }
 }
-}  // namespace shipments::domain
+}  // namespace shipments::shipment_card

@@ -11,16 +11,6 @@
 #include <userver/utils/text.hpp>
 
 namespace shipments::domain {
-using converters::Convert;
-using namespace helpers;
-
-std::optional<std::string> CleanText(const std::optional<std::string>& value) {
-    if (!value.has_value())
-        return std::nullopt;
-    auto result = userver::utils::text::Trim(value.value());
-    return result.empty() ? std::nullopt : std::optional<std::string>{result};
-}
-
 namespace {
 userver::utils::datetime::Date Today() {
     return userver::utils::datetime::Date{
@@ -28,9 +18,8 @@ userver::utils::datetime::Date Today() {
 }
 
 void ValidateShipmentDate(userver::utils::datetime::Date value) {
-    using namespace std::chrono;
-    if (!platform::IsCalendarDateInRange(
-            value, year{1900} / January / 1, year{9999} / December / 31))
+    if (!platform::IsCalendarDateInRange(value, std::chrono::year{1900} / std::chrono::January / 1,
+            std::chrono::year{9999} / std::chrono::December / 31))
         throw ApiError<400>{
             "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
@@ -69,13 +58,20 @@ template <typename Request> void ApplyCard(const Request& request, models::pg::S
             if (!ids.insert(segment.id).second)
                 throw ApiError<400>{
                     "duplicate_segment", "Идентификаторы участков должны быть уникальными"};
-            row.RouteSegments.push_back(Convert(segment));
+            row.RouteSegments.push_back(converters::Convert(segment));
         }
     }
     ValidateShipmentDate(row.ShipmentDate);
 }
 
 }  // namespace
+
+std::optional<std::string> CleanText(const std::optional<std::string>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    auto result = userver::utils::text::Trim(value.value());
+    return result.empty() ? std::nullopt : std::optional<std::string>{result};
+}
 
 models::pg::ShipmentData CreateShipmentCard(const models::CreateShipmentRequest& request,
     const configs::detail_SHIPMENT_SETTINGS::Value& settings) {
@@ -121,28 +117,31 @@ void ValidateCard(const models::pg::ShipmentData& row,
             (std::find(settings.RouteTypes.begin(), settings.RouteTypes.end(), segment.Type) ==
                     settings.RouteTypes.end() ||
                 std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                    return ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
+                    return helpers::ParseDictionary(entry.Dictionary) ==
+                        helpers::ShipmentDictionary::kRouteType &&
                         entry.Code == segment.Type;
                 })))
             throw ApiError<400>{"invalid_route_type", "Тип участка недоступен для организации"};
     }
     const auto validate = [&](const std::optional<std::string>& value,
-                              ShipmentDictionary dictionary, const std::string& message,
+                              helpers::ShipmentDictionary dictionary, const std::string& message,
                               const std::optional<std::string>& old) {
         if (!value.has_value() || (previous != nullptr && old == value))
             return;
         if (std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                return ParseDictionary(entry.Dictionary) == dictionary &&
+                return helpers::ParseDictionary(entry.Dictionary) == dictionary &&
                     entry.Code == value.value();
             }))
-            throw ApiError<400>{"invalid_" + std::string{DictionaryCode(dictionary)}, message};
+            throw ApiError<400>{
+                "invalid_" + std::string{helpers::DictionaryCode(dictionary)}, message};
     };
-    validate(row.Incoterms, ShipmentDictionary::kIncoterms, "Выберите Incoterms из справочника",
+    validate(row.Incoterms, helpers::ShipmentDictionary::kIncoterms,
+        "Выберите Incoterms из справочника",
         previous != nullptr ? previous->Incoterms : std::nullopt);
-    validate(row.CarriageTerms, ShipmentDictionary::kCarriageTerms,
+    validate(row.CarriageTerms, helpers::ShipmentDictionary::kCarriageTerms,
         "Выберите условия перевозки из справочника",
         previous != nullptr ? previous->CarriageTerms : std::nullopt);
-    validate(row.Loading, ShipmentDictionary::kLoading, "Выберите загрузку из справочника",
+    validate(row.Loading, helpers::ShipmentDictionary::kLoading, "Выберите загрузку из справочника",
         previous != nullptr ? previous->Loading : std::nullopt);
 }
 

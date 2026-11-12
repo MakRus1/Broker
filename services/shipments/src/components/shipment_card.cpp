@@ -142,18 +142,4 @@ std::vector<std::string> ChangedRouteSegments(
     return changed;
 }
 
-void ValidateRouteUsage(const models::pg::ShipmentRaw& previous,
-    const models::pg::ShipmentData& next, const std::vector<std::string>& protected_ids) {
-    for (const auto& id : protected_ids) {
-        const auto before =
-            std::find_if(previous.RouteSegments.begin(), previous.RouteSegments.end(),
-                [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
-        const auto after = std::find_if(next.RouteSegments.begin(), next.RouteSegments.end(),
-            [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
-        if (before != previous.RouteSegments.end() &&
-            (after == next.RouteSegments.end() || after->Type != before->Type))
-            throw ApiError<409>{"route_segment_in_use",
-                "Нельзя удалить или изменить тип участка с данными перевозок"};
-    }
-}
 }  // namespace shipments::shipment_card

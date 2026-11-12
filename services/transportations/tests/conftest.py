@@ -83,7 +83,7 @@ def api(service_client, auth_key):
             response = await service_client.post(
                 path, json=body, headers={'Authorization': 'Bearer ' + token}
             )
-            assert response.status == expected, response.text
+            assert response.status in (expected if isinstance(expected, tuple) else (expected,)), response.text
             return response.json()
 
     return Client()

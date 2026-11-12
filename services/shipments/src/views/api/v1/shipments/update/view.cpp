@@ -20,7 +20,9 @@ Response View::Handle(
         deps.shipment_card_integrations->ValidateLogist(
             organization, access_token, platform::TrimToOptional(body.logist.value()));
 
+    std::optional<std::int64_t> route_usage_version;
     if (body.route_segments.has_value()) {
+        route_usage_version = deps.shipments->GetRouteUsageVersion(organization, body.shipment_id);
         const auto previous = deps.shipments->GetShipment(organization, body.shipment_id);
         helpers::CheckRevision(previous.revision, body.expected_revision);
         auto& route = body.route_segments.value();
@@ -29,6 +31,7 @@ Response View::Handle(
             shipment_card::ChangedRouteSegments(previous.route_segments, route));
     }
 
-    return Response200{.shipment = deps.shipments->UpdateShipment(organization, actor, body)};
+    return Response200{
+        .shipment = deps.shipments->UpdateShipment(organization, actor, body, route_usage_version)};
 }
 }  // namespace shipments::views::api::v1::shipments::update

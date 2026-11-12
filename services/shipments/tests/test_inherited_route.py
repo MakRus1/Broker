@@ -31,7 +31,7 @@ async def test_contexts_are_scoped_and_terms_are_current(api):
 
 
 @pytest.mark.parametrize('change', ['remove', 'type', 'reorder'])
-async def test_used_stage_cannot_be_removed_or_retyped(api, change):
+async def test_used_stage_cannot_be_removed_or_retyped(api, transportation_route_usage, change):
     sea, road = [{'id': str(uuid4()), 'type': mode} for mode in ['sea', 'road']]
     shipment = (
         await api.post(
@@ -47,6 +47,7 @@ async def test_used_stage_cannot_be_removed_or_retyped(api, change):
         },
         roles=['transportations.read', 'transportations.write'],
     )
+    transportation_route_usage.add(sea['id'])
     changed = (
         [road]
         if change == 'remove'
@@ -90,3 +91,54 @@ async def test_stale_usage_registration_rejected(api):
         roles=['transportations.read', 'transportations.write'],
         expected=409,
     )
+
+async def test_failed_transportation_save_does_not_permanently_protect_stage(api):
+    stage = {'id': str(uuid4()), 'type': 'sea'}
+    shipment = (
+        await api.post('/api/v1/shipments/create', creation(route_segments=[stage]), expected=201)
+    )['shipment']
+    await api.post(
+        '/api/v1/shipments/route-segments/register-usage',
+        {'shipment_id': shipment['id'], 'expected_revision': 1, 'segment_ids': [stage['id']]},
+        roles=['transportations.read', 'transportations.write'],
+    )
+
+    # У перевозки после регистрации откатилась запись; фактических данных участка нет.
+    updated = await api.post(
+        '/api/v1/shipments/update',
+        {'shipment_id': shipment['id'], 'expected_revision': 1, 'route_segments': []},
+    )
+    assert updated['shipment']['route_segments'] == []
+
+
+async def test_registration_during_usage_check_requires_retry(api, mockserver):
+    stage = {'id': str(uuid4()), 'type': 'sea'}
+    shipment = (
+        await api.post('/api/v1/shipments/create', creation(route_segments=[stage]), expected=201)
+    )['shipment']
+
+    # Повторная регистрация того же участка тоже должна сдвигать версию защиты.
+    await api.post(
+        '/api/v1/shipments/route-segments/register-usage',
+        {'shipment_id': shipment['id'], 'expected_revision': 1, 'segment_ids': [stage['id']]},
+        roles=['transportations.read', 'transportations.write'],
+    )
+
+    @mockserver.json_handler('/api/v1/transportation-routes/usage')
+    async def usage(request):
+        await api.post(
+            '/api/v1/shipments/route-segments/register-usage',
+            {'shipment_id': shipment['id'], 'expected_revision': 1,
+             'segment_ids': [stage['id']]},
+            roles=['transportations.read', 'transportations.write'],
+        )
+        return {'segment_ids': []}
+
+    changed = await api.post(
+        '/api/v1/shipments/update',
+        {'shipment_id': shipment['id'], 'expected_revision': 1, 'route_segments': []},
+        expected=409,
+    )
+    assert changed['error'] == 'route_usage_changed'
+    actual = await api.post('/api/v1/shipments/get', {'shipment_id': shipment['id']})
+    assert actual['shipment']['route_segments'] == [stage]

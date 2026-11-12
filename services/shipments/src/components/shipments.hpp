@@ -19,7 +19,10 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     std::vector<models::Shipment> GetShipments(
         const std::string& organization, const std::vector<std::string>& shipment_ids) const;
     models::Shipment UpdateShipment(const std::string& organization,
-        const platform::auth::Identity&, const models::UpdateShipmentRequest&) const;
+        const platform::auth::Identity&, const models::UpdateShipmentRequest&,
+        const std::optional<std::int64_t>& route_usage_version) const;
+    std::int64_t GetRouteUsageVersion(
+        const std::string& organization, const std::string& shipment_id) const;
     void RegisterRouteUsage(
         const std::string& organization, const models::RegisterRouteUsageRequest&) const;
     std::optional<models::Shipment> FindManualShipmentReplay(const std::string& organization,

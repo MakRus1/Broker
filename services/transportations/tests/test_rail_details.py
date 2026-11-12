@@ -168,3 +168,45 @@ async def test_station_dependency_failure_does_not_change_route(api, shipment_ro
     assert result['error'] == 'transport_locations_unavailable'
     current = await api.post('/api/v1/transportations/get', {'transportation_id': transportation['id']})
     assert current['transportation']['revision'] == 1
+
+
+@pytest.mark.parametrize('failure', ['status', 'contract'])
+async def test_shipment_context_failure_is_reported_as_dependency_error(
+    api, shipment_routes, mockserver, failure,
+):
+    transportation, _ = await create_rail(api, shipment_routes)
+
+    @mockserver.handler('/api/v1/shipments/transportation-contexts')
+    def unavailable(request):
+        if failure == 'status':
+            return mockserver.make_response(status=503)
+        return mockserver.make_response('not-json', status=200)
+
+    result = await api.post('/api/v1/transportations/get', {
+        'transportation_id': transportation['id'],
+    }, expected=503)
+    assert result['error'] == 'shipment_unavailable'
+
+
+@pytest.mark.parametrize('failure', ['status', 'contract'])
+async def test_route_registration_failure_rolls_back_changes(
+    api, shipment_routes, stations, mockserver, pgsql, failure,
+):
+    transportation, stage = await create_rail(api, shipment_routes)
+
+    @mockserver.handler('/api/v1/shipments/route-segments/register-usage')
+    def unavailable(request):
+        if failure == 'status':
+            return mockserver.make_response(status=503)
+        return mockserver.make_response('not-json', status=200)
+
+    result = await api.post('/api/v1/transportation-routes/set', {
+        'transportation_id': transportation['id'], 'expected_revision': 1,
+        'route_segments': [{**stage, 'rail': details()}],
+    }, expected=503)
+    assert result['error'] == 'shipment_unavailable'
+    current = await api.post('/api/v1/transportations/get', {
+        'transportation_id': transportation['id'],
+    })
+    assert current['transportation']['revision'] == 1
+    assert current['transportation']['route_segments'][0].get('rail') is None

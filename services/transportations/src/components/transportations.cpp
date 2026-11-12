@@ -65,7 +65,7 @@ models::Transportation TransportationsComponent::FindTransportation(
 }
 
 models::TransportationHistoryResult TransportationsComponent::GetTransportationHistory(
-    models::ListHistoryRequest request, const std::string& organization) const {
+    const std::string& organization, const models::ListHistoryRequest& request) const {
     // Наличие перевозки и её история проверяются в одном снимке.
 
     auto transaction =
@@ -148,7 +148,7 @@ models::Transportation TransportationsComponent::UpdateTransportation(
 }
 
 models::ContainerFactsResult TransportationsComponent::GetContainerFacts(
-    models::ContainerFactsRequest request, const std::string& organization) const {
+    const std::string& organization, const models::ContainerFactsRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kContainerFacts,
         organization, request.shipment_id, request.pending_operation_ids);
     return converters::Convert(rows.AsContainer<std::vector<models::pg::ContainerFact>>());

@@ -10,8 +10,7 @@ Response View::Handle(
     platform::auth::CheckPermission(context, permissions::TRANSPORTATIONS_READ);
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
-    auto result =
-        deps.transportations->GetTransportationHistory(std::move(request.body), organization);
+    auto result = deps.transportations->GetTransportationHistory(organization, request.body);
 
     return Response200{.items = std::move(result.items)};
 }

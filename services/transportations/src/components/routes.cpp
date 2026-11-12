@@ -1,5 +1,6 @@
 #include <components/inherited_route.hpp>
 #include <components/rail_route.hpp>
+#include <components/route_integrations.hpp>
 #include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <converters/route.hpp>
@@ -101,7 +102,7 @@ models::Transportation RoutesComponent::SaveRoute(const std::string& organizatio
         value.actual_arrival_at = stored.actual_arrival_at;
         route_rules::ValidateActualTimes(value);
         transaction.Execute(sql::kInsertRouteSegment, organization, result.id, value.id,
-            static_cast<std::int64_t>(i), helpers::Document(value));
+            static_cast<std::int64_t>(i), converters::ToStoredRouteSegment(value));
         stored = std::move(value);
     }
 

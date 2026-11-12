@@ -1,16 +1,11 @@
 #pragma once
 #include <converters/shipments.hpp>
-#include <models/pg/shipment_raw.hpp>
-#include <platform/registry.hpp>
+#include <models/pg/shipment_registry_row.hpp>
 
 namespace shipments::converters {
-struct RegistryRow {
-    models::pg::ShipmentRaw Shipment;
-    std::string TextKey;
-    std::optional<userver::utils::datetime::Date> DateKey;
-};
 
-inline std::vector<models::Shipment> Convert(const std::vector<RegistryRow>& rows) {
+inline std::vector<models::Shipment> Convert(
+    const std::vector<models::pg::ShipmentRegistryRow>& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

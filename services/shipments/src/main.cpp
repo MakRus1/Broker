@@ -22,6 +22,7 @@
 #include <components/container_plan.hpp>
 #include <components/references.hpp>
 #include <components/settings.hpp>
+#include <components/shipment_registry.hpp>
 #include <components/shipments.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <components/transportation_operations.hpp>
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<shipments::CargoSuggestionsCleanup>();
     component_list.Append<shipments::ReferencesComponent>();
     component_list.Append<shipments::ShipmentsComponent>();
+    component_list.Append<shipments::ShipmentRegistryComponent>();
     component_list.Append<shipments::SettingsComponent>();
     component_list.Append<shipments::ContainerPlanComponent>();
     component_list.Append<shipments::TransportationOperationsComponent>();

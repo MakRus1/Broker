@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <chrono>
-#include <domain/route_details.hpp>
+#include <components/route_details.hpp>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
 #include <userver/utils/datetime.hpp>
 
-namespace shipments::domain {
+namespace shipments::route_details {
 namespace {
 void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool actual) {
     if (!value.has_value())
@@ -44,7 +44,6 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
     throw ApiError<400>{
         "route_location_not_found", "Выберите действующий порт или аэропорт из справочника"};
 }
-}  // namespace
 
 void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segments) {
     for (const auto& segment : segments) {
@@ -70,6 +69,8 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
         }
     }
 }
+
+}  // namespace
 
 void ResolveRouteDetails(std::vector<models::ShipmentRouteSegment>& segments,
     const std::vector<models::ShipmentRouteSegment>& previous, const RouteLocations& locations) {
@@ -97,4 +98,4 @@ void ResolveRouteDetails(std::vector<models::ShipmentRouteSegment>& segments,
         }
     }
 }
-}  // namespace shipments::domain
+}  // namespace shipments::route_details

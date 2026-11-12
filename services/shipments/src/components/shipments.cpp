@@ -1,8 +1,8 @@
 #include <boost/uuid/string_generator.hpp>
+#include <components/shipment_card.hpp>
 #include <components/shipments.hpp>
 #include <configs/keys.hpp>
 #include <converters/shipments.hpp>
-#include <domain/shipment_card.hpp>
 #include <helpers/database.hpp>
 #include <helpers/idempotency.hpp>
 #include <helpers/revision.hpp>
@@ -33,7 +33,7 @@ ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfi
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       settings_(context.FindComponent<SettingsComponent>()),
-      references_(context.FindComponent<ReferencesComponent>()) {}
+      card_integrations_(context.FindComponent<ShipmentCardIntegrations>()) {}
 
 userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -60,10 +60,10 @@ void RememberCargo(pg::Transaction& transaction, const std::string& organization
 
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
     const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
-    auto card = domain::CreateShipmentCard(body, settings);
+    auto card = shipment_card::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
-    domain::ValidateCard(card, settings, dictionaries);
+    shipment_card::ValidateCard(card, settings, dictionaries);
     card.Number = body.number.has_value()
         ? userver::utils::text::Trim(body.number.value())
         : GenerateShipmentNumber(transaction, organization, card.ShipmentDate, settings);
@@ -146,10 +146,10 @@ models::ShipmentsCreateResult ShipmentsComponent::CreateShipment(
             return models::ShipmentsCreateResult{.shipment = replay.value()};
         const auto logist = request.logist.has_value()
             ? platform::TrimToOptional(request.logist.value())
-            : references_.CustomerLogist(context, request.customer_id);
-        references_.ValidateLogist(context, logist);
+            : card_integrations_.CustomerLogist(context, request.customer_id);
+        card_integrations_.ValidateLogist(context, logist);
         if (request.route_segments.has_value()) {
-            references_.ResolveRoute(context, request.route_segments.value(), {});
+            card_integrations_.ResolveRoute(context, request.route_segments.value(), {});
         }
         auto body = request;
         body.logist = logist;
@@ -183,7 +183,8 @@ models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
         if (request.logist.has_value())
-            references_.ValidateLogist(context, platform::TrimToOptional(request.logist.value()));
+            card_integrations_.ValidateLogist(
+                context, platform::TrimToOptional(request.logist.value()));
         const auto organization = platform::auth::GetOrganization(identity);
         if (request.route_segments.has_value()) {
             const auto rows = cluster_->Execute(
@@ -193,9 +194,10 @@ models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
             const auto previous = rows.AsSingleRow<models::pg::ShipmentRaw>();
             CheckRevision(previous.Revision, request.expected_revision);
             const auto previous_route = Convert(previous).route_segments;
-            references_.ResolveRoute(context, request.route_segments.value(), previous_route);
-            references_.CheckExistingRouteUsage(context, request.shipment_id,
-                domain::ChangedRouteSegments(previous, request.route_segments.value()));
+            card_integrations_.ResolveRoute(
+                context, request.route_segments.value(), previous_route);
+            card_integrations_.CheckExistingRouteUsage(context, request.shipment_id,
+                shipment_card::ChangedRouteSegments(previous, request.route_segments.value()));
         }
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto current =
@@ -204,16 +206,17 @@ models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
             throw ApiError<404>{"not_found", "Поставка не найдена"};
         const auto previous = current.AsSingleRow<models::pg::ShipmentRaw>();
         CheckRevision(previous.Revision, request.expected_revision);
-        const auto card = domain::UpdateShipmentCard(request, previous);
+        const auto card = shipment_card::UpdateShipmentCard(request, previous);
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
                 .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
         const auto protected_ids =
             transaction.Execute(sql::kGetRouteUsage, organization, request.shipment_id)
                 .AsContainer<std::vector<std::string>>();
-        domain::ValidateRouteUsage(previous, card, protected_ids);
-        domain::ValidateCard(card,
-            settings_.Effective(organization, boost::uuids::to_string(card.CustomerId)),
+        shipment_card::ValidateRouteUsage(previous, card, protected_ids);
+        shipment_card::ValidateCard(card,
+            settings_.Effective(
+                transaction, organization, boost::uuids::to_string(card.CustomerId)),
             dictionaries, &previous);
         const auto result = Convert(transaction
                                         .Execute(sql::kUpdateShipment, organization,

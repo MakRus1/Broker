@@ -1,8 +1,8 @@
 #include <algorithm>
-#include <components/references.hpp>
+#include <components/route_details.hpp>
+#include <components/shipment_card_integrations.hpp>
 #include <converters/route_details.hpp>
 #include <converters/route_locations.hpp>
-#include <domain/route_details.hpp>
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <openapi/models.hpp>
@@ -17,15 +17,16 @@ namespace shipments {
 using namespace helpers;
 using namespace converters;
 
-void ReferencesComponent::ResolveRoute(const userver::server::request::RequestContext& context,
+void ShipmentCardIntegrations::ResolveRoute(const userver::server::request::RequestContext& context,
     std::vector<models::ShipmentRouteSegment>& segments,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
     const auto locations = LoadRouteLocations(context, segments);
-    domain::ResolveRouteDetails(segments, previous, locations);
+    route_details::ResolveRouteDetails(segments, previous, locations);
     ValidateRouteCounterparties(context, segments, previous);
 }
 
-ReferencesComponent::ReferencesComponent(const userver::components::ComponentConfig& config,
+ShipmentCardIntegrations::ShipmentCardIntegrations(
+    const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
@@ -34,12 +35,12 @@ ReferencesComponent::ReferencesComponent(const userver::components::ComponentCon
           context.FindComponent<clients::transport_locations::Component>().GetClient()),
       transportations_(context.FindComponent<clients::transportations::Component>().GetClient()) {}
 
-userver::yaml_config::Schema ReferencesComponent::GetStaticConfigSchema() {
+userver::yaml_config::Schema ShipmentCardIntegrations::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
 std::vector<clients::organizations::models::OrganizationEmployee>
-ReferencesComponent::FindEmployees(const userver::server::request::RequestContext& context,
+ShipmentCardIntegrations::FindEmployees(const userver::server::request::RequestContext& context,
     const std::optional<std::string>& query, const std::optional<std::string>& subject,
     int limit) const try {
     namespace api = clients::organizations::ApiOrganizationsEmployeesList;
@@ -65,13 +66,14 @@ ReferencesComponent::FindEmployees(const userver::server::request::RequestContex
         "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
 }
 
-void ReferencesComponent::ValidateLogist(const userver::server::request::RequestContext& context,
+void ShipmentCardIntegrations::ValidateLogist(
+    const userver::server::request::RequestContext& context,
     const std::optional<std::string>& subject) const {
     if (subject.has_value() && FindEmployees(context, std::nullopt, subject, 1).empty())
         throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
 }
 
-std::optional<std::string> ReferencesComponent::CustomerLogist(
+std::optional<std::string> ShipmentCardIntegrations::CustomerLogist(
     const userver::server::request::RequestContext& context, const std::string& customer) const
     try {
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
@@ -110,7 +112,7 @@ inline std::set<std::string> RouteCounterparties(
     return ids;
 }
 
-void ReferencesComponent::ValidateRouteCounterparties(
+void ShipmentCardIntegrations::ValidateRouteCounterparties(
     const userver::server::request::RequestContext& context,
     const std::vector<models::ShipmentRouteSegment>& stages,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
@@ -143,7 +145,7 @@ void ReferencesComponent::ValidateRouteCounterparties(
 
 using converters::Convert;
 
-domain::RouteLocations ReferencesComponent::LoadRouteLocations(
+route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
     const userver::server::request::RequestContext& context,
     const std::vector<models::ShipmentRouteSegment>& segments) const try {
     std::set<boost::uuids::uuid> ids;
@@ -161,7 +163,7 @@ domain::RouteLocations ReferencesComponent::LoadRouteLocations(
             add(segment.air.value().destination_airport);
         }
     }
-    domain::RouteLocations result;
+    route_details::RouteLocations result;
     if (ids.empty())
         return result;
     std::vector<std::string> requested;
@@ -188,7 +190,7 @@ domain::RouteLocations ReferencesComponent::LoadRouteLocations(
         "transport_locations_unavailable", "Некорректный ответ справочника транспортных пунктов"};
 }
 
-void ReferencesComponent::CheckExistingRouteUsage(
+void ShipmentCardIntegrations::CheckExistingRouteUsage(
     const userver::server::request::RequestContext& context, const std::string& shipment_id,
     const std::vector<std::string>& changed) const try {
     if (changed.empty())

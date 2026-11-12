@@ -20,8 +20,8 @@
 #include <components/cargo_suggestions.hpp>
 #include <components/cargo_suggestions_cleanup.hpp>
 #include <components/container_plan.hpp>
-#include <components/references.hpp>
 #include <components/settings.hpp>
+#include <components/shipment_card_integrations.hpp>
 #include <components/shipment_registry.hpp>
 #include <components/shipments.hpp>
 #include <components/transportation_dispatcher.hpp>
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<shipments::TransportationDispatcher>();
     component_list.Append<shipments::CargoSuggestionsCleanup>();
-    component_list.Append<shipments::ReferencesComponent>();
+    component_list.Append<shipments::ShipmentCardIntegrations>();
     component_list.Append<shipments::ShipmentsComponent>();
     component_list.Append<shipments::ShipmentRegistryComponent>();
     component_list.Append<shipments::SettingsComponent>();

@@ -97,8 +97,8 @@ models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItem
         throw ApiError<404>{"not_found", "Поставка не найдена"};
     const auto previous = shipment.AsSingleRow<models::pg::ShipmentRaw>();
     CheckRevision(previous.Revision, request.expected_revision);
-    const auto settings =
-        settings_.Effective(organization, boost::uuids::to_string(previous.CustomerId));
+    const auto settings = settings_.Effective(
+        transaction, organization, boost::uuids::to_string(previous.CustomerId));
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};

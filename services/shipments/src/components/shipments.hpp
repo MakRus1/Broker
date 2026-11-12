@@ -1,6 +1,6 @@
 #pragma once
-#include <components/references.hpp>
 #include <components/settings.hpp>
+#include <components/shipment_card_integrations.hpp>
 #include <models/errors.hpp>
 #include <models/shipment_source.hpp>
 #include <openapi/models.hpp>
@@ -35,7 +35,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     SettingsComponent& settings_;
-    ReferencesComponent& references_;
+    ShipmentCardIntegrations& card_integrations_;
     std::optional<models::Shipment> FindCreatedShipment(
         const std::string&, const ShipmentSource&, const userver::formats::json::Value&) const;
     models::Shipment CreateShipmentFromSource(const std::string&, const platform::auth::Identity&,

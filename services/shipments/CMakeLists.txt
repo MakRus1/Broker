@@ -11,6 +11,7 @@ add_library(
     src/components/route_details.cpp
     src/components/shipment_registry.cpp
     src/components/settings.cpp
+    src/components/container_plan_calculation.cpp
     src/components/container_plan.cpp
     src/components/transportation_operations.cpp
     src/components/cargo_suggestions.cpp

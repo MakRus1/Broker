@@ -1,5 +1,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <components/container_plan.hpp>
+#include <components/container_plan_calculation.hpp>
 #include <models/errors.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
@@ -21,7 +22,7 @@ Response View::Handle(
         fact_request.pending_operation_ids.push_back(boost::uuids::to_string(operation.Id));
     const auto facts = deps.transportations.ApiV1TransportationsContainerFact(
         {.body = std::move(fact_request)}, platform::auth::GetAccessToken(context));
-    auto result = deps.container_plan->BuildPlanPage(snapshot, facts, body);
+    auto result = container_plan::BuildPlanPage(snapshot, facts, body.after, body.limit);
     return Response200{
         .items = std::move(result.items), .unplanned_items = std::move(result.unplanned_items)};
 } catch (const platform::http::ApiError&) {

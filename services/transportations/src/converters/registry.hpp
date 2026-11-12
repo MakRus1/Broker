@@ -1,14 +1,11 @@
 #pragma once
-#include <models/pg/transportation_raw.hpp>
+#include <models/transportation_registry_row.hpp>
 #include <openapi/models.hpp>
 
 namespace transportations::converters {
-struct RegistryRow {
-    models::pg::TransportationRaw Transportation;
-    std::string SortKey;
-};
 
-inline std::vector<models::pg::TransportationRaw> Convert(const std::vector<RegistryRow>& rows) {
+inline std::vector<models::pg::TransportationRaw> Convert(
+    const std::vector<models::TransportationRegistryRow>& rows) {
     std::vector<models::pg::TransportationRaw> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
-#include <domain/rail.hpp>
-#include <domain/road.hpp>
-#include <domain/route.hpp>
+#include <components/rail_route.hpp>
+#include <components/road_route.hpp>
+#include <components/route_validation.hpp>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
 #include <set>
@@ -20,7 +20,7 @@ void CheckInterval(const std::optional<std::chrono::system_clock::time_point>& d
 }
 }  // namespace
 
-namespace transportations::domain {
+namespace transportations::route_rules {
 void ValidateRoute(const models::SetRouteRequest& request) {
     ValidateRoadDetails(request);
     std::set<boost::uuids::uuid> ids;
@@ -70,4 +70,4 @@ void ValidateActualTimes(const models::RouteSegment& route_segment) {
     CheckInterval(route_segment.actual_departure_at, route_segment.actual_arrival_at);
 }
 
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

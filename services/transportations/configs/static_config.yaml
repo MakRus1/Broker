@@ -6,10 +6,11 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
+        transportations-registry: {}
         transportations-transportations: {}
         transportations-routes: {}
         transportations-actuals: {}
-        transportations-references: {}
+        transportations-route-integrations: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-internal-v1-shipments-route_projection:
             path: /api/internal/v1/shipments/route-projection

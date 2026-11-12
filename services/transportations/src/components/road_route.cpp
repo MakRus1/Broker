@@ -1,10 +1,12 @@
-#include <domain/road.hpp>
+#include <components/road_route.hpp>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
 #include <userver/utils/datetime.hpp>
 
-namespace transportations::domain {
 namespace {
+namespace models = transportations::models;
+using transportations::ApiError;
+
 void CheckDate(const std::optional<userver::utils::datetime::Date>& value, bool actual) {
     if (!value.has_value())
         return;
@@ -26,6 +28,7 @@ void CheckOrder(const std::optional<userver::utils::datetime::Date>& from,
 }
 }  // namespace
 
+namespace transportations::route_rules {
 void ValidateRoadDetails(const models::SetRouteRequest& request) {
     for (const auto& segment : request.route_segments) {
         if (segment.international_road.has_value()) {
@@ -56,4 +59,4 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
         }
     }
 }
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

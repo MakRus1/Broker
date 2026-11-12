@@ -1,8 +1,8 @@
 #pragma once
-#include <components/references.hpp>
+#include <models/shipment_context.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
@@ -12,30 +12,23 @@ class TransportationsComponent final : public userver::components::ComponentBase
     TransportationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::TransportationHistoryResult History(models::ListHistoryRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationResult Get(models::GetTransportationRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationListResult List(models::ListTransportationsRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationResult Create(models::CreateTransportationRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationResult Update(models::UpdateTransportationRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::ContainerFactsResult ContainerFacts(models::ContainerFactsRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::RegistryValuesResult FilterValues(models::FilterValuesRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::EnsureTransportationsResult EnsureCreated(models::EnsureCreatedRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::Transportation LoadLocal(
-        const userver::server::request::RequestContext&, const std::string&) const;
-    models::Transportation Load(
-        const userver::server::request::RequestContext&, const std::string&) const;
+    models::Transportation FindTransportation(
+        const std::string& organization, const std::string& id) const;
+    models::TransportationHistoryResult GetTransportationHistory(
+        models::ListHistoryRequest, const std::string& organization) const;
+    models::Transportation CreateTransportation(const std::string& organization,
+        const platform::auth::Identity&, const models::CreateTransportationRequest&,
+        const models::ShipmentContext&) const;
+    models::Transportation UpdateTransportation(const std::string& organization,
+        const platform::auth::Identity&, const models::UpdateTransportationRequest&,
+        const models::ShipmentContext&) const;
+    models::ContainerFactsResult GetContainerFacts(
+        models::ContainerFactsRequest, const std::string& organization) const;
+    models::EnsureTransportationsResult CreateTransportationsFromCommand(
+        const models::EnsureCreatedRequest&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
-    ReferencesComponent& references_;
 };
 }  // namespace transportations
 

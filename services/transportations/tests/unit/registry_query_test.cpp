@@ -2,6 +2,8 @@
 #include <registry/query.hpp>
 #include <userver/utest/utest.hpp>
 
+namespace pg = userver::storages::postgres;
+
 namespace transportations::registry_query {
 namespace {
 const std::string kOrganization = "00000000-0000-0000-0000-000000000001";

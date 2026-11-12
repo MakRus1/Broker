@@ -1,10 +1,10 @@
 #pragma once
-#include <components/references.hpp>
-#include <components/transportations.hpp>
-#include <domain/actuals.hpp>
+#include <components/actual_changes.hpp>
+#include <components/route_integrations.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
@@ -14,18 +14,20 @@ class ActualsComponent final : public userver::components::ComponentBase {
     ActualsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::TransportationResult Record(models::RecordActualRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationResult Correct(models::CorrectActualRequest request,
-        userver::server::request::RequestContext& context) const;
+    models::Transportation RecordActual(const std::string& organization,
+        const platform::auth::Identity&, std::string_view access_token,
+        const models::RecordActualRequest&, const models::ShipmentContext&) const;
+    models::Transportation CorrectActual(const std::string& organization,
+        const platform::auth::Identity&, std::string_view access_token,
+        const models::CorrectActualRequest&, const models::ShipmentContext&) const;
 
   private:
     template <typename Request>
-    models::TransportationResult Apply(
-        const Request&, userver::server::request::RequestContext&, domain::ActualChange) const;
+    models::Transportation ApplyActualChange(const Request&, const std::string& organization,
+        const platform::auth::Identity&, std::string_view access_token,
+        const models::ShipmentContext&, route_rules::ActualChange) const;
     userver::storages::postgres::ClusterPtr cluster_;
-    ReferencesComponent& references_;
-    TransportationsComponent& transportations_;
+    RouteIntegrations& integrations_;
 };
 }  // namespace transportations
 

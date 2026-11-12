@@ -1,14 +1,13 @@
 #pragma once
-#include <map>
+#include <models/railway_stations.hpp>
 #include <openapi/models.hpp>
 #include <string>
 #include <vector>
 
-namespace transportations::domain {
-using RailwayStations = std::map<std::string, models::RailwayStation>;
+namespace transportations::route_rules {
 std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request);
 void ResolveRailwayStations(models::SetRouteRequest& request,
-    const models::Transportation& previous, const RailwayStations& stations);
+    const models::Transportation& previous, const models::RailwayStations& stations);
 // ЖД-участок хранит отправление и назначение только в rail.
 void NormalizeRailLocations(models::RouteSegment& segment);
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

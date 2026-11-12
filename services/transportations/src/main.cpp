@@ -1,6 +1,7 @@
 #include <components/actuals.hpp>
-#include <components/references.hpp>
+#include <components/route_integrations.hpp>
 #include <components/routes.hpp>
+#include <components/transportation_registry.hpp>
 #include <components/transportations.hpp>
 #include <userver/clients/dns/component.hpp>
 #include <userver/clients/http/component.hpp>
@@ -70,9 +71,10 @@ int main(int argc, char* argv[]) {
     // SERVICE_REGISTRATION_END
 
     component_list.Append<transportations::TransportationsComponent>();
+    component_list.Append<transportations::TransportationRegistry>();
     component_list.Append<transportations::RoutesComponent>();
     component_list.Append<transportations::ActualsComponent>();
-    component_list.Append<transportations::ReferencesComponent>();
+    component_list.Append<transportations::RouteIntegrations>();
     component_list = transportations::openapi::AppendGeneratedHandlers(component_list);
 
     return userver::utils::DaemonMain(argc, argv, component_list);

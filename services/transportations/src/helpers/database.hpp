@@ -11,7 +11,7 @@
 namespace transportations {
 namespace helpers {
 namespace pg = userver::storages::postgres;
-inline constexpr pg::TransactionOptions kReadSnapshot{
+inline constexpr pg::TransactionOptions kReadOnlySnapshotTransaction{
     pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
 template <typename Request, typename Result>

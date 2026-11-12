@@ -1,9 +1,9 @@
 #pragma once
-#include <components/references.hpp>
-#include <components/transportations.hpp>
+#include <components/route_integrations.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
@@ -13,17 +13,17 @@ class RoutesComponent final : public userver::components::ComponentBase {
     RoutesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::RouteUsageResult Usage(
-        models::RouteUsageRequest request, userver::server::request::RequestContext& context) const;
-    models::RouteProjectionResult Project(models::ShipmentRouteProjection request,
-        userver::server::request::RequestContext& context) const;
-    models::TransportationResult Set(
-        models::SetRouteRequest request, userver::server::request::RequestContext& context) const;
+    models::RouteUsageResult FindRouteUsage(
+        const std::string& organization, const std::string& shipment_id) const;
+    models::RouteProjectionResult ApplyShipmentRouteProjection(
+        const models::ShipmentRouteProjection&) const;
+    models::Transportation SaveRoute(const std::string& organization,
+        const platform::auth::Identity&, std::string_view access_token,
+        const models::SetRouteRequest&, const models::ShipmentContext&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
-    ReferencesComponent& references_;
-    TransportationsComponent& transportations_;
+    RouteIntegrations& integrations_;
 };
 }  // namespace transportations
 

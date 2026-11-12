@@ -1,5 +1,5 @@
 #pragma once
-#include <domain/rail.hpp>
+#include <components/rail_route.hpp>
 #include <map>
 #include <models/pg/route_segment.hpp>
 #include <models/pg/transportation_event.hpp>
@@ -9,9 +9,16 @@
 #include <vector>
 
 namespace transportations::converters {
+inline std::optional<std::string> ConvertOwnership(
+    const std::optional<models::ContainerOwnership>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return std::string{models::EnumValue(value.value())};
+}
+
 inline models::RouteSegment Convert(const userver::formats::json::Value& document) {
     auto result = models::ParseModelJson(document, std::type_identity<models::RouteSegment>{});
-    domain::NormalizeRailLocations(result);
+    route_rules::NormalizeRailLocations(result);
     return result;
 }
 

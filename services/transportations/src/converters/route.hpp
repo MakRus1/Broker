@@ -1,5 +1,5 @@
 #pragma once
-#include <domain/rail.hpp>
+#include <components/rail_route.hpp>
 #include <openapi/models.hpp>
 
 namespace transportations::converters {
@@ -17,7 +17,7 @@ inline models::RouteSegment Convert(const models::SetRouteSegmentsItem& source) 
         result.destination =
             models::RouteSegmentDestination{.country_code = source.destination.value().country_code,
                 .name = source.destination.value().name};
-    domain::NormalizeRailLocations(result);
+    route_rules::NormalizeRailLocations(result);
     result.contractor_id = source.contractor_id;
     result.planned_departure_at = source.planned_departure_at;
     result.planned_arrival_at = source.planned_arrival_at;

@@ -114,6 +114,16 @@ async def test_concurrent_automatic_numbers_and_replay(api):
     assert await api.post('/api/v1/shipments/create', bodies[0], expected=201) == shipments[0]
 
 
+async def test_concurrent_create_with_same_idempotency_key(api):
+    body = creation()
+    first, second = await asyncio.gather(
+        api.post('/api/v1/shipments/create', body, expected=201),
+        api.post('/api/v1/shipments/create', body, expected=201),
+    )
+    assert first == second
+    await api.post('/api/v1/shipments/create', {**body, 'reference': 'Другие данные'}, expected=409)
+
+
 @pytest.mark.parametrize(
     'field,value',
     [

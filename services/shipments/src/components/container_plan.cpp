@@ -70,7 +70,8 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
 
 ContainerPlanSnapshot ContainerPlanComponent::LoadPlan(
     const std::string& organization, const std::string& shipment_id) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadSnapshot);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
     if (transaction.Execute(sql::kGetShipment, organization, shipment_id).IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
     auto rows = transaction.Execute(sql::kListItems, organization, shipment_id)

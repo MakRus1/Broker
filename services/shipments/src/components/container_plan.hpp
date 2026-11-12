@@ -1,5 +1,4 @@
 #pragma once
-#include <clients/transportations/client.hpp>
 #include <components/settings.hpp>
 #include <models/container_plan.hpp>
 #include <openapi/models.hpp>
@@ -18,9 +17,6 @@ class ContainerPlanComponent final : public userver::components::ComponentBase {
         const models::AddItemRequest&, const platform::auth::Identity&) const;
     ContainerPlanSnapshot LoadPlan(
         const std::string& organization, const std::string& shipment_id) const;
-    models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snapshot,
-        const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
-        const models::ListItemsRequest& request) const;
     models::ShipmentItem UpdatePlannedContainer(
         const models::UpdateItemRequest&, const platform::auth::Identity&) const;
 

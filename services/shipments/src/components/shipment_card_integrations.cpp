@@ -6,7 +6,6 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <openapi/models.hpp>
-#include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -17,12 +16,13 @@ namespace shipments {
 using namespace helpers;
 using namespace converters;
 
-void ShipmentCardIntegrations::ResolveRoute(const userver::server::request::RequestContext& context,
+void ShipmentCardIntegrations::ResolveRoute(std::string_view access_token,
     std::vector<models::ShipmentRouteSegment>& segments,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
-    const auto locations = LoadRouteLocations(context, segments);
+    const auto locations = LoadRouteLocations(access_token, segments);
     route_details::ResolveRouteDetails(segments, previous, locations);
-    ValidateRouteCounterparties(context, segments, previous);
+
+    ValidateRouteCounterparties(access_token, segments, previous);
 }
 
 ShipmentCardIntegrations::ShipmentCardIntegrations(
@@ -40,17 +40,18 @@ userver::yaml_config::Schema ShipmentCardIntegrations::GetStaticConfigSchema() {
 }
 
 std::vector<clients::organizations::models::OrganizationEmployee>
-ShipmentCardIntegrations::FindEmployees(const userver::server::request::RequestContext& context,
-    const std::optional<std::string>& query, const std::optional<std::string>& subject,
-    int limit) const try {
+ShipmentCardIntegrations::FindEmployees(const std::string& organization,
+    std::string_view access_token, const std::optional<std::string>& query,
+    const std::optional<std::string>& subject, int limit) const try {
     namespace api = clients::organizations::ApiOrganizationsEmployeesList;
-    const auto& identity = platform::auth::GetIdentity(context);
+
     const auto response = organizations_.ApiOrganizationsEmployeesList(
         api::Request{.body = {.limit = limit,
-                         .organization_id = platform::auth::GetOrganization(identity),
+                         .organization_id = organization,
                          .query = query,
                          .subject = subject}},
-        platform::auth::GetAccessToken(context));
+        access_token);
+
     return response.items;
 } catch (const platform::http::ApiError&) {
 
@@ -66,19 +67,19 @@ ShipmentCardIntegrations::FindEmployees(const userver::server::request::RequestC
         "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
 }
 
-void ShipmentCardIntegrations::ValidateLogist(
-    const userver::server::request::RequestContext& context,
-    const std::optional<std::string>& subject) const {
-    if (subject.has_value() && FindEmployees(context, std::nullopt, subject, 1).empty())
+void ShipmentCardIntegrations::ValidateLogist(const std::string& organization,
+    std::string_view access_token, const std::optional<std::string>& subject) const {
+    if (subject.has_value() &&
+        FindEmployees(organization, access_token, std::nullopt, subject, 1).empty())
         throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
 }
 
 std::optional<std::string> ShipmentCardIntegrations::CustomerLogist(
-    const userver::server::request::RequestContext& context, const std::string& customer) const
-    try {
+    std::string_view access_token, const std::string& customer) const try {
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
     const auto result = counterparties_.ApiV1CounterpartiesGet(
-        api::Request{.body = {.id = customer}}, platform::auth::GetAccessToken(context));
+        api::Request{.body = {.id = customer}}, access_token);
+
     return result.counterparty.logist.value_or(std::nullopt);
 } catch (const platform::http::ErrorByStatus<404>&) {
 
@@ -101,6 +102,7 @@ inline std::set<std::string> RouteCounterparties(
         if (id.has_value())
             ids.insert(id.value());
     };
+
     for (const auto& stage : stages) {
         if (stage.sea.has_value()) {
             add(stage.sea.value().departure_terminal_id);
@@ -109,20 +111,22 @@ inline std::set<std::string> RouteCounterparties(
         if (stage.air.has_value())
             add(stage.air.value().carrier_id);
     }
+
     return ids;
 }
 
-void ShipmentCardIntegrations::ValidateRouteCounterparties(
-    const userver::server::request::RequestContext& context,
+void ShipmentCardIntegrations::ValidateRouteCounterparties(std::string_view access_token,
     const std::vector<models::ShipmentRouteSegment>& stages,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
     const auto old = RouteCounterparties(previous);
+
     for (const auto& id : RouteCounterparties(stages)) {
         if (old.contains(id))
             continue;
+
         try {
-            const auto response = counterparties_.ApiV1CounterpartiesGet(
-                {.body = {.id = id}}, platform::auth::GetAccessToken(context));
+            const auto response =
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token);
             if (response.counterparty.archived)
                 throw ApiError<400>{
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};
@@ -146,13 +150,14 @@ void ShipmentCardIntegrations::ValidateRouteCounterparties(
 using converters::Convert;
 
 route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
-    const userver::server::request::RequestContext& context,
-    const std::vector<models::ShipmentRouteSegment>& segments) const try {
+    std::string_view access_token, const std::vector<models::ShipmentRouteSegment>& segments) const
+    try {
     std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& location) {
         if (location.has_value())
             ids.insert(boost::uuids::string_generator{}(location.value().id));
     };
+
     for (const auto& segment : segments) {
         if (segment.sea.has_value()) {
             add(segment.sea.value().pol);
@@ -163,18 +168,24 @@ route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
             add(segment.air.value().destination_airport);
         }
     }
+
     route_details::RouteLocations result;
     if (ids.empty())
+
         return result;
+
     std::vector<std::string> requested;
     for (const auto& id : ids)
         requested.push_back(boost::uuids::to_string(id));
+
     const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
-        {.body = {.ids = requested}}, platform::auth::GetAccessToken(context));
+        {.body = {.ids = requested}}, access_token);
+
     for (const auto& value : response.items) {
         auto location = converters::Convert(value);
         result.emplace(location.id, std::move(location));
     }
+
     return result;
 } catch (const platform::http::CancelledError&) {
 
@@ -190,15 +201,15 @@ route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
         "transport_locations_unavailable", "Некорректный ответ справочника транспортных пунктов"};
 }
 
-void ShipmentCardIntegrations::CheckExistingRouteUsage(
-    const userver::server::request::RequestContext& context, const std::string& shipment_id,
-    const std::vector<std::string>& changed) const try {
+void ShipmentCardIntegrations::CheckExistingRouteUsage(std::string_view access_token,
+    const std::string& shipment_id, const std::vector<std::string>& changed) const try {
     if (changed.empty())
         return;
+
     namespace api = clients::transportations::ApiV1TransportationRoutesUsage;
     const auto result = transportations_.ApiV1TransportationRoutesUsage(
-        api::Request{.body = {.shipment_id = shipment_id}},
-        platform::auth::GetAccessToken(context));
+        api::Request{.body = {.shipment_id = shipment_id}}, access_token);
+
     for (const auto& id : result.segment_ids)
         if (std::find(changed.begin(), changed.end(), id) != changed.end())
             throw ApiError<409>{"route_segment_in_use",

@@ -20,9 +20,8 @@ Response View::Handle(
     helpers::CheckRevision(loaded.revision, request.body.expected_revision);
 
     const auto& access_token = platform::auth::GetAccessToken(context);
-    const auto sources =
-        deps.route_integrations->FindShipmentContexts(access_token, {loaded.shipment_id});
-    const auto& source = route_rules::FindShipmentContext(sources, loaded.shipment_id);
+    const auto source =
+        deps.route_integrations->GetShipmentContext(access_token, loaded.shipment_id);
     route_rules::InheritRoute(loaded, source);
     auto& body = request.body;
     route_rules::ValidateRoute(body);

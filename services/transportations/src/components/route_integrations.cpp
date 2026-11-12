@@ -1,3 +1,4 @@
+#include <components/inherited_route.hpp>
 #include <components/route_integrations.hpp>
 #include <converters/railway_station.hpp>
 #include <models/errors.hpp>
@@ -34,6 +35,12 @@ RouteIntegrations::RouteIntegrations(const userver::components::ComponentConfig&
 
 userver::yaml_config::Schema RouteIntegrations::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
+}
+
+models::ShipmentContext RouteIntegrations::GetShipmentContext(
+    std::string_view access_token, const std::string& shipment_id) const {
+    const auto contexts = FindShipmentContexts(access_token, {shipment_id});
+    return route_rules::FindShipmentContext(contexts, shipment_id);
 }
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(

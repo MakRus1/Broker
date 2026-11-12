@@ -18,9 +18,8 @@ Response View::Handle(
     helpers::CheckRevision(transportation.revision, request.body.expected_revision);
 
     const auto& access_token = platform::auth::GetAccessToken(context);
-    const auto sources =
-        deps.route_integrations->FindShipmentContexts(access_token, {transportation.shipment_id});
-    const auto& source = route_rules::FindShipmentContext(sources, transportation.shipment_id);
+    const auto source =
+        deps.route_integrations->GetShipmentContext(access_token, transportation.shipment_id);
 
     auto result =
         deps.actuals->CorrectActual(organization, actor, access_token, request.body, source);

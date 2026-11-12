@@ -16,9 +16,8 @@ Response View::Handle(
         deps.transportations->FindTransportation(organization, request.body.transportation_id);
 
     const auto& access_token = platform::auth::GetAccessToken(context);
-    const auto sources =
-        deps.route_integrations->FindShipmentContexts(access_token, {transportation.shipment_id});
-    const auto& source = route_rules::FindShipmentContext(sources, transportation.shipment_id);
+    const auto source =
+        deps.route_integrations->GetShipmentContext(access_token, transportation.shipment_id);
     route_rules::InheritRoute(transportation, source);
 
     return Response200{.transportation = std::move(transportation)};

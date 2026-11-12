@@ -14,9 +14,8 @@ Response View::Handle(
     const auto organization = platform::auth::GetOrganization(actor);
 
     const auto& access_token = platform::auth::GetAccessToken(context);
-    const auto sources =
-        deps.route_integrations->FindShipmentContexts(access_token, {request.body.shipment_id});
-    const auto& source = route_rules::FindShipmentContext(sources, request.body.shipment_id);
+    const auto source =
+        deps.route_integrations->GetShipmentContext(access_token, request.body.shipment_id);
 
     auto result =
         deps.transportations->CreateTransportation(organization, actor, request.body, source);

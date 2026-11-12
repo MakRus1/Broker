@@ -9,9 +9,9 @@
 #include <set>
 #include <userver/utils/text.hpp>
 
-namespace shipments::domain {
 namespace {
-template <typename Request> void ApplyCard(const Request& request, models::pg::ShipmentData& row) {
+template <typename Request>
+void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row) {
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
     if (request.recipient_id.has_value()) {
@@ -43,19 +43,20 @@ template <typename Request> void ApplyCard(const Request& request, models::pg::S
         std::set<std::string> ids;
         for (const auto& segment : request.route_segments.value()) {
             if (!ids.insert(segment.id).second)
-                throw ApiError<400>{
+                throw shipments::ApiError<400>{
                     "duplicate_segment", "Идентификаторы участков должны быть уникальными"};
-            row.RouteSegments.push_back(converters::Convert(segment));
+            row.RouteSegments.push_back(shipments::converters::Convert(segment));
         }
     }
     if (row.ShipmentDate < userver::utils::datetime::Date{1900, 1, 1} ||
         row.ShipmentDate > userver::utils::datetime::Date{9999, 12, 31})
-        throw ApiError<400>{
+        throw shipments::ApiError<400>{
             "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
 }  // namespace
 
+namespace shipments::domain {
 models::pg::ShipmentData CreateShipmentCard(
     const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings) {
     models::pg::ShipmentData card;

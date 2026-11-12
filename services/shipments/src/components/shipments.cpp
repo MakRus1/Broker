@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <boost/uuid/string_generator.hpp>
 #include <components/shipments.hpp>
 #include <configs/keys.hpp>
@@ -12,12 +11,12 @@
 #include <models/pg/shipment_data.hpp>
 #include <models/pg/shipment_dictionary_value.hpp>
 #include <models/pg/shipment_raw.hpp>
+#include <models/shipment_source_record.hpp>
 #include <openapi/models.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <platform/text.hpp>
-#include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -59,11 +58,6 @@ void RememberCargo(pg::Transaction& transaction, const std::string& organization
             userver::utils::text::ToLower(description.value()));
 }
 
-struct CreatedShipmentRow {
-    std::string Id;
-    Json Document;
-};
-
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
     const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
     auto card = domain::CreateShipmentCard(body, settings);
@@ -89,17 +83,18 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
         organization, source.Producer, source.Type, source.Id);
     if (saved.IsEmpty())
         return std::nullopt;
-    const auto stored = saved.AsSingleRow<CreatedShipmentRow>(pg::kRowTag);
-    if (stored.Document != document)
+    const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
+    if (stored.Payload != document)
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
-    return Convert(
-        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment, organization, stored.Id)
-            .AsSingleRow<models::pg::ShipmentRaw>());
+    return Convert(cluster_
+                       ->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment, organization,
+                           stored.ShipmentId)
+                       .AsSingleRow<models::pg::ShipmentRaw>());
 }
 
 // Один сценарий для ручного создания и команд доверенных сервисов.
 // Источник участвует только в дедупликации и связи, не выбирает бизнес-ветку.
-models::Shipment ShipmentsComponent::CreateShipment(const std::string& organization,
+models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
     const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
     const ShipmentSource& source, const Json& document) const {
     if (const auto saved = FindCreatedShipment(organization, source, document); saved.has_value())
@@ -111,11 +106,11 @@ models::Shipment ShipmentsComponent::CreateShipment(const std::string& organizat
     const auto saved = transaction.Execute(
         sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
     if (!saved.IsEmpty()) {
-        const auto stored = saved.AsSingleRow<CreatedShipmentRow>(pg::kRowTag);
-        if (stored.Document != document)
+        const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
+        if (stored.Payload != document)
             throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
         const auto shipment =
-            Convert(transaction.Execute(sql::kGetShipment, organization, stored.Id)
+            Convert(transaction.Execute(sql::kGetShipment, organization, stored.ShipmentId)
                         .AsSingleRow<models::pg::ShipmentRaw>());
         transaction.Commit();
         return shipment;
@@ -130,34 +125,8 @@ models::Shipment ShipmentsComponent::CreateShipment(const std::string& organizat
     return result;
 }
 
-models::ShipmentsFilterValuesResult ShipmentsComponent::FilterValues(
-    const models::ShipmentsFilterValuesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    using namespace ::shipments::registry_query;
-    try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        models::ShipmentsFilterValuesResult result;
-        result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
-        if (!request.field.has_value())
-            return result;
-        const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
-        const auto rows =
-            cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(request.limit);
-        for (std::size_t index = 0;
-             index < rows.size() && index < static_cast<std::size_t>(request.limit); ++index)
-            result.values.push_back({.label = rows[index].Label, .value = rows[index].Value});
-        if (more)
-            result.next_after = result.values.back().value;
-        return result;
-    } catch (const registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
-}
-
-models::ShipmentsCreateResult ShipmentsComponent::Create(models::CreateShipmentRequest request,
+models::ShipmentsCreateResult ShipmentsComponent::CreateShipment(
+    models::CreateShipmentRequest request,
     userver::server::request::RequestContext& context) const {
     try {
         const auto& identity = platform::auth::GetIdentity(context);
@@ -180,14 +149,16 @@ models::ShipmentsCreateResult ShipmentsComponent::Create(models::CreateShipmentR
         }
         auto body = request;
         body.logist = logist;
-        const auto result = CreateShipment(organization, identity, body, source, Document(request));
+        const auto result =
+            CreateShipmentFromSource(organization, identity, body, source, Document(request));
         return models::ShipmentsCreateResult{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{"number_exists", "Номер поставки уже занят"};
     }
 }
 
-models::ShipmentsGetResult ShipmentsComponent::Get(const models::GetShipmentRequest& request,
+models::ShipmentsGetResult ShipmentsComponent::GetShipment(
+    const models::GetShipmentRequest& request,
     userver::server::request::RequestContext& context) const {
 
     const auto& identity = platform::auth::GetIdentity(context);
@@ -201,52 +172,8 @@ models::ShipmentsGetResult ShipmentsComponent::Get(const models::GetShipmentRequ
     return models::ShipmentsGetResult{.shipment = result};
 }
 
-models::ShipmentsListResult ShipmentsComponent::List(const models::ListShipmentsRequest& request,
-    userver::server::request::RequestContext& context) const {
-    using namespace ::shipments::registry_query;
-    try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
-        const auto organization = platform::auth::GetOrganization(identity);
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == registry::CursorKeyType::Date;
-        if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
-            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        if (body.cursor.has_value()) {
-            const auto& cursor = body.cursor.value();
-            if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
-                date_sort == cursor.text_value.has_value())
-                throw ApiError<400>{
-                    "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
-        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(body.limit);
-        if (more)
-            rows.pop_back();
-        std::optional<models::ShipmentRegistryCursor> cursor;
-        if (more) {
-            const auto& last = rows.back();
-            cursor = models::ShipmentRegistryCursor{
-                .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Shipment.Id),
-                .scope = scope,
-                .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
-        }
-        transaction.Commit();
-        return models::ShipmentsListResult{.items = Convert(rows), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
-}
-
-models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentRequest request,
+models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
+    models::UpdateShipmentRequest request,
     userver::server::request::RequestContext& context) const {
     try {
         const auto& identity = platform::auth::GetIdentity(context);
@@ -302,7 +229,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
     }
 }
 
-models::ShipmentsTransportationContextsResult ShipmentsComponent::TransportationContexts(
+models::ShipmentsTransportationContextsResult ShipmentsComponent::GetTransportationContexts(
     const models::TransportationContextsRequest& request,
     userver::server::request::RequestContext& context) const {
 
@@ -351,7 +278,7 @@ models::ShipmentsRegisterRouteUsageResult ShipmentsComponent::RegisterRouteUsage
     return models::ShipmentsRegisterRouteUsageResult{.registered = true};
 }
 
-models::ShipmentsEnsureCreatedResult ShipmentsComponent::EnsureCreated(
+models::ShipmentsEnsureCreatedResult ShipmentsComponent::EnsureShipmentCreated(
     const models::EnsureShipmentRequest& request,
     userver::server::request::RequestContext& context) const {
     const auto& command = request;
@@ -361,7 +288,7 @@ models::ShipmentsEnsureCreatedResult ShipmentsComponent::EnsureCreated(
     auto actor = sender;
     actor.Subject = command.actor_subject;
     actor.Issuer = command.actor_issuer;
-    const auto result = CreateShipment(command.organization_id, actor, command.shipment,
+    const auto result = CreateShipmentFromSource(command.organization_id, actor, command.shipment,
         {.Producer = sender.ClientId, .Type = command.source.type, .Id = command.source.id},
         Document(command));
     return models::ShipmentsEnsureCreatedResult{.shipment = result};

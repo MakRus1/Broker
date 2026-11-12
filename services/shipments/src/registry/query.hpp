@@ -1,11 +1,10 @@
 #pragma once
-#include <converters/registry.hpp>
-#include <helpers/database.hpp>
+#include <openapi/models.hpp>
 #include <platform/registry_page.hpp>
+#include <shipments/sql_queries.hpp>
+#include <userver/storages/postgres/io/date.hpp>
 
 namespace shipments::registry_query {
-using namespace helpers;
-using converters::RegistryRow;
 namespace registry = platform::registry;
 
 namespace registry_fields {
@@ -48,11 +47,10 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(const models::ListShipmentsRequest& request,
     const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
-    using namespace registry_fields;
-    const auto order = registry::RegistryOrderBy(kFields, request.sort);
+    const auto order = registry::RegistryOrderBy(registry_fields::kFields, request.sort);
     registry::QueryBuilder query{sql::kListShipments, order, request.descending};
-    query.WhereEqual(kOrganization, organization);
-    registry::ApplyFilters(query, kFields, request.filters, exclude);
+    query.WhereEqual(registry_fields::kOrganization, organization);
+    registry::ApplyFilters(query, registry_fields::kFields, request.filters, exclude);
     return query;
 }
 

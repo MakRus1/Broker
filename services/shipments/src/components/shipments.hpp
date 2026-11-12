@@ -16,24 +16,20 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     ShipmentsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::ShipmentsFilterValuesResult FilterValues(
-        const models::ShipmentsFilterValuesRequest& request,
+    models::ShipmentsCreateResult CreateShipment(models::CreateShipmentRequest request,
         userver::server::request::RequestContext& context) const;
-    models::ShipmentsCreateResult Create(models::CreateShipmentRequest request,
+    models::ShipmentsGetResult GetShipment(const models::GetShipmentRequest& request,
         userver::server::request::RequestContext& context) const;
-    models::ShipmentsGetResult Get(const models::GetShipmentRequest& request,
+    models::ShipmentsUpdateResult UpdateShipment(models::UpdateShipmentRequest request,
         userver::server::request::RequestContext& context) const;
-    models::ShipmentsListResult List(const models::ListShipmentsRequest& request,
-        userver::server::request::RequestContext& context) const;
-    models::ShipmentsUpdateResult Update(models::UpdateShipmentRequest request,
-        userver::server::request::RequestContext& context) const;
-    models::ShipmentsTransportationContextsResult TransportationContexts(
+    models::ShipmentsTransportationContextsResult GetTransportationContexts(
         const models::TransportationContextsRequest& request,
         userver::server::request::RequestContext& context) const;
     models::ShipmentsRegisterRouteUsageResult RegisterRouteUsage(
         const models::RegisterRouteUsageRequest& request,
         userver::server::request::RequestContext& context) const;
-    models::ShipmentsEnsureCreatedResult EnsureCreated(const models::EnsureShipmentRequest& request,
+    models::ShipmentsEnsureCreatedResult EnsureShipmentCreated(
+        const models::EnsureShipmentRequest& request,
         userver::server::request::RequestContext& context) const;
 
   private:
@@ -42,7 +38,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     ReferencesComponent& references_;
     std::optional<models::Shipment> FindCreatedShipment(
         const std::string&, const ShipmentSource&, const userver::formats::json::Value&) const;
-    models::Shipment CreateShipment(const std::string&, const platform::auth::Identity&,
+    models::Shipment CreateShipmentFromSource(const std::string&, const platform::auth::Identity&,
         const models::CreateShipmentRequest&, const ShipmentSource&,
         const userver::formats::json::Value&) const;
 };

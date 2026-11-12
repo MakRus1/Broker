@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/references.cpp
     src/components/shipments.cpp
+    src/components/shipment_registry.cpp
     src/components/settings.cpp
     src/components/container_plan.cpp
     src/components/transportation_operations.cpp

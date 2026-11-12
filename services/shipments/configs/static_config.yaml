@@ -8,6 +8,7 @@ components_manager:
     components:
         shipment-references: {}
         shipments-shipments: {}
+        shipment-registry: {}
         shipments-settings: {}
         shipments-container-plan: {}
         shipments-transportation-operations: {}

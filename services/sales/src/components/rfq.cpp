@@ -126,43 +126,10 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
     return value;
 }
 
-void RfqComponent::ResolveQuote(const std::string& organization,
-    const models::ProposalInput& proposal, const models::Inquiry& inquiry,
-    models::ProposalLine& line) const {
-    if (!line.quote_source)
-        return;
-    const auto& source = *line.quote_source;
-    const auto value = Read(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRfqRevision,
-        organization, source.rfq_id, source.revision));
-    if (value.input.inquiry_id != proposal.inquiry_id ||
-        value.input.status != models::RfqStatus::Ready)
-        throw ApiError<400>{"wrong_quote_source", "Выберите готовую котировку этого запроса"};
-    const auto segment = std::find_if(inquiry.route_segments.begin(), inquiry.route_segments.end(),
-        [&](const auto& candidate) { return candidate.id == value.input.route_segment_id; });
-    if (segment == inquiry.route_segments.end() ||
-        json::ValueBuilder(*segment).ExtractValue() !=
-            json::ValueBuilder(value.route_segment).ExtractValue())
-        throw ApiError<400>{
-            "quote_route_changed", "Участок изменился. Уточните котировку у поставщика"};
-
-    for (const auto& quote : value.input.quotes) {
-        if (quote.id != source.quote_id)
-            continue;
-        if (quote.valid_until && *quote.valid_until < proposal.calculation_date)
-            throw ApiError<400>{"quote_expired", "Срок действия котировки истёк"};
-        for (const auto& quoted : quote.lines) {
-            if (quoted.id != source.line_id)
-                continue;
-            line.label_id = quoted.label_id;
-            line.unit = quoted.unit;
-            line.quantity_milli = quoted.quantity_milli;
-            line.purchase = quoted.price;
-            line.supplier_id = quote.supplier_id;
-            line.route_segment_id = value.input.route_segment_id;
-            return;
-        }
-    }
-    throw ApiError<400>{"quote_not_found", "Строка котировки не найдена"};
+models::Rfq RfqComponent::FindRfqRevision(
+    const std::string& organization, const std::string& id, std::int64_t revision) const {
+    return Read(cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetRfqRevision, organization, id, revision));
 }
 
 }  // namespace sales

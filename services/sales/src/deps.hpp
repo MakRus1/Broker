@@ -1,7 +1,5 @@
-#include <components/proposal_calculator.hpp>
-#include <components/sales_directory.hpp>
-#include <components/sales_registry.hpp>
 #pragma once
+#include <components/sales_registry.hpp>
 
 #include <components/cards.hpp>
 #include <components/contacts.hpp>
@@ -32,9 +30,7 @@
 namespace sales {
 
 struct Deps {
-    SalesDirectory* directory;
     SalesRegistry* registry;
-    ProposalCalculator* calculator;
     CardsComponent* cards;
     ContactsComponent* contacts;
     InquiriesComponent* inquiries;
@@ -56,9 +52,7 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
-        .directory = &component_context.FindComponent<SalesDirectory>(),
         .registry = &component_context.FindComponent<SalesRegistry>(),
-        .calculator = &component_context.FindComponent<ProposalCalculator>(),
         .cards = &component_context.FindComponent<CardsComponent>(),
         .contacts = &component_context.FindComponent<ContactsComponent>(),
         .inquiries = &component_context.FindComponent<InquiriesComponent>(),

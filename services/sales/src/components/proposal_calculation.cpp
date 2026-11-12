@@ -1,15 +1,9 @@
-#include <components/proposal_calculator.hpp>
-#include <components/rfq.hpp>
-#include <components/sales_directory.hpp>
-#include <map>
+#include <components/proposal_calculation.hpp>
 #include <models/errors.hpp>
 #include <platform/charge_amounts.hpp>
-#include <platform/http_client.hpp>
 #include <set>
-#include <userver/components/component_context.hpp>
 #include <userver/decimal64/decimal64.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -40,37 +34,26 @@ std::int64_t ConvertProposalAmount(std::int64_t amount, std::int64_t rate) {
 
 }  // namespace
 
-namespace sales {
-namespace json = userver::formats::json;
-
-ProposalCalculator::ProposalCalculator(const userver::components::ComponentConfig& config,
-    const userver::components::ComponentContext& context)
-    : ComponentBase(config, context),
-      finance_(context.FindComponent<clients::finance::Component>().GetClient()),
-      rfq_(context.FindComponent<RfqComponent>()),
-      directory_(context.FindComponent<SalesDirectory>()) {}
-
-userver::yaml_config::Schema ProposalCalculator::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
-models::Proposal ProposalCalculator::CalculateProposal(const std::string& organization,
-    std::string_view token, const models::Inquiry& inquiry, models::ProposalInput input) const try {
+namespace sales::proposal_rules {
+void ValidateInput(const models::ProposalInput& input, const models::Inquiry& inquiry) {
     if (userver::utils::text::Trim(input.title).empty())
         throw ApiError<400>{"empty_title", "Укажите название предложения"};
     if (input.valid_until && *input.valid_until < input.calculation_date)
         throw ApiError<400>{"invalid_dates", "Срок действия не может быть раньше даты расчёта"};
-    const auto settings = finance_.ApiV1FinanceSettingsGet({}, token);
-    models::Proposal result;
     if (!inquiry.cargo_description ||
         userver::utils::text::Trim(*inquiry.cargo_description).empty())
         throw ApiError<400>{
             "cargo_required", "Перед расчётом предложения опишите груз во входящем запросе"};
-    result.inquiry_revision = inquiry.revision;
-    result.customer_name = directory_.GetCounterparty(token, inquiry.customer_id).name;
+}
+
+models::Proposal CalculateProposal(
+    models::ProposalInput input, const models::ProposalCalculation& data) {
+    models::Proposal result;
+    result.inquiry_revision = data.InquiryRevision;
+    result.customer_name = data.CustomerName;
     result.input = std::move(input);
     result.status = models::ProposalStatus::Draft;
-    result.reporting_currency = settings.reporting_currency;
+    result.reporting_currency = data.ReportingCurrency;
     result.reporting.currency = result.reporting_currency;
     std::map<std::string, models::ProposalTotal> totals;
     std::map<std::string, std::int64_t> rates;
@@ -80,16 +63,7 @@ models::Proposal ProposalCalculator::CalculateProposal(const std::string& organi
         auto& total = totals[price.currency];
         total.currency = price.currency;
         AddAmounts(sale ? total.sale : total.purchase, amount);
-        if (!rates.contains(price.currency)) {
-            rates[price.currency] = price.currency == result.reporting_currency
-                ? 1000000
-                : finance_
-                      .ApiV1ExchangeRatesGet({.body = {.date = result.input.calculation_date,
-                                                  .from_currency = price.currency,
-                                                  .to_currency = result.reporting_currency}},
-                          token)
-                      .rate_millionths;
-        }
+        rates[price.currency] = data.Rates.at(price.currency);
         const auto rate = rates.at(price.currency);
         const auto net = ConvertProposalAmount(amount.net_minor, rate);
         const auto gross = ConvertProposalAmount(amount.total_minor, rate);
@@ -97,33 +71,20 @@ models::Proposal ProposalCalculator::CalculateProposal(const std::string& organi
             {.net_minor = net, .total_minor = gross, .vat_minor = gross - net});
     };
     for (auto& line : result.input.lines) {
-        rfq_.ResolveQuote(organization, result.input, inquiry, line);
         if (!ids.insert(line.id).second)
             throw ApiError<400>{
                 "duplicate_line", "Строки предложения должны иметь разные идентификаторы"};
-        const auto label =
-            finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
-        if (label.archived ||
-            label.direction == clients::finance::models::FinancialLabelDirection::Expense ||
-            (line.purchase &&
-                label.direction != clients::finance::models::FinancialLabelDirection::Both))
-            throw ApiError<400>{
-                "invalid_label", "Выберите действующую метку, подходящую для дохода и расхода"};
         models::CalculatedProposalLine row;
         row.input = line;
-        row.label_name = label.name;
+        row.label_name = data.LabelNames.at(line.label_id);
         row.sale = Amounts(line.quantity_milli, line.sale);
         accumulate(line.sale, row.sale, true);
         if (line.purchase) {
             row.purchase = Amounts(line.quantity_milli, *line.purchase);
             accumulate(*line.purchase, *row.purchase, false);
         }
-        if (line.supplier_id) {
-            const auto party = directory_.GetCounterparty(token, *line.supplier_id);
-            if (party.archived)
-                throw ApiError<400>{"archived_supplier", "Поставщик находится в архиве"};
-            row.supplier_name = party.name;
-        }
+        if (line.supplier_id)
+            row.supplier_name = data.SupplierNames.at(*line.supplier_id);
         result.lines.push_back(std::move(row));
     }
     for (const auto& [_, total] : totals)
@@ -134,19 +95,5 @@ models::Proposal ProposalCalculator::CalculateProposal(const std::string& organi
         result.reporting.purchase.total_minor > 9000000000000000LL)
         throw ApiError<400>{"amount_overflow", "Сумма предложения слишком велика"};
     return result;
-} catch (const platform::http::ErrorByStatus<403>&) {
-
-    throw ApiError<403>{"reference_forbidden", "Нет доступа к справочникам расчёта"};
-} catch (const platform::http::ErrorByStatus<404>&) {
-    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const platform::http::ApiError&) {
-    throw ApiError<502>{"reference_unavailable", "Не удалось получить данные для расчёта"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<502>{"reference_unavailable", "Сервис справочников недоступен"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
 }
-
-}  // namespace sales
+}  // namespace sales::proposal_rules

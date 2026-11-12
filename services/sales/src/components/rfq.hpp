@@ -18,8 +18,8 @@ class RfqComponent final : public userver::components::ComponentBase {
         const std::string& organization, const models::HistoryRequest& request) const;
     models::Rfq SaveRfq(const std::string& organization, const platform::auth::Identity& identity,
         std::int64_t expected, models::RfqInput input) const;
-    void ResolveQuote(const std::string& organization, const models::ProposalInput& proposal,
-        const models::Inquiry& inquiry, models::ProposalLine& line) const;
+    models::Rfq FindRfqRevision(
+        const std::string& organization, const std::string& id, std::int64_t revision) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

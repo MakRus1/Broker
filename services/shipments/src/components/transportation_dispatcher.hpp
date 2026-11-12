@@ -1,5 +1,4 @@
 #pragma once
-#include <clients/notifications/client.hpp>
 #include <clients/transportations/client.hpp>
 #include <models/pg/creation_operation.hpp>
 #include <platform/auth/service_token.hpp>
@@ -17,7 +16,6 @@ class TransportationDispatcher final : public userver::components::ComponentBase
   private:
     models::pg::CreationOperation SendOperation(const platform::outbox::Message&);
     void SendRouteProjection(const platform::outbox::Message&);
-    clients::notifications::Client notifications_;
     clients::transportations::Client transportations_;
     platform::auth::ServiceTokenProvider& tokens_;
 };

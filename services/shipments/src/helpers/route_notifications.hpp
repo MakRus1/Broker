@@ -1,9 +1,9 @@
 #pragma once
 #include <clients/notifications/client.hpp>
 #include <helpers/database.hpp>
-#include <helpers/outbox.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/notifications/dispatcher.hpp>
 #include <platform/outbox/component.hpp>
 #include <userver/formats/json.hpp>
 
@@ -26,8 +26,8 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
     const clients::notifications::models::PublishedEvent event{
         .value = clients::notifications::models::ShipmentRouteChanged{
             .id = id, .organization_id = organization, .payload = payload}};
-    platform::outbox::Enqueue(
-        transaction, kPublishNotificationEvent, id, json::ValueBuilder(event).ExtractValue());
+    platform::outbox::Enqueue(transaction, platform::notifications::kPublishEventTopic, id,
+        json::ValueBuilder(event).ExtractValue());
 }
 
 inline void QueueShipmentCreated(pg::Transaction& transaction, const std::string& organization,
@@ -42,7 +42,7 @@ inline void QueueShipmentCreated(pg::Transaction& transaction, const std::string
                 .revision = shipment.revision,
                 .shipment_id = shipment.id,
                 .shipment_number = shipment.number}}};
-    platform::outbox::Enqueue(transaction, kPublishNotificationEvent, id,
+    platform::outbox::Enqueue(transaction, platform::notifications::kPublishEventTopic, id,
         userver::formats::json::ValueBuilder(event).ExtractValue());
 }
 }  // namespace shipments::helpers

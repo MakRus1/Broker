@@ -69,7 +69,8 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
         const auto query =
             platform::registry::BuildPage(registry_query::kRegistry, request, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadSnapshot);
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::ShipmentRegistryRow>>(pg::kRowTag);

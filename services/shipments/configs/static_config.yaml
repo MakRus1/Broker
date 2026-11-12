@@ -229,6 +229,8 @@ components_manager:
             service-name: shipments
             environment: $environment
         cargo-suggestions-cleanup: {}
+        notification-dispatcher:
+            load-enabled: $dispatcher-enabled
         transportation-dispatcher:
             load-enabled: $dispatcher-enabled
         service-token-provider:

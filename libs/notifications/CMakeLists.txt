@@ -1,0 +1,3 @@
+add_library(broker_notifications INTERFACE)
+target_include_directories(broker_notifications INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(broker_notifications INTERFACE broker_outbox broker_auth)

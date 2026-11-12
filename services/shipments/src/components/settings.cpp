@@ -15,22 +15,11 @@
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace shipments {
-using namespace helpers;
-using namespace converters;
-
-SettingsComponent::SettingsComponent(const userver::components::ComponentConfig& config,
-    const userver::components::ComponentContext& context)
-    : ComponentBase(config, context),
-      cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()) {}
-
-userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 namespace {
+namespace models = shipments::models;
+namespace pg = userver::storages::postgres;
+using shipments::ApiError;
+
 configs::ShipmentSettings ReadPlatformSettings(const platform::configs::Snapshot& snapshot,
     const std::string& organization, const std::optional<std::string>& customer = std::nullopt) {
     return snapshot.Get(configs::SHIPMENT_SETTINGS,
@@ -105,6 +94,20 @@ configs::ShipmentSettings ResolveEffectiveSettings(const platform::configs::Snap
 
 }  // namespace
 
+namespace shipments {
+namespace pg = userver::storages::postgres;
+
+SettingsComponent::SettingsComponent(const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : ComponentBase(config, context),
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
+      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()) {}
+
+userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
+    return ComponentBase::GetStaticConfigSchema();
+}
+
 std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
     const std::string& organization) const {
     return ReadStoredRules(cluster_->Execute(
@@ -134,7 +137,7 @@ models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
     result.allowed_container_types = limits.ContainerTypes;
     result.planned_containers_allowed = limits.PlannedContainers;
     for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>())
-        if (ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
+        if (helpers::ParseDictionary(entry.Dictionary) == helpers::ShipmentDictionary::kRouteType &&
             std::find(limits.RouteTypes.begin(), limits.RouteTypes.end(), entry.Code) !=
                 limits.RouteTypes.end())
             result.allowed_route_types.push_back({.code = entry.Code, .name = entry.Name});
@@ -147,17 +150,17 @@ models::ShipmentDictionaries SettingsComponent::GetDictionaries() const {
     models::ShipmentDictionaries result;
     for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>()) {
         const models::DictionaryValue value{.code = entry.Code, .name = entry.Name};
-        switch (ParseDictionary(entry.Dictionary)) {
-        case ShipmentDictionary::kIncoterms:
+        switch (helpers::ParseDictionary(entry.Dictionary)) {
+        case helpers::ShipmentDictionary::kIncoterms:
             result.incoterms.push_back(value);
             break;
-        case ShipmentDictionary::kCarriageTerms:
+        case helpers::ShipmentDictionary::kCarriageTerms:
             result.carriage_terms.push_back(value);
             break;
-        case ShipmentDictionary::kLoading:
+        case helpers::ShipmentDictionary::kLoading:
             result.loading.push_back(value);
             break;
-        case ShipmentDictionary::kRouteType:
+        case helpers::ShipmentDictionary::kRouteType:
             result.route_types.push_back(value);
             break;
         }
@@ -183,7 +186,7 @@ models::ShipmentBusinessSettings SettingsComponent::GetBusinessSettings(
 models::ShipmentBusinessSettings SettingsComponent::SaveBusinessSettings(
     const std::string& organization, const platform::auth::Identity& actor,
     const models::ShipmentBusinessRules& requested_rules, std::int64_t expected_revision) const {
-    const auto rules = Convert(requested_rules);
+    const auto rules = converters::Convert(requested_rules);
     const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), organization);
     ValidateBusinessRules(limits, rules);
     auto result = BuildBusinessSettings(limits, requested_rules, 0);
@@ -193,7 +196,7 @@ models::ShipmentBusinessSettings SettingsComponent::SaveBusinessSettings(
     if (changed.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Настройки уже изменились. Обновите страницу"};
     const auto revision = changed.AsSingleRow<std::int64_t>();
-    WriteAudit(transaction, organization, actor, "update_shipment_rules", organization,
+    helpers::WriteAudit(transaction, organization, actor, "update_shipment_rules", organization,
         requested_rules, requested_rules);
     transaction.Commit();
     result.revision = revision;

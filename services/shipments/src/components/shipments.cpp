@@ -21,22 +21,13 @@
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace shipments {
-using namespace helpers;
-using namespace converters;
-
-ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfig& config,
-    const userver::components::ComponentContext& context)
-    : ComponentBase(config, context),
-      cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      settings_(context.FindComponent<SettingsComponent>()) {}
-
-userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 namespace {
+namespace models = shipments::models;
+namespace sql = shipments::sql;
+namespace pg = userver::storages::postgres;
+namespace json = userver::formats::json;
+using shipments::ApiError;
+
 std::string GenerateShipmentNumber(pg::Transaction& transaction, const std::string& organization,
     userver::utils::datetime::Date date, const auto& settings) {
     const auto period = platform::DocumentNumberPeriod(date, settings.ResetNumberYearly);
@@ -57,23 +48,25 @@ void RememberCargo(pg::Transaction& transaction, const std::string& organization
 
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
     const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
-    auto card = shipment_card::CreateShipmentCard(body, settings);
+    auto card = shipments::shipment_card::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
-    shipment_card::ValidateCard(card, settings, dictionaries);
+    shipments::shipment_card::ValidateCard(card, settings, dictionaries);
+
     card.Number = body.number.has_value()
         ? userver::utils::text::Trim(body.number.value())
         : GenerateShipmentNumber(transaction, organization, card.ShipmentDate, settings);
     if (card.Number.empty())
         throw ApiError<400>{"invalid_number", "Укажите номер поставки"};
+
     const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
                          .AsSingleRow<models::pg::ShipmentRaw>();
     RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
-    return Convert(row);
+    return shipments::converters::Convert(row);
 }
 
 std::optional<boost::uuids::uuid> ValidateShipmentReplay(
-    const pg::ResultSet& saved, const Json& document) {
+    const pg::ResultSet& saved, const json::Value& document) {
     if (saved.IsEmpty())
         return std::nullopt;
     const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
@@ -84,52 +77,72 @@ std::optional<boost::uuids::uuid> ValidateShipmentReplay(
 
 }  // namespace
 
+namespace shipments {
+namespace pg = userver::storages::postgres;
+namespace json = userver::formats::json;
+
+ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : ComponentBase(config, context),
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
+      settings_(context.FindComponent<SettingsComponent>()) {}
+
+userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
+    return ComponentBase::GetStaticConfigSchema();
+}
+
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
-    const std::string& organization, const ShipmentSource& source, const Json& document) const {
+    const std::string& organization, const ShipmentSource& source,
+    const json::Value& document) const {
     const auto saved = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindSourceShipment,
         organization, source.Producer, source.Type, source.Id);
     const auto shipment_id = ValidateShipmentReplay(saved, document);
     if (!shipment_id.has_value())
         return std::nullopt;
-    return Convert(cluster_
-                       ->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment, organization,
-                           shipment_id.value())
-                       .AsSingleRow<models::pg::ShipmentRaw>());
+    return converters::Convert(cluster_
+                                   ->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment,
+                                       organization, shipment_id.value())
+                                   .AsSingleRow<models::pg::ShipmentRaw>());
 }
 
 // Один сценарий для ручного создания и команд доверенных сервисов.
 // Источник участвует только в дедупликации и связи, не выбирает бизнес-ветку.
 models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
     const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
-    const ShipmentSource& source, const Json& document) const {
+    const ShipmentSource& source, const json::Value& document) const {
     const auto settings = settings_.Effective(organization, body.customer_id);
+
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(
         sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, source.Id);
     const auto saved = transaction.Execute(
         sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
     if (const auto shipment_id = ValidateShipmentReplay(saved, document); shipment_id.has_value()) {
-        const auto shipment =
-            Convert(transaction.Execute(sql::kGetShipment, organization, shipment_id.value())
-                        .AsSingleRow<models::pg::ShipmentRaw>());
+        const auto shipment = converters::Convert(
+            transaction.Execute(sql::kGetShipment, organization, shipment_id.value())
+                .AsSingleRow<models::pg::ShipmentRaw>());
         transaction.Commit();
         return shipment;
     }
+
     const auto result = InsertShipment(transaction, organization, body, settings);
     transaction.Execute(sql::kLinkSourceShipment, organization, source.Producer, source.Type,
         source.Id, result.id, document);
-    WriteAudit(transaction, organization, actor, "create_shipment", result.id, body, result);
-    QueueRouteProjection(transaction, organization, result);
-    QueueShipmentCreated(transaction, organization, actor, result);
+
+    helpers::WriteAudit(
+        transaction, organization, actor, "create_shipment", result.id, body, result);
+    helpers::QueueRouteProjection(transaction, organization, result);
+    helpers::QueueShipmentCreated(transaction, organization, actor, result);
     transaction.Commit();
     return result;
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
     const std::string& organization, const models::CreateShipmentRequest& request,
-    const ShipmentSource& source, const Json& document) const {
-    if (const auto saved =
-            FindSavedReplay<models::Shipment>(cluster_, organization, "create_shipment", request);
+    const ShipmentSource& source, const json::Value& document) const {
+    if (const auto saved = helpers::FindSavedReplay<models::Shipment>(
+            cluster_, organization, "create_shipment", request);
         saved.has_value())
         return saved;
     return FindCreatedShipment(organization, source, document);
@@ -141,7 +154,7 @@ models::Shipment ShipmentsComponent::GetShipment(
         pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    return Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
+    return converters::Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
 }
 
 std::int64_t ShipmentsComponent::GetRouteUsageVersion(
@@ -163,8 +176,9 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
             transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
         if (current.IsEmpty())
             throw ApiError<404>{"not_found", "Поставка не найдена"};
+
         const auto previous = current.AsSingleRow<models::pg::ShipmentRaw>();
-        CheckRevision(previous.Revision, request.expected_revision);
+        helpers::CheckRevision(previous.Revision, request.expected_revision);
         const auto card = shipment_card::UpdateShipmentCard(request, previous);
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
@@ -183,16 +197,20 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
             settings_.Effective(
                 transaction, organization, boost::uuids::to_string(card.CustomerId)),
             dictionaries, &previous);
-        const auto result = Convert(transaction
-                                        .Execute(sql::kUpdateShipment, organization,
-                                            request.shipment_id, request.expected_revision, card)
-                                        .AsSingleRow<models::pg::ShipmentRaw>());
+
+        const auto result =
+            converters::Convert(transaction
+                                    .Execute(sql::kUpdateShipment, organization,
+                                        request.shipment_id, request.expected_revision, card)
+                                    .AsSingleRow<models::pg::ShipmentRaw>());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);
-        WriteAudit(transaction, organization, actor, "update_shipment", result.id, request, result);
-        QueueRouteProjection(transaction, organization, result);
-        QueueRouteChanged(transaction, organization, actor, Convert(previous), result);
+        helpers::WriteAudit(
+            transaction, organization, actor, "update_shipment", result.id, request, result);
+        helpers::QueueRouteProjection(transaction, organization, result);
+        helpers::QueueRouteChanged(
+            transaction, organization, actor, converters::Convert(previous), result);
         transaction.Commit();
         return result;
     } catch (const userver::storages::postgres::UniqueViolation&) {
@@ -202,7 +220,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
 
 std::vector<models::Shipment> ShipmentsComponent::GetShipments(
     const std::string& organization, const std::vector<std::string>& shipment_ids) const {
-    return Convert(cluster_->Execute(
+    return converters::Convert(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids));
 }
 

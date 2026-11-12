@@ -6,7 +6,7 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
-using namespace helpers;
+namespace pg = userver::storages::postgres;
 
 CargoSuggestionsComponent::CargoSuggestionsComponent(
     const userver::components::ComponentConfig& config,

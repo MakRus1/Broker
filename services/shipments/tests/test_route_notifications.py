@@ -4,7 +4,16 @@ import pytest
 from conftest import ORGANIZATION
 
 
-@pytest.mark.uservice_oneshot(config_hooks=['configure_dispatcher'])
+@pytest.fixture(scope='session')
+def configure_notification_dispatcher(configure_dispatcher):
+    def patch(config, config_vars):
+        configure_dispatcher(config, config_vars)
+        config['components_manager']['components']['transportation-dispatcher']['load-enabled'] = False
+
+    return patch
+
+
+@pytest.mark.uservice_oneshot(config_hooks=['configure_notification_dispatcher'])
 async def test_route_event_retries_and_only_follows_route_changes(api, mockserver, pgsql):
     received = []
 

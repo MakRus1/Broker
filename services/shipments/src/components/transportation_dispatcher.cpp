@@ -18,7 +18,6 @@ TransportationDispatcher::TransportationDispatcher(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      notifications_(context.FindComponent<clients::notifications::Component>().GetClient()),
       transportations_(context.FindComponent<clients::transportations::Component>().GetClient()),
       tokens_(context.FindComponent<platform::auth::ServiceTokenProvider>()) {
     auto& outbox = context.FindComponent<platform::outbox::Component>();
@@ -29,12 +28,6 @@ TransportationDispatcher::TransportationDispatcher(
             const models::pg::CreationOperation& result) {
             const auto organization = message.Payload["organization_id"].As<std::string>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
-        });
-    outbox.RegisterHandler(std::string{helpers::kPublishNotificationEvent},
-        [this](const platform::outbox::Message& message) {
-            namespace api = clients::notifications::ApiInternalV1EventsPublish;
-            notifications_.ApiInternalV1EventsPublish(
-                api::Request{.body = api::ParseBody(message.Payload)}, tokens_.GetAccessToken());
         });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},
         [this](const auto& message) { SendRouteProjection(message); });

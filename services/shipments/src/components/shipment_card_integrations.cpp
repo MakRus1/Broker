@@ -21,6 +21,7 @@ void ShipmentCardIntegrations::ResolveRoute(std::string_view access_token,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
     const auto locations = LoadRouteLocations(access_token, segments);
     route_details::ResolveRouteDetails(segments, previous, locations);
+
     ValidateRouteCounterparties(access_token, segments, previous);
 }
 
@@ -43,12 +44,14 @@ ShipmentCardIntegrations::FindEmployees(const std::string& organization,
     std::string_view access_token, const std::optional<std::string>& query,
     const std::optional<std::string>& subject, int limit) const try {
     namespace api = clients::organizations::ApiOrganizationsEmployeesList;
+
     const auto response = organizations_.ApiOrganizationsEmployeesList(
         api::Request{.body = {.limit = limit,
                          .organization_id = organization,
                          .query = query,
                          .subject = subject}},
         access_token);
+
     return response.items;
 } catch (const platform::http::ApiError&) {
 
@@ -76,6 +79,7 @@ std::optional<std::string> ShipmentCardIntegrations::CustomerLogist(
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
     const auto result = counterparties_.ApiV1CounterpartiesGet(
         api::Request{.body = {.id = customer}}, access_token);
+
     return result.counterparty.logist.value_or(std::nullopt);
 } catch (const platform::http::ErrorByStatus<404>&) {
 
@@ -98,6 +102,7 @@ inline std::set<std::string> RouteCounterparties(
         if (id.has_value())
             ids.insert(id.value());
     };
+
     for (const auto& stage : stages) {
         if (stage.sea.has_value()) {
             add(stage.sea.value().departure_terminal_id);
@@ -106,6 +111,7 @@ inline std::set<std::string> RouteCounterparties(
         if (stage.air.has_value())
             add(stage.air.value().carrier_id);
     }
+
     return ids;
 }
 
@@ -113,9 +119,11 @@ void ShipmentCardIntegrations::ValidateRouteCounterparties(std::string_view acce
     const std::vector<models::ShipmentRouteSegment>& stages,
     const std::vector<models::ShipmentRouteSegment>& previous) const {
     const auto old = RouteCounterparties(previous);
+
     for (const auto& id : RouteCounterparties(stages)) {
         if (old.contains(id))
             continue;
+
         try {
             const auto response =
                 counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token);
@@ -149,6 +157,7 @@ route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
         if (location.has_value())
             ids.insert(boost::uuids::string_generator{}(location.value().id));
     };
+
     for (const auto& segment : segments) {
         if (segment.sea.has_value()) {
             add(segment.sea.value().pol);
@@ -159,18 +168,24 @@ route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
             add(segment.air.value().destination_airport);
         }
     }
+
     route_details::RouteLocations result;
     if (ids.empty())
+
         return result;
+
     std::vector<std::string> requested;
     for (const auto& id : ids)
         requested.push_back(boost::uuids::to_string(id));
+
     const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
         {.body = {.ids = requested}}, access_token);
+
     for (const auto& value : response.items) {
         auto location = converters::Convert(value);
         result.emplace(location.id, std::move(location));
     }
+
     return result;
 } catch (const platform::http::CancelledError&) {
 
@@ -190,9 +205,11 @@ void ShipmentCardIntegrations::CheckExistingRouteUsage(std::string_view access_t
     const std::string& shipment_id, const std::vector<std::string>& changed) const try {
     if (changed.empty())
         return;
+
     namespace api = clients::transportations::ApiV1TransportationRoutesUsage;
     const auto result = transportations_.ApiV1TransportationRoutesUsage(
         api::Request{.body = {.shipment_id = shipment_id}}, access_token);
+
     for (const auto& id : result.segment_ids)
         if (std::find(changed.begin(), changed.end(), id) != changed.end())
             throw ApiError<409>{"route_segment_in_use",

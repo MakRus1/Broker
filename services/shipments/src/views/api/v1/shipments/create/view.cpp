@@ -14,6 +14,7 @@ Response View::Handle(
     platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
     const auto organization = platform::auth::GetOrganization(actor);
     const auto& access_token = platform::auth::GetAccessToken(context);
+
     auto& body = request.body;
     const auto source = ShipmentSource::Manual(body.idempotency_key);
     const auto document = helpers::Document(body);
@@ -21,14 +22,17 @@ Response View::Handle(
             deps.shipments->FindManualShipmentReplay(organization, body, source, document);
         replay.has_value())
         return Response201{.shipment = std::move(replay.value())};
+
     const auto logist = body.logist.has_value()
         ? platform::TrimToOptional(body.logist.value())
         : deps.shipment_card_integrations->CustomerLogist(access_token, body.customer_id);
     deps.shipment_card_integrations->ValidateLogist(organization, access_token, logist);
+
     if (body.route_segments.has_value())
         deps.shipment_card_integrations->ResolveRoute(
             access_token, body.route_segments.value(), {});
     body.logist = logist;
+
     return Response201{.shipment = deps.shipments->CreateShipmentFromSource(
                            organization, actor, body, source, document)};
 } catch (const userver::storages::postgres::UniqueViolation&) {

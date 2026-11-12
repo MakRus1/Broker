@@ -18,9 +18,11 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
     const auto& items = snapshot.Items;
     const auto& pending = snapshot.Pending;
     ContainerPlan result;
+
     std::set<ContainerKey> planned;
     for (const auto& item : items)
         planned.emplace(item.ContainerType, item.Ownership);
+
     for (const auto& group : facts.groups) {
         std::optional<std::string> ownership;
         if (group.container_ownership.has_value())
@@ -32,6 +34,7 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
             if (planned.contains(key))
                 continue;
         }
+
         models::ContainerFact unplanned;
         unplanned.container_type_code = group.container_type_code;
         if (ownership.has_value())
@@ -40,13 +43,16 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
         unplanned.quantity = group.quantity;
         result.Unplanned.push_back(std::move(unplanned));
     }
+
     std::map<std::string, std::int64_t> materialized;
     for (const auto& operation : facts.operations)
         materialized.emplace(operation.operation_id, operation.created_quantity);
+
     for (const auto& operation : pending)
         result.Totals[{operation.ContainerType, operation.Ownership}].Pending +=
             std::max<std::int64_t>(
                 0, operation.Quantity - materialized[boost::uuids::to_string(operation.Id)]);
+
     return result;
 }
 
@@ -59,9 +65,11 @@ models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snaps
     auto plan = ReconcileContainerPlan(snapshot, facts);
     models::ContainerPlanListResult result;
     result.unplanned_items = std::move(plan.Unplanned);
+
     const auto after = after_id.has_value()
         ? std::optional{boost::uuids::string_generator{}(after_id.value())}
         : std::nullopt;
+
     for (const auto& row : snapshot.Items) {
         if (after.has_value() && row.Id <= after.value())
             continue;
@@ -70,6 +78,7 @@ models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snaps
         result.items.push_back(
             converters::Convert(row, plan.Totals[{row.ContainerType, row.Ownership}]));
     }
+
     return result;
 }
 

@@ -1,5 +1,6 @@
 """Структура маршрута принадлежит поставке; поля и факты — конкретной перевозке."""
 
+import asyncio
 from uuid import uuid4
 import pytest
 from test_transportations import command, route_segment, PATH
@@ -183,3 +184,104 @@ async def test_invalid_actual_does_not_protect_segment(api, shipment_routes):
         expected=409,
     )
     assert shipment_routes.registrations == []
+
+
+@pytest.mark.parametrize('path', [
+    '/api/v1/transportation-routes/set',
+    '/api/v1/transportation-actuals/record',
+])
+async def test_conflicting_save_does_not_register_route_usage_twice(
+    api, shipment_routes, mockserver, path
+):
+    body = command()
+    created = await api.post(PATH, body)
+    identifier = created['operation']['transportation_ids'][0]
+    stage = route_segment('road')
+    shipment_routes.set(body['shipment_id'], [stage])
+    both_loaded = asyncio.Event()
+    loaded = 0
+
+    @mockserver.json_handler('/api/v1/shipments/transportation-contexts')
+    async def load(request):
+        nonlocal loaded
+        loaded += 1
+        if loaded == 2:
+            both_loaded.set()
+        await asyncio.wait_for(both_loaded.wait(), 5)
+        return {'items': [{
+            'shipment_id': body['shipment_id'], 'revision': 1,
+            'route_segments': [{'id': stage['id'], 'type': stage['mode']}],
+        }]}
+
+    change = {'transportation_id': identifier, 'expected_revision': 1}
+    if path.endswith('/set'):
+        change['route_segments'] = [stage]
+    else:
+        change.update(route_segment_id=stage['id'], event_kind='departure',
+                      occurred_at='2026-10-20T09:00:00+00:00')
+
+    responses = await asyncio.gather(*(
+        api.post(path, change, expected=(200, 409)) for _ in range(2)
+    ))
+    assert sum('transportation' in response for response in responses) == 1
+    assert len(shipment_routes.registrations) == 1
+
+
+@pytest.mark.parametrize('rollback', [False, True])
+async def test_usage_waits_for_registered_save_to_commit_or_rollback(
+    api, shipment_routes, mockserver, pgsql, rollback
+):
+    body = command()
+    created = await api.post(PATH, body)
+    identifier = created['operation']['transportation_ids'][0]
+    stage = route_segment('road')
+    shipment_routes.set(body['shipment_id'], [stage])
+    registered = asyncio.Event()
+    release_registration = asyncio.Event()
+
+    if rollback:
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute('''
+                CREATE FUNCTION reject_route_write() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                    RAISE EXCEPTION 'test rollback';
+                END;
+                $$;
+                CREATE TRIGGER reject_route_write BEFORE INSERT ON route_segments
+                FOR EACH ROW EXECUTE FUNCTION reject_route_write();
+            ''')
+
+    @mockserver.json_handler('/api/v1/shipments/route-segments/register-usage')
+    async def register(request):
+        registered.set()
+        await asyncio.wait_for(release_registration.wait(), 5)
+        return {'registered': True}
+
+    save = asyncio.create_task(api.post(
+        '/api/v1/transportation-actuals/record',
+        {'transportation_id': identifier, 'expected_revision': 1,
+         'route_segment_id': stage['id'], 'event_kind': 'departure',
+         'occurred_at': '2026-10-20T09:00:00+00:00'},
+        expected=500 if rollback else 200,
+    ))
+    usage = None
+    try:
+        await asyncio.wait_for(registered.wait(), 5)
+        usage = asyncio.create_task(api.post(
+            '/api/v1/transportation-routes/usage', {'shipment_id': body['shipment_id']},
+            roles=['shipments.write', 'shipments.read', 'organizations.read_employees',
+                   'counterparties.read'],
+        ))
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(asyncio.shield(usage), 0.2)
+    finally:
+        release_registration.set()
+        try:
+            results = await asyncio.gather(save, *([usage] if usage is not None else []))
+        finally:
+            if rollback:
+                with pgsql['db_1'].cursor() as cursor:
+                    cursor.execute('DROP TRIGGER reject_route_write ON route_segments')
+                    cursor.execute('DROP FUNCTION reject_route_write()')
+
+    assert results[1]['segment_ids'] == ([] if rollback else [stage['id']])

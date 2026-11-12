@@ -37,10 +37,12 @@ models::RouteUsageResult RoutesComponent::Usage(
     models::RouteUsageRequest request, userver::server::request::RequestContext& context) const {
 
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-    const auto rows = cluster_
-                          ->Execute(pg::ClusterHostType::kMaster, sql::kRouteUsage, organization,
-                              request.shipment_id)
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    transaction.Execute(sql::kLockShipmentTransportations, organization, request.shipment_id);
+    const auto rows = transaction.Execute(sql::kRouteUsage, organization, request.shipment_id)
                           .AsContainer<std::vector<Json>>();
+    transaction.Commit();
+
     std::set<std::string> ids;
     for (const auto& segment : Convert(rows))
         if (HasRouteData(segment))
@@ -96,11 +98,13 @@ models::TransportationResult RoutesComponent::Set(
         if (HasRouteData(converters::Convert(input)))
             used.push_back(input.id);
     }
-    references_.RegisterRouteUsage(context, source, used);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     auto result = ReadTransportation(transaction, organization, loaded.id, true);
     CheckRevision(result.revision, request.expected_revision);
     InheritRoute(result, source);
+
+    references_.RegisterRouteUsage(context, source, used);
+
     for (std::size_t i = 0; i < request.route_segments.size(); ++i) {
         auto& stored = result.route_segments[i];
         auto value = converters::Convert(request.route_segments[i]);

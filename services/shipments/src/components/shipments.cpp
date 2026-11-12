@@ -144,8 +144,19 @@ models::Shipment ShipmentsComponent::GetShipment(
     return Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
 }
 
+std::int64_t ShipmentsComponent::GetRouteUsageVersion(
+    const std::string& organization, const std::string& shipment_id) const {
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetRouteUsageVersion, organization, shipment_id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Поставка не найдена"};
+
+    return rows.AsSingleRow<std::int64_t>();
+}
+
 models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organization,
-    const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request) const {
+    const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request,
+    const std::optional<std::int64_t>& route_usage_version) const {
     try {
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto current =
@@ -158,10 +169,16 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
                 .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
-        const auto protected_ids =
-            transaction.Execute(sql::kGetRouteUsage, organization, request.shipment_id)
-                .AsContainer<std::vector<std::string>>();
-        shipment_card::ValidateRouteUsage(previous, card, protected_ids);
+
+        if (route_usage_version.has_value()) {
+            const auto current_usage =
+                transaction.Execute(sql::kGetRouteUsageVersion, organization, request.shipment_id)
+                    .AsSingleRow<std::int64_t>();
+            if (current_usage != route_usage_version.value())
+                throw ApiError<409>{"route_usage_changed",
+                    "Данные участков изменились. Обновите поставку и повторите сохранение"};
+        }
+
         shipment_card::ValidateCard(card,
             settings_.Effective(
                 transaction, organization, boost::uuids::to_string(card.CustomerId)),

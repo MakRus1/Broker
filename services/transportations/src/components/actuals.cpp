@@ -38,7 +38,6 @@ models::TransportationResult ActualsComponent::Apply(const Request& request,
     const auto& source = FindShipmentContext(sources, loaded.shipment_id);
     InheritRoute(loaded, source);
     ApplyActual(loaded, request.route_segment_id, request.event_kind, request.occurred_at, change);
-    references_.RegisterRouteUsage(context, source, {request.route_segment_id});
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto organization = platform::auth::GetOrganization(identity);
     auto result = ReadTransportation(transaction, organization, request.transportation_id, true);
@@ -46,6 +45,8 @@ models::TransportationResult ActualsComponent::Apply(const Request& request,
     InheritRoute(result, source);
     const auto position = ApplyActual(
         result, request.route_segment_id, request.event_kind, request.occurred_at, change);
+    references_.RegisterRouteUsage(context, source, {request.route_segment_id});
+
     transaction.Execute(sql::kInsertRouteSegment, organization, result.id, request.route_segment_id,
         static_cast<std::int64_t>(position), Document(result.route_segments.at(position)));
     transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);

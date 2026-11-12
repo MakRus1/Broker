@@ -57,7 +57,7 @@ class SelectionTest(unittest.TestCase):
                     'services/transportations/docs/components/schemas/models.yaml',
                     'libs/auth/src/verifier.cpp',
                     'services/transportations/CMakeLists.txt',
-                    'services/transportations/postgresql/types.yaml',
+                    'services/transportations/src/models/pg/transportation_raw.hpp',
                 ],
                 ALL,
             ),

@@ -247,7 +247,8 @@ OpenAPI `type: string, format: date` генерирует `userver::utils::datet
 JSON и HTTP query/path сохраняют ISO `YYYY-MM-DD`; строка проверяется и разбирается
 на границе, внутри DTO и бизнесовой логики используются даты. `format: date-time` генерирует `std::chrono::system_clock::time_point`: это момент
 времени с часовым поясом во входном RFC3339 и нормализацией в UTC на выходе.
-`postgresql/types.yaml` поддерживает `type: date` с бинарным I/O PostgreSQL DATE.
+В моделях PostgreSQL используем `userver::utils::datetime::Date` и маппинг
+`userver/storages/postgres/io/date.hpp` для бинарного I/O PostgreSQL DATE.
 
 В Web `DateInput` принимает `CalendarDate | null`, форматирует значение для ввода
 и календаря. Незавершённый текст хранится внутри контрола и доступен через

@@ -2,7 +2,6 @@
 #include <components/references.hpp>
 #include <configs/keys.hpp>
 #include <models/pg/organization_shipment_rules.hpp>
-#include <models/pg/shipment_business_rules.hpp>
 #include <openapi/models.hpp>
 #include <platform/configs/runtime.hpp>
 #include <userver/components/component_base.hpp>
@@ -33,11 +32,9 @@ class SettingsComponent final : public userver::components::ComponentBase {
     platform::configs::Source configs_;
     clients::organizations::Client organizations_;
     ReferencesComponent& references_;
-    configs::ShipmentSettings Platform(
-        const std::string&, const std::optional<std::string>& = std::nullopt) const;
     std::optional<models::pg::OrganizationShipmentRules> LoadRules(const std::string&) const;
-    models::ShipmentBusinessSettings Business(const std::string&) const;
-    void ValidateBusinessRules(const std::string&, const models::pg::ShipmentBusinessRules&) const;
+    models::ShipmentBusinessSettings BuildBusinessSettings(const configs::ShipmentSettings& limits,
+        models::ShipmentBusinessRules rules, std::int64_t revision) const;
 };
 }  // namespace shipments
 

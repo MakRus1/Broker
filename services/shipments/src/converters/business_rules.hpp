@@ -12,13 +12,4 @@ inline models::pg::ShipmentBusinessRules Convert(const models::ShipmentBusinessR
         .ContainerTypes = value.container_types};
 }
 
-inline models::ShipmentBusinessRules Convert(const models::pg::ShipmentBusinessRules& value) {
-    return {.container_types = value.ContainerTypes,
-        .number_template = value.NumberTemplate,
-        .planned_containers = value.PlannedContainers,
-        .reset_number_yearly = value.ResetNumberYearly,
-        .route_types = value.RouteTypes,
-        .statuses = value.Statuses};
-}
-
 }  // namespace shipments::converters

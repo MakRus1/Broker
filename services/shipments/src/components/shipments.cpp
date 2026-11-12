@@ -13,10 +13,8 @@
 #include <models/pg/shipment_raw.hpp>
 #include <models/shipment_source_record.hpp>
 #include <openapi/models.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
-#include <platform/text.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -32,8 +30,7 @@ ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfi
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      settings_(context.FindComponent<SettingsComponent>()),
-      card_integrations_(context.FindComponent<ShipmentCardIntegrations>()) {}
+      settings_(context.FindComponent<SettingsComponent>()) {}
 
 userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -128,77 +125,28 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string&
     return result;
 }
 
-models::ShipmentsCreateResult ShipmentsComponent::CreateShipment(
-    models::CreateShipmentRequest request,
-    userver::server::request::RequestContext& context) const {
-    try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-        const auto organization = platform::auth::GetOrganization(identity);
-        const auto saved =
+std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
+    const std::string& organization, const models::CreateShipmentRequest& request,
+    const ShipmentSource& source, const Json& document) const {
+    if (const auto saved =
             FindSavedReplay<models::Shipment>(cluster_, organization, "create_shipment", request);
-        if (saved.has_value())
-            return models::ShipmentsCreateResult{.shipment = saved.value()};
-        const auto source = ShipmentSource::Manual(request.idempotency_key);
-        const auto document = Document(request);
-        if (const auto replay = FindCreatedShipment(organization, source, document);
-            replay.has_value())
-            return models::ShipmentsCreateResult{.shipment = replay.value()};
-        const auto logist = request.logist.has_value()
-            ? platform::TrimToOptional(request.logist.value())
-            : card_integrations_.CustomerLogist(context, request.customer_id);
-        card_integrations_.ValidateLogist(context, logist);
-        if (request.route_segments.has_value()) {
-            card_integrations_.ResolveRoute(context, request.route_segments.value(), {});
-        }
-        auto body = request;
-        body.logist = logist;
-        const auto result =
-            CreateShipmentFromSource(organization, identity, body, source, document);
-        return models::ShipmentsCreateResult{.shipment = result};
-    } catch (const userver::storages::postgres::UniqueViolation&) {
-        throw ApiError<409>{"number_exists", "Номер поставки уже занят"};
-    }
+        saved.has_value())
+        return saved;
+    return FindCreatedShipment(organization, source, document);
 }
 
-models::ShipmentsGetResult ShipmentsComponent::GetShipment(
-    const models::GetShipmentRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::Shipment ShipmentsComponent::GetShipment(
+    const std::string& organization, const std::string& shipment_id) const {
     const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetShipment, organization, request.shipment_id);
+        pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    const auto result = Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
-    return models::ShipmentsGetResult{.shipment = result};
+    return Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
 }
 
-models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
-    models::UpdateShipmentRequest request,
-    userver::server::request::RequestContext& context) const {
+models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organization,
+    const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request) const {
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-        if (request.logist.has_value())
-            card_integrations_.ValidateLogist(
-                context, platform::TrimToOptional(request.logist.value()));
-        const auto organization = platform::auth::GetOrganization(identity);
-        if (request.route_segments.has_value()) {
-            const auto rows = cluster_->Execute(
-                pg::ClusterHostType::kMaster, sql::kGetShipment, organization, request.shipment_id);
-            if (rows.IsEmpty())
-                throw ApiError<404>{"not_found", "Поставка не найдена"};
-            const auto previous = rows.AsSingleRow<models::pg::ShipmentRaw>();
-            CheckRevision(previous.Revision, request.expected_revision);
-            const auto previous_route = Convert(previous).route_segments;
-            card_integrations_.ResolveRoute(
-                context, request.route_segments.value(), previous_route);
-            card_integrations_.CheckExistingRouteUsage(context, request.shipment_id,
-                shipment_card::ChangedRouteSegments(previous, request.route_segments.value()));
-        }
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto current =
             transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
@@ -225,45 +173,24 @@ models::ShipmentsUpdateResult ShipmentsComponent::UpdateShipment(
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);
-        WriteAudit(
-            transaction, organization, identity, "update_shipment", result.id, request, result);
+        WriteAudit(transaction, organization, actor, "update_shipment", result.id, request, result);
         QueueRouteProjection(transaction, organization, result);
-        QueueRouteChanged(transaction, organization, identity, Convert(previous), result);
+        QueueRouteChanged(transaction, organization, actor, Convert(previous), result);
         transaction.Commit();
-        return models::ShipmentsUpdateResult{.shipment = result};
+        return result;
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{"number_exists", "Номер поставки уже занят"};
     }
 }
 
-models::ShipmentsTransportationContextsResult ShipmentsComponent::GetTransportationContexts(
-    const models::TransportationContextsRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-    const auto rows = cluster_
-                          ->Execute(pg::ClusterHostType::kMaster, sql::kTransportationContexts,
-                              organization, request.shipment_ids)
-                          .AsContainer<std::vector<models::pg::ShipmentRaw>>();
-    std::vector<models::TransportationContext> items;
-    for (const auto& row : rows) {
-        const auto shipment = Convert(row);
-        items.push_back(models::TransportationContext{
-            .carriage_terms = shipment.carriage_terms.value_or(std::nullopt),
-            .incoterms = shipment.incoterms.value_or(std::nullopt),
-            .loading = shipment.loading.value_or(std::nullopt),
-            .revision = shipment.revision,
-            .route_segments = shipment.route_segments,
-            .shipment_id = shipment.id});
-    }
-    return models::ShipmentsTransportationContextsResult{.items = std::move(items)};
+std::vector<models::Shipment> ShipmentsComponent::GetShipments(
+    const std::string& organization, const std::vector<std::string>& shipment_ids) const {
+    return Convert(cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids));
 }
 
-models::ShipmentsRegisterRouteUsageResult ShipmentsComponent::RegisterRouteUsage(
-    const models::RegisterRouteUsageRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
+void ShipmentsComponent::RegisterRouteUsage(
+    const std::string& organization, const models::RegisterRouteUsageRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto rows = transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (rows.IsEmpty())
@@ -282,27 +209,5 @@ models::ShipmentsRegisterRouteUsageResult ShipmentsComponent::RegisterRouteUsage
     transaction.Execute(
         sql::kRegisterRouteUsage, organization, request.shipment_id, request.segment_ids);
     transaction.Commit();
-    return models::ShipmentsRegisterRouteUsageResult{.registered = true};
-}
-
-models::ShipmentsEnsureCreatedResult ShipmentsComponent::EnsureShipmentCreated(
-    const models::EnsureShipmentRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& command = request;
-    const auto& sender = platform::auth::GetIdentity(context);
-    if (sender.Issuer != command.actor_issuer)
-        throw ApiError<400>{"invalid_actor", "Некорректный провайдер пользователя"};
-    auto actor = sender;
-    actor.Subject = command.actor_subject;
-    actor.Issuer = command.actor_issuer;
-    const ShipmentSource source{
-        .Producer = sender.ClientId, .Type = command.source.type, .Id = command.source.id};
-    const auto document = Document(command);
-    if (const auto replay = FindCreatedShipment(command.organization_id, source, document);
-        replay.has_value())
-        return models::ShipmentsEnsureCreatedResult{.shipment = replay.value()};
-    const auto result = CreateShipmentFromSource(
-        command.organization_id, actor, command.shipment, source, document);
-    return models::ShipmentsEnsureCreatedResult{.shipment = result};
 }
 }  // namespace shipments

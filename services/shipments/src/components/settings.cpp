@@ -6,7 +6,7 @@
 #include <models/pg/organization_shipment_rules.hpp>
 #include <models/pg/shipment_business_rules.hpp>
 #include <models/pg/shipment_dictionary_value.hpp>
-#include <platform/auth/organization_admin.hpp>
+#include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -24,8 +24,7 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
-      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
+      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()) {}
 
 userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -142,9 +141,7 @@ models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
     return result;
 }
 
-models::ShipmentDictionaries SettingsComponent::Dictionaries(
-    const models::SettingsDictionariesRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::ShipmentDictionaries SettingsComponent::GetDictionaries() const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListShipmentDictionaries);
     models::ShipmentDictionaries result;
@@ -168,73 +165,38 @@ models::ShipmentDictionaries SettingsComponent::Dictionaries(
     return result;
 }
 
-models::ShipmentBusinessSettings SettingsComponent::GetBusiness(
-    const models::SettingsGetBusinessRequest& request,
-    userver::server::request::RequestContext& context) const {
-    try {
-        platform::auth::RequireOrganizationAdministrator(
-            organizations_, context, request.organization_id);
-
-        const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), request.organization_id);
-        const auto stored = LoadRules(request.organization_id);
-        const auto effective = ResolveShipmentSettings(limits, limits, stored);
-        return BuildBusinessSettings(limits,
-            {.container_types = effective.ContainerTypes,
-                .number_template = effective.NumberTemplate,
-                .planned_containers = effective.PlannedContainers,
-                .reset_number_yearly = effective.ResetNumberYearly,
-                .route_types = effective.RouteTypes,
-                .statuses = effective.Statuses},
-            stored.has_value() ? stored.value().Revision : 0);
-    } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError<403>{"forbidden", "Нет права управления организацией"};
-    } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError<404>{"not_found", "Организация не найдена"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<503>{"organizations_unavailable", "Не удалось проверить доступ"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<503>{"organizations_unavailable", "Не удалось проверить доступ"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<503>{"organizations_unavailable", "Некорректный ответ проверки доступа"};
-    }
+models::ShipmentBusinessSettings SettingsComponent::GetBusinessSettings(
+    const std::string& organization) const {
+    const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), organization);
+    const auto stored = LoadRules(organization);
+    const auto effective = ResolveShipmentSettings(limits, limits, stored);
+    return BuildBusinessSettings(limits,
+        {.container_types = effective.ContainerTypes,
+            .number_template = effective.NumberTemplate,
+            .planned_containers = effective.PlannedContainers,
+            .reset_number_yearly = effective.ResetNumberYearly,
+            .route_types = effective.RouteTypes,
+            .statuses = effective.Statuses},
+        stored.has_value() ? stored.value().Revision : 0);
 }
 
-models::ShipmentBusinessSettings SettingsComponent::UpdateBusiness(
-    const models::SettingsUpdateBusinessRequest& request,
-    userver::server::request::RequestContext& context) const {
-    try {
-        platform::auth::RequireOrganizationAdministrator(
-            organizations_, context, request.organization_id);
-
-        const auto rules = Convert(request.rules);
-        const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), request.organization_id);
-        ValidateBusinessRules(limits, rules);
-        auto result = BuildBusinessSettings(limits, request.rules, 0);
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto changed = transaction.Execute(sql::kSaveOrganizationShipmentRules,
-            request.organization_id, request.expected_revision, rules);
-        if (changed.IsEmpty())
-            throw ApiError<409>{"revision_conflict", "Настройки уже изменились. Обновите страницу"};
-        const auto revision = changed.AsSingleRow<std::int64_t>();
-        WriteAudit(transaction, request.organization_id, platform::auth::GetIdentity(context),
-            "update_shipment_rules", request.organization_id, request.rules, request.rules);
-        transaction.Commit();
-        result.revision = revision;
-        return result;
-    } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError<403>{"forbidden", "Нет права управления организацией"};
-    } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError<404>{"not_found", "Организация не найдена"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<503>{"organizations_unavailable", "Не удалось проверить доступ"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<503>{"organizations_unavailable", "Не удалось проверить доступ"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<503>{"organizations_unavailable", "Некорректный ответ проверки доступа"};
-    }
+models::ShipmentBusinessSettings SettingsComponent::SaveBusinessSettings(
+    const std::string& organization, const platform::auth::Identity& actor,
+    const models::ShipmentBusinessRules& requested_rules, std::int64_t expected_revision) const {
+    const auto rules = Convert(requested_rules);
+    const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), organization);
+    ValidateBusinessRules(limits, rules);
+    auto result = BuildBusinessSettings(limits, requested_rules, 0);
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const auto changed = transaction.Execute(
+        sql::kSaveOrganizationShipmentRules, organization, expected_revision, rules);
+    if (changed.IsEmpty())
+        throw ApiError<409>{"revision_conflict", "Настройки уже изменились. Обновите страницу"};
+    const auto revision = changed.AsSingleRow<std::int64_t>();
+    WriteAudit(transaction, organization, actor, "update_shipment_rules", organization,
+        requested_rules, requested_rules);
+    transaction.Commit();
+    result.revision = revision;
+    return result;
 }
 }  // namespace shipments

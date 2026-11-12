@@ -3,8 +3,6 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <models/shipment_registry_row.hpp>
-#include <permissions/permissions.hpp>
-#include <platform/auth/identity.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -27,11 +25,8 @@ userver::yaml_config::Schema ShipmentRegistryComponent::GetStaticConfigSchema() 
 }
 
 models::ShipmentsFilterValuesResult ShipmentRegistryComponent::GetShipmentFilterValues(
-    const models::ShipmentsFilterValuesRequest& request,
-    userver::server::request::RequestContext& context) const {
+    const models::ShipmentsFilterValuesRequest& request, const std::string& organization) const {
     try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
         models::ShipmentsFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(
             registry_query::registry_fields::kFields);
@@ -55,12 +50,8 @@ models::ShipmentsFilterValuesResult ShipmentRegistryComponent::GetShipmentFilter
 }
 
 models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
-    const models::ListShipmentsRequest& request,
-    userver::server::request::RequestContext& context) const {
+    const models::ListShipmentsRequest& request, const std::string& organization) const {
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
-        const auto organization = platform::auth::GetOrganization(identity);
         const auto scope = platform::registry::CursorScope(request, organization);
         const auto order =
             registry::RegistryOrderBy(registry_query::registry_fields::kFields, request.sort);

@@ -10,7 +10,6 @@
 #include <models/errors.hpp>
 #include <models/pg/creation_operation.hpp>
 #include <models/pg/shipment_item.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/outbox/component.hpp>
 #include <userver/components/component_context.hpp>
@@ -33,28 +32,13 @@ userver::yaml_config::Schema TransportationOperationsComponent::GetStaticConfigS
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::TransportationOperationsCreateResult TransportationOperationsComponent::Create(
-    const models::CreateOperationRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-    const auto result = RequestTransportations(platform::auth::GetIdentity(context), request);
-    return models::TransportationOperationsCreateResult{.operation = result};
-}
-
-models::TransportationOperationsGetResult TransportationOperationsComponent::Get(
-    const models::GetOperationRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
-    const auto& identity = platform::auth::GetIdentity(context);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::CreationOperation TransportationOperationsComponent::GetCreationOperation(
+    const std::string& organization, const std::string& operation_id) const {
     const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetOperation, organization, request.operation_id);
+        pg::ClusterHostType::kMaster, sql::kGetOperation, organization, operation_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Операция не найдена"};
-    const auto result = Convert(rows.AsSingleRow<models::pg::CreationOperation>());
-    return models::TransportationOperationsGetResult{.operation = result};
+    return Convert(rows.AsSingleRow<models::pg::CreationOperation>());
 }
 
 models::CreationOperation TransportationOperationsComponent::RequestTransportations(

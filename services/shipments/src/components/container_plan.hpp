@@ -2,11 +2,9 @@
 #include <clients/transportations/client.hpp>
 #include <components/settings.hpp>
 #include <models/container_plan.hpp>
-#include <models/pg/pending_container_creation.hpp>
-#include <models/pg/shipment_item.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace shipments {
@@ -16,20 +14,19 @@ class ContainerPlanComponent final : public userver::components::ComponentBase {
     ContainerPlanComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::ContainerPlanAddResult Add(const models::AddItemRequest& request,
-        userver::server::request::RequestContext& context) const;
-    models::ContainerPlanListResult List(const models::ListItemsRequest& request,
-        userver::server::request::RequestContext& context) const;
-    models::ContainerPlanUpdateResult Update(const models::UpdateItemRequest& request,
-        userver::server::request::RequestContext& context) const;
+    models::ShipmentItem AddPlannedContainer(
+        const models::AddItemRequest&, const platform::auth::Identity&) const;
+    ContainerPlanSnapshot LoadPlan(
+        const std::string& organization, const std::string& shipment_id) const;
+    models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snapshot,
+        const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
+        const models::ListItemsRequest& request) const;
+    models::ShipmentItem UpdatePlannedContainer(
+        const models::UpdateItemRequest&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     SettingsComponent& settings_;
-    clients::transportations::Client transportations_;
-    ContainerPlan ReadContainerPlan(const userver::server::request::RequestContext&,
-        const std::string&, const std::vector<models::pg::ShipmentItem>&,
-        const std::vector<models::pg::PendingContainerCreation>&) const;
 };
 }  // namespace shipments
 

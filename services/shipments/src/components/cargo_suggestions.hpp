@@ -1,8 +1,8 @@
 #pragma once
-#include <openapi/models.hpp>
+#include <string>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <vector>
 
 namespace shipments {
 class CargoSuggestionsComponent final : public userver::components::ComponentBase {
@@ -11,10 +11,10 @@ class CargoSuggestionsComponent final : public userver::components::ComponentBas
     CargoSuggestionsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::CargoSuggestionsListResult List(const models::CargoSuggestionsRequest& request,
-        userver::server::request::RequestContext& context) const;
-    models::CargoSuggestionsRemoveResult Remove(const models::DeleteCargoSuggestionRequest& request,
-        userver::server::request::RequestContext& context) const;
+    std::vector<std::string> FindSuggestions(const std::string& organization,
+        const std::string& customer, const std::string& query) const;
+    bool RemoveSuggestion(const std::string& organization, const std::string& customer,
+        const std::string& value) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

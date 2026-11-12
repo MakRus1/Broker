@@ -10,9 +10,7 @@
 #include <models/pg/pending_container_creation.hpp>
 #include <models/pg/shipment_item.hpp>
 #include <models/pg/shipment_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
-#include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -27,24 +25,17 @@ ContainerPlanComponent::ContainerPlanComponent(const userver::components::Compon
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      settings_(context.FindComponent<SettingsComponent>()),
-      transportations_(context.FindComponent<clients::transportations::Component>().GetClient()) {}
+      settings_(context.FindComponent<SettingsComponent>()) {}
 
 userver::yaml_config::Schema ContainerPlanComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-ContainerPlan ContainerPlanComponent::ReadContainerPlan(
-    const userver::server::request::RequestContext& context, const std::string& shipment,
-    const std::vector<models::pg::ShipmentItem>& items,
-    const std::vector<models::pg::PendingContainerCreation>& pending) const {
-    namespace api = clients::transportations::ApiV1TransportationsContainerFact;
-    api::RequestBody request;
-    request.shipment_id = shipment;
-    for (const auto& operation : pending)
-        request.pending_operation_ids.push_back(boost::uuids::to_string(operation.Id));
-    const auto facts = transportations_.ApiV1TransportationsContainerFact(
-        api::Request{.body = request}, platform::auth::GetAccessToken(context));
+namespace {
+ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
+    const clients::transportations::ApiV1TransportationsContainerFact::Response& facts) {
+    const auto& items = snapshot.Items;
+    const auto& pending = snapshot.Pending;
     ContainerPlan result;
     std::set<ContainerKey> planned;
     for (const auto& item : items)
@@ -78,18 +69,17 @@ ContainerPlan ContainerPlanComponent::ReadContainerPlan(
     return result;
 }
 
-models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItemRequest& request,
-    userver::server::request::RequestContext& context) const {
+}  // namespace
 
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-    const auto& identity = platform::auth::GetIdentity(context);
+models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
+    const models::AddItemRequest& request, const platform::auth::Identity& actor) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = platform::auth::GetOrganization(identity);
+    const auto organization = platform::auth::GetOrganization(actor);
     const auto replay =
         FindReplay<models::ShipmentItem>(transaction, organization, "add_item", request);
     if (replay.has_value()) {
         transaction.Commit();
-        return models::ContainerPlanAddResult{.item = replay.value()};
+        return replay.value();
     }
     const auto shipment =
         transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
@@ -113,65 +103,48 @@ models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItem
     transaction.Execute(sql::kBumpShipmentRevision, organization, request.shipment_id);
     const auto result = Convert(row);
     SaveReplay(transaction, organization, "add_item", request, result);
-    WriteAudit(transaction, organization, identity, "add_item", result.id, request, result);
+    WriteAudit(transaction, organization, actor, "add_item", result.id, request, result);
     transaction.Commit();
-    return models::ContainerPlanAddResult{.item = result};
+    return result;
 }
 
-models::ContainerPlanListResult ContainerPlanComponent::List(
-    const models::ListItemsRequest& request,
-    userver::server::request::RequestContext& context) const {
-    try {
-        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
-        const auto& identity = platform::auth::GetIdentity(context);
-        // Позиции и счётчики резервов читаются из одного снимка.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
-        const auto organization = platform::auth::GetOrganization(identity);
-        if (transaction.Execute(sql::kGetShipment, organization, request.shipment_id).IsEmpty())
-            throw ApiError<404>{"not_found", "Поставка не найдена"};
-        const auto rows = transaction.Execute(sql::kListItems, organization, request.shipment_id)
-                              .AsContainer<std::vector<models::pg::ShipmentItem>>();
-        const auto pending =
-            transaction.Execute(sql::kPendingContainerCreations, organization, request.shipment_id)
-                .AsContainer<std::vector<models::pg::PendingContainerCreation>>();
-        transaction.Commit();
-        // Сетевой вызов не держит соединение и транзакцию Shipments.
-        auto plan = ReadContainerPlan(context, request.shipment_id, rows, pending);
-        models::ContainerPlanListResult result;
-        result.unplanned_items = std::move(plan.Unplanned);
-        const auto after = request.after.has_value()
-            ? std::optional{boost::uuids::string_generator{}(request.after.value())}
-            : std::nullopt;
-        for (const auto& row : rows) {
-            if (after.has_value() && row.Id <= after.value())
-                continue;
-            if (result.items.size() >= static_cast<std::size_t>(request.limit))
-                break;
-            result.items.push_back(Convert(row, plan.Totals[{row.ContainerType, row.Ownership}]));
-        }
-        return result;
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<503>{"container_fact_unavailable",
-            "Не удалось получить фактические перевозки. Повторите загрузку"};
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<503>{"container_fact_unavailable",
-            "Не удалось получить фактические перевозки. Повторите загрузку"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<503>{"container_fact_unavailable",
-            "Не удалось получить фактические перевозки. Повторите загрузку"};
+ContainerPlanSnapshot ContainerPlanComponent::LoadPlan(
+    const std::string& organization, const std::string& shipment_id) const {
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+    if (transaction.Execute(sql::kGetShipment, organization, shipment_id).IsEmpty())
+        throw ApiError<404>{"not_found", "Поставка не найдена"};
+    auto rows = transaction.Execute(sql::kListItems, organization, shipment_id)
+                    .AsContainer<std::vector<models::pg::ShipmentItem>>();
+    auto pending = transaction.Execute(sql::kPendingContainerCreations, organization, shipment_id)
+                       .AsContainer<std::vector<models::pg::PendingContainerCreation>>();
+    transaction.Commit();
+    return {.Items = std::move(rows), .Pending = std::move(pending)};
+}
+
+models::ContainerPlanListResult ContainerPlanComponent::BuildPlanPage(
+    const ContainerPlanSnapshot& snapshot,
+    const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
+    const models::ListItemsRequest& request) const {
+    auto plan = ReconcileContainerPlan(snapshot, facts);
+    models::ContainerPlanListResult result;
+    result.unplanned_items = std::move(plan.Unplanned);
+    const auto after = request.after.has_value()
+        ? std::optional{boost::uuids::string_generator{}(request.after.value())}
+        : std::nullopt;
+    for (const auto& row : snapshot.Items) {
+        if (after.has_value() && row.Id <= after.value())
+            continue;
+        if (result.items.size() >= static_cast<std::size_t>(request.limit))
+            break;
+        result.items.push_back(Convert(row, plan.Totals[{row.ContainerType, row.Ownership}]));
     }
+    return result;
 }
 
-models::ContainerPlanUpdateResult ContainerPlanComponent::Update(
-    const models::UpdateItemRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
-    const auto& identity = platform::auth::GetIdentity(context);
+models::ShipmentItem ContainerPlanComponent::UpdatePlannedContainer(
+    const models::UpdateItemRequest& request, const platform::auth::Identity& actor) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = platform::auth::GetOrganization(identity);
+    const auto organization = platform::auth::GetOrganization(actor);
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Позиция не найдена"};
@@ -181,8 +154,8 @@ models::ContainerPlanUpdateResult ContainerPlanComponent::Update(
             .Execute(sql::kUpdateItem, organization, request.item_id, request.planned_quantity)
             .AsSingleRow<models::pg::ShipmentItem>();
     const auto result = Convert(row);
-    WriteAudit(transaction, organization, identity, "update_item", result.id, request, result);
+    WriteAudit(transaction, organization, actor, "update_item", result.id, request, result);
     transaction.Commit();
-    return models::ContainerPlanUpdateResult{.item = result};
+    return result;
 }
 }  // namespace shipments

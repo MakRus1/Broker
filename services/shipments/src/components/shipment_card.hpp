@@ -14,7 +14,8 @@ void ValidateCard(const models::pg::ShipmentData& card, const configs::ShipmentS
     const std::vector<models::pg::ShipmentDictionaryValue>& dictionaries,
     const models::pg::ShipmentRaw* previous = nullptr);
 std::vector<std::string> ChangedRouteSegments(
-    const models::pg::ShipmentRaw& previous, const std::vector<models::ShipmentRouteSegment>& next);
+    const std::vector<models::ShipmentRouteSegment>& previous,
+    const std::vector<models::ShipmentRouteSegment>& next);
 void ValidateRouteUsage(const models::pg::ShipmentRaw& previous,
     const models::pg::ShipmentData& next, const std::vector<std::string>& protected_ids);
 }  // namespace shipments::shipment_card

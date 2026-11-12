@@ -128,14 +128,15 @@ void ValidateCard(const models::pg::ShipmentData& row, const configs::ShipmentSe
         previous != nullptr ? previous->Loading : std::nullopt);
 }
 
-std::vector<std::string> ChangedRouteSegments(const models::pg::ShipmentRaw& previous,
+std::vector<std::string> ChangedRouteSegments(
+    const std::vector<models::ShipmentRouteSegment>& previous,
     const std::vector<models::ShipmentRouteSegment>& next) {
     std::vector<std::string> changed;
-    for (const auto& stage : previous.RouteSegments) {
-        const auto id = boost::uuids::to_string(stage.Id);
+    for (const auto& stage : previous) {
+        const auto& id = stage.id;
         const auto found =
             std::find_if(next.begin(), next.end(), [&](const auto& item) { return item.id == id; });
-        if (found == next.end() || found->type != stage.Type)
+        if (found == next.end() || found->type != stage.type)
             changed.push_back(id);
     }
     return changed;

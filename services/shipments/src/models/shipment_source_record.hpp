@@ -4,9 +4,9 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 
-namespace shipments::models::pg {
+namespace shipments::models {
 struct ShipmentSourceRecord {
     boost::uuids::uuid ShipmentId;
     userver::formats::json::Value Payload;
 };
-}  // namespace shipments::models::pg
+}  // namespace shipments::models

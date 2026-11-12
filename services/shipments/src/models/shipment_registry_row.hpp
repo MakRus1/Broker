@@ -3,10 +3,10 @@
 #include <optional>
 #include <string>
 
-namespace shipments::models::pg {
+namespace shipments::models {
 struct ShipmentRegistryRow {
-    ShipmentRaw Shipment;
+    pg::ShipmentRaw Shipment;
     std::string TextKey;
     std::optional<userver::utils::datetime::Date> DateKey;
 };
-}  // namespace shipments::models::pg
+}  // namespace shipments::models

@@ -2,7 +2,7 @@
 #include <converters/registry.hpp>
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
-#include <models/pg/shipment_registry_row.hpp>
+#include <models/shipment_registry_row.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <registry/query.hpp>
@@ -81,7 +81,7 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadSnapshot);
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<models::pg::ShipmentRegistryRow>>(pg::kRowTag);
+                        .AsContainer<std::vector<models::ShipmentRegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         if (more)
             rows.pop_back();

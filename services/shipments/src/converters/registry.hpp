@@ -1,11 +1,10 @@
 #pragma once
 #include <converters/shipments.hpp>
-#include <models/pg/shipment_registry_row.hpp>
+#include <models/shipment_registry_row.hpp>
 
 namespace shipments::converters {
 
-inline std::vector<models::Shipment> Convert(
-    const std::vector<models::pg::ShipmentRegistryRow>& rows) {
+inline std::vector<models::Shipment> Convert(const std::vector<models::ShipmentRegistryRow>& rows) {
     std::vector<models::Shipment> result;
     result.reserve(rows.size());
     for (const auto& row : rows)

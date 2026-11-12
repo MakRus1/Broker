@@ -11,7 +11,7 @@
 #include <models/pg/shipment_data.hpp>
 #include <models/pg/shipment_dictionary_value.hpp>
 #include <models/pg/shipment_raw.hpp>
-#include <models/pg/shipment_source_record.hpp>
+#include <models/shipment_source_record.hpp>
 #include <openapi/models.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
@@ -83,7 +83,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
         organization, source.Producer, source.Type, source.Id);
     if (saved.IsEmpty())
         return std::nullopt;
-    const auto stored = saved.AsSingleRow<models::pg::ShipmentSourceRecord>(pg::kRowTag);
+    const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
     if (stored.Payload != document)
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
     return Convert(cluster_
@@ -106,7 +106,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string&
     const auto saved = transaction.Execute(
         sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
     if (!saved.IsEmpty()) {
-        const auto stored = saved.AsSingleRow<models::pg::ShipmentSourceRecord>(pg::kRowTag);
+        const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
         if (stored.Payload != document)
             throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
         const auto shipment =

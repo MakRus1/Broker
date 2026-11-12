@@ -3,18 +3,14 @@
 #include <components/shipment_card_integrations.hpp>
 #include <converters/route_details.hpp>
 #include <converters/route_locations.hpp>
-#include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <openapi/models.hpp>
 #include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
-#include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
-using namespace helpers;
-using namespace converters;
 
 void ShipmentCardIntegrations::ResolveRoute(std::string_view access_token,
     std::vector<models::ShipmentRouteSegment>& segments,
@@ -146,8 +142,6 @@ void ShipmentCardIntegrations::ValidateRouteCounterparties(std::string_view acce
         }
     }
 }
-
-using converters::Convert;
 
 route_details::RouteLocations ShipmentCardIntegrations::LoadRouteLocations(
     std::string_view access_token, const std::vector<models::ShipmentRouteSegment>& segments) const

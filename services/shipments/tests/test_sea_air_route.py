@@ -79,13 +79,22 @@ def stages(locations):
     ]
 
 
-async def test_shared_fields_roundtrip_and_patch(api, locations):
+async def test_shared_fields_roundtrip_and_patch(api, locations, pgsql):
     route = stages(locations)
     created = (
         await api.post('/api/v1/shipments/create', creation(route_segments=route), expected=201)
     )['shipment']
     route[0]['sea']['pol'] = locations[0]
     assert created['route_segments'] == route
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "SELECT payload FROM outbox WHERE topic = 'shipment.route.project' "
+            "AND payload->>'shipment_id' = %s", (created['id'],),
+        )
+        projection = cursor.fetchone()[0]
+    assert projection['route_segments'] == route
+    assert projection['revision'] == created['revision']
+
     selected = (await api.post('/api/v1/shipments/get', {'shipment_id': created['id']}))['shipment']
     assert selected == created
     contexts = await api.post(

@@ -27,6 +27,7 @@
 #include <components/transportation_dispatcher.hpp>
 #include <components/transportation_operations.hpp>
 #include <openapi/handlers.hpp>
+#include <platform/notifications/dispatcher.hpp>
 
 #include <platform/auth/service_token.hpp>
 
@@ -48,6 +49,12 @@
 #include <userver/storages/postgres/component.hpp>
 
 // SERVICE_INCLUDES_END
+
+namespace {
+using NotificationDispatcher =
+    platform::notifications::Dispatcher<shipments::clients::notifications::Component,
+        shipments::clients::notifications::ApiInternalV1EventsPublish::Request>;
+}  // namespace
 
 int main(int argc, char* argv[]) {
     auto component_list =
@@ -84,6 +91,7 @@ int main(int argc, char* argv[]) {
 
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<shipments::TransportationDispatcher>();
+    component_list.Append<NotificationDispatcher>();
     component_list.Append<shipments::CargoSuggestionsCleanup>();
     component_list.Append<shipments::ShipmentCardIntegrations>();
     component_list.Append<shipments::ShipmentsComponent>();

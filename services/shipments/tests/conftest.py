@@ -104,6 +104,7 @@ def configure_dispatcher(mockserver_info):
     def patch(config, config_vars):
         components = config['components_manager']['components']
         components['transportation-dispatcher']['load-enabled'] = True
+        components['notification-dispatcher']['load-enabled'] = True
         components['service-token-provider'].update(
             {
                 'load-enabled': True,

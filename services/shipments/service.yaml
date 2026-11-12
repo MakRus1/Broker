@@ -2,6 +2,7 @@ version: 1
 libraries:
 - common
 - outbox
+- notifications
 - configs
 postgresql:
   enabled: true

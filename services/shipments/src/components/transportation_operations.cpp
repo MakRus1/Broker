@@ -17,8 +17,7 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
-using namespace helpers;
-using namespace converters;
+namespace pg = userver::storages::postgres;
 
 TransportationOperationsComponent::TransportationOperationsComponent(
     const userver::components::ComponentConfig& config,
@@ -38,7 +37,7 @@ models::CreationOperation TransportationOperationsComponent::GetCreationOperatio
         pg::ClusterHostType::kMaster, sql::kGetOperation, organization, operation_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Операция не найдена"};
-    return Convert(rows.AsSingleRow<models::pg::CreationOperation>());
+    return converters::Convert(rows.AsSingleRow<models::pg::CreationOperation>());
 }
 
 models::CreationOperation TransportationOperationsComponent::RequestTransportations(
@@ -46,18 +45,19 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto organization = platform::auth::GetOrganization(identity);
-    const auto replay = FindReplay<models::CreationOperation>(
+    const auto replay = helpers::FindReplay<models::CreationOperation>(
         transaction, organization, "create_operation", request);
     if (replay.has_value()) {
         transaction.Commit();
         return replay.value();
     }
+
     // Блокировка защищает снимок позиции при создании операции.
     const auto rows = transaction.Execute(sql::kLockItem, organization, request.item_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Позиция не найдена"};
     const auto item = rows.AsSingleRow<models::pg::ShipmentItem>();
-    CheckRevision(item.Revision, request.expected_revision);
+    helpers::CheckRevision(item.Revision, request.expected_revision);
 
     models::CreationOperation result;
     result.id = boost::uuids::to_string(boost::uuids::random_generator{}());
@@ -81,9 +81,11 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     // Payload сохраняется один раз и не пересобирается из изменяемой позиции при повторах.
     const auto document = userver::formats::json::FromString(api::ToJson(payload));
     transaction.Execute(sql::kCreateOperation, organization, result.id, item.Id, request.quantity);
-    platform::outbox::Enqueue(transaction, kCreateTransportations, result.id, document);
-    SaveReplay(transaction, organization, "create_operation", request, result);
-    WriteAudit(transaction, organization, identity, "create_operation", result.id, request, result);
+    platform::outbox::Enqueue(transaction, helpers::kCreateTransportations, result.id, document);
+    helpers::SaveReplay(transaction, organization, "create_operation", request, result);
+
+    helpers::WriteAudit(
+        transaction, organization, identity, "create_operation", result.id, request, result);
     transaction.Commit();
     return result;
 }

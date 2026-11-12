@@ -1,4 +1,5 @@
 #pragma once
+#include <openapi/models.hpp>
 #include <platform/registry_filters.hpp>
 #include <transportations/sql_queries.hpp>
 

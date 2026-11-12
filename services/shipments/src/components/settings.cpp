@@ -25,8 +25,7 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
-      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
-      card_integrations_(context.FindComponent<ShipmentCardIntegrations>()) {}
+      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
 
 userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -141,23 +140,6 @@ models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
                 limits.RouteTypes.end())
             result.allowed_route_types.push_back({.code = entry.Code, .name = entry.Name});
     return result;
-}
-
-models::ShipmentSettings SettingsComponent::Get(const models::GetShipmentSettingsRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-    const auto settings = Effective(organization, request.customer_id);
-    const auto customer_logist = request.customer_id.has_value()
-        ? card_integrations_.CustomerLogist(context, request.customer_id.value())
-        : std::nullopt;
-    return models::ShipmentSettings{.container_types = settings.ContainerTypes,
-        .customer_logist = customer_logist,
-        .number_template = settings.NumberTemplate,
-        .planned_containers = settings.PlannedContainers,
-        .reset_number_yearly = settings.ResetNumberYearly,
-        .route_types = settings.RouteTypes,
-        .statuses = settings.Statuses};
 }
 
 models::ShipmentDictionaries SettingsComponent::Dictionaries(

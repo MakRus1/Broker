@@ -311,11 +311,11 @@ def outputs(service, loader):
     used_contexts = sorted({configs[entry]['context'] for entry in entries if configs[entry]['mode'] == 'conditional'})
     for context in used_contexts:
         spec = contexts[context]
-        ns = 'config_contexts::detail_' + spec['name']
+        ns = 'config_contexts::detail::' + spec['name'].lower()
         text += f'namespace {ns} {{\n' + body_code(spec, ns, True) + f'}}  // namespace {ns}\n'
         text += f'namespace config_contexts {{ using {pascal(spec["name"])} = {ns}::Value; }}\n'
     for entry in entries:
-        spec = configs[entry];name = spec['name'];ns = 'configs::detail_' + name
+        spec = configs[entry];name = spec['name'];ns = 'configs::detail::' + name.lower()
         text += f'namespace {ns} {{\n'
         if spec['mode'] == 'json-schema':
             typ = 'platform::configs::Json'
@@ -331,10 +331,12 @@ def outputs(service, loader):
             text += body_code(spec, ns)
             typ = ns + '::Value';parser = 'ParseValue';default = spec['default']
             if spec['mode'] == 'conditional':
-                context = contexts[spec['context']];context_ns = 'config_contexts::detail_' + context['name'];context_typ = 'config_contexts::' + pascal(context['name'])
+                context = contexts[spec['context']];context_ns = 'config_contexts::detail::' + context['name'].lower();context_typ = 'config_contexts::' + pascal(context['name'])
                 text += f'inline platform::configs::Conditional<Value, {context_typ}> ParseConfig(const platform::configs::Json& json) {{ return platform::configs::ParseConditional<Value, {context_typ}>(json, ParseValue, {context_ns}::ValidatePredicate); }}\n'
                 parser = 'ParseConfig';default = {'clauses': [], 'default': default}
         text += f'}}  // namespace {ns}\n'
+        typ = 'configs::' + pascal(name)
+        text += f'namespace configs {{ using {pascal(name)} = {ns}::Value; }}\n'
         key = f'platform::configs::ConditionalKey<{typ}, {context_typ}>' if spec['mode'] == 'conditional' else f'platform::configs::PlainKey<{typ}>'
         initial = f'{{{quoted(name)}, {ns}::{parser}, userver::dynamic_config::DefaultAsJsonString{{{quoted(json.dumps(default, ensure_ascii=False))}}}}}'
         text += f'namespace configs {{ inline const {key} {name}{{{initial}, {quoted(schema_hash(spec, contexts))}}}; }}\n'
@@ -346,12 +348,12 @@ def outputs(service, loader):
         text += 'return out.ExtractValue();\n}\ninline void Validate(const platform::configs::Json& values) {\nplatform::configs::ObjectKeys(values, {' + ', '.join(quoted(configs[e]['name']) for e in entries) + '});\n'
         for entry in entries:
             spec = configs[entry];parser = 'ParseConfig' if spec['mode'] == 'conditional' else 'ParseValue'
-            text += f'if (values.HasMember({quoted(spec["name"])})) (void)detail_{spec["name"]}::{parser}(values[{quoted(spec["name"])}]);\n'
+            text += f'if (values.HasMember({quoted(spec["name"])})) (void)detail::{spec["name"].lower()}::{parser}(values[{quoted(spec["name"])}]);\n'
         text += '}\n}  // namespace configs\n'
     text += 'namespace configs {\nstruct DeliveryContract {\nstatic void Validate(const userver::dynamic_config::DocsMap& docs) {\n'
     for entry in entries:
         spec = configs[entry];parser = 'ParseConfig' if spec['mode'] == 'conditional' else 'ParseValue'
-        text += f'if (docs.Has({quoted(spec["name"])})) (void)detail_{spec["name"]}::{parser}(docs.Get({quoted(spec["name"])}));\n'
+        text += f'if (docs.Has({quoted(spec["name"])})) (void)detail::{spec["name"].lower()}::{parser}(docs.Get({quoted(spec["name"])}));\n'
     text += '}\nstatic std::map<std::string, std::string> Schemas() { return {'
     text += ', '.join('{' + quoted(configs[entry]['name']) + ', ' + quoted(schema_hash(configs[entry], contexts)) + '}' for entry in entries)
     text += '}; }\n};\n}  // namespace configs\n'

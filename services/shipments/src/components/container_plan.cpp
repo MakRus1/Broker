@@ -95,10 +95,10 @@ models::ContainerPlanAddResult ContainerPlanComponent::Add(const models::AddItem
         transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (shipment.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    CheckRevision(
-        shipment.AsSingleRow<models::pg::ShipmentRaw>().Revision, request.expected_revision);
-    const auto settings = settings_.Effective(organization,
-        boost::uuids::to_string(shipment.AsSingleRow<models::pg::ShipmentRaw>().CustomerId));
+    const auto previous = shipment.AsSingleRow<models::pg::ShipmentRaw>();
+    CheckRevision(previous.Revision, request.expected_revision);
+    const auto settings =
+        settings_.Effective(organization, boost::uuids::to_string(previous.CustomerId));
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};

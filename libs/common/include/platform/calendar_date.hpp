@@ -6,8 +6,14 @@
 #include <string>
 #include <userver/utils/datetime/date.hpp>
 #include <userver/utils/datetime/from_string_saturating.hpp>
+#include <userver/utils/datetime_light.hpp>
 
 namespace platform {
+inline userver::utils::datetime::Date CurrentUtcDate() {
+    return userver::utils::datetime::Date{
+        std::chrono::floor<std::chrono::days>(userver::utils::datetime::Now())};
+}
+
 // Calendar days must not pass through system_clock's nanosecond duration (1677–2262).
 inline userver::utils::datetime::Date ParseCalendarDate(const std::string& text) {
     if (text.substr(0, 4) == "0000")

@@ -33,7 +33,7 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-configs::detail_SHIPMENT_SETTINGS::Value SettingsComponent::Platform(
+configs::ShipmentSettings SettingsComponent::Platform(
     const std::string& organization, const std::optional<std::string>& customer) const {
     return configs_.GetSnapshot().Get(configs::SHIPMENT_SETTINGS,
         config_contexts::ShipmentOrganizationContext{
@@ -49,7 +49,7 @@ std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRule
     return rows.AsSingleRow<models::pg::OrganizationShipmentRules>();
 }
 
-configs::detail_SHIPMENT_SETTINGS::Value SettingsComponent::Effective(
+configs::ShipmentSettings SettingsComponent::Effective(
     const std::string& organization, const std::optional<std::string>& customer) const {
     auto result = Platform(organization, customer);
     const auto limits = Platform(organization);

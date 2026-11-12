@@ -19,15 +19,18 @@ class ReferencesComponent final : public userver::components::ComponentBase {
         const userver::server::request::RequestContext&, const std::optional<std::string>&) const;
     std::optional<std::string> CustomerLogist(
         const userver::server::request::RequestContext&, const std::string&) const;
+    void ResolveRoute(const userver::server::request::RequestContext& context,
+        std::vector<models::ShipmentRouteSegment>& segments,
+        const std::vector<models::ShipmentRouteSegment>& previous) const;
+    void CheckExistingRouteUsage(const userver::server::request::RequestContext&,
+        const std::string&, const std::vector<std::string>&) const;
+
+  private:
     domain::RouteLocations LoadRouteLocations(const userver::server::request::RequestContext&,
         const std::vector<models::ShipmentRouteSegment>&) const;
     void ValidateRouteCounterparties(const userver::server::request::RequestContext&,
         const std::vector<models::ShipmentRouteSegment>&,
         const std::vector<models::ShipmentRouteSegment>&) const;
-    void CheckExistingRouteUsage(const userver::server::request::RequestContext&,
-        const std::string&, const std::vector<std::string>&) const;
-
-  private:
     std::vector<clients::organizations::models::OrganizationEmployee> FindEmployees(
         const userver::server::request::RequestContext&,
         const std::optional<std::string>& = std::nullopt,

@@ -63,9 +63,19 @@ class ConfigSchemasTest(unittest.TestCase):
         spec = yaml.safe_load(manifest.read_text());spec['configs'] = ['PLAIN_CONFIG']
         manifest.write_text(yaml.safe_dump(spec))
         generated = configs.outputs(self.root / 'services/broker', UniqueLoader)['include/configs/keys.hpp']
-        self.assertIn('PlainKey<configs::detail_PLAIN_CONFIG::Value>', generated)
+        self.assertIn('PlainKey<configs::PlainConfig>', generated)
+        self.assertIn('using PlainConfig = configs::detail::plain_config::Value;', generated)
+        self.assertIn('PLAIN_CONFIG', generated)
+        self.assertNotIn('detail_', generated)
         self.assertIn('bool IsEnabled', generated)
         self.assertNotIn('ConditionalKey', generated)
+
+    def test_conditional_config_exposes_public_value_type(self):
+        generated = configs.outputs(self.root / 'services/broker', UniqueLoader)['include/configs/keys.hpp']
+        self.assertIn('using ShipmentTermsConfig = configs::detail::shipment_terms_config::Value;', generated)
+        self.assertRegex(generated, r'ConditionalKey<\s*configs::ShipmentTermsConfig,\s*config_contexts::ShipmentContext>')
+        self.assertIn('namespace config_contexts::detail::shipment_context', generated)
+        self.assertNotIn('detail_', generated)
 
     def test_manifest_resolves_global_names_without_paths(self):
         service = self.root / 'services/broker'

@@ -56,8 +56,8 @@ template <typename Request> void ApplyCard(const Request& request, models::pg::S
 
 }  // namespace
 
-models::pg::ShipmentData CreateShipmentCard(const models::CreateShipmentRequest& request,
-    const configs::detail_SHIPMENT_SETTINGS::Value& settings) {
+models::pg::ShipmentData CreateShipmentCard(
+    const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings) {
     models::pg::ShipmentData card;
     card.CustomerId = boost::uuids::string_generator{}(request.customer_id);
     card.Reference = request.reference.value_or("");
@@ -84,8 +84,7 @@ models::pg::ShipmentData UpdateShipmentCard(
     return card;
 }
 
-void ValidateCard(const models::pg::ShipmentData& row,
-    const configs::detail_SHIPMENT_SETTINGS::Value& settings,
+void ValidateCard(const models::pg::ShipmentData& row, const configs::ShipmentSettings& settings,
     const std::vector<models::pg::ShipmentDictionaryValue>& dictionaries,
     const models::pg::ShipmentRaw* previous) {
     if ((previous == nullptr || previous->Status != row.Status) &&

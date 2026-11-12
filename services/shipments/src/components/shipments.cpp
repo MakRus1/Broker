@@ -65,8 +65,7 @@ struct CreatedShipmentRow {
 };
 
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
-    const models::CreateShipmentRequest& body,
-    const configs::detail_SHIPMENT_SETTINGS::Value& settings) {
+    const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
     auto card = domain::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();

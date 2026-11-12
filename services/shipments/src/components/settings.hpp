@@ -16,7 +16,7 @@ class SettingsComponent final : public userver::components::ComponentBase {
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    configs::detail_SHIPMENT_SETTINGS::Value Effective(
+    configs::ShipmentSettings Effective(
         const std::string&, const std::optional<std::string>& = std::nullopt) const;
     models::ShipmentSettings Get(const models::GetShipmentSettingsRequest& request,
         userver::server::request::RequestContext& context) const;
@@ -33,7 +33,7 @@ class SettingsComponent final : public userver::components::ComponentBase {
     platform::configs::Source configs_;
     clients::organizations::Client organizations_;
     ReferencesComponent& references_;
-    configs::detail_SHIPMENT_SETTINGS::Value Platform(
+    configs::ShipmentSettings Platform(
         const std::string&, const std::optional<std::string>& = std::nullopt) const;
     std::optional<models::pg::OrganizationShipmentRules> LoadRules(const std::string&) const;
     models::ShipmentBusinessSettings Business(const std::string&) const;

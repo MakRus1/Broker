@@ -6,12 +6,11 @@
 #include <openapi/models.hpp>
 
 namespace shipments::domain {
-models::pg::ShipmentData CreateShipmentCard(const models::CreateShipmentRequest& request,
-    const configs::detail_SHIPMENT_SETTINGS::Value& settings);
+models::pg::ShipmentData CreateShipmentCard(
+    const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings);
 models::pg::ShipmentData UpdateShipmentCard(
     const models::UpdateShipmentRequest& request, const models::pg::ShipmentRaw& previous);
-void ValidateCard(const models::pg::ShipmentData& card,
-    const configs::detail_SHIPMENT_SETTINGS::Value& settings,
+void ValidateCard(const models::pg::ShipmentData& card, const configs::ShipmentSettings& settings,
     const std::vector<models::pg::ShipmentDictionaryValue>& dictionaries,
     const models::pg::ShipmentRaw* previous = nullptr);
 std::vector<std::string> ChangedRouteSegments(

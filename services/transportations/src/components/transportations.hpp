@@ -15,7 +15,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
     models::Transportation FindTransportation(
         const std::string& organization, const std::string& id) const;
     models::TransportationHistoryResult GetTransportationHistory(
-        models::ListHistoryRequest, const std::string& organization) const;
+        const std::string& organization, const models::ListHistoryRequest&) const;
     models::Transportation CreateTransportation(const std::string& organization,
         const platform::auth::Identity&, const models::CreateTransportationRequest&,
         const models::ShipmentContext&) const;
@@ -23,7 +23,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
         const platform::auth::Identity&, const models::UpdateTransportationRequest&,
         const models::ShipmentContext&) const;
     models::ContainerFactsResult GetContainerFacts(
-        models::ContainerFactsRequest, const std::string& organization) const;
+        const std::string& organization, const models::ContainerFactsRequest&) const;
     models::EnsureTransportationsResult CreateTransportationsFromCommand(
         const models::EnsureCreatedRequest&, const platform::auth::Identity&) const;
 

@@ -11,7 +11,7 @@ Response View::Handle(
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
 
-    auto result = deps.transportations->GetContainerFacts(std::move(request.body), organization);
+    auto result = deps.transportations->GetContainerFacts(organization, request.body);
 
     return Response200{
         .groups = std::move(result.groups), .operations = std::move(result.operations)};

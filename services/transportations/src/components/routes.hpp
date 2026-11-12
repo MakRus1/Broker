@@ -1,5 +1,5 @@
 #pragma once
-#include <components/route_integrations.hpp>
+#include <models/shipment_context.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <string_view>
@@ -7,6 +7,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
+class RouteIntegrations;
+
 class RoutesComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "transportations-routes";

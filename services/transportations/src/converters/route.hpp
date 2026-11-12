@@ -1,8 +1,17 @@
 #pragma once
 #include <components/rail_route.hpp>
 #include <openapi/models.hpp>
+#include <userver/formats/json.hpp>
 
 namespace transportations::converters {
+// Морские и авиационные данные принадлежат поставке и не сохраняются в локальном маршруте.
+inline userver::formats::json::Value ToStoredRouteSegment(const models::RouteSegment& value) {
+    auto local = value;
+    local.sea.reset();
+    local.air.reset();
+    return userver::formats::json::ValueBuilder(local).ExtractValue();
+}
+
 inline models::RouteSegment Convert(const models::SetRouteSegmentsItem& source) {
     models::RouteSegment result;
     result.rail = source.rail;

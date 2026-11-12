@@ -55,8 +55,12 @@ std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
 } catch (const platform::http::CancelledError&) {
 
     throw;
-} catch (const std::exception&) {
+} catch (const platform::http::ApiError&) {
     throw ApiError<503>{"shipment_unavailable", "Не удалось получить маршрут поставки"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<503>{"shipment_unavailable", "Сервис поставок недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<503>{"shipment_unavailable", "Некорректный ответ сервиса поставок"};
 }
 
 void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
@@ -76,8 +80,10 @@ void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
     throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
 } catch (const platform::http::CancelledError&) {
     throw;
-} catch (const std::exception&) {
+} catch (const platform::http::TransportError&) {
     throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<503>{"shipment_unavailable", "Некорректный ответ сервиса поставок"};
 }
 
 void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_token,

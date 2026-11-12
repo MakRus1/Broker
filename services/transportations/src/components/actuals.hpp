@@ -1,6 +1,6 @@
 #pragma once
 #include <components/actual_changes.hpp>
-#include <components/route_integrations.hpp>
+#include <models/shipment_context.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <string_view>
@@ -8,6 +8,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
+class RouteIntegrations;
+
 class ActualsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "transportations-actuals";
@@ -23,8 +25,8 @@ class ActualsComponent final : public userver::components::ComponentBase {
 
   private:
     template <typename Request>
-    models::Transportation ApplyActualChange(const Request&, const std::string& organization,
-        const platform::auth::Identity&, std::string_view access_token,
+    models::Transportation ApplyActualChange(const std::string& organization,
+        const platform::auth::Identity&, std::string_view access_token, const Request&,
         const models::ShipmentContext&, route_rules::ActualChange) const;
     userver::storages::postgres::ClusterPtr cluster_;
     RouteIntegrations& integrations_;

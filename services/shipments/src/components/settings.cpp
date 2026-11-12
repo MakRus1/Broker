@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <components/settings.hpp>
 #include <converters/business_rules.hpp>
-#include <converters/shipments.hpp>
 #include <helpers/database.hpp>
 #include <helpers/dictionaries.hpp>
 #include <models/pg/organization_shipment_rules.hpp>
@@ -33,27 +32,17 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-configs::ShipmentSettings SettingsComponent::Platform(
-    const std::string& organization, const std::optional<std::string>& customer) const {
-    return configs_.GetSnapshot().Get(configs::SHIPMENT_SETTINGS,
+namespace {
+configs::ShipmentSettings ReadPlatformSettings(const platform::configs::Snapshot& snapshot,
+    const std::string& organization, const std::optional<std::string>& customer = std::nullopt) {
+    return snapshot.Get(configs::SHIPMENT_SETTINGS,
         config_contexts::ShipmentOrganizationContext{
             .CustomerId = customer, .OrganizationId = organization});
 }
 
-std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
-    const std::string& organization) const {
-    const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization);
-    if (rows.IsEmpty())
-        return std::nullopt;
-    return rows.AsSingleRow<models::pg::OrganizationShipmentRules>();
-}
-
-configs::ShipmentSettings SettingsComponent::Effective(
-    const std::string& organization, const std::optional<std::string>& customer) const {
-    auto result = Platform(organization, customer);
-    const auto limits = Platform(organization);
-    const auto stored = LoadRules(organization);
+configs::ShipmentSettings ResolveShipmentSettings(configs::ShipmentSettings result,
+    const configs::ShipmentSettings& limits,
+    const std::optional<models::pg::OrganizationShipmentRules>& stored) {
     if (stored.has_value()) {
         const auto& rules = stored.value().Rules;
         result.NumberTemplate = rules.NumberTemplate;
@@ -74,10 +63,9 @@ configs::ShipmentSettings SettingsComponent::Effective(
     return result;
 }
 
-void SettingsComponent::ValidateBusinessRules(
-    const std::string& organization, const models::pg::ShipmentBusinessRules& rules) const {
+void ValidateBusinessRules(
+    const configs::ShipmentSettings& limits, const models::pg::ShipmentBusinessRules& rules) {
     platform::ValidateNumberTemplate(rules.NumberTemplate);
-    const auto limits = Platform(organization);
     const auto unique = [](const auto& values) {
         std::set<std::string> seen;
         for (const auto& value : values)
@@ -102,22 +90,34 @@ void SettingsComponent::ValidateBusinessRules(
             "platform_limit", "Настройки выходят за доступные организации возможности"};
 }
 
-models::ShipmentBusinessSettings SettingsComponent::Business(
+}  // namespace
+
+std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
     const std::string& organization) const {
-    const auto limits = Platform(organization);
-    const auto effective = Effective(organization);
-    const auto stored = LoadRules(organization);
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization);
+    if (rows.IsEmpty())
+        return std::nullopt;
+    return rows.AsSingleRow<models::pg::OrganizationShipmentRules>();
+}
+
+configs::ShipmentSettings SettingsComponent::Effective(
+    const std::string& organization, const std::optional<std::string>& customer) const {
+    const auto snapshot = configs_.GetSnapshot();
+    const auto limits = ReadPlatformSettings(snapshot, organization);
+    auto defaults =
+        customer.has_value() ? ReadPlatformSettings(snapshot, organization, customer) : limits;
+    return ResolveShipmentSettings(std::move(defaults), limits, LoadRules(organization));
+}
+
+models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
+    const configs::ShipmentSettings& limits, models::ShipmentBusinessRules rules,
+    std::int64_t revision) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListShipmentDictionaries);
     models::ShipmentBusinessSettings result;
-    result.revision = stored.has_value() ? stored.value().Revision : 0;
-    result.rules =
-        Convert(models::pg::ShipmentBusinessRules{.NumberTemplate = effective.NumberTemplate,
-            .ResetNumberYearly = effective.ResetNumberYearly,
-            .Statuses = effective.Statuses,
-            .RouteTypes = effective.RouteTypes,
-            .PlannedContainers = effective.PlannedContainers,
-            .ContainerTypes = effective.ContainerTypes});
+    result.revision = revision;
+    result.rules = std::move(rules);
     result.allowed_container_types = limits.ContainerTypes;
     result.planned_containers_allowed = limits.PlannedContainers;
     for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>())
@@ -178,13 +178,17 @@ models::ShipmentBusinessSettings SettingsComponent::GetBusiness(
         platform::auth::RequireOrganizationAdministrator(
             organizations_, context, request.organization_id);
 
-        const auto result = Business(request.organization_id);
-        return models::ShipmentBusinessSettings{
-            .allowed_container_types = result.allowed_container_types,
-            .allowed_route_types = result.allowed_route_types,
-            .planned_containers_allowed = result.planned_containers_allowed,
-            .revision = result.revision,
-            .rules = result.rules};
+        const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), request.organization_id);
+        const auto stored = LoadRules(request.organization_id);
+        const auto effective = ResolveShipmentSettings(limits, limits, stored);
+        return BuildBusinessSettings(limits,
+            {.container_types = effective.ContainerTypes,
+                .number_template = effective.NumberTemplate,
+                .planned_containers = effective.PlannedContainers,
+                .reset_number_yearly = effective.ResetNumberYearly,
+                .route_types = effective.RouteTypes,
+                .statuses = effective.Statuses},
+            stored.has_value() ? stored.value().Revision : 0);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {
@@ -208,9 +212,9 @@ models::ShipmentBusinessSettings SettingsComponent::UpdateBusiness(
             organizations_, context, request.organization_id);
 
         const auto rules = Convert(request.rules);
-        ValidateBusinessRules(request.organization_id, rules);
-        auto result = Business(request.organization_id);
-        result.rules = request.rules;
+        const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), request.organization_id);
+        ValidateBusinessRules(limits, rules);
+        auto result = BuildBusinessSettings(limits, request.rules, 0);
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto changed = transaction.Execute(sql::kSaveOrganizationShipmentRules,
             request.organization_id, request.expected_revision, rules);
@@ -221,12 +225,7 @@ models::ShipmentBusinessSettings SettingsComponent::UpdateBusiness(
             "update_shipment_rules", request.organization_id, request.rules, request.rules);
         transaction.Commit();
         result.revision = revision;
-        return models::ShipmentBusinessSettings{
-            .allowed_container_types = result.allowed_container_types,
-            .allowed_route_types = result.allowed_route_types,
-            .planned_containers_allowed = result.planned_containers_allowed,
-            .revision = result.revision,
-            .rules = result.rules};
+        return result;
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {

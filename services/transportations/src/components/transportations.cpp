@@ -2,6 +2,8 @@
 #include <components/inherited_route.hpp>
 #include <components/transportations.hpp>
 #include <converters/container_facts.hpp>
+#include <converters/saved_transportation.hpp>
+#include <converters/transportation_history.hpp>
 #include <converters/transportations.hpp>
 #include <helpers/database.hpp>
 #include <helpers/revision.hpp>
@@ -56,7 +58,8 @@ models::Transportation TransportationsComponent::FindTransportation(
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
 
-    auto result = helpers::ReadTransportation(transaction, organization, id, false);
+    auto result =
+        helpers::ReadTransportation(transaction, organization, id, helpers::ReadMode::Snapshot);
     transaction.Commit();
     return result;
 }
@@ -92,11 +95,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
         const auto command = saved.AsSingleRow<models::pg::SavedCommand>();
         if (command.Payload != helpers::Document(request))
             throw ApiError<409>{"idempotency_conflict", "Содержимое команды создания изменено"};
-        // Снимки старых команд содержат технический номер, которого больше нет в API.
-        userver::formats::json::ValueBuilder document{command.Result};
-        document.Remove("number");
-        auto result = models::ParseModelJson(
-            document.ExtractValue(), std::type_identity<models::Transportation>{});
+        auto result = converters::RestoreTransportation(command.Result);
         transaction.Commit();
         route_rules::InheritRoute(result, source);
         return result;
@@ -128,8 +127,8 @@ models::Transportation TransportationsComponent::UpdateTransportation(
         request.container_number);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    auto current =
-        helpers::ReadTransportation(transaction, organization, request.transportation_id, true);
+    auto current = helpers::ReadTransportation(
+        transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
     helpers::CheckRevision(current.revision, request.expected_revision);
 
     auto result = converters::Convert(

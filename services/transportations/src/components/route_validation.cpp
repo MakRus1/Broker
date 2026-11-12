@@ -2,12 +2,10 @@
 #include <boost/uuid/string_generator.hpp>
 #include <components/rail_route.hpp>
 #include <components/road_route.hpp>
+#include <components/route_dates.hpp>
 #include <components/route_validation.hpp>
 #include <models/errors.hpp>
-#include <platform/date_validation.hpp>
 #include <set>
-#include <userver/utils/datetime.hpp>
-#include <userver/utils/datetime_light.hpp>
 
 namespace {
 void CheckInterval(const std::optional<std::chrono::system_clock::time_point>& departure,
@@ -23,6 +21,8 @@ void CheckInterval(const std::optional<std::chrono::system_clock::time_point>& d
 namespace transportations::route_rules {
 void ValidateRoute(const models::SetRouteRequest& request) {
     ValidateRoadDetails(request);
+    const RouteDateValidation dates{"invalid_rail_date", "invalid_rail_sequence",
+        "Проверьте последовательность дат ЖД-участка"};
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
         if (!ids.insert(boost::uuids::string_generator{}(route_segment.id)).second)
@@ -35,34 +35,15 @@ void ValidateRoute(const models::SetRouteRequest& request) {
             throw ApiError<400>{"unexpected_rail_details",
                 "Детали ЖД доступны только для железнодорожных участков"};
         const auto& rail = route_segment.rail.value();
-        const std::chrono::year_month_day minimum{
-            std::chrono::year{1900}, std::chrono::January, std::chrono::day{1}};
-        const std::chrono::year_month_day maximum{
-            std::chrono::year{9999}, std::chrono::December, std::chrono::day{31}};
-        // Календарь бизнесовых событий — Europe/Moscow, без времени в API и БД.
-        const std::chrono::year_month_day today{std::chrono::floor<std::chrono::days>(
-            userver::utils::datetime::Now() + std::chrono::hours{3})};
-        auto check = [&](const std::optional<userver::utils::datetime::Date>& value, bool actual) {
-            if (value.has_value() &&
-                !platform::IsCalendarDateInRange(value.value(), minimum, actual ? today : maximum))
-                throw ApiError<400>{"invalid_rail_date",
-                    actual ? "Фактическая дата должна быть от 01.01.1900 до сегодняшнего дня"
-                           : "Укажите корректную календарную дату от 01.01.1900"};
-        };
-        check(rail.etd, false);
-        check(rail.eta, false);
-        check(rail.departure_date, true);
-        check(rail.arrival_date, true);
-        check(rail.unloading_date, true);
-        auto interval = [](const auto& from, const auto& to) {
-            if (from.has_value() && to.has_value() && from.value() > to.value())
-                throw ApiError<400>{
-                    "invalid_rail_sequence", "Проверьте последовательность дат ЖД-участка"};
-        };
-        interval(rail.etd, rail.eta);
-        interval(rail.departure_date, rail.arrival_date);
-        interval(rail.arrival_date, rail.unloading_date);
-        interval(rail.departure_date, rail.unloading_date);
+        dates.ValidateDate(rail.etd, DateKind::Planned);
+        dates.ValidateDate(rail.eta, DateKind::Planned);
+        dates.ValidateDate(rail.departure_date, DateKind::Actual);
+        dates.ValidateDate(rail.arrival_date, DateKind::Actual);
+        dates.ValidateDate(rail.unloading_date, DateKind::Actual);
+        dates.ValidateOrder(rail.etd, rail.eta);
+        dates.ValidateOrder(rail.departure_date, rail.arrival_date);
+        dates.ValidateOrder(rail.arrival_date, rail.unloading_date);
+        dates.ValidateOrder(rail.departure_date, rail.unloading_date);
     }
 }
 

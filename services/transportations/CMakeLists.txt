@@ -12,6 +12,7 @@ add_library(
     src/components/route_integrations.cpp
     src/components/inherited_route.cpp
     src/components/actual_changes.cpp
+    src/components/route_dates.cpp
     src/components/route_validation.cpp
     src/components/rail_route.cpp
     src/components/road_route.cpp
@@ -53,7 +54,7 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(transportations_unittest tests/unit/registry_query_test.cpp)
+    add_executable(transportations_unittest tests/unit/registry_query_test.cpp tests/unit/route_dates_test.cpp)
     target_link_libraries(transportations_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
     broker_openapi_apply(transportations_unittest)
     add_google_tests(transportations_unittest)

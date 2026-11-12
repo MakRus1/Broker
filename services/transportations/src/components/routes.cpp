@@ -84,8 +84,8 @@ models::Transportation RoutesComponent::SaveRoute(const std::string& organizatio
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
 
-    auto result =
-        helpers::ReadTransportation(transaction, organization, request.transportation_id, true);
+    auto result = helpers::ReadTransportation(
+        transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
     helpers::CheckRevision(result.revision, request.expected_revision);
     route_rules::InheritRoute(result, source);
 

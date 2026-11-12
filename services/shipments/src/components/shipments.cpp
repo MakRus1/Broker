@@ -75,20 +75,28 @@ models::Shipment InsertShipment(pg::Transaction& transaction, const std::string&
     return Convert(row);
 }
 
+std::optional<boost::uuids::uuid> ValidateShipmentReplay(
+    const pg::ResultSet& saved, const Json& document) {
+    if (saved.IsEmpty())
+        return std::nullopt;
+    const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
+    if (stored.Payload != document)
+        throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
+    return stored.ShipmentId;
+}
+
 }  // namespace
 
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
     const std::string& organization, const ShipmentSource& source, const Json& document) const {
     const auto saved = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindSourceShipment,
         organization, source.Producer, source.Type, source.Id);
-    if (saved.IsEmpty())
+    const auto shipment_id = ValidateShipmentReplay(saved, document);
+    if (!shipment_id.has_value())
         return std::nullopt;
-    const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
-    if (stored.Payload != document)
-        throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
     return Convert(cluster_
                        ->Execute(pg::ClusterHostType::kMaster, sql::kGetShipment, organization,
-                           stored.ShipmentId)
+                           shipment_id.value())
                        .AsSingleRow<models::pg::ShipmentRaw>());
 }
 
@@ -97,20 +105,15 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
 models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
     const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
     const ShipmentSource& source, const Json& document) const {
-    if (const auto saved = FindCreatedShipment(organization, source, document); saved.has_value())
-        return saved.value();
     const auto settings = settings_.Effective(organization, body.customer_id);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(
         sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, source.Id);
     const auto saved = transaction.Execute(
         sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
-    if (!saved.IsEmpty()) {
-        const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
-        if (stored.Payload != document)
-            throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
+    if (const auto shipment_id = ValidateShipmentReplay(saved, document); shipment_id.has_value()) {
         const auto shipment =
-            Convert(transaction.Execute(sql::kGetShipment, organization, stored.ShipmentId)
+            Convert(transaction.Execute(sql::kGetShipment, organization, shipment_id.value())
                         .AsSingleRow<models::pg::ShipmentRaw>());
         transaction.Commit();
         return shipment;
@@ -137,7 +140,8 @@ models::ShipmentsCreateResult ShipmentsComponent::CreateShipment(
         if (saved.has_value())
             return models::ShipmentsCreateResult{.shipment = saved.value()};
         const auto source = ShipmentSource::Manual(request.idempotency_key);
-        if (const auto replay = FindCreatedShipment(organization, source, Document(request));
+        const auto document = Document(request);
+        if (const auto replay = FindCreatedShipment(organization, source, document);
             replay.has_value())
             return models::ShipmentsCreateResult{.shipment = replay.value()};
         const auto logist = request.logist.has_value()
@@ -150,7 +154,7 @@ models::ShipmentsCreateResult ShipmentsComponent::CreateShipment(
         auto body = request;
         body.logist = logist;
         const auto result =
-            CreateShipmentFromSource(organization, identity, body, source, Document(request));
+            CreateShipmentFromSource(organization, identity, body, source, document);
         return models::ShipmentsCreateResult{.shipment = result};
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{"number_exists", "Номер поставки уже занят"};
@@ -288,9 +292,14 @@ models::ShipmentsEnsureCreatedResult ShipmentsComponent::EnsureShipmentCreated(
     auto actor = sender;
     actor.Subject = command.actor_subject;
     actor.Issuer = command.actor_issuer;
-    const auto result = CreateShipmentFromSource(command.organization_id, actor, command.shipment,
-        {.Producer = sender.ClientId, .Type = command.source.type, .Id = command.source.id},
-        Document(command));
+    const ShipmentSource source{
+        .Producer = sender.ClientId, .Type = command.source.type, .Id = command.source.id};
+    const auto document = Document(command);
+    if (const auto replay = FindCreatedShipment(command.organization_id, source, document);
+        replay.has_value())
+        return models::ShipmentsEnsureCreatedResult{.shipment = replay.value()};
+    const auto result = CreateShipmentFromSource(
+        command.organization_id, actor, command.shipment, source, document);
     return models::ShipmentsEnsureCreatedResult{.shipment = result};
 }
 }  // namespace shipments

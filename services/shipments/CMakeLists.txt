@@ -15,6 +15,7 @@ add_library(
     src/components/cargo_suggestions_cleanup.cpp
     src/bootstrap/ping.cpp
     src/domain/route_details.cpp
+    src/domain/shipment_card.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

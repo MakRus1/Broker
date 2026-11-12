@@ -17,6 +17,14 @@ namespace shipments {
 using namespace helpers;
 using namespace converters;
 
+void ReferencesComponent::ResolveRoute(const userver::server::request::RequestContext& context,
+    std::vector<models::ShipmentRouteSegment>& segments,
+    const std::vector<models::ShipmentRouteSegment>& previous) const {
+    const auto locations = LoadRouteLocations(context, segments);
+    domain::ResolveRouteDetails(segments, previous, locations);
+    ValidateRouteCounterparties(context, segments, previous);
+}
+
 ReferencesComponent::ReferencesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),

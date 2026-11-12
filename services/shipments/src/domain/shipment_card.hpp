@@ -6,7 +6,6 @@
 #include <openapi/models.hpp>
 
 namespace shipments::domain {
-std::optional<std::string> CleanText(const std::optional<std::string>& value);
 models::pg::ShipmentData CreateShipmentCard(const models::CreateShipmentRequest& request,
     const configs::detail_SHIPMENT_SETTINGS::Value& settings);
 models::pg::ShipmentData UpdateShipmentCard(

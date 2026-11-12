@@ -1,29 +1,16 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
-#include <chrono>
 #include <converters/shipments.hpp>
 #include <domain/shipment_card.hpp>
 #include <helpers/dictionaries.hpp>
 #include <models/errors.hpp>
-#include <platform/date_validation.hpp>
+#include <platform/calendar_date.hpp>
+#include <platform/text.hpp>
 #include <set>
-#include <userver/utils/datetime.hpp>
 #include <userver/utils/text.hpp>
 
 namespace shipments::domain {
 namespace {
-userver::utils::datetime::Date Today() {
-    return userver::utils::datetime::Date{
-        std::chrono::floor<std::chrono::days>(userver::utils::datetime::Now())};
-}
-
-void ValidateShipmentDate(userver::utils::datetime::Date value) {
-    if (!platform::IsCalendarDateInRange(value, std::chrono::year{1900} / std::chrono::January / 1,
-            std::chrono::year{9999} / std::chrono::December / 31))
-        throw ApiError<400>{
-            "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
-}
-
 template <typename Request> void ApplyCard(const Request& request, models::pg::ShipmentData& row) {
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
@@ -34,23 +21,23 @@ template <typename Request> void ApplyCard(const Request& request, models::pg::S
             : std::nullopt;
     }
     if (request.logist.has_value())
-        row.Logist = CleanText(request.logist.value());
+        row.Logist = platform::TrimToOptional(request.logist.value());
     if (request.cargo_description.has_value())
-        row.CargoDescription = CleanText(request.cargo_description.value());
+        row.CargoDescription = platform::TrimToOptional(request.cargo_description.value());
     if (request.status.has_value())
         row.Status = request.status.value();
     if (request.incoterms.has_value())
-        row.Incoterms = CleanText(request.incoterms.value());
+        row.Incoterms = platform::TrimToOptional(request.incoterms.value());
     if (request.carriage_terms.has_value())
-        row.CarriageTerms = CleanText(request.carriage_terms.value());
+        row.CarriageTerms = platform::TrimToOptional(request.carriage_terms.value());
     if (request.loading.has_value())
-        row.Loading = CleanText(request.loading.value());
+        row.Loading = platform::TrimToOptional(request.loading.value());
     if (request.delivery_city.has_value())
-        row.DeliveryCity = CleanText(request.delivery_city.value());
+        row.DeliveryCity = platform::TrimToOptional(request.delivery_city.value());
     if (request.delivery_country.has_value())
         row.DeliveryCountry = request.delivery_country.value();
     if (request.delivery_address.has_value())
-        row.DeliveryAddress = CleanText(request.delivery_address.value());
+        row.DeliveryAddress = platform::TrimToOptional(request.delivery_address.value());
     if (request.route_segments.has_value()) {
         row.RouteSegments.clear();
         std::set<std::string> ids;
@@ -61,24 +48,20 @@ template <typename Request> void ApplyCard(const Request& request, models::pg::S
             row.RouteSegments.push_back(converters::Convert(segment));
         }
     }
-    ValidateShipmentDate(row.ShipmentDate);
+    if (row.ShipmentDate < userver::utils::datetime::Date{1900, 1, 1} ||
+        row.ShipmentDate > userver::utils::datetime::Date{9999, 12, 31})
+        throw ApiError<400>{
+            "invalid_date", "Укажите корректную дату поставки не раньше 01.01.1900"};
 }
 
 }  // namespace
-
-std::optional<std::string> CleanText(const std::optional<std::string>& value) {
-    if (!value.has_value())
-        return std::nullopt;
-    auto result = userver::utils::text::Trim(value.value());
-    return result.empty() ? std::nullopt : std::optional<std::string>{result};
-}
 
 models::pg::ShipmentData CreateShipmentCard(const models::CreateShipmentRequest& request,
     const configs::detail_SHIPMENT_SETTINGS::Value& settings) {
     models::pg::ShipmentData card;
     card.CustomerId = boost::uuids::string_generator{}(request.customer_id);
     card.Reference = request.reference.value_or("");
-    card.ShipmentDate = Today();
+    card.ShipmentDate = platform::CurrentUtcDate();
     card.Status = settings.Statuses.front();
     card.Logist = request.logist.value_or(std::nullopt);
     ApplyCard(request, card);

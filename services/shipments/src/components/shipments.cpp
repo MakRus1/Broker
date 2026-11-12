@@ -16,6 +16,7 @@
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
+#include <platform/text.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -172,7 +173,7 @@ models::ShipmentsCreateResult ShipmentsComponent::Create(models::CreateShipmentR
             replay.has_value())
             return models::ShipmentsCreateResult{.shipment = replay.value()};
         const auto logist = request.logist.has_value()
-            ? domain::CleanText(request.logist.value())
+            ? platform::TrimToOptional(request.logist.value())
             : references_.CustomerLogist(context, request.customer_id);
         references_.ValidateLogist(context, logist);
         if (request.route_segments.has_value()) {
@@ -252,7 +253,7 @@ models::ShipmentsUpdateResult ShipmentsComponent::Update(models::UpdateShipmentR
         const auto& identity = platform::auth::GetIdentity(context);
         platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
         if (request.logist.has_value())
-            references_.ValidateLogist(context, domain::CleanText(request.logist.value()));
+            references_.ValidateLogist(context, platform::TrimToOptional(request.logist.value()));
         const auto organization = platform::auth::GetOrganization(identity);
         if (request.route_segments.has_value()) {
             const auto rows = cluster_->Execute(

@@ -6,17 +6,18 @@
 #include <openapi/models.hpp>
 
 namespace transportations::helpers {
-using converters::Convert;
+enum class ReadMode { Snapshot, ForUpdate };
 
 inline models::Transportation ReadTransportation(pg::Transaction& transaction,
-    const std::string& organization, const std::string& id, bool lock) {
+    const std::string& organization, const std::string& id, ReadMode mode) {
     const auto rows = transaction.Execute(
-        lock ? sql::kLockTransportation : sql::kGetTransportation, organization, id);
+        mode == ReadMode::ForUpdate ? sql::kLockTransportation : sql::kGetTransportation,
+        organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Перевозка не найдена"};
-    auto result = Convert(rows.AsSingleRow<models::pg::TransportationRaw>());
+    auto result = converters::Convert(rows.AsSingleRow<models::pg::TransportationRaw>());
     const auto route_segments = transaction.Execute(sql::kGetRouteSegments, organization, id);
-    result.route_segments = Convert(route_segments.AsContainer<std::vector<Json>>());
+    result.route_segments = converters::Convert(route_segments.AsContainer<std::vector<Json>>());
     return result;
 }
 }  // namespace transportations::helpers

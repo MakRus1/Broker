@@ -1,6 +1,8 @@
 #pragma once
 #include <components/actuals.hpp>
+#include <components/route_integrations.hpp>
 #include <components/routes.hpp>
+#include <components/transportation_registry.hpp>
 #include <components/transportations.hpp>
 
 #include <userver/components/component_context.hpp>
@@ -25,6 +27,8 @@ struct Deps {
     TransportationsComponent* transportations;
     RoutesComponent* routes;
     ActualsComponent* actuals;
+    TransportationRegistry* transportation_registry;
+    RouteIntegrations* route_integrations;
 
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
@@ -41,6 +45,8 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .transportations = &component_context.FindComponent<TransportationsComponent>(),
         .routes = &component_context.FindComponent<RoutesComponent>(),
         .actuals = &component_context.FindComponent<ActualsComponent>(),
+        .transportation_registry = &component_context.FindComponent<TransportationRegistry>(),
+        .route_integrations = &component_context.FindComponent<RouteIntegrations>(),
 
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),

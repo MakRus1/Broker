@@ -1,13 +1,11 @@
 #pragma once
-#include <converters/registry.hpp>
-#include <helpers/database.hpp>
+#include <openapi/models.hpp>
 #include <platform/registry_page.hpp>
 #include <registry/route.hpp>
+#include <transportations/sql_queries.hpp>
 #include <userver/storages/postgres/io/date.hpp>
 
 namespace transportations::registry_query {
-using namespace helpers;
-using converters::RegistryRow;
 using platform::registry::CursorScope;
 using platform::registry::SearchPattern;
 namespace registry = platform::registry;

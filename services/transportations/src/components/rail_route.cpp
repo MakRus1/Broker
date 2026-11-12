@@ -1,12 +1,15 @@
 #include <algorithm>
-#include <domain/rail.hpp>
+#include <components/rail_route.hpp>
 #include <models/errors.hpp>
 #include <set>
 
-namespace transportations::domain {
 namespace {
+namespace models = transportations::models;
+using transportations::ApiError;
+
 void ResolveStation(std::optional<models::RailwayStation>& station,
-    const std::optional<models::RailwayStation>& previous, const RailwayStations& stations) {
+    const std::optional<models::RailwayStation>& previous,
+    const models::RailwayStations& stations) {
     if (!station.has_value())
         return;
     const auto found = stations.find(station.value().id);
@@ -22,6 +25,7 @@ void ResolveStation(std::optional<models::RailwayStation>& station,
 }
 }  // namespace
 
+namespace transportations::route_rules {
 std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request) {
     std::set<std::string> ids;
     for (const auto& segment : request.route_segments) {
@@ -37,7 +41,7 @@ std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& req
 }
 
 void ResolveRailwayStations(models::SetRouteRequest& request,
-    const models::Transportation& previous, const RailwayStations& stations) {
+    const models::Transportation& previous, const models::RailwayStations& stations) {
     for (auto& segment : request.route_segments) {
         if (!segment.rail.has_value())
             continue;
@@ -63,4 +67,4 @@ void NormalizeRailLocations(models::RouteSegment& segment) {
     segment.origin.reset();
     segment.destination.reset();
 }
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

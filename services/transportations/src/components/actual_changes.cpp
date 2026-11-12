@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
-#include <domain/actuals.hpp>
-#include <domain/route.hpp>
+#include <components/actual_changes.hpp>
+#include <components/route_validation.hpp>
 #include <models/errors.hpp>
 
-namespace transportations::domain {
+namespace transportations::route_rules {
 std::size_t ApplyActual(models::Transportation& transportation, const std::string& route_segment_id,
     models::EventKind event, std::chrono::system_clock::time_point occurred_at,
     ActualChange change) {
@@ -31,7 +31,7 @@ std::size_t ApplyActual(models::Transportation& transportation, const std::strin
             correction ? "Исправляемый факт отсутствует"
                        : "Факт уже записан; используйте команду исправления"};
     value = occurred_at;
-    domain::ValidateActualTimes(*found);
+    route_rules::ValidateActualTimes(*found);
     return static_cast<std::size_t>(std::distance(transportation.route_segments.begin(), found));
 }
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

@@ -1,17 +1,23 @@
 #pragma once
-#include <domain/rail.hpp>
+#include <components/rail_route.hpp>
 #include <map>
 #include <models/pg/route_segment.hpp>
-#include <models/pg/transportation_event.hpp>
 #include <models/pg/transportation_raw.hpp>
 #include <openapi/models.hpp>
 #include <userver/storages/postgres/result_set.hpp>
 #include <vector>
 
 namespace transportations::converters {
+inline std::optional<std::string> ConvertOwnership(
+    const std::optional<models::ContainerOwnership>& value) {
+    if (!value.has_value())
+        return std::nullopt;
+    return std::string{models::EnumValue(value.value())};
+}
+
 inline models::RouteSegment Convert(const userver::formats::json::Value& document) {
     auto result = models::ParseModelJson(document, std::type_identity<models::RouteSegment>{});
-    domain::NormalizeRailLocations(result);
+    route_rules::NormalizeRailLocations(result);
     return result;
 }
 
@@ -59,35 +65,4 @@ inline std::vector<models::Transportation> Convert(
     return result;
 }
 
-inline models::TransportationEvent Convert(const models::pg::TransportationEvent& row) {
-    models::TransportationEvent result;
-    result.id = row.Id;
-    result.actor = row.Actor;
-    result.action = row.Action;
-    result.occurred_at = row.OccurredAt;
-    const auto& document = row.Document;
-    if (document.HasMember("actor_name"))
-        result.actor_name = document["actor_name"].As<std::string>();
-    const auto& request = document["request"];
-    if (request.HasMember("reason"))
-        result.reason = request["reason"].As<std::string>();
-    if (request.HasMember("route_segment_id"))
-        result.route_segment_id = request["route_segment_id"].As<std::string>();
-    if (request.HasMember("event_kind"))
-        result.event_kind =
-            models::ParseEnumScalar(request["event_kind"].As<std::string>(), models::EventKind{});
-    result.revision = document["result"]["revision"].As<std::int64_t>();
-    for (const auto& route_segment : document["result"]["route_segments"])
-        result.route_segments.push_back(Convert(route_segment));
-    return result;
-}
-
-inline std::vector<models::TransportationEvent> Convert(
-    const std::vector<models::pg::TransportationEvent>& rows) {
-    std::vector<models::TransportationEvent> result;
-    result.reserve(rows.size());
-    for (const auto& row : rows)
-        result.push_back(Convert(row));
-    return result;
-}
 }  // namespace transportations::converters

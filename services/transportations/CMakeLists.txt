@@ -5,15 +5,17 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
+    src/components/transportation_registry.cpp
     src/components/transportations.cpp
     src/components/routes.cpp
     src/components/actuals.cpp
-    src/components/references.cpp
-    src/domain/inherited_route.cpp
-    src/domain/actuals.cpp
-    src/domain/route.cpp
-    src/domain/rail.cpp
-    src/domain/road.cpp
+    src/components/route_integrations.cpp
+    src/components/inherited_route.cpp
+    src/components/actual_changes.cpp
+    src/components/route_dates.cpp
+    src/components/route_validation.cpp
+    src/components/rail_route.cpp
+    src/components/road_route.cpp
     src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
@@ -52,7 +54,7 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(transportations_unittest tests/unit/registry_query_test.cpp)
+    add_executable(transportations_unittest tests/unit/registry_query_test.cpp tests/unit/route_dates_test.cpp)
     target_link_libraries(transportations_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
     broker_openapi_apply(transportations_unittest)
     add_google_tests(transportations_unittest)

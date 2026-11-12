@@ -1,9 +1,9 @@
 #include <algorithm>
+#include <components/inherited_route.hpp>
 #include <converters/shipment_route.hpp>
-#include <domain/inherited_route.hpp>
 #include <models/errors.hpp>
 
-namespace transportations::domain {
+namespace transportations::route_rules {
 using converters::Convert;
 
 bool HasRouteData(const models::RouteSegment& segment) {
@@ -18,8 +18,8 @@ bool HasRouteData(const models::RouteSegment& segment) {
         segment.actual_arrival_at.has_value();
 }
 
-const ShipmentContext& FindShipmentContext(
-    const std::vector<ShipmentContext>& contexts, const std::string& shipment_id) {
+const models::ShipmentContext& FindShipmentContext(
+    const std::vector<models::ShipmentContext>& contexts, const std::string& shipment_id) {
     const auto found = std::find_if(contexts.begin(), contexts.end(),
         [&](const auto& item) { return item.shipment_id == shipment_id; });
     if (found == contexts.end())
@@ -27,7 +27,7 @@ const ShipmentContext& FindShipmentContext(
     return *found;
 }
 
-void InheritRoute(models::Transportation& transportation, const ShipmentContext& source) {
+void InheritRoute(models::Transportation& transportation, const models::ShipmentContext& source) {
     std::vector<models::RouteSegment> route;
     for (const auto& stage : source.route_segments) {
         const auto found =
@@ -61,4 +61,4 @@ void InheritRoute(models::Transportation& transportation, const ShipmentContext&
     transportation.carriage_terms = source.carriage_terms;
 }
 
-}  // namespace transportations::domain
+}  // namespace transportations::route_rules

@@ -1,7 +1,7 @@
 #pragma once
-#include <openapi/models.hpp>
+#include <models/contact_results.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace sales {
@@ -12,31 +12,19 @@ class ContactsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    struct AddResult {
-        models::SalesCard card;
-        models::SalesContact item;
-    };
-
-    struct ListResult {
-        std::vector<models::SalesContact> items;
-        std::optional<std::string> next_before;
-    };
-
-    AddResult Add(
-        const models::AddSalesContactRequest&, userver::server::request::RequestContext&) const;
-    ListResult List(
-        const models::ListSalesContactsRequest&, userver::server::request::RequestContext&) const;
-    models::SalesContact Update(
-        const models::UpdateSalesContactRequest&, userver::server::request::RequestContext&) const;
-    std::vector<models::SalesContactHistoryEntry> History(
-        const models::HistoryRequest&, userver::server::request::RequestContext&) const;
+    models::ContactAddition AddContact(const std::string& organization,
+        const platform::auth::Identity& identity,
+        const models::AddSalesContactRequest& request) const;
+    models::ContactsPage ListContacts(
+        const std::string& organization, const models::ListSalesContactsRequest& request) const;
+    models::SalesContact UpdateContact(const std::string& organization,
+        const platform::auth::Identity& identity,
+        const models::UpdateSalesContactRequest& request) const;
+    std::vector<models::SalesContactHistoryEntry> GetContactHistory(
+        const std::string& organization, const models::HistoryRequest& request) const;
 
   private:
-    struct Dependencies {
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace sales
 

@@ -1,9 +1,17 @@
 #include <components/cards.hpp>
+#include <components/sales_directory.hpp>
+#include <platform/auth/identity.hpp>
 #include <views/api/v1/sales/cards/save/view.hpp>
 
 namespace sales::views::api::v1::sales::cards::save {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    return Response200{.item = deps.cards->Save(request.body, context)};
+    const auto& actor = platform::auth::GetIdentity(context);
+    const auto organization = platform::auth::GetOrganization(actor);
+
+    deps.directory->ValidateSalesParties(organization, platform::auth::GetAccessToken(context),
+        request.body.customer_id, request.body.manager_subject);
+
+    return Response200{.item = deps.cards->SaveCard(organization, actor, request.body)};
 }
 }  // namespace sales::views::api::v1::sales::cards::save

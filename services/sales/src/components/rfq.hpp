@@ -1,11 +1,7 @@
 #pragma once
-
-#include <clients/counterparties/client.hpp>
-#include <clients/finance/client.hpp>
-#include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace sales {
@@ -15,26 +11,18 @@ class RfqComponent final : public userver::components::ComponentBase {
     RfqComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-
-    models::Rfq Save(
-        const models::SaveRfqRequest&, userver::server::request::RequestContext&) const;
-    models::Rfq Get(const std::string& organization, const std::string& id) const;
-    std::vector<models::Rfq> List(
+    models::Rfq FindRfq(const std::string& organization, const std::string& id) const;
+    std::vector<models::Rfq> ListRfqs(
         const std::string& organization, const std::string& inquiry_id) const;
-    std::vector<models::RfqHistoryEntry> History(
-        const std::string& organization, const models::HistoryRequest&) const;
-    void ResolveQuote(const std::string& organization, const models::ProposalInput&,
-        const models::Inquiry&, models::ProposalLine&) const;
+    std::vector<models::RfqHistoryEntry> GetRfqHistory(
+        const std::string& organization, const models::HistoryRequest& request) const;
+    models::Rfq SaveRfq(const std::string& organization, const platform::auth::Identity& identity,
+        std::int64_t expected, models::RfqInput input) const;
+    void ResolveQuote(const std::string& organization, const models::ProposalInput& proposal,
+        const models::Inquiry& inquiry, models::ProposalLine& line) const;
 
   private:
-    struct Dependencies {
-        clients::counterparties::Client counterparties;
-        clients::finance::Client finance;
-        clients::organizations::Client organizations;
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace sales
 

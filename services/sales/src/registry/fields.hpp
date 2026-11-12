@@ -1,10 +1,15 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <models/errors.hpp>
+#include <openapi/models.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
+#include <sales/sql_queries.hpp>
+#include <userver/formats/json.hpp>
 #include <userver/storages/postgres/io/date.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 
-namespace sales::helpers {
+namespace sales::registry_query {
 namespace registry = platform::registry;
 using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
@@ -86,10 +91,4 @@ inline registry::QueryBuilder InquiriesFilters(const models::ListSalesRequest& b
 inline const registry::Definition kInquiriesRegistry{
     kInquiryFields, sql::kInquiriesFilterValues, &InquiriesFilters};
 
-struct RegistryRow {
-    json::Value Document;
-    std::string TextKey;
-    std::optional<Date> DateKey;
-};
-
-}  // namespace sales::helpers
+}  // namespace sales::registry_query

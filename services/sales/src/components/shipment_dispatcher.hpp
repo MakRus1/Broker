@@ -20,14 +20,10 @@ class ShipmentDispatcher final : public userver::components::ComponentBase {
     void TransferProposal(
         const ShipmentCommand&, const std::string& shipment_id, const std::string& token) const;
 
-    struct Dependencies {
-        clients::finance::Client finance;
-        clients::shipments::Client shipments;
-        clients::notifications::Client notifications;
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    clients::finance::Client finance_;
+    clients::shipments::Client shipments_;
+    clients::notifications::Client notifications_;
+    userver::storages::postgres::ClusterPtr cluster_;
     platform::auth::ServiceTokenProvider& tokens_;
 };
 }  // namespace sales

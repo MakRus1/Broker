@@ -6,6 +6,9 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/shipment_dispatcher.cpp
+    src/components/sales_directory.cpp
+    src/components/sales_registry.cpp
+    src/components/proposal_calculator.cpp
     src/components/cards.cpp
     src/components/contacts.cpp
     src/components/inquiries.cpp

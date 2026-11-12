@@ -1,7 +1,15 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <models/errors.hpp>
+#include <openapi/models.hpp>
+#include <sales/sql_queries.hpp>
+#include <userver/formats/json.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 
 namespace sales::helpers {
+namespace pg = userver::storages::postgres;
+namespace json = userver::formats::json;
+
 inline models::Inquiry LockEditableInquiry(
     pg::Transaction& transaction, const std::string& organization, const std::string& id) {
     const auto rows = transaction.Execute(sql::kLockInquiries, organization, id);

@@ -1,7 +1,8 @@
+#include <components/invoices.hpp>
 #include <components/payments.hpp>
 #include <converters/payment.hpp>
 #include <finance/sql_queries.hpp>
-#include <helpers/invoices.hpp>
+#include <helpers/history/snapshot.hpp>
 #include <map>
 #include <models/errors.hpp>
 #include <models/invoice_balance_row.hpp>
@@ -80,7 +81,8 @@ PaymentsComponent::PaymentsComponent(const userver::components::ComponentConfig&
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
+          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()),
+      invoices_(context.FindComponent<InvoicesComponent>()) {}
 
 userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -275,7 +277,7 @@ models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto invoice = helpers::LoadInvoice(transaction, organization, body.invoice_id).invoice;
+    const auto invoice = invoices_.FindInvoice(transaction, organization, body.invoice_id).invoice;
     if (invoice.archived)
         throw ApiError<409>{"invoice_archived", "Счёт находится в архиве"};
     const auto kind = invoice.direction == models::InvoiceDirection::Outgoing

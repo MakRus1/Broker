@@ -4,10 +4,12 @@
 #include <models/invoice_list_result.hpp>
 #include <models/invoice_print_snapshot.hpp>
 #include <models/pg/invoice_raw.hpp>
+#include <models/pg/service_charge_raw.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 
 namespace finance {
 class InvoicesComponent final : public userver::components::ComponentBase {
@@ -39,7 +41,36 @@ class InvoicesComponent final : public userver::components::ComponentBase {
     models::InvoiceFilterValuesResult GetInvoiceFilterValues(
         const std::string& organization, const models::InvoiceFilterValuesRequest& request) const;
 
+    // Используют транзакцию вызывающего сценария.
+    models::InvoiceDetails FindInvoice(userver::storages::postgres::Transaction& transaction,
+        const std::string& organization, const std::string& id) const;
+
+    models::InvoiceDetails IncludeServiceCharge(
+        userver::storages::postgres::Transaction& transaction, const std::string& organization,
+        const platform::auth::Identity& identity, const models::pg::ServiceChargeRaw& charge,
+        const std::string& invoice_id, std::int64_t expected_revision,
+        const std::optional<std::string>& previous_invoice_id = std::nullopt) const;
+
+    void UpdateServiceChargeSnapshot(userver::storages::postgres::Transaction& transaction,
+        const std::string& organization, const platform::auth::Identity& identity,
+        const boost::uuids::uuid& invoice_id, const models::pg::ServiceChargeRaw& charge) const;
+
   private:
+    void ValidateInvoiceServiceCharge(
+        const models::pg::ServiceChargeRaw& charge, const models::pg::InvoiceRaw& invoice) const;
+
+    void ValidateInvoiceSettlement(userver::storages::postgres::Transaction& transaction,
+        const std::string& organization, const models::pg::InvoiceRaw& invoice) const;
+
+    void RemoveInvoiceServiceCharge(userver::storages::postgres::Transaction& transaction,
+        const std::string& organization, const boost::uuids::uuid& invoice_id,
+        const boost::uuids::uuid& service_charge_id,
+        const platform::auth::Identity& identity) const;
+
+    void CheckInvoiceAssignment(userver::storages::postgres::Transaction& transaction,
+        const std::string& organization, const boost::uuids::uuid& service_charge_id,
+        const std::optional<std::string>& previous) const;
+
     userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace finance

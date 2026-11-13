@@ -1,8 +1,8 @@
 #pragma once
 #include <finance/sql_queries.hpp>
-#include <helpers/invoices.hpp>
 #include <models/payment_registry_row.hpp>
 #include <models/pg/payment_raw.hpp>
+#include <openapi/models.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 

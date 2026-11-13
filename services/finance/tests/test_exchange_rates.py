@@ -109,3 +109,21 @@ async def test_conversion_overflow_is_rejected_before_storage(api,charge,invoice
         price_minor=100000000,quantity_milli=10000000)
     await api.post('/api/v1/service-charges/save',body,expected=400)
     await api.post('/api/v1/service-charges/get',{'id':body['id']},expected=404)
+
+async def test_settings_access_is_checked_before_reading_storage(api, finance_admin, pgsql):
+    import asyncio
+
+    query = {'organization_id': ORGANIZATION}
+    await api.post(SETTINGS + 'get', query)
+    finance_admin['allowed'] = False
+
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('BEGIN')
+        cursor.execute('LOCK TABLE finance_settings IN ACCESS EXCLUSIVE MODE')
+        try:
+            result = await asyncio.wait_for(
+                api.post(SETTINGS + 'get', query, expected=403), timeout=3,
+            )
+            assert result['error'] == 'forbidden'
+        finally:
+            cursor.execute('ROLLBACK')

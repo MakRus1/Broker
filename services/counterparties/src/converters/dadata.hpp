@@ -1,6 +1,7 @@
 #pragma once
 #include <openapi/models.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/json/exception.hpp>
 #include <userver/formats/parse/common_containers.hpp>
 
 namespace counterparties::converters {
@@ -16,5 +17,23 @@ inline models::RegistryParty Convert(const userver::formats::json::Value& item) 
         .registration_id = data["ogrn"].As<std::optional<std::string>>(),
         .status = data["state"]["status"].As<std::optional<std::string>>(),
         .tax_id = data["inn"].As<std::string>()};
+}
+
+inline std::vector<models::RegistryParty> ConvertDaDataResponse(
+    const userver::formats::json::Value& document, const std::string& tax_id) {
+    const auto& items = document["suggestions"];
+    if (!items.IsArray() || items.GetSize() > 1)
+        throw userver::formats::json::ConversionException{
+            "Ожидается не больше одного результата DaData", "suggestions"};
+
+    std::vector<models::RegistryParty> result;
+    for (const auto& item : items) {
+        auto value = Convert(item);
+        if (value.tax_id != tax_id || value.name.empty())
+            throw userver::formats::json::ConversionException{
+                "Ответ DaData не соответствует запросу", item.GetPath()};
+        result.push_back(std::move(value));
+    }
+    return result;
 }
 }  // namespace counterparties::converters

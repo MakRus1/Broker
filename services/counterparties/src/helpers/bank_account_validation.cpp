@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <cctype>
 #include <helpers/bank_account_validation.hpp>
-#include <helpers/normalization.hpp>
 #include <models/errors.hpp>
+#include <platform/text.hpp>
 
 namespace counterparties::helpers {
 void NormalizeAndValidateBankAccount(models::BankAccount& value) {
@@ -17,7 +17,7 @@ void NormalizeAndValidateBankAccount(models::BankAccount& value) {
     uppercase(value.number);
     uppercase(value.currency);
     for (auto* field : {&value.bic, &value.swift, &value.correspondent_account, &value.iban})
-        field->emplace(Normalize(field->value_or(std::nullopt)));
+        field->emplace(platform::TrimToOptional(field->value_or(std::nullopt)));
     if (value.swift.value().has_value())
         uppercase(value.swift.value().value());
     if (value.iban.value().has_value()) {

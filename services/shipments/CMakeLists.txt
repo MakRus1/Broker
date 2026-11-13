@@ -6,7 +6,7 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/shipments.cpp
-    src/components/shipment_card.cpp
+    src/helpers/shipment_card.cpp
     src/components/shipment_routes.cpp
     src/components/route_details.cpp
     src/components/shipment_registry.cpp

@@ -1,6 +1,6 @@
-#include <components/shipment_card.hpp>
 #include <components/shipments.hpp>
 #include <helpers/revision.hpp>
+#include <helpers/shipment_card.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/text.hpp>
@@ -28,7 +28,7 @@ Response View::Handle(
         auto& route = body.route_segments.value();
         deps.shipment_routes->ResolveRoute(access_token, route, previous.route_segments);
         deps.shipment_routes->CheckExistingRouteUsage(access_token, body.shipment_id,
-            shipment_card::ChangedRouteSegments(previous.route_segments, route));
+            helpers::ChangedRouteSegments(previous.route_segments, route));
     }
 
     return Response200{

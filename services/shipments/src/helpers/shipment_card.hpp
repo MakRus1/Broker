@@ -5,7 +5,7 @@
 #include <models/pg/shipment_raw.hpp>
 #include <openapi/models.hpp>
 
-namespace shipments::shipment_card {
+namespace shipments::helpers {
 models::pg::ShipmentData CreateShipmentCard(
     const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings);
 models::pg::ShipmentData UpdateShipmentCard(
@@ -16,4 +16,4 @@ void ValidateCard(const models::pg::ShipmentData& card, const configs::ShipmentS
 std::vector<std::string> ChangedRouteSegments(
     const std::vector<models::ShipmentRouteSegment>& previous,
     const std::vector<models::ShipmentRouteSegment>& next);
-}  // namespace shipments::shipment_card
+}  // namespace shipments::helpers

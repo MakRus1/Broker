@@ -1,5 +1,4 @@
 #include <boost/uuid/string_generator.hpp>
-#include <components/shipment_card.hpp>
 #include <components/shipments.hpp>
 #include <configs/keys.hpp>
 #include <converters/shipments.hpp>
@@ -8,6 +7,7 @@
 #include <helpers/revision.hpp>
 #include <helpers/route_notifications.hpp>
 #include <helpers/route_projection.hpp>
+#include <helpers/shipment_card.hpp>
 #include <models/pg/shipment_data.hpp>
 #include <models/pg/shipment_dictionary_value.hpp>
 #include <models/pg/shipment_raw.hpp>
@@ -49,10 +49,10 @@ void RememberCargo(pg::Transaction& transaction, const std::string& organization
 
 models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
     const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
-    auto card = shipments::shipment_card::CreateShipmentCard(body, settings);
+    auto card = shipments::helpers::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
-    shipments::shipment_card::ValidateCard(card, settings, dictionaries);
+    shipments::helpers::ValidateCard(card, settings, dictionaries);
 
     card.Number = body.number.has_value()
         ? userver::utils::text::Trim(body.number.value())
@@ -226,7 +226,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
 
         const auto previous = current.AsSingleRow<models::pg::ShipmentRaw>();
         helpers::CheckRevision(previous.Revision, request.expected_revision);
-        const auto card = shipment_card::UpdateShipmentCard(request, previous);
+        const auto card = helpers::UpdateShipmentCard(request, previous);
         const auto dictionaries =
             transaction.Execute(sql::kListShipmentDictionaries)
                 .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
@@ -240,7 +240,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
                     "Данные участков изменились. Обновите поставку и повторите сохранение"};
         }
 
-        shipment_card::ValidateCard(card,
+        helpers::ValidateCard(card,
             settings_.Effective(
                 transaction, organization, boost::uuids::to_string(card.CustomerId)),
             dictionaries, &previous);

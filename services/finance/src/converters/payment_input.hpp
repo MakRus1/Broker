@@ -7,7 +7,6 @@
 #include <userver/utils/text_light.hpp>
 
 namespace finance::converters {
-using namespace helpers;
 
 inline models::pg::PaymentRaw ToPayment(const models::SavePaymentRequest& body) {
     if (body.expected_revision == std::numeric_limits<std::int64_t>::max())
@@ -15,7 +14,7 @@ inline models::pg::PaymentRaw ToPayment(const models::SavePaymentRequest& body) 
     if (!platform::IsCalendarDateInRange(
             body.payment_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
         throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
-    if (SameId(body.own_company_id, body.counterparty_id))
+    if (helpers::SameId(body.own_company_id, body.counterparty_id))
         throw ApiError<400>{"same_parties", "Выберите разные стороны платежа"};
     models::pg::PaymentRaw value{.Id = boost::uuids::string_generator{}(body.id),
         .Kind = models::EnumValue(body.kind),

@@ -1,10 +1,10 @@
 #pragma once
 #include <algorithm>
-#include <converters/financial_label.hpp>
+#include <boost/uuid/string_generator.hpp>
 #include <models/errors.hpp>
+#include <string>
 
 namespace finance::helpers {
-namespace pg = userver::storages::postgres;
 
 inline bool SameId(const std::string& left, const std::string& right) {
     return boost::uuids::string_generator{}(left) == boost::uuids::string_generator{}(right);

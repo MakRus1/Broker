@@ -11,8 +11,10 @@ Response View::Handle(
     platform::auth::CheckPermission(context, permissions::FINANCE_READ_PAYMENTS);
 
     const auto value = deps.history->GetHistory(organization, request.body,
-        models::FinancialHistorySource::Payment, true,
-        platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES));
+        models::FinancialHistorySource::Payment,
+        {.IncludeRelatedEvents = true,
+            .IncludeInvoiceNames =
+                platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES)});
     return Response200{.items = value.items, .next_before = value.next_before};
 }
 }  // namespace finance::views::api::v1::payments::history

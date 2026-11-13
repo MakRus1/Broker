@@ -10,7 +10,7 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {
-using namespace helpers;
+namespace pg = userver::storages::postgres;
 
 SettingsComponent::SettingsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -23,7 +23,7 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
 }
 
 models::FinanceSettings SettingsComponent::GetSettings(const std::string& organization) const {
-    return helpers::GetFinanceSettings(cluster_, organization);
+    return helpers::LoadFinanceSettings(cluster_, organization);
 }
 
 models::FinanceSettings SettingsComponent::UpdateSettings(
@@ -35,14 +35,12 @@ models::FinanceSettings SettingsComponent::UpdateSettings(
     if (body.expected_revision < 0 ||
         body.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция настроек"};
-    const auto rows = cluster_->Execute(helpers::pg::ClusterHostType::kMaster,
-        sql::kSaveFinanceSettings, body.organization_id, body.reporting_currency,
-        body.expected_revision, body.outgoing_number_template, body.incoming_number_template,
-        body.reset_numbers_yearly);
+    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kSaveFinanceSettings,
+        body.organization_id, body.reporting_currency, body.expected_revision,
+        body.outgoing_number_template, body.incoming_number_template, body.reset_numbers_yearly);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Настройки изменены. Обновите форму"};
-    const auto result = helpers::ConvertFinanceSettings(rows);
-    return result;
+    return helpers::ReadFinanceSettings(rows);
 }
 
 }  // namespace finance

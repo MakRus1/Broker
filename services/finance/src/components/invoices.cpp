@@ -6,7 +6,6 @@
 #include <models/errors.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <registry/invoice_query.hpp>
@@ -15,12 +14,12 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
+namespace helpers = finance::helpers;
 namespace converters = finance::converters;
 namespace models = finance::models;
 namespace pg = userver::storages::postgres;
 namespace sql = finance::sql;
 using finance::ApiError;
-using namespace finance::helpers;
 
 std::string ServiceChargeDirection(models::InvoiceDirection direction) {
     return direction == models::InvoiceDirection::Outgoing ? "income" : "expense";
@@ -40,7 +39,7 @@ namespace {
 std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::string& organization,
     const models::pg::InvoiceRaw& invoice) {
     const auto settings =
-        ConvertFinanceSettings(transaction.Execute(sql::kGetFinanceSettings, organization));
+        helpers::ReadFinanceSettings(transaction.Execute(sql::kGetFinanceSettings, organization));
     const auto& mask = invoice.Direction == "outgoing" ? settings.outgoing_number_template
                                                        : settings.incoming_number_template;
     const auto period =
@@ -56,7 +55,7 @@ std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::strin
 }  // namespace
 
 namespace finance {
-using namespace helpers;
+namespace pg = userver::storages::postgres;
 
 InvoicesComponent::InvoicesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -74,7 +73,7 @@ models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
     auto read = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto details = LoadInvoice(read, organization, body.id);
+    const auto details = helpers::LoadInvoice(read, organization, body.id);
     if (details.invoice.revision != body.revision)
         throw ApiError<409>{
             "revision_conflict", "Счёт изменён. Обновите карточку перед скачиванием"};
@@ -113,7 +112,6 @@ models::InvoicePrintData InvoicesComponent::SaveInvoicePrintSnapshot(
 models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organization,
     const platform::auth::Identity& identity, const models::SaveInvoiceRequest& request,
     models::pg::InvoiceRaw value) const {
-
     const auto ids = InvoiceServiceChargeIds(request);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     if (value.Number.empty())
@@ -127,8 +125,9 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         if (request.expected_revision != 0 || ids.size() != 1)
             throw ApiError<400>{
                 "invalid_reassignment", "Новый счёт при перепривязке создаётся из одной услуги"};
-        CheckInvoiceAssignment(transaction, organization, ids.front(), request.previous_invoice_id);
-        RemoveInvoiceServiceCharge(transaction, organization,
+        helpers::CheckInvoiceAssignment(
+            transaction, organization, ids.front(), request.previous_invoice_id);
+        helpers::RemoveInvoiceServiceCharge(transaction, organization,
             boost::uuids::string_generator{}(request.previous_invoice_id.value()), ids.front(),
             identity);
     }
@@ -138,7 +137,7 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
     std::vector<models::pg::ServiceChargeRaw> snapshots;
     snapshots.reserve(charges.Size());
     for (const auto& charge : charges.AsSetOf<models::pg::ServiceChargeRaw>()) {
-        ValidateInvoiceServiceCharge(charge, value);
+        helpers::ValidateInvoiceServiceCharge(charge, value);
         snapshots.push_back(charge);
         value.NetMinor += charge.InvoiceNetMinor;
         value.VatMinor += charge.InvoiceVatMinor;
@@ -146,7 +145,7 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
     }
     if (request.expected_revision != 0)
         transaction.Execute(sql::kLockInvoices, organization, std::vector{value.Id});
-    ValidateInvoiceSettlement(transaction, organization, value);
+    helpers::ValidateInvoiceSettlement(transaction, organization, value);
     const auto saved = request.expected_revision == 0
         ? transaction.Execute(sql::kCreateInvoice, organization, value)
         : transaction.Execute(sql::kUpdateInvoice, organization, value, request.expected_revision);
@@ -156,33 +155,31 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         std::optional<boost::uuids::uuid>{});
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
-    const auto result = LoadInvoice(transaction, organization, request.id);
+    const auto result = helpers::LoadInvoice(transaction, organization, request.id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), HistorySnapshot(result, identity));
+        identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
 models::InvoiceDetails InvoicesComponent::FindInvoice(
     const std::string& organization, const models::GetInvoiceRequest& request) const {
-
     auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = LoadInvoice(transaction, organization, request.id);
+    const auto result = helpers::LoadInvoice(transaction, organization, request.id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
 models::InvoiceListResult InvoicesComponent::ListInvoices(
     const std::string& organization, const models::ListInvoicesRequest& request) const {
-    using namespace ::finance::registry_query::invoices;
     try {
-
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == registry::CursorKeyType::Date;
+        const auto order = platform::registry::RegistryOrderBy(
+            registry_query::invoices::registry_fields::kFields, body.sort);
+        const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
         if (body.cursor.has_value()) {
             const auto& cursor = body.cursor.value();
             if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
@@ -190,7 +187,8 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
                 throw ApiError<400>{
                     "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         }
-        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
+        const auto query =
+            platform::registry::BuildPage(registry_query::invoices::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
@@ -219,13 +217,12 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
 
 models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(
     const std::string& organization, const models::ListInvoiceCandidatesRequest& request) const {
-
     const auto& body = request;
     const auto rows = cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListInvoiceCandidates,
         organization, ServiceChargeDirection(body.direction), body.counterparty_id, body.currency,
         converters::InvoiceId(body.contract_id), converters::InvoiceId(body.invoice_id),
         converters::InvoiceId(body.after), static_cast<std::int32_t>(body.limit + 1));
-    auto items = ConvertServiceCharges(rows);
+    auto items = helpers::ConvertServiceCharges(rows);
     std::optional<std::string> next;
     if (items.size() > static_cast<std::size_t>(body.limit)) {
         items.pop_back();
@@ -237,7 +234,6 @@ models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(
 models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string& organization,
     const platform::auth::Identity& identity,
     const models::AddInvoiceServiceChargeRequest& request) const {
-
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto charges = transaction.Execute(sql::kLockServiceCharges, organization,
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
@@ -253,33 +249,34 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string
 models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string& organization,
     const platform::auth::Identity& identity,
     const models::DetachInvoiceServiceChargeRequest& request) const {
-
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto charges = transaction.Execute(sql::kLockServiceCharges, organization,
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    CheckInvoiceAssignment(transaction, organization, charge.Id, std::optional{request.invoice_id});
-    RemoveInvoiceServiceCharge(transaction, organization,
+    helpers::CheckInvoiceAssignment(
+        transaction, organization, charge.Id, std::optional{request.invoice_id});
+    helpers::RemoveInvoiceServiceCharge(transaction, organization,
         boost::uuids::string_generator{}(request.invoice_id), charge.Id, identity);
-    const auto result = LoadInvoice(transaction, organization, request.invoice_id);
+    const auto result = helpers::LoadInvoice(transaction, organization, request.invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
 models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
     const std::string& organization, const models::InvoiceFilterValuesRequest& request) const {
-    using namespace ::finance::registry_query::invoices;
     try {
         models::InvoiceFilterValuesResult result;
-        result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
+        result.fields = platform::registry::DescribeFields<models::RegistryField>(
+            registry_query::invoices::registry_fields::kFields);
         if (!request.field.has_value())
             return result;
-        const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
+        const auto query = platform::registry::BuildFilterValues(
+            registry_query::invoices::kRegistry, request, organization);
         const auto rows =
             cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
+                .AsContainer<std::vector<platform::registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
              index < rows.size() && index < static_cast<std::size_t>(request.limit); ++index)
@@ -287,7 +284,7 @@ models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
         if (more)
             result.next_after = result.values.back().value;
         return result;
-    } catch (const registry::FilterError& error) {
+    } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }

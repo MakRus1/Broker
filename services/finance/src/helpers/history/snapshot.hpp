@@ -1,7 +1,6 @@
 #pragma once
 #include <platform/auth/identity.hpp>
 #include <userver/formats/json/value_builder.hpp>
-#include <userver/storages/postgres/io/json_types.hpp>
 
 namespace finance::helpers {
 inline userver::formats::json::Value HistorySnapshot(

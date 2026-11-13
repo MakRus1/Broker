@@ -1,31 +1,26 @@
 #pragma once
+#include <converters/finance_settings.hpp>
 #include <finance/sql_queries.hpp>
-#include <models/finance_settings_row.hpp>
 #include <openapi/models.hpp>
 #include <userver/storages/postgres/cluster.hpp>
-#include <userver/storages/postgres/transaction.hpp>
+#include <userver/storages/postgres/result_set.hpp>
 
 namespace finance::helpers {
 namespace pg = userver::storages::postgres;
 
-inline models::FinanceSettings ConvertFinanceSettings(const pg::ResultSet& rows) {
+inline models::FinanceSettings ReadFinanceSettings(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return {.incoming_number_template = "ВС-{sequence}/{yyyy}",
             .outgoing_number_template = "ИС-{sequence}/{yyyy}",
             .reporting_currency = "RUB",
             .reset_numbers_yearly = false,
             .revision = 0};
-    const auto row = rows.AsSingleRow<models::FinanceSettingsRow>(pg::kRowTag);
-    return {.incoming_number_template = row.IncomingNumberTemplate,
-        .outgoing_number_template = row.OutgoingNumberTemplate,
-        .reporting_currency = row.Currency,
-        .reset_numbers_yearly = row.ResetNumbersYearly,
-        .revision = row.Revision};
+    return converters::ToFinanceSettings(rows.AsSingleRow<models::FinanceSettingsRow>(pg::kRowTag));
 }
 
-inline models::FinanceSettings GetFinanceSettings(
+inline models::FinanceSettings LoadFinanceSettings(
     const pg::ClusterPtr& cluster, const std::string& organization) {
-    return ConvertFinanceSettings(
+    return ReadFinanceSettings(
         cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetFinanceSettings, organization));
 }
 

@@ -1,6 +1,5 @@
 #pragma once
-#include <converters/financial_label.hpp>
-#include <converters/invoice.hpp>
+#include <converters/service_charge.hpp>
 #include <finance/sql_queries.hpp>
 #include <models/pg/service_charge_raw.hpp>
 #include <models/service_charge_invoice_row.hpp>

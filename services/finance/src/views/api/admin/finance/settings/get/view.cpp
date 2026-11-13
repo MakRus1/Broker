@@ -10,9 +10,6 @@
 namespace finance::views::api::admin::finance::settings::get {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-
-    auto result = deps.settings->GetSettings(request.body.organization_id);
-
     try {
         platform::auth::RequireOrganizationAdministrator(
             deps.organizations, context, request.body.organization_id);
@@ -30,6 +27,8 @@ Response View::Handle(
     } catch (const platform::http::ContractError&) {
         throw ApiError<503>{"organizations_unavailable", "Некорректный ответ сервиса организаций"};
     }
+
+    auto result = deps.settings->GetSettings(request.body.organization_id);
 
     return Response200{.incoming_number_template = std::move(result.incoming_number_template),
         .outgoing_number_template = std::move(result.outgoing_number_template),

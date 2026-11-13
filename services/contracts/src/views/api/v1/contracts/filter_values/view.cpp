@@ -1,4 +1,4 @@
-#include <components/contracts.hpp>
+#include <components/contract_registry.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <utility>
@@ -11,7 +11,7 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(identity);
 
-    auto result = deps.documents->GetContractFilterValues(organization, request.body);
+    auto result = deps.registry->GetContractFilterValues(organization, request.body);
 
     return Response200{.fields = std::move(result.fields),
         .next_after = std::move(result.next_after),

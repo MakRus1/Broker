@@ -16,6 +16,7 @@
 #include <userver/ugrpc/client/client_factory_component.hpp>
 #include <userver/ugrpc/client/component_list.hpp>
 
+#include <components/contract_registry.hpp>
 #include <components/contracts.hpp>
 #include <components/numbering.hpp>
 #include <openapi/handlers.hpp>
@@ -65,6 +66,7 @@ int main(int argc, char* argv[]) {
     // SERVICE_REGISTRATION_END
 
     component_list.Append<contracts::ContractsComponent>();
+    component_list.Append<contracts::ContractRegistry>();
     component_list.Append<contracts::NumberingComponent>();
     component_list = contracts::openapi::AppendGeneratedHandlers(component_list);
 

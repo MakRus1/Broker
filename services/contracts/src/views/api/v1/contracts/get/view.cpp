@@ -11,7 +11,7 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(identity);
 
-    auto result = deps.documents->FindContract(organization, request.body.id);
+    auto result = deps.contracts->FindContract(organization, request.body.id);
 
     return Response200{.contract = std::move(result)};
 }

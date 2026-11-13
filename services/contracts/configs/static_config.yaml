@@ -6,7 +6,8 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
-        contracts-documents: {}
+        contracts-contracts: {}
+        contracts-registry: {}
         contracts-numbering: {}
         # OPENAPI_HANDLERS_BEGIN
         handler-api-admin-contracts-numbering-get:

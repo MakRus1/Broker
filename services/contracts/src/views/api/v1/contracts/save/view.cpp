@@ -1,4 +1,6 @@
+#include <components/contract_card.hpp>
 #include <components/contracts.hpp>
+#include <converters/contracts.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <utility>
@@ -11,9 +13,13 @@ Response View::Handle(
     const auto& identity = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(identity);
 
-    auto value =
-        deps.documents->PrepareContract(platform::auth::GetAccessToken(context), request.body);
-    auto result = deps.documents->SaveContract(
+    auto body = request.body;
+    contract_card::NormalizeAndValidateContract(body);
+    auto value = converters::Convert(body);
+
+    deps.contracts->ValidateContractParties(platform::auth::GetAccessToken(context), body);
+
+    auto result = deps.contracts->SaveContract(
         organization, identity, request.body.expected_revision, std::move(value));
 
     return Response200{.contract = std::move(result)};

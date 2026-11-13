@@ -438,6 +438,7 @@ components_manager:
             task_processor: main-task-processor
         finance-financial-labels: {}
         finance-service-charges: {}
+        finance-document-parties: {}
         finance-invoices: {}
         finance-payments: {}
         finance-settings: {}

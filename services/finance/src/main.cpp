@@ -1,3 +1,4 @@
+#include <components/document_parties.hpp>
 #include <components/financial_history.hpp>
 #include <components/financial_labels.hpp>
 #include <components/invoices.hpp>
@@ -78,6 +79,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<userver::components::HttpClient>("cbr-http-client");
     component_list.Append<finance::ExchangeRates>();
 
+    component_list.Append<finance::DocumentPartiesComponent>();
     component_list.Append<finance::FinancialLabelsComponent>();
     component_list.Append<finance::ServiceChargesComponent>();
     component_list.Append<finance::InvoicesComponent>();

@@ -1,6 +1,7 @@
 #include <components/invoices.hpp>
 #include <converters/invoice_print.hpp>
 #include <helpers/document_parties.hpp>
+#include <models/errors.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>

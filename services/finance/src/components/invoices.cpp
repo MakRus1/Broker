@@ -1,14 +1,17 @@
+#include <components/invoice_operations.hpp>
 #include <components/invoices.hpp>
 #include <converters/invoice.hpp>
 #include <finance/sql_queries.hpp>
 #include <helpers/finance_settings.hpp>
-#include <helpers/invoices.hpp>
+#include <helpers/history/snapshot.hpp>
+#include <helpers/service_charges.hpp>
 #include <models/errors.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <registry/invoice_query.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
@@ -33,9 +36,7 @@ std::vector<boost::uuids::uuid> InvoiceServiceChargeIds(const models::SaveInvoic
         throw ApiError<400>{"duplicate_service_charge", "Услуги не должны повторяться"};
     return {unique.begin(), unique.end()};
 }
-}  // namespace
 
-namespace {
 std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::string& organization,
     const models::pg::InvoiceRaw& invoice) {
     const auto settings =
@@ -73,7 +74,7 @@ models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
     auto read = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto details = helpers::LoadInvoice(read, organization, body.id);
+    const auto details = invoice_operations::LoadInvoice(read, organization, body.id);
     if (details.invoice.revision != body.revision)
         throw ApiError<409>{
             "revision_conflict", "Счёт изменён. Обновите карточку перед скачиванием"};
@@ -125,9 +126,9 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         if (request.expected_revision != 0 || ids.size() != 1)
             throw ApiError<400>{
                 "invalid_reassignment", "Новый счёт при перепривязке создаётся из одной услуги"};
-        helpers::CheckInvoiceAssignment(
+        invoice_operations::CheckInvoiceAssignment(
             transaction, organization, ids.front(), request.previous_invoice_id);
-        helpers::RemoveInvoiceServiceCharge(transaction, organization,
+        invoice_operations::RemoveInvoiceServiceCharge(transaction, organization,
             boost::uuids::string_generator{}(request.previous_invoice_id.value()), ids.front(),
             identity);
     }
@@ -137,15 +138,14 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
     std::vector<models::pg::ServiceChargeRaw> snapshots;
     snapshots.reserve(charges.Size());
     for (const auto& charge : charges.AsSetOf<models::pg::ServiceChargeRaw>()) {
-        helpers::ValidateInvoiceServiceCharge(charge, value);
+        invoice_operations::ValidateInvoiceServiceCharge(charge, value);
         snapshots.push_back(charge);
-        value.NetMinor += charge.InvoiceNetMinor;
-        value.VatMinor += charge.InvoiceVatMinor;
-        value.TotalMinor += charge.InvoiceTotalMinor;
     }
+    invoice_operations::RecalculateAmounts(value, snapshots);
+
     if (request.expected_revision != 0)
         transaction.Execute(sql::kLockInvoices, organization, std::vector{value.Id});
-    helpers::ValidateInvoiceSettlement(transaction, organization, value);
+    invoice_operations::ValidateInvoiceSettlement(transaction, organization, value);
     const auto saved = request.expected_revision == 0
         ? transaction.Execute(sql::kCreateInvoice, organization, value)
         : transaction.Execute(sql::kUpdateInvoice, organization, value, request.expected_revision);
@@ -155,7 +155,7 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         std::optional<boost::uuids::uuid>{});
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
-    const auto result = helpers::LoadInvoice(transaction, organization, request.id);
+    const auto result = invoice_operations::LoadInvoice(transaction, organization, request.id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
@@ -167,7 +167,7 @@ models::InvoiceDetails InvoicesComponent::FindInvoice(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = helpers::LoadInvoice(transaction, organization, request.id);
+    const auto result = invoice_operations::LoadInvoice(transaction, organization, request.id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
@@ -240,8 +240,9 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    const auto result = helpers::IncludeServiceCharge(transaction, organization, identity, charge,
-        request.invoice_id, request.expected_revision, request.previous_invoice_id);
+    const auto result =
+        invoice_operations::IncludeServiceCharge(transaction, organization, identity, charge,
+            request.invoice_id, request.expected_revision, request.previous_invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
@@ -255,11 +256,12 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string&
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    helpers::CheckInvoiceAssignment(
+    invoice_operations::CheckInvoiceAssignment(
         transaction, organization, charge.Id, std::optional{request.invoice_id});
-    helpers::RemoveInvoiceServiceCharge(transaction, organization,
+    invoice_operations::RemoveInvoiceServiceCharge(transaction, organization,
         boost::uuids::string_generator{}(request.invoice_id), charge.Id, identity);
-    const auto result = helpers::LoadInvoice(transaction, organization, request.invoice_id);
+    const auto result =
+        invoice_operations::LoadInvoice(transaction, organization, request.invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }

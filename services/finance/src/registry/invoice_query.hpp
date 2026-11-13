@@ -1,7 +1,6 @@
 #pragma once
 #include <converters/invoice.hpp>
 #include <finance/sql_queries.hpp>
-#include <helpers/invoices.hpp>
 #include <models/invoice_registry_row.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <platform/registry.hpp>

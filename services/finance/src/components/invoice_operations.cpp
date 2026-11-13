@@ -1,4 +1,5 @@
-#pragma once
+#include <algorithm>
+#include <components/invoice_operations.hpp>
 #include <converters/invoice.hpp>
 #include <finance/sql_queries.hpp>
 #include <helpers/document_parties.hpp>
@@ -8,15 +9,24 @@
 #include <models/errors.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
-#include <platform/date_validation.hpp>
-#include <set>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
-namespace finance::helpers {
-namespace pg = userver::storages::postgres;
+namespace finance::invoice_operations {
 
-inline void ValidateInvoiceServiceCharge(
+void RecalculateAmounts(
+    models::pg::InvoiceRaw& invoice, std::span<const models::pg::ServiceChargeRaw> charges) {
+    invoice.NetMinor = 0;
+    invoice.VatMinor = 0;
+    invoice.TotalMinor = 0;
+    for (const auto& charge : charges) {
+        invoice.NetMinor += charge.InvoiceNetMinor;
+        invoice.VatMinor += charge.InvoiceVatMinor;
+        invoice.TotalMinor += charge.InvoiceTotalMinor;
+    }
+}
+
+void ValidateInvoiceServiceCharge(
     const models::pg::ServiceChargeRaw& charge, const models::pg::InvoiceRaw& invoice) {
     if (charge.Archived ||
         charge.Direction != (invoice.Direction == "outgoing" ? "income" : "expense") ||
@@ -26,7 +36,7 @@ inline void ValidateInvoiceServiceCharge(
             "Услуга не соответствует сторонам, договору, валюте или направлению счёта"};
 }
 
-inline void ValidateInvoiceSettlement(pg::Transaction& transaction, const std::string& organization,
+void ValidateInvoiceSettlement(pg::Transaction& transaction, const std::string& organization,
     const models::pg::InvoiceRaw& invoice) {
     const auto paid = transaction.Execute(sql::kInvoicePaid, organization, invoice.Id)
                           .AsSingleRow<std::int64_t>();
@@ -35,34 +45,28 @@ inline void ValidateInvoiceSettlement(pg::Transaction& transaction, const std::s
             "Счёт частично или полностью оплачен. Сначала снимите распределение оплаты в платеже"};
 }
 
-inline models::InvoiceDetails LoadInvoice(
+models::InvoiceDetails LoadInvoice(
     pg::Transaction& transaction, const std::string& organization, const std::string& id) {
     const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
-    return {.charges = ConvertServiceCharges(
+    return {.charges = helpers::ConvertServiceCharges(
                 transaction.Execute(sql::kGetInvoiceServiceCharges, organization, id)),
         .invoice = converters::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>())};
 }
 
-inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
-    const std::string& organization, const boost::uuids::uuid& invoice_id,
-    const boost::uuids::uuid& service_charge_id, const platform::auth::Identity& identity) {
+void RemoveInvoiceServiceCharge(pg::Transaction& transaction, const std::string& organization,
+    const boost::uuids::uuid& invoice_id, const boost::uuids::uuid& service_charge_id,
+    const platform::auth::Identity& identity) {
     auto invoice = transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id})
                        .AsSingleRow<models::pg::InvoiceRaw>();
     if (invoice.Archived || invoice.Revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<409>{"invoice_unavailable", "Счёт недоступен для изменения"};
-    const auto rows = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id);
-    invoice.NetMinor = 0;
-    invoice.VatMinor = 0;
-    invoice.TotalMinor = 0;
-    for (const auto& line : rows.AsSetOf<models::pg::ServiceChargeRaw>()) {
-        if (line.Id == service_charge_id)
-            continue;
-        invoice.NetMinor += line.InvoiceNetMinor;
-        invoice.VatMinor += line.InvoiceVatMinor;
-        invoice.TotalMinor += line.InvoiceTotalMinor;
-    }
+    auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id)
+                       .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
+    std::erase_if(charges, [&](const auto& charge) { return charge.Id == service_charge_id; });
+    RecalculateAmounts(invoice, charges);
+
     transaction.Execute(sql::kDeleteInvoiceServiceCharges, organization, invoice_id,
         std::optional{service_charge_id});
     const auto revision = invoice.Revision++;
@@ -71,10 +75,10 @@ inline void RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const auto details =
         LoadInvoice(transaction, organization, boost::uuids::to_string(invoice_id));
     transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-        identity.ActorId(), HistorySnapshot(details, identity));
+        identity.ActorId(), helpers::HistorySnapshot(details, identity));
 }
 
-inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::string& organization,
+void CheckInvoiceAssignment(pg::Transaction& transaction, const std::string& organization,
     const boost::uuids::uuid& service_charge_id, const std::optional<std::string>& previous) {
     const auto assignment =
         transaction.Execute(sql::kServiceChargeInvoiceAssignment, organization, service_charge_id);
@@ -88,11 +92,10 @@ inline void CheckInvoiceAssignment(pg::Transaction& transaction, const std::stri
         throw ApiError<409>{"service_charge_invoiced", "Услуга уже включена в счёт"};
 }
 
-inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
+models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
     const std::string& organization, const platform::auth::Identity& identity,
     const models::pg::ServiceChargeRaw& charge, const std::string& invoice_id,
-    std::int64_t expected_revision,
-    const std::optional<std::string>& previous_invoice_id = std::nullopt) {
+    std::int64_t expected_revision, const std::optional<std::string>& previous_invoice_id) {
     CheckInvoiceAssignment(transaction, organization, charge.Id, previous_invoice_id);
     std::vector<boost::uuids::uuid> invoice_ids{boost::uuids::string_generator{}(invoice_id)};
     if (previous_invoice_id.has_value())
@@ -107,19 +110,20 @@ inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
     if (value.Revision != expected_revision ||
         value.Revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<409>{"revision_conflict", "Счёт изменён. Обновите список"};
-    if (transaction.Execute(sql::kGetInvoiceServiceCharges, organization, value.Id).Size() >= 500)
+    auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, value.Id)
+                       .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
+    if (charges.size() >= 500)
         throw ApiError<400>{
             "too_many_service_charges", "В одном счёте может быть не больше 500 услуг"};
     ValidateInvoiceServiceCharge(charge, value);
     if (previous_invoice_id.has_value()) {
-        if (SameId(previous_invoice_id.value(), invoice_id))
+        if (helpers::SameId(previous_invoice_id.value(), invoice_id))
             throw ApiError<400>{"same_invoice", "Выберите другой счёт"};
         RemoveInvoiceServiceCharge(transaction, organization,
             boost::uuids::string_generator{}(previous_invoice_id.value()), charge.Id, identity);
     }
-    value.NetMinor += charge.InvoiceNetMinor;
-    value.VatMinor += charge.InvoiceVatMinor;
-    value.TotalMinor += charge.InvoiceTotalMinor;
+    charges.push_back(charge);
+    RecalculateAmounts(value, charges);
     ++value.Revision;
     ValidateInvoiceSettlement(transaction, organization, value);
     transaction.Execute(sql::kUpdateInvoice, organization, value, expected_revision);
@@ -127,7 +131,7 @@ inline models::InvoiceDetails IncludeServiceCharge(pg::Transaction& transaction,
         sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
     const auto result = LoadInvoice(transaction, organization, invoice_id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), HistorySnapshot(result, identity));
+        identity.ActorId(), helpers::HistorySnapshot(result, identity));
     return result;
 }
-}  // namespace finance::helpers
+}  // namespace finance::invoice_operations

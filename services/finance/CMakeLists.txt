@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
     src/components/financial_history.cpp
+    src/converters/cbr_exchange_rates.cpp
     src/components/exchange_rates.cpp
     src/components/financial_labels.cpp
     src/components/service_charges.cpp

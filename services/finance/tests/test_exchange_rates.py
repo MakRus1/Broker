@@ -127,3 +127,24 @@ async def test_settings_access_is_checked_before_reading_storage(api, finance_ad
             assert result['error'] == 'forbidden'
         finally:
             cursor.execute('ROLLBACK')
+
+
+@pytest.mark.parametrize('response', [
+    {'date': '31.10.2026'},
+    {'rates': {}},
+    {'rates': {'USD': (1, '0,0000')}},
+    {'rates': {'USD': (0, '90,0000')}},
+    {'rates': {'USD': (1, '90,0000001')}},
+    {'rates': {'RUB': (1, '1,0000'), 'USD': (1, '90,0000')}},
+])
+async def test_invalid_cbr_response_is_not_cached(api, cbr, response):
+    cbr.update(response)
+    query = {'date': '2026-10-30', 'from_currency': 'USD', 'to_currency': 'RUB'}
+    error = await api.post(RATES, query, expected=503)
+    assert error['error'] == 'exchange_rate_unavailable'
+
+    cbr.update(date=None, rates={'USD': (1, '90,0000')})
+    assert await api.post(RATES, query) == {
+        'date': '2026-10-30', 'rate_millionths': 90000000, 'source': 'cbr',
+    }
+    assert cbr['handler'].times_called == 2

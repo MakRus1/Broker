@@ -93,7 +93,8 @@ Response View::Handle(
         ? models::ConversionRate{.Millionths = body.manual_invoice_rate_millionths.value(),
               .Date = body.service_date,
               .Source = "manual"}
-        : deps.exchange_rates.Get(body.currency, body.invoice_currency, body.service_date);
+        : deps.exchange_rates.GetConversionRate(
+              body.currency, body.invoice_currency, body.service_date);
     if (body.currency == body.invoice_currency && exchange_rate.Millionths != 1000000)
         throw ApiError<400>{
             "identity_exchange_rate", "Для одинаковых валют курс должен быть равен 1"};

@@ -3,7 +3,7 @@
 #include <string>
 
 namespace finance::models {
-struct ExchangeQuoteRow {
+struct ExchangeQuote {
     std::string Currency;
     std::int64_t Value;
     std::int64_t Nominal;

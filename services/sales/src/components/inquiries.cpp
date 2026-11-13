@@ -1,7 +1,7 @@
 #include <components/inquiries.hpp>
-#include <converters/settings.hpp>
 #include <converters/shipment_command.hpp>
 #include <events/shipment_command.hpp>
+#include <helpers/settings.hpp>
 #include <models/errors.hpp>
 #include <models/number_allocation.hpp>
 #include <platform/document_number.hpp>
@@ -56,7 +56,7 @@ models::Inquiry InquiriesComponent::SaveInquiry(const std::string& organization,
     std::string number;
     if (value.expected_revision == 0) {
         const auto settings =
-            converters::ToSalesSettings(transaction.Execute(sql::kGetSettings, organization));
+            helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, organization));
         const auto allocation = transaction
                                     .Execute(sql::kNextDocumentNumber, organization,
                                         std::string{"inquiry"}, settings.reset_number_yearly)

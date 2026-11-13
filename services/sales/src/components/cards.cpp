@@ -1,5 +1,5 @@
 #include <components/cards.hpp>
-#include <converters/settings.hpp>
+#include <helpers/settings.hpp>
 #include <models/errors.hpp>
 #include <sales/sql_queries.hpp>
 #include <userver/components/component_context.hpp>
@@ -44,7 +44,7 @@ models::SalesCard CardsComponent::SaveCard(const std::string& organization,
     const auto previous = transaction.Execute(sql::kLockCards, organization, value.id);
     const auto previous_stage =
         previous.IsEmpty() ? std::nullopt : std::optional{previous.AsSingleRow<std::string>()};
-    ValidateStage(converters::ToSalesSettings(transaction.Execute(sql::kGetSettings, organization)),
+    ValidateStage(helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, organization)),
         value.stage_id, previous_stage);
 
     const auto document = json::ValueBuilder(value).ExtractValue();

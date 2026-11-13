@@ -1,19 +1,10 @@
 #pragma once
-#include <models/errors.hpp>
 #include <models/pg/sales_settings.hpp>
 #include <openapi/models.hpp>
-#include <sales/sql_queries.hpp>
 #include <userver/formats/json.hpp>
-#include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/storages/postgres/transaction.hpp>
 
 namespace sales::converters {
-namespace pg = userver::storages::postgres;
-
-inline models::SalesSettings ToSalesSettings(const pg::ResultSet& rows) {
-    if (rows.IsEmpty())
-        return {.revision = 0, .stages = {}};
-    const auto settings = rows.AsSingleRow<models::pg::SalesSettings>();
+inline models::SalesSettings ToSalesSettings(const models::pg::SalesSettings& settings) {
     models::SalesSettings result{.inquiry_number_template = settings.InquiryNumberTemplate,
         .reset_number_yearly = settings.ResetNumberYearly,
         .revision = settings.Revision,

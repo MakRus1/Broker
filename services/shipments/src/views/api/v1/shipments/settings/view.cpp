@@ -1,5 +1,5 @@
 #include <components/settings.hpp>
-#include <components/shipment_card_integrations.hpp>
+#include <components/shipments.hpp>
 #include <platform/auth/identity.hpp>
 #include <utility>
 #include <views/api/v1/shipments/settings/view.hpp>
@@ -13,7 +13,7 @@ Response View::Handle(
     const auto& customer = request.body.customer_id;
     auto settings = deps.settings->Effective(organization, customer);
     auto customer_logist = customer.has_value()
-        ? deps.shipment_card_integrations->CustomerLogist(access_token, customer.value())
+        ? deps.shipments->GetCustomerLogist(access_token, customer.value())
         : std::nullopt;
 
     return Response200{.container_types = std::move(settings.ContainerTypes),

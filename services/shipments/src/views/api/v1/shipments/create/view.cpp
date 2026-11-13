@@ -25,12 +25,11 @@ Response View::Handle(
 
     const auto logist = body.logist.has_value()
         ? platform::TrimToOptional(body.logist.value())
-        : deps.shipment_card_integrations->CustomerLogist(access_token, body.customer_id);
-    deps.shipment_card_integrations->ValidateLogist(organization, access_token, logist);
+        : deps.shipments->GetCustomerLogist(access_token, body.customer_id);
+    deps.shipments->ValidateLogist(organization, access_token, logist);
 
     if (body.route_segments.has_value())
-        deps.shipment_card_integrations->ResolveRoute(
-            access_token, body.route_segments.value(), {});
+        deps.shipment_routes->ResolveRoute(access_token, body.route_segments.value(), {});
     body.logist = logist;
 
     return Response201{.shipment = deps.shipments->CreateShipmentFromSource(

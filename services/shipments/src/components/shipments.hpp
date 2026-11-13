@@ -1,9 +1,12 @@
 #pragma once
+#include <clients/counterparties/client.hpp>
+#include <clients/organizations/client.hpp>
 #include <components/settings.hpp>
 #include <models/errors.hpp>
 #include <models/shipment_source.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
@@ -14,6 +17,11 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     ShipmentsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
+    std::optional<std::string> GetCustomerLogist(
+        std::string_view access_token, const std::string& customer_id) const;
+    void ValidateLogist(const std::string& organization, std::string_view access_token,
+        const std::optional<std::string>& subject) const;
+
     models::Shipment GetShipment(
         const std::string& organization, const std::string& shipment_id) const;
     std::vector<models::Shipment> GetShipments(
@@ -37,6 +45,8 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     SettingsComponent& settings_;
+    clients::counterparties::Client counterparties_;
+    clients::organizations::Client organizations_;
 };
 }  // namespace shipments
 

@@ -1,6 +1,10 @@
 #pragma once
+#include <clients/counterparties/client.hpp>
+#include <clients/finance/client.hpp>
+#include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
@@ -16,6 +20,9 @@ class RfqComponent final : public userver::components::ComponentBase {
         const std::string& organization, const std::string& inquiry_id) const;
     std::vector<models::RfqHistoryEntry> GetRfqHistory(
         const std::string& organization, const models::HistoryRequest& request) const;
+    // Проверяет клиента и ответственного, заполняет снимки поставщиков и меток в input.
+    void PrepareRfq(const std::string& organization, std::string_view access_token,
+        const models::Inquiry& inquiry, models::RfqInput& input) const;
     models::Rfq SaveRfq(const std::string& organization, const platform::auth::Identity& identity,
         std::int64_t expected, models::RfqInput input) const;
     models::Rfq FindRfqRevision(
@@ -23,6 +30,9 @@ class RfqComponent final : public userver::components::ComponentBase {
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
+    clients::counterparties::Client counterparties_;
+    clients::organizations::Client organizations_;
+    clients::finance::Client finance_;
 };
 }  // namespace sales
 

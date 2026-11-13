@@ -1,19 +1,20 @@
 #include <array>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <components/financial_history.hpp>
-#include <converters/financial_label.hpp>
 #include <finance/sql_queries.hpp>
 #include <map>
 #include <models/errors.hpp>
 #include <models/financial_history_row.hpp>
 #include <models/invoice_name_row.hpp>
 #include <openapi/models.hpp>
-#include <permissions/permissions.hpp>
 #include <set>
 #include <span>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json/value.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/chrono.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
@@ -324,7 +325,7 @@ userver::yaml_config::Schema FinancialHistoryComponent::GetStaticConfigSchema() 
 
 models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     const std::string& organization, const models::FinancialHistoryRequest& body,
-    models::FinancialHistorySource source, bool related, bool can_read_invoices) const {
+    models::FinancialHistorySource source, const models::FinancialHistoryAccess& access) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -348,13 +349,13 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
         : source == Source::Invoice                    ? sql::kListInvoiceHistory
                                                        : sql::kListPaymentHistory;
     const auto rows = transaction.Execute(query, organization, body.id, before_time, before_source,
-        before_id, before_revision, body.limit + 1, related);
+        before_id, before_revision, body.limit + 1, access.IncludeRelatedEvents);
     const auto stored_rows =
         rows.AsContainer<std::vector<models::FinancialHistoryRow>>(pg::kRowTag);
     std::vector<HistoryRecord> history;
     history.reserve(stored_rows.size());
     std::set<boost::uuids::uuid> invoice_ids;
-    const bool load_invoice_names = source == Source::Payment && can_read_invoices;
+    const bool load_invoice_names = source == Source::Payment && access.IncludeInvoiceNames;
     for (const auto& row : stored_rows) {
         const auto event_source = models::ParseEnumScalar(row.Source, Source{});
         HistoryRecord record{.Cursor = {.entity_id = boost::uuids::to_string(row.EntityId),

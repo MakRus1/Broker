@@ -5,7 +5,6 @@
 #include <limits>
 #include <models/errors.hpp>
 #include <models/pg/financial_label_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <registry/financial_label_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -15,7 +14,6 @@
 
 namespace finance {
 namespace pg = userver::storages::postgres;
-using namespace registry_query::labels;
 
 FinancialLabelsComponent::FinancialLabelsComponent(
     const userver::components::ComponentConfig& config,
@@ -33,13 +31,15 @@ models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialL
     const models::FinancialLabelFilterValuesRequest& request) const {
     try {
         models::FinancialLabelFilterValuesResult result;
-        result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
+        result.fields = platform::registry::DescribeFields<models::RegistryField>(
+            registry_query::labels::registry_fields::kFields);
         if (!request.field.has_value())
             return result;
-        const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
+        const auto query = platform::registry::BuildFilterValues(
+            registry_query::labels::kRegistry, request, organization);
         const auto rows =
             cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
+                .AsContainer<std::vector<platform::registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
              index < rows.size() && index < static_cast<std::size_t>(request.limit); ++index)
@@ -47,7 +47,7 @@ models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialL
         if (more)
             result.next_after = result.values.back().value;
         return result;
-    } catch (const registry::FilterError& error) {
+    } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
@@ -55,7 +55,6 @@ models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialL
 models::FinancialLabel FinancialLabelsComponent::SaveFinancialLabel(const std::string& organization,
     const platform::auth::Identity& identity,
     const models::SaveFinancialLabelRequest& request) const {
-
     const auto value = converters::ToFinancialLabel(request);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto rows = request.expected_revision == 0
@@ -73,7 +72,6 @@ models::FinancialLabel FinancialLabelsComponent::SaveFinancialLabel(const std::s
 
 models::FinancialLabel FinancialLabelsComponent::FindFinancialLabel(
     const std::string& organization, const models::GetFinancialLabelRequest& request) const {
-
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetFinancialLabel, organization, request.id);
     if (rows.IsEmpty())
@@ -84,13 +82,13 @@ models::FinancialLabel FinancialLabelsComponent::FindFinancialLabel(
 models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
     const std::string& organization, const models::ListFinancialLabelsRequest& request) const {
     try {
-
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
         if (body.cursor.has_value() && body.cursor.value().scope != scope)
             throw ApiError<400>{
                 "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
+        const auto query =
+            platform::registry::BuildPage(registry_query::labels::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{

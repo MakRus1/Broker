@@ -1,6 +1,6 @@
 #pragma once
+#include <models/financial_history_access.hpp>
 #include <openapi/models.hpp>
-#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
@@ -13,7 +13,7 @@ class FinancialHistoryComponent final : public userver::components::ComponentBas
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::FinancialHistoryResponse GetHistory(const std::string& organization,
         const models::FinancialHistoryRequest& body, models::FinancialHistorySource source,
-        bool related, bool can_read_invoices) const;
+        const models::FinancialHistoryAccess& access) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

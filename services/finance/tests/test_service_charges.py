@@ -197,3 +197,30 @@ async def test_shared_http_status_errors(api, charge, references, target, status
     references[target] = status
     result = await api.post(BASE+'save', value, expected=expected)
     assert result['error'] == {403:'forbidden_reference',404:'reference_not_found',502:'reference_unavailable'}[expected]
+
+@pytest.mark.parametrize('transportation_id', [None, TRANSPORT])
+@pytest.mark.parametrize('direction', ['income', 'expense'])
+async def test_zero_summary_keeps_existing_group_without_creating_missing_group(
+    api, charge, scope, transportation_id, direction,
+):
+    body = await charge(
+        transportation_id=transportation_id, direction=direction, price_minor=0,
+    )
+    await api.post(BASE + 'save', body)
+    summary = (await listing(api, scope))['summary']
+    zero = [{'currency': 'RUB', 'income_minor': '0', 'expense_minor': '0'}]
+    assert summary['own'] == (zero if transportation_id is None else [])
+    assert summary['transportations'] == (zero if transportation_id else [])
+    assert summary['combined'] == zero
+
+
+async def test_summary_does_not_add_currency_from_archived_services(api, charge, scope):
+    await api.post(BASE + 'save', await charge())
+    await api.post(BASE + 'save', await charge(
+        archived=True, currency='USD', contract_id=None, transportation_id=TRANSPORT,
+    ))
+    summary = (await listing(api, scope))['summary']
+    assert summary['own'] == summary['combined'] == [
+        {'currency': 'RUB', 'income_minor': '12000', 'expense_minor': '0'},
+    ]
+    assert summary['transportations'] == []

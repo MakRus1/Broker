@@ -7,7 +7,6 @@
 #include <userver/utils/text_light.hpp>
 
 namespace finance::converters {
-using namespace helpers;
 
 inline models::pg::InvoiceRaw ToInvoice(const models::SaveInvoiceRequest& body) {
     if (body.expected_revision == std::numeric_limits<std::int64_t>::max())
@@ -20,7 +19,7 @@ inline models::pg::InvoiceRaw ToInvoice(const models::SaveInvoiceRequest& body) 
             !platform::IsCalendarDateInRange(
                 date.value(), std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
             throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
-    if (SameId(body.own_company_id, body.counterparty_id))
+    if (helpers::SameId(body.own_company_id, body.counterparty_id))
         throw ApiError<400>{"same_parties", "Выберите разные стороны счёта"};
     auto result = models::pg::InvoiceRaw{.Id = boost::uuids::string_generator{}(body.id),
         .Direction = models::EnumValue(body.direction),

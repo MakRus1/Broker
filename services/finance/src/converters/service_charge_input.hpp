@@ -9,7 +9,6 @@
 #include <platform/date_validation.hpp>
 
 namespace finance::converters {
-using namespace helpers;
 
 inline models::pg::ServiceChargeRaw ToServiceCharge(const models::SaveServiceChargeRequest& value,
     const models::FinancialLabel& label, const models::ServiceChargeParties& parties,
@@ -24,13 +23,13 @@ inline models::pg::ServiceChargeRaw ToServiceCharge(const models::SaveServiceCha
     if (!platform::IsCalendarDateInRange(
             value.service_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
         throw ApiError<400>{"invalid_service_date", "Укажите дату услуги не раньше 01.01.1900"};
-    ValidateCurrency(value.currency);
-    ValidateCurrency(value.invoice_currency);
+    helpers::ValidateCurrency(value.currency);
+    helpers::ValidateCurrency(value.invoice_currency);
     const auto amounts = platform::CalculateChargeAmounts(value.quantity_milli, value.price_minor,
         value.price_mode == models::PriceMode::Gross, value.vat_mode == models::VatMode::Exempt,
         value.vat_rate_basis_points);
-    const auto invoice_net = ConvertAmount(amounts.Net, exchange_rate.Millionths);
-    const auto invoice_total = ConvertAmount(amounts.Total, exchange_rate.Millionths);
+    const auto invoice_net = helpers::ConvertAmount(amounts.Net, exchange_rate.Millionths);
+    const auto invoice_total = helpers::ConvertAmount(amounts.Total, exchange_rate.Millionths);
     auto note = value.note;
     if (note.has_value()) {
         note = userver::utils::text::Trim(note.value());

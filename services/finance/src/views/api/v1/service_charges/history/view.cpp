@@ -12,8 +12,8 @@ Response View::Handle(
 
     const auto value = deps.history->GetHistory(organization, request.body,
         models::FinancialHistorySource::ServiceCharge,
-        platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES),
-        platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES));
+        {.IncludeRelatedEvents =
+                platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES)});
     return Response200{.items = value.items, .next_before = value.next_before};
 }
 }  // namespace finance::views::api::v1::service_charges::history

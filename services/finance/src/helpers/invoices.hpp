@@ -10,6 +10,7 @@
 #include <models/pg/service_charge_raw.hpp>
 #include <platform/date_validation.hpp>
 #include <set>
+#include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
 namespace finance::helpers {

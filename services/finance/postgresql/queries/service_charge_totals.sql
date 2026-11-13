@@ -1,8 +1,6 @@
--- source_group: 0 — услуги текущей поставки или перевозки,
--- 1 — услуги перевозок поставки, 2 — общий итог без двойного учёта.
 WITH amounts AS (
     SELECT
-        transportation_id IS NOT NULL AS transportation,
+        $3::UUID IS NOT NULL OR transportation_id IS NULL AS direct,
         currency,
         direction,
         total_minor
@@ -13,15 +11,21 @@ WITH amounts AS (
         AND NOT archived
 )
 SELECT
-    CASE
-        WHEN GROUPING(transportation) = 1 THEN 2
-        WHEN $3::UUID IS NOT NULL THEN 0
-        WHEN transportation THEN 1
-        ELSE 0
-    END::INTEGER AS source_group,
     currency,
+    CASE WHEN BOOL_OR(direct) THEN
+        COALESCE(SUM(total_minor) FILTER (WHERE direct AND direction = 'income'), 0)::TEXT
+    END AS direct_income,
+    CASE WHEN BOOL_OR(direct) THEN
+        COALESCE(SUM(total_minor) FILTER (WHERE direct AND direction = 'expense'), 0)::TEXT
+    END AS direct_expense,
+    CASE WHEN BOOL_OR(NOT direct) THEN
+        COALESCE(SUM(total_minor) FILTER (WHERE NOT direct AND direction = 'income'), 0)::TEXT
+    END AS transportation_income,
+    CASE WHEN BOOL_OR(NOT direct) THEN
+        COALESCE(SUM(total_minor) FILTER (WHERE NOT direct AND direction = 'expense'), 0)::TEXT
+    END AS transportation_expense,
     COALESCE(SUM(total_minor) FILTER (WHERE direction = 'income'), 0)::TEXT AS income,
     COALESCE(SUM(total_minor) FILTER (WHERE direction = 'expense'), 0)::TEXT AS expense
 FROM amounts
-GROUP BY GROUPING SETS ((currency, transportation), (currency))
-ORDER BY currency, source_group;
+GROUP BY currency
+ORDER BY currency;

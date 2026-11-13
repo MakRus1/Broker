@@ -10,7 +10,6 @@
 #include <models/payment_available_row.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/payment_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <registry/payment_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -23,7 +22,6 @@ namespace models = finance::models;
 namespace pg = userver::storages::postgres;
 namespace sql = finance::sql;
 using finance::ApiError;
-using namespace finance::helpers;
 
 models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
     switch (kind) {
@@ -76,7 +74,7 @@ models::PaymentInvoice LoadInvoiceBalance(
 }  // namespace
 
 namespace finance {
-using namespace helpers;
+namespace pg = userver::storages::postgres;
 
 PaymentsComponent::PaymentsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -91,7 +89,6 @@ userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
 models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organization,
     const platform::auth::Identity& identity, const models::SavePaymentRequest& request,
     models::pg::PaymentRaw value) const {
-
     const auto& body = request;
     std::map<boost::uuids::uuid, std::int64_t> allocations;
     std::int64_t allocated = 0;
@@ -147,7 +144,7 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
         transaction.Execute(sql::kCreatePaymentAllocation, organization, value.Id, id, amount);
     const auto result = LoadPayment(transaction, organization, body.id);
     transaction.Execute(sql::kWritePaymentHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), HistorySnapshot(result, identity));
+        identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
     return models::PaymentDetails{.allocated_minor = result.allocated_minor,
         .allocations = result.allocations,
@@ -157,7 +154,6 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
 
 models::PaymentDetails PaymentsComponent::FindPayment(
     const std::string& organization, const models::InvoiceBalanceRequest& request) const {
-
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -171,13 +167,12 @@ models::PaymentDetails PaymentsComponent::FindPayment(
 
 models::PaymentListResult PaymentsComponent::ListPayments(
     const std::string& organization, const models::ListPaymentsRequest& request) const {
-    using namespace ::finance::registry_query::payments;
     try {
-
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == registry::CursorKeyType::Date;
+        const auto order = platform::registry::RegistryOrderBy(
+            registry_query::payments::registry_fields::kFields, body.sort);
+        const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
         if (body.cursor.has_value()) {
             const auto& cursor = body.cursor.value();
             if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
@@ -185,7 +180,8 @@ models::PaymentListResult PaymentsComponent::ListPayments(
                 throw ApiError<400>{
                     "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         }
-        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
+        const auto query =
+            platform::registry::BuildPage(registry_query::payments::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
@@ -214,16 +210,17 @@ models::PaymentListResult PaymentsComponent::ListPayments(
 
 models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(
     const std::string& organization, const models::PaymentFilterValuesRequest& request) const {
-    using namespace ::finance::registry_query::payments;
     try {
         models::PaymentFilterValuesResult result;
-        result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
+        result.fields = platform::registry::DescribeFields<models::RegistryField>(
+            registry_query::payments::registry_fields::kFields);
         if (!request.field.has_value())
             return result;
-        const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
+        const auto query = platform::registry::BuildFilterValues(
+            registry_query::payments::kRegistry, request, organization);
         const auto rows =
             cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
-                .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
+                .AsContainer<std::vector<platform::registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
              index < rows.size() && index < static_cast<std::size_t>(request.limit); ++index)
@@ -231,14 +228,13 @@ models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(
         if (more)
             result.next_after = result.values.back().value;
         return result;
-    } catch (const registry::FilterError& error) {
+    } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
 
 models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
     const std::string& organization, const models::PaymentInvoiceCandidatesRequest& request) const {
-
     const auto& body = request;
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kPaymentInvoiceCandidates,
@@ -262,7 +258,6 @@ models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
 
 models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
     const std::string& organization, const models::InvoiceBalanceRequest& request) const {
-
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -276,12 +271,11 @@ models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
 
 models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
     const std::string& organization, const models::PaymentCandidatesRequest& request) const {
-
     const auto& body = request;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto invoice = LoadInvoice(transaction, organization, body.invoice_id).invoice;
+    const auto invoice = helpers::LoadInvoice(transaction, organization, body.invoice_id).invoice;
     if (invoice.archived)
         throw ApiError<409>{"invoice_archived", "Счёт находится в архиве"};
     const auto kind = invoice.direction == models::InvoiceDirection::Outgoing

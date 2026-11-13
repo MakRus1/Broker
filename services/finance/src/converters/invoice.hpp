@@ -2,8 +2,19 @@
 #include <converters/service_charge.hpp>
 #include <models/invoice_registry_row.hpp>
 #include <models/pg/invoice_raw.hpp>
+#include <stdexcept>
 
 namespace finance::converters {
+inline models::ServiceChargeDirection ToServiceChargeDirection(models::InvoiceDirection direction) {
+    switch (direction) {
+    case models::InvoiceDirection::Outgoing:
+        return models::ServiceChargeDirection::Income;
+    case models::InvoiceDirection::Incoming:
+        return models::ServiceChargeDirection::Expense;
+    }
+    throw std::logic_error("Неизвестное направление счёта");
+}
+
 inline std::optional<boost::uuids::uuid> InvoiceId(const std::optional<std::string>& value) {
     return value.has_value() ? std::optional{boost::uuids::string_generator{}(value.value())}
                              : std::nullopt;

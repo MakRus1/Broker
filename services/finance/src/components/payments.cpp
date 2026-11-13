@@ -117,8 +117,11 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
     std::set<boost::uuids::uuid> ids;
     for (const auto& [id, amount] : allocations)
         ids.insert(id);
-    for (const auto& row : transaction.Execute(sql::kGetPaymentAllocations, organization, value.Id))
-        ids.insert(row[0].As<boost::uuids::uuid>());
+    const auto previous_allocations =
+        transaction.Execute(sql::kGetPaymentAllocations, organization, value.Id);
+    for (const auto& allocation :
+        previous_allocations.AsSetOf<models::PaymentAllocationRow>(pg::kRowTag))
+        ids.insert(allocation.InvoiceId);
     // Платёж блокируется первым; все счета — в едином порядке. HTTP уже завершён.
     const auto invoices = transaction.Execute(
         sql::kLockInvoices, organization, std::vector<boost::uuids::uuid>{ids.begin(), ids.end()});
@@ -144,14 +147,11 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
     transaction.Execute(sql::kDeletePaymentAllocations, organization, value.Id);
     for (const auto& [id, amount] : allocations)
         transaction.Execute(sql::kCreatePaymentAllocation, organization, value.Id, id, amount);
-    const auto result = LoadPayment(transaction, organization, body.id);
+    auto result = LoadPayment(transaction, organization, body.id);
     transaction.Execute(sql::kWritePaymentHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
-    return models::PaymentDetails{.allocated_minor = result.allocated_minor,
-        .allocations = result.allocations,
-        .payment = result.payment,
-        .unallocated_minor = result.unallocated_minor};
+    return result;
 }
 
 models::PaymentDetails PaymentsComponent::FindPayment(
@@ -159,12 +159,9 @@ models::PaymentDetails PaymentsComponent::FindPayment(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = LoadPayment(transaction, organization, request.id);
+    auto result = LoadPayment(transaction, organization, request.id);
     transaction.Commit();
-    return models::PaymentDetails{.allocated_minor = result.allocated_minor,
-        .allocations = result.allocations,
-        .payment = result.payment,
-        .unallocated_minor = result.unallocated_minor};
+    return result;
 }
 
 models::PaymentListResult PaymentsComponent::ListPayments(
@@ -263,12 +260,9 @@ models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = LoadInvoiceBalance(transaction, organization, request.id);
+    auto result = LoadInvoiceBalance(transaction, organization, request.id);
     transaction.Commit();
-    return models::PaymentInvoice{.invoice = result.invoice,
-        .outstanding_minor = result.outstanding_minor,
-        .paid_minor = result.paid_minor,
-        .payments = result.payments};
+    return result;
 }
 
 models::AvailablePayments PaymentsComponent::ListPaymentCandidates(

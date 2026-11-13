@@ -39,10 +39,6 @@ void RecalculateAmounts(
     }
 }
 
-std::string ServiceChargeDirection(models::InvoiceDirection direction) {
-    return direction == models::InvoiceDirection::Outgoing ? "income" : "expense";
-}
-
 std::vector<boost::uuids::uuid> InvoiceServiceChargeIds(const models::SaveInvoiceRequest& body) {
     std::set<boost::uuids::uuid> unique;
     for (const auto& id : body.service_charge_ids)
@@ -56,8 +52,10 @@ std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::strin
     const models::pg::InvoiceRaw& invoice) {
     const auto settings =
         helpers::ReadFinanceSettings(transaction.Execute(sql::kGetFinanceSettings, organization));
-    const auto& mask = invoice.Direction == "outgoing" ? settings.outgoing_number_template
-                                                       : settings.incoming_number_template;
+    const auto direction = models::ParseEnumScalar(invoice.Direction, models::InvoiceDirection{});
+    const auto& mask = direction == models::InvoiceDirection::Outgoing
+        ? settings.outgoing_number_template
+        : settings.incoming_number_template;
     const auto period =
         platform::DocumentNumberPeriod(invoice.InvoiceDate, settings.reset_numbers_yearly);
     const auto sequence =
@@ -169,11 +167,11 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         std::optional<boost::uuids::uuid>{});
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
-    const auto result = FindInvoice(transaction, organization, request.id);
+    auto result = FindInvoice(transaction, organization, request.id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
-    return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
+    return result;
 }
 
 models::InvoiceDetails InvoicesComponent::FindInvoice(
@@ -181,9 +179,9 @@ models::InvoiceDetails InvoicesComponent::FindInvoice(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = FindInvoice(transaction, organization, request.id);
+    auto result = FindInvoice(transaction, organization, request.id);
     transaction.Commit();
-    return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
+    return result;
 }
 
 models::InvoiceListResult InvoicesComponent::ListInvoices(
@@ -233,9 +231,10 @@ models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(
     const std::string& organization, const models::ListInvoiceCandidatesRequest& request) const {
     const auto& body = request;
     const auto rows = cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListInvoiceCandidates,
-        organization, ServiceChargeDirection(body.direction), body.counterparty_id, body.currency,
-        converters::InvoiceId(body.contract_id), converters::InvoiceId(body.invoice_id),
-        converters::InvoiceId(body.after), static_cast<std::int32_t>(body.limit + 1));
+        organization, models::EnumValue(converters::ToServiceChargeDirection(body.direction)),
+        body.counterparty_id, body.currency, converters::InvoiceId(body.contract_id),
+        converters::InvoiceId(body.invoice_id), converters::InvoiceId(body.after),
+        static_cast<std::int32_t>(body.limit + 1));
     auto items = helpers::ConvertServiceCharges(rows);
     std::optional<std::string> next;
     if (items.size() > static_cast<std::size_t>(body.limit)) {
@@ -254,10 +253,10 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    const auto result = IncludeServiceCharge(transaction, organization, identity, charge,
+    auto result = IncludeServiceCharge(transaction, organization, identity, charge,
         request.invoice_id, request.expected_revision, request.previous_invoice_id);
     transaction.Commit();
-    return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
+    return result;
 }
 
 models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string& organization,
@@ -272,9 +271,9 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string&
     CheckInvoiceAssignment(transaction, organization, charge.Id, std::optional{request.invoice_id});
     RemoveInvoiceServiceCharge(transaction, organization,
         boost::uuids::string_generator{}(request.invoice_id), charge.Id, identity);
-    const auto result = FindInvoice(transaction, organization, request.invoice_id);
+    auto result = FindInvoice(transaction, organization, request.invoice_id);
     transaction.Commit();
-    return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
+    return result;
 }
 
 models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
@@ -304,8 +303,10 @@ models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
 
 void InvoicesComponent::ValidateInvoiceServiceCharge(
     const models::pg::ServiceChargeRaw& charge, const models::pg::InvoiceRaw& invoice) const {
-    if (charge.Archived ||
-        charge.Direction != (invoice.Direction == "outgoing" ? "income" : "expense") ||
+    const auto direction = models::ParseEnumScalar(invoice.Direction, models::InvoiceDirection{});
+    const auto charge_direction =
+        models::ParseEnumScalar(charge.Direction, models::ServiceChargeDirection{});
+    if (charge.Archived || charge_direction != converters::ToServiceChargeDirection(direction) ||
         charge.CounterpartyId != invoice.CounterpartyId ||
         charge.InvoiceCurrency != invoice.Currency || charge.ContractId != invoice.ContractId)
         throw ApiError<400>{"wrong_service_charge",
@@ -406,7 +407,7 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(pg::Transaction& 
     transaction.Execute(sql::kUpdateInvoice, organization, value, expected_revision);
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
-    const auto result = FindInvoice(transaction, organization, invoice_id);
+    auto result = FindInvoice(transaction, organization, invoice_id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));
     return result;

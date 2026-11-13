@@ -6,7 +6,7 @@ components_manager:
             worker_threads: $worker-fs-threads
     default_task_processor: main-task-processor
     components:
-        shipment-card-integrations: {}
+        shipment-routes: {}
         shipments-shipments: {}
         shipment-registry: {}
         shipments-settings: {}

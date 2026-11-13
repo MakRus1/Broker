@@ -15,6 +15,7 @@
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
+#include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -86,10 +87,56 @@ ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfi
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
-      settings_(context.FindComponent<SettingsComponent>()) {}
+      settings_(context.FindComponent<SettingsComponent>()),
+      counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
+      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
 
 userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
+}
+
+std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
+    std::string_view access_token, const std::string& customer) const try {
+    namespace api = clients::counterparties::ApiV1CounterpartiesGet;
+    const auto result = counterparties_.ApiV1CounterpartiesGet(
+        api::Request{.body = {.id = customer}}, access_token);
+
+    return result.counterparty.logist.value_or(std::nullopt);
+} catch (const platform::http::ErrorByStatus<404>&) {
+
+    throw ApiError<400>{"invalid_customer", "Клиент не найден в организации"};
+} catch (const platform::http::ApiError&) {
+    throw ApiError<503>{"customer_directory_unavailable", "Не удалось получить карточку клиента"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::TransportError&) {
+    throw ApiError<503>{"customer_directory_unavailable", "Не удалось получить карточку клиента"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<503>{
+        "customer_directory_unavailable", "Некорректный ответ справочника контрагентов"};
+}
+
+void ShipmentsComponent::ValidateLogist(const std::string& organization,
+    std::string_view access_token, const std::optional<std::string>& subject) const try {
+    if (!subject)
+        return;
+
+    const auto employees = organizations_.ApiOrganizationsEmployeesList(
+        {.body = {.limit = 1, .organization_id = organization, .subject = subject}}, access_token);
+    if (employees.items.empty())
+        throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
+} catch (const platform::http::ApiError&) {
+
+    throw ApiError<503>{"employee_directory_unavailable",
+        "Не удалось проверить сотрудника. Повторите сохранение позже"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::TransportError&) {
+    throw ApiError<503>{"employee_directory_unavailable",
+        "Не удалось проверить сотрудника. Повторите сохранение позже"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<503>{
+        "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(

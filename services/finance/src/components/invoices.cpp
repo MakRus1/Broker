@@ -39,16 +39,6 @@ void RecalculateAmounts(
     }
 }
 
-models::ServiceChargeDirection ServiceChargeDirection(models::InvoiceDirection direction) {
-    switch (direction) {
-    case models::InvoiceDirection::Outgoing:
-        return models::ServiceChargeDirection::Income;
-    case models::InvoiceDirection::Incoming:
-        return models::ServiceChargeDirection::Expense;
-    }
-    throw std::logic_error("Неизвестное направление счёта");
-}
-
 std::vector<boost::uuids::uuid> InvoiceServiceChargeIds(const models::SaveInvoiceRequest& body) {
     std::set<boost::uuids::uuid> unique;
     for (const auto& id : body.service_charge_ids)
@@ -241,7 +231,7 @@ models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(
     const std::string& organization, const models::ListInvoiceCandidatesRequest& request) const {
     const auto& body = request;
     const auto rows = cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListInvoiceCandidates,
-        organization, models::EnumValue(ServiceChargeDirection(body.direction)),
+        organization, models::EnumValue(converters::ToServiceChargeDirection(body.direction)),
         body.counterparty_id, body.currency, converters::InvoiceId(body.contract_id),
         converters::InvoiceId(body.invoice_id), converters::InvoiceId(body.after),
         static_cast<std::int32_t>(body.limit + 1));
@@ -316,7 +306,7 @@ void InvoicesComponent::ValidateInvoiceServiceCharge(
     const auto direction = models::ParseEnumScalar(invoice.Direction, models::InvoiceDirection{});
     const auto charge_direction =
         models::ParseEnumScalar(charge.Direction, models::ServiceChargeDirection{});
-    if (charge.Archived || charge_direction != ServiceChargeDirection(direction) ||
+    if (charge.Archived || charge_direction != converters::ToServiceChargeDirection(direction) ||
         charge.CounterpartyId != invoice.CounterpartyId ||
         charge.InvoiceCurrency != invoice.Currency || charge.ContractId != invoice.ContractId)
         throw ApiError<400>{"wrong_service_charge",

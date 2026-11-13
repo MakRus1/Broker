@@ -1,8 +1,13 @@
 #include <components/proposals.hpp>
+#include <components/rfq.hpp>
+#include <components/rfq_rules.hpp>
 #include <helpers/editable_inquiry.hpp>
 #include <helpers/proposal_storage.hpp>
+#include <map>
 #include <models/errors.hpp>
+#include <platform/http_client.hpp>
 #include <sales/sql_queries.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -38,11 +43,98 @@ namespace json = userver::formats::json;
 ProposalsComponent::ProposalsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
+      cluster_(context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()),
+      rfq_(context.FindComponent<RfqComponent>()),
+      finance_(context.FindComponent<clients::finance::Component>().GetClient()),
+      counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()) {}
 
 userver::yaml_config::Schema ProposalsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
+}
+
+models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
+    const std::string& organization, std::string_view token, const models::Inquiry& inquiry,
+    models::ProposalInput& input) const try {
+    const auto settings = finance_.ApiV1FinanceSettingsGet({}, token);
+    const auto customer =
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+            .counterparty;
+    models::ProposalCalculation data{.InquiryRevision = inquiry.revision,
+        .CustomerName = customer.name,
+        .ReportingCurrency = settings.reporting_currency};
+    std::map<std::pair<std::string, std::int64_t>, models::Rfq> rfq_revisions;
+    std::map<std::string, clients::finance::models::FinancialLabel> labels;
+    for (auto& line : input.lines) {
+        if (line.quote_source) {
+            const auto& source = *line.quote_source;
+            const auto key = std::pair{source.rfq_id, source.revision};
+            auto revision = rfq_revisions.find(key);
+            if (revision == rfq_revisions.end())
+                revision =
+                    rfq_revisions
+                        .emplace(
+                            key, rfq_.FindRfqRevision(organization, source.rfq_id, source.revision))
+                        .first;
+
+            rfq_rules::ApplyQuote(input, inquiry, revision->second, line);
+        }
+        auto label_position = labels.find(line.label_id);
+        if (label_position == labels.end())
+            label_position =
+                labels
+                    .emplace(line.label_id,
+                        finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token)
+                            .label)
+                    .first;
+
+        const auto& label = label_position->second;
+        if (label.archived ||
+            label.direction == clients::finance::models::FinancialLabelDirection::Expense ||
+            (line.purchase &&
+                label.direction != clients::finance::models::FinancialLabelDirection::Both))
+            throw ApiError<400>{
+                "invalid_label", "Выберите действующую метку, подходящую для дохода и расхода"};
+        data.LabelNames.emplace(line.label_id, label.name);
+        if (line.supplier_id && !data.SupplierNames.contains(*line.supplier_id)) {
+            const auto supplier =
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = *line.supplier_id}}, token)
+                    .counterparty;
+            if (supplier.archived)
+                throw ApiError<400>{"archived_supplier", "Поставщик находится в архиве"};
+            data.SupplierNames.emplace(*line.supplier_id, supplier.name);
+        }
+    }
+
+    std::set<std::string> currencies;
+    for (const auto& line : input.lines) {
+        currencies.insert(line.sale.currency);
+        if (line.purchase)
+            currencies.insert(line.purchase->currency);
+    }
+    for (const auto& currency : currencies) {
+        data.Rates[currency] = currency == data.ReportingCurrency
+            ? 1000000
+            : finance_
+                  .ApiV1ExchangeRatesGet({.body = {.date = input.calculation_date,
+                                              .from_currency = currency,
+                                              .to_currency = data.ReportingCurrency}},
+                      token)
+                  .rate_millionths;
+    }
+    return data;
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к справочникам расчёта"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить данные для расчёта"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис справочников недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
 }
 
 models::Proposal ProposalsComponent::SaveProposal(const std::string& organization,

@@ -1,5 +1,4 @@
 #include <components/inherited_route.hpp>
-#include <components/rail_route.hpp>
 #include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <helpers/revision.hpp>
@@ -25,11 +24,7 @@ Response View::Handle(
     route_rules::InheritRoute(loaded, source);
     auto& body = request.body;
     route_rules::ValidateRoute(body);
-    deps.route_integrations->ValidateRouteCounterparties(
-        access_token, body.route_segments, loaded.route_segments);
-    const auto stations = deps.route_integrations->FindRailwayStations(
-        access_token, route_rules::GetRailwayStationIds(body));
-    route_rules::ResolveRailwayStations(body, loaded, stations);
+    deps.route_integrations->PrepareRoute(access_token, body, loaded);
 
     auto result = deps.routes->SaveRoute(organization, actor, access_token, body, source);
 

@@ -1,4 +1,5 @@
 #include <components/inherited_route.hpp>
+#include <components/rail_route.hpp>
 #include <components/route_integrations.hpp>
 #include <converters/railway_station.hpp>
 #include <models/errors.hpp>
@@ -84,6 +85,15 @@ void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
     throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
 } catch (const platform::http::ContractError&) {
     throw ApiError<503>{"shipment_unavailable", "Некорректный ответ сервиса поставок"};
+}
+
+void RouteIntegrations::PrepareRoute(std::string_view access_token,
+    models::SetRouteRequest& request, const models::Transportation& previous) const {
+    ValidateRouteCounterparties(access_token, request.route_segments, previous.route_segments);
+
+    const auto stations =
+        FindRailwayStations(access_token, route_rules::GetRailwayStationIds(request));
+    route_rules::ResolveRailwayStations(request, previous, stations);
 }
 
 void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_token,

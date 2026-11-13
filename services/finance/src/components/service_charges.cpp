@@ -299,7 +299,8 @@ models::ReportingSummary ServiceChargesComponent::BuildReporting(
             const auto key = std::pair{charge.Date, charge.Currency};
             if (!rates.contains(key)) {
                 try {
-                    rates.emplace(key, exchange_rates_.Get(charge.Currency, currency, charge.Date));
+                    rates.emplace(key,
+                        exchange_rates_.GetConversionRate(charge.Currency, currency, charge.Date));
                 } catch (const ApiError<503>&) {
                     rates.emplace(key, std::nullopt);
                 }

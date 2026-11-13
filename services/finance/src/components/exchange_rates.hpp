@@ -13,11 +13,11 @@ class ExchangeRates final : public userver::components::ComponentBase {
     ExchangeRates(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::ConversionRate Get(
+    models::ConversionRate GetConversionRate(
         const std::string& from, const std::string& to, userver::utils::datetime::Date date) const;
 
   private:
-    void EnsureDay(userver::utils::datetime::Date date) const;
+    void LoadRatesForDate(userver::utils::datetime::Date date) const;
     userver::clients::http::Client& http_;
     userver::storages::postgres::ClusterPtr pg_;
     std::string endpoint_;

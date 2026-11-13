@@ -1,16 +1,13 @@
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <charconv>
 #include <components/exchange_rates.hpp>
+#include <converters/cbr_exchange_rates.hpp>
 #include <finance/sql_queries.hpp>
 #include <fmt/chrono.h>
 #include <helpers/exchange_amounts.hpp>
 #include <map>
 #include <models/errors.hpp>
-#include <models/exchange_quote_row.hpp>
+#include <models/exchange_quote.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/http_client.hpp>
-#include <sstream>
 #include <userver/clients/http/component.hpp>
 #include <userver/clients/http/request.hpp>
 #include <userver/clients/http/response.hpp>
@@ -23,32 +20,6 @@
 
 namespace finance {
 namespace pg = userver::storages::postgres;
-
-namespace {
-std::int64_t PositiveInteger(const std::string& text) {
-    std::int64_t result{};
-    const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), result);
-    if (error != std::errc{} || end != text.data() + text.size() || result <= 0 ||
-        result > 1000000000000LL)
-        throw std::runtime_error("Некорректное число в курсе ЦБ");
-    return result;
-}
-
-std::int64_t Millionths(std::string text) {
-    const auto separator = text.find_first_of(",.");
-    if (separator == std::string::npos)
-        return PositiveInteger(text) * 1000000;
-    auto fraction = text.substr(separator + 1);
-    if (fraction.empty() || fraction.size() > 6)
-        throw std::runtime_error("Некорректная точность курса ЦБ");
-    fraction.append(6 - fraction.size(), '0');
-    const auto whole = text.substr(0, separator);
-    if (whole != "0")
-        PositiveInteger(whole);
-    return (whole == "0" ? 0 : PositiveInteger(whole)) * 1000000 +
-        (fraction == "000000" ? 0 : PositiveInteger(fraction));
-}
-}  // namespace
 
 ExchangeRates::ExchangeRates(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -63,7 +34,7 @@ ExchangeRates::ExchangeRates(const userver::components::ComponentConfig& config,
         throw std::invalid_argument("Некорректные настройки клиента ЦБ");
 }
 
-void ExchangeRates::EnsureDay(userver::utils::datetime::Date date) const {
+void ExchangeRates::LoadRatesForDate(userver::utils::datetime::Date date) const {
     if (!pg_->Execute(pg::ClusterHostType::kMaster, sql::kGetExchangeDay, date).IsEmpty())
         return;
     try {
@@ -74,40 +45,19 @@ void ExchangeRates::EnsureDay(userver::utils::datetime::Date date) const {
                 .retry(0)
                 .follow_redirects(false)
                 .perform();
-        if (response->status_code() != 200 || response->body().size() > 1024 * 1024 ||
-            response->body().find("<!DOCTYPE") != std::string::npos)
+        if (response->status_code() != 200)
             throw std::runtime_error("Недоступен ответ ЦБ");
-        boost::property_tree::ptree xml;
-        std::istringstream stream{response->body()};
-        boost::property_tree::read_xml(stream, xml);
-        const auto& root = xml.get_child("ValCurs");
-        const auto text = root.get<std::string>("<xmlattr>.Date");
-        if (text.size() != 10 || text[2] != '.' || text[5] != '.')
-            throw std::runtime_error("Некорректная дата ЦБ");
-        // Только внешний формат ЦБ преобразуется в календарную дату здесь.
-        const auto effective = userver::utils::datetime::DateFromRFC3339String(
-            text.substr(6, 4) + "-" + text.substr(3, 2) + "-" + text.substr(0, 2));
-        if (effective > date)
-            throw std::runtime_error("Курс ЦБ относится к будущей дате");
-        std::vector<std::string> codes{"RUB"};
-        std::vector<std::int64_t> values{1000000}, nominals{1};
-        for (const auto& [name, value] : root) {
-            if (name != "Valute")
-                continue;
-            const auto code = value.get<std::string>("CharCode");
-            helpers::ValidateCurrency(code);
-            if (std::find(codes.begin(), codes.end(), code) != codes.end())
-                throw std::runtime_error("Повтор валюты ЦБ");
-            codes.push_back(code);
-            values.push_back(Millionths(value.get<std::string>("Value")));
-            if (values.back() <= 0)
-                throw std::runtime_error("Нулевой курс ЦБ");
-            nominals.push_back(PositiveInteger(value.get<std::string>("Nominal")));
+        const auto rates = converters::ParseCbrExchangeRates(response->body(), date);
+        std::vector<std::string> codes;
+        std::vector<std::int64_t> values, nominals;
+        for (const auto& quote : rates.Quotes) {
+            codes.push_back(quote.Currency);
+            values.push_back(quote.Value);
+            nominals.push_back(quote.Nominal);
         }
-        if (codes.size() < 2)
-            throw std::runtime_error("Пустой список курсов ЦБ");
+
         auto transaction = pg_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        transaction.Execute(sql::kCreateExchangeDay, date, effective);
+        transaction.Execute(sql::kCreateExchangeDay, date, rates.EffectiveDate);
         transaction.Execute(sql::kCreateExchangeRates, date, codes, values, nominals);
         transaction.Commit();
     } catch (const platform::http::CancelledError&) {
@@ -120,7 +70,7 @@ void ExchangeRates::EnsureDay(userver::utils::datetime::Date date) const {
     }
 }
 
-models::ConversionRate ExchangeRates::Get(
+models::ConversionRate ExchangeRates::GetConversionRate(
     const std::string& from, const std::string& to, userver::utils::datetime::Date date) const {
     if (!platform::IsCalendarDateInRange(
             date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
@@ -129,12 +79,12 @@ models::ConversionRate ExchangeRates::Get(
     helpers::ValidateCurrency(to);
     if (from == to)
         return {.Millionths = 1000000, .Date = date, .Source = "identity"};
-    EnsureDay(date);
+    LoadRatesForDate(date);
     const auto rows = pg_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetExchangeRates, date, std::vector{from, to});
     std::map<std::string, std::pair<std::int64_t, std::int64_t>> quotes;
     for (const auto& row : rows) {
-        const auto quote = row.As<models::ExchangeQuoteRow>(pg::kRowTag);
+        const auto quote = row.As<models::ExchangeQuote>(pg::kRowTag);
         quotes.emplace(quote.Currency, std::pair{quote.Value, quote.Nominal});
     }
     if (!quotes.contains(from) || !quotes.contains(to))

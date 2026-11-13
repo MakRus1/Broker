@@ -227,3 +227,29 @@ async def test_rfq_notifications_replay_actor_and_event_types(api, service_clien
     own = {**body,'id':'rfq-own:2','payload':{**body['payload'],'revision':2,'actor_subject':'author'}}
     assert (await send(own)).status == 200
     assert len((await api.post(LIST_PATH, {'organization_id':ORGANIZATION}))['items']) == 2
+
+
+@pytest.mark.parametrize('failure,expected', [(403, 403), (404, 403), (500, 502), ('invalid_json', 502)])
+@pytest.mark.parametrize('operation', ['list', 'read', 'dismiss'])
+async def test_inbox_access_failure_does_not_change_notifications(
+    api, publish, mockserver, pgsql, failure, expected, operation
+):
+    await publish(event())
+    item = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items'][0]
+
+    @mockserver.handler('/api/organizations/access')
+    def unavailable(request):
+        assert request.json['organization_id'] == ORGANIZATION
+        assert request.json['permission'] == 'shipments.read'
+        if failure == 'invalid_json':
+            return mockserver.make_response(response='invalid organization response', status=200)
+        return mockserver.make_response(status=failure, json={'error': 'test', 'message': 'test'})
+
+    body = {'organization_id': ORGANIZATION}
+    if operation != 'list':
+        body.update({'ids': [item['id']], 'dismiss': operation == 'dismiss'})
+    result = await api.post(LIST_PATH if operation == 'list' else READ_PATH, body, expected=expected)
+    assert result['error'] == ('organization_access_denied' if expected == 403 else 'organizations_unavailable')
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT read_at, dismissed_at FROM notifications WHERE id=%s', (item['id'],))
+        assert cursor.fetchone() == (None, None)

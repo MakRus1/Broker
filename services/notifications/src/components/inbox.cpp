@@ -23,13 +23,13 @@ userver::yaml_config::Schema InboxComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-void InboxComponent::CheckOrganization(const userver::server::request::RequestContext& context,
-    const std::string& organization) const {
+void InboxComponent::CheckOrganization(
+    const std::string& access_token, const std::string& organization) const {
     namespace api = clients::organizations::ApiOrganizationsAccess;
     try {
         organizations_.ApiOrganizationsAccess(
             api::Request{.body = {.organization_id = organization, .permission = "shipments.read"}},
-            platform::auth::GetAccessToken(context));
+            access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {
@@ -46,24 +46,24 @@ void InboxComponent::CheckOrganization(const userver::server::request::RequestCo
     }
 }
 
-std::vector<models::Notification> InboxComponent::List(
-    const models::ListNotificationsRequest& request,
-    const userver::server::request::RequestContext& context) const {
-    CheckOrganization(context, request.organization_id);
-    const auto& identity = platform::auth::GetIdentity(context);
+std::vector<models::Notification> InboxComponent::ListNotifications(
+    const models::ListNotificationsRequest& request, const platform::auth::Identity& identity,
+    const std::string& access_token) const {
+    CheckOrganization(access_token, request.organization_id);
+
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListNotifications,
         request.organization_id, identity.Issuer, identity.Subject, request.before, request.limit);
     std::vector<models::Notification> items;
     items.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<converters::NotificationRow>(pg::kRowTag))
+    for (const auto& row : rows.AsSetOf<models::NotificationRow>(pg::kRowTag))
         items.push_back(converters::Convert(row));
     return items;
 }
 
-int InboxComponent::Read(const models::ReadNotificationsRequest& request,
-    const userver::server::request::RequestContext& context) const {
-    CheckOrganization(context, request.organization_id);
-    const auto& identity = platform::auth::GetIdentity(context);
+int InboxComponent::MarkNotificationsRead(const models::ReadNotificationsRequest& request,
+    const platform::auth::Identity& identity, const std::string& access_token) const {
+    CheckOrganization(access_token, request.organization_id);
+
     std::vector<boost::uuids::uuid> ids;
     for (const auto& id : request.ids)
         ids.push_back(boost::uuids::string_generator{}(id));

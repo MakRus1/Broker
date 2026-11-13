@@ -72,6 +72,7 @@ std::vector<models::RegistryParty> DaData::Lookup(const std::string& tax_id) con
     const auto document = userver::formats::json::FromString(response->body());
     return converters::ConvertDaDataResponse(document, tax_id);
 } catch (const userver::clients::http::CancelException&) {
+
     throw;
 } catch (const userver::clients::http::BadArgumentException&) {
     throw;

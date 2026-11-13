@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
-#include <components/shipment_card.hpp>
 #include <converters/shipments.hpp>
 #include <helpers/dictionaries.hpp>
+#include <helpers/shipment_card.hpp>
 #include <models/errors.hpp>
 #include <platform/calendar_date.hpp>
 #include <platform/text.hpp>
@@ -56,7 +56,7 @@ void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row)
 
 }  // namespace
 
-namespace shipments::shipment_card {
+namespace shipments::helpers {
 models::pg::ShipmentData CreateShipmentCard(
     const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings) {
     models::pg::ShipmentData card;
@@ -100,31 +100,28 @@ void ValidateCard(const models::pg::ShipmentData& row, const configs::ShipmentSe
             (std::find(settings.RouteTypes.begin(), settings.RouteTypes.end(), segment.Type) ==
                     settings.RouteTypes.end() ||
                 std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                    return helpers::ParseDictionary(entry.Dictionary) ==
-                        helpers::ShipmentDictionary::kRouteType &&
+                    return ParseDictionary(entry.Dictionary) == ShipmentDictionary::kRouteType &&
                         entry.Code == segment.Type;
                 })))
             throw ApiError<400>{"invalid_route_type", "Тип участка недоступен для организации"};
     }
     const auto validate = [&](const std::optional<std::string>& value,
-                              helpers::ShipmentDictionary dictionary, const std::string& message,
+                              ShipmentDictionary dictionary, const std::string& message,
                               const std::optional<std::string>& old) {
         if (!value.has_value() || (previous != nullptr && old == value))
             return;
         if (std::none_of(dictionaries.begin(), dictionaries.end(), [&](const auto& entry) {
-                return helpers::ParseDictionary(entry.Dictionary) == dictionary &&
+                return ParseDictionary(entry.Dictionary) == dictionary &&
                     entry.Code == value.value();
             }))
-            throw ApiError<400>{
-                "invalid_" + std::string{helpers::DictionaryCode(dictionary)}, message};
+            throw ApiError<400>{"invalid_" + std::string{DictionaryCode(dictionary)}, message};
     };
-    validate(row.Incoterms, helpers::ShipmentDictionary::kIncoterms,
-        "Выберите Incoterms из справочника",
+    validate(row.Incoterms, ShipmentDictionary::kIncoterms, "Выберите Incoterms из справочника",
         previous != nullptr ? previous->Incoterms : std::nullopt);
-    validate(row.CarriageTerms, helpers::ShipmentDictionary::kCarriageTerms,
+    validate(row.CarriageTerms, ShipmentDictionary::kCarriageTerms,
         "Выберите условия перевозки из справочника",
         previous != nullptr ? previous->CarriageTerms : std::nullopt);
-    validate(row.Loading, helpers::ShipmentDictionary::kLoading, "Выберите загрузку из справочника",
+    validate(row.Loading, ShipmentDictionary::kLoading, "Выберите загрузку из справочника",
         previous != nullptr ? previous->Loading : std::nullopt);
 }
 
@@ -142,4 +139,4 @@ std::vector<std::string> ChangedRouteSegments(
     return changed;
 }
 
-}  // namespace shipments::shipment_card
+}  // namespace shipments::helpers

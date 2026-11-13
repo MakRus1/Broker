@@ -11,7 +11,7 @@ class EventAcceptanceComponent final : public userver::components::ComponentBase
     EventAcceptanceComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    void Accept(const models::PublishedEvent&, const platform::auth::Identity&) const;
+    void AcceptEvent(const models::PublishedEvent&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

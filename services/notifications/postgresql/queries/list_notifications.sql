@@ -1,4 +1,4 @@
-SELECT id::TEXT, entity_id::TEXT, entity_number, entity_revision,
+SELECT id, entity_id, entity_number, entity_revision,
     created_at, read_at IS NOT NULL, event_type
 FROM notifications
 WHERE organization_id = $1::UUID

@@ -1,18 +1,29 @@
 #include <components/payments.hpp>
+#include <converters/payment.hpp>
+#include <finance/sql_queries.hpp>
 #include <helpers/invoices.hpp>
-#include <helpers/payment_registry.hpp>
+#include <map>
+#include <models/errors.hpp>
+#include <models/invoice_balance_row.hpp>
+#include <models/invoice_payment_row.hpp>
+#include <models/payment_allocation_row.hpp>
+#include <models/payment_available_row.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/payment_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
+#include <registry/payment_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace finance {
-using namespace helpers;
-
 namespace {
+namespace converters = finance::converters;
+namespace models = finance::models;
+namespace pg = userver::storages::postgres;
+namespace sql = finance::sql;
+using finance::ApiError;
+using namespace finance::helpers;
 
 models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
     switch (kind) {
@@ -24,40 +35,19 @@ models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
     throw std::logic_error("Неизвестный вид платежа");
 }
 
-models::Payment Convert(const models::pg::PaymentRaw& value) {
-    models::Payment result;
-    result.id = boost::uuids::to_string(value.Id);
-    result.kind = models::ParseEnumScalar(value.Kind, models::PaymentKind{});
-    result.number = value.Number;
-    result.payment_date = value.PaymentDate;
-    result.own_company_id = boost::uuids::to_string(value.OwnCompanyId);
-    result.own_company_name = value.OwnCompanyName;
-    result.counterparty_id = boost::uuids::to_string(value.CounterpartyId);
-    result.counterparty_name = value.CounterpartyName;
-    result.own_bank_account_id = InvoiceId(value.OwnBankAccountId);
-    result.counterparty_bank_account_id = InvoiceId(value.CounterpartyBankAccountId);
-    result.currency = value.Currency;
-    result.amount_minor = value.AmountMinor;
-    result.purpose = value.Purpose;
-    result.note = value.Note;
-    result.archived = value.Archived;
-    result.revision = value.Revision;
-    return result;
-}
-
 models::PaymentDetails LoadPayment(
     pg::Transaction& transaction, const std::string& organization, const std::string& id) {
     const auto rows = transaction.Execute(sql::kGetPayment, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"payment_not_found", "Платёж не найден"};
     models::PaymentDetails result;
-    result.payment = Convert(rows.AsSingleRow<models::pg::PaymentRaw>());
+    result.payment = converters::Convert(rows.AsSingleRow<models::pg::PaymentRaw>());
     for (const auto& row : transaction.Execute(sql::kGetPaymentAllocations, organization, id)) {
-        const auto [invoice, amount] = row.As<boost::uuids::uuid, std::int64_t>();
-        result.allocations.push_back(
-            {.amount_minor = amount, .invoice_id = boost::uuids::to_string(invoice)});
+        const auto allocation = row.As<models::PaymentAllocationRow>(pg::kRowTag);
+        result.allocations.push_back({.amount_minor = allocation.AmountMinor,
+            .invoice_id = boost::uuids::to_string(allocation.InvoiceId)});
         if (!result.payment.archived)
-            result.allocated_minor += amount;
+            result.allocated_minor += allocation.AmountMinor;
     }
     result.unallocated_minor = result.payment.amount_minor - result.allocated_minor;
     return result;
@@ -68,13 +58,14 @@ models::PaymentInvoice LoadInvoiceBalance(
     const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
-    const auto invoice = helpers::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>());
+    const auto invoice = converters::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>());
     const auto paid =
         transaction.Execute(sql::kInvoicePaid, organization, id).AsSingleRow<std::int64_t>();
     std::vector<models::InvoicePayment> payments;
     for (const auto& row : transaction.Execute(sql::kInvoicePayments, organization, id)) {
-        const auto [payment, amount] = row.As<models::pg::PaymentRaw, std::int64_t>();
-        payments.push_back({.amount_minor = amount, .payment = Convert(payment)});
+        const auto allocation = row.As<models::InvoicePaymentRow>(pg::kRowTag);
+        payments.push_back({.amount_minor = allocation.AmountMinor,
+            .payment = converters::Convert(allocation.Payment)});
     }
     return {.invoice = invoice,
         .outstanding_minor = invoice.total_minor - paid,
@@ -82,36 +73,26 @@ models::PaymentInvoice LoadInvoiceBalance(
         .payments = std::move(payments)};
 }
 
-std::vector<models::Payment> Convert(const std::vector<payment_registry::RegistryRow>& rows) {
-    std::vector<models::Payment> result;
-    result.reserve(rows.size());
-    for (const auto& row : rows)
-        result.push_back(Convert(row.Payment));
-    return result;
-}
-
 }  // namespace
+
+namespace finance {
+using namespace helpers;
 
 PaymentsComponent::PaymentsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      deps_{
-          .counterparties = context.FindComponent<clients::counterparties::Component>().GetClient(),
-          .pg_cluster = context.FindComponent<userver::components::Postgres>("postgres-finance")
-                            .GetCluster()} {}
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
 
 userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::PaymentDetails PaymentsComponent::Save(const models::SavePaymentRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_PAYMENTS);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organization,
+    const platform::auth::Identity& identity, const models::SavePaymentRequest& request,
+    models::pg::PaymentRaw value) const {
+
     const auto& body = request;
-    auto value = Prepare(context, body);
     std::map<boost::uuids::uuid, std::int64_t> allocations;
     std::int64_t allocated = 0;
     for (const auto& item : body.allocations) {
@@ -123,8 +104,7 @@ models::PaymentDetails PaymentsComponent::Save(const models::SavePaymentRequest&
                  .second)
             throw ApiError<400>{"duplicate_invoice", "Счёт указан несколько раз"};
     }
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     if (body.expected_revision == 0) {
         if (transaction.Execute(sql::kCreatePayment, organization, value).IsEmpty())
             throw ApiError<409>{"revision_conflict", "Платёж уже существует. Обновите карточку"};
@@ -175,13 +155,10 @@ models::PaymentDetails PaymentsComponent::Save(const models::SavePaymentRequest&
         .unallocated_minor = result.unallocated_minor};
 }
 
-models::PaymentDetails PaymentsComponent::Get(const models::InvoiceBalanceRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_PAYMENTS);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+models::PaymentDetails PaymentsComponent::FindPayment(
+    const std::string& organization, const models::InvoiceBalanceRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto result = LoadPayment(transaction, organization, request.id);
@@ -192,14 +169,11 @@ models::PaymentDetails PaymentsComponent::Get(const models::InvoiceBalanceReques
         .unallocated_minor = result.unallocated_minor};
 }
 
-PaymentsComponent::ListResult PaymentsComponent::List(const models::ListPaymentsRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::payment_registry;
+models::PaymentListResult PaymentsComponent::ListPayments(
+    const std::string& organization, const models::ListPaymentsRequest& request) const {
+    using namespace ::finance::registry_query::payments;
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::FINANCE_READ_PAYMENTS);
-        const auto organization = platform::auth::GetOrganization(identity);
+
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
@@ -213,12 +187,12 @@ PaymentsComponent::ListResult PaymentsComponent::List(const models::ListPayments
         }
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+                        .AsContainer<std::vector<models::PaymentRegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)
             rows.pop_back();
@@ -232,28 +206,23 @@ PaymentsComponent::ListResult PaymentsComponent::List(const models::ListPayments
                     .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
         transaction.Commit();
-        return ListResult{.items = Convert(rows), .next_cursor = cursor};
+        return models::PaymentListResult{.items = converters::Convert(rows), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
 
-PaymentsComponent::FilterValuesResult PaymentsComponent::FilterValues(
-    const models::PaymentFilterValuesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::payment_registry;
+models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(
+    const std::string& organization, const models::PaymentFilterValuesRequest& request) const {
+    using namespace ::finance::registry_query::payments;
     try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        FilterValuesResult result;
+        models::PaymentFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
         if (!request.field.has_value())
             return result;
         const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
         const auto rows =
-            deps.pg_cluster->Execute(
-                               pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
+            cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
@@ -267,27 +236,23 @@ PaymentsComponent::FilterValuesResult PaymentsComponent::FilterValues(
     }
 }
 
-PaymentsComponent::InvoiceCandidatesResult PaymentsComponent::InvoiceCandidates(
-    const models::PaymentInvoiceCandidatesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_PAYMENTS);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
+    const std::string& organization, const models::PaymentInvoiceCandidatesRequest& request) const {
+
     const auto& body = request;
     const auto rows =
-        deps.pg_cluster->Execute(pg::ClusterHostType::kMaster, sql::kPaymentInvoiceCandidates,
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kPaymentInvoiceCandidates,
             organization, models::EnumValue(PaymentInvoiceDirection(body.kind)),
             body.own_company_id, body.counterparty_id, body.currency, body.query, body.after,
             body.limit + 1, body.payment_id);
-    InvoiceCandidatesResult result;
+    models::PaymentInvoiceCandidatesResult result;
     for (std::size_t index = 0; index < rows.Size() && index < static_cast<std::size_t>(body.limit);
          ++index) {
-        const auto [row, paid] = rows[index].As<models::pg::InvoiceRaw, std::int64_t>();
-        const auto invoice = Convert(row);
+        const auto balance = rows[index].As<models::InvoiceBalanceRow>(pg::kRowTag);
+        const auto invoice = converters::Convert(balance.Invoice);
         result.items.push_back({.invoice = invoice,
-            .outstanding_minor = invoice.total_minor - paid,
-            .paid_minor = paid,
+            .outstanding_minor = invoice.total_minor - balance.PaidMinor,
+            .paid_minor = balance.PaidMinor,
             .payments = {}});
     }
     if (rows.Size() > static_cast<std::size_t>(body.limit))
@@ -295,14 +260,10 @@ PaymentsComponent::InvoiceCandidatesResult PaymentsComponent::InvoiceCandidates(
     return result;
 }
 
-models::PaymentInvoice PaymentsComponent::InvoiceBalance(
-    const models::InvoiceBalanceRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
+    const std::string& organization, const models::InvoiceBalanceRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto result = LoadInvoiceBalance(transaction, organization, request.id);
@@ -313,14 +274,11 @@ models::PaymentInvoice PaymentsComponent::InvoiceBalance(
         .payments = result.payments};
 }
 
-PaymentsComponent::PaymentCandidatesResult PaymentsComponent::PaymentCandidates(
-    const models::PaymentCandidatesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_PAYMENTS);
+models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
+    const std::string& organization, const models::PaymentCandidatesRequest& request) const {
+
     const auto& body = request;
-    auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto invoice = LoadInvoice(transaction, organization, body.invoice_id).invoice;
@@ -332,11 +290,12 @@ PaymentsComponent::PaymentCandidatesResult PaymentsComponent::PaymentCandidates(
     const auto rows = transaction.Execute(sql::kPaymentCandidates, organization,
         models::EnumValue(kind), invoice.own_company_id, invoice.counterparty_id, invoice.currency,
         body.query, body.after, body.limit + 1);
-    PaymentCandidatesResult response;
+    models::AvailablePayments response;
     for (std::size_t index = 0; index < rows.Size() && index < static_cast<std::size_t>(body.limit);
          ++index) {
-        const auto [payment, available] = rows[index].As<models::pg::PaymentRaw, std::int64_t>();
-        response.items.push_back({.payment = Convert(payment), .unallocated_minor = available});
+        const auto available = rows[index].As<models::PaymentAvailableRow>(pg::kRowTag);
+        response.items.push_back({.payment = converters::Convert(available.Payment),
+            .unallocated_minor = available.AvailableMinor});
     }
     if (rows.Size() > static_cast<std::size_t>(body.limit))
         response.next_after = response.items.back().payment.id;
@@ -344,36 +303,4 @@ PaymentsComponent::PaymentCandidatesResult PaymentsComponent::PaymentCandidates(
     return response;
 }
 
-models::pg::PaymentRaw PaymentsComponent::Prepare(
-    const userver::server::request::RequestContext& context,
-    const models::SavePaymentRequest& body) const {
-    const auto& deps = deps_;
-    if (body.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError<400>{"invalid_revision", "Некорректная редакция платежа"};
-    if (!platform::IsCalendarDateInRange(
-            body.payment_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
-        throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
-    if (SameId(body.own_company_id, body.counterparty_id))
-        throw ApiError<400>{"same_parties", "Выберите разные стороны платежа"};
-    models::pg::PaymentRaw value{.Id = boost::uuids::string_generator{}(body.id),
-        .Kind = models::EnumValue(body.kind),
-        .Number = userver::utils::text::Trim(body.number),
-        .PaymentDate = body.payment_date,
-        .OwnCompanyId = boost::uuids::string_generator{}(body.own_company_id),
-        .OwnCompanyName = {},
-        .CounterpartyId = boost::uuids::string_generator{}(body.counterparty_id),
-        .CounterpartyName = {},
-        .OwnBankAccountId = InvoiceId(body.own_bank_account_id),
-        .CounterpartyBankAccountId = InvoiceId(body.counterparty_bank_account_id),
-        .Currency = body.currency,
-        .AmountMinor = body.amount_minor,
-        .Purpose = body.purpose,
-        .Note = body.note,
-        .Archived = body.archived,
-        .Revision = body.expected_revision + 1};
-    if (value.Number.empty())
-        throw ApiError<400>{"empty_number", "Укажите номер платежа"};
-    ValidateDocumentParties(deps, context, body, value);
-    return value;
-}
 }  // namespace finance

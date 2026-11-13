@@ -1,8 +1,7 @@
 #pragma once
-#include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace finance {
@@ -12,22 +11,12 @@ class SettingsComponent final : public userver::components::ComponentBase {
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::FinanceSettings Get(userver::server::request::RequestContext&) const;
-    models::FinanceSettings GetForOrganization(
-        const models::GetFinanceSettingsRequest&, userver::server::request::RequestContext&) const;
-    models::FinanceSettings Update(const models::UpdateFinanceSettingsRequest&,
-        userver::server::request::RequestContext&) const;
+    models::FinanceSettings GetSettings(const std::string& organization) const;
+    models::FinanceSettings UpdateSettings(
+        const models::UpdateFinanceSettingsRequest& request) const;
 
   private:
-    void RequireAdministrator(
-        const userver::server::request::RequestContext&, const std::string&) const;
-
-    struct Dependencies {
-        clients::organizations::Client organizations;
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace finance
 

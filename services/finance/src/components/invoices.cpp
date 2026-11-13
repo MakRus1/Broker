@@ -1,21 +1,27 @@
 #include <components/invoices.hpp>
-#include <helpers/converters/invoice_print.hpp>
+#include <converters/invoice.hpp>
+#include <finance/sql_queries.hpp>
 #include <helpers/finance_settings.hpp>
-#include <helpers/invoice_registry.hpp>
 #include <helpers/invoices.hpp>
+#include <models/errors.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
+#include <registry/invoice_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace finance {
-using namespace helpers;
-
 namespace {
+namespace converters = finance::converters;
+namespace models = finance::models;
+namespace pg = userver::storages::postgres;
+namespace sql = finance::sql;
+using finance::ApiError;
+using namespace finance::helpers;
+
 std::string ServiceChargeDirection(models::InvoiceDirection direction) {
     return direction == models::InvoiceDirection::Outgoing ? "income" : "expense";
 }
@@ -49,26 +55,23 @@ std::string GenerateInvoiceNumber(pg::Transaction& transaction, const std::strin
 }
 }  // namespace
 
+namespace finance {
+using namespace helpers;
+
 InvoicesComponent::InvoicesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      deps_{.contracts = context.FindComponent<clients::contracts::Component>().GetClient(),
-          .counterparties = context.FindComponent<clients::counterparties::Component>().GetClient(),
-          .pg_cluster = context.FindComponent<userver::components::Postgres>("postgres-finance")
-                            .GetCluster()} {}
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
 
 userver::yaml_config::Schema InvoicesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::InvoicePrintData InvoicesComponent::PrintData(const models::InvoicePrintRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
+    const std::string& organization, const models::InvoicePrintRequest& request) const {
     const auto& body = request;
-    auto read = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+    auto read = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto details = LoadInvoice(read, organization, body.id);
@@ -81,73 +84,38 @@ models::InvoicePrintData InvoicesComponent::PrintData(const models::InvoicePrint
         read.Execute(sql::kGetInvoicePrintSnapshot, organization, body.id, body.revision);
     read.Commit();
     if (!cached.IsEmpty())
-        return broker_codegen::ParseJson<models::InvoicePrintData>(
-            cached.AsSingleRow<userver::formats::json::Value>());
+        return {.Details = details,
+            .Cached = broker_codegen::ParseJson<models::InvoicePrintData>(
+                cached.AsSingleRow<userver::formats::json::Value>())};
 
-    // Справочники нужны только для первого снимка редакции. Транзакция на время HTTP не открыта.
-    models::InvoicePrintData data;
-    data.invoice = details.invoice;
-    data.charges = details.charges;
-    const auto token = platform::auth::GetAccessToken(context);
-    try {
-        data.supplier = ConvertPrintParty(
-            deps.counterparties
-                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.own_company_id}}, token)
-                .counterparty);
-        data.customer = ConvertPrintParty(
-            deps.counterparties
-                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.counterparty_id}}, token)
-                .counterparty);
-        if (data.invoice.own_bank_account_id.has_value()) {
-            const auto accounts = deps.counterparties.ApiV1CounterpartiesBankAccountsList(
-                {.body = {.counterparty_id = data.invoice.own_company_id}}, token);
-            const auto found = std::find_if(
-                accounts.items.begin(), accounts.items.end(), [&](const auto& account) {
-                    return SameId(account.id, data.invoice.own_bank_account_id.value());
-                });
-            if (found == accounts.items.end() || found->currency != data.invoice.currency)
-                throw ApiError<409>{"invalid_print_account",
-                    "Банковские реквизиты счёта недоступны или имеют другую валюту"};
-            data.supplier_bank = ConvertPrintBank(*found);
-        }
-    } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError<403>{"forbidden_reference", "Нет доступа к реквизитам для печатной формы"};
-    } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError<404>{"reference_not_found", "Реквизиты для печатной формы не найдены"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{"reference_unavailable", "Не удалось получить реквизиты счёта"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис реквизитов недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса реквизитов"};
-    }
-    auto write = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto current = write.Execute(sql::kLockInvoicePrintRevision, organization, body.id);
-    if (current.IsEmpty() || current.AsSingleRow<std::int64_t>() != body.revision)
+    return {.Details = details, .Cached = std::nullopt};
+}
+
+models::InvoicePrintData InvoicesComponent::SaveInvoicePrintSnapshot(
+    const std::string& organization, const models::InvoicePrintData& data) const {
+    auto write = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const auto current =
+        write.Execute(sql::kLockInvoicePrintRevision, organization, data.invoice.id);
+    if (current.IsEmpty() || current.AsSingleRow<std::int64_t>() != data.invoice.revision)
         throw ApiError<409>{
             "revision_conflict", "Счёт изменён. Обновите карточку перед скачиванием"};
-    auto saved = write.Execute(sql::kSaveInvoicePrintSnapshot, organization, body.id, body.revision,
-        userver::formats::json::ValueBuilder(data).ExtractValue());
+    auto saved = write.Execute(sql::kSaveInvoicePrintSnapshot, organization, data.invoice.id,
+        data.invoice.revision, userver::formats::json::ValueBuilder(data).ExtractValue());
     if (saved.IsEmpty())
-        saved = write.Execute(sql::kGetInvoicePrintSnapshot, organization, body.id, body.revision);
+        saved = write.Execute(
+            sql::kGetInvoicePrintSnapshot, organization, data.invoice.id, data.invoice.revision);
     const auto result = broker_codegen::ParseJson<models::InvoicePrintData>(
         saved.AsSingleRow<userver::formats::json::Value>());
     write.Commit();
     return result;
 }
 
-models::InvoiceDetails InvoicesComponent::Save(const models::SaveInvoiceRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto value = Prepare(context, request);
+models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organization,
+    const platform::auth::Identity& identity, const models::SaveInvoiceRequest& request,
+    models::pg::InvoiceRaw value) const {
+
     const auto ids = InvoiceServiceChargeIds(request);
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     if (value.Number.empty())
         value.Number = GenerateInvoiceNumber(transaction, organization, value);
     // Общий порядок блокировок защищает от одновременного редактирования и включения услуг в
@@ -195,13 +163,10 @@ models::InvoiceDetails InvoicesComponent::Save(const models::SaveInvoiceRequest&
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
-models::InvoiceDetails InvoicesComponent::Get(const models::GetInvoiceRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kSlave,
+models::InvoiceDetails InvoicesComponent::FindInvoice(
+    const std::string& organization, const models::GetInvoiceRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto result = LoadInvoice(transaction, organization, request.id);
@@ -209,14 +174,11 @@ models::InvoiceDetails InvoicesComponent::Get(const models::GetInvoiceRequest& r
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
-InvoicesComponent::ListResult InvoicesComponent::List(const models::ListInvoicesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::invoice_registry;
+models::InvoiceListResult InvoicesComponent::ListInvoices(
+    const std::string& organization, const models::ListInvoicesRequest& request) const {
+    using namespace ::finance::registry_query::invoices;
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::FINANCE_READ_INVOICES);
-        const auto organization = platform::auth::GetOrganization(identity);
+
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
@@ -230,12 +192,12 @@ InvoicesComponent::ListResult InvoicesComponent::List(const models::ListInvoices
         }
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+                        .AsContainer<std::vector<models::InvoiceRegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)
             rows.pop_back();
@@ -249,63 +211,50 @@ InvoicesComponent::ListResult InvoicesComponent::List(const models::ListInvoices
                     .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
         transaction.Commit();
-        return ListResult{.items = Convert(rows), .next_cursor = cursor};
+        return models::InvoiceListResult{.items = converters::Convert(rows), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
 
-InvoicesComponent::CandidatesResult InvoicesComponent::Candidates(
-    const models::ListInvoiceCandidatesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(
+    const std::string& organization, const models::ListInvoiceCandidatesRequest& request) const {
+
     const auto& body = request;
-    const auto rows =
-        deps.pg_cluster->Execute(pg::ClusterHostType::kSlave, sql::kListInvoiceCandidates,
-            organization, ServiceChargeDirection(body.direction), body.counterparty_id,
-            body.currency, InvoiceId(body.contract_id), InvoiceId(body.invoice_id),
-            InvoiceId(body.after), static_cast<std::int32_t>(body.limit + 1));
+    const auto rows = cluster_->Execute(pg::ClusterHostType::kSlave, sql::kListInvoiceCandidates,
+        organization, ServiceChargeDirection(body.direction), body.counterparty_id, body.currency,
+        converters::InvoiceId(body.contract_id), converters::InvoiceId(body.invoice_id),
+        converters::InvoiceId(body.after), static_cast<std::int32_t>(body.limit + 1));
     auto items = ConvertServiceCharges(rows);
     std::optional<std::string> next;
     if (items.size() > static_cast<std::size_t>(body.limit)) {
         items.pop_back();
         next = items.back().id;
     }
-    return CandidatesResult{.items = std::move(items), .next_after = next};
+    return models::InvoiceCandidatesResult{.items = std::move(items), .next_after = next};
 }
 
-models::InvoiceDetails InvoicesComponent::AddServiceCharge(
-    const models::AddInvoiceServiceChargeRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string& organization,
+    const platform::auth::Identity& identity,
+    const models::AddInvoiceServiceChargeRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto charges = transaction.Execute(sql::kLockServiceCharges, organization,
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    const auto result = IncludeServiceCharge(transaction, organization, identity, charge,
+    const auto result = helpers::IncludeServiceCharge(transaction, organization, identity, charge,
         request.invoice_id, request.expected_revision, request.previous_invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
-models::InvoiceDetails InvoicesComponent::DetachServiceCharge(
-    const models::DetachInvoiceServiceChargeRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string& organization,
+    const platform::auth::Identity& identity,
+    const models::DetachInvoiceServiceChargeRequest& request) const {
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto charges = transaction.Execute(sql::kLockServiceCharges, organization,
         std::vector{boost::uuids::string_generator{}(request.service_charge_id)});
     if (charges.IsEmpty())
@@ -319,22 +268,17 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
 
-InvoicesComponent::FilterValuesResult InvoicesComponent::FilterValues(
-    const models::InvoiceFilterValuesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::invoice_registry;
+models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
+    const std::string& organization, const models::InvoiceFilterValuesRequest& request) const {
+    using namespace ::finance::registry_query::invoices;
     try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        FilterValuesResult result;
+        models::InvoiceFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
         if (!request.field.has_value())
             return result;
         const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
         const auto rows =
-            deps.pg_cluster->Execute(
-                               pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
+            cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
@@ -348,48 +292,4 @@ InvoicesComponent::FilterValuesResult InvoicesComponent::FilterValues(
     }
 }
 
-models::pg::InvoiceRaw InvoicesComponent::Prepare(
-    const userver::server::request::RequestContext& context,
-    const models::SaveInvoiceRequest& body) const {
-    const auto& deps = deps_;
-    if (body.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError<400>{"invalid_revision", "Некорректная редакция счёта"};
-    const auto number = userver::utils::text::Trim(body.number.value_or(""));
-    if (number.empty() && (body.number.has_value() || body.expected_revision != 0))
-        throw ApiError<400>{"empty_number", "Укажите номер счёта"};
-    for (const auto& date : {std::optional{body.invoice_date}, body.due_date})
-        if (date.has_value() &&
-            !platform::IsCalendarDateInRange(
-                date.value(), std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
-            throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
-    if (SameId(body.own_company_id, body.counterparty_id))
-        throw ApiError<400>{"same_parties", "Выберите разные стороны счёта"};
-    auto result = models::pg::InvoiceRaw{.Id = boost::uuids::string_generator{}(body.id),
-        .Direction = models::EnumValue(body.direction),
-        .Number = number,
-        .InvoiceDate = body.invoice_date,
-        .DueDate = body.due_date,
-        .OwnCompanyId = boost::uuids::string_generator{}(body.own_company_id),
-        .OwnCompanyName = {},
-        .CounterpartyId = boost::uuids::string_generator{}(body.counterparty_id),
-        .CounterpartyName = {},
-        .OwnBankAccountId = InvoiceId(body.own_bank_account_id),
-        .CounterpartyBankAccountId = InvoiceId(body.counterparty_bank_account_id),
-        .ContractId = InvoiceId(body.contract_id),
-        .ContractNumber = std::nullopt,
-        .Currency = body.currency,
-        .Note = body.note,
-        .Archived = body.archived,
-        .Revision = body.expected_revision + 1,
-        .NetMinor = 0,
-        .VatMinor = 0,
-        .TotalMinor = 0};
-    if (result.Note.has_value()) {
-        result.Note = userver::utils::text::Trim(result.Note.value());
-        if (result.Note.value().empty())
-            result.Note.reset();
-    }
-    ValidateDocumentParties(deps, context, body, result);
-    return result;
-}
 }  // namespace finance

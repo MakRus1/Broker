@@ -1,7 +1,7 @@
 #pragma once
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace finance {
@@ -11,17 +11,13 @@ class SettlementsComponent final : public userver::components::ComponentBase {
     SettlementsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::ReconciliationResponse Reconciliation(
-        const models::ReconciliationRequest&, userver::server::request::RequestContext&) const;
-    models::CounterpartySettlementsResponse Balances(const models::CounterpartySettlementsRequest&,
-        userver::server::request::RequestContext&) const;
+    models::ReconciliationResponse GetReconciliation(
+        const std::string& organization, const models::ReconciliationRequest& request) const;
+    models::CounterpartySettlementsResponse GetBalances(const std::string& organization,
+        const models::CounterpartySettlementsRequest& request) const;
 
   private:
-    struct Dependencies {
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace finance
 

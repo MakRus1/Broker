@@ -1,17 +1,10 @@
 #pragma once
 #include <boost/uuid/string_generator.hpp>
-#include <finance/sql_queries.hpp>
-#include <limits>
-#include <models/errors.hpp>
+#include <models/financial_label_registry_row.hpp>
 #include <models/pg/financial_label_raw.hpp>
 #include <openapi/models.hpp>
-#include <platform/auth/identity.hpp>
-#include <userver/storages/postgres/cluster.hpp>
-#include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/utils/text_light.hpp>
 
-namespace finance::helpers {
-namespace pg = userver::storages::postgres;
+namespace finance::converters {
 
 inline models::FinancialLabel Convert(const models::pg::FinancialLabelRaw& value) {
     models::FinancialLabel result;
@@ -28,4 +21,12 @@ inline models::FinancialLabel Convert(const models::pg::FinancialLabelRaw& value
     return result;
 }
 
-}  // namespace finance::helpers
+inline std::vector<models::FinancialLabel> Convert(
+    const std::vector<models::FinancialLabelRegistryRow>& rows) {
+    std::vector<models::FinancialLabel> result;
+    result.reserve(rows.size());
+    for (const auto& row : rows)
+        result.push_back(Convert(row.Label));
+    return result;
+}
+}  // namespace finance::converters

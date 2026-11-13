@@ -1,34 +1,15 @@
 #pragma once
+#include <converters/invoice.hpp>
+#include <finance/sql_queries.hpp>
 #include <helpers/invoices.hpp>
+#include <models/invoice_registry_row.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 
-namespace finance::helpers::invoice_registry {
+namespace finance::registry_query::invoices {
+namespace pg = userver::storages::postgres;
 namespace registry = platform::registry;
-
-struct RegistryRow {
-    models::pg::InvoiceRaw Invoice;
-    std::int64_t PaidMinor;
-    std::int64_t OutstandingMinor;
-    std::string PaymentStatus;
-    int OverdueDays;
-    std::string TextKey;
-    std::optional<userver::utils::datetime::Date> DateKey;
-};
-
-inline std::vector<models::InvoiceRegistryItem> Convert(const std::vector<RegistryRow>& rows) {
-    std::vector<models::InvoiceRegistryItem> result;
-    result.reserve(rows.size());
-    for (const auto& row : rows)
-        result.push_back({.invoice = ::finance::helpers::Convert(row.Invoice),
-            .outstanding_minor = row.OutstandingMinor,
-            .overdue_days = row.OverdueDays,
-            .paid_minor = row.PaidMinor,
-            .payment_status =
-                models::ParseEnumScalar(row.PaymentStatus, models::InvoicePaymentStatus{})});
-    return result;
-}
 
 namespace registry_fields {
 
@@ -107,4 +88,4 @@ inline registry::QueryBuilder BuildRegistryFilters(const models::ListInvoicesReq
 inline const registry::Definition kRegistry{
     registry_fields::kFields, sql::kInvoiceRegistryFilterValues, &BuildRegistryFilters};
 
-}  // namespace finance::helpers::invoice_registry
+}  // namespace finance::registry_query::invoices

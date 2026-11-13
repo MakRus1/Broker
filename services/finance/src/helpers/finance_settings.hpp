@@ -1,7 +1,7 @@
 #pragma once
 #include <finance/sql_queries.hpp>
+#include <models/finance_settings_row.hpp>
 #include <openapi/models.hpp>
-#include <tuple>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
@@ -15,14 +15,12 @@ inline models::FinanceSettings ConvertFinanceSettings(const pg::ResultSet& rows)
             .reporting_currency = "RUB",
             .reset_numbers_yearly = false,
             .revision = 0};
-    const auto [currency, revision, outgoing, incoming, yearly] =
-        rows.AsSingleRow<std::tuple<std::string, std::int64_t, std::string, std::string, bool>>(
-            pg::kRowTag);
-    return {.incoming_number_template = incoming,
-        .outgoing_number_template = outgoing,
-        .reporting_currency = currency,
-        .reset_numbers_yearly = yearly,
-        .revision = revision};
+    const auto row = rows.AsSingleRow<models::FinanceSettingsRow>(pg::kRowTag);
+    return {.incoming_number_template = row.IncomingNumberTemplate,
+        .outgoing_number_template = row.OutgoingNumberTemplate,
+        .reporting_currency = row.Currency,
+        .reset_numbers_yearly = row.ResetNumbersYearly,
+        .revision = row.Revision};
 }
 
 inline models::FinanceSettings GetFinanceSettings(

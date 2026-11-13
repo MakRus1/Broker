@@ -1,8 +1,11 @@
 #pragma once
-#include <helpers/registry.hpp>
+#include <finance/sql_queries.hpp>
+#include <openapi/models.hpp>
 #include <platform/registry_page.hpp>
+#include <userver/storages/postgres/io/date.hpp>
 
-namespace finance::helpers {
+namespace finance::registry_query::labels {
+namespace pg = userver::storages::postgres;
 namespace registry = platform::registry;
 
 namespace registry_fields {
@@ -51,4 +54,4 @@ inline registry::QueryBuilder BuildRegistryFilters(
 inline const registry::Definition kRegistry{
     registry_fields::kFields, sql::kRegistryFilterValues, &BuildRegistryFilters};
 
-}  // namespace finance::helpers
+}  // namespace finance::registry_query::labels

@@ -1,24 +1,36 @@
 #include <components/service_charges.hpp>
+#include <converters/invoice.hpp>
+#include <converters/service_charge_input.hpp>
+#include <finance/sql_queries.hpp>
 #include <helpers/document_parties.hpp>
 #include <helpers/exchange_amounts.hpp>
 #include <helpers/finance_settings.hpp>
 #include <helpers/history/snapshot.hpp>
 #include <helpers/invoices.hpp>
-#include <helpers/service_charge_registry.hpp>
 #include <helpers/service_charges.hpp>
 #include <limits>
 #include <map>
+#include <models/errors.hpp>
 #include <models/pg/financial_label_raw.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
+#include <models/reporting_charge_row.hpp>
+#include <models/service_charge_total_row.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/charge_amounts.hpp>
 #include <platform/date_validation.hpp>
+#include <registry/service_charge_query.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/utils/text_light.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
+
+namespace {
+// Значения source_group в service_charge_totals.sql.
+enum class SummaryGroup : std::int32_t { Direct = 0, Transportations = 1, Combined = 2 };
+}  // namespace
 
 namespace finance {
 using namespace helpers;
@@ -26,41 +38,21 @@ using namespace helpers;
 ServiceChargesComponent::ServiceChargesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      deps_{.contracts = context.FindComponent<clients::contracts::Component>().GetClient(),
-          .counterparties = context.FindComponent<clients::counterparties::Component>().GetClient(),
-          .shipments = context.FindComponent<clients::shipments::Component>().GetClient(),
-          .transportations =
-              context.FindComponent<clients::transportations::Component>().GetClient(),
-          .exchange_rates = context.FindComponent<ExchangeRates>(),
-          .pg_cluster = context.FindComponent<userver::components::Postgres>("postgres-finance")
-                            .GetCluster()} {}
+      cluster_(
+          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()),
+      exchange_rates_(context.FindComponent<ExchangeRates>()) {}
 
 userver::yaml_config::Schema ServiceChargesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceChargeRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_SERVICE_CHARGES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    ValidateServiceChargeScope(context,
-        {.shipment_id = request.shipment_id, .transportation_id = request.transportation_id});
-    const auto parties = ValidateServiceChargeParties(context, request);
+models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::string& organization,
+    const platform::auth::Identity& identity, const models::SaveServiceChargeRequest& request,
+    const models::ServiceChargeParties& parties, const models::ConversionRate& exchange_rate,
+    bool can_write_invoices) const {
+
     const auto& body = request;
-    ValidateCurrency(body.currency);
-    ValidateCurrency(body.invoice_currency);
-    const Rate exchange_rate = body.manual_invoice_rate_millionths.has_value()
-        ? Rate{.Millionths = body.manual_invoice_rate_millionths.value(),
-              .Date = body.service_date,
-              .Source = "manual"}
-        : deps.exchange_rates.Get(body.currency, body.invoice_currency, body.service_date);
-    if (body.currency == body.invoice_currency && exchange_rate.Millionths != 1000000)
-        throw ApiError<400>{
-            "identity_exchange_rate", "Для одинаковых валют курс должен быть равен 1"};
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Тот же порядок блокировок, что при включении услуги: услуга, затем счёт.
     if (request.expected_revision != 0)
         transaction.Execute(sql::kLockServiceCharges, organization,
@@ -69,21 +61,24 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
         transaction.Execute(sql::kGetFinancialLabel, organization, request.label_id);
     if (labels.IsEmpty())
         throw ApiError<404>{"label_not_found", "Финансовая метка не найдена"};
-    const auto value = PrepareServiceCharge(request,
-        Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>()), parties, exchange_rate);
+    const auto value = converters::ToServiceCharge(request,
+        converters::Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>()), parties,
+        exchange_rate);
     const auto rows = request.expected_revision == 0
         ? transaction.Execute(sql::kCreateServiceCharge, organization, value)
         : transaction.Execute(
               sql::kUpdateServiceCharge, organization, value, request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Услуга изменена. Обновите список"};
-    const auto result = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
+    const auto result = converters::Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
     transaction.Execute(sql::kWriteServiceChargeHistory, organization, result.id, result.revision,
         identity.ActorId(), HistorySnapshot(result, identity));
     const auto assignment =
         transaction.Execute(sql::kServiceChargeInvoiceAssignment, organization, value.Id);
     if (!assignment.IsEmpty()) {
-        platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
+        if (!can_write_invoices)
+            throw ApiError<403>{"forbidden", "Нет права изменения счетов"};
+
         const auto invoice_id = assignment.AsSingleRow<boost::uuids::uuid>();
         const auto locked =
             transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id});
@@ -116,7 +111,9 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
             identity.ActorId(), HistorySnapshot(details, identity));
     }
     if (body.target_invoice_id.has_value()) {
-        platform::auth::CheckPermission(context, permissions::FINANCE_WRITE_INVOICES);
+        if (!can_write_invoices)
+            throw ApiError<403>{"forbidden", "Нет права изменения счетов"};
+
         if (body.expected_revision != 0 || !body.target_invoice_revision.has_value())
             throw ApiError<400>{
                 "invalid_invoice_target", "Создавать услугу из счёта можно только с его редакцией"};
@@ -128,26 +125,16 @@ models::ServiceCharge ServiceChargesComponent::Save(const models::SaveServiceCha
     return result;
 }
 
-namespace {
-// Значения source_group в service_charge_totals.sql.
-enum class SummaryGroup : std::int32_t { Direct = 0, Transportations = 1, Combined = 2 };
-}  // namespace
+models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
+    const std::string& organization, const models::ListServiceChargesRequest& request) const {
 
-ServiceChargesComponent::ListResult ServiceChargesComponent::List(
-    const models::ListServiceChargesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_SERVICE_CHARGES);
-    const auto organization = platform::auth::GetOrganization(identity);
     const auto& scope = request.scope;
-    ValidateServiceChargeScope(context, scope);
-    auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
     const auto rows = transaction.Execute(sql::kListServiceCharges, organization, scope.shipment_id,
         scope.transportation_id, request.after, request.include_archived, request.limit + 1);
-    ListResult response;
+    models::ServiceChargeListResult response;
     response.items = ConvertServiceCharges(rows);
     if (response.items.size() > static_cast<std::size_t>(request.limit)) {
         response.items.pop_back();
@@ -156,7 +143,7 @@ ServiceChargesComponent::ListResult ServiceChargesComponent::List(
     response.invoices = LoadServiceChargeInvoices(transaction, organization, response.items);
     if (!scope.shipment_id.has_value()) {
         transaction.Commit();
-        const auto settings = GetFinanceSettings(deps.pg_cluster, organization);
+        const auto settings = GetFinanceSettings(cluster_, organization);
         response.reporting = {
             .currency = settings.reporting_currency, .missing_rates = {}, .summary = {}};
         return response;
@@ -164,11 +151,11 @@ ServiceChargesComponent::ListResult ServiceChargesComponent::List(
     const auto totals = transaction.Execute(
         sql::kServiceChargeTotals, organization, scope.shipment_id, scope.transportation_id);
     for (const auto& row : totals) {
-        const auto [group, currency, income, expense] =
-            row.As<std::int32_t, std::string, std::string, std::string>();
-        models::CurrencyTotal total{
-            .currency = currency, .expense_minor = expense, .income_minor = income};
-        switch (static_cast<SummaryGroup>(group)) {
+        const auto amounts = row.As<models::ServiceChargeTotalRow>(pg::kRowTag);
+        models::CurrencyTotal total{.currency = amounts.Currency,
+            .expense_minor = amounts.Expense,
+            .income_minor = amounts.Income};
+        switch (static_cast<SummaryGroup>(amounts.Group)) {
         case SummaryGroup::Direct:
             response.summary.own.push_back(total);
             break;
@@ -185,40 +172,33 @@ ServiceChargesComponent::ListResult ServiceChargesComponent::List(
     const auto reporting_rows = transaction.Execute(
         sql::kReportingServiceCharges, organization, scope.shipment_id, scope.transportation_id);
     transaction.Commit();
-    const auto settings = GetFinanceSettings(deps.pg_cluster, organization);
+    const auto settings = GetFinanceSettings(cluster_, organization);
     response.reporting = BuildReporting(
         settings.reporting_currency, reporting_rows, scope.transportation_id.has_value());
     return response;
 }
 
-models::ServiceCharge ServiceChargesComponent::Get(const models::GetServiceChargeRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::FINANCE_READ_SERVICE_CHARGES);
-    const auto organization = platform::auth::GetOrganization(identity);
-    const auto rows = deps.pg_cluster->Execute(
+models::ServiceCharge ServiceChargesComponent::FindServiceCharge(
+    const std::string& organization, const models::GetServiceChargeRequest& request) const {
+
+    const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetServiceCharge, organization, request.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
-    const auto charge = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
-    ValidateServiceChargeScope(context,
-        {.shipment_id = charge.shipment_id, .transportation_id = charge.transportation_id});
+    const auto charge = converters::Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
     return charge;
 }
 
-bool ServiceChargesComponent::ApplyImport(const models::ImportServiceChargesRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
+bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Identity& identity,
+    const models::ImportServiceChargesRequest& request) const {
     const auto& command = request;
-    auto actor = platform::auth::GetIdentity(context);
+    auto actor = identity;
     if (actor.Issuer != command.actor_issuer)
         throw ApiError<400>{"invalid_actor", "Некорректный провайдер пользователя"};
     const auto producer = actor.ClientId;
     actor.Subject = command.actor_subject;
     const auto document = userver::formats::json::ValueBuilder(command).ExtractValue();
-    auto transaction =
-        deps.pg_cluster->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto inserted = transaction.Execute(
         sql::kRegisterServiceChargeImport, command.organization_id, producer, command.id, document);
     if (inserted.IsEmpty()) {
@@ -243,19 +223,19 @@ bool ServiceChargesComponent::ApplyImport(const models::ImportServiceChargesRequ
             transaction.Execute(sql::kGetFinancialLabel, command.organization_id, charge.label_id);
         if (labels.IsEmpty())
             throw ApiError<404>{"label_not_found", "Метка не найдена в организации"};
-        auto label = Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>());
+        auto label = converters::Convert(labels.AsSingleRow<models::pg::FinancialLabelRaw>());
         // Названия, суммы и НДС берём из согласованного снимка, а не текущего справочника.
         label.name = item.label_name;
         label.archived = false;
         label.direction = models::FinancialLabelDirection::Both;
-        const auto value = PrepareServiceCharge(charge, label,
+        const auto value = converters::ToServiceCharge(charge, label,
             {.CounterpartyName = item.counterparty_name, .ContractNumber = std::nullopt},
             {.Millionths = 1000000, .Date = charge.service_date, .Source = "identity"});
         const auto rows =
             transaction.Execute(sql::kCreateServiceCharge, command.organization_id, value);
         if (rows.IsEmpty())
             throw ApiError<409>{"charge_conflict", "Услуга уже существует вне переноса"};
-        const auto result = Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
+        const auto result = converters::Convert(rows.AsSingleRow<models::pg::ServiceChargeRaw>());
         transaction.Execute(sql::kWriteServiceChargeHistory, command.organization_id, result.id,
             result.revision, actor.ActorId(), HistorySnapshot(result, actor));
     }
@@ -263,15 +243,11 @@ bool ServiceChargesComponent::ApplyImport(const models::ImportServiceChargesRequ
     return true;
 }
 
-ServiceChargesComponent::RegistryResult ServiceChargesComponent::Registry(
-    const models::ServiceChargeRegistryRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::service_charge_registry;
+models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRegistry(
+    const std::string& organization, const models::ServiceChargeRegistryRequest& request) const {
+    using namespace ::finance::registry_query::service_charges;
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::FINANCE_READ_SERVICE_CHARGES);
-        const auto organization = platform::auth::GetOrganization(identity);
+
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
         const auto order = platform::registry::RegistryOrderBy(fields::kFields, body.sort);
@@ -285,12 +261,12 @@ ServiceChargesComponent::RegistryResult ServiceChargesComponent::Registry(
         }
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = deps.pg_cluster->Begin(pg::ClusterHostType::kMaster,
+        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+                        .AsContainer<std::vector<models::ServiceChargeRegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)
             rows.pop_back();
@@ -303,9 +279,9 @@ ServiceChargesComponent::RegistryResult ServiceChargesComponent::Registry(
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
-        RegistryResult response;
+        models::ServiceChargeRegistryResult response;
         for (const auto& row : rows)
-            response.items.push_back(Convert(row.Charge));
+            response.items.push_back(converters::Convert(row.Charge));
         response.invoices = LoadServiceChargeInvoices(transaction, organization, response.items);
         response.next_cursor = cursor;
         transaction.Commit();
@@ -315,15 +291,11 @@ ServiceChargesComponent::RegistryResult ServiceChargesComponent::Registry(
     }
 }
 
-ServiceChargesComponent::FilterValuesResult ServiceChargesComponent::FilterValues(
-    models::ServiceChargeFilterValuesRequest request,
-    userver::server::request::RequestContext& context) const {
-    const auto& deps = deps_;
-    using namespace ::finance::helpers::service_charge_registry;
+models::ServiceChargeFilterValuesResult ServiceChargesComponent::GetServiceChargeFilterValues(
+    const std::string& organization, models::ServiceChargeFilterValuesRequest request) const {
+    using namespace ::finance::registry_query::service_charges;
     try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        FilterValuesResult result;
+        models::ServiceChargeFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(fields::kFields);
         if (!request.field.has_value())
             return result;
@@ -331,8 +303,7 @@ ServiceChargesComponent::FilterValuesResult ServiceChargesComponent::FilterValue
             request.query = userver::utils::text::ToLower(request.query.value());
         const auto query = platform::registry::BuildFilterValues(kRegistry, request, organization);
         const auto rows =
-            deps.pg_cluster->Execute(
-                               pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
+            cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(request.limit);
         for (std::size_t index = 0;
@@ -346,157 +317,8 @@ ServiceChargesComponent::FilterValuesResult ServiceChargesComponent::FilterValue
     }
 }
 
-void ServiceChargesComponent::ValidateServiceChargeScope(
-    const userver::server::request::RequestContext& context,
-    const models::ServiceChargeScope& scope) const {
-    const auto& deps = deps_;
-    if (scope.transportation_id.has_value() && !scope.shipment_id.has_value())
-        throw ApiError<400>{"shipment_required", "Для услуги перевозки нужна поставка"};
-    const auto token = platform::auth::GetAccessToken(context);
-    try {
-        if (scope.transportation_id.has_value()) {
-            const auto transportation =
-                deps.transportations
-                    .ApiV1TransportationsGet(
-                        {.body = {.transportation_id = scope.transportation_id.value()}}, token)
-                    .transportation;
-            if (!SameId(transportation.shipment_id, scope.shipment_id.value()))
-                throw ApiError<400>{"wrong_shipment", "Перевозка относится к другой поставке"};
-        } else if (scope.shipment_id.has_value()) {
-            deps.shipments.ApiV1ShipmentsGet(
-                {.body = {.shipment_id = scope.shipment_id.value()}}, token);
-        }
-    } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError<403>{"forbidden_reference", "Нет доступа к связанным данным услуги"};
-    } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{
-            "reference_unavailable", "Не удалось проверить связанные данные услуги"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
-    }
-}
-
-ServiceChargesComponent::ServiceChargeParties ServiceChargesComponent::ValidateServiceChargeParties(
-    const userver::server::request::RequestContext& context,
-    const models::SaveServiceChargeRequest& value) const {
-    const auto& deps = deps_;
-    const auto token = platform::auth::GetAccessToken(context);
-    try {
-        const auto party =
-            deps.counterparties
-                .ApiV1CounterpartiesGet({.body = {.id = value.counterparty_id}}, token)
-                .counterparty;
-        if (party.archived && !value.archived)
-            throw ApiError<409>{"archived_party", "Выберите действующего контрагента"};
-        ServiceChargeParties result{.CounterpartyName = party.name, .ContractNumber = std::nullopt};
-        if (value.contract_id.has_value()) {
-            const auto contract =
-                deps.contracts.ApiV1ContractsGet({.body = {.id = value.contract_id.value()}}, token)
-                    .contract;
-            if (!SameId(contract.counterparty_id, value.counterparty_id))
-                throw ApiError<400>{"wrong_contract", "Договор относится к другому контрагенту"};
-            if (contract.currency != value.invoice_currency)
-                throw ApiError<400>{
-                    "contract_currency", "Валюта счёта должна совпадать с валютой договора"};
-            if (contract.archived && !value.archived)
-                throw ApiError<409>{"archived_contract", "Выберите действующий договор"};
-            result.ContractNumber = contract.number;
-        }
-        return result;
-    } catch (const platform::http::ErrorByStatus<403>&) {
-        throw ApiError<403>{"forbidden_reference", "Нет доступа к связанным данным услуги"};
-    } catch (const platform::http::ErrorByStatus<404>&) {
-        throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{
-            "reference_unavailable", "Не удалось проверить связанные данные услуги"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
-    }
-}
-
-models::pg::ServiceChargeRaw ServiceChargesComponent::PrepareServiceCharge(
-    const models::SaveServiceChargeRequest& value, const models::FinancialLabel& label,
-    const ServiceChargeParties& parties, const Rate& exchange_rate) const {
-    if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
-        throw ApiError<400>{"invalid_revision", "Некорректная редакция услуги"};
-    if (label.archived && !value.archived)
-        throw ApiError<409>{"archived_label", "Выберите действующую финансовую метку"};
-    if (label.direction != models::FinancialLabelDirection::Both &&
-        models::EnumValue(label.direction) != models::EnumValue(value.direction))
-        throw ApiError<400>{"wrong_direction", "Метка не подходит для выбранного направления"};
-    if (!platform::IsCalendarDateInRange(
-            value.service_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
-        throw ApiError<400>{"invalid_service_date", "Укажите дату услуги не раньше 01.01.1900"};
-    ValidateCurrency(value.currency);
-    ValidateCurrency(value.invoice_currency);
-    const auto amounts = platform::CalculateChargeAmounts(value.quantity_milli, value.price_minor,
-        value.price_mode == models::PriceMode::Gross, value.vat_mode == models::VatMode::Exempt,
-        value.vat_rate_basis_points);
-    const auto invoice_net = ConvertAmount(amounts.Net, exchange_rate.Millionths);
-    const auto invoice_total = ConvertAmount(amounts.Total, exchange_rate.Millionths);
-    auto note = value.note;
-    if (note.has_value()) {
-        note = userver::utils::text::Trim(note.value());
-        if (note.value().empty())
-            note.reset();
-    }
-    return {
-        .Id = boost::uuids::string_generator{}(value.id),
-        .ShipmentId = value.shipment_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.shipment_id.value())}
-            : std::nullopt,
-        .TransportationId = value.transportation_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.transportation_id.value())}
-            : std::nullopt,
-        .LabelId = boost::uuids::string_generator{}(value.label_id),
-        .LabelName = label.name,
-        .Direction = models::EnumValue(value.direction),
-        .Unit = models::EnumValue(value.unit),
-        .CounterpartyId = boost::uuids::string_generator{}(value.counterparty_id),
-        .CounterpartyName = parties.CounterpartyName,
-        .ContractId = value.contract_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.contract_id.value())}
-            : std::nullopt,
-        .ContractNumber = parties.ContractNumber,
-        .QuantityMilli = value.quantity_milli,
-        .PriceMinor = value.price_minor,
-        .Currency = value.currency,
-        .VatMode = models::EnumValue(value.vat_mode),
-        .VatRateBasisPoints = value.vat_rate_basis_points.has_value()
-            ? std::optional{static_cast<std::int32_t>(value.vat_rate_basis_points.value())}
-            : std::nullopt,
-        .NetMinor = amounts.Net,
-        .VatMinor = amounts.Vat,
-        .TotalMinor = amounts.Total,
-        .Note = note,
-        .Archived = value.archived,
-        .Revision = value.expected_revision + 1,
-        .PriceMode = models::EnumValue(value.price_mode),
-        .ServiceDate = value.service_date,
-        .InvoiceCurrency = value.invoice_currency,
-        .InvoiceRateMillionths = exchange_rate.Millionths,
-        .InvoiceRateDate = exchange_rate.Date,
-        .InvoiceRateSource = exchange_rate.Source,
-        .InvoiceNetMinor = invoice_net,
-        .InvoiceVatMinor = invoice_total - invoice_net,
-        .InvoiceTotalMinor = invoice_total,
-    };
-}
-
 models::ReportingSummary ServiceChargesComponent::BuildReporting(
     const std::string& currency, const pg::ResultSet& rows, bool transportation_scope) const {
-    const auto& deps = deps_;
 
     struct Totals {
         WideAmount Income = 0;
@@ -506,20 +328,18 @@ models::ReportingSummary ServiceChargesComponent::BuildReporting(
 
     models::ReportingSummary result{.currency = currency, .missing_rates = {}, .summary = {}};
     using Date = userver::utils::datetime::Date;
-    std::map<std::pair<Date, std::string>, std::optional<Rate>> rates;
+    std::map<std::pair<Date, std::string>, std::optional<models::ConversionRate>> rates;
     std::set<std::pair<Date, std::string>> missing;
     for (const auto& row : rows) {
-        const auto [date, from, invoice_currency, total, invoice_total, direction, transportation] =
-            row.As<Date, std::string, std::string, std::int64_t, std::int64_t, std::string,
-                std::optional<boost::uuids::uuid>>();
+        const auto charge = row.As<models::ReportingChargeRow>(pg::kRowTag);
         WideAmount amount;
-        if (currency == invoice_currency)
-            amount = invoice_total;
+        if (currency == charge.InvoiceCurrency)
+            amount = charge.InvoiceTotalMinor;
         else {
-            const auto key = std::pair{date, from};
+            const auto key = std::pair{charge.Date, charge.Currency};
             if (!rates.contains(key)) {
                 try {
-                    rates.emplace(key, deps.exchange_rates.Get(from, currency, date));
+                    rates.emplace(key, exchange_rates_.Get(charge.Currency, currency, charge.Date));
                 } catch (const ApiError<503>&) {
                     rates.emplace(key, std::nullopt);
                 }
@@ -528,12 +348,12 @@ models::ReportingSummary ServiceChargesComponent::BuildReporting(
                 missing.insert(key);
                 continue;
             }
-            amount = ConvertAmount(WideAmount{total}, rates.at(key).value().Millionths);
+            amount = ConvertAmount(WideAmount{charge.TotalMinor}, rates.at(key).value().Millionths);
         }
         auto& group =
-            transportation.has_value() && !transportation_scope ? transportations : direct;
+            charge.TransportationId.has_value() && !transportation_scope ? transportations : direct;
         group.Present = combined.Present = true;
-        if (models::ParseEnumScalar(direction, models::ServiceChargeDirection{}) ==
+        if (models::ParseEnumScalar(charge.Direction, models::ServiceChargeDirection{}) ==
             models::ServiceChargeDirection::Income) {
             group.Income += amount;
             combined.Income += amount;

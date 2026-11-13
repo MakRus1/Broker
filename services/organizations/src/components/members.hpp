@@ -1,5 +1,5 @@
 #pragma once
-#include <components/users.hpp>
+#include <components/keycloak_users.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
@@ -24,7 +24,7 @@ class MembersComponent final : public userver::components::ComponentBase {
         const models::UpdateMemberProfileRequest&, const platform::auth::Identity&) const;
 
   private:
-    const Users& users_;
+    const KeycloakUsers& keycloak_users_;
     userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace organizations

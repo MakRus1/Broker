@@ -11,12 +11,12 @@
 
 #include <bootstrap/ping.hpp>
 #include <components/access.hpp>
+#include <components/keycloak_users.hpp>
 #include <components/members.hpp>
 #include <components/organizations.hpp>
 #include <components/permission_releases.hpp>
 #include <components/registry_defaults.hpp>
 #include <components/roles.hpp>
-#include <components/users.hpp>
 
 #include <platform/auth/service_token.hpp>
 #include <platform/telemetry.hpp>
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
             .Append<platform::auth::ServiceTokenProvider>()
-            .Append<organizations::Users>()
+            .Append<organizations::KeycloakUsers>()
             .Append<organizations::Ping>()
             .Append<organizations::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()

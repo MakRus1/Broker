@@ -1,7 +1,8 @@
-#include <components/users.hpp>
+#include <components/keycloak_users.hpp>
 #include <converters/users.hpp>
 #include <helpers/errors.hpp>
 #include <userver/clients/http/component.hpp>
+#include <userver/clients/http/error.hpp>
 #include <userver/clients/http/request.hpp>
 #include <userver/clients/http/response.hpp>
 #include <userver/components/component_config.hpp>
@@ -11,7 +12,7 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace organizations {
-Users::Users(const userver::components::ComponentConfig& config,
+KeycloakUsers::KeycloakUsers(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       http_(context.FindComponent<userver::components::HttpClient>("auth-http-client")
@@ -24,7 +25,7 @@ Users::Users(const userver::components::ComponentConfig& config,
         throw std::invalid_argument("Некорректные настройки Keycloak Admin API");
 }
 
-userver::clients::http::Request Users::MakeRequest() const {
+userver::clients::http::Request KeycloakUsers::MakeRequest() const {
     return http_.CreateRequest()
         .headers({{"Authorization", "Bearer " + tokens_.GetAccessToken()},
             {"Content-Type", "application/json"}})
@@ -33,7 +34,7 @@ userver::clients::http::Request Users::MakeRequest() const {
         .SetLoggedUrl("keycloak/users");
 }
 
-userver::formats::json::Value Users::Lookup(const std::string& username) const {
+userver::formats::json::Value KeycloakUsers::Lookup(const std::string& username) const {
     const auto response =
         MakeRequest()
             .get(base_url_ + "/users?" +
@@ -44,28 +45,36 @@ userver::formats::json::Value Users::Lookup(const std::string& username) const {
         throw ApiError<503>{
             "identity_provider_unavailable", "Не удалось обратиться к провайдеру пользователей"};
     const auto items = userver::formats::json::FromString(response->body());
-    if (items.GetSize() != 1)
+    if (!items.IsArray() || items.GetSize() > 1)
+        throw userver::formats::json::ConversionException{
+            "Ожидается не больше одного пользователя Keycloak", items.GetPath()};
+    if (items.IsEmpty())
         throw ApiError<404>{"user_not_found", "Пользователь с таким логином не найден"};
     return items[0];
 }
 
-User Users::Find(const std::string& username) const try {
+User KeycloakUsers::Find(const std::string& username) const try {
     const auto value = Lookup(username);
     if (!value["enabled"].As<bool>(false) || !value["serviceAccountClientId"].IsMissing())
         throw ApiError<400>{
             "invalid_user", "Нельзя добавить отключённую или служебную учётную запись"};
     return converters::Convert(value);
-} catch (const platform::http::HandlerErrorBase&) {
+} catch (const userver::clients::http::CancelException&) {
 
     throw;
-} catch (const std::bad_alloc&) {
+} catch (const userver::clients::http::BadArgumentException&) {
     throw;
-} catch (const std::exception&) {
+} catch (const userver::clients::http::TechnicalError&) {
+    throw;
+} catch (const userver::clients::http::BaseException&) {
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Провайдер пользователей временно недоступен"};
+} catch (const userver::formats::json::Exception&) {
     throw ApiError<503>{
         "identity_provider_unavailable", "Провайдер пользователей временно недоступен"};
 }
 
-User Users::Create(const std::string& request_id, const std::string& username,
+User KeycloakUsers::Create(const std::string& request_id, const std::string& username,
     const std::string& email, const std::string& last_name, const std::string& first_name,
     const std::optional<std::string>& middle_name, const std::string& temporary_password) const
     try {
@@ -101,23 +110,28 @@ User Users::Create(const std::string& request_id, const std::string& username,
         throw ApiError<409>{
             "username_taken", "Логин уже занят. Используйте добавление существующего пользователя"};
     return converters::Convert(value);
-} catch (const platform::http::HandlerErrorBase&) {
+} catch (const userver::clients::http::CancelException&) {
 
     throw;
-} catch (const std::bad_alloc&) {
+} catch (const userver::clients::http::BadArgumentException&) {
     throw;
-} catch (const std::exception&) {
+} catch (const userver::clients::http::TechnicalError&) {
+    throw;
+} catch (const userver::clients::http::BaseException&) {
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Создание пользователя не завершено. Повторите запрос"};
+} catch (const userver::formats::json::Exception&) {
     throw ApiError<503>{
         "identity_provider_unavailable", "Создание пользователя не завершено. Повторите запрос"};
 }
 
-User Users::UpdateProfile(const std::string& subject, const std::string& last_name,
+User KeycloakUsers::UpdateProfile(const std::string& subject, const std::string& last_name,
     const std::string& first_name, const std::optional<std::string>& middle_name) const try {
     const auto response = MakeRequest().get(base_url_ + "/users/" + subject).retry(0).perform();
     if (response->status_code() == 404)
         throw ApiError<404>{"user_not_found", "Пользователь не найден"};
     if (response->status_code() != 200)
-        throw std::runtime_error("Не удалось прочитать профиль");
+        throw ApiError<503>{"identity_provider_unavailable", "Не удалось прочитать профиль"};
     const auto current = userver::formats::json::FromString(response->body());
     if (!current["serviceAccountClientId"].IsMissing())
         throw ApiError<400>{"invalid_user", "Нельзя менять профиль служебной учётной записи"};
@@ -139,19 +153,24 @@ User Users::UpdateProfile(const std::string& subject, const std::string& last_na
             .retry(0)
             .perform();
     if (updated->status_code() != 204)
-        throw std::runtime_error("Не удалось обновить профиль");
+        throw ApiError<503>{"identity_provider_unavailable", "Не удалось обновить профиль"};
     return converters::Convert(document);
-} catch (const platform::http::HandlerErrorBase&) {
+} catch (const userver::clients::http::CancelException&) {
 
     throw;
-} catch (const std::bad_alloc&) {
+} catch (const userver::clients::http::BadArgumentException&) {
     throw;
-} catch (const std::exception&) {
+} catch (const userver::clients::http::TechnicalError&) {
+    throw;
+} catch (const userver::clients::http::BaseException&) {
+    throw ApiError<503>{
+        "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
+} catch (const userver::formats::json::Exception&) {
     throw ApiError<503>{
         "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
 }
 
-userver::yaml_config::Schema Users::GetStaticConfigSchema() {
+userver::yaml_config::Schema KeycloakUsers::GetStaticConfigSchema() {
     return userver::yaml_config::MergeSchemas<userver::components::ComponentBase>(R"(
 type: object
 description: Создание пользователей через Keycloak Admin API

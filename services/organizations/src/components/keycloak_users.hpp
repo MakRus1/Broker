@@ -8,10 +8,10 @@
 #include <userver/formats/json/value.hpp>
 
 namespace organizations {
-class Users final : public userver::components::ComponentBase {
+class KeycloakUsers final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "keycloak-users";
-    Users(
+    KeycloakUsers(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     User UpdateProfile(const std::string& subject, const std::string& last_name,
@@ -31,4 +31,5 @@ class Users final : public userver::components::ComponentBase {
 };
 }  // namespace organizations
 
-template <> inline constexpr bool userver::components::kHasValidate<organizations::Users> = true;
+template <>
+inline constexpr bool userver::components::kHasValidate<organizations::KeycloakUsers> = true;

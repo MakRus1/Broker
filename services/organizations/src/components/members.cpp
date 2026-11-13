@@ -21,7 +21,7 @@ using namespace registry_query;
 
 MembersComponent::MembersComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
-    : ComponentBase(config, context), users_(context.FindComponent<Users>()),
+    : ComponentBase(config, context), keycloak_users_(context.FindComponent<KeycloakUsers>()),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
 
@@ -99,8 +99,8 @@ models::MemberResult MembersComponent::CreateMember(
             }
             transaction.Commit();
         }
-        const auto user = users_.Create(request.request_id, request.username, email, last_name,
-            first_name, middle_name, request.temporary_password);
+        const auto user = keycloak_users_.Create(request.request_id, request.username, email,
+            last_name, first_name, middle_name, request.temporary_password);
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
@@ -139,7 +139,7 @@ models::MemberResult MembersComponent::AddExistingMember(
             transaction.Commit();
         }
         // Сетевое обращение выполняется без открытой транзакции и блокировок БД.
-        const auto user = users_.Find(request.username);
+        const auto user = keycloak_users_.Find(request.username);
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
@@ -209,9 +209,10 @@ models::MemberResult MembersComponent::UpdateMemberProfile(
     if (existing.IsEmpty())
         throw ApiError<404>{"member_not_found", "Сотрудник не найден"};
     // Сетевой вызов выполняется до транзакции БД. Повторное задание ФИО идемпотентно.
-    const auto user = users_.UpdateProfile(request.subject, last, first, middle);
+    const auto user = keycloak_users_.UpdateProfile(request.subject, last, first, middle);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    RequireAdministrator(transaction, request.organization_id, identity);
     transaction.Execute(sql::kUpdateMemberProfile, identity.Issuer, request.subject,
         user.DisplayName, user.LastName, user.FirstName, user.MiddleName);
     const auto member = Convert(

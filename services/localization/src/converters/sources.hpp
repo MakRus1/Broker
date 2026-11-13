@@ -1,6 +1,7 @@
 #pragma once
 #include <models/source_translation.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/serialize/common_containers.hpp>
 
 namespace localization::converters {
 inline userver::formats::json::Value Convert(const std::vector<SourceTranslation>& entries) {

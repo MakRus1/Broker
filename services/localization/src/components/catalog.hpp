@@ -2,7 +2,6 @@
 #include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace localization {
@@ -12,14 +11,13 @@ class CatalogComponent final : public userver::components::ComponentBase {
     CatalogComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    std::vector<models::Translation> Get(
-        const models::GetCatalogRequest&, const userver::server::request::RequestContext&) const;
-    std::vector<models::Translation> GetPublic(const std::string& locale) const;
+    std::vector<models::Translation> GetOrganizationCatalog(
+        const models::GetCatalogRequest&, const std::string& access_token) const;
+    std::vector<models::Translation> GetPublicCatalog(const std::string& locale) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
-    void CheckOrganization(
-        const userver::server::request::RequestContext&, const std::string&) const;
+    void CheckOrganization(const std::string& access_token, const std::string&) const;
     clients::organizations::Client organizations_;
 };
 }  // namespace localization

@@ -3,7 +3,7 @@
 
 namespace localization::views::api::admin::localization::publish {
 Response View::Handle(Request&& request, userver::server::request::RequestContext&, Deps deps) {
-    const auto state = deps.editor->Publish(request.body);
+    const auto state = deps.editor->PublishDraft(request.body);
     return Response200{.draft = state.draft,
         .inherited = state.inherited,
         .published = state.published,

@@ -26,13 +26,13 @@ userver::yaml_config::Schema SourcesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-int SourcesComponent::Register(const models::EditableCatalog& catalog) const {
+int SourcesComponent::RegisterSourceCatalog(const models::EditableCatalog& catalog) const {
     const auto collect = [](const auto& entries) {
+        static const std::regex key_pattern{"[A-Za-z0-9_.-]{1,200}"};
         std::map<std::string, std::string> result;
         for (const auto& entry : entries) {
-            if (!std::regex_match(entry.key, std::regex{"[A-Za-z0-9_.-]{1,200}"}) ||
-                entry.value.empty() || entry.value.size() > 10000 ||
-                !result.emplace(entry.key, entry.value).second)
+            if (!std::regex_match(entry.key, key_pattern) || entry.value.empty() ||
+                entry.value.size() > 10000 || !result.emplace(entry.key, entry.value).second)
                 throw ApiError<400>{"invalid_source", "Некорректный исходный каталог"};
         }
         return result;
@@ -41,6 +41,7 @@ int SourcesComponent::Register(const models::EditableCatalog& catalog) const {
     const auto en = collect(catalog.en);
     if (ru.empty() || ru.size() != en.size())
         throw ApiError<400>{"invalid_source", "Наборы ключей ru/en должны совпадать"};
+
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kLockSource);
     const auto current = tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>();
@@ -57,9 +58,11 @@ int SourcesComponent::Register(const models::EditableCatalog& catalog) const {
                 "Параметры ключа изменены. Используйте новый ключ: " + key};
         rows.push_back({.Key = key, .Ru = text, .En = english->second, .Parameters = parameters});
     }
+
     const auto values = converters::Convert(rows);
     if (json::ToString(values).size() > 2 * 1024 * 1024)
         throw ApiError<400>{"catalog_too_large", "Каталог превышает 2 МБ"};
+
     tx.Execute(sql::kRegisterSource, values);
     tx.Commit();
     return static_cast<int>(ru.size());

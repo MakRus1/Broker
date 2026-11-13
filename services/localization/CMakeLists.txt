@@ -8,6 +8,7 @@ add_library(
     src/bootstrap/ping.cpp
     src/components/catalog.cpp
     src/components/editor.cpp
+    src/helpers/catalog_validation.cpp
     src/components/sources.cpp
     ${OPENAPI_GEN_SRCS}
 )

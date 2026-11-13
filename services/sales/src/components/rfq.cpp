@@ -2,7 +2,9 @@
 #include <components/rfq.hpp>
 #include <events/shipment_command.hpp>
 #include <helpers/editable_inquiry.hpp>
+#include <map>
 #include <models/errors.hpp>
+#include <platform/http_client.hpp>
 #include <sales/sql_queries.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
@@ -32,8 +34,10 @@ namespace json = userver::formats::json;
 RfqComponent::RfqComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
+      cluster_(context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()),
+      counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
+      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
+      finance_(context.FindComponent<clients::finance::Component>().GetClient()) {}
 
 userver::yaml_config::Schema RfqComponent::GetStaticConfigSchema() {
     return userver::components::ComponentBase::GetStaticConfigSchema();
@@ -65,6 +69,60 @@ std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
             row[0].As<json::Value>(), std::type_identity<models::RfqHistoryEntry>{}));
 
     return result;
+}
+
+void RfqComponent::PrepareRfq(const std::string& organization, std::string_view token,
+    const models::Inquiry& inquiry, models::RfqInput& input) const try {
+    const auto party =
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+            .counterparty;
+    if (party.archived)
+        throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
+    const auto employees =
+        organizations_.ApiOrganizationsEmployeesList({.body = {.limit = 1,
+                                                          .organization_id = organization,
+                                                          .subject = input.responsible_subject}},
+            token);
+    if (employees.items.empty())
+        throw ApiError<400>{"invalid_manager", "Выберите действующего сотрудника организации"};
+
+    std::map<std::string, std::string> suppliers;
+    std::map<std::string, std::string> labels;
+    for (auto& quote : input.quotes) {
+        if (!suppliers.contains(quote.supplier_id)) {
+            const auto supplier =
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = quote.supplier_id}}, token)
+                    .counterparty;
+            if (supplier.archived)
+                throw ApiError<400>{"archived_supplier", "Поставщик в архиве"};
+            suppliers.emplace(quote.supplier_id, supplier.name);
+        }
+        quote.supplier_name = suppliers.at(quote.supplier_id);
+        for (auto& line : quote.lines) {
+            if (!labels.contains(line.label_id)) {
+                const auto label =
+                    finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
+                if (label.archived ||
+                    label.direction == clients::finance::models::FinancialLabelDirection::Income)
+                    throw ApiError<400>{"invalid_label", "Выберите метку для расхода"};
+                labels.emplace(line.label_id, label.name);
+            }
+            line.label_name = labels.at(line.label_id);
+        }
+    }
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к справочникам котировок"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить справочники котировок"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис справочников недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
 }
 
 models::Rfq RfqComponent::SaveRfq(const std::string& organization,

@@ -140,3 +140,34 @@ async def test_combine_suppliers_for_different_legs_and_reject_changed_route(api
     incoming['route_segments'][0]['type']='rail'
     await api.post('/api/v1/sales/inquiries/save',incoming)
     await api.post('/api/v1/sales/proposals/save',{**body,'expected_revision':1},expected=400)
+
+
+@pytest.mark.parametrize('status, expected_status, code', [
+    (403, 403, 'reference_forbidden'),
+    (404, 404, 'reference_not_found'),
+    (503, 502, 'reference_unavailable'),
+])
+async def test_rfq_reference_failure_does_not_save(api, mockserver, status, expected_status, code):
+    incoming, value = await setup_rfq(api)
+    value['quotes'] = [quote()]
+
+    @mockserver.handler('/api/v1/financial-labels/get')
+    def unavailable_label(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'unavailable', 'message': 'Reference unavailable'})
+
+    response = await api.post(BASE + 'save', value, expected=expected_status)
+    assert response['error'] == code
+    assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []
+
+
+async def test_rfq_requires_active_responsible_before_saving(api, mockserver):
+    incoming, value = await setup_rfq(api)
+
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def missing_employee(request):
+        return {'items': []}
+
+    response = await api.post(BASE + 'save', value, expected=400)
+    assert response['error'] == 'invalid_manager'
+    assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []

@@ -1,8 +1,8 @@
 #pragma once
 #include <components/users.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace organizations {
@@ -12,16 +12,16 @@ class MembersComponent final : public userver::components::ComponentBase {
     MembersComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::MembersListResult List(
-        const models::ListMembersRequest&, userver::server::request::RequestContext&) const;
-    models::MemberResult Create(
-        const models::CreateMemberRequest&, userver::server::request::RequestContext&) const;
-    models::MemberResult Add(
-        const models::AddMemberRequest&, userver::server::request::RequestContext&) const;
-    models::MemberResult Update(
-        const models::UpdateMemberRequest&, userver::server::request::RequestContext&) const;
-    models::MemberResult UpdateProfile(
-        const models::UpdateMemberProfileRequest&, userver::server::request::RequestContext&) const;
+    models::MembersListResult ListMembers(
+        const models::ListMembersRequest&, const platform::auth::Identity&) const;
+    models::MemberResult CreateMember(
+        const models::CreateMemberRequest&, const platform::auth::Identity&) const;
+    models::MemberResult AddExistingMember(
+        const models::AddMemberRequest&, const platform::auth::Identity&) const;
+    models::MemberResult UpdateMemberAccess(
+        const models::UpdateMemberRequest&, const platform::auth::Identity&) const;
+    models::MemberResult UpdateMemberProfile(
+        const models::UpdateMemberProfileRequest&, const platform::auth::Identity&) const;
 
   private:
     const Users& users_;

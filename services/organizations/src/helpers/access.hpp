@@ -13,11 +13,6 @@
 namespace organizations::helpers {
 namespace pg = userver::storages::postgres;
 
-struct AccessRow {
-    std::string Organization;
-    std::vector<std::string> Permissions;
-};
-
 inline bool IsPlatformAdmin(const platform::auth::Identity& identity) {
     return identity.Permissions.contains("platform.admin");
 }

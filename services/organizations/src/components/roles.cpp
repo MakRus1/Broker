@@ -24,29 +24,25 @@ userver::yaml_config::Schema RolesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::RolesListResult RolesComponent::List(const models::OrganizationIdentity& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
-    try {
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        RequireAdministrator(transaction, request.organization_id, identity);
-        const auto roles = ConvertRows<models::pg::OrganizationRoleRaw>(
-            transaction.Execute(sql::kListRoles, request.organization_id));
-        const auto permissions = PermissionCatalog(transaction);
-        transaction.Commit();
-        return models::RolesListResult{.items = roles, .permissions = permissions};
-    } catch (const userver::storages::postgres::UniqueViolation&) {
-        throw ApiError<409>{"already_exists", "Такая запись уже существует"};
-    }
+models::RolesListResult RolesComponent::ListRoles(
+    const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    RequireAdministrator(transaction, request.organization_id, identity);
+    const auto roles = ConvertRows<models::pg::OrganizationRoleRaw>(
+        transaction.Execute(sql::kListRoles, request.organization_id));
+    const auto permissions = PermissionCatalog(transaction);
+
+    transaction.Commit();
+    return models::RolesListResult{.items = roles, .permissions = permissions};
 }
 
-models::OrganizationRoleResult RolesComponent::Create(const models::RolesCreateRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
+models::OrganizationRoleResult RolesComponent::CreateRole(
+    const models::RolesCreateRequest& request, const platform::auth::Identity& identity) const {
     try {
         const auto name = userver::utils::text::Trim(request.name);
         if (name.empty())
             throw ApiError<400>{"empty_role_name", "Укажите название роли"};
+
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
         ValidatePermissions(transaction, request.permissions);
@@ -56,6 +52,7 @@ models::OrganizationRoleResult RolesComponent::Create(const models::RolesCreateR
             Convert(transaction.Execute(sql::kCreateRole, request.organization_id, value)
                         .AsSingleRow<models::pg::OrganizationRoleRaw>());
         WriteAudit(transaction, request.organization_id, identity, "role.created", role);
+
         transaction.Commit();
         return models::OrganizationRoleResult{.role = role};
     } catch (const userver::storages::postgres::UniqueViolation&) {
@@ -63,13 +60,13 @@ models::OrganizationRoleResult RolesComponent::Create(const models::RolesCreateR
     }
 }
 
-models::OrganizationRoleResult RolesComponent::Update(const models::RolesUpdateRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
+models::OrganizationRoleResult RolesComponent::UpdateRole(
+    const models::RolesUpdateRequest& request, const platform::auth::Identity& identity) const {
     try {
         const auto name = userver::utils::text::Trim(request.name);
         if (name.empty())
             throw ApiError<400>{"empty_role_name", "Укажите название роли"};
+
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
         const auto previous = RequireRole(transaction, request.organization_id, request.id);
@@ -92,6 +89,7 @@ models::OrganizationRoleResult RolesComponent::Update(const models::RolesUpdateR
             Convert(transaction.Execute(sql::kUpdateRole, request.organization_id, value)
                         .AsSingleRow<models::pg::OrganizationRoleRaw>());
         WriteAudit(transaction, request.organization_id, identity, "role.updated", role);
+
         transaction.Commit();
         return models::OrganizationRoleResult{.role = role};
     } catch (const userver::storages::postgres::UniqueViolation&) {

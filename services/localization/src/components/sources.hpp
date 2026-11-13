@@ -10,7 +10,7 @@ class SourcesComponent final : public userver::components::ComponentBase {
     SourcesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    int Register(const models::EditableCatalog&) const;
+    int RegisterSourceCatalog(const models::EditableCatalog&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

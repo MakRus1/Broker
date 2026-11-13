@@ -97,3 +97,22 @@ async def test_registration_access_and_validation(api, service_client, source_ca
     await source_catalog({'ru': {'stable.key': '{name}'}, 'en': {'stable.key': '{name}'}}, expected=409)
     await source_catalog({'ru': {'a': 'A'}, 'en': {}}, expected=400)
     await source_catalog({'ru': {'a': '{count}'}, 'en': {'a': '{name}'}}, expected=400)
+
+
+async def test_publish_without_draft_preserves_editor_state(api):
+    before = await api.post(ROOT + 'get', {}, user='translator')
+    error = await api.post(ROOT + 'publish', {'version': before['version']}, user='translator', expected=409)
+    assert error['error'] == 'draft_required'
+    assert await api.post(ROOT + 'get', {}, user='translator') == before
+
+
+async def test_stale_publish_keeps_newer_draft(api):
+    first = await api.post(ROOT + 'save', {'version': 0, 'catalog': CATALOG}, user='translator')
+    updated = {'ru': [{'key': 'nav.shipments', 'value': 'Новый перевод'}], 'en': []}
+    latest = await api.post(ROOT + 'save', {'version': first['version'], 'catalog': updated}, user='translator')
+    error = await api.post(ROOT + 'publish', {'version': first['version']}, user='translator', expected=409)
+    assert error['error'] == 'catalog_changed'
+    assert await api.post(ROOT + 'get', {}, user='translator') == latest
+    published = await api.post(ROOT + 'publish', {'version': latest['version']}, user='translator')
+    assert published['published'] == updated
+    assert published.get('draft') is None

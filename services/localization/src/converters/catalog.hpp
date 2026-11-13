@@ -1,4 +1,5 @@
 #pragma once
+#include <models/public_translation_row.hpp>
 #include <openapi/models.hpp>
 #include <userver/formats/json.hpp>
 
@@ -38,12 +39,7 @@ inline std::vector<models::Translation> ConvertMessages(const json::Value& messa
     return result;
 }
 
-struct PublicTranslationRow {
-    std::string Key;
-    json::Value Value;
-};
-
-inline models::Translation Convert(const PublicTranslationRow& row) {
+inline models::Translation Convert(const models::PublicTranslationRow& row) {
     return {.key = row.Key, .value = row.Value.As<std::string>()};
 }
 }  // namespace localization::converters

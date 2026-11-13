@@ -1,7 +1,6 @@
 #include <components/catalog.hpp>
 #include <converters/catalog.hpp>
 #include <localization/sql_queries.hpp>
-#include <platform/auth/identity.hpp>
 #include <platform/handler_error.hpp>
 #include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
@@ -24,13 +23,12 @@ userver::yaml_config::Schema CatalogComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-void CatalogComponent::CheckOrganization(const userver::server::request::RequestContext& context,
-    const std::string& organization) const {
+void CatalogComponent::CheckOrganization(
+    const std::string& access_token, const std::string& organization) const {
     namespace api = clients::organizations::ApiOrganizationsMembershipGet;
     try {
         organizations_.ApiOrganizationsMembershipGet(
-            api::Request{.body = {.organization_id = organization}},
-            platform::auth::GetAccessToken(context));
+            api::Request{.body = {.organization_id = organization}}, access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {
@@ -47,20 +45,21 @@ void CatalogComponent::CheckOrganization(const userver::server::request::Request
     }
 }
 
-std::vector<models::Translation> CatalogComponent::Get(const models::GetCatalogRequest& request,
-    const userver::server::request::RequestContext& context) const {
-    CheckOrganization(context, request.organization_id);
+std::vector<models::Translation> CatalogComponent::GetOrganizationCatalog(
+    const models::GetCatalogRequest& request, const std::string& access_token) const {
+    CheckOrganization(access_token, request.organization_id);
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetCatalog,
         request.organization_id, models::EnumValue(request.locale));
     return converters::ConvertMessages(rows.AsSingleRow<json::Value>());
 }
 
-std::vector<models::Translation> CatalogComponent::GetPublic(const std::string& locale) const {
+std::vector<models::Translation> CatalogComponent::GetPublicCatalog(
+    const std::string& locale) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetPublicCatalog, locale);
     std::vector<models::Translation> result;
     result.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<converters::PublicTranslationRow>(pg::kRowTag))
+    for (const auto& row : rows.AsSetOf<models::PublicTranslationRow>(pg::kRowTag))
         result.push_back(converters::Convert(row));
     return result;
 }

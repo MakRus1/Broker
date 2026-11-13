@@ -12,7 +12,7 @@ userver::yaml_config::Schema AdminSessionComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::AdminSession AdminSessionComponent::Get(
+models::AdminSession AdminSessionComponent::GetAdminSession(
     const platform::browser::BrowserSession& session) const {
     const auto access =
         organizations_.ApiPlatformAccess({.body = {.permission = "authenticated"}}, session.Access);

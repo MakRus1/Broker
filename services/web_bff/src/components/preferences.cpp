@@ -16,7 +16,7 @@ userver::yaml_config::Schema PreferencesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::preferences::ListPreferencesResult PreferencesComponent::List(
+models::preferences::ListPreferencesResult PreferencesComponent::GetWorkspacePreferences(
     const std::string& organization, const std::string& token) const {
     const auto personal =
         preferences_.ApiV1PreferencesList({.body = {.organization_id = organization}}, token);
@@ -30,7 +30,7 @@ models::preferences::ListPreferencesResult PreferencesComponent::List(
     return result;
 }
 
-models::preferences::Preference PreferencesComponent::Save(
+models::preferences::Preference PreferencesComponent::SavePersonalPreference(
     const models::preferences::SavePreferenceRequest& request, const std::string& token) const {
     return Convert(
         preferences_
@@ -42,7 +42,7 @@ models::preferences::Preference PreferencesComponent::Save(
             .preference);
 }
 
-models::RegistryDefaultsResult PreferencesComponent::ListRoles(
+models::RegistryDefaultsResult PreferencesComponent::ListRoleRegistryDefaults(
     const std::string& organization, const std::string& token) const {
     const auto source = organizations_.ApiOrganizationsRegistryDefaultsList(
         {.body = {.organization_id = organization}}, token);
@@ -54,7 +54,7 @@ models::RegistryDefaultsResult PreferencesComponent::ListRoles(
     return result;
 }
 
-models::RegistryDefault PreferencesComponent::SaveRole(
+models::RegistryDefault PreferencesComponent::SaveRoleRegistryDefault(
     const models::SaveRegistryDefaultRequest& request, const std::string& token) const {
     return Convert(organizations_
                        .ApiOrganizationsRegistryDefaultsSave(

@@ -20,13 +20,17 @@ class RouteIntegrations final : public userver::components::ComponentBase {
         std::string_view access_token, const std::vector<std::string>&) const;
     void RegisterRouteUsage(std::string_view access_token, const models::ShipmentContext&,
         const std::vector<std::string>&) const;
+    // Проверяет связанные данные и заменяет станции в запросе каноническими значениями.
+    void PrepareRoute(std::string_view access_token, models::SetRouteRequest&,
+        const models::Transportation& previous) const;
+
+  private:
     void ValidateRouteCounterparties(std::string_view access_token,
         const std::vector<models::SetRouteSegmentsItem>&,
         const std::vector<models::RouteSegment>&) const;
     models::RailwayStations FindRailwayStations(
         std::string_view access_token, const std::vector<std::string>&) const;
 
-  private:
     clients::shipments::Client shipments_;
     clients::counterparties::Client counterparties_;
     clients::transport_locations::Client transport_locations_;

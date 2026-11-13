@@ -1,10 +1,12 @@
-#include <components/invoice_operations.hpp>
+#include <algorithm>
 #include <components/invoices.hpp>
 #include <converters/invoice.hpp>
 #include <finance/sql_queries.hpp>
+#include <helpers/document_parties.hpp>
 #include <helpers/finance_settings.hpp>
 #include <helpers/history/snapshot.hpp>
 #include <helpers/service_charges.hpp>
+#include <limits>
 #include <models/errors.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
@@ -12,6 +14,7 @@
 #include <platform/document_number.hpp>
 #include <registry/invoice_query.hpp>
 #include <set>
+#include <span>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
@@ -23,6 +26,18 @@ namespace models = finance::models;
 namespace pg = userver::storages::postgres;
 namespace sql = finance::sql;
 using finance::ApiError;
+
+void RecalculateAmounts(
+    models::pg::InvoiceRaw& invoice, std::span<const models::pg::ServiceChargeRaw> charges) {
+    invoice.NetMinor = 0;
+    invoice.VatMinor = 0;
+    invoice.TotalMinor = 0;
+    for (const auto& charge : charges) {
+        invoice.NetMinor += charge.InvoiceNetMinor;
+        invoice.VatMinor += charge.InvoiceVatMinor;
+        invoice.TotalMinor += charge.InvoiceTotalMinor;
+    }
+}
 
 std::string ServiceChargeDirection(models::InvoiceDirection direction) {
     return direction == models::InvoiceDirection::Outgoing ? "income" : "expense";
@@ -74,7 +89,7 @@ models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
     auto read = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto details = invoice_operations::LoadInvoice(read, organization, body.id);
+    const auto details = FindInvoice(read, organization, body.id);
     if (details.invoice.revision != body.revision)
         throw ApiError<409>{
             "revision_conflict", "Счёт изменён. Обновите карточку перед скачиванием"};
@@ -126,9 +141,8 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         if (request.expected_revision != 0 || ids.size() != 1)
             throw ApiError<400>{
                 "invalid_reassignment", "Новый счёт при перепривязке создаётся из одной услуги"};
-        invoice_operations::CheckInvoiceAssignment(
-            transaction, organization, ids.front(), request.previous_invoice_id);
-        invoice_operations::RemoveInvoiceServiceCharge(transaction, organization,
+        CheckInvoiceAssignment(transaction, organization, ids.front(), request.previous_invoice_id);
+        RemoveInvoiceServiceCharge(transaction, organization,
             boost::uuids::string_generator{}(request.previous_invoice_id.value()), ids.front(),
             identity);
     }
@@ -138,14 +152,14 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
     std::vector<models::pg::ServiceChargeRaw> snapshots;
     snapshots.reserve(charges.Size());
     for (const auto& charge : charges.AsSetOf<models::pg::ServiceChargeRaw>()) {
-        invoice_operations::ValidateInvoiceServiceCharge(charge, value);
+        ValidateInvoiceServiceCharge(charge, value);
         snapshots.push_back(charge);
     }
-    invoice_operations::RecalculateAmounts(value, snapshots);
+    RecalculateAmounts(value, snapshots);
 
     if (request.expected_revision != 0)
         transaction.Execute(sql::kLockInvoices, organization, std::vector{value.Id});
-    invoice_operations::ValidateInvoiceSettlement(transaction, organization, value);
+    ValidateInvoiceSettlement(transaction, organization, value);
     const auto saved = request.expected_revision == 0
         ? transaction.Execute(sql::kCreateInvoice, organization, value)
         : transaction.Execute(sql::kUpdateInvoice, organization, value, request.expected_revision);
@@ -155,7 +169,7 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const std::string& organiz
         std::optional<boost::uuids::uuid>{});
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
-    const auto result = invoice_operations::LoadInvoice(transaction, organization, request.id);
+    const auto result = FindInvoice(transaction, organization, request.id);
     transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));
     transaction.Commit();
@@ -167,7 +181,7 @@ models::InvoiceDetails InvoicesComponent::FindInvoice(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto result = invoice_operations::LoadInvoice(transaction, organization, request.id);
+    const auto result = FindInvoice(transaction, organization, request.id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
@@ -240,9 +254,8 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(const std::string
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    const auto result =
-        invoice_operations::IncludeServiceCharge(transaction, organization, identity, charge,
-            request.invoice_id, request.expected_revision, request.previous_invoice_id);
+    const auto result = IncludeServiceCharge(transaction, organization, identity, charge,
+        request.invoice_id, request.expected_revision, request.previous_invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
@@ -256,12 +269,10 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(const std::string&
     if (charges.IsEmpty())
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
-    invoice_operations::CheckInvoiceAssignment(
-        transaction, organization, charge.Id, std::optional{request.invoice_id});
-    invoice_operations::RemoveInvoiceServiceCharge(transaction, organization,
+    CheckInvoiceAssignment(transaction, organization, charge.Id, std::optional{request.invoice_id});
+    RemoveInvoiceServiceCharge(transaction, organization,
         boost::uuids::string_generator{}(request.invoice_id), charge.Id, identity);
-    const auto result =
-        invoice_operations::LoadInvoice(transaction, organization, request.invoice_id);
+    const auto result = FindInvoice(transaction, organization, request.invoice_id);
     transaction.Commit();
     return models::InvoiceDetails{.charges = result.charges, .invoice = result.invoice};
 }
@@ -291,4 +302,145 @@ models::InvoiceFilterValuesResult InvoicesComponent::GetInvoiceFilterValues(
     }
 }
 
+void InvoicesComponent::ValidateInvoiceServiceCharge(
+    const models::pg::ServiceChargeRaw& charge, const models::pg::InvoiceRaw& invoice) const {
+    if (charge.Archived ||
+        charge.Direction != (invoice.Direction == "outgoing" ? "income" : "expense") ||
+        charge.CounterpartyId != invoice.CounterpartyId ||
+        charge.InvoiceCurrency != invoice.Currency || charge.ContractId != invoice.ContractId)
+        throw ApiError<400>{"wrong_service_charge",
+            "Услуга не соответствует сторонам, договору, валюте или направлению счёта"};
+}
+
+void InvoicesComponent::ValidateInvoiceSettlement(pg::Transaction& transaction,
+    const std::string& organization, const models::pg::InvoiceRaw& invoice) const {
+    const auto paid = transaction.Execute(sql::kInvoicePaid, organization, invoice.Id)
+                          .AsSingleRow<std::int64_t>();
+    if (paid > 0)
+        throw ApiError<409>{"invoice_paid_readonly",
+            "Счёт частично или полностью оплачен. Сначала снимите распределение оплаты в платеже"};
+}
+
+models::InvoiceDetails InvoicesComponent::FindInvoice(
+    pg::Transaction& transaction, const std::string& organization, const std::string& id) const {
+    const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
+    return {.charges = helpers::ConvertServiceCharges(
+                transaction.Execute(sql::kGetInvoiceServiceCharges, organization, id)),
+        .invoice = converters::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>())};
+}
+
+void InvoicesComponent::RemoveInvoiceServiceCharge(pg::Transaction& transaction,
+    const std::string& organization, const boost::uuids::uuid& invoice_id,
+    const boost::uuids::uuid& service_charge_id, const platform::auth::Identity& identity) const {
+    auto invoice = transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id})
+                       .AsSingleRow<models::pg::InvoiceRaw>();
+    if (invoice.Archived || invoice.Revision == std::numeric_limits<std::int64_t>::max())
+        throw ApiError<409>{"invoice_unavailable", "Счёт недоступен для изменения"};
+    auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id)
+                       .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
+    std::erase_if(charges, [&](const auto& charge) { return charge.Id == service_charge_id; });
+    RecalculateAmounts(invoice, charges);
+
+    transaction.Execute(sql::kDeleteInvoiceServiceCharges, organization, invoice_id,
+        std::optional{service_charge_id});
+    const auto revision = invoice.Revision++;
+    ValidateInvoiceSettlement(transaction, organization, invoice);
+    transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
+    const auto details =
+        FindInvoice(transaction, organization, boost::uuids::to_string(invoice_id));
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
+        identity.ActorId(), helpers::HistorySnapshot(details, identity));
+}
+
+void InvoicesComponent::CheckInvoiceAssignment(pg::Transaction& transaction,
+    const std::string& organization, const boost::uuids::uuid& service_charge_id,
+    const std::optional<std::string>& previous) const {
+    const auto assignment =
+        transaction.Execute(sql::kServiceChargeInvoiceAssignment, organization, service_charge_id);
+    if (previous.has_value()) {
+        if (assignment.IsEmpty() ||
+            assignment.AsSingleRow<boost::uuids::uuid>() !=
+                boost::uuids::string_generator{}(previous.value()))
+            throw ApiError<409>{
+                "assignment_changed", "Привязка услуги изменилась. Обновите список"};
+    } else if (!assignment.IsEmpty())
+        throw ApiError<409>{"service_charge_invoiced", "Услуга уже включена в счёт"};
+}
+
+models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(pg::Transaction& transaction,
+    const std::string& organization, const platform::auth::Identity& identity,
+    const models::pg::ServiceChargeRaw& charge, const std::string& invoice_id,
+    std::int64_t expected_revision, const std::optional<std::string>& previous_invoice_id) const {
+    CheckInvoiceAssignment(transaction, organization, charge.Id, previous_invoice_id);
+    std::vector<boost::uuids::uuid> invoice_ids{boost::uuids::string_generator{}(invoice_id)};
+    if (previous_invoice_id.has_value())
+        invoice_ids.push_back(boost::uuids::string_generator{}(previous_invoice_id.value()));
+    transaction.Execute(sql::kLockInvoices, organization, invoice_ids);
+    const auto invoices = transaction.Execute(sql::kGetInvoice, organization, invoice_id);
+    if (invoices.IsEmpty())
+        throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
+    auto value = invoices.AsSingleRow<models::pg::InvoiceRaw>();
+    if (value.Archived)
+        throw ApiError<409>{"archived_invoice", "Выберите действующий счёт"};
+    if (value.Revision != expected_revision ||
+        value.Revision == std::numeric_limits<std::int64_t>::max())
+        throw ApiError<409>{"revision_conflict", "Счёт изменён. Обновите список"};
+    auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, value.Id)
+                       .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
+    if (charges.size() >= 500)
+        throw ApiError<400>{
+            "too_many_service_charges", "В одном счёте может быть не больше 500 услуг"};
+    ValidateInvoiceServiceCharge(charge, value);
+    if (previous_invoice_id.has_value()) {
+        if (helpers::SameId(previous_invoice_id.value(), invoice_id))
+            throw ApiError<400>{"same_invoice", "Выберите другой счёт"};
+        RemoveInvoiceServiceCharge(transaction, organization,
+            boost::uuids::string_generator{}(previous_invoice_id.value()), charge.Id, identity);
+    }
+    charges.push_back(charge);
+    RecalculateAmounts(value, charges);
+    ++value.Revision;
+    ValidateInvoiceSettlement(transaction, organization, value);
+    transaction.Execute(sql::kUpdateInvoice, organization, value, expected_revision);
+    transaction.Execute(
+        sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
+    const auto result = FindInvoice(transaction, organization, invoice_id);
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
+        identity.ActorId(), helpers::HistorySnapshot(result, identity));
+    return result;
+}
+
+void InvoicesComponent::UpdateServiceChargeSnapshot(pg::Transaction& transaction,
+    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& invoice_id,
+    const models::pg::ServiceChargeRaw& updated_charge) const {
+    const auto locked =
+        transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id});
+    auto invoice = locked.AsSingleRow<models::pg::InvoiceRaw>();
+    if (invoice.Revision == std::numeric_limits<std::int64_t>::max())
+        throw ApiError<409>{"invalid_revision", "Достигнут предел редакций счёта"};
+    if (updated_charge.Archived)
+        throw ApiError<409>{
+            "service_charge_invoiced", "Сначала исключите услугу из счёта, затем архивируйте"};
+    ValidateInvoiceServiceCharge(updated_charge, invoice);
+    auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id)
+                       .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
+    for (auto& charge : charges) {
+        if (charge.Id == updated_charge.Id)
+            charge = updated_charge;
+    }
+    RecalculateAmounts(invoice, charges);
+
+    const auto revision = invoice.Revision++;
+    transaction.Execute(sql::kUpdateInvoiceServiceCharge, organization, invoice_id,
+        updated_charge.Id, updated_charge);
+    ValidateInvoiceSettlement(transaction, organization, invoice);
+    transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
+    const auto details =
+        FindInvoice(transaction, organization, boost::uuids::to_string(invoice_id));
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
+        identity.ActorId(), helpers::HistorySnapshot(details, identity));
+}
 }  // namespace finance

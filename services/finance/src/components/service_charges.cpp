@@ -1,4 +1,4 @@
-#include <components/invoice_operations.hpp>
+#include <components/invoices.hpp>
 #include <components/service_charges.hpp>
 #include <converters/invoice.hpp>
 #include <converters/service_charge_input.hpp>
@@ -8,11 +8,9 @@
 #include <helpers/finance_settings.hpp>
 #include <helpers/history/snapshot.hpp>
 #include <helpers/service_charges.hpp>
-#include <limits>
 #include <map>
 #include <models/errors.hpp>
 #include <models/pg/financial_label_raw.hpp>
-#include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
 #include <models/reporting_charge_row.hpp>
 #include <models/service_charge_total_row.hpp>
@@ -34,7 +32,8 @@ ServiceChargesComponent::ServiceChargesComponent(const userver::components::Comp
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()),
-      exchange_rates_(context.FindComponent<ExchangeRates>()) {}
+      exchange_rates_(context.FindComponent<ExchangeRates>()),
+      invoices_(context.FindComponent<InvoicesComponent>()) {}
 
 userver::yaml_config::Schema ServiceChargesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -73,32 +72,8 @@ models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::stri
             throw ApiError<403>{"forbidden", "Нет права изменения счетов"};
 
         const auto invoice_id = assignment.AsSingleRow<boost::uuids::uuid>();
-        const auto locked =
-            transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id});
-        auto invoice = locked.AsSingleRow<models::pg::InvoiceRaw>();
-        if (invoice.Revision == std::numeric_limits<std::int64_t>::max())
-            throw ApiError<409>{"invalid_revision", "Достигнут предел редакций счёта"};
-        if (value.Archived)
-            throw ApiError<409>{
-                "service_charge_invoiced", "Сначала исключите услугу из счёта, затем архивируйте"};
-        invoice_operations::ValidateInvoiceServiceCharge(value, invoice);
-        auto charges = transaction.Execute(sql::kGetInvoiceServiceCharges, organization, invoice_id)
-                           .AsContainer<std::vector<models::pg::ServiceChargeRaw>>();
-        for (auto& charge : charges) {
-            if (charge.Id == value.Id)
-                charge = value;
-        }
-        invoice_operations::RecalculateAmounts(invoice, charges);
-
-        const auto revision = invoice.Revision++;
-        transaction.Execute(
-            sql::kUpdateInvoiceServiceCharge, organization, invoice_id, value.Id, value);
-        invoice_operations::ValidateInvoiceSettlement(transaction, organization, invoice);
-        transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
-        const auto details = invoice_operations::LoadInvoice(
-            transaction, organization, boost::uuids::to_string(invoice_id));
-        transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-            identity.ActorId(), helpers::HistorySnapshot(details, identity));
+        invoices_.UpdateServiceChargeSnapshot(
+            transaction, organization, identity, invoice_id, value);
     }
     if (body.target_invoice_id.has_value()) {
         if (!can_write_invoices)
@@ -107,7 +82,7 @@ models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::stri
         if (body.expected_revision != 0 || !body.target_invoice_revision.has_value())
             throw ApiError<400>{
                 "invalid_invoice_target", "Создавать услугу из счёта можно только с его редакцией"};
-        invoice_operations::IncludeServiceCharge(transaction, organization, identity, value,
+        invoices_.IncludeServiceCharge(transaction, organization, identity, value,
             body.target_invoice_id.value(), body.target_invoice_revision.value());
     } else if (body.target_invoice_revision.has_value())
         throw ApiError<400>{"invalid_invoice_target", "Укажите счёт для новой услуги"};

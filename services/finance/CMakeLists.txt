@@ -10,7 +10,6 @@ add_library(
     src/components/exchange_rates.cpp
     src/components/financial_labels.cpp
     src/components/service_charges.cpp
-    src/components/invoice_operations.cpp
     src/components/invoices.cpp
     src/components/payments.cpp
     src/components/settings.cpp

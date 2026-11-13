@@ -11,6 +11,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace finance {
+class InvoicesComponent;
+
 class ServiceChargesComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "finance-service-charges";
@@ -39,6 +41,7 @@ class ServiceChargesComponent final : public userver::components::ComponentBase 
 
     userver::storages::postgres::ClusterPtr cluster_;
     ExchangeRates& exchange_rates_;
+    InvoicesComponent& invoices_;
 };
 }  // namespace finance
 

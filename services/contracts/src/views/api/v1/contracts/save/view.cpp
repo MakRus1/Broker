@@ -1,6 +1,6 @@
-#include <components/contract_card.hpp>
 #include <components/contracts.hpp>
 #include <converters/contracts.hpp>
+#include <helpers/contract_validation.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <utility>
@@ -14,7 +14,7 @@ Response View::Handle(
     const auto organization = platform::auth::GetOrganization(identity);
 
     auto body = request.body;
-    contract_card::NormalizeAndValidateContract(body);
+    helpers::NormalizeAndValidateContract(body);
     auto value = converters::Convert(body);
 
     deps.contracts->ValidateContractParties(platform::auth::GetAccessToken(context), body);

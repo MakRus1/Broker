@@ -6,7 +6,7 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
-    src/components/contract_card.cpp
+    src/helpers/contract_validation.cpp
     src/components/contract_registry.cpp
     src/components/contracts.cpp
     src/components/numbering.cpp

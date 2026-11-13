@@ -1,6 +1,6 @@
 #pragma once
 #include <openapi/models.hpp>
 
-namespace contracts::contract_card {
+namespace contracts::helpers {
 void NormalizeAndValidateContract(models::SaveContractRequest& value);
-}  // namespace contracts::contract_card
+}  // namespace contracts::helpers

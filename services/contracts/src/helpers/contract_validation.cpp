@@ -1,11 +1,11 @@
 #include <boost/uuid/string_generator.hpp>
-#include <components/contract_card.hpp>
+#include <helpers/contract_validation.hpp>
 #include <limits>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
 #include <userver/utils/text_light.hpp>
 
-namespace contracts::contract_card {
+namespace contracts::helpers {
 void NormalizeAndValidateContract(models::SaveContractRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция договора"};
@@ -35,4 +35,4 @@ void NormalizeAndValidateContract(models::SaveContractRequest& value) {
     }
 }
 
-}  // namespace contracts::contract_card
+}  // namespace contracts::helpers

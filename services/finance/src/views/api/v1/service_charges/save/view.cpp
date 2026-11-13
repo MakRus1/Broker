@@ -1,6 +1,7 @@
 #include <components/service_charges.hpp>
 #include <helpers/document_parties.hpp>
 #include <helpers/exchange_amounts.hpp>
+#include <models/errors.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>

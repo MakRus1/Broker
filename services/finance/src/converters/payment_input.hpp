@@ -2,6 +2,7 @@
 #include <converters/invoice.hpp>
 #include <helpers/document_parties.hpp>
 #include <limits>
+#include <models/errors.hpp>
 #include <models/pg/payment_raw.hpp>
 #include <platform/date_validation.hpp>
 #include <userver/utils/text_light.hpp>

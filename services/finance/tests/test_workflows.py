@@ -129,3 +129,42 @@ async def test_service_charge_without_invoice_permission_cannot_change_linked_in
     assert result['error'] == 'forbidden'
     assert await api.post('/api/v1/service-charges/get', {'id': body['id']}) == {'charge': saved}
     assert await api.post('/api/v1/invoices/get', {'id': document['id']}) == before
+
+
+@pytest.mark.parametrize('kind', ['invoices', 'payments'])
+@pytest.mark.parametrize('field', ['own_bank_account_id', 'counterparty_bank_account_id'])
+@pytest.mark.parametrize('problem', ['missing', 'currency', 'archived'])
+async def test_document_bank_account_validation_before_save(
+    api, mockserver, pgsql, invoice_references, kind, field, problem,
+):
+    from uuid import uuid4
+    from test_payments import payment
+
+    body = invoice([]) if kind == 'invoices' else payment()
+    account_id = str(uuid4())
+    body[field] = account_id
+    state = {'problem': problem}
+
+    @mockserver.json_handler('/api/v1/counterparties/bank-accounts/list')
+    def accounts(request):
+        if state['problem'] == 'missing':
+            return {'items': []}
+        return {'items': [{
+            'id': account_id, 'counterparty_id': request.json['counterparty_id'],
+            'name': 'Account', 'number': '40702810000000000001',
+            'currency': 'USD' if state['problem'] == 'currency' else 'RUB',
+            'bank_name': 'Bank', 'bic': '044525225', 'swift': None,
+            'correspondent_account': None, 'iban': None, 'is_primary': True,
+            'archived': state['problem'] == 'archived', 'revision': 1,
+        }]}
+
+    result = await api.post(f'/api/v1/{kind}/save', body, expected=400)
+    assert result['error'] == 'invalid_account'
+    cursor = pgsql['db_1'].cursor()
+    cursor.execute(f'SELECT COUNT(*) FROM {kind} WHERE id = %s::UUID', (body['id'],))
+    assert cursor.fetchone()[0] == 0
+
+    state['problem'] = None
+    saved = await api.post(f'/api/v1/{kind}/save', body)
+    document = saved['invoice' if kind == 'invoices' else 'payment']
+    assert document[field] == account_id

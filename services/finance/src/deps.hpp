@@ -1,4 +1,5 @@
 #pragma once
+#include <components/document_parties.hpp>
 #include <components/financial_history.hpp>
 #include <components/financial_labels.hpp>
 #include <components/invoices.hpp>
@@ -29,6 +30,7 @@
 namespace finance {
 
 struct Deps {
+    DocumentPartiesComponent* document_parties;
     FinancialLabelsComponent* financial_labels;
     ServiceChargesComponent* service_charges;
     InvoicesComponent* invoices;
@@ -51,6 +53,7 @@ struct Deps {
 
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
+        .document_parties = &component_context.FindComponent<DocumentPartiesComponent>(),
         .financial_labels = &component_context.FindComponent<FinancialLabelsComponent>(),
         .service_charges = &component_context.FindComponent<ServiceChargesComponent>(),
         .invoices = &component_context.FindComponent<InvoicesComponent>(),

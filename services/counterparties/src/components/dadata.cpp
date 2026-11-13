@@ -2,6 +2,7 @@
 #include <converters/dadata.hpp>
 #include <models/errors.hpp>
 #include <userver/clients/http/component.hpp>
+#include <userver/clients/http/error.hpp>
 #include <userver/clients/http/request.hpp>
 #include <userver/clients/http/response.hpp>
 #include <userver/components/component_config.hpp>
@@ -69,24 +70,18 @@ std::vector<models::RegistryParty> DaData::Lookup(const std::string& tax_id) con
         throw ApiError<503>{"registry_unavailable",
             "DaData сейчас недоступна. Повторите поиск позже или заполните данные вручную"};
     const auto document = userver::formats::json::FromString(response->body());
-    const auto& items = document["suggestions"];
-    if (!items.IsArray() || items.GetSize() > 1)
-        throw std::runtime_error("Некорректный ответ реестра");
-    std::vector<models::RegistryParty> result;
-    for (const auto& item : items) {
-        auto value = converters::Convert(item);
-        if (value.tax_id != tax_id || value.name.empty())
-            throw std::runtime_error("Ответ реестра не соответствует запросу");
-        result.push_back(std::move(value));
-    }
-    return result;
-} catch (const platform::http::HandlerErrorBase&) {
+    return converters::ConvertDaDataResponse(document, tax_id);
+} catch (const userver::clients::http::CancelException&) {
 
     throw;
-} catch (const std::bad_alloc&) {
+} catch (const userver::clients::http::BadArgumentException&) {
     throw;
-} catch (const std::exception&) {
-    // Текст внешних ошибок не переносим в ответ: он может содержать настройки клиента.
+} catch (const userver::clients::http::TechnicalError&) {
+    throw;
+} catch (const userver::clients::http::BaseException&) {
+    throw ApiError<503>{"registry_unavailable",
+        "Не удалось получить реквизиты из DaData. Повторите позже или заполните вручную"};
+} catch (const userver::formats::json::Exception&) {
     throw ApiError<503>{"registry_unavailable",
         "Не удалось получить реквизиты из DaData. Повторите позже или заполните вручную"};
 }

@@ -93,6 +93,10 @@ async def test_registry_failure_is_safe_and_not_retried(api, registry, status):
     [
         {},
         {'suggestions': None},
+        {'suggestions': 'invalid'},
+        {'suggestions': [PARTY, PARTY]},
+        {'suggestions': [{**PARTY, 'data': {**PARTY['data'], 'name': {
+            'short_with_opf': '', 'full_with_opf': None}}}]},
         {'suggestions': [{}]},
         {'suggestions': [{**PARTY, 'data': {**PARTY['data'], 'inn': '7800000000'}}]},
     ],
@@ -180,3 +184,14 @@ def configure_registry_timeout(daemon_scoped_mark):
         config['components_manager']['components']['http-client-core']['testsuite-timeout'] = '50ms'
 
     return patch
+
+
+async def test_non_json_registry_response_is_safe(api, mockserver):
+    @mockserver.handler('/dadata/party')
+    def invalid_json(request):
+        return mockserver.make_response(status=200, response='not json: testsuite-dadata-token')
+
+    result = await api.post('/api/v1/counterparties/lookup', {'tax_id': INN}, expected=503)
+    assert result['error'] == 'registry_unavailable'
+    assert 'testsuite-dadata-token' not in str(result)
+    assert invalid_json.times_called == 1

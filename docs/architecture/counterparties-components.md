@@ -23,7 +23,11 @@ GetCounterpartyFilterValues, SaveBankAccount и ListBankAccounts.
 
 Чистые правила карточки и банковского счёта находятся в helpers/counterparty_validation
 и helpers/bank_account_validation. Это свободные функции, а не DI-компоненты.
-Конвертеры карточек, счетов, истории и DaData находятся в converters. Метаданные
+Конвертеры карточек, счетов, истории и DaData находятся в converters.
+ConvertDaDataResponse проверяет структуру ответа, число результатов и соответствие
+ИНН запросу. DaData обрабатывает ожидаемые исключения HTTP-клиента и JSON; отмена
+и ошибки настройки вызова не подменяются недоступностью реестра. Общего catch
+для std::exception нет. Необязательный текст нормализуется platform::TrimToOptional. Метаданные
 реестра — в registry/fields.hpp, конструктор SQL — в registry/query.hpp. Строка
 SQL и результаты реестра находятся в models; composite-типы — в models/pg.
 Анонимный namespace расположен перед именованным, логические блоки разделены.

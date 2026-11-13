@@ -2,7 +2,7 @@
 #include <clients/counterparties/client.hpp>
 #include <openapi/models.hpp>
 
-namespace finance::helpers {
+namespace finance::converters {
 inline models::InvoicePrintParty ConvertPrintParty(
     const clients::counterparties::models::Counterparty& value) {
     return {.kpp = value.kpp.value_or(std::nullopt),
@@ -22,4 +22,4 @@ inline models::InvoicePrintBank ConvertPrintBank(
         .number = value.number,
         .swift = value.swift.value_or(std::nullopt)};
 }
-}  // namespace finance::helpers
+}  // namespace finance::converters

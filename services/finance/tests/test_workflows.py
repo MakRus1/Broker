@@ -82,3 +82,50 @@ async def test_standalone_service_can_be_edited_after_creating_its_invoice(api, 
     await api.post('/api/v1/service-charges/save', {
         **body, 'expected_revision': saved['revision'],
     }, expected=409)
+
+@pytest.mark.parametrize('kind', ['invoices', 'payments'])
+@pytest.mark.parametrize('status, expected, code', [
+    (403, 403, 'forbidden_reference'),
+    (404, 404, 'reference_not_found'),
+    (503, 502, 'reference_unavailable'),
+])
+async def test_document_reference_failure_does_not_create_document(
+    api, mockserver, pgsql, invoice_references, kind, status, expected, code,
+):
+    from test_invoices import invoice
+    from test_payments import payment
+
+    body = invoice([]) if kind == 'invoices' else payment()
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def unavailable(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'unavailable', 'message': 'Недоступно'},
+        )
+
+    result = await api.post(f'/api/v1/{kind}/save', body, expected=expected)
+    assert result['error'] == code
+    cursor = pgsql['db_1'].cursor()
+    # Имя таблицы выбирается только из параметров теста выше.
+    cursor.execute(f'SELECT COUNT(*) FROM {kind} WHERE id = %s::UUID', (body['id'],))
+    assert cursor.fetchone()[0] == 0
+
+async def test_service_charge_without_invoice_permission_cannot_change_linked_invoice(
+    api, charge, invoice_references,
+):
+    from test_invoices import saved_entry
+
+    body, saved = await saved_entry(api, charge)
+    document = invoice([saved['id']])
+    before = await api.post('/api/v1/invoices/save', document)
+    roles = [
+        'finance.write_service_charges', 'finance.read_service_charges',
+        'finance.read_invoices', 'shipments.read', 'transportations.read',
+        'contracts.read', 'counterparties.read',
+    ]
+    result = await api.post('/api/v1/service-charges/save', {
+        **body, 'expected_revision': 1, 'price_minor': 50000,
+    }, roles=roles, expected=403)
+    assert result['error'] == 'forbidden'
+    assert await api.post('/api/v1/service-charges/get', {'id': body['id']}) == {'charge': saved}
+    assert await api.post('/api/v1/invoices/get', {'id': document['id']}) == before

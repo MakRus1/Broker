@@ -1,15 +1,11 @@
 #pragma once
+#include <models/conversion_rate.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/utils/datetime/date.hpp>
 
 namespace finance {
-struct Rate {
-    std::int64_t Millionths;
-    userver::utils::datetime::Date Date;
-    std::string Source;
-};
 
 class ExchangeRates final : public userver::components::ComponentBase {
   public:
@@ -17,7 +13,7 @@ class ExchangeRates final : public userver::components::ComponentBase {
     ExchangeRates(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    Rate Get(
+    models::ConversionRate Get(
         const std::string& from, const std::string& to, userver::utils::datetime::Date date) const;
 
   private:

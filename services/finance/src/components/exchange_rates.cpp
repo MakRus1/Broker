@@ -6,6 +6,8 @@
 #include <fmt/chrono.h>
 #include <helpers/exchange_amounts.hpp>
 #include <map>
+#include <models/errors.hpp>
+#include <models/exchange_quote_row.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/http_client.hpp>
 #include <sstream>
@@ -118,7 +120,7 @@ void ExchangeRates::EnsureDay(userver::utils::datetime::Date date) const {
     }
 }
 
-Rate ExchangeRates::Get(
+models::ConversionRate ExchangeRates::Get(
     const std::string& from, const std::string& to, userver::utils::datetime::Date date) const {
     if (!platform::IsCalendarDateInRange(
             date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
@@ -132,8 +134,8 @@ Rate ExchangeRates::Get(
         pg::ClusterHostType::kMaster, sql::kGetExchangeRates, date, std::vector{from, to});
     std::map<std::string, std::pair<std::int64_t, std::int64_t>> quotes;
     for (const auto& row : rows) {
-        const auto [code, value, nominal] = row.As<std::string, std::int64_t, std::int64_t>();
-        quotes.emplace(code, std::pair{value, nominal});
+        const auto quote = row.As<models::ExchangeQuoteRow>(pg::kRowTag);
+        quotes.emplace(quote.Currency, std::pair{quote.Value, quote.Nominal});
     }
     if (!quotes.contains(from) || !quotes.contains(to))
         throw ApiError<503>{"exchange_rate_missing",

@@ -1,18 +1,16 @@
 #pragma once
+#include <finance/sql_queries.hpp>
 #include <helpers/service_charges.hpp>
 #include <models/pg/service_charge_raw.hpp>
+#include <models/service_charge_registry_row.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 #include <userver/utils/text.hpp>
+#include <userver/utils/text_light.hpp>
 
-namespace finance::helpers::service_charge_registry {
+namespace finance::registry_query::service_charges {
+namespace pg = userver::storages::postgres;
 namespace registry = platform::registry;
-
-struct RegistryRow {
-    models::pg::ServiceChargeRaw Charge;
-    std::string TextKey;
-    std::optional<userver::utils::datetime::Date> DateKey;
-};
 
 namespace fields {
 using Date = userver::utils::datetime::Date;
@@ -92,4 +90,4 @@ inline registry::QueryBuilder BuildRegistryFilters(
 
 inline const registry::Definition kRegistry{
     fields::kFields, sql::kServiceChargeRegistryFilterValues, &BuildRegistryFilters};
-}  // namespace finance::helpers::service_charge_registry
+}  // namespace finance::registry_query::service_charges

@@ -1,17 +1,14 @@
 #pragma once
+#include <finance/sql_queries.hpp>
 #include <helpers/invoices.hpp>
+#include <models/payment_registry_row.hpp>
 #include <models/pg/payment_raw.hpp>
 #include <platform/registry.hpp>
 #include <platform/registry_page.hpp>
 
-namespace finance::helpers::payment_registry {
+namespace finance::registry_query::payments {
+namespace pg = userver::storages::postgres;
 namespace registry = platform::registry;
-
-struct RegistryRow {
-    models::pg::PaymentRaw Payment;
-    std::string TextKey;
-    std::optional<userver::utils::datetime::Date> DateKey;
-};
 
 namespace registry_fields {
 
@@ -75,4 +72,4 @@ inline registry::QueryBuilder BuildRegistryFilters(const models::ListPaymentsReq
 inline const registry::Definition kRegistry{
     registry_fields::kFields, sql::kPaymentRegistryFilterValues, &BuildRegistryFilters};
 
-}  // namespace finance::helpers::payment_registry
+}  // namespace finance::registry_query::payments

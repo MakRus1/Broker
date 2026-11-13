@@ -1,7 +1,11 @@
 #include <array>
 #include <components/financial_history.hpp>
-#include <helpers/financial_labels.hpp>
+#include <converters/financial_label.hpp>
+#include <finance/sql_queries.hpp>
 #include <map>
+#include <models/errors.hpp>
+#include <models/financial_history_row.hpp>
+#include <models/invoice_name_row.hpp>
 #include <openapi/models.hpp>
 #include <permissions/permissions.hpp>
 #include <set>
@@ -12,10 +16,11 @@
 #include <userver/storages/postgres/io/chrono.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace finance {
-using namespace helpers;
-
 namespace {
+namespace models = finance::models;
+namespace pg = userver::storages::postgres;
+using finance::ApiError;
+
 using Json = userver::formats::json::Value;
 using Format = models::FinancialHistoryFormat;
 using FieldKey = models::FinancialHistoryField;
@@ -204,16 +209,6 @@ std::optional<Value> PaymentAllocationValue(std::int64_t amount, const Snapshot&
         .value = std::to_string(amount)};
 }
 
-struct HistoryRow {
-    std::string Source;
-    boost::uuids::uuid EntityId;
-    std::int64_t Revision;
-    std::string Actor;
-    pg::TimePointTz OccurredAt;
-    Json Snapshot;
-    std::optional<Json> Previous;
-};
-
 struct HistoryRecord {
     models::FinancialHistoryCursor Cursor;
     std::string Actor;
@@ -314,6 +309,8 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
 
 }  // namespace
 
+namespace finance {
+
 FinancialHistoryComponent::FinancialHistoryComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -325,16 +322,9 @@ userver::yaml_config::Schema FinancialHistoryComponent::GetStaticConfigSchema() 
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::FinancialHistoryResponse FinancialHistoryComponent::Load(
-    const userver::server::request::RequestContext& context,
-    const models::FinancialHistoryRequest& body, models::FinancialHistorySource source) const {
-    const auto& identity = platform::auth::GetIdentity(context);
-    const auto organization = platform::auth::GetOrganization(identity);
-    const auto permission = source == Source::ServiceCharge
-        ? permissions::FINANCE_READ_SERVICE_CHARGES
-        : source == Source::Invoice ? permissions::FINANCE_READ_INVOICES
-                                    : permissions::FINANCE_READ_PAYMENTS;
-    platform::auth::CheckPermission(context, permission);
+models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
+    const std::string& organization, const models::FinancialHistoryRequest& body,
+    models::FinancialHistorySource source, bool related, bool can_read_invoices) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -353,22 +343,18 @@ models::FinancialHistoryResponse FinancialHistoryComponent::Load(
         before_id = before.entity_id;
         before_revision = before.revision;
     }
-    const bool related = source == Source::ServiceCharge
-        ? platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES)
-        : source == Source::Invoice
-        ? platform::auth::HasPermission(context, permissions::FINANCE_READ_PAYMENTS)
-        : true;
+
     const auto query = source == Source::ServiceCharge ? sql::kListServiceChargeHistory
         : source == Source::Invoice                    ? sql::kListInvoiceHistory
                                                        : sql::kListPaymentHistory;
     const auto rows = transaction.Execute(query, organization, body.id, before_time, before_source,
         before_id, before_revision, body.limit + 1, related);
-    const auto stored_rows = rows.AsContainer<std::vector<HistoryRow>>(pg::kRowTag);
+    const auto stored_rows =
+        rows.AsContainer<std::vector<models::FinancialHistoryRow>>(pg::kRowTag);
     std::vector<HistoryRecord> history;
     history.reserve(stored_rows.size());
     std::set<boost::uuids::uuid> invoice_ids;
-    const bool load_invoice_names = source == Source::Payment &&
-        platform::auth::HasPermission(context, permissions::FINANCE_READ_INVOICES);
+    const bool load_invoice_names = source == Source::Payment && can_read_invoices;
     for (const auto& row : stored_rows) {
         const auto event_source = models::ParseEnumScalar(row.Source, Source{});
         HistoryRecord record{.Cursor = {.entity_id = boost::uuids::to_string(row.EntityId),
@@ -394,8 +380,8 @@ models::FinancialHistoryResponse FinancialHistoryComponent::Load(
         const auto names = transaction.Execute(sql::kHistoryInvoiceNames, organization,
             std::vector<boost::uuids::uuid>{invoice_ids.begin(), invoice_ids.end()});
         for (const auto& row : names) {
-            const auto [id, name] = row.As<boost::uuids::uuid, std::string>();
-            invoice_names.emplace(boost::uuids::to_string(id), name);
+            const auto invoice = row.As<models::InvoiceNameRow>(pg::kRowTag);
+            invoice_names.emplace(boost::uuids::to_string(invoice.Id), invoice.Number);
         }
     }
     transaction.Commit();

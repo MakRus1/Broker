@@ -1,10 +1,12 @@
 #pragma once
-#include <clients/contracts/client.hpp>
-#include <clients/counterparties/client.hpp>
+#include <models/invoice_candidates_result.hpp>
+#include <models/invoice_filter_values_result.hpp>
+#include <models/invoice_list_result.hpp>
+#include <models/invoice_print_snapshot.hpp>
 #include <models/pg/invoice_raw.hpp>
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace finance {
@@ -15,50 +17,30 @@ class InvoicesComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    struct ListResult {
-        std::vector<models::InvoiceRegistryItem> items;
-        std::optional<models::InvoiceRegistryCursor> next_cursor;
-    };
-
-    struct CandidatesResult {
-        std::vector<models::ServiceCharge> items;
-        std::optional<std::string> next_after;
-    };
-
-    struct FilterValuesResult {
-        std::vector<models::RegistryField> fields;
-        std::optional<std::string> next_after;
-        std::vector<models::RegistryValue> values;
-    };
-
-    models::InvoicePrintData PrintData(
-        const models::InvoicePrintRequest&, userver::server::request::RequestContext&) const;
-    models::InvoiceDetails Save(
-        const models::SaveInvoiceRequest&, userver::server::request::RequestContext&) const;
-    models::InvoiceDetails Get(
-        const models::GetInvoiceRequest&, userver::server::request::RequestContext&) const;
-    ListResult List(
-        const models::ListInvoicesRequest&, userver::server::request::RequestContext&) const;
-    CandidatesResult Candidates(const models::ListInvoiceCandidatesRequest&,
-        userver::server::request::RequestContext&) const;
-    models::InvoiceDetails AddServiceCharge(const models::AddInvoiceServiceChargeRequest&,
-        userver::server::request::RequestContext&) const;
-    models::InvoiceDetails DetachServiceCharge(const models::DetachInvoiceServiceChargeRequest&,
-        userver::server::request::RequestContext&) const;
-    FilterValuesResult FilterValues(
-        const models::InvoiceFilterValuesRequest&, userver::server::request::RequestContext&) const;
+    models::InvoicePrintSnapshot ReadInvoicePrintSnapshot(
+        const std::string& organization, const models::InvoicePrintRequest& request) const;
+    models::InvoicePrintData SaveInvoicePrintSnapshot(
+        const std::string& organization, const models::InvoicePrintData& data) const;
+    models::InvoiceDetails SaveInvoice(const std::string& organization,
+        const platform::auth::Identity& identity, const models::SaveInvoiceRequest& request,
+        models::pg::InvoiceRaw value) const;
+    models::InvoiceDetails FindInvoice(
+        const std::string& organization, const models::GetInvoiceRequest& request) const;
+    models::InvoiceListResult ListInvoices(
+        const std::string& organization, const models::ListInvoicesRequest& request) const;
+    models::InvoiceCandidatesResult ListServiceChargeCandidates(
+        const std::string& organization, const models::ListInvoiceCandidatesRequest& request) const;
+    models::InvoiceDetails IncludeServiceCharge(const std::string& organization,
+        const platform::auth::Identity& identity,
+        const models::AddInvoiceServiceChargeRequest& request) const;
+    models::InvoiceDetails DetachServiceCharge(const std::string& organization,
+        const platform::auth::Identity& identity,
+        const models::DetachInvoiceServiceChargeRequest& request) const;
+    models::InvoiceFilterValuesResult GetInvoiceFilterValues(
+        const std::string& organization, const models::InvoiceFilterValuesRequest& request) const;
 
   private:
-    models::pg::InvoiceRaw Prepare(
-        const userver::server::request::RequestContext&, const models::SaveInvoiceRequest&) const;
-
-    struct Dependencies {
-        clients::contracts::Client contracts;
-        clients::counterparties::Client counterparties;
-        userver::storages::postgres::ClusterPtr pg_cluster;
-    };
-
-    Dependencies deps_;
+    userver::storages::postgres::ClusterPtr cluster_;
 };
 }  // namespace finance
 

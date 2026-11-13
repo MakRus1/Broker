@@ -1,7 +1,7 @@
 #pragma once
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace organizations {
@@ -11,12 +11,12 @@ class RegistryDefaultsComponent final : public userver::components::ComponentBas
     RegistryDefaultsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::RegistryDefaultsGetResult Get(
-        const models::OrganizationIdentity&, userver::server::request::RequestContext&) const;
-    models::RegistryDefaultsListResult List(
-        const models::OrganizationIdentity&, userver::server::request::RequestContext&) const;
-    models::RegistryDefaultsSaveResult Save(const models::RegistryDefaultsSaveRequest&,
-        userver::server::request::RequestContext&) const;
+    models::RegistryDefaultsGetResult GetOwnRegistryDefaults(
+        const models::OrganizationIdentity&, const platform::auth::Identity&) const;
+    models::RegistryDefaultsListResult ListRoleRegistryDefaults(
+        const models::OrganizationIdentity&, const platform::auth::Identity&) const;
+    models::RegistryDefaultsSaveResult SaveRoleRegistryDefault(
+        const models::RegistryDefaultsSaveRequest&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

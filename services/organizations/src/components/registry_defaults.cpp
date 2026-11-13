@@ -4,22 +4,13 @@
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
 #include <models/pg/organization_role_raw.hpp>
+#include <models/registry_default_row.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace organizations {
-using namespace helpers;
-using converters::Convert;
-using converters::ConvertRows;
-
 namespace {
-std::vector<models::RegistryDefault> RegistryDefaults(const pg::ResultSet& rows) {
-    std::vector<models::RegistryDefault> result;
-    for (const auto& row : rows.AsSetOf<converters::RegistryDefaultRow>(pg::kRowTag))
-        result.push_back(converters::Convert(row));
-    return result;
-}
+using namespace organizations;
 
 void ValidateRegistryDefault(const userver::formats::json::Value& value) {
     if (userver::formats::json::ToString(value).size() > 24 * 1024)
@@ -33,6 +24,9 @@ void ValidateRegistryDefault(const userver::formats::json::Value& value) {
 }
 }  // namespace
 
+namespace organizations {
+using namespace helpers;
+
 RegistryDefaultsComponent::RegistryDefaultsComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -44,54 +38,54 @@ userver::yaml_config::Schema RegistryDefaultsComponent::GetStaticConfigSchema() 
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::RegistryDefaultsGetResult RegistryDefaultsComponent::Get(
-    const models::OrganizationIdentity& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
+models::RegistryDefaultsGetResult RegistryDefaultsComponent::GetOwnRegistryDefaults(
+    const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
     const auto membership = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kResolveAccess,
         identity.Issuer, identity.Subject, request.organization_id);
     if (membership.Size() != 1)
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
+
     return models::RegistryDefaultsGetResult{
-        .items = RegistryDefaults(
+        .items = converters::ConvertRegistryDefaults(
             cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListOwnRegistryDefaults,
                 request.organization_id, identity.Issuer, identity.Subject))};
 }
 
-models::RegistryDefaultsListResult RegistryDefaultsComponent::List(
-    const models::OrganizationIdentity& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
+models::RegistryDefaultsListResult RegistryDefaultsComponent::ListRoleRegistryDefaults(
+    const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     RequireAdministrator(transaction, request.organization_id, identity);
     models::RegistryDefaultsListResult response{
-        .items = RegistryDefaults(
+        .items = converters::ConvertRegistryDefaults(
             transaction.Execute(sql::kListRoleRegistryDefaults, request.organization_id))};
     for (const auto& role : transaction.Execute(sql::kListRoles, request.organization_id)
                                 .AsSetOf<models::pg::OrganizationRoleRaw>())
         response.roles.push_back({.id = role.Id, .name = role.Name});
+
     transaction.Commit();
     return response;
 }
 
-models::RegistryDefaultsSaveResult RegistryDefaultsComponent::Save(
+models::RegistryDefaultsSaveResult RegistryDefaultsComponent::SaveRoleRegistryDefault(
     const models::RegistryDefaultsSaveRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
-    const auto& body = request;
-    ValidateRegistryDefault(body.value);
+    const platform::auth::Identity& identity) const {
+    ValidateRegistryDefault(request.value);
+
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    RequireAdministrator(transaction, body.organization_id, identity);
-    RequireRole(transaction, body.organization_id, body.role);
+    RequireAdministrator(transaction, request.organization_id, identity);
+    RequireRole(transaction, request.organization_id, request.role);
     const auto rows =
-        transaction.Execute(body.expected_revision == 0 ? sql::kSaveRoleRegistryDefault
-                                                        : sql::kUpdateRoleRegistryDefault,
-            body.organization_id, body.role, body.registry, body.value, body.expected_revision);
+        transaction.Execute(request.expected_revision == 0 ? sql::kSaveRoleRegistryDefault
+                                                           : sql::kUpdateRoleRegistryDefault,
+            request.organization_id, request.role, request.registry, request.value,
+            request.expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"registry_default_changed", "Вид роли уже изменён. Обновите данные"};
     const auto item =
-        converters::Convert(rows.AsSingleRow<converters::RegistryDefaultRow>(pg::kRowTag));
-    WriteAudit(transaction, body.organization_id, identity, "role.registry_default.updated", item);
+        converters::Convert(rows.AsSingleRow<models::RegistryDefaultRow>(pg::kRowTag));
+    WriteAudit(
+        transaction, request.organization_id, identity, "role.registry_default.updated", item);
+
     transaction.Commit();
     return models::RegistryDefaultsSaveResult{.item = item};
 }

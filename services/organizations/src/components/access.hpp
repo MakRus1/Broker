@@ -1,7 +1,7 @@
 #pragma once
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace organizations {
@@ -11,21 +11,21 @@ class AccessComponent final : public userver::components::ComponentBase {
     AccessComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::OrganizationIdentity Membership(
-        const models::OrganizationIdentity&, userver::server::request::RequestContext&) const;
-    models::OrganizationAccess ResolveOrganization(const models::AccessResolveOrganizationRequest&,
-        userver::server::request::RequestContext&) const;
-    models::AccessMineResult Mine(userver::server::request::RequestContext&) const;
-    models::PlatformAccessResult GetPlatform(
-        const models::AccessGetPlatformRequest&, userver::server::request::RequestContext&) const;
-    models::PlatformAccessResult UpdatePlatform(const models::AccessUpdatePlatformRequest&,
-        userver::server::request::RequestContext&) const;
-    models::PlatformAccess ResolvePlatform(const models::AccessResolvePlatformRequest&,
-        userver::server::request::RequestContext&) const;
-    models::AccessEmployeesResult Employees(
-        const models::AccessEmployeesRequest&, userver::server::request::RequestContext&) const;
+    models::OrganizationIdentity CheckMembership(
+        const models::OrganizationIdentity&, const platform::auth::Identity&) const;
+    models::OrganizationAccess ResolveOrganizationAccess(
+        const models::AccessResolveOrganizationRequest&, const platform::auth::Identity&) const;
+    models::AccessMineResult FindMyOrganizations(const platform::auth::Identity&) const;
+    models::PlatformAccessResult GetPlatformAccess(
+        const models::AccessGetPlatformRequest&, const platform::auth::Identity&) const;
+    models::PlatformAccessResult UpdatePlatformAccess(
+        const models::AccessUpdatePlatformRequest&, const platform::auth::Identity&) const;
+    models::PlatformAccess ResolvePlatformAccess(
+        const models::AccessResolvePlatformRequest&, const platform::auth::Identity&) const;
+    models::AccessEmployeesResult ListEmployees(
+        const models::AccessEmployeesRequest&, const platform::auth::Identity&) const;
     models::OrganizationIdentity CheckAdministrator(
-        const models::OrganizationIdentity&, userver::server::request::RequestContext&) const;
+        const models::OrganizationIdentity&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

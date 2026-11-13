@@ -14,12 +14,9 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace organizations {
-using namespace helpers;
-using converters::Convert;
-using converters::ConvertRows;
-
 namespace {
+using namespace organizations;
+
 void ValidatePermissionRelease(const std::string& owner, const std::string& version) {
     static const std::regex owner_pattern{"[a-z][a-z0-9_]*"};
     if (!std::regex_match(owner, owner_pattern) || version.empty() ||
@@ -43,6 +40,9 @@ void RequirePermissionReleases(userver::storages::postgres::Transaction& tx,
 }
 }  // namespace
 
+namespace organizations {
+using namespace helpers;
+
 PermissionReleasesComponent::PermissionReleasesComponent(
     const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -54,9 +54,8 @@ userver::yaml_config::Schema PermissionReleasesComponent::GetStaticConfigSchema(
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::PermissionReleaseResult PermissionReleasesComponent::Upsert(
-    const models::PermissionReleasesUpsertRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::PermissionReleaseResult PermissionReleasesComponent::RegisterPermissionRelease(
+    const models::PermissionReleasesUpsertRequest& request) const {
     namespace pg = userver::storages::postgres;
     ValidatePermissionRelease(request.owner, request.version);
     static const std::regex code_pattern{"[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*"};
@@ -75,9 +74,11 @@ models::PermissionReleaseResult PermissionReleasesComponent::Upsert(
                 throw ApiError<400>{
                     "invalid_permission_dependencies", "Некорректные зависимости права"};
     }
+
     std::map<std::string, const models::ReleasePermission*> catalog;
     for (const auto& entry : request.entries)
         catalog.emplace(entry.code, &entry);
+
     std::set<std::string> visiting;
     std::set<std::string> visited;
     const std::function<void(const std::string&)> visit = [&](const std::string& code) {
@@ -102,8 +103,10 @@ models::PermissionReleaseResult PermissionReleasesComponent::Upsert(
         visiting.erase(code);
         visited.insert(code);
     };
+
     for (const auto& [code, entry] : catalog)
         visit(code);
+
     const auto entries = converters::Convert(request.entries);
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kLockPermissionReleases);
@@ -114,30 +117,31 @@ models::PermissionReleaseResult PermissionReleasesComponent::Upsert(
             "permission_release_changed", "Каталог зарегистрированной версии нельзя изменить"};
     tx.Execute(sql::kRegisterPermissionRelease, request.owner, request.version, entries);
     tx.Commit();
+
     return models::PermissionReleaseResult{.success = true};
 }
 
-models::PermissionReleaseResult PermissionReleasesComponent::Activate(
-    const models::PermissionReleasesActivateRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::PermissionReleaseResult PermissionReleasesComponent::ActivatePermissionRelease(
+    const models::PermissionReleasesActivateRequest& request) const {
     namespace pg = userver::storages::postgres;
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kLockPermissionReleases);
     RequirePermissionReleases(tx, request.owner, std::vector<std::string>{request.version});
     tx.Execute(sql::kActivatePermissionRelease, request.owner, request.version);
     tx.Commit();
+
     return models::PermissionReleaseResult{.success = true};
 }
 
-models::PermissionReleaseResult PermissionReleasesComponent::Reconcile(
-    const models::PermissionReleasesReconcileRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::PermissionReleaseResult PermissionReleasesComponent::ReconcilePermissionReleases(
+    const models::PermissionReleasesReconcileRequest& request) const {
     namespace pg = userver::storages::postgres;
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kLockPermissionReleases);
     RequirePermissionReleases(tx, request.owner, request.versions);
     tx.Execute(sql::kReconcilePermissionReleases, request.owner, request.versions);
     tx.Commit();
+
     return models::PermissionReleaseResult{.success = true};
 }
 }  // namespace organizations

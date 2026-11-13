@@ -1,7 +1,7 @@
 #pragma once
 #include <openapi/models.hpp>
+#include <platform/auth/identity.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace organizations {
@@ -11,12 +11,12 @@ class RolesComponent final : public userver::components::ComponentBase {
     RolesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::RolesListResult List(
-        const models::OrganizationIdentity&, userver::server::request::RequestContext&) const;
-    models::OrganizationRoleResult Create(
-        const models::RolesCreateRequest&, userver::server::request::RequestContext&) const;
-    models::OrganizationRoleResult Update(
-        const models::RolesUpdateRequest&, userver::server::request::RequestContext&) const;
+    models::RolesListResult ListRoles(
+        const models::OrganizationIdentity&, const platform::auth::Identity&) const;
+    models::OrganizationRoleResult CreateRole(
+        const models::RolesCreateRequest&, const platform::auth::Identity&) const;
+    models::OrganizationRoleResult UpdateRole(
+        const models::RolesUpdateRequest&, const platform::auth::Identity&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

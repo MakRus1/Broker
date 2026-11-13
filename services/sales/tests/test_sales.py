@@ -337,3 +337,58 @@ async def test_work_filters_and_contact_presence_are_composable(api):
     facet = await api.post('/api/v1/sales/cards/filter-values', {
         'registry': {'filters': [no_contacts]}, 'field': 'manager_subject'})
     assert [value['value'] for value in facet['values']] == ['author']
+
+
+@pytest.mark.parametrize('status, expected_status, code', [
+    (403, 403, 'reference_forbidden'),
+    (404, 404, 'reference_not_found'),
+    (503, 502, 'reference_unavailable'),
+])
+async def test_creation_reference_failure_keeps_inquiry_editable(
+        api, mockserver, status, expected_status, code):
+    value = inquiry()
+    await api.post('/api/v1/sales/inquiries/save', value)
+    value.update(status='agreed', expected_revision=1)
+    await api.post('/api/v1/sales/inquiries/save', value)
+
+    @mockserver.handler('/api/v1/counterparties/get')
+    def unavailable_customer(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'unavailable', 'message': 'Customer unavailable'})
+
+    response = await api.post('/api/v1/sales/inquiries/create-shipment',
+                             {'id': value['id'], 'expected_revision': 2}, expected=expected_status)
+    assert response['error'] == code
+    current = (await api.post('/api/v1/sales/inquiries/get', {'id': value['id']}))['item']
+    assert not current['converting']
+    assert not current.get('shipment_id')
+    assert current['revision'] == 2
+
+
+async def test_creation_checks_customer_logist_before_queuing(api, mockserver):
+    value = inquiry()
+    await api.post('/api/v1/sales/inquiries/save', value)
+    value.update(status='agreed', expected_revision=1)
+    await api.post('/api/v1/sales/inquiries/save', value)
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def customer_with_logist(request):
+        return {'counterparty': {
+            'id': CUSTOMER, 'name': 'Customer', 'revision': 1, 'archived': False,
+            'roles': [], 'own_company': False, 'contacts': [], 'logist': 'inactive-logist',
+            'legal_name': None, 'country_code': 'RU', 'tax_id': None,
+            'registration_id': None, 'legal_address': None,
+        }}
+
+    @mockserver.json_handler('/api/organizations/employees/list')
+    def inactive_logist(request):
+        assert request.json['subject'] == 'inactive-logist'
+        assert request.json['organization_id'] == ORG
+        return {'items': []}
+
+    response = await api.post('/api/v1/sales/inquiries/create-shipment',
+                             {'id': value['id'], 'expected_revision': 2}, expected=400)
+    assert response['error'] == 'invalid_logist'
+    current = (await api.post('/api/v1/sales/inquiries/get', {'id': value['id']}))['item']
+    assert not current['converting']
+    assert current['revision'] == 2

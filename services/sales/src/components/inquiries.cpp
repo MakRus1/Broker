@@ -1,10 +1,13 @@
 #include <components/inquiries.hpp>
+#include <components/shipment_route.hpp>
 #include <converters/shipment_command.hpp>
+#include <converters/transport_location.hpp>
 #include <events/shipment_command.hpp>
 #include <helpers/settings.hpp>
 #include <models/errors.hpp>
 #include <models/number_allocation.hpp>
 #include <platform/document_number.hpp>
+#include <platform/http_client.hpp>
 #include <platform/outbox/component.hpp>
 #include <sales/sql_queries.hpp>
 #include <userver/components/component_context.hpp>
@@ -22,8 +25,11 @@ namespace json = userver::formats::json;
 InquiriesComponent::InquiriesComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
-      cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
+      cluster_(context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()),
+      counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
+      organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
+      transport_locations_(
+          context.FindComponent<clients::transport_locations::Component>().GetClient()) {}
 
 userver::yaml_config::Schema InquiriesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -110,6 +116,60 @@ std::vector<models::InquiryHistoryEntry> InquiriesComponent::GetInquiryHistory(
             models::ParseModelJson(row, std::type_identity<models::InquiryHistoryEntry>{}));
 
     return response;
+}
+
+models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
+    const std::string& organization, std::string_view token, const models::Inquiry& inquiry) const
+    try {
+    const auto party =
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+            .counterparty;
+    if (party.archived)
+        throw ApiError<409>{"archived_customer", "Клиент находится в архиве"};
+    models::ShipmentCreationContext creation{.InquiryRevision = inquiry.revision,
+        .Logist = party.logist.value_or(std::nullopt),
+        .RouteSegments = inquiry.route_segments};
+    if (creation.Logist) {
+        const auto employees = organizations_.ApiOrganizationsEmployeesList(
+            {.body = {.limit = 1, .organization_id = organization, .subject = creation.Logist}},
+            token);
+        if (employees.items.empty())
+            throw ApiError<400>{
+                "invalid_logist", "В карточке клиента назначен недействующий логист"};
+    }
+
+    const auto references = route_rules::CollectReferences(creation.RouteSegments);
+    models::TransportLocations locations;
+    if (!references.LocationIds.empty()) {
+        const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
+            {.body = {.ids = {references.LocationIds.begin(), references.LocationIds.end()}}},
+            token);
+        for (const auto& location : response.items)
+            locations.emplace(location.id, converters::ToTransportLocation(location));
+    }
+    route_rules::ResolveLocations(creation.RouteSegments, locations);
+    for (const auto& id : references.CounterpartyIds) {
+        const auto counterparty =
+            counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, token).counterparty;
+        if (counterparty.archived)
+            throw ApiError<400>{
+                "invalid_route_counterparty", "Выберите действующего контрагента участка"};
+    }
+
+    return creation;
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к связанным данным"};
+} catch (const platform::http::ErrorByStatus<404>&) {
+    throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"reference_unavailable", "Не удалось получить связанные данные"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 
 models::Inquiry InquiriesComponent::StartShipmentCreation(const std::string& organization,

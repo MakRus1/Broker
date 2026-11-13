@@ -1,13 +1,10 @@
-#include <algorithm>
-#include <cctype>
 #include <components/bank_accounts.hpp>
 #include <converters/bank_accounts.hpp>
 #include <helpers/audit.hpp>
-#include <helpers/normalization.hpp>
+#include <helpers/bank_account_validation.hpp>
 #include <limits>
 #include <models/pg/bank_account_raw.hpp>
 #include <models/pg/counterparty_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -15,36 +12,9 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace counterparties {
-using namespace helpers;
+namespace pg = userver::storages::postgres;
 using converters::Convert;
-
-namespace {
-void NormalizeAndValidate(models::BankAccount& value) {
-    value.name = userver::utils::text::Trim(value.name);
-    value.bank_name = userver::utils::text::Trim(value.bank_name);
-    value.number = userver::utils::text::Trim(value.number);
-    auto uppercase = [](std::string& text) {
-        std::transform(text.begin(), text.end(), text.begin(),
-            [](unsigned char c) { return std::toupper(c); });
-    };
-    std::erase(value.number, ' ');
-    uppercase(value.number);
-    uppercase(value.currency);
-    for (auto* field : {&value.bic, &value.swift, &value.correspondent_account, &value.iban})
-        field->emplace(Normalize(field->value_or(std::nullopt)));
-    if (value.swift.value().has_value())
-        uppercase(value.swift.value().value());
-    if (value.iban.value().has_value()) {
-        auto& iban = value.iban.value().value();
-        std::erase(iban, ' ');
-        uppercase(iban);
-    }
-    if (value.name.empty() || value.number.empty() || value.bank_name.empty())
-        throw ApiError<400>{"empty_bank_requisites", "Укажите название счёта, номер и банк"};
-    if (value.archived && value.is_primary)
-        throw ApiError<400>{"archived_primary", "Архивный счёт не может быть основным"};
-}
-}  // namespace
+using helpers::WriteAudit;
 
 BankAccountsComponent::BankAccountsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
@@ -56,16 +26,14 @@ userver::yaml_config::Schema BankAccountsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::BankAccount BankAccountsComponent::SaveBankAccount(const std::string& organization,
+    const platform::auth::Identity& identity, const models::SaveBankAccountRequest& request) const {
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_WRITE_BANK_ACCOUNTS);
-        const auto organization = platform::auth::GetOrganization(identity);
         if (request.expected_revision == std::numeric_limits<std::int64_t>::max())
             throw ApiError<400>{"invalid_revision", "Некорректная редакция счёта"};
         auto value = Convert(request);
-        NormalizeAndValidate(value);
+        helpers::NormalizeAndValidateBankAccount(value);
+
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         // Владелец сериализует изменения своих счетов и архивирование карточки.
         const auto owner =
@@ -92,6 +60,7 @@ models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountReq
                 throw ApiError<409>{
                     "account_limit", "У юридического лица уже 100 банковских счетов"};
         }
+
         const auto saved = transaction.Execute(
             previous.has_value() ? sql::kUpdateBankAccount : sql::kCreateBankAccount, organization,
             Convert(value));
@@ -101,6 +70,7 @@ models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountReq
         WriteAudit(transaction, organization, identity, "save_bank_account", result.id, request,
             result, previous);
         transaction.Commit();
+
         return result;
     } catch (const userver::storages::postgres::UniqueViolation&) {
         throw ApiError<409>{
@@ -108,16 +78,13 @@ models::BankAccount BankAccountsComponent::Save(const models::SaveBankAccountReq
     }
 }
 
-std::vector<models::BankAccount> BankAccountsComponent::List(
-    const models::ListBankAccountsRequest& request,
-    userver::server::request::RequestContext& context) const {
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::COUNTERPARTIES_READ_BANK_ACCOUNTS);
-    const auto organization = platform::auth::GetOrganization(identity);
+std::vector<models::BankAccount> BankAccountsComponent::ListBankAccounts(
+    const std::string& organization, const models::ListBankAccountsRequest& request) const {
     const auto owner = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.counterparty_id);
     if (owner.IsEmpty())
         throw ApiError<404>{"not_found", "Юридическое лицо не найдено"};
+
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListBankAccounts,
         organization, request.counterparty_id);
     std::vector<models::BankAccount> items;

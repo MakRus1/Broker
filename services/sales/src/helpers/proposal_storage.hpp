@@ -1,10 +1,9 @@
 #pragma once
 #include <models/errors.hpp>
 #include <openapi/models.hpp>
-#include <sales/sql_queries.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/storages/postgres/transaction.hpp>
+#include <userver/storages/postgres/result_set.hpp>
 
 namespace sales::helpers {
 namespace pg = userver::storages::postgres;

@@ -9,6 +9,19 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
+namespace {
+void ValidateContact(const std::string& result, const std::optional<std::string>& next_action,
+    const std::optional<userver::utils::datetime::Date>& next_action_date) {
+    if (result.find_first_not_of(" \t\r\n") == std::string::npos ||
+        (next_action && next_action->find_first_not_of(" \t\r\n") == std::string::npos))
+        throw sales::ApiError<400>{
+            "empty_contact", "Укажите результат общения и непустое следующее действие"};
+    if (next_action.has_value() != next_action_date.has_value())
+        throw sales::ApiError<400>{
+            "invalid_next_action", "Укажите следующее действие вместе со сроком"};
+}
+}  // namespace
+
 namespace sales {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
@@ -26,13 +39,7 @@ userver::yaml_config::Schema ContactsComponent::GetStaticConfigSchema() {
 models::ContactAddition ContactsComponent::AddContact(const std::string& organization,
     const platform::auth::Identity& identity, const models::AddSalesContactRequest& request) const {
     const auto& body = request;
-    if (body.result.find_first_not_of(" \t\r\n") == std::string::npos ||
-        (body.next_action.has_value() &&
-            body.next_action->find_first_not_of(" \t\r\n") == std::string::npos))
-        throw ApiError<400>{
-            "empty_contact", "Укажите результат общения и непустое следующее действие"};
-    if (body.next_action.has_value() != body.next_action_date.has_value())
-        throw ApiError<400>{"invalid_next_action", "Укажите следующее действие вместе со сроком"};
+    ValidateContact(body.result, body.next_action, body.next_action_date);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto locked = transaction.Execute(sql::kLockCards, organization, body.card_id);
@@ -104,12 +111,7 @@ models::SalesContact ContactsComponent::UpdateContact(const std::string& organiz
     const platform::auth::Identity& identity,
     const models::UpdateSalesContactRequest& request) const {
     const auto& body = request;
-    if (body.result.find_first_not_of(" \t\r\n") == std::string::npos ||
-        (body.next_action && body.next_action->find_first_not_of(" \t\r\n") == std::string::npos))
-        throw ApiError<400>{
-            "empty_contact", "Укажите непустой результат общения и следующее действие"};
-    if (body.next_action.has_value() != body.next_action_date.has_value())
-        throw ApiError<400>{"invalid_next_action", "Укажите следующее действие вместе со сроком"};
+    ValidateContact(body.result, body.next_action, body.next_action_date);
 
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kLockCards, organization, body.card_id);

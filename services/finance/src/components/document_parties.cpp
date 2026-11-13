@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <components/document_parties.hpp>
+#include <converters/invoice_print.hpp>
 #include <helpers/document_parties.hpp>
 #include <models/errors.hpp>
 #include <platform/http_client.hpp>
@@ -73,5 +74,48 @@ models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
         throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
     }
     return result;
+}
+
+models::InvoicePrintData DocumentPartiesComponent::PrepareInvoicePrintData(
+    std::string_view token, const models::InvoiceDetails& details) const {
+    models::InvoicePrintData data;
+    data.invoice = details.invoice;
+    data.charges = details.charges;
+
+    try {
+        data.supplier = converters::ConvertPrintParty(
+            counterparties_
+                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.own_company_id}}, token)
+                .counterparty);
+        data.customer = converters::ConvertPrintParty(
+            counterparties_
+                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.counterparty_id}}, token)
+                .counterparty);
+        if (data.invoice.own_bank_account_id.has_value()) {
+            const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
+                {.body = {.counterparty_id = data.invoice.own_company_id}}, token);
+            const auto found = std::find_if(
+                accounts.items.begin(), accounts.items.end(), [&](const auto& account) {
+                    return helpers::SameId(account.id, data.invoice.own_bank_account_id.value());
+                });
+            if (found == accounts.items.end() || found->currency != data.invoice.currency)
+                throw ApiError<409>{"invalid_print_account",
+                    "Банковские реквизиты счёта недоступны или имеют другую валюту"};
+            data.supplier_bank = converters::ConvertPrintBank(*found);
+        }
+    } catch (const platform::http::ErrorByStatus<403>&) {
+        throw ApiError<403>{"forbidden_reference", "Нет доступа к реквизитам для печатной формы"};
+    } catch (const platform::http::ErrorByStatus<404>&) {
+        throw ApiError<404>{"reference_not_found", "Реквизиты для печатной формы не найдены"};
+    } catch (const platform::http::ApiError&) {
+        throw ApiError<502>{"reference_unavailable", "Не удалось получить реквизиты счёта"};
+    } catch (const platform::http::CancelledError&) {
+        throw;
+    } catch (const platform::http::TransportError&) {
+        throw ApiError<502>{"reference_unavailable", "Сервис реквизитов недоступен"};
+    } catch (const platform::http::ContractError&) {
+        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса реквизитов"};
+    }
+    return data;
 }
 }  // namespace finance

@@ -3,6 +3,7 @@
 #include <clients/counterparties/client.hpp>
 #include <models/document_parties.hpp>
 #include <models/document_parties_input.hpp>
+#include <openapi/models.hpp>
 #include <string_view>
 #include <userver/components/component_base.hpp>
 
@@ -16,6 +17,9 @@ class DocumentPartiesComponent final : public userver::components::ComponentBase
 
     models::DocumentParties ResolveDocumentParties(
         std::string_view access_token, const models::DocumentPartiesInput& input) const;
+
+    models::InvoicePrintData PrepareInvoicePrintData(
+        std::string_view access_token, const models::InvoiceDetails& details) const;
 
   private:
     clients::counterparties::Client counterparties_;

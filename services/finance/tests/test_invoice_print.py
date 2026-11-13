@@ -87,3 +87,43 @@ async def test_revision_change_during_reference_lookup_does_not_save_snapshot(ap
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT COUNT(*) FROM invoice_print_snapshots WHERE invoice_id = %s::UUID', (body['id'],))
         assert cursor.fetchone()[0] == 0
+
+
+async def test_print_allows_archived_parties_of_existing_invoice(api, invoice_references, mockserver):
+    body = invoice([])
+    await api.post(BASE + 'save', body)
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def archived_party(request):
+        return {'counterparty': {
+            'id': request.json['id'], 'name': 'Archived company', 'revision': 2,
+            'own_company': True, 'archived': True, 'country_code': None, 'tax_id': None,
+            'registration_id': None, 'legal_name': None, 'legal_address': None,
+            'roles': [], 'contacts': [],
+        }}
+
+    printed = await api.post(BASE + 'print-data', dict(id=body['id'], revision=1))
+    assert printed['supplier']['name'] == 'Archived company'
+    assert printed['customer']['name'] == 'Archived company'
+
+
+@pytest.mark.parametrize('status, code', [
+    (403, 'forbidden_reference'),
+    (404, 'reference_not_found'),
+])
+async def test_print_reference_error_does_not_cache_snapshot(
+        api, invoice_references, mockserver, pgsql, status, code):
+    body = invoice([])
+    await api.post(BASE + 'save', body)
+
+    @mockserver.handler('/api/v1/counterparties/get')
+    def unavailable_party(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'unavailable', 'message': 'Party unavailable'})
+
+    response = await api.post(BASE + 'print-data', dict(id=body['id'], revision=1), expected=status)
+    assert response['error'] == code
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT COUNT(*) FROM invoice_print_snapshots WHERE invoice_id = %s::UUID',
+                       (body['id'],))
+        assert cursor.fetchone()[0] == 0

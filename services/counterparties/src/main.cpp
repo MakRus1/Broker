@@ -12,6 +12,7 @@
 #include <bootstrap/ping.hpp>
 #include <components/bank_accounts.hpp>
 #include <components/counterparties.hpp>
+#include <components/counterparty_registry.hpp>
 #include <components/dadata.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
@@ -67,6 +68,7 @@ int main(int argc, char* argv[]) {
     // SERVICE_REGISTRATION_END
 
     component_list.Append<counterparties::CounterpartiesComponent>();
+    component_list.Append<counterparties::CounterpartyRegistry>();
     component_list.Append<counterparties::BankAccountsComponent>();
     component_list = counterparties::openapi::AppendGeneratedHandlers(component_list);
 

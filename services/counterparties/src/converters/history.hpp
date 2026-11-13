@@ -1,6 +1,7 @@
 #pragma once
 #include <converters/counterparties.hpp>
 #include <models/pg/counterparty_event.hpp>
+#include <userver/formats/parse/common_containers.hpp>
 
 namespace counterparties::converters {
 inline models::CounterpartySnapshot ReadSnapshot(const userver::formats::json::Value& document) {

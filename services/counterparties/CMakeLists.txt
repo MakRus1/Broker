@@ -7,6 +7,9 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/bootstrap/ping.cpp
     src/components/dadata.cpp
+    src/components/counterparty_registry.cpp
+    src/helpers/counterparty_validation.cpp
+    src/helpers/bank_account_validation.cpp
     src/components/counterparties.cpp
     src/components/bank_accounts.cpp
     ${OPENAPI_GEN_SRCS}

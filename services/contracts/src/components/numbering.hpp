@@ -1,8 +1,8 @@
 #pragma once
 #include <clients/organizations/client.hpp>
 #include <openapi/models.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace contracts {
@@ -12,14 +12,11 @@ class NumberingComponent final : public userver::components::ComponentBase {
     NumberingComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::ContractNumbering Get(
-        const std::string& organization, userver::server::request::RequestContext&) const;
-    models::ContractNumbering Update(const models::UpdateContractNumberingRequest&,
-        userver::server::request::RequestContext&) const;
+    void RequireAdministrator(const std::string& organization, std::string_view access_token) const;
+    models::ContractNumbering GetNumbering(const std::string& organization) const;
+    models::ContractNumbering SaveNumbering(const models::UpdateContractNumberingRequest&) const;
 
   private:
-    void RequireAdministrator(
-        const userver::server::request::RequestContext&, const std::string&) const;
     clients::organizations::Client organizations_;
     userver::storages::postgres::ClusterPtr cluster_;
 };

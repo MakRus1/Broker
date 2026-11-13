@@ -28,3 +28,15 @@ async def test_contract_numbering_masks_and_concurrency(api,directory,administra
     await api.post(base+'update',{**rules,'expected_revision':1,'number_template':'{bad}'},expected=400)
     administrator['allowed']=False
     await api.post(base+'get',{'organization_id':ORGANIZATION},expected=403)
+
+
+async def test_numbering_update_checks_administrator_before_writing(api, administrator, pgsql):
+    administrator['allowed'] = False
+    await api.post('/api/admin/contracts/numbering/update', {
+        'organization_id': ORGANIZATION, 'number_template': 'X-{sequence}',
+        'reset_number_yearly': False, 'expected_revision': 0,
+    }, expected=403)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT COUNT(*) FROM contract_numbering WHERE organization_id = %s::UUID',
+                       (ORGANIZATION,))
+        assert cursor.fetchone()[0] == 0

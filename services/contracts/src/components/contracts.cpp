@@ -5,9 +5,9 @@
 #include <converters/contracts.hpp>
 #include <helpers/numbering.hpp>
 #include <limits>
+#include <models/contract_registry_row.hpp>
 #include <models/errors.hpp>
 #include <models/pg/contract_raw.hpp>
-#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/document_number.hpp>
@@ -20,11 +20,15 @@
 #include <userver/utils/text_light.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
-namespace contracts {
-namespace pg = userver::storages::postgres;
-using helpers::ReadNumbering;
-
 namespace {
+namespace models = contracts::models;
+namespace pg = userver::storages::postgres;
+namespace sql = contracts::sql;
+namespace registry = contracts::registry;
+namespace registry_fields = contracts::registry_fields;
+using contracts::ApiError;
+using contracts::helpers::ReadNumbering;
+
 void NormalizeAndValidate(models::SaveContractRequest& value) {
     if (value.expected_revision == std::numeric_limits<std::int64_t>::max())
         throw ApiError<400>{"invalid_revision", "Некорректная редакция договора"};
@@ -40,10 +44,12 @@ void NormalizeAndValidate(models::SaveContractRequest& value) {
     if (value.valid_until.has_value() && value.valid_until.value() < value.contract_date)
         throw ApiError<400>{
             "invalid_valid_until", "Срок действия не может быть раньше даты договора"};
+
     const auto own = boost::uuids::string_generator{}(value.own_company_id);
     const auto counterparty = boost::uuids::string_generator{}(value.counterparty_id);
     if (own == counterparty)
         throw ApiError<400>{"same_parties", "Выберите разные стороны договора"};
+
     value.number = number;
     if (value.note.has_value()) {
         value.note = userver::utils::text::Trim(value.note.value());
@@ -51,12 +57,6 @@ void NormalizeAndValidate(models::SaveContractRequest& value) {
             value.note.reset();
     }
 }
-
-struct RegistryRow {
-    models::pg::ContractRaw Contract;
-    std::string TextKey;
-    std::optional<userver::utils::datetime::Date> DateKey;
-};
 
 registry::QueryBuilder BuildRegistryFilters(const models::ListContractsRequest& request,
     const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
@@ -86,6 +86,9 @@ std::string GenerateContractNumber(pg::Transaction& transaction, const std::stri
 }
 }  // namespace
 
+namespace contracts {
+namespace pg = userver::storages::postgres;
+
 ContractsComponent::ContractsComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
@@ -98,9 +101,8 @@ userver::yaml_config::Schema ContractsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-void ContractsComponent::ValidateParties(const userver::server::request::RequestContext& context,
-    const models::SaveContractRequest& value) const {
-    const auto token = platform::auth::GetAccessToken(context);
+void ContractsComponent::ValidateParties(
+    std::string_view token, const models::SaveContractRequest& value) const {
     try {
         for (const auto& id : {value.own_company_id, value.counterparty_id}) {
             const auto party =
@@ -142,12 +144,8 @@ void ContractsComponent::ValidateParties(const userver::server::request::Request
     }
 }
 
-models::Contract ContractsComponent::Get(
-    const std::string& id, userver::server::request::RequestContext& context) const {
-
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::CONTRACTS_READ);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::Contract ContractsComponent::FindContract(
+    const std::string& organization, const std::string& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())
@@ -155,37 +153,41 @@ models::Contract ContractsComponent::Get(
     return converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
 }
 
-models::Contract ContractsComponent::Save(const models::SaveContractRequest& request,
-    userver::server::request::RequestContext& context) const {
-
-    const auto& identity = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::CONTRACTS_WRITE);
-    const auto organization = platform::auth::GetOrganization(identity);
+models::pg::ContractRaw ContractsComponent::PrepareContract(
+    std::string_view token, const models::SaveContractRequest& request) const {
     auto normalized = request;
     NormalizeAndValidate(normalized);
     auto value = converters::Convert(normalized);
-    ValidateParties(context, request);
+
+    ValidateParties(token, request);
+
+    return value;
+}
+
+models::Contract ContractsComponent::SaveContract(const std::string& organization,
+    const platform::auth::Identity& identity, std::int64_t expected_revision,
+    models::pg::ContractRaw value) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     if (value.Number.empty())
         value.Number = GenerateContractNumber(transaction, organization, value.ContractDate);
-    const auto rows = request.expected_revision == 0
+
+    const auto rows = expected_revision == 0
         ? transaction.Execute(sql::kCreateContract, organization, value)
-        : transaction.Execute(sql::kUpdateContract, organization, value, request.expected_revision);
+        : transaction.Execute(sql::kUpdateContract, organization, value, expected_revision);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Договор изменён. Обновите карточку"};
     const auto result = converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
+
     transaction.Execute(sql::kWriteHistory, organization, result.id, result.revision,
         identity.ActorId(), userver::formats::json::ValueBuilder(result).ExtractValue());
     transaction.Commit();
+
     return result;
 }
 
-ContractsComponent::ListResult ContractsComponent::List(const models::ListContractsRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::ContractListResult ContractsComponent::ListContracts(
+    const std::string& organization, const models::ListContractsRequest& request) const {
     try {
-        const auto& identity = platform::auth::GetIdentity(context);
-        platform::auth::CheckPermission(context, permissions::CONTRACTS_READ);
-        const auto organization = platform::auth::GetOrganization(identity);
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
@@ -197,6 +199,7 @@ ContractsComponent::ListResult ContractsComponent::List(const models::ListContra
                 throw ApiError<400>{
                     "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
         }
+
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
@@ -204,7 +207,7 @@ ContractsComponent::ListResult ContractsComponent::List(const models::ListContra
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
-                        .AsContainer<std::vector<RegistryRow>>(pg::kRowTag);
+                        .AsContainer<std::vector<models::ContractRegistryRow>>(pg::kRowTag);
         const bool more = rows.size() > static_cast<std::size_t>(body.limit);
         if (more)
             rows.pop_back();
@@ -218,23 +221,21 @@ ContractsComponent::ListResult ContractsComponent::List(const models::ListContra
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
         transaction.Commit();
+
         std::vector<models::Contract> items;
         items.reserve(rows.size());
         for (const auto& row : rows)
             items.push_back(converters::Convert(row.Contract));
-        return ListResult{.items = std::move(items), .next_cursor = cursor};
+        return models::ContractListResult{.items = std::move(items), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};
     }
 }
 
-ContractsComponent::FilterValuesResult ContractsComponent::FilterValues(
-    const models::ContractFilterValuesRequest& request,
-    userver::server::request::RequestContext& context) const {
+models::ContractFilterValuesResult ContractsComponent::GetContractFilterValues(
+    const std::string& organization, const models::ContractFilterValuesRequest& request) const {
     try {
-        const auto organization =
-            platform::auth::GetOrganization(platform::auth::GetIdentity(context));
-        FilterValuesResult result;
+        models::ContractFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);
         if (!request.field.has_value())
             return result;

@@ -9,6 +9,6 @@ inline models::ContractNumbering ReadNumbering(const userver::storages::postgres
             .number_template = "Д-{sequence}/{yyyy}", .reset_number_yearly = false, .revision = 0};
 
     return converters::Convert(
-        rows.AsSingleRow<converters::NumberingRow>(userver::storages::postgres::kRowTag));
+        rows.AsSingleRow<models::NumberingRow>(userver::storages::postgres::kRowTag));
 }
 }  // namespace contracts::helpers

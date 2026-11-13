@@ -1,8 +1,11 @@
 #pragma once
 #include <clients/counterparties/client.hpp>
-#include <openapi/models.hpp>
+#include <models/contract_filter_values_result.hpp>
+#include <models/contract_list_result.hpp>
+#include <models/pg/contract_raw.hpp>
+#include <platform/auth/identity.hpp>
+#include <string_view>
 #include <userver/components/component_base.hpp>
-#include <userver/server/request/request_context.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace contracts {
@@ -13,28 +16,19 @@ class ContractsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    struct FilterValuesResult {
-        std::vector<models::RegistryField> fields;
-        std::vector<models::RegistryValue> values;
-        std::optional<std::string> next_after;
-    };
-
-    struct ListResult {
-        std::vector<models::Contract> items;
-        std::optional<models::ContractRegistryCursor> next_cursor;
-    };
-
-    models::Contract Save(
-        const models::SaveContractRequest&, userver::server::request::RequestContext&) const;
-    models::Contract Get(const std::string& id, userver::server::request::RequestContext&) const;
-    ListResult List(
-        const models::ListContractsRequest&, userver::server::request::RequestContext&) const;
-    FilterValuesResult FilterValues(const models::ContractFilterValuesRequest&,
-        userver::server::request::RequestContext&) const;
+    models::pg::ContractRaw PrepareContract(
+        std::string_view access_token, const models::SaveContractRequest&) const;
+    models::Contract SaveContract(const std::string& organization,
+        const platform::auth::Identity& identity, std::int64_t expected_revision,
+        models::pg::ContractRaw value) const;
+    models::Contract FindContract(const std::string& organization, const std::string& id) const;
+    models::ContractListResult ListContracts(
+        const std::string& organization, const models::ListContractsRequest&) const;
+    models::ContractFilterValuesResult GetContractFilterValues(
+        const std::string& organization, const models::ContractFilterValuesRequest&) const;
 
   private:
-    void ValidateParties(
-        const userver::server::request::RequestContext&, const models::SaveContractRequest&) const;
+    void ValidateParties(std::string_view access_token, const models::SaveContractRequest&) const;
     clients::counterparties::Client counterparties_;
     userver::storages::postgres::ClusterPtr cluster_;
 };

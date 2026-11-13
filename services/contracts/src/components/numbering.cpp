@@ -3,7 +3,6 @@
 #include <helpers/numbering.hpp>
 #include <limits>
 #include <models/errors.hpp>
-#include <platform/auth/organization_admin.hpp>
 #include <platform/document_number.hpp>
 #include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
@@ -26,10 +25,10 @@ userver::yaml_config::Schema NumberingComponent::GetStaticConfigSchema() {
 }
 
 void NumberingComponent::RequireAdministrator(
-    const userver::server::request::RequestContext& context,
-    const std::string& organization) const {
+    const std::string& organization, std::string_view token) const {
     try {
-        platform::auth::RequireOrganizationAdministrator(organizations_, context, organization);
+        organizations_.ApiOrganizationsAdministrationCheck(
+            {.body = {.organization_id = organization}}, token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {
@@ -46,17 +45,13 @@ void NumberingComponent::RequireAdministrator(
     }
 }
 
-models::ContractNumbering NumberingComponent::Get(
-    const std::string& organization, userver::server::request::RequestContext& context) const {
-    RequireAdministrator(context, organization);
+models::ContractNumbering NumberingComponent::GetNumbering(const std::string& organization) const {
     return helpers::ReadNumbering(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetNumbering, organization));
 }
 
-models::ContractNumbering NumberingComponent::Update(
-    const models::UpdateContractNumberingRequest& body,
-    userver::server::request::RequestContext& context) const {
-    RequireAdministrator(context, body.organization_id);
+models::ContractNumbering NumberingComponent::SaveNumbering(
+    const models::UpdateContractNumberingRequest& body) const {
     platform::ValidateNumberTemplate(body.number_template);
     if (body.expected_revision < 0 ||
         body.expected_revision == std::numeric_limits<std::int64_t>::max())

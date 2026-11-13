@@ -136,3 +136,36 @@ async def test_reporting_conversion_rounds_half_up(api, finance, rate, price, ex
     line['sale'].pop('vat_rate_basis_points')
     saved = (await api.post(BASE + 'save', value))['item']
     assert saved['reporting']['sale']['total_minor'] == expected
+
+
+async def test_inquiry_changed_during_calculation_does_not_save_proposal(api, mockserver, pgsql):
+    incoming, value = await draft(api)
+
+    @mockserver.json_handler('/api/v1/exchange-rates/get')
+    def rate(request):
+        cursor = pgsql['db_1'].cursor()
+        cursor.execute(
+            'UPDATE sales_inquiries SET revision = revision + 1 WHERE id = %s',
+            (incoming['id'],),
+        )
+        return {'date': request.json['date'], 'source': 'cbr', 'rate_millionths': 90000000}
+
+    result = await api.post(BASE + 'save', value, expected=409)
+    assert result['error'] == 'inquiry_changed'
+    assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []
+
+
+@pytest.mark.parametrize('status', [403, 404, 503, 200])
+async def test_calculation_dependency_failure_does_not_save_proposal(api, mockserver, status):
+    incoming, value = await draft(api)
+
+    @mockserver.handler('/api/v1/financial-labels/get')
+    def unavailable(request):
+        if status == 200:
+            return mockserver.make_response('invalid-response', status=status)
+        return mockserver.make_response(status=status, json={'error': 'unavailable', 'message': 'Ошибка справочника'})
+
+    expected = status if status in (403, 404) else 502
+    result = await api.post(BASE + 'save', value, expected=expected)
+    assert result['error'] in ('reference_forbidden', 'reference_not_found', 'reference_unavailable')
+    assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []

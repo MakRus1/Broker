@@ -1,9 +1,16 @@
 #pragma once
-#include <helpers/database.hpp>
+#include <models/errors.hpp>
 #include <models/pg/sales_settings.hpp>
+#include <openapi/models.hpp>
+#include <sales/sql_queries.hpp>
+#include <userver/formats/json.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 
-namespace sales::helpers {
-inline models::SalesSettings Settings(const pg::ResultSet& rows) {
+namespace sales::converters {
+namespace pg = userver::storages::postgres;
+
+inline models::SalesSettings ToSalesSettings(const pg::ResultSet& rows) {
     if (rows.IsEmpty())
         return {.revision = 0, .stages = {}};
     const auto settings = rows.AsSingleRow<models::pg::SalesSettings>();
@@ -18,4 +25,4 @@ inline models::SalesSettings Settings(const pg::ResultSet& rows) {
     return result;
 }
 
-}  // namespace sales::helpers
+}  // namespace sales::converters

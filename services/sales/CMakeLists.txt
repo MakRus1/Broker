@@ -6,6 +6,10 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/shipment_dispatcher.cpp
+    src/components/sales_registry.cpp
+    src/components/proposal_calculation.cpp
+    src/components/rfq_rules.cpp
+    src/components/shipment_route.cpp
     src/components/cards.cpp
     src/components/contacts.cpp
     src/components/inquiries.cpp
@@ -50,6 +54,10 @@ if(OPENAPI_VIEW_SRCS)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(sales_unittest tests/unit/proposal_calculation_test.cpp)
+    target_link_libraries(sales_unittest PRIVATE ${PROJECT_NAME}_objs userver::utest)
+    broker_openapi_apply(sales_unittest)
+    add_google_tests(sales_unittest)
     userver_testsuite_add_simple()
 endif()
 

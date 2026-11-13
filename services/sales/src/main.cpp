@@ -2,6 +2,7 @@
 #include <components/contacts.hpp>
 #include <components/inquiries.hpp>
 #include <components/proposals.hpp>
+#include <components/sales_registry.hpp>
 #include <components/settings.hpp>
 #include <userver/clients/dns/component.hpp>
 #include <userver/clients/http/component_list.hpp>
@@ -82,6 +83,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<platform::auth::ServiceTokenProvider>();
     component_list.Append<sales::ShipmentDispatcher>();
     component_list.Append<sales::RfqComponent>();
+    component_list.Append<sales::SalesRegistry>();
     component_list.Append<sales::CardsComponent>();
     component_list.Append<sales::ContactsComponent>();
     component_list.Append<sales::InquiriesComponent>();

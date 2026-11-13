@@ -169,3 +169,57 @@ async def test_calculation_dependency_failure_does_not_save_proposal(api, mockse
     result = await api.post(BASE + 'save', value, expected=expected)
     assert result['error'] in ('reference_forbidden', 'reference_not_found', 'reference_unavailable')
     assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []
+
+async def test_repeated_lines_load_each_reference_once(api, finance, mockserver):
+    incoming, value = await draft(api)
+    supplier = str(uuid4())
+    calls = {'labels': 0, 'suppliers': 0}
+
+    @mockserver.json_handler('/api/v1/financial-labels/get')
+    def label(request):
+        calls['labels'] += 1
+        return {'label': {'id': LABEL, 'name': 'Фрахт', 'direction': 'both',
+            'unit': 'transportation', 'currency': 'USD', 'vat_mode': 'exempt',
+            'vat_rate_basis_points': None, 'note': None, 'archived': False, 'revision': 1}}
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def party(request):
+        if request.json['id'] == supplier:
+            calls['suppliers'] += 1
+        return {'counterparty': {'id': request.json['id'], 'name': 'Клиент',
+            'revision': 1, 'archived': False, 'roles': [], 'own_company': False,
+            'contacts': [], 'legal_name': None, 'country_code': 'RU', 'tax_id': None,
+            'registration_id': None, 'legal_address': None}}
+
+    value['lines'][0]['supplier_id'] = supplier
+    second = copy.deepcopy(value['lines'][0])
+    second['id'] = str(uuid4())
+    value['lines'].append(second)
+    saved = (await api.post(BASE + 'save', value))['item']
+    assert len(saved['lines']) == 2
+    assert calls == {'labels': 1, 'suppliers': 1}
+
+    value['expected_revision'] = saved['revision']
+    await api.post(BASE + 'save', value)
+    assert calls == {'labels': 2, 'suppliers': 2}
+
+
+async def test_cached_label_is_validated_for_each_line(api, finance, mockserver):
+    incoming, value = await draft(api)
+    calls = []
+
+    @mockserver.json_handler('/api/v1/financial-labels/get')
+    def label(request):
+        calls.append(request.json['id'])
+        return {'label': {'id': LABEL, 'name': 'Доход', 'direction': 'income',
+            'unit': 'transportation', 'currency': 'USD', 'vat_mode': 'exempt',
+            'vat_rate_basis_points': None, 'note': None, 'archived': False, 'revision': 1}}
+
+    purchase_line = copy.deepcopy(value['lines'][0])
+    purchase_line['id'] = str(uuid4())
+    value['lines'][0].pop('purchase')
+    value['lines'][0].pop('supplier_id')
+    value['lines'].append(purchase_line)
+    response = await api.post(BASE + 'save', value, expected=400)
+    assert response['error'] == 'invalid_label'
+    assert calls == [LABEL]

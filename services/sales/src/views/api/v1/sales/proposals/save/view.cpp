@@ -3,6 +3,7 @@
 #include <components/proposals.hpp>
 #include <components/rfq_rules.hpp>
 #include <converters/inputs.hpp>
+#include <map>
 #include <models/errors.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/http_client.hpp>
@@ -26,15 +27,32 @@ Response View::Handle(
     models::ProposalCalculation data{.InquiryRevision = inquiry.revision,
         .CustomerName = customer.name,
         .ReportingCurrency = settings.reporting_currency};
+    std::map<std::pair<std::string, std::int64_t>, models::Rfq> rfq_revisions;
+    std::map<std::string, clients::finance::models::FinancialLabel> labels;
     for (auto& line : input.lines) {
         if (line.quote_source) {
             const auto& source = *line.quote_source;
-            const auto rfq =
-                deps.rfq->FindRfqRevision(organization, source.rfq_id, source.revision);
-            rfq_rules::ApplyQuote(input, inquiry, rfq, line);
+            const auto key = std::pair{source.rfq_id, source.revision};
+            auto revision = rfq_revisions.find(key);
+            if (revision == rfq_revisions.end())
+                revision =
+                    rfq_revisions
+                        .emplace(key,
+                            deps.rfq->FindRfqRevision(organization, source.rfq_id, source.revision))
+                        .first;
+
+            rfq_rules::ApplyQuote(input, inquiry, revision->second, line);
         }
-        const auto label =
-            deps.finance.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
+        auto label_position = labels.find(line.label_id);
+        if (label_position == labels.end())
+            label_position =
+                labels
+                    .emplace(line.label_id,
+                        deps.finance.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token)
+                            .label)
+                    .first;
+
+        const auto& label = label_position->second;
         if (label.archived ||
             label.direction == clients::finance::models::FinancialLabelDirection::Expense ||
             (line.purchase &&
@@ -42,7 +60,7 @@ Response View::Handle(
             throw ApiError<400>{
                 "invalid_label", "Выберите действующую метку, подходящую для дохода и расхода"};
         data.LabelNames.emplace(line.label_id, label.name);
-        if (line.supplier_id) {
+        if (line.supplier_id && !data.SupplierNames.contains(*line.supplier_id)) {
             const auto supplier =
                 deps.counterparties
                     .ApiV1CounterpartiesGet({.body = {.id = *line.supplier_id}}, token)

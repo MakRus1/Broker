@@ -1,6 +1,8 @@
 #include <components/settings.hpp>
-#include <converters/settings.hpp>
+#include <helpers/settings.hpp>
+#include <models/errors.hpp>
 #include <platform/document_number.hpp>
+#include <sales/sql_queries.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -41,7 +43,7 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
 }
 
 models::SalesSettings SettingsComponent::GetSettings(const std::string& organization) const {
-    return converters::ToSalesSettings(
+    return helpers::ReadSalesSettings(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings, organization));
 }
 
@@ -51,7 +53,7 @@ models::SalesSettings SettingsComponent::UpdateSettings(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockSettings, value.organization_id);
     const auto previous =
-        converters::ToSalesSettings(transaction.Execute(sql::kGetSettings, value.organization_id));
+        helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, value.organization_id));
     if (previous.revision != value.expected_revision)
         throw ApiError<409>{"revision_conflict", "Настройки изменены. Обновите страницу"};
     ValidateStages(value, previous);
@@ -62,7 +64,7 @@ models::SalesSettings SettingsComponent::UpdateSettings(
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Настройки изменены"};
     const auto result =
-        converters::ToSalesSettings(transaction.Execute(sql::kGetSettings, value.organization_id));
+        helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, value.organization_id));
     transaction.Commit();
     return result;
 }

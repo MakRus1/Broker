@@ -6,7 +6,6 @@
 #include <components/registry_defaults.hpp>
 #include <components/roles.hpp>
 
-#include <components/users.hpp>
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
 #include <platform/readiness.hpp>
@@ -25,7 +24,6 @@ struct Deps {
     RegistryDefaultsComponent* registry_defaults;
     RolesComponent* roles;
 
-    Users* users;
     // SERVICE_DEPS_FIELDS_BEGIN
     platform::Readiness* readiness;
     userver::storages::postgres::ClusterPtr pg_cluster;
@@ -41,7 +39,6 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .registry_defaults = &component_context.FindComponent<RegistryDefaultsComponent>(),
         .roles = &component_context.FindComponent<RolesComponent>(),
 
-        .users = &component_context.FindComponent<Users>(),
         // SERVICE_DEPS_INIT_BEGIN
         .readiness = &component_context.FindComponent<platform::Readiness>(),
         .pg_cluster =

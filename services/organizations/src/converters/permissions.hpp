@@ -1,16 +1,11 @@
 #pragma once
+#include <models/permission_row.hpp>
 #include <openapi/models.hpp>
 #include <userver/formats/json.hpp>
 
 namespace organizations::converters {
-struct PermissionRow {
-    std::string Group;
-    std::string Id;
-    std::string Name;
-    std::vector<std::string> Requires;
-};
 
-inline models::Permission Convert(const PermissionRow& row) {
+inline models::Permission Convert(const models::PermissionRow& row) {
     return {.dependencies = row.Requires, .group = row.Group, .id = row.Id, .name = row.Name};
 }
 

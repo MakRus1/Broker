@@ -1,6 +1,7 @@
 #pragma once
 #include <models/user.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/json/exception.hpp>
 #include <userver/formats/parse/common_containers.hpp>
 
 namespace organizations::converters {
@@ -9,7 +10,8 @@ inline std::optional<std::string> ReadMiddleName(const userver::formats::json::V
     if (attribute.IsMissing() || attribute.IsNull())
         return std::nullopt;
     if (!attribute.IsArray() || attribute.GetSize() > 1)
-        throw std::runtime_error("Keycloak вернул некорректный атрибут middle_name");
+        throw userver::formats::json::ConversionException{
+            "Keycloak вернул некорректный атрибут middle_name", attribute.GetPath()};
     if (attribute.IsEmpty())
         return std::nullopt;
     return attribute[0].As<std::string>();

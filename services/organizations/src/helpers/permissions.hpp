@@ -12,15 +12,13 @@
 namespace organizations::helpers {
 enum class PermissionScope { Organization, Platform };
 
-using converters::PermissionRow;
-
-inline std::vector<PermissionRow> LoadPermissions(
+inline std::vector<models::PermissionRow> LoadPermissions(
     userver::storages::postgres::Transaction& transaction,
     PermissionScope scope = PermissionScope::Organization) {
     return transaction
         .Execute(scope == PermissionScope::Platform ? sql::kListPlatformPermissions
                                                     : sql::kListPermissions)
-        .AsContainer<std::vector<PermissionRow>>(userver::storages::postgres::kRowTag);
+        .AsContainer<std::vector<models::PermissionRow>>(userver::storages::postgres::kRowTag);
 }
 
 inline std::vector<models::Permission> PermissionCatalog(

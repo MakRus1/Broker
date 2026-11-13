@@ -573,3 +573,102 @@ async def test_disabled_member_cannot_read_personal_preferences(api):
         user='viewer',
         expected=403,
     )
+
+
+@pytest.mark.parametrize('revocation', ['disabled', 'role'])
+async def test_profile_update_rechecks_administrator_after_keycloak(
+    api, mockserver, pgsql, revocation
+):
+    from conftest import ISSUER
+
+    calls = []
+    profile = {
+        'id': 'viewer', 'username': 'viewer', 'enabled': True,
+        'firstName': 'Old', 'email': 'viewer@example.test',
+    }
+
+    @mockserver.handler('/admin/realms/broker/users/viewer')
+    def user(request):
+        calls.append(request.method)
+        if request.method == 'GET':
+            return mockserver.make_response(json=profile)
+        assert request.method == 'PUT'
+        profile.update(request.json)
+        with pgsql['db_1'].cursor() as cursor:
+            if revocation == 'disabled':
+                cursor.execute(
+                    "UPDATE memberships SET enabled=false WHERE organization_id=%s AND subject='org-admin'",
+                    (ORGANIZATION,),
+                )
+            else:
+                cursor.execute(
+                    "UPDATE memberships SET role='viewer' WHERE organization_id=%s AND subject='org-admin'",
+                    (ORGANIZATION,),
+                )
+        return mockserver.make_response(status=204)
+
+    body = {
+        'organization_id': ORGANIZATION, 'subject': 'viewer',
+        'last_name': 'New', 'first_name': 'Name',
+    }
+    await api.call(ADMIN + '/members/update-profile', body, user='org-admin', expected=403)
+    assert calls == ['GET', 'PUT']
+    assert profile['lastName'] == 'New'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "SELECT display_name, revision FROM memberships WHERE issuer=%s AND subject='viewer'",
+            (ISSUER,),
+        )
+        assert cursor.fetchall() == [('viewer', 1)]
+        cursor.execute("SELECT count(*) FROM access_audit WHERE action='member.profile_updated'")
+        assert cursor.fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('response', [
+    'not json: test-management-token',
+    '{}',
+    '[{}, {}]',
+    '[{"enabled": true}]',
+])
+async def test_invalid_keycloak_lookup_is_safe(api, mockserver, response):
+    @mockserver.handler('/admin/realms/broker/users')
+    def invalid(request):
+        return mockserver.make_response(response=response, status=200)
+
+    result = await api.call(
+        ADMIN + '/members/add',
+        {'organization_id': ORGANIZATION, 'username': 'employee', 'role': 'operator'},
+        user='org-admin', expected=503,
+    )
+    assert result['error'] == 'identity_provider_unavailable'
+    assert 'test-management-token' not in str(result)
+
+
+@pytest.mark.parametrize('failure', ['read_status', 'read_json', 'write_status'])
+async def test_keycloak_profile_failure_is_safe(api, mockserver, pgsql, failure):
+    calls = []
+
+    @mockserver.handler('/admin/realms/broker/users/viewer')
+    def user(request):
+        calls.append(request.method)
+        if request.method == 'GET':
+            if failure == 'read_status':
+                return mockserver.make_response(status=500)
+            if failure == 'read_json':
+                return mockserver.make_response(response='not json: test-management-token')
+            return mockserver.make_response(json={
+                'id': 'viewer', 'username': 'viewer', 'enabled': True,
+            })
+        return mockserver.make_response(status=500)
+
+    result = await api.call(
+        ADMIN + '/members/update-profile',
+        {'organization_id': ORGANIZATION, 'subject': 'viewer', 'last_name': 'New', 'first_name': 'Name'},
+        user='org-admin', expected=503,
+    )
+    assert result['error'] == 'identity_provider_unavailable'
+    assert 'test-management-token' not in str(result)
+    assert calls == (['GET', 'PUT'] if failure == 'write_status' else ['GET'])
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("SELECT display_name, revision FROM memberships WHERE subject='viewer'")
+        assert cursor.fetchall() == [('viewer', 1)]

@@ -3,10 +3,11 @@
 #include <clients/notifications/client.hpp>
 #include <clients/shipments/client.hpp>
 #include <events/shipment_command.hpp>
+#include <models/shipment_delivery.hpp>
 #include <platform/auth/service_token.hpp>
-#include <platform/outbox/component.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 
 namespace sales {
 class ShipmentDispatcher final : public userver::components::ComponentBase {
@@ -17,6 +18,9 @@ class ShipmentDispatcher final : public userver::components::ComponentBase {
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
   private:
+    models::ShipmentDelivery DeliverShipmentCreation(const ShipmentCommand&) const;
+    void CompleteShipmentCreation(userver::storages::postgres::Transaction&, const ShipmentCommand&,
+        const models::ShipmentDelivery&) const;
     void TransferProposal(
         const ShipmentCommand&, const std::string& shipment_id, const std::string& token) const;
 

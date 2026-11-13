@@ -1,6 +1,6 @@
 #pragma once
 #include <array>
-#include <platform/registry.hpp>
+#include <platform/registry_filters.hpp>
 
 namespace contracts {
 namespace registry = platform::registry;

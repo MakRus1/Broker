@@ -23,8 +23,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
 from auth_tokens import ISSUER, SigningKey
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'configs/tests'))
-from configs_mock import mock_configs_service
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'

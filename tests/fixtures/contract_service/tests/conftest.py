@@ -3,6 +3,9 @@ import pytest
 pytest_plugins = ['pytest_userver.plugins.core']
 # SERVICE_TESTS_END
 
+# Контрактные тесты проверяют в том числе намеренно неполные ответы.
+from pytest_userver.plugins.dynamic_config import mock_configs_service
+
 
 @pytest.fixture(name='userver_config_testsuite', scope='session')
 def _client_config(userver_config_testsuite, mockserver_info):

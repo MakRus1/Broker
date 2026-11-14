@@ -5,7 +5,7 @@
 Каждый новый сервис получает внутренний listener на loopback:
 
 - `/ping`: процесс может обработать запрос, без обращения к зависимостям.
-- `/ping/ready`: компоненты работают; для сервиса с PostgreSQL выполняется `SELECT 1`.
+- `/ping/ready`: процесс готов, зарегистрированные проверки зависимостей прошли.
   При отказе БД или завершении работы возвращается 503.
 - `/metrics`: Prometheus-формат статистики userver, включая HTTP, gRPC, PostgreSQL,
   состояние процесса и пул соединений подключенных компонентов.
@@ -67,11 +67,6 @@ docker compose -f tools/compose.telemetry.yaml logs collector
 Collector не должна блокировать бизнес-запросы: используется ограниченная асинхронная очередь.
 Endpoint OTLP задается через `OTEL_EXPORTER_OTLP_ENDPOINT`; переменная среды развертывания
 должна совпадать с config_vars и resource-атрибутами.
-
-Для проверки готовности остановите `docker compose stop postgres-broker`: служебный
-`/ping` должен оставаться 200, `/ping/ready` — возвращать 503. После
-`docker compose start postgres-broker` и восстановления соединений `/ping/ready`
-снова возвращает 200. Проверка выполнена на работающем Broker.
 
 Целевая центральная связка: OpenTelemetry Collector, Prometheus, Grafana, Loki, Tempo.
 Полный локальный стенд с хранением телеметрии и готовым дашбордом запускается через

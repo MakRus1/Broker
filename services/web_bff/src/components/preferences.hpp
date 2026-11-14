@@ -11,13 +11,13 @@ class PreferencesComponent final : public userver::components::ComponentBase {
     PreferencesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::preferences::ListPreferencesResult List(
+    models::preferences::ListPreferencesResult GetWorkspacePreferences(
         const std::string& organization, const std::string& token) const;
-    models::preferences::Preference Save(
+    models::preferences::Preference SavePersonalPreference(
         const models::preferences::SavePreferenceRequest&, const std::string& token) const;
-    models::RegistryDefaultsResult ListRoles(
+    models::RegistryDefaultsResult ListRoleRegistryDefaults(
         const std::string& organization, const std::string& token) const;
-    models::RegistryDefault SaveRole(
+    models::RegistryDefault SaveRoleRegistryDefault(
         const models::SaveRegistryDefaultRequest&, const std::string& token) const;
 
   private:

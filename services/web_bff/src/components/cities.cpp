@@ -1,4 +1,7 @@
 #include <components/cities.hpp>
+#include <converters/cities.hpp>
+#include <platform/handler_error.hpp>
+#include <userver/clients/http/error.hpp>
 
 #include <userver/clients/http/component.hpp>
 #include <userver/clients/http/request.hpp>
@@ -10,6 +13,8 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace web_bff {
+template <int Status> using ApiError = platform::http::HandlerError<Status>;
+
 Cities::Cities(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
@@ -23,10 +28,10 @@ Cities::Cities(const userver::components::ComponentConfig& config,
         throw std::invalid_argument("Некорректные настройки поиска городов");
 }
 
-std::vector<models::City> Cities::Find(const std::string& query) const try {
+std::vector<models::City> Cities::FindCities(const std::string& query) const try {
     namespace json = userver::formats::json;
     if (api_key_.empty())
-        throw CityLookupError{
+        throw ApiError<503>{
             "cities_not_configured", "Поиск городов не настроен. Введите город и страну вручную"};
     json::ValueBuilder body;
     body["query"] = userver::utils::text::Trim(query);
@@ -47,31 +52,22 @@ std::vector<models::City> Cities::Find(const std::string& query) const try {
             .SetLoggedUrl("dadata/cities")
             .perform();
     if (response->status_code() != 200)
-        throw std::runtime_error("Поиск городов недоступен");
+        throw ApiError<503>{
+            "cities_unavailable", "Не удалось загрузить города. Введите город и страну вручную"};
     const auto document = json::FromString(response->body());
-    const auto& items = document["suggestions"];
-    if (!items.IsArray() || items.GetSize() > 10)
-        throw std::runtime_error("Некорректный ответ поиска городов");
-    std::vector<models::City> result;
-    for (const auto& item : items) {
-        const auto& data = item["data"];
-        const auto name = data["city"].As<std::optional<std::string>>();
-        const auto code = data["country_iso_code"].As<std::optional<std::string>>();
-        if (!name.has_value() || !code.has_value() || code.value().size() != 2)
-            continue;
-        result.push_back({.country = data["country"].As<std::string>(),
-            .country_code = code.value(),
-            .label = item["value"].As<std::string>(),
-            .name = name.value()});
-    }
-    return result;
-} catch (const CityLookupError&) {
+    return converters::ConvertCitySuggestions(document);
+} catch (const userver::clients::http::CancelException&) {
 
     throw;
-} catch (const std::bad_alloc&) {
+} catch (const userver::clients::http::BadArgumentException&) {
     throw;
-} catch (const std::exception&) {
-    throw CityLookupError{
+} catch (const userver::clients::http::TechnicalError&) {
+    throw;
+} catch (const userver::clients::http::BaseException&) {
+    throw ApiError<503>{
+        "cities_unavailable", "Не удалось загрузить города. Введите город и страну вручную"};
+} catch (const userver::formats::json::Exception&) {
+    throw ApiError<503>{
         "cities_unavailable", "Не удалось загрузить города. Введите город и страну вручную"};
 }
 

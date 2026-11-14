@@ -11,7 +11,7 @@ class AdminSessionComponent final : public userver::components::ComponentBase {
     AdminSessionComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::AdminSession Get(const platform::browser::BrowserSession&) const;
+    models::AdminSession GetAdminSession(const platform::browser::BrowserSession&) const;
 
   private:
     clients::organizations::Client organizations_;

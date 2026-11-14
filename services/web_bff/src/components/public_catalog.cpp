@@ -2,7 +2,6 @@
 #include <userver/server/http/http_request.hpp>
 #include <userver/server/http/http_response.hpp>
 
-namespace web_bff {
 namespace {
 class Cors final : public userver::server::middlewares::HttpMiddlewareBase {
     void HandleRequest(userver::server::http::HttpRequest& request,
@@ -15,6 +14,7 @@ class Cors final : public userver::server::middlewares::HttpMiddlewareBase {
 };
 }  // namespace
 
+namespace web_bff {
 std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> PublicCatalogCors::Create(
     const userver::server::handlers::HttpHandlerBase&, userver::yaml_config::YamlConfig) const {
     return std::make_unique<Cors>();

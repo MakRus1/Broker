@@ -353,7 +353,7 @@ def outputs(service, loader):
     text += 'namespace configs {\nstruct DeliveryContract {\nstatic void Validate(const userver::dynamic_config::DocsMap& docs) {\n'
     for entry in entries:
         spec = configs[entry];parser = 'ParseConfig' if spec['mode'] == 'conditional' else 'ParseValue'
-        text += f'if (docs.Has({quoted(spec["name"])})) (void)detail::{spec["name"].lower()}::{parser}(docs.Get({quoted(spec["name"])}));\n'
+        text += f'(void)detail::{spec["name"].lower()}::{parser}(docs.Get({quoted(spec["name"])}));\n'
     text += '}\nstatic std::map<std::string, std::string> Schemas() { return {'
     text += ', '.join('{' + quoted(configs[entry]['name']) + ', ' + quoted(schema_hash(configs[entry], contexts)) + '}' for entry in entries)
     text += '}; }\n};\n}  // namespace configs\n'

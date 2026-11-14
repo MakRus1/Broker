@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
 from auth_tokens import ISSUER, SigningKey
+from config_defaults import imported_config_defaults
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
@@ -130,18 +131,19 @@ def configure_railway_sync(mockserver_info):
 
 
 @pytest.fixture(scope='session')
+def config_service_defaults(config_service_defaults, service_source_dir):
+    defaults = imported_config_defaults(service_source_dir)
+    for name in ('AIRPORT_SYNC_SETTINGS', 'SEA_PORT_SYNC_SETTINGS', 'RAILWAY_SYNC_SETTINGS'):
+        defaults[name]['http_timeout_ms'] = 1000
+    return {**defaults, **config_service_defaults}
+
+
+@pytest.fixture(scope='session')
 def configure_sync_policies():
     def patch(config, config_vars):
-        import yaml
         config_vars['config-updates-enabled'] = True
         # Проверяем реальные тайм-ауты из динамического конфига, без замены на 10s.
         config['components_manager']['components']['http-client-core'].pop('testsuite-timeout', None)
-        policies = config['components_manager']['components']['dynamic-config']['defaults']
-        for name in ('AIRPORT_SYNC_SETTINGS', 'SEA_PORT_SYNC_SETTINGS', 'RAILWAY_SYNC_SETTINGS'):
-            path = Path(__file__).resolve().parents[3] / 'schemas/configs/transport_locations' / (name + '.yaml')
-            policy = yaml.safe_load(path.read_text())['default']
-            policy['http_timeout_ms'] = 1000
-            policies[name] = policy
     return patch
 
 

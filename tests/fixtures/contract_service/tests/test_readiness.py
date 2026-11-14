@@ -10,14 +10,18 @@ def settings():
     return {'**default**': {'timeout': 100, 'max_retries': 0}}
 
 
-async def test_missing_config_blocks_and_recovers(service_client, monitor_client, dynamic_config):
-    dynamic_config.remove_values([KEY])
-    assert (await service_client.get('/items/1')).status == 503
-    assert (await monitor_client.get('/ping')).status == 200
-    assert (await monitor_client.get('/ping/ready')).status == 503
-    dynamic_config.set_values({KEY: settings()})
+async def test_incomplete_update_preserves_snapshot(
+    service_client, monitor_client, dynamic_config,
+):
     assert (await service_client.get('/items/1')).status == 204
+    dynamic_config.remove_values([KEY])
+    with pytest.raises(http.HttpResponseError):
+        await service_client.update_server_state()
+    assert (await service_client.get('/items/1', testsuite_skip_prepare=True)).status == 204
     assert (await monitor_client.get('/ping/ready')).status == 200
+    dynamic_config.set_values({KEY: settings()})
+    dynamic_config.switch_to_static_default(KEY)
+    assert (await service_client.get('/items/1')).status == 204
 
 
 @pytest.mark.now('2026-10-18T12:00:00+0000')

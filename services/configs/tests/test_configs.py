@@ -72,6 +72,7 @@ async def test_values_filter_and_unknown_native_configs(service_client):
         'ids': ['SHIPMENT_TERMS_CONFIG', 'USERVER_UNKNOWN_NATIVE_CONFIG'], 'updated_since': ''})
     assert response.status == 200
     assert set(response.json()['configs']) == {'SHIPMENT_TERMS_CONFIG'}
+    assert response.json()['kill_switches_disabled'] == ['USERVER_UNKNOWN_NATIVE_CONFIG']
 
 
 async def test_required_http_defaults_and_inheritance(admin_client):

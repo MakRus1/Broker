@@ -50,6 +50,12 @@ paths:
                   configs:
                     type: object
                     additionalProperties: true
+                  kill_switches_disabled:
+                    type: array
+                    description: Запрошенные ключи без публикации, для которых updater
+                      использует встроенное значение
+                    items:
+                      type: string
                   revision:
                     type: integer
                     minimum: 0

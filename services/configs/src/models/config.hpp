@@ -4,10 +4,12 @@
 #include <optional>
 #include <string>
 #include <userver/storages/postgres/io/chrono.hpp>
+#include <vector>
 
 namespace configs {
 struct ConfigValues {
     Json Values;
+    std::optional<std::vector<std::string>> BuiltinKeys;
     std::int64_t Revision;
     userver::storages::postgres::TimePointTz PublishedAt;
 };

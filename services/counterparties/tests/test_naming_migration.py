@@ -1,6 +1,6 @@
 """Миграция терминологии сохраняет данные предыдущей схемы."""
 
-from naming_migrations import check_naming_migration
+from tests.support.naming_migrations import check_naming_migration
 
 
 def test_naming_migration(pgsql, service_source_dir):

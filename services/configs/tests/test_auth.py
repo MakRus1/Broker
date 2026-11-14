@@ -4,7 +4,7 @@ import asyncio
 import time
 import pytest
 
-from auth_tokens import ISSUER
+from tests.support.auth_tokens import ISSUER
 from test_configs import terms
 from test_drafts import create
 

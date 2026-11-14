@@ -5,6 +5,7 @@
 #include <userver/components/component_list.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/congestion_control/component.hpp>
+#include <userver/server/handlers/ping.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/ugrpc/server/component_list.hpp>
@@ -66,7 +67,7 @@ int main(int argc, char* argv[]) {
             .Append<userver::congestion_control::Component>()
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
-            .Append<shipments::Ping>()
+            .Append<userver::server::handlers::Ping>()
             .Append<shipments::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())

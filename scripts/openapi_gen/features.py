@@ -106,11 +106,6 @@ def prepare(service, loader):
         'DEPS_FIELDS': '    platform::Readiness* readiness;\n' + ('    platform::configs::Source configs;\n' if config_enabled else '') + ''.join(f'    clients::{alias}::Client {alias};\n' for alias, _ in clients) + ('    userver::storages::postgres::ClusterPtr pg_cluster;\n' if pg else ''),
         'DEPS_INIT': '        .readiness = &component_context.FindComponent<platform::Readiness>(),\n' + ('        .configs = platform::configs::Source{component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},\n' if config_enabled else '') + ''.join(f'        .{alias} = component_context.FindComponent<clients::{alias}::Component>().GetClient(),\n' for alias, _ in clients) + (f'        .pg_cluster = component_context.FindComponent<userver::components::Postgres>("{pg_component}").GetCluster(),\n' if pg else ''),
     })
-    if (service / 'src/bootstrap/ping.cpp').exists():
-        edit('src/bootstrap/ping.cpp', {
-            'PING_INCLUDES': '#include <userver/storages/postgres/cluster.hpp>\n' if pg else '',
-            'PING_CHECK': '        const auto readiness = deps_.readiness->GetStatus();\n        if (!readiness.Ready) { request.SetResponseStatus(userver::server::http::HttpStatus::kServiceUnavailable); return readiness.Reason + "\\n"; }\n' + ('        deps_.pg_cluster->Execute(userver::storages::postgres::ClusterHostType::kMaster, "SELECT 1");\n' if pg else ''),
-        })
     cmake = 'foreach(service_library IN ITEMS ' + ' '.join('broker_' + lib for lib in libraries) + ')\n'
     cmake += '    if(NOT TARGET ${service_library})\n        message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")\n    endif()\nendforeach()\n'
     cmake += 'target_link_libraries(${PROJECT_NAME}_objs PUBLIC ' + ' '.join('broker_' + lib for lib in libraries) + ')\n'

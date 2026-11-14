@@ -4,6 +4,7 @@
 #include <userver/components/component_list.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/congestion_control/component.hpp>
+#include <userver/server/handlers/ping.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/ugrpc/server/component_list.hpp>
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
             .Append<platform::browser::Assets>()
             .Append<platform::browser::Assets>("browser-index")
             .Append<platform::browser::Assets>("browser-index-html")
-            .Append<web_bff::Ping>()
+            .Append<userver::server::handlers::Ping>()
             .Append<web_bff::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())

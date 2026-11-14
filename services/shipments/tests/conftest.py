@@ -23,7 +23,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
 from auth_tokens import ISSUER, SigningKey
-from config_defaults import imported_config_defaults
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
@@ -129,11 +128,6 @@ def shipment_dictionaries(pgsql, service_source_dir):
     seed = migration.read_text().split('INSERT INTO shipment_dictionary_values', 1)[1]
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('INSERT INTO shipment_dictionary_values' + seed)
-
-
-@pytest.fixture(scope='session')
-def config_service_defaults(config_service_defaults, service_source_dir):
-    return {**imported_config_defaults(service_source_dir), **config_service_defaults}
 
 
 @pytest.fixture(name='userver_config_testsuite', scope='session')

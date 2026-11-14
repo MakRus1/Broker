@@ -31,6 +31,9 @@ shared_paths:
 - tools/Dockerfile
 - tools/docker/
 - tests/support/
+- conftest.py
+- pytest.ini
+- services/configs/tests/configs_mock.py
 - CMakeLists.txt
 - CMakePresets.json
 - Makefile

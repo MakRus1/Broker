@@ -22,7 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
 from auth_tokens import ISSUER, SigningKey
-from config_defaults import imported_config_defaults
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'configs/tests'))
+from configs_mock import mock_configs_service
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
@@ -131,12 +132,15 @@ def configure_railway_sync(mockserver_info):
 
 
 @pytest.fixture(scope='session')
-def config_service_defaults(config_service_defaults, service_source_dir):
-    defaults = imported_config_defaults(service_source_dir)
-    for name in ('AIRPORT_SYNC_SETTINGS', 'SEA_PORT_SYNC_SETTINGS', 'RAILWAY_SYNC_SETTINGS'):
-        defaults[name]['http_timeout_ms'] = 1000
-    return {**defaults, **config_service_defaults}
+def config_service_defaults(config_service_defaults):
+    import yaml
 
+    schemas = Path(__file__).resolve().parents[3] / 'schemas/configs/transport_locations'
+    defaults = {}
+    for name in ('AIRPORT_SYNC_SETTINGS', 'SEA_PORT_SYNC_SETTINGS', 'RAILWAY_SYNC_SETTINGS'):
+        policy = yaml.safe_load((schemas / (name + '.yaml')).read_text())['default']
+        defaults[name] = {**policy, 'http_timeout_ms': 1000}
+    return {**defaults, **config_service_defaults}
 
 @pytest.fixture(scope='session')
 def configure_sync_policies():

@@ -1,6 +1,7 @@
 #include <bootstrap/ping.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/server/http/http_response.hpp>
+
 namespace configs {
 PingReady::PingReady(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)

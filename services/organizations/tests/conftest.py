@@ -20,8 +20,7 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'tests/support'))
-from auth_tokens import ISSUER, SigningKey
+from tests.support.auth_tokens import ISSUER, SigningKey
 
 ORGANIZATION = '11111111-1111-4111-8111-111111111111'
 OTHER_ORGANIZATION = '22222222-2222-4222-8222-222222222222'
@@ -88,7 +87,7 @@ def memberships(pgsql):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))
     from permission_catalog import load
-    from permission_fixtures import register_sql
+    from tests.support.permission_fixtures import register_sql
     catalog = load(Path(__file__).resolve().parents[3])
     with pgsql['db_1'].cursor() as cursor:
         for owner in sorted({value['owner'] for value in catalog.values()}):

@@ -33,7 +33,6 @@ make test-debug
 - CMake: библиотеки, SQL и protobuf-кодогенерация;
 - main.cpp: include и регистрация компонентов;
 - deps.hpp: PostgreSQL-зависимость и получение кластера;
-- bootstrap/ping.cpp: проверка БД в готовности;
 - static_config.yaml: PostgreSQL, gRPC-listener и middleware трассировки;
 - tests/conftest.py: плагины и fixtures PostgreSQL/gRPC.
 
@@ -114,28 +113,6 @@ HTTP-клиенты автоматически подключают библио
 Имя базы и адрес задаются в `pg-connection`/`DB_CONNECTION`; каталог `schemas/db_1`
 соответствует имени тестовой базы `<service>_db_1` и остается отдельным понятием.
 Пока manifest поддерживает один PostgreSQL-кластер на сервис.
-
-## Критические зависимости
-
-Секция `critical_dependencies.configs` задает готовность по подключенным ключам:
-
-```yaml
-critical_dependencies:
-  configs:
-    SHIPMENT_TERMS_CONFIG:
-      allow_builtin: false
-      allow_cache: true
-      max_age_seconds: 300
-```
-
-`max_age_seconds` обязателен; allow_builtin по умолчанию false, allow_cache — true.
-Необязательные ключи не нужно перечислять. Генератор добавляет общий реестр готовности
-и политики конфигов. HTTP/gRPC gate, кеш и интерфейс собственных проверок описаны в
-[critical-dependencies.md](critical-dependencies.md).
-
-При включении gRPC автоматически регистрируется platform-grpc-readiness. Он использует
-тот же реестр критических зависимостей и возвращает UNAVAILABLE новым RPC при неготовности.
-Отдельные правила для gRPC в manifest не требуются. Открытые вызовы/потоки не прерываются.
 
 ## Grafana
 

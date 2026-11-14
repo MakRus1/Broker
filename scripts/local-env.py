@@ -167,6 +167,7 @@ def prepare():
         variables['organization-access-url'] = 'http://organizations:8130/api/organizations/access'
         variables['platform-access-url'] = 'http://organizations:8130/api/platform/access'
         variables["config-updates-enabled"] = name != "configs"
+        variables["config-wait-for-snapshot"] = name != "configs"
         config = yaml.safe_load((ROOT / f"services/{name}/configs/static_config.yaml").read_text())
 
         variables.update(client_variables(name))
@@ -291,6 +292,7 @@ def prepare():
         "admin-revoke-url": "http://keycloak:8080/realms/broker/protocol/openid-connect/revoke",
         "admin-assets-dir": "/admin-ui",
         "config-updates-enabled": True,
+        "config-wait-for-snapshot": True,
         "config-server-url": "http://configs:8090",
         "otlp-enabled": True,
         "otlp-endpoint": "collector:4317",
@@ -314,7 +316,7 @@ def prepare():
             "keycloak-setup": {"condition": "service_completed_successfully"},
             "configs": {"condition": "service_healthy"},
         },
-        "healthcheck": {"test": ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8182/ping/ready', timeout=2)"],
+        "healthcheck": {"test": ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8182/ping', timeout=2)"],
                         "interval": "3s", "timeout": "3s", "retries": 30},
     }
     volumes['web-ui'] = {}
@@ -342,6 +344,7 @@ def prepare():
         'web-token-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/token',
         'web-revoke-url': 'http://keycloak:8080/realms/broker/protocol/openid-connect/revoke',
         'web-assets-dir': '/web-ui', 'config-updates-enabled': True,
+        'config-wait-for-snapshot': True,
         'config-server-url': 'http://configs:8090', 'otlp-enabled': True,
         'otlp-endpoint': 'collector:4317',
     })
@@ -398,6 +401,7 @@ def prepare():
             "client-broker-base-url": "http://broker:8080",
             "config-server-url": "http://configs:8090",
             "config-updates-enabled": True,
+            "config-wait-for-snapshot": True,
         }
     )
     config = resolve(yaml.safe_load((fixture / "static_config.yaml").read_text()), variables)
@@ -466,7 +470,7 @@ def prepare():
                 "CMD",
                 "python3",
                 "-c",
-                f"import urllib.request; urllib.request.urlopen('http://localhost:{port}/ping/ready', timeout=2)",
+                f"import urllib.request; urllib.request.urlopen('http://localhost:{port}/ping', timeout=2)",
             ],
             "interval": "3s",
             "timeout": "3s",

@@ -6,7 +6,7 @@ pytest_plugins = ['pytest_userver.plugins.core']
 @pytest.fixture(scope='session')
 async def service_http_ping_url(monitor_baseurl):
     # Готовность проверяется на внутреннем listener до первого запроса testsuite.
-    return monitor_baseurl.rstrip('/') + '/ping/ready'
+    return monitor_baseurl.rstrip('/') + '/ping'
 
 
 from tests.support.auth_tokens import ISSUER, SigningKey

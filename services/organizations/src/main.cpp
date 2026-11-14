@@ -10,7 +10,6 @@
 #include <userver/ugrpc/server/component_list.hpp>
 #include <userver/utils/daemon_run.hpp>
 
-#include <bootstrap/ping.hpp>
 #include <components/access.hpp>
 #include <components/keycloak_users.hpp>
 #include <components/members.hpp>
@@ -30,7 +29,6 @@
 
 // SERVICE_INCLUDES_BEGIN
 #include <platform/auth/component.hpp>
-#include <platform/readiness.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/storages/postgres/component.hpp>
 
@@ -49,14 +47,12 @@ int main(int argc, char* argv[]) {
             .Append<platform::auth::ServiceTokenProvider>()
             .Append<organizations::KeycloakUsers>()
             .Append<userver::server::handlers::Ping>()
-            .Append<organizations::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
             .Append<userver::otlp::LoggerComponent>();
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.Append<platform::auth::Component>();
     component_list.Append<userver::components::HttpClient>("auth-http-client");
     component_list.Append<userver::components::Postgres>("postgres-organizations");

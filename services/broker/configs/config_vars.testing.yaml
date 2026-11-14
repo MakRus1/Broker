@@ -16,3 +16,4 @@ environment: local
 config-updates-enabled: false
 config-server-url: http://localhost:8090
 config-cache-path: ''
+config-wait-for-snapshot: false

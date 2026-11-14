@@ -10,7 +10,6 @@
 #include <userver/ugrpc/server/component_list.hpp>
 #include <userver/utils/daemon_run.hpp>
 
-#include <bootstrap/ping.hpp>
 #include <platform/telemetry.hpp>
 #include <userver/otlp/logs/component.hpp>
 #include <userver/server/handlers/server_monitor.hpp>
@@ -20,7 +19,6 @@
 #include <openapi/handlers.hpp>
 
 // SERVICE_INCLUDES_BEGIN
-#include <platform/readiness.hpp>
 
 // SERVICE_INCLUDES_END
 
@@ -35,14 +33,12 @@ int main(int argc, char* argv[]) {
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
             .Append<userver::server::handlers::Ping>()
-            .Append<broker::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
             .Append<userver::otlp::LoggerComponent>();
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     // SERVICE_REGISTRATION_END
 
     component_list = broker::openapi::AppendGeneratedHandlers(component_list);

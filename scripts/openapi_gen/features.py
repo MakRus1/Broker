@@ -8,7 +8,7 @@ import yaml
 from model import identifier
 from render import format_cpp
 from clients import client_specs
-from configs import selected, readiness_rules
+from configs import selected
 from dashboards import render as render_dashboard
 from http_logging import policy as logging_policy
 from deployment import validate as validate_deployment
@@ -31,8 +31,8 @@ def prepare(service, loader):
     if not manifest.exists():
         return {}
     spec = yaml.load(manifest.read_text(), Loader=loader)
-    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'critical_dependencies', 'dashboard', 'http_logging', 'deployment', 'auth', 'service_accounts'} or type(spec.get('version')) is not int or spec['version'] != 1:
-        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/critical_dependencies/dashboard/http_logging/deployment/auth/service_accounts')
+    if not isinstance(spec, dict) or set(spec) - {'version', 'postgresql', 'grpc', 'libraries', 'clients', 'configs', 'dashboard', 'http_logging', 'deployment', 'auth', 'service_accounts'} or type(spec.get('version')) is not int or spec['version'] != 1:
+        raise ValueError('service.yaml: ожидается version: 1 и секции postgresql/grpc/libraries/clients/configs/dashboard/http_logging/deployment/auth/service_accounts')
     service_accounts_policy(spec)
     if service.parent.name == 'services':
         load_service_accounts(service.parent.parent, loader)
@@ -72,7 +72,6 @@ def prepare(service, loader):
     clients = client_specs(service, loader)
     _, _, config_entries = selected(service, loader)
     config_enabled = bool(config_entries)
-    policies = readiness_rules(service, spec, loader)
     if spec.get('configs') and 'configs' not in libraries:
         raise ValueError('service.yaml: explicit configs require libraries: [common, configs]')
     if config_enabled and 'configs' not in libraries:
@@ -98,13 +97,13 @@ def prepare(service, loader):
         files[path] = format_cpp(text) if path.suffix in {'.cpp', '.hpp'} else text
     main_path = 'src/main.cpp' if (service / 'src/main.cpp').exists() else 'main.cpp'
     edit(main_path, {
-        'INCLUDES': '#include <platform/readiness.hpp>\n' + auth_includes + config_includes + client_includes + outbox_include + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <platform/grpc_telemetry.hpp>\n#include <platform/grpc_readiness.hpp>\n' if grpc else ''),
-        'REGISTRATION': '    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();\n' + auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigReadiness>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + outbox_registration + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<platform::GrpcTelemetryFactory>().Append<platform::GrpcReadinessFactory>();\n' if grpc else ''),
+        'INCLUDES': auth_includes + config_includes + client_includes + outbox_include + ('#include <userver/storages/postgres/component.hpp>\n' if pg else '') + ('#include <platform/grpc_telemetry.hpp>\n' if grpc else ''),
+        'REGISTRATION': auth_registration + ('    component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());\n    component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();\n    component_list.Append<platform::configs::ConfigStartup<::configs::DeliveryContract>>();\n' if config_enabled else '') + ''.join(f'    component_list.Append<{name}::clients::{alias}::Component>();\n' for alias, _ in clients) + (f'    component_list.Append<userver::components::Postgres>("{pg_component}");\n' if pg else '') + outbox_registration + (f'    component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList()).Append<platform::GrpcTelemetryFactory>();\n' if grpc else ''),
     })
     edit('src/deps.hpp', {
-        'DEPS_INCLUDES': '#include <platform/readiness.hpp>\n' + config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
-        'DEPS_FIELDS': '    platform::Readiness* readiness;\n' + ('    platform::configs::Source configs;\n' if config_enabled else '') + ''.join(f'    clients::{alias}::Client {alias};\n' for alias, _ in clients) + ('    userver::storages::postgres::ClusterPtr pg_cluster;\n' if pg else ''),
-        'DEPS_INIT': '        .readiness = &component_context.FindComponent<platform::Readiness>(),\n' + ('        .configs = platform::configs::Source{component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},\n' if config_enabled else '') + ''.join(f'        .{alias} = component_context.FindComponent<clients::{alias}::Component>().GetClient(),\n' for alias, _ in clients) + (f'        .pg_cluster = component_context.FindComponent<userver::components::Postgres>("{pg_component}").GetCluster(),\n' if pg else ''),
+        'DEPS_INCLUDES': config_includes + client_includes + ('#include <userver/storages/postgres/cluster.hpp>\n#include <userver/storages/postgres/component.hpp>\n' if pg else ''),
+        'DEPS_FIELDS': ('    platform::configs::Source configs;\n' if config_enabled else '') + ''.join(f'    clients::{alias}::Client {alias};\n' for alias, _ in clients) + ('    userver::storages::postgres::ClusterPtr pg_cluster;\n' if pg else ''),
+        'DEPS_INIT': ('        .configs = platform::configs::Source{component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},\n' if config_enabled else '') + ''.join(f'        .{alias} = component_context.FindComponent<clients::{alias}::Component>().GetClient(),\n' for alias, _ in clients) + (f'        .pg_cluster = component_context.FindComponent<userver::components::Postgres>("{pg_component}").GetCluster(),\n' if pg else ''),
     })
     cmake = 'foreach(service_library IN ITEMS ' + ' '.join('broker_' + lib for lib in libraries) + ')\n'
     cmake += '    if(NOT TARGET ${service_library})\n        message(FATAL_ERROR "Не найден target библиотеки: ${service_library}")\n    endif()\nendforeach()\n'
@@ -160,17 +159,15 @@ def pgsql_local(service_source_dir, pgsql_local_create):
     tests += f'pytest_plugins = {plugins!r}\n'
     edit('tests/conftest.py', {'TESTS': tests}, '#')
     components = {f'client-{alias}': {'base-url': f'$client-{alias}-base-url'} for alias, _ in clients}
-    components['platform-readiness'] = {}
-    components['platform-http-readiness'] = {}
     if config_enabled:
         components['platform-config-delivery'] = {'load-enabled': '$config-updates-enabled'}
-        components['platform-config-readiness'] = {'rules': policies}
+        components['platform-config-startup'] = {'load-enabled': '$config-wait-for-snapshot'}
     if outbox:
         components['platform-outbox'] = {**(yaml.load((service / 'configs/static_config.yaml').read_text(), Loader=loader)['components_manager']['components'].get('platform-outbox', {}) or {}), 'postgres-component': pg_component}
     if pg:
         components[pg_component] = {'dbconnection': '$pg-connection', 'dbconnection#env': 'DB_CONNECTION', 'blocking_task_processor': 'fs-task-processor', 'dns_resolver': 'async', 'sync-start': True, 'connlimit_mode': 'manual'}
     if grpc:
-        components.update({'platform-grpc-telemetry': {}, 'platform-grpc-readiness': {}, 'grpc-server-middlewares-pipeline': {'middlewares': {'platform-grpc-telemetry': {'enabled': True}, 'platform-grpc-readiness': {'enabled': True}}}, 'grpc-server-logging': {'msg-log-level': 'none'}, 'grpc-server': {'port': '$grpc-server-port', 'completion-queue-count': 3}})
+        components.update({'platform-grpc-telemetry': {}, 'grpc-server-middlewares-pipeline': {'middlewares': {'platform-grpc-telemetry': {'enabled': True}}}, 'grpc-server-logging': {'msg-log-level': 'none'}, 'grpc-server': {'port': '$grpc-server-port', 'completion-queue-count': 3}})
     path = service / 'configs/static_config.yaml'
     static_source = path.read_text()
     managed = static_source.split('# SERVICE_CONFIG_BEGIN', 1)[1].split('# SERVICE_CONFIG_END', 1)[0]
@@ -233,7 +230,7 @@ def pgsql_local(service_source_dir, pgsql_local_create):
                 if key not in values:
                     additions[key] = value
         if config_enabled:
-            for key, value in {'config-updates-enabled': False, 'config-server-url': 'http://localhost:8090', 'config-cache-path': ''}.items():
+            for key, value in {'config-updates-enabled': False, 'config-server-url': 'http://localhost:8090', 'config-cache-path': '', 'config-wait-for-snapshot': False}.items():
                 if key not in values:
                     additions[key] = value
         for alias, _ in clients:

@@ -45,10 +45,6 @@ broker_openapi_generate("${CMAKE_SOURCE_DIR}/services/broker")
             copy_generator_repository(root)
             shutil.copytree(ROOT / 'tests/fixtures/contract_service', root / 'tests/fixtures/contract_service',
                             ignore=shutil.ignore_patterns('__pycache__'))
-            manifest_path = root / 'tests/fixtures/contract_service/service.yaml'
-            manifest = yaml.safe_load(manifest_path.read_text())
-            manifest.pop('critical_dependencies')
-            manifest_path.write_text(yaml.safe_dump(manifest))
             (root / 'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.24)
 project(consumer LANGUAGES NONE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

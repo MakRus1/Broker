@@ -399,6 +399,7 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 'worker-fs-threads': 1,
                 'config-server-url': f'http://{addresses["configs"]}:8090',
                 'config-updates-enabled': name != 'configs',
+                'config-wait-for-snapshot': name != 'configs',
                 'config-cache-path': '',
                 'otlp-enabled': False,
                 'admin-assets-dir': '/app/assets',
@@ -501,12 +502,12 @@ def render(release, directory, *, root=ROOT, environment='staging'):
                 {'name': 'tmp', 'mountPath': '/tmp'},
             ],
             'startupProbe': {
-                'httpGet': {'path': '/ping/ready', 'port': variables['monitor-port']},
+                'httpGet': {'path': '/ping', 'port': variables['monitor-port']},
                 'periodSeconds': 3,
                 'failureThreshold': 60,
             },
             'readinessProbe': {
-                'httpGet': {'path': '/ping/ready', 'port': variables['monitor-port']},
+                'httpGet': {'path': '/ping', 'port': variables['monitor-port']},
                 'periodSeconds': 5,
             },
             'livenessProbe': {

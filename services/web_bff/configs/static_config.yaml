@@ -668,12 +668,10 @@ components_manager:
             base-url: $client-transportations-base-url
         client-user_preferences:
             base-url: $client-user_preferences-base-url
-        platform-readiness: {}
-        platform-http-readiness: {}
         platform-config-delivery:
             load-enabled: $config-updates-enabled
-        platform-config-readiness:
-            rules: []
+        platform-config-startup:
+            load-enabled: $config-wait-for-snapshot
         dynamic-config:
             defaults:
                 HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
@@ -814,11 +812,6 @@ components_manager:
                 environment: $environment
         handler-ping:
             path: /ping
-            method: GET
-            task_processor: main-task-processor
-            monitor-handler: true
-        handler-ping-ready:
-            path: /ping/ready
             method: GET
             task_processor: main-task-processor
             monitor-handler: true

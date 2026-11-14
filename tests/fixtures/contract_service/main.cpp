@@ -7,6 +7,7 @@
 #include <userver/clients/http/component_list.hpp>
 #include <userver/components/minimal_server_component_list.hpp>
 #include <userver/otlp/logs/component.hpp>
+#include <userver/server/handlers/ping.hpp>
 #include <userver/server/handlers/server_monitor.hpp>
 #include <userver/server/handlers/tests_control.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
@@ -17,7 +18,6 @@
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
-#include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 
@@ -39,13 +39,11 @@ int main(int argc, char* argv[]) {
             .Append<contract_service::LocalScenario>();
     }
     component_list.Append<contract_service::ClientProbe>();
-    component_list.Append<contract_service::ReadinessProbe>();
-    component_list.Append<contract_service::ReadinessProbe>("handler-ping-ready");
+    component_list.Append<userver::server::handlers::Ping>();
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
-    component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<platform::configs::ConfigStartup<::configs::DeliveryContract>>();
     component_list.Append<contract_service::clients::broker::Component>();
     // SERVICE_REGISTRATION_END
     component_list = contract_service::openapi::AppendGeneratedHandlers(component_list);

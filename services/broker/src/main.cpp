@@ -16,7 +16,6 @@
 #ifdef BROKER_TRACE_TESTS
 #include <trace_probe.hpp>
 #endif
-#include <bootstrap/ping.hpp>
 #include <userver/otlp/logs/component.hpp>
 #include <userver/server/handlers/server_monitor.hpp>
 #include <userver/ugrpc/client/client_factory_component.hpp>
@@ -29,9 +28,7 @@
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
-#include <platform/grpc_readiness.hpp>
 #include <platform/grpc_telemetry.hpp>
-#include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -49,7 +46,6 @@ int main(int argc, char* argv[]) {
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
             .Append<userver::server::handlers::Ping>()
-            .Append<broker::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
@@ -60,20 +56,17 @@ int main(int argc, char* argv[]) {
     const auto* trace_tests = std::getenv("BROKER_TRACE_TESTS");
     if (trace_tests && std::string_view{trace_tests} == "1") {
         component_list.Append<broker::TraceProbe>()
-            .Append<broker::ReadinessControl>()
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-probe-factory");
     }
 #endif
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
-    component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<platform::configs::ConfigStartup<::configs::DeliveryContract>>();
     component_list.Append<userver::components::Postgres>("postgres-broker");
     component_list.AppendComponentList(userver::ugrpc::server::MinimalComponentList())
-        .Append<platform::GrpcTelemetryFactory>()
-        .Append<platform::GrpcReadinessFactory>();
+        .Append<platform::GrpcTelemetryFactory>();
     // SERVICE_REGISTRATION_END
 
     component_list.Append<broker::HelloGrpc>();

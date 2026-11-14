@@ -5,7 +5,6 @@ from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
 import json
-import hashlib
 import re
 import yaml
 from jsonschema import Draft4Validator
@@ -143,7 +142,7 @@ def validate_object(schema):
 
 def validate_name(name, path):
     if name == 'BROKER_CONFIG_DELIVERY_META':
-        raise ValueError('BROKER_CONFIG_DELIVERY_META is reserved for delivery metadata')
+        raise ValueError('BROKER_CONFIG_DELIVERY_META is reserved for compatibility with older consumers')
     if not isinstance(name, str) or not re.fullmatch(r'[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*', name) or path.stem != name:
         raise ValueError(f'{path}: expected matching UPPER_CASE name and filename')
 
@@ -228,38 +227,6 @@ def selected(service, loader):
     return contexts, configs, entries
 
 
-def schema_hash(spec, contexts):
-    payload = [spec, contexts[spec['context']] if spec['mode'] == 'conditional' else None]
-    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-
-
-def readiness_rules(service, manifest, loader):
-    section = manifest.get('critical_dependencies', {})
-    if not isinstance(section, dict) or set(section) - {'configs'}:
-        raise ValueError('service.yaml: critical_dependencies supports configs only')
-    rules = section.get('configs', {})
-    if not isinstance(rules, dict):
-        raise ValueError('service.yaml: critical_dependencies.configs must be a mapping')
-    contexts, catalog, selected_entries = selected(service, loader)
-    available = {catalog[entry]['name']: catalog[entry] for entry in selected_entries}
-    result = []
-    for name, policy in rules.items():
-        if name not in available:
-            raise ValueError(f'service.yaml: critical config {name} must be imported')
-        if not isinstance(policy, dict) or set(policy) - {'allow_builtin', 'allow_cache', 'max_age_seconds'}:
-            raise ValueError(f'service.yaml: invalid policy for {name}')
-        if type(policy.get('max_age_seconds')) is not int or not 1 <= policy['max_age_seconds'] <= 31536000:
-            raise ValueError(f'service.yaml: {name}.max_age_seconds must be 1..31536000')
-        for flag in ('allow_builtin', 'allow_cache'):
-            if flag in policy and type(policy[flag]) is not bool:
-                raise ValueError(f'service.yaml: {name}.{flag} must be boolean')
-        result.append({'name': name, 'schema-hash': schema_hash(available[name], contexts),
-                       'allow-builtin': policy.get('allow_builtin', False),
-                       'allow-cache': policy.get('allow_cache', True),
-                       'max-age-seconds': policy['max_age_seconds']})
-    return result
-
-
 def body_code(spec, ns, context=False):
     body = parse_body(spec['schema'], {})
     members = tuple(replace(f, name=pascal(f.name)) for f in body.fields)
@@ -339,7 +306,7 @@ def outputs(service, loader):
         text += f'namespace configs {{ using {pascal(name)} = {ns}::Value; }}\n'
         key = f'platform::configs::ConditionalKey<{typ}, {context_typ}>' if spec['mode'] == 'conditional' else f'platform::configs::PlainKey<{typ}>'
         initial = f'{{{quoted(name)}, {ns}::{parser}, userver::dynamic_config::DefaultAsJsonString{{{quoted(json.dumps(default, ensure_ascii=False))}}}}}'
-        text += f'namespace configs {{ inline const {key} {name}{{{initial}, {quoted(schema_hash(spec, contexts))}}}; }}\n'
+        text += f'namespace configs {{ inline const {key} {name}{{{initial}}}; }}\n'
     if service.name == 'configs':
         text += 'namespace configs {\ninline platform::configs::Json Defaults() { userver::formats::json::ValueBuilder out(userver::formats::json::Type::kObject);\n'
         for entry in entries:
@@ -354,7 +321,5 @@ def outputs(service, loader):
     for entry in entries:
         spec = configs[entry];parser = 'ParseConfig' if spec['mode'] == 'conditional' else 'ParseValue'
         text += f'(void)detail::{spec["name"].lower()}::{parser}(docs.Get({quoted(spec["name"])}));\n'
-    text += '}\nstatic std::map<std::string, std::string> Schemas() { return {'
-    text += ', '.join('{' + quoted(configs[entry]['name']) + ', ' + quoted(schema_hash(configs[entry], contexts)) + '}' for entry in entries)
-    text += '}; }\n};\n}  // namespace configs\n'
+    text += '}\n};\n}  // namespace configs\n'
     return {'include/configs/keys.hpp': format_cpp(text)}

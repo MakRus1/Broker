@@ -74,9 +74,9 @@ def restart_counts():
 
 def check():
     endpoints = {
-        "broker": "http://127.0.0.1:18082/ping/ready",
-        "configs": "http://127.0.0.1:18092/ping/ready",
-        "diagnostics": "http://127.0.0.1:18085/ping/ready",
+        "broker": "http://127.0.0.1:18082/ping",
+        "configs": "http://127.0.0.1:18092/ping",
+        "diagnostics": "http://127.0.0.1:18085/ping",
         "grafana": "http://127.0.0.1:13000/api/health",
         "loki": "http://127.0.0.1:13100/ready",
         "tempo": "http://127.0.0.1:13200/ready",

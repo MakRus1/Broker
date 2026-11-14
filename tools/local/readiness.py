@@ -14,7 +14,7 @@ class Handler(BaseHTTPRequestHandler):
             ready = 0
             try:
                 with urllib.request.urlopen(
-                    f"http://{service}:{port}/ping/ready", timeout=1
+                    f"http://{service}:{port}/ping", timeout=1
                 ) as response:
                     ready = int(response.status == 200)
             except OSError:

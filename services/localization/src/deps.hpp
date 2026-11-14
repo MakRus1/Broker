@@ -9,7 +9,6 @@
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
-#include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -25,7 +24,6 @@ struct Deps {
     SourcesComponent* sources;
 
     // SERVICE_DEPS_FIELDS_BEGIN
-    platform::Readiness* readiness;
     platform::configs::Source configs;
     clients::organizations::Client organizations;
     userver::storages::postgres::ClusterPtr pg_cluster;
@@ -39,7 +37,6 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .sources = &component_context.FindComponent<SourcesComponent>(),
 
         // SERVICE_DEPS_INIT_BEGIN
-        .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =
             platform::configs::Source{
                 component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},

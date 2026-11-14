@@ -222,7 +222,7 @@ def run(build):
                     raise RuntimeError(log.read())
                 try:
                     with urllib.request.urlopen(
-                        f'http://127.0.0.1:{monitor}/ping/ready', timeout=0.2
+                        f'http://127.0.0.1:{monitor}/ping', timeout=0.2
                     ) as response:
                         if response.status == 200:
                             return port

@@ -24,3 +24,4 @@ auth-allow-http: true
 platform-access-url: http://localhost:8130/api/platform/access
 
 configs-allow-self-approval: true
+config-wait-for-snapshot: false

@@ -16,7 +16,6 @@ add_library(
     src/components/route_validation.cpp
     src/components/rail_route.cpp
     src/components/road_route.cpp
-    src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

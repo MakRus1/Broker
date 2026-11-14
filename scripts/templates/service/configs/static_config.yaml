@@ -10,8 +10,6 @@ components_manager:
 
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
-        platform-readiness: {}
-        platform-http-readiness: {}
         # SERVICE_CONFIG_END
         platform-http-telemetry:
             service-name: broker
@@ -80,11 +78,6 @@ components_manager:
                 environment: $environment
         handler-ping:
             path: /ping
-            method: GET
-            task_processor: main-task-processor
-            monitor-handler: true
-        handler-ping-ready:
-            path: /ping/ready
             method: GET
             task_processor: main-task-processor
             monitor-handler: true

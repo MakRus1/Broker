@@ -51,6 +51,7 @@ SavePreferenceRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
 ListPreferencesResult:
   type: object
   additionalProperties: false

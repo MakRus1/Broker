@@ -24,6 +24,7 @@ paths:
                   type: string
                 organization_id:
                   format: uuid
+                  x-cpp-type: uuid
                   type: string
               required:
               - organization_id

@@ -17,7 +17,7 @@ class CatalogComponent final : public userver::components::ComponentBase {
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
-    void CheckOrganization(const std::string& access_token, const std::string&) const;
+    void CheckOrganization(const std::string& access_token, const boost::uuids::uuid&) const;
     clients::organizations::Client organizations_;
 };
 }  // namespace localization

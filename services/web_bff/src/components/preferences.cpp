@@ -1,6 +1,7 @@
 #include <components/preferences.hpp>
 #include <converters/preferences.hpp>
 #include <userver/components/component_context.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace web_bff {
@@ -17,11 +18,11 @@ userver::yaml_config::Schema PreferencesComponent::GetStaticConfigSchema() {
 }
 
 models::preferences::ListPreferencesResult PreferencesComponent::GetWorkspacePreferences(
-    const std::string& organization, const std::string& token) const {
+    const boost::uuids::uuid& organization, const std::string& token) const {
     const auto personal =
         preferences_.ApiV1PreferencesList({.body = {.organization_id = organization}}, token);
     const auto role = organizations_.ApiOrganizationsRegistryDefaultsGet(
-        {.body = {.organization_id = organization}}, token);
+        {.body = {.organization_id = userver::utils::ToString(organization)}}, token);
     models::preferences::ListPreferencesResult result;
     for (const auto& item : personal.preferences)
         result.preferences.push_back(Convert(item));

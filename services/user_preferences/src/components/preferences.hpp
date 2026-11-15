@@ -18,7 +18,7 @@ class PreferencesComponent final : public userver::components::ComponentBase {
         const platform::auth::Identity&, const std::string& access_token) const;
 
   private:
-    void CheckOrganization(const std::string& access_token, const std::string&) const;
+    void CheckOrganization(const std::string& access_token, const boost::uuids::uuid&) const;
     userver::storages::postgres::ClusterPtr cluster_;
     clients::organizations::Client organizations_;
 };

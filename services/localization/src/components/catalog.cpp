@@ -6,6 +6,8 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace localization {
@@ -24,11 +26,12 @@ userver::yaml_config::Schema CatalogComponent::GetStaticConfigSchema() {
 }
 
 void CatalogComponent::CheckOrganization(
-    const std::string& access_token, const std::string& organization) const {
+    const std::string& access_token, const boost::uuids::uuid& organization) const {
     namespace api = clients::organizations::ApiOrganizationsMembershipGet;
     try {
         organizations_.ApiOrganizationsMembershipGet(
-            api::Request{.body = {.organization_id = organization}}, access_token);
+            api::Request{.body = {.organization_id = userver::utils::ToString(organization)}},
+            access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {

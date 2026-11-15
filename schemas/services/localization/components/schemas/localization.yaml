@@ -57,6 +57,7 @@ GetCatalogRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     locale:
       type: string
       enum:

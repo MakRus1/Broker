@@ -17,6 +17,21 @@ void ValidateRecipient(
         throw platform::http::HandlerError<400>{"invalid_recipient_issuer",
             "Получатель должен принадлежать провайдеру пользователей отправителя"};
 }
+
+bool MatchesStoredEvent(const userver::storages::postgres::ResultSet& saved,
+    const userver::formats::json::Value& document) {
+    namespace json = userver::formats::json;
+    namespace models = notifications::models;
+    if (saved.IsEmpty())
+        return false;
+    const auto payload = saved.AsSingleRow<json::Value>();
+    if (payload == document)
+        return true;
+
+    const auto event =
+        models::ParseModelJson(payload, std::type_identity<models::PublishedEvent>{});
+    return json::ValueBuilder(event).ExtractValue() == document;
+}
 }  // namespace
 
 namespace notifications {
@@ -51,13 +66,7 @@ void EventAcceptanceComponent::AcceptEvent(
             if (inserted.IsEmpty()) {
                 const auto saved = transaction.Execute(sql::kGetEvent, identity.ClientId,
                     event.organization_id, event.id, type, version);
-                using Event = std::decay_t<decltype(event)>;
-                if (saved.IsEmpty() ||
-                    userver::formats::json::ValueBuilder(
-                        models::ParseModelJson(
-                            saved.template AsSingleRow<userver::formats::json::Value>(),
-                            std::type_identity<Event>{}))
-                            .ExtractValue() != document)
+                if (!MatchesStoredEvent(saved, document))
                     throw platform::http::HandlerError<409>{
                         "event_conflict", "Событие с этим ключом уже принято с другими данными"};
             } else if (delivery.RecipientSubject.has_value()) {

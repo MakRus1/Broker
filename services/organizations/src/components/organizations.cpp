@@ -28,7 +28,7 @@ userver::yaml_config::Schema OrganizationsComponent::GetStaticConfigSchema() {
 
 models::OrganizationsListResult OrganizationsComponent::ListOrganizations(
     const models::ListOrganizationsRequest& request) const {
-    const auto scope = registry::CursorScope(request, std::nullopt, "organizations");
+    const auto scope = registry::GlobalCursorScope(request, "organizations");
     if (!registry::CursorMatches(request, scope, EnumValue(request.sort) == "id"))
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
 

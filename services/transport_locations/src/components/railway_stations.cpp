@@ -29,7 +29,7 @@ userver::yaml_config::Schema RailwayStationsComponent::GetStaticConfigSchema() {
 
 models::StationListResult RailwayStationsComponent::List(
     const models::ListStationsRequest& request) const {
-    const auto scope = registry::CursorScope(request, std::nullopt, "railway_stations");
+    const auto scope = registry::GlobalCursorScope(request, "railway_stations");
     if (!registry::CursorMatches(request, scope, false))
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
     const auto query = StationQuery(request);

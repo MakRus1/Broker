@@ -21,7 +21,8 @@ std::optional<Result> ReadReplay(const pg::ResultSet& rows, const Request& reque
 template <typename Result, typename Request>
 std::optional<Result> FindReplay(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, const std::string& action, const Request& request) {
-    transaction.Execute(sql::kLockIdempotency, organization, action, request.idempotency_key);
+    transaction.Execute(sql::kLockIdempotency, organization, action, request.idempotency_key,
+        std::optional<boost::uuids::uuid>{});
     const auto rows =
         transaction.Execute(sql::kFindIdempotency, organization, action, request.idempotency_key);
     return ReadReplay<Result>(rows, request);

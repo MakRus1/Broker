@@ -1668,19 +1668,11 @@ FinancialHistoryReference:
     name:
       type: string
       description: Сохранённое имя или номер связанного документа; не локализуется.
-FinancialHistoryFormat:
-  type: string
-  enum:
-  - text
-  - date
-  - money
-  - quantity
-  - percent
-  - rate
-  - boolean
-  - enum
-  - reference
 FinancialHistoryValue:
+  oneOf:
+  - $ref: '#/FinancialHistoryScalarValue'
+  - $ref: '#/FinancialHistoryReferenceValue'
+FinancialHistoryScalarValue:
   type: object
   additionalProperties: false
   required:
@@ -1689,16 +1681,29 @@ FinancialHistoryValue:
   properties:
     value:
       type: string
-      description: 'Исходное значение: целое число для денежных/числовых форматов,
-        true/false для boolean, код для enum, ID для reference.'
+      description: Исходное значение. Целые числа передаются строкой для сохранения точности.
     format:
-      $ref: '#/FinancialHistoryFormat'
+      type: string
+      enum: [text, date, money, quantity, percent, rate, boolean, enum]
     currency:
       type: string
+FinancialHistoryReferenceValue:
+  type: object
+  additionalProperties: false
+  required:
+  - value
+  - format
+  properties:
+    value:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    format:
+      type: string
+      enum: [reference]
     display_name:
       type: string
-      description: Сохранённое имя связанного объекта для reference. ID остаётся в
-        value.
+      description: Сохранённое имя связанного объекта.
 FinancialHistoryChange:
   type: object
   additionalProperties: false

@@ -37,19 +37,15 @@ inline models::pg::ServiceChargeRaw ToServiceCharge(const models::SaveServiceCha
     }
     return {
         .Id = value.id,
-        .ShipmentId =
-            value.shipment_id.has_value() ? std::optional{value.shipment_id.value()} : std::nullopt,
-        .TransportationId = value.transportation_id.has_value()
-            ? std::optional{value.transportation_id.value()}
-            : std::nullopt,
+        .ShipmentId = value.shipment_id,
+        .TransportationId = value.transportation_id,
         .LabelId = value.label_id,
         .LabelName = label.name,
         .Direction = models::EnumValue(value.direction),
         .Unit = models::EnumValue(value.unit),
         .CounterpartyId = value.counterparty_id,
         .CounterpartyName = parties.CounterpartyName,
-        .ContractId =
-            value.contract_id.has_value() ? std::optional{value.contract_id.value()} : std::nullopt,
+        .ContractId = value.contract_id,
         .ContractNumber = parties.ContractNumber,
         .QuantityMilli = value.quantity_milli,
         .PriceMinor = value.price_minor,

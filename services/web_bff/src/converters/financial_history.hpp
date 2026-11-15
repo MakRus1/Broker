@@ -25,12 +25,22 @@ inline models::finance::FinancialHistoryCursor Convert(
 
 inline models::finance::FinancialHistoryValue Convert(
     const clients::finance::models::FinancialHistoryValue& value) {
-    return {.currency = value.currency,
-        .display_name = value.display_name,
-        .format =
-            models::finance::ParseEnumScalar(clients::finance::models::EnumValue(value.format),
-                models::finance::FinancialHistoryFormat{}),
-        .value = value.value};
+    using namespace models::finance;
+    return std::visit(
+        [](const auto& item) -> FinancialHistoryValue {
+            if constexpr (std::is_same_v<std::decay_t<decltype(item)>,
+                              clients::finance::models::FinancialHistoryReferenceValue>) {
+                return {.value = FinancialHistoryReferenceValue{
+                            .display_name = item.display_name, .value = item.value}};
+            } else {
+                return {
+                    .value = FinancialHistoryScalarValue{.currency = item.currency,
+                        .format = ParseEnumScalar(clients::finance::models::EnumValue(item.format),
+                            FinancialHistoryScalarValue_format{}),
+                        .value = item.value}};
+            }
+        },
+        value.value);
 }
 
 inline models::finance::FinancialHistoryReference Convert(

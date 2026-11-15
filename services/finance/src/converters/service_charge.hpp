@@ -6,19 +6,15 @@ namespace finance::converters {
 inline models::ServiceCharge Convert(const models::pg::ServiceChargeRaw& value) {
     models::ServiceCharge result;
     result.id = value.Id;
-    result.shipment_id =
-        value.ShipmentId.has_value() ? std::optional{value.ShipmentId.value()} : std::nullopt;
-    result.transportation_id = value.TransportationId.has_value()
-        ? std::optional{value.TransportationId.value()}
-        : std::nullopt;
+    result.shipment_id = value.ShipmentId;
+    result.transportation_id = value.TransportationId;
     result.label_id = value.LabelId;
     result.label_name = value.LabelName;
     result.direction = models::ParseEnumScalar(value.Direction, models::ServiceChargeDirection{});
     result.unit = models::ParseEnumScalar(value.Unit, models::FinancialLabelUnit{});
     result.counterparty_id = value.CounterpartyId;
     result.counterparty_name = value.CounterpartyName;
-    result.contract_id =
-        value.ContractId.has_value() ? std::optional{value.ContractId.value()} : std::nullopt;
+    result.contract_id = value.ContractId;
     result.contract_number = value.ContractNumber;
     result.quantity_milli = value.QuantityMilli;
     result.price_minor = value.PriceMinor;

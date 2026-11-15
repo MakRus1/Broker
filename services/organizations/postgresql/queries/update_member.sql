@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — issuer токена пользователя.
+-- $3 — subject пользователя.
+-- $4 — новый идентификатор роли.
+-- $5 — новый признак активности участника.
 UPDATE memberships AS m
 SET role = $4, enabled = $5, revision = revision + 1
 WHERE organization_id = $1::UUID AND issuer = $2 AND subject = $3

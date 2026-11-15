@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные новой роли.
 INSERT INTO organization_roles AS r (organization_id, id, name, description, permissions)
 SELECT $1::UUID, v.id, v.name, v.description, v.permissions
 FROM (SELECT ($2::public.organization_role_v1).*) v

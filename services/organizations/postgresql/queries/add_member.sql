@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — issuer токена пользователя.
+-- $3 — данные участника организации, включая subject и роль.
 INSERT INTO memberships AS m (
     organization_id, issuer, subject, username, display_name, email, role, last_name, first_name, middle_name
 )

@@ -150,7 +150,9 @@ COMMON = r'''#pragma once
 #include <userver/utils/datetime.hpp>
 #include <userver/formats/parse/common.hpp>
 #include <userver/formats/json/serialize.hpp>
+#include <userver/formats/serialize/boost_uuid.hpp>
 #include <userver/formats/serialize/common_containers.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/formats/json/value.hpp>
 #include <userver/formats/json/value_builder.hpp>
 namespace broker_codegen {
@@ -206,11 +208,19 @@ template <typename T> userver::formats::json::Value CalendarDateJson(const std::
     for (const auto& value : values) result.PushBack(CalendarDateJson(value));
     return result.ExtractValue();
 }
+inline void CheckFormat(const std::string& value, const std::string& format);
+
+template <> inline boost::uuids::uuid ParseScalar<boost::uuids::uuid>(const std::string& text) {
+    CheckFormat(text, "uuid");
+    return userver::utils::BoostUuidFromString(text);
+}
+
 template <typename T> T ParseJson(const userver::formats::json::Value& value) {
     if constexpr (IsOptional<T>::value) {
         if (value.IsNull()) return std::nullopt;
         return T{ParseJson<typename T::value_type>(value)};
     } else if constexpr (std::is_enum_v<T>) return ParseEnumJson(value, T{});
+    else if constexpr (std::is_same_v<T, boost::uuids::uuid>) return ParseScalar<T>(value.As<std::string>());
     else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) return ParseScalar<T>(value.As<std::string>());
     else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) return ParseScalar<T>(value.As<std::string>());
     else if constexpr (std::is_same_v<T, userver::formats::json::Value>) {

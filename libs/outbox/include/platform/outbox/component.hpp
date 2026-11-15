@@ -138,7 +138,7 @@ class Component final : public userver::components::ComponentBase {
     std::map<std::string, std::size_t> topic_concurrency_;
     std::vector<std::unique_ptr<Worker>> workers_;
     void Stop() noexcept;
-    std::mutex statistics_mutex_;
+    std::mutex topics_mutex_;
     std::map<std::string, std::unique_ptr<TopicStatistics>> statistics_;
     std::atomic<bool> snapshot_success_{false};
     std::atomic<double> snapshot_timestamp_{0};

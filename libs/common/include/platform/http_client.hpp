@@ -1,5 +1,6 @@
 #pragma once
 #include <platform/calendar_date.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/datetime.hpp>
 #include <userver/utils/datetime/date.hpp>
 
@@ -88,6 +89,8 @@ template <typename T> std::string Scalar(const T& value) {
         return Scalar(EnumValue(value));
     } else if constexpr (std::is_same_v<T, std::string>) {
         return value;
+    } else if constexpr (std::is_same_v<T, boost::uuids::uuid>) {
+        return userver::utils::ToString(value);
     } else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) {
         return platform::FormatCalendarDate(value);
     } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {

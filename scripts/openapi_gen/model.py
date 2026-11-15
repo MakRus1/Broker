@@ -40,6 +40,8 @@ class Type:
             return self.model_name if self.model_name.startswith("::") else "models::" + self.model_name
         if self.enum_name:
             return self.enum_name
+        if self.schema.get('x-cpp-type') == 'uuid':
+            return 'boost::uuids::uuid'
         if self.kind == 'string' and self.schema.get('format') == 'date':
             return 'userver::utils::datetime::Date'
         if self.kind == 'string' and self.schema.get('format') == 'date-time':

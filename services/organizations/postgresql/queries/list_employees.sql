@@ -1,3 +1,7 @@
+-- $1 — организация.
+-- $2 — subject пользователя (NULL отключает фильтр).
+-- $3 — часть отображаемого имени (NULL отключает фильтр).
+-- $4 — максимальное число сотрудников.
 SELECT ROW(subject, display_name)::public.organization_employee_v1
 FROM memberships
 WHERE organization_id = $1::UUID AND enabled

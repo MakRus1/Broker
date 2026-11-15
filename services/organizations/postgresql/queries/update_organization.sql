@@ -1,3 +1,6 @@
+-- $1 — идентификатор организации.
+-- $2 — новое название организации.
+-- $3 — новый признак активности организации.
 UPDATE organizations AS o
 SET name = $2, enabled = $3, revision = revision + 1
 WHERE id = $1::UUID

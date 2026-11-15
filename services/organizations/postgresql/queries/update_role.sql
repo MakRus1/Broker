@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — новые данные роли с её идентификатором.
 UPDATE organization_roles AS r
 SET name = v.name, description = v.description, permissions = v.permissions, revision = r.revision + 1
 FROM (SELECT ($2::public.organization_role_v1).*) v

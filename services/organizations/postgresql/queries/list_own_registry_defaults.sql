@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — issuer токена пользователя.
+-- $3 — subject пользователя.
 SELECT d.role, d.registry, d.value, d.revision
 FROM effective_memberships m
 JOIN role_registry_defaults d

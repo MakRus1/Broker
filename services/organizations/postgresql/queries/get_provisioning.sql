@@ -1,3 +1,4 @@
+-- $1 — идентификатор запроса создания пользователя.
 SELECT organization_id::TEXT, actor, payload, subject
 FROM user_provisioning
 WHERE request_id = $1::UUID

@@ -1,3 +1,7 @@
+-- $1 — issuer токена пользователя.
+-- $2 — subject пользователя.
+-- $3 — список платформенных прав пользователя.
+-- $4 — ожидаемая редакция (0 для создания).
 INSERT INTO platform_access AS a (issuer, subject, permissions, revision)
 SELECT $1, $2, $3::TEXT[], 1 WHERE $4::BIGINT = 0
 ON CONFLICT (issuer, subject) DO UPDATE

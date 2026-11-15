@@ -246,14 +246,15 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
         event.action = included ? Action::InvoiceLinked : Action::InvoiceUnlinked;
         event.reference = Reference{
             .id = record.Cursor.entity_id, .name = after.Document.Name, .source = Source::Invoice};
+        const auto invoice_id = userver::utils::ToString(record.Cursor.entity_id);
         event.changes.push_back(
             {.after = included ? std::optional{Value{.display_name = after.Document.Name,
                                      .format = Format::Reference,
-                                     .value = userver::utils::ToString(record.Cursor.entity_id)}}
+                                     .value = invoice_id}}
                                : std::nullopt,
                 .before = was ? std::optional{Value{.display_name = before.Document.Name,
                                     .format = Format::Reference,
-                                    .value = userver::utils::ToString(record.Cursor.entity_id)}}
+                                    .value = invoice_id}}
                               : std::nullopt,
                 .field = FieldKey::Invoice});
         return event;

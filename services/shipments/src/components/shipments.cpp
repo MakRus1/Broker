@@ -152,7 +152,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
     const boost::uuids::uuid& organization, const ShipmentSource& source,
     const json::Value& document) const {
     const auto saved = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindSourceShipment,
-        organization, source.Producer, source.Type, source.Id);
+        organization, source.Producer, source.Type, source.Id, source.ManualIdempotencyKey);
     const auto shipment_id = ValidateShipmentReplay(saved, document);
     if (!shipment_id.has_value())
         return std::nullopt;
@@ -171,10 +171,10 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(
     const auto settings = settings_.Effective(organization, std::optional{body.customer_id});
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    transaction.Execute(
-        sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, source.Id);
-    const auto saved = transaction.Execute(
-        sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
+    transaction.Execute(sql::kLockShipmentSource, organization, source.Producer, source.Type,
+        source.Id, source.ManualIdempotencyKey);
+    const auto saved = transaction.Execute(sql::kFindSourceShipment, organization, source.Producer,
+        source.Type, source.Id, source.ManualIdempotencyKey);
     if (const auto shipment_id = ValidateShipmentReplay(saved, document); shipment_id.has_value()) {
         const auto shipment = converters::Convert(
             transaction.Execute(sql::kGetShipment, organization, shipment_id.value())
@@ -185,7 +185,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(
 
     const auto result = InsertShipment(transaction, organization, body, settings);
     transaction.Execute(sql::kLinkSourceShipment, organization, source.Producer, source.Type,
-        source.Id, result.id, document);
+        source.Id, source.ManualIdempotencyKey, result.id, document);
 
     helpers::WriteAudit(
         transaction, organization, actor, "create_shipment", result.id, body, result);

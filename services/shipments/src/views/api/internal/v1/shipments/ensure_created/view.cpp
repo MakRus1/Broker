@@ -15,9 +15,8 @@ Response View::Handle(
     auto actor = sender;
     actor.Subject = command.actor_subject;
     actor.Issuer = command.actor_issuer;
-    const ShipmentSource source{.Producer = sender.ClientId,
-        .Type = command.source.type,
-        .Id = userver::utils::ToString(command.source.id)};
+    const ShipmentSource source{
+        .Producer = sender.ClientId, .Type = command.source.type, .Id = command.source.id};
     const auto document = helpers::Document(command);
     if (auto replay = deps.shipments->FindCreatedShipment(organization, source, document);
         replay.has_value())

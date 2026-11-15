@@ -167,7 +167,7 @@ async def test_list_pagination_and_counters(api):
 
 
 async def test_idempotent_replay_has_one_audit_entry(api, pgsql):
-    body = {'customer_id': str(uuid4()), 'idempotency_key': str(uuid4())}
+    body = {'customer_id': str(uuid4()), 'idempotency_key': 'manual:' + str(uuid4())}
     first = await api.post('/api/v1/shipments/create', body, expected=201)
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(

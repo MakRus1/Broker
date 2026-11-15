@@ -22,8 +22,8 @@ async def test_command_is_generic_idempotent_and_transactional(service_client, a
     assert replay.json()['shipment']['id'] in ids
     assert (await send({**command, 'source': {**command['source'], 'id': 'not-a-uuid'}})).status == 400
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT count(*) FROM shipment_sources')
-        assert cursor.fetchone()[0]==1
+        cursor.execute('SELECT source_id::text, manual_idempotency_key FROM shipment_sources')
+        assert cursor.fetchall() == [(command['source']['id'], None)]
         cursor.execute("SELECT count(*) FROM outbox WHERE topic='notifications.publish' AND payload->>'type'='shipment.created'")
         assert cursor.fetchone()[0]==1
     conflicting={**command,'shipment':{**command['shipment'],'reference':'Changed'}}

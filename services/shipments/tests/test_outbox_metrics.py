@@ -109,7 +109,12 @@ async def test_failed_delivery_retry_and_success_counters(
     )
     for _ in range(140):
         text = (await monitor_client.get("/metrics")).text
-        if metric(text, "outbox_delivered_total", topic) == 1:
+        # Доставка учитывается до завершения обработки и освобождения worker.
+        if (
+            metric(text, "outbox_delivered_total", topic) == 1
+            and metric(text, "outbox_finished_total", topic) == 2
+            and metric(text, "outbox_active", topic) == 0
+        ):
             break
         await asyncio.sleep(0.05)
     else:

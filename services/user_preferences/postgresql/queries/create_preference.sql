@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — issuer токена пользователя.
+-- $3 — subject пользователя.
+-- $4 — ключ настройки.
+-- $5 — значение настройки в JSON.
 INSERT INTO user_preferences (
     organization_id, issuer, subject, key, value, revision
 )

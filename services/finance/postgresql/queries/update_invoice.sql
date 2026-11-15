@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — новые данные счёта.
+-- $3 — ожидаемая редакция.
 UPDATE invoices AS invoice
 SET
     direction = value.direction,

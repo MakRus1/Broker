@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового счёта.
 INSERT INTO invoices AS invoice (
     organization_id,
     id,

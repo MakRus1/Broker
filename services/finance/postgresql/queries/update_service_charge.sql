@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — новые данные начисления.
+-- $3 — ожидаемая редакция.
 UPDATE service_charges AS charge
 SET
     label_id = value.label_id,

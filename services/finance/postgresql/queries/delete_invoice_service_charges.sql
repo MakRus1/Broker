@@ -1,4 +1,6 @@
--- NULL в третьем параметре: заменить весь состав; UUID: исключить одну услугу.
+-- $1 — организация.
+-- $2 — идентификатор счёта.
+-- $3 — идентификатор начисления (NULL удаляет весь состав счёта).
 DELETE FROM invoice_service_charges
 WHERE organization_id = $1::UUID
     AND invoice_id = $2::UUID

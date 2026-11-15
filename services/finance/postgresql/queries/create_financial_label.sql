@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные новой финансовой метки.
 INSERT INTO financial_labels (
     organization_id,
     id,

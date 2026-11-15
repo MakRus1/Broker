@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — новые данные финансовой метки.
+-- $3 — ожидаемая редакция.
 UPDATE financial_labels AS stored
 SET
     name = value.name,

@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор платежа.
 SELECT ROW(
     payment.id,
     payment.kind,

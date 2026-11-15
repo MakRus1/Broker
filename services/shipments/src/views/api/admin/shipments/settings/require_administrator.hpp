@@ -5,7 +5,7 @@
 
 namespace shipments::views::api::admin::shipments::settings {
 inline void RequireAdministrator(const clients::organizations::Client& organizations,
-    userver::server::request::RequestContext& context, const std::string& organization) try {
+    userver::server::request::RequestContext& context, const boost::uuids::uuid& organization) try {
     platform::auth::RequireOrganizationAdministrator(organizations, context, organization);
 } catch (const platform::http::ErrorByStatus<403>&) {
 

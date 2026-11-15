@@ -1,6 +1,6 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <platform/auth/identity.hpp>
-#include <userver/utils/boost_uuid4.hpp>
 
 namespace platform::auth {
 // Проверяет управление именно указанной организацией, включая корневого администратора.
@@ -13,10 +13,4 @@ void RequireOrganizationAdministrator(const OrganizationsClient& organizations,
         {.body = {.organization_id = organization}}, GetAccessToken(context));
 }
 
-template <typename OrganizationsClient>
-void RequireOrganizationAdministrator(const OrganizationsClient& organizations,
-    const userver::server::request::RequestContext& context, const std::string& organization) {
-    RequireOrganizationAdministrator(
-        organizations, context, userver::utils::BoostUuidFromString(organization));
-}
 }  // namespace platform::auth

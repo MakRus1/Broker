@@ -2,4 +2,6 @@
 -- $2 — идентификатор контрагента.
 -- Создание и изменение одного UUID используют одинаковый порядок блокировок:
 -- идентификатор, затем реквизиты. Разные карточки не блокируют друг друга.
-SELECT pg_advisory_xact_lock(hashtextextended('counterparty:' || $1 || ':' || $2::UUID::TEXT, 0));
+SELECT pg_advisory_xact_lock(
+    hashtextextended('counterparty:' || $1::UUID::TEXT || ':' || $2::UUID::TEXT, 0)
+);

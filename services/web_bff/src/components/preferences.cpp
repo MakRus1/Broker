@@ -22,7 +22,7 @@ models::preferences::ListPreferencesResult PreferencesComponent::GetWorkspacePre
     const auto personal =
         preferences_.ApiV1PreferencesList({.body = {.organization_id = organization}}, token);
     const auto role = organizations_.ApiOrganizationsRegistryDefaultsGet(
-        {.body = {.organization_id = userver::utils::ToString(organization)}}, token);
+        {.body = {.organization_id = organization}}, token);
     models::preferences::ListPreferencesResult result;
     for (const auto& item : personal.preferences)
         result.preferences.push_back(Convert(item));
@@ -44,7 +44,7 @@ models::preferences::Preference PreferencesComponent::SavePersonalPreference(
 }
 
 models::RegistryDefaultsResult PreferencesComponent::ListRoleRegistryDefaults(
-    const std::string& organization, const std::string& token) const {
+    const boost::uuids::uuid& organization, const std::string& token) const {
     const auto source = organizations_.ApiOrganizationsRegistryDefaultsList(
         {.body = {.organization_id = organization}}, token);
     models::RegistryDefaultsResult result;

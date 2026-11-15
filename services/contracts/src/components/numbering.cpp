@@ -30,7 +30,7 @@ void NumberingComponent::RequireAdministrator(
     const boost::uuids::uuid& organization, std::string_view token) const {
     try {
         organizations_.ApiOrganizationsAdministrationCheck(
-            {.body = {.organization_id = userver::utils::ToString(organization)}}, token);
+            {.body = {.organization_id = organization}}, token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {

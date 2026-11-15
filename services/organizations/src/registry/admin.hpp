@@ -16,7 +16,7 @@ inline constexpr std::array<registry::FieldDefinition, 3> kSorts{kId, kName, kEn
 
 namespace member_fields {
 inline constexpr registry::Field<std::string> kSubject{"subject", "m.subject", "TEXT", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "m.organization_id", "UUID"};
 inline constexpr registry::Field<std::string> kName{
     "display_name", "lower(m.display_name) COLLATE \"C\""};

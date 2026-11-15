@@ -7,10 +7,13 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::organizations::ApiOrganizationsEmployeesList;
     const auto response = deps.organizations.ApiOrganizationsEmployeesList(
-        api::Request{.body = {.limit = request.body.limit,
-                         .organization_id = session.User.Organization,
-                         .query = request.body.query,
-                         .subject = request.body.subject}},
+        api::Request{
+            .body = {.limit = request.body.limit,
+                .organization_id = session.User.Organization
+                    ? std::optional{userver::utils::BoostUuidFromString(*session.User.Organization)}
+                    : std::nullopt,
+                .query = request.body.query,
+                .subject = request.body.subject}},
         session.Access);
     Response200 result;
     for (const auto& item : response.items)

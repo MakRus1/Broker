@@ -4,11 +4,12 @@
 #include <userver/crypto/hash.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/json/value_builder.hpp>
+#include <userver/formats/serialize/boost_uuid.hpp>
 #include <userver/utils/text_light.hpp>
 
 namespace platform::registry {
-template <typename Request>
-std::string CursorScope(const Request& request, const std::string& organization) {
+template <typename Request, typename Organization>
+std::string CursorScope(const Request& request, const Organization& organization) {
     userver::formats::json::ValueBuilder value{request};
     value.Remove("cursor");
     value.Remove("after");

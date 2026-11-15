@@ -9,10 +9,7 @@
 
 namespace organizations::converters {
 inline models::Organization Convert(const models::pg::OrganizationRaw& row) {
-    return {.enabled = row.Enabled,
-        .id = boost::uuids::to_string(row.Id),
-        .name = row.Name,
-        .revision = row.Revision};
+    return {.enabled = row.Enabled, .id = row.Id, .name = row.Name, .revision = row.Revision};
 }
 
 inline models::OrganizationEmployee Convert(const models::pg::OrganizationEmployeeRaw& row) {

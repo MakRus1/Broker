@@ -140,7 +140,9 @@ async def test_create_user_and_membership_replay_keeps_password_out_of_database(
 ):
     body = new_member()
     first = await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201)
-    replay = await api.call(ADMIN + '/members/create', body, user='org-admin', expected=201)
+    replay = await api.call(ADMIN + '/members/create',
+        {**body, 'request_id': body['request_id'].upper(), 'organization_id': body['organization_id'].upper()},
+        user='org-admin', expected=201)
     assert replay == first
     assert first['member']['display_name'] == 'Иванов Иван Иванович'
     assert first['member']['last_name'] == 'Иванов'

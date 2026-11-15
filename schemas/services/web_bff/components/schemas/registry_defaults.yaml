@@ -51,6 +51,7 @@ SaveRegistryDefaultRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     role:
       type: string
       minLength: 1

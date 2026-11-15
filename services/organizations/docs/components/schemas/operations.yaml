@@ -7,6 +7,7 @@ OrganizationIdentity:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
 RegistryDefaultsGetResult:
   type: object
   additionalProperties: false
@@ -39,6 +40,7 @@ RegistryDefaultsSaveRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     role:
       type: string
       minLength: 1
@@ -75,6 +77,7 @@ AccessResolveOrganizationRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     permission:
       type: string
       minLength: 1
@@ -98,6 +101,7 @@ AccessMineResult:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
 OrganizationsListResult:
   type: object
   additionalProperties: false
@@ -166,6 +170,7 @@ RolesCreateRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     id:
       type: string
       minLength: 1
@@ -205,6 +210,7 @@ RolesUpdateRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     id:
       type: string
       minLength: 1
@@ -272,6 +278,7 @@ AccessEmployeesRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     query:
       type: string
       maxLength: 200

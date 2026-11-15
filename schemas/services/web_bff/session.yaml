@@ -27,6 +27,7 @@ paths:
                   organization_id:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                   subject:
                     type: string
                   display_name:

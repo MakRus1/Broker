@@ -48,9 +48,8 @@ models::OrganizationsListResult OrganizationsComponent::ListOrganizations(
 
     std::optional<models::OrganizationListCursor> next;
     if (more)
-        next = models::OrganizationListCursor{.id = boost::uuids::to_string(rows.back().Value.Id),
-            .scope = scope,
-            .value = rows.back().SortKey};
+        next = models::OrganizationListCursor{
+            .id = rows.back().Value.Id, .scope = scope, .value = rows.back().SortKey};
     const auto items = registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
 
     transaction.Commit();

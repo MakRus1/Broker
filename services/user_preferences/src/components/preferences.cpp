@@ -30,8 +30,7 @@ void PreferencesComponent::CheckOrganization(
     namespace api = clients::organizations::ApiOrganizationsMembershipGet;
     try {
         organizations_.ApiOrganizationsMembershipGet(
-            api::Request{.body = {.organization_id = userver::utils::ToString(organization)}},
-            access_token);
+            api::Request{.body = {.organization_id = organization}}, access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {

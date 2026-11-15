@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/predicate.hpp>
 #include <components/keycloak_users.hpp>
 #include <converters/users.hpp>
 #include <helpers/errors.hpp>
@@ -106,7 +107,7 @@ User KeycloakUsers::Create(const std::string& request_id, const std::string& use
     const auto value = Lookup(username);
     const auto provisioning = value["attributes"]["broker-provisioning-id"];
     if (provisioning.IsMissing() || provisioning.GetSize() != 1 ||
-        provisioning[0].As<std::string>() != request_id)
+        !boost::iequals(provisioning[0].As<std::string>(), request_id))
         throw ApiError<409>{
             "username_taken", "Логин уже занят. Используйте добавление существующего пользователя"};
     return converters::Convert(value);

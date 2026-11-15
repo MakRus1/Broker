@@ -7,7 +7,7 @@ inline models::shipments::TransportLocation Convert(
     const clients::transport_locations::models::TransportLocation& value) {
     return {.code = value.code,
         .country_code = value.country_code,
-        .id = value.id,
+        .id = userver::utils::ToString(value.id),
         .kind = models::shipments::ParseEnumScalar(
             clients::transport_locations::models::EnumValue(value.kind),
             models::shipments::TransportLocationKind{}),
@@ -19,7 +19,7 @@ inline models::transportations::RailwayStation Convert(
     return {.country_code = value.country_code,
         .esr_code = value.esr_code,
         .esr_source = value.esr_source,
-        .id = value.id,
+        .id = userver::utils::ToString(value.id),
         .name = value.name,
         .uic_code = value.uic_code};
 }

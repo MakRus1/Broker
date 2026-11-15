@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <components/railway_stations.hpp>
 #include <converters/locations.hpp>
 #include <helpers/database.hpp>
@@ -8,6 +7,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -44,11 +44,9 @@ models::StationListResult RailwayStationsComponent::List(
     models::StationListResult result;
     result.items = registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
     if (more) {
-        result.next = boost::uuids::to_string(rows.back().Value.Id);
-        result.next_cursor =
-            models::StationListCursor{.id = boost::uuids::to_string(rows.back().Value.Id),
-                .scope = scope,
-                .value = rows.back().SortKey};
+        result.next = userver::utils::ToString(rows.back().Value.Id);
+        result.next_cursor = models::StationListCursor{
+            .id = rows.back().Value.Id, .scope = scope, .value = rows.back().SortKey};
     }
     transaction.Commit();
     return result;
@@ -67,7 +65,7 @@ models::RailwayStation RailwayStationsComponent::Save(
     return Convert(rows.AsSingleRow<models::pg::RailwayStationRaw>());
 }
 
-void RailwayStationsComponent::Archive(const std::string& id) const {
+void RailwayStationsComponent::Archive(const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kArchiveRailwayStation, id);
     if (rows.IsEmpty())
@@ -75,7 +73,7 @@ void RailwayStationsComponent::Archive(const std::string& id) const {
 }
 
 std::vector<models::RailwayStation> RailwayStationsComponent::GetBatch(
-    const std::vector<std::string>& requested_ids) const {
+    const std::vector<boost::uuids::uuid>& requested_ids) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRailwayStations, requested_ids);
     std::vector<models::RailwayStation> result;

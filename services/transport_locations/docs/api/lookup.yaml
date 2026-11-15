@@ -20,6 +20,7 @@ paths:
                   items:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
               required:
               - ids
       responses:
@@ -78,6 +79,7 @@ paths:
                   items:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
               required:
               - ids
       responses:

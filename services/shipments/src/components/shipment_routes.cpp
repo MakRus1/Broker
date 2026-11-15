@@ -112,12 +112,8 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
     if (ids.empty())
         return result;
 
-    std::vector<std::string> requested;
-    for (const auto& id : ids)
-        requested.push_back(boost::uuids::to_string(id));
-
     const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
-        {.body = {.ids = requested}}, access_token);
+        {.body = {.ids = {ids.begin(), ids.end()}}}, access_token);
 
     for (const auto& value : response.items) {
         auto location = converters::Convert(value);

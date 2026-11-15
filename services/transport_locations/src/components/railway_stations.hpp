@@ -12,8 +12,8 @@ class RailwayStationsComponent final : public userver::components::ComponentBase
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::StationListResult List(const models::ListStationsRequest& request) const;
     models::RailwayStation Save(const models::SaveStationRequest& request) const;
-    void Archive(const std::string& id) const;
-    std::vector<models::RailwayStation> GetBatch(const std::vector<std::string>& ids) const;
+    void Archive(const boost::uuids::uuid& id) const;
+    std::vector<models::RailwayStation> GetBatch(const std::vector<boost::uuids::uuid>& ids) const;
     std::vector<models::RailwayStation> Search(const std::string& query) const;
 
   private:

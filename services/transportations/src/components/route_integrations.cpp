@@ -131,10 +131,14 @@ models::RailwayStations RouteIntegrations::FindRailwayStations(
     models::RailwayStations stations;
     if (ids.empty())
         return stations;
-    const auto response =
-        transport_locations_.ApiV1RailwayStationsGetBatch({.body = {.ids = ids}}, access_token);
+    std::vector<boost::uuids::uuid> requested;
+    requested.reserve(ids.size());
+    for (const auto& id : ids)
+        requested.push_back(userver::utils::BoostUuidFromString(id));
+    const auto response = transport_locations_.ApiV1RailwayStationsGetBatch(
+        {.body = {.ids = std::move(requested)}}, access_token);
     for (const auto& value : response.items)
-        stations.emplace(value.id, converters::Convert(value));
+        stations.emplace(userver::utils::ToString(value.id), converters::Convert(value));
     return stations;
 } catch (const platform::http::CancelledError&) {
 

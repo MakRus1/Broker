@@ -12,8 +12,9 @@ class LocationsComponent final : public userver::components::ComponentBase {
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::LocationListResult List(const models::ListLocationsRequest& request) const;
     models::TransportLocation Save(const models::SaveLocationRequest& request) const;
-    void Archive(const std::string& id) const;
-    std::vector<models::TransportLocation> GetBatch(const std::vector<std::string>& ids) const;
+    void Archive(const boost::uuids::uuid& id) const;
+    std::vector<models::TransportLocation> GetBatch(
+        const std::vector<boost::uuids::uuid>& ids) const;
     std::vector<models::TransportLocation> Search(
         models::TransportLocationKind kind, const std::optional<std::string>& query) const;
 

@@ -21,6 +21,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -50,6 +51,7 @@ LocationListCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     value:
       type: string
       maxLength: 1024
@@ -68,6 +70,7 @@ ListLocationsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     country_code:
       type: string
       pattern: ^[A-Z]{2}$
@@ -108,6 +111,7 @@ RailwayStation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     uic_code:
       type: string
       pattern: ^[0-9]{7}$
@@ -130,6 +134,7 @@ StationListCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     value:
       type: string
       maxLength: 1024
@@ -146,6 +151,7 @@ ListStationsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     country_code:
       type: string
       pattern: ^[A-Z]{2}$
@@ -175,6 +181,7 @@ SaveLocationRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -216,6 +223,7 @@ SaveStationRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     uic_code:
       type: string
       pattern: ^[0-9]{7}$
@@ -235,6 +243,7 @@ LocationListResult:
     next:
       type: string
       format: uuid
+      x-cpp-type: uuid
     next_cursor:
       $ref: '#/LocationListCursor'
   required:

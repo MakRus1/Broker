@@ -2,6 +2,7 @@
 #include <helpers/database.hpp>
 #include <openapi/models.hpp>
 #include <platform/registry_query.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 
 namespace transport_locations::registry_query {
 namespace registry = platform::registry;

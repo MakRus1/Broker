@@ -226,7 +226,7 @@ class QueryBuilder {
 
     // Курсорная пагинация
 
-    template <typename T> void After(const std::optional<std::string>& id, const T& key) {
+    template <typename Id, typename T> void After(const std::optional<Id>& id, const T& key) {
         if (!id.has_value())
             return;
         const std::string comparison = descending_ ? " < " : " > ";

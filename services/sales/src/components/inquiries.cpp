@@ -141,11 +141,15 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     const auto references = route_rules::CollectReferences(creation.RouteSegments);
     models::TransportLocations locations;
     if (!references.LocationIds.empty()) {
+        std::vector<boost::uuids::uuid> ids;
+        ids.reserve(references.LocationIds.size());
+        for (const auto& id : references.LocationIds)
+            ids.push_back(userver::utils::BoostUuidFromString(id));
         const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
-            {.body = {.ids = {references.LocationIds.begin(), references.LocationIds.end()}}},
-            token);
+            {.body = {.ids = std::move(ids)}}, token);
         for (const auto& location : response.items)
-            locations.emplace(location.id, converters::ToTransportLocation(location));
+            locations.emplace(
+                userver::utils::ToString(location.id), converters::ToTransportLocation(location));
     }
     route_rules::ResolveLocations(creation.RouteSegments, locations);
     for (const auto& id : references.CounterpartyIds) {

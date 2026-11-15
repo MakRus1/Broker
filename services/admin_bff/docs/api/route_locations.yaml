@@ -28,6 +28,7 @@ paths:
                   next:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                   next_cursor:
                     $ref: ../components/schemas/route_locations.yaml#/LocationListCursor
                 required:
@@ -82,6 +83,7 @@ paths:
                 id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 kind:
                   $ref: ../components/schemas/route_locations.yaml#/TransportLocationKind
                 name:
@@ -159,6 +161,7 @@ paths:
                 id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
               required:
               - id
       responses:
@@ -173,6 +176,7 @@ paths:
                   id:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                 required:
                 - id
         '400':

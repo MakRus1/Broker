@@ -8,7 +8,7 @@ inline models::RailwayStation Convert(
     return {.country_code = value.country_code,
         .esr_code = value.esr_code,
         .esr_source = value.esr_source,
-        .id = value.id,
+        .id = userver::utils::ToString(value.id),
         .name = value.name,
         .uic_code = value.uic_code};
 }

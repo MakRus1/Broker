@@ -71,17 +71,19 @@ Component::~Component() {
 }
 
 void Component::Register(std::string topic, Handler handler) {
+    // Компоненты регистрируют обработчики из параллельно выполняемых конструкторов.
+    const std::lock_guard lock(topics_mutex_);
     if (started_ || topic.empty() || !handlers_.emplace(topic, std::move(handler)).second)
         throw std::logic_error{"Обработчик outbox должен быть зарегистрирован один раз до запуска"};
-    {
-        const std::lock_guard lock(statistics_mutex_);
-        statistics_.emplace(topic, std::make_unique<TopicStatistics>());
-    }
+    statistics_.emplace(topic, std::make_unique<TopicStatistics>());
     topics_.push_back(std::move(topic));
 }
 
 void Component::OnAllComponentsLoaded() {
-    started_ = true;
+    {
+        const std::lock_guard lock(topics_mutex_);
+        started_ = true;
+    }
     std::size_t total = 0;
     for (const auto& [topic, limit] : topic_concurrency_) {
         if (!handlers_.contains(topic))
@@ -245,7 +247,7 @@ void Component::RefreshQueueStatistics() {
         const auto rows =
             cluster_->Execute(pg::ClusterHostType::kMaster, sql::kQueueStatistics, topics_)
                 .AsContainer<std::vector<QueueRow>>(pg::kRowTag);
-        const std::lock_guard lock(statistics_mutex_);
+        const std::lock_guard lock(topics_mutex_);
         for (auto& [topic, stats] : statistics_) {
             stats->QueueSize = 0;
             stats->OldestCreatedAt = 0;
@@ -272,7 +274,7 @@ void Component::WriteStatistics(userver::utils::statistics::Writer& writer) {
     writer["queue_snapshot_success"] = snapshot_success_.load() ? 1 : 0;
     writer["queue_snapshot_timestamp_seconds"] = snapshot_timestamp_.load();
     writer["queue_snapshot_errors_total"] = Rate{snapshot_errors_.load()};
-    const std::lock_guard lock(statistics_mutex_);
+    const std::lock_guard lock(topics_mutex_);
     for (const auto& [topic, stats] : statistics_) {
         const auto labels = {userver::utils::statistics::LabelView{"outbox_topic", topic}};
         writer["active"].ValueWithLabels(stats->Active.load(), labels);

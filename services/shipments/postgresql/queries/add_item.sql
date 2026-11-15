@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — код типа контейнера.
+-- $4 — принадлежность контейнера.
+-- $5 — количество добавляемых контейнеров.
 INSERT INTO shipment_items (
     organization_id, shipment_id, container_type_code, container_ownership, planned_quantity
 )

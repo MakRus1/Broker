@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
 SELECT ROW(operation.id, item.container_type_code, item.container_ownership,
     operation.quantity::BIGINT)::public.pending_container_creation_v1
 FROM creation_operations AS operation

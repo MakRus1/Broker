@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — ожидаемая редакция (0 при создании).
+-- $3 — новые правила поставок.
 INSERT INTO organization_shipment_rules AS current (
     organization_id,
     number_template,

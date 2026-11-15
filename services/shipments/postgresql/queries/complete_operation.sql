@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — результат операции создания перевозок с её идентификатором и статусом.
 UPDATE creation_operations
 SET
     status = ($2::public.creation_operation_v1).status,

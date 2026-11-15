@@ -32,7 +32,7 @@ userver::yaml_config::Schema TransportationOperationsComponent::GetStaticConfigS
 }
 
 models::CreationOperation TransportationOperationsComponent::GetCreationOperation(
-    const std::string& organization, const boost::uuids::uuid& operation_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& operation_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetOperation, organization, operation_id);
     if (rows.IsEmpty())
@@ -68,7 +68,7 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
     api::RequestBody payload;
     payload.operation_id = result.id;
-    payload.organization_id = userver::utils::BoostUuidFromString(organization);
+    payload.organization_id = organization;
     payload.shipment_id = item.ShipmentId;
     payload.item_id = item.Id;
     payload.quantity = request.quantity;

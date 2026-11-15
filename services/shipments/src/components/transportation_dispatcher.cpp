@@ -6,6 +6,7 @@
 #include <userver/components/component_config.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -25,7 +26,7 @@ TransportationDispatcher::TransportationDispatcher(
         [this](const auto& message) { return SendOperation(message); },
         [](pg::Transaction& transaction, const platform::outbox::Message& message,
             const models::pg::CreationOperation& result) {
-            const auto organization = message.Payload["organization_id"].As<std::string>();
+            const auto organization = message.Payload["organization_id"].As<boost::uuids::uuid>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
         });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},

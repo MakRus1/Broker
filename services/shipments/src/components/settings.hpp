@@ -15,19 +15,21 @@ class SettingsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     configs::ShipmentSettings Effective(
-        const std::string&, const std::optional<boost::uuids::uuid>& = std::nullopt) const;
+        const boost::uuids::uuid&, const std::optional<boost::uuids::uuid>& = std::nullopt) const;
     configs::ShipmentSettings Effective(userver::storages::postgres::Transaction& transaction,
-        const std::string& organization, const std::optional<boost::uuids::uuid>& customer) const;
+        const boost::uuids::uuid& organization,
+        const std::optional<boost::uuids::uuid>& customer) const;
     models::ShipmentDictionaries GetDictionaries() const;
-    models::ShipmentBusinessSettings GetBusinessSettings(const std::string& organization) const;
-    models::ShipmentBusinessSettings SaveBusinessSettings(const std::string& organization,
+    models::ShipmentBusinessSettings GetBusinessSettings(
+        const boost::uuids::uuid& organization) const;
+    models::ShipmentBusinessSettings SaveBusinessSettings(const boost::uuids::uuid& organization,
         const platform::auth::Identity& actor, const models::ShipmentBusinessRules& rules,
         std::int64_t expected_revision) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     platform::configs::Source configs_;
-    std::optional<models::pg::OrganizationShipmentRules> LoadRules(const std::string&) const;
+    std::optional<models::pg::OrganizationShipmentRules> LoadRules(const boost::uuids::uuid&) const;
     models::ShipmentBusinessSettings BuildBusinessSettings(const configs::ShipmentSettings& limits,
         models::ShipmentBusinessRules rules, std::int64_t revision) const;
 };

@@ -23,7 +23,7 @@ userver::yaml_config::Schema ContractRegistry::GetStaticConfigSchema() {
 }
 
 models::ContractListResult ContractRegistry::ListContracts(
-    const std::string& organization, const models::ListContractsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListContractsRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -71,7 +71,8 @@ models::ContractListResult ContractRegistry::ListContracts(
 }
 
 models::ContractFilterValuesResult ContractRegistry::GetContractFilterValues(
-    const std::string& organization, const models::ContractFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ContractFilterValuesRequest& request) const {
     try {
         models::ContractFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);

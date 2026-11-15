@@ -15,7 +15,7 @@ namespace registry = platform::registry;
 namespace fields {
 using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "charge.id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "charge.organization_id", "UUID"};
 inline constexpr registry::Field<std::string> kLabel{"label_name",
     "lower(charge.label_name COLLATE public.registry_number_order) COLLATE "
@@ -67,7 +67,7 @@ inline constexpr std::array<registry::RegistryField, 13> kFields{{
 }  // namespace fields
 
 inline registry::QueryBuilder BuildRegistryFilters(
-    const models::ServiceChargeRegistryRequest& request, const std::string& organization,
+    const models::ServiceChargeRegistryRequest& request, const boost::uuids::uuid& organization,
     const std::optional<std::string>& exclude = std::nullopt) {
     registry::QueryBuilder query{sql::kServiceChargeRegistry,
         registry::RegistryOrderBy(fields::kFields, request.sort), request.descending, fields::kId};

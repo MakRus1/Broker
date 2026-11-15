@@ -15,7 +15,7 @@ inline constexpr pg::TransactionOptions kReadOnlySnapshotTransaction{
     pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
 template <typename Request, typename Result>
-void WriteAudit(pg::Transaction& transaction, const std::string& organization,
+void WriteAudit(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const std::string& action,
     const boost::uuids::uuid& id, const Request& request, const Result& result) {
     // Снимок аудита сохраняется атомарно с изменением данных.

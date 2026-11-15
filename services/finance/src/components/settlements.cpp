@@ -25,7 +25,7 @@ userver::yaml_config::Schema SettlementsComponent::GetStaticConfigSchema() {
 }
 
 models::ReconciliationResponse SettlementsComponent::GetReconciliation(
-    const std::string& organization, const models::ReconciliationRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ReconciliationRequest& request) const {
     const auto& body = request;
     for (const auto date : {body.date_from, body.date_to})
         if (!platform::IsCalendarDateInRange(
@@ -65,7 +65,8 @@ models::ReconciliationResponse SettlementsComponent::GetReconciliation(
 }
 
 models::CounterpartySettlementsResponse SettlementsComponent::GetBalances(
-    const std::string& organization, const models::CounterpartySettlementsRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::CounterpartySettlementsRequest& request) const {
     const auto& body = request;
     // Один SQL-запрос даёт согласованный снимок счетов и распределений платежей.
     const auto rows = cluster_->Execute(userver::storages::postgres::ClusterHostType::kSlave,

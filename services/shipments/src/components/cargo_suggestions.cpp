@@ -21,15 +21,16 @@ userver::yaml_config::Schema CargoSuggestionsComponent::GetStaticConfigSchema() 
     return ComponentBase::GetStaticConfigSchema();
 }
 
-std::vector<std::string> CargoSuggestionsComponent::FindSuggestions(const std::string& organization,
-    const boost::uuids::uuid& customer, const std::string& query) const {
+std::vector<std::string> CargoSuggestionsComponent::FindSuggestions(
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& customer,
+    const std::string& query) const {
     return cluster_
         ->Execute(pg::ClusterHostType::kSlave, sql::kListCargoSuggestions, organization, customer,
             userver::utils::text::ToLower(query))
         .AsContainer<std::vector<std::string>>();
 }
 
-bool CargoSuggestionsComponent::RemoveSuggestion(const std::string& organization,
+bool CargoSuggestionsComponent::RemoveSuggestion(const boost::uuids::uuid& organization,
     const boost::uuids::uuid& customer, const std::string& value) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kRemoveCargoSuggestion, organization, customer, value);

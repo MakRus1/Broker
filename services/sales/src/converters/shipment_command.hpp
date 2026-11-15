@@ -5,7 +5,7 @@
 
 namespace sales::converters {
 inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
-    const std::string& organization, const platform::auth::Identity& actor,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& actor,
     const models::Inquiry& inquiry, const models::ShipmentCreationContext& creation) {
     namespace json = userver::formats::json;
     namespace shipment_models = clients::shipments::models;
@@ -29,7 +29,7 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
             shipment_models::ParseModelJson(json::ValueBuilder(segment).ExtractValue(),
                 std::type_identity<shipment_models::ShipmentRouteSegment>{}));
     shipment_models::EnsureShipmentRequest command;
-    command.organization_id = userver::utils::BoostUuidFromString(organization);
+    command.organization_id = organization;
     command.source.type = kInquirySourceType;
     command.source.id = userver::utils::ToString(inquiry.id);
     command.actor_subject = actor.Subject;

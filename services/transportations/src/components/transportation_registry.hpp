@@ -11,9 +11,9 @@ class TransportationRegistry final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::TransportationListResult ListTransportations(
-        const std::string& organization, const models::ListTransportationsRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListTransportationsRequest&) const;
     models::RegistryValuesResult GetFilterValues(
-        const std::string& organization, const models::FilterValuesRequest&) const;
+        const boost::uuids::uuid& organization, const models::FilterValuesRequest&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

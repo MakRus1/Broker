@@ -9,46 +9,46 @@ namespace pg = userver::storages::postgres;
 
 // Фильтры участка используют те же операторы, что поля основного реестра.
 inline constexpr std::array<registry::RegistryField, 7> kFields{{
-    {.Field = registry::Field<std::string>{"mode", "shared.mode COLLATE \"C\"", "TEXT"},
+    {.Field = registry::Field<boost::uuids::uuid>{"mode", "shared.mode COLLATE \"C\"", "TEXT"},
         .ValueSql = "shared.mode",
         .Sortable = false,
         .ValuesFrom = "shipment_route_segments AS shared"},
-    {.Field = registry::Field<std::string>{"origin_station",
+    {.Field = registry::Field<boost::uuids::uuid>{"origin_station",
          "(local.document #>> '{rail,origin_station,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', local.document #>> '{rail,origin_station,name}', "
                     "local.document #>> '{rail,origin_station,esr_code}')",
         .Sortable = false,
         .Lookup = "route_locations",
         .ValuesFrom = "route_segments AS local"},
-    {.Field = registry::Field<std::string>{"destination_station",
+    {.Field = registry::Field<boost::uuids::uuid>{"destination_station",
          "(local.document #>> '{rail,destination_station,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', local.document #>> '{rail,destination_station,name}', "
                     "local.document #>> '{rail,destination_station,esr_code}')",
         .Sortable = false,
         .Lookup = "route_locations",
         .ValuesFrom = "route_segments AS local"},
-    {.Field = registry::Field<std::string>{"pol", "(shared.document #>> '{sea,pol,id}')::UUID",
-         "UUID"},
+    {.Field = registry::Field<boost::uuids::uuid>{"pol",
+         "(shared.document #>> '{sea,pol,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', shared.document #>> '{sea,pol,name}', shared.document #>> "
                     "'{sea,pol,code}')",
         .Sortable = false,
         .Lookup = "route_locations",
         .ValuesFrom = "shipment_route_segments AS shared"},
-    {.Field = registry::Field<std::string>{"pod", "(shared.document #>> '{sea,pod,id}')::UUID",
-         "UUID"},
+    {.Field = registry::Field<boost::uuids::uuid>{"pod",
+         "(shared.document #>> '{sea,pod,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', shared.document #>> '{sea,pod,name}', shared.document #>> "
                     "'{sea,pod,code}')",
         .Sortable = false,
         .Lookup = "route_locations",
         .ValuesFrom = "shipment_route_segments AS shared"},
-    {.Field = registry::Field<std::string>{"origin_airport",
+    {.Field = registry::Field<boost::uuids::uuid>{"origin_airport",
          "(shared.document #>> '{air,origin_airport,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', shared.document #>> '{air,origin_airport,name}', "
                     "shared.document #>> '{air,origin_airport,code}')",
         .Sortable = false,
         .Lookup = "route_locations",
         .ValuesFrom = "shipment_route_segments AS shared"},
-    {.Field = registry::Field<std::string>{"destination_airport",
+    {.Field = registry::Field<boost::uuids::uuid>{"destination_airport",
          "(shared.document #>> '{air,destination_airport,id}')::UUID", "UUID"},
         .ValueSql = "concat_ws(' · ', shared.document #>> '{air,destination_airport,name}', "
                     "shared.document #>> '{air,destination_airport,code}')",
@@ -83,14 +83,14 @@ void ApplyGroups(registry::QueryBuilder& query, const Groups& groups,
 
 template <typename ApplyMain>
 inline registry::BuiltQuery BuildValues(const models::ListTransportationsRequest& request,
-    const std::string& organization, const std::string& field, int group,
+    const boost::uuids::uuid& organization, const std::string& field, int group,
     const std::optional<std::string>& search, const std::optional<std::string>& after, int limit,
     ApplyMain apply_main) {
     const auto& definition = registry::FindField(kFields, field);
     registry::QueryBuilder query{sql::kListTransportations,
         registry::Order{.Expression = "id", .ById = true, .PgType = "UUID"}, false};
     query.WhereEqual(
-        registry::Field<std::string>{"organization_id", "candidate.organization_id", "UUID"},
+        registry::Field<boost::uuids::uuid>{"organization_id", "candidate.organization_id", "UUID"},
         organization);
     const auto join = fmt::format(fmt::runtime(sql::kRegistryRouteJoin.GetStatementView()),
         fmt::arg("owner", "transportations"));

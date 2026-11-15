@@ -1,3 +1,4 @@
+#include <userver/utils/boost_uuid4.hpp>
 // Печать реального SQL API для изолированных бенчмарков; не часть обычной сборки.
 #include <iostream>
 #include <iterator>
@@ -10,7 +11,8 @@ int main() {
     const auto& body = document.HasMember("request") ? document["request"] : document;
     const auto request = transportations::models::ParseModelJson(
         body, std::type_identity<transportations::models::ListTransportationsRequest>{});
-    const std::string organization = "00000000-0000-0000-0000-000000000001";
+    const auto organization =
+        userver::utils::BoostUuidFromString("00000000-0000-0000-0000-000000000001");
     if (document.HasMember("route_group")) {
         const auto query = transportations::registry_query::route_registry::BuildValues(request,
             organization, document["facet"].As<std::string>(), document["route_group"].As<int>(),

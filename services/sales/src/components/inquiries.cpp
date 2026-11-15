@@ -35,7 +35,7 @@ userver::yaml_config::Schema InquiriesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::Inquiry InquiriesComponent::SaveInquiry(const std::string& organization,
+models::Inquiry InquiriesComponent::SaveInquiry(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const {
     const auto& value = request;
 
@@ -96,7 +96,7 @@ models::Inquiry InquiriesComponent::SaveInquiry(const std::string& organization,
 }
 
 models::Inquiry InquiriesComponent::FindInquiry(
-    const std::string& organization, const boost::uuids::uuid& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetInquiries, organization, id);
     if (rows.IsEmpty())
@@ -106,7 +106,7 @@ models::Inquiry InquiriesComponent::FindInquiry(
 }
 
 std::vector<models::InquiryHistoryEntry> InquiriesComponent::GetInquiryHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryInquiries,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::InquiryHistoryEntry> response;
@@ -119,8 +119,8 @@ std::vector<models::InquiryHistoryEntry> InquiriesComponent::GetInquiryHistory(
 }
 
 models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
-    const std::string& organization, std::string_view token, const models::Inquiry& inquiry) const
-    try {
+    const boost::uuids::uuid& organization, std::string_view token,
+    const models::Inquiry& inquiry) const try {
     const auto party =
         counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
             .counterparty;
@@ -131,9 +131,7 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
         .RouteSegments = inquiry.route_segments};
     if (creation.Logist) {
         const auto employees = organizations_.ApiOrganizationsEmployeesList(
-            {.body = {.limit = 1,
-                 .organization_id = userver::utils::BoostUuidFromString(organization),
-                 .subject = creation.Logist}},
+            {.body = {.limit = 1, .organization_id = organization, .subject = creation.Logist}},
             token);
         if (employees.items.empty())
             throw ApiError<400>{
@@ -174,7 +172,7 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
 }
 
-models::Inquiry InquiriesComponent::StartShipmentCreation(const std::string& organization,
+models::Inquiry InquiriesComponent::StartShipmentCreation(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, const models::CreateShipmentRequest& request,
     const models::ShipmentCreationContext& creation) const {
 

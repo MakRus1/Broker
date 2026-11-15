@@ -32,7 +32,7 @@ userver::yaml_config::Schema RoutesComponent::GetStaticConfigSchema() {
 }
 
 models::RouteUsageResult RoutesComponent::FindRouteUsage(
-    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockShipmentTransportations, organization, shipment_id);
@@ -67,7 +67,7 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
     return models::RouteProjectionResult{.applied = true};
 }
 
-models::Transportation RoutesComponent::SaveRoute(const std::string& organization,
+models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::string_view access_token,
     const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
     if (request.route_segments.size() != source.route_segments.size())

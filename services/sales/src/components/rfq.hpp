@@ -15,18 +15,19 @@ class RfqComponent final : public userver::components::ComponentBase {
     RfqComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::Rfq FindRfq(const std::string& organization, const boost::uuids::uuid& id) const;
+    models::Rfq FindRfq(const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     std::vector<models::Rfq> ListRfqs(
-        const std::string& organization, const boost::uuids::uuid& inquiry_id) const;
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const;
     std::vector<models::RfqHistoryEntry> GetRfqHistory(
-        const std::string& organization, const models::HistoryRequest& request) const;
+        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
     // Проверяет клиента и ответственного, заполняет снимки поставщиков и меток в input.
-    void PrepareRfq(const std::string& organization, std::string_view access_token,
+    void PrepareRfq(const boost::uuids::uuid& organization, std::string_view access_token,
         const models::Inquiry& inquiry, models::RfqInput& input) const;
-    models::Rfq SaveRfq(const std::string& organization, const platform::auth::Identity& identity,
-        std::int64_t expected, models::RfqInput input) const;
-    models::Rfq FindRfqRevision(
-        const std::string& organization, const boost::uuids::uuid& id, std::int64_t revision) const;
+    models::Rfq SaveRfq(const boost::uuids::uuid& organization,
+        const platform::auth::Identity& identity, std::int64_t expected,
+        models::RfqInput input) const;
+    models::Rfq FindRfqRevision(const boost::uuids::uuid& organization,
+        const boost::uuids::uuid& id, std::int64_t revision) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

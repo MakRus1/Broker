@@ -15,7 +15,7 @@ namespace helpers {
 namespace pg = userver::storages::postgres;
 
 template <typename Request, typename Result>
-void WriteAudit(pg::Transaction& transaction, const std::string& organization,
+void WriteAudit(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const std::string& action,
     const boost::uuids::uuid& id, const Request& request, const Result& result,
     const std::optional<Result>& previous = std::nullopt) {

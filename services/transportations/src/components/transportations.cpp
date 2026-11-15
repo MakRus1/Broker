@@ -53,7 +53,7 @@ userver::yaml_config::Schema TransportationsComponent::GetStaticConfigSchema() {
 }
 
 models::Transportation TransportationsComponent::FindTransportation(
-    const std::string& organization, const boost::uuids::uuid& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
 
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
@@ -65,7 +65,7 @@ models::Transportation TransportationsComponent::FindTransportation(
 }
 
 models::TransportationHistoryResult TransportationsComponent::GetTransportationHistory(
-    const std::string& organization, const models::ListHistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListHistoryRequest& request) const {
     // Наличие перевозки и её история проверяются в одном снимке.
 
     auto transaction =
@@ -82,7 +82,7 @@ models::TransportationHistoryResult TransportationsComponent::GetTransportationH
 }
 
 models::Transportation TransportationsComponent::CreateTransportation(
-    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::CreateTransportationRequest& request,
     const models::ShipmentContext& source) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
@@ -123,7 +123,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
 }
 
 models::Transportation TransportationsComponent::UpdateTransportation(
-    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::UpdateTransportationRequest& request,
     const models::ShipmentContext& source) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
@@ -151,7 +151,7 @@ models::Transportation TransportationsComponent::UpdateTransportation(
 }
 
 models::ContainerFactsResult TransportationsComponent::GetContainerFacts(
-    const std::string& organization, const models::ContainerFactsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ContainerFactsRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kContainerFacts,
         organization, request.shipment_id, request.pending_operation_ids);
     return converters::Convert(rows.AsContainer<std::vector<models::pg::ContainerFact>>());
@@ -161,7 +161,7 @@ models::EnsureTransportationsResult TransportationsComponent::CreateTransportati
     const models::EnsureCreatedRequest& request, const platform::auth::Identity& identity) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = userver::utils::ToString(request.organization_id);
+    const auto organization = request.organization_id;
     transaction.Execute(sql::kLockCommand, organization, request.operation_id);
     const auto rows = transaction.Execute(sql::kFindCommand, organization, request.operation_id);
     if (!rows.IsEmpty()) {

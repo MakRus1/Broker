@@ -28,7 +28,7 @@ userver::yaml_config::Schema LocationsComponent::GetStaticConfigSchema() {
 
 models::LocationListResult LocationsComponent::List(
     const models::ListLocationsRequest& request) const {
-    const auto scope = registry::CursorScope(request, "route_locations");
+    const auto scope = registry::CursorScope(request, std::nullopt, "route_locations");
     if (!registry::CursorMatches(request, scope, EnumValue(request.sort) == "id"))
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
     const auto query = LocationQuery(request);

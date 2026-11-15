@@ -11,8 +11,7 @@ Response View::Handle(
     platform::auth::RequireOrganizationAdministrator(
         deps.organizations, context, request.body.organization_id);
 
-    const auto result =
-        deps.settings->GetSettings(userver::utils::ToString(request.body.organization_id));
+    const auto result = deps.settings->GetSettings(request.body.organization_id);
     return Response200{.inquiry_number_template = result.inquiry_number_template,
         .reset_number_yearly = result.reset_number_yearly,
         .revision = result.revision,

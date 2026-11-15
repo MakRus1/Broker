@@ -13,8 +13,8 @@ namespace registry = platform::registry;
 
 template <typename Item>
 models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
-    const registry::Definition<models::ListSalesRequest, std::string>& definition,
-    const std::string& organization, const models::ListSalesRequest& request) {
+    const registry::Definition<models::ListSalesRequest, boost::uuids::uuid>& definition,
+    const boost::uuids::uuid& organization, const models::ListSalesRequest& request) {
     try {
         const auto scope = registry::CursorScope(request, organization);
         const bool date_sort =
@@ -57,8 +57,8 @@ models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
 }
 
 models::RegistryFilterValues ReadFilterValues(const pg::ClusterPtr& cluster,
-    const registry::Definition<models::ListSalesRequest, std::string>& definition,
-    const std::string& organization, const models::SalesFilterValuesRequest& request) {
+    const registry::Definition<models::ListSalesRequest, boost::uuids::uuid>& definition,
+    const boost::uuids::uuid& organization, const models::SalesFilterValuesRequest& request) {
     try {
         models::RegistryFilterValues result;
         result.fields = registry::DescribeFields<models::RegistryField>(definition.Fields);
@@ -96,24 +96,24 @@ userver::yaml_config::Schema SalesRegistry::GetStaticConfigSchema() {
 }
 
 models::RegistryPage<models::SalesCard> SalesRegistry::ListCards(
-    const std::string& organization, const models::ListSalesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListSalesRequest& request) const {
     return ReadPage<models::SalesCard>(
         cluster_, registry_query::kCardsRegistry, organization, request);
 }
 
 models::RegistryFilterValues SalesRegistry::GetCardsFilterValues(
-    const std::string& organization, const models::SalesFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::SalesFilterValuesRequest& request) const {
     return ReadFilterValues(cluster_, registry_query::kCardsRegistry, organization, request);
 }
 
 models::RegistryPage<models::Inquiry> SalesRegistry::ListInquiries(
-    const std::string& organization, const models::ListSalesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListSalesRequest& request) const {
     return ReadPage<models::Inquiry>(
         cluster_, registry_query::kInquiriesRegistry, organization, request);
 }
 
 models::RegistryFilterValues SalesRegistry::GetInquiriesFilterValues(
-    const std::string& organization, const models::SalesFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::SalesFilterValuesRequest& request) const {
     return ReadFilterValues(cluster_, registry_query::kInquiriesRegistry, organization, request);
 }
 

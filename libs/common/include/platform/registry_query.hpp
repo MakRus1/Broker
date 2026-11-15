@@ -1,4 +1,5 @@
 #pragma once
+#include <userver/utils/boost_uuid4.hpp>
 
 #include <array>
 #include <cstdint>
@@ -108,7 +109,7 @@ struct BuiltQuery {
 class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending,
-        FieldDefinition identity = {"id", "id", "UUID", true})
+        FieldDefinition identity = Field<boost::uuids::uuid>{"id", "id", "UUID", true})
         : order_(order), descending_(descending), identity_(identity) {
         statement_ = selection.GetStatementView();
         selection_name_ = selection.GetOptionalNameView().has_value()
@@ -182,7 +183,16 @@ class QueryBuilder {
         }
         std::string condition;
         if (!present.empty()) {
-            auto parameter = Bind(present, std::string{field.PgType} + "[]");
+            std::string parameter;
+            if (field.PgType == "UUID") {
+                std::vector<boost::uuids::uuid> ids;
+                ids.reserve(present.size());
+                for (const auto& value : present)
+                    ids.push_back(userver::utils::BoostUuidFromString(value));
+                parameter = Bind(ids, "UUID[]");
+            } else {
+                parameter = Bind(present, std::string{field.PgType} + "[]");
+            }
             if (fold)
                 parameter = "ARRAY(SELECT lower(value) FROM unnest(" + parameter + ") AS value)";
             condition = std::string{field.Expression} + (array ? " && " : " = ANY(") + parameter +

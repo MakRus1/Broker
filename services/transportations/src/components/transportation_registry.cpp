@@ -24,7 +24,8 @@ userver::yaml_config::Schema TransportationRegistry::GetStaticConfigSchema() {
 }
 
 models::TransportationListResult TransportationRegistry::ListTransportations(
-    const std::string& organization, const models::ListTransportationsRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListTransportationsRequest& request) const {
     try {
         const auto scope = platform::registry::CursorScope(request, organization);
         const auto order =
@@ -74,7 +75,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
 }
 
 models::RegistryValuesResult TransportationRegistry::GetFilterValues(
-    const std::string& organization, const models::FilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::FilterValuesRequest& request) const {
     try {
         const bool route = request.scope == models::FilterValuesScope::Route;
         models::RegistryValuesResult result;

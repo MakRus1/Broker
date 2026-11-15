@@ -22,8 +22,8 @@ namespace sql = contracts::sql;
 using contracts::ApiError;
 using contracts::helpers::ReadNumbering;
 
-std::string GenerateContractNumber(pg::Transaction& transaction, const std::string& organization,
-    userver::utils::datetime::Date date) {
+std::string GenerateContractNumber(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, userver::utils::datetime::Date date) {
     const auto settings = ReadNumbering(transaction.Execute(sql::kGetNumbering, organization));
     const auto sequence =
         transaction
@@ -93,7 +93,7 @@ void ContractsComponent::ValidateContractParties(
 }
 
 models::Contract ContractsComponent::FindContract(
-    const std::string& organization, const boost::uuids::uuid& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())
@@ -101,7 +101,7 @@ models::Contract ContractsComponent::FindContract(
     return converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
 }
 
-models::Contract ContractsComponent::SaveContract(const std::string& organization,
+models::Contract ContractsComponent::SaveContract(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::int64_t expected_revision,
     models::pg::ContractRaw value) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});

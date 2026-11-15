@@ -11,7 +11,7 @@ class SettingsComponent final : public userver::components::ComponentBase {
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::FinanceSettings GetSettings(const std::string& organization) const;
+    models::FinanceSettings GetSettings(const boost::uuids::uuid& organization) const;
     models::FinanceSettings UpdateSettings(
         const models::UpdateFinanceSettingsRequest& request) const;
 

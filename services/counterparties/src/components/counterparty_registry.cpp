@@ -23,7 +23,8 @@ userver::yaml_config::Schema CounterpartyRegistry::GetStaticConfigSchema() {
 }
 
 models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
-    const std::string& organization, const models::ListCounterpartiesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListCounterpartiesRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -62,7 +63,8 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
 }
 
 models::CounterpartyFilterValuesResult CounterpartyRegistry::GetCounterpartyFilterValues(
-    const std::string& organization, const models::CounterpartyFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::CounterpartyFilterValuesRequest& request) const {
     try {
         models::CounterpartyFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);

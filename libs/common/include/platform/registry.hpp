@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <string_view>
 #include <userver/crypto/hash.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/formats/json/value_builder.hpp>
@@ -8,13 +9,17 @@
 #include <userver/utils/text_light.hpp>
 
 namespace platform::registry {
-template <typename Request, typename Organization>
-std::string CursorScope(const Request& request, const Organization& organization) {
+template <typename Request>
+std::string CursorScope(const Request& request,
+    const std::optional<boost::uuids::uuid>& organization, std::string_view registry = {}) {
     userver::formats::json::ValueBuilder value{request};
     value.Remove("cursor");
     value.Remove("after");
     value.Remove("limit");
-    value["organization_id"] = organization;
+    if (organization.has_value())
+        value["organization_id"] = *organization;
+    if (!registry.empty())
+        value["registry"] = registry;
     return userver::crypto::hash::Sha256(
         userver::formats::json::ToStableString(value.ExtractValue()));
 }

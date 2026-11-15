@@ -8,7 +8,7 @@ namespace shipments::views::api::internal::v1::shipments::ensure_created {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& command = request.body;
-    const auto organization = userver::utils::ToString(command.organization_id);
+    const auto organization = command.organization_id;
     const auto& sender = platform::auth::GetIdentity(context);
     if (sender.Issuer != command.actor_issuer)
         throw ApiError<400>{"invalid_actor", "Некорректный провайдер пользователя"};

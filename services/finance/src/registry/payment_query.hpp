@@ -15,7 +15,7 @@ namespace registry_fields {
 // Поля SQL и каталог API определяются здесь; общий конструктор добавляет фильтры и курсор.
 using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 inline constexpr auto kNumber =
     registry::Field<std::string>{"number", "lower(number) COLLATE \"C\""}.SortedAs(
@@ -59,7 +59,8 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(const models::ListPaymentsRequest& request,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     using namespace registry_fields;
     registry::QueryBuilder query{
         sql::kListPayments, registry::RegistryOrderBy(kFields, request.sort), request.descending};

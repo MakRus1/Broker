@@ -12,8 +12,8 @@
 namespace sales::registry_query {
 namespace registry = platform::registry;
 using Date = userver::utils::datetime::Date;
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
     "customer_id", "customer_id", "UUID"};
@@ -64,7 +64,8 @@ inline constexpr std::array<registry::RegistryField, 8> kInquiryFields{{
 }};
 
 inline registry::QueryBuilder CardsFilters(const models::ListSalesRequest& body,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     registry::QueryBuilder query{
         sql::kListCards, registry::RegistryOrderBy(kCardFields, body.sort), body.descending};
     query.WhereEqual(kOrganization, organization);
@@ -78,7 +79,8 @@ inline const registry::Definition kCardsRegistry{
     kCardFields, sql::kCardsFilterValues, &CardsFilters};
 
 inline registry::QueryBuilder InquiriesFilters(const models::ListSalesRequest& body,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     registry::QueryBuilder query{
         sql::kListInquiries, registry::RegistryOrderBy(kInquiryFields, body.sort), body.descending};
     query.WhereEqual(kOrganization, organization);

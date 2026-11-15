@@ -26,7 +26,7 @@ userver::yaml_config::Schema ActualsComponent::GetStaticConfigSchema() {
 }
 
 template <typename Request>
-models::Transportation ActualsComponent::ApplyActualChange(const std::string& organization,
+models::Transportation ActualsComponent::ApplyActualChange(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::string_view access_token, const Request& request,
     const models::ShipmentContext& source, route_rules::ActualChange change) const {
 
@@ -55,14 +55,14 @@ models::Transportation ActualsComponent::ApplyActualChange(const std::string& or
     return result;
 }
 
-models::Transportation ActualsComponent::RecordActual(const std::string& organization,
+models::Transportation ActualsComponent::RecordActual(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, std::string_view access_token,
     const models::RecordActualRequest& request, const models::ShipmentContext& source) const {
     return ApplyActualChange(
         organization, actor, access_token, request, source, route_rules::ActualChange::Record);
 }
 
-models::Transportation ActualsComponent::CorrectActual(const std::string& organization,
+models::Transportation ActualsComponent::CorrectActual(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, std::string_view access_token,
     const models::CorrectActualRequest& request, const models::ShipmentContext& source) const {
     return ApplyActualChange(

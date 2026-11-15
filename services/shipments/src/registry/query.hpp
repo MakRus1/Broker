@@ -12,9 +12,9 @@ namespace registry_fields {
 // SQL-поля: выражения фильтрации и, при необходимости, отдельный порядок сортировки.
 using Date = userver::utils::datetime::Date;
 
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
 
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 
 inline constexpr auto kNumber =
@@ -24,7 +24,8 @@ inline constexpr auto kNumber =
 inline constexpr registry::Field<std::string> kCargo{
     "cargo_description", "lower(COALESCE(cargo_description, '')) COLLATE \"C\""};
 
-inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
+    "customer_id", "customer_id", "UUID"};
 
 inline constexpr auto kStatus =
     registry::Field<std::string>{"status", "status"}.SortedAs("lower(status) COLLATE \"C\"");
@@ -46,7 +47,8 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(const models::ListShipmentsRequest& request,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     const auto order = registry::RegistryOrderBy(registry_fields::kFields, request.sort);
     registry::QueryBuilder query{sql::kListShipments, order, request.descending};
     query.WhereEqual(registry_fields::kOrganization, organization);

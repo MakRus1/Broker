@@ -7,18 +7,16 @@
 #include <userver/formats/json.hpp>
 
 namespace shipments::helpers {
-inline void QueueRouteProjection(pg::Transaction& transaction, const std::string& organization,
-    const models::Shipment& shipment) {
+inline void QueueRouteProjection(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const models::Shipment& shipment) {
     clients::transportations::models::ShipmentRouteProjection body{
-        .organization_id = userver::utils::BoostUuidFromString(organization),
-        .revision = shipment.revision,
-        .shipment_id = shipment.id};
+        .organization_id = organization, .revision = shipment.revision, .shipment_id = shipment.id};
     body.route_segments.reserve(shipment.route_segments.size());
     for (const auto& segment : shipment.route_segments)
         body.route_segments.push_back(converters::ToRouteProjection(segment));
 
     platform::outbox::EnqueueLatest(transaction, kProjectShipmentRoute,
-        organization + ":" + userver::utils::ToString(shipment.id),
+        userver::utils::ToString(organization) + ":" + userver::utils::ToString(shipment.id),
         userver::formats::json::ValueBuilder(body).ExtractValue());
 }
 }  // namespace shipments::helpers

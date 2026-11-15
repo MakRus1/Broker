@@ -68,7 +68,7 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
 }
 
 ContainerPlanSnapshot ContainerPlanComponent::LoadPlan(
-    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
     if (transaction.Execute(sql::kGetShipment, organization, shipment_id).IsEmpty())

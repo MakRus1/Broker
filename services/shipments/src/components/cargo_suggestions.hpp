@@ -12,10 +12,10 @@ class CargoSuggestionsComponent final : public userver::components::ComponentBas
     CargoSuggestionsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    std::vector<std::string> FindSuggestions(const std::string& organization,
+    std::vector<std::string> FindSuggestions(const boost::uuids::uuid& organization,
         const boost::uuids::uuid& customer, const std::string& query) const;
-    bool RemoveSuggestion(const std::string& organization, const boost::uuids::uuid& customer,
-        const std::string& value) const;
+    bool RemoveSuggestion(const boost::uuids::uuid& organization,
+        const boost::uuids::uuid& customer, const std::string& value) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

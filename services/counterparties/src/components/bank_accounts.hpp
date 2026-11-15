@@ -11,10 +11,10 @@ class BankAccountsComponent final : public userver::components::ComponentBase {
     BankAccountsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::BankAccount SaveBankAccount(const std::string& organization,
+    models::BankAccount SaveBankAccount(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::SaveBankAccountRequest&) const;
     std::vector<models::BankAccount> ListBankAccounts(
-        const std::string& organization, const models::ListBankAccountsRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListBankAccountsRequest&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

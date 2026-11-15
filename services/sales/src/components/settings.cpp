@@ -42,7 +42,7 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::SalesSettings SettingsComponent::GetSettings(const std::string& organization) const {
+models::SalesSettings SettingsComponent::GetSettings(const boost::uuids::uuid& organization) const {
     return helpers::ReadSalesSettings(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings, organization));
 }

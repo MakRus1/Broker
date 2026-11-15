@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <models/user.hpp>
 #include <optional>
 #include <platform/auth/service_token.hpp>
@@ -17,7 +18,7 @@ class KeycloakUsers final : public userver::components::ComponentBase {
     User UpdateProfile(const std::string& subject, const std::string& last_name,
         const std::string& first_name, const std::optional<std::string>& middle_name) const;
     User Find(const std::string& username) const;
-    User Create(const std::string& request_id, const std::string& username,
+    User Create(const boost::uuids::uuid& request_id, const std::string& username,
         const std::string& email, const std::string& last_name, const std::string& first_name,
         const std::optional<std::string>& middle_name, const std::string& temporary_password) const;
 

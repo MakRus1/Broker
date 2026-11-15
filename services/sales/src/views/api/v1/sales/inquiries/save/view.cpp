@@ -19,7 +19,7 @@ Response View::Handle(
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
     const auto employees = deps.organizations.ApiOrganizationsEmployeesList(
         {.body = {.limit = 1,
-             .organization_id = userver::utils::BoostUuidFromString(organization),
+             .organization_id = organization,
              .subject = request.body.manager_subject}},
         token);
     if (employees.items.empty())

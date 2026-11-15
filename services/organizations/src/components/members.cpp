@@ -99,9 +99,8 @@ models::MemberResult MembersComponent::CreateMember(
             }
             transaction.Commit();
         }
-        const auto user =
-            keycloak_users_.Create(userver::utils::ToString(request.request_id), request.username,
-                email, last_name, first_name, middle_name, request.temporary_password);
+        const auto user = keycloak_users_.Create(request.request_id, request.username, email,
+            last_name, first_name, middle_name, request.temporary_password);
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);

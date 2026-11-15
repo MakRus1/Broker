@@ -13,17 +13,17 @@ class TransportationsComponent final : public userver::components::ComponentBase
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Transportation FindTransportation(
-        const std::string& organization, const boost::uuids::uuid& id) const;
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     models::TransportationHistoryResult GetTransportationHistory(
-        const std::string& organization, const models::ListHistoryRequest&) const;
-    models::Transportation CreateTransportation(const std::string& organization,
+        const boost::uuids::uuid& organization, const models::ListHistoryRequest&) const;
+    models::Transportation CreateTransportation(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::CreateTransportationRequest&,
         const models::ShipmentContext&) const;
-    models::Transportation UpdateTransportation(const std::string& organization,
+    models::Transportation UpdateTransportation(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::UpdateTransportationRequest&,
         const models::ShipmentContext&) const;
     models::ContainerFactsResult GetContainerFacts(
-        const std::string& organization, const models::ContainerFactsRequest&) const;
+        const boost::uuids::uuid& organization, const models::ContainerFactsRequest&) const;
     models::EnsureTransportationsResult CreateTransportationsFromCommand(
         const models::EnsureCreatedRequest&, const platform::auth::Identity&) const;
 

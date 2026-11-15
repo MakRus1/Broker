@@ -27,7 +27,7 @@ userver::yaml_config::Schema FinancialLabelsComponent::GetStaticConfigSchema() {
 }
 
 models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialLabelFilterValues(
-    const std::string& organization,
+    const boost::uuids::uuid& organization,
     const models::FinancialLabelFilterValuesRequest& request) const {
     try {
         models::FinancialLabelFilterValuesResult result;
@@ -52,8 +52,8 @@ models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialL
     }
 }
 
-models::FinancialLabel FinancialLabelsComponent::SaveFinancialLabel(const std::string& organization,
-    const platform::auth::Identity& identity,
+models::FinancialLabel FinancialLabelsComponent::SaveFinancialLabel(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::SaveFinancialLabelRequest& request) const {
     const auto value = converters::ToFinancialLabel(request);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -71,7 +71,7 @@ models::FinancialLabel FinancialLabelsComponent::SaveFinancialLabel(const std::s
 }
 
 models::FinancialLabel FinancialLabelsComponent::FindFinancialLabel(
-    const std::string& organization, const models::GetFinancialLabelRequest& request) const {
+    const boost::uuids::uuid& organization, const models::GetFinancialLabelRequest& request) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetFinancialLabel, organization, request.id);
     if (rows.IsEmpty())
@@ -80,7 +80,8 @@ models::FinancialLabel FinancialLabelsComponent::FindFinancialLabel(
 }
 
 models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
-    const std::string& organization, const models::ListFinancialLabelsRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListFinancialLabelsRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);

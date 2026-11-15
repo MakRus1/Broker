@@ -36,7 +36,7 @@ userver::yaml_config::Schema ContactsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::ContactAddition ContactsComponent::AddContact(const std::string& organization,
+models::ContactAddition ContactsComponent::AddContact(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::AddSalesContactRequest& request) const {
     const auto& body = request;
     ValidateContact(body.result, body.next_action, body.next_action_date);
@@ -90,7 +90,7 @@ models::ContactAddition ContactsComponent::AddContact(const std::string& organiz
 }
 
 models::ContactsPage ContactsComponent::ListContacts(
-    const std::string& organization, const models::ListSalesContactsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListSalesContactsRequest& request) const {
     if (cluster_
             ->Execute(pg::ClusterHostType::kMaster, sql::kGetCards, organization, request.card_id)
             .IsEmpty())
@@ -110,7 +110,7 @@ models::ContactsPage ContactsComponent::ListContacts(
     return response;
 }
 
-models::SalesContact ContactsComponent::UpdateContact(const std::string& organization,
+models::SalesContact ContactsComponent::UpdateContact(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity,
     const models::UpdateSalesContactRequest& request) const {
     const auto& body = request;
@@ -150,7 +150,7 @@ models::SalesContact ContactsComponent::UpdateContact(const std::string& organiz
 }
 
 std::vector<models::SalesContactHistoryEntry> ContactsComponent::GetContactHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryContacts,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::SalesContactHistoryEntry> response;

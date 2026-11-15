@@ -44,12 +44,12 @@ userver::yaml_config::Schema RfqComponent::GetStaticConfigSchema() {
 }
 
 models::Rfq RfqComponent::FindRfq(
-    const std::string& organization, const boost::uuids::uuid& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     return Read(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRfq, organization, id));
 }
 
 std::vector<models::Rfq> RfqComponent::ListRfqs(
-    const std::string& organization, const boost::uuids::uuid& inquiry_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListRfqs, organization, inquiry_id);
     std::vector<models::Rfq> result;
@@ -61,7 +61,7 @@ std::vector<models::Rfq> RfqComponent::ListRfqs(
 }
 
 std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryRfqs,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::RfqHistoryEntry> result;
@@ -72,18 +72,18 @@ std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
     return result;
 }
 
-void RfqComponent::PrepareRfq(const std::string& organization, std::string_view token,
+void RfqComponent::PrepareRfq(const boost::uuids::uuid& organization, std::string_view token,
     const models::Inquiry& inquiry, models::RfqInput& input) const try {
     const auto party =
         counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
-    const auto employees = organizations_.ApiOrganizationsEmployeesList(
-        {.body = {.limit = 1,
-             .organization_id = userver::utils::BoostUuidFromString(organization),
-             .subject = input.responsible_subject}},
-        token);
+    const auto employees =
+        organizations_.ApiOrganizationsEmployeesList({.body = {.limit = 1,
+                                                          .organization_id = organization,
+                                                          .subject = input.responsible_subject}},
+            token);
     if (employees.items.empty())
         throw ApiError<400>{"invalid_manager", "Выберите действующего сотрудника организации"};
 
@@ -126,7 +126,7 @@ void RfqComponent::PrepareRfq(const std::string& organization, std::string_view 
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
 }
 
-models::Rfq RfqComponent::SaveRfq(const std::string& organization,
+models::Rfq RfqComponent::SaveRfq(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::int64_t expected, models::RfqInput input) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -169,7 +169,7 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
             std::to_string(value.revision);
         const events::PublishedEvent event{
             .value = events::RfqAssigned{.id = id,
-                .organization_id = userver::utils::BoostUuidFromString(organization),
+                .organization_id = organization,
                 .payload = payload(value.input.responsible_subject)}};
         platform::outbox::Enqueue(transaction, kPublishNotification, id, event);
     }
@@ -177,10 +177,9 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
         (!previous || previous->input.status != models::RfqStatus::Ready)) {
         const auto id = "rfq-ready:" + userver::utils::ToString(value.input.id) + ":" +
             std::to_string(value.revision);
-        const events::PublishedEvent event{
-            .value = events::RfqReady{.id = id,
-                .organization_id = userver::utils::BoostUuidFromString(organization),
-                .payload = payload(inquiry.manager_subject)}};
+        const events::PublishedEvent event{.value = events::RfqReady{.id = id,
+                                               .organization_id = organization,
+                                               .payload = payload(inquiry.manager_subject)}};
         platform::outbox::Enqueue(transaction, kPublishNotification, id, event);
     }
 
@@ -188,8 +187,8 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
     return value;
 }
 
-models::Rfq RfqComponent::FindRfqRevision(
-    const std::string& organization, const boost::uuids::uuid& id, std::int64_t revision) const {
+models::Rfq RfqComponent::FindRfqRevision(const boost::uuids::uuid& organization,
+    const boost::uuids::uuid& id, std::int64_t revision) const {
     return Read(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetRfqRevision, organization, id, revision));
 }

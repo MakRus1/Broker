@@ -35,7 +35,7 @@ userver::yaml_config::Schema CardsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::SalesCard CardsComponent::SaveCard(const std::string& organization,
+models::SalesCard CardsComponent::SaveCard(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveSalesCardRequest& request) const {
     const auto& value = request;
 
@@ -71,7 +71,7 @@ models::SalesCard CardsComponent::SaveCard(const std::string& organization,
 }
 
 models::SalesCard CardsComponent::FindCard(
-    const std::string& organization, const boost::uuids::uuid& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetCards, organization, id);
     if (rows.IsEmpty())
@@ -81,7 +81,7 @@ models::SalesCard CardsComponent::FindCard(
 }
 
 std::vector<models::SalesHistoryEntry> CardsComponent::GetCardHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryCards,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::SalesHistoryEntry> response;

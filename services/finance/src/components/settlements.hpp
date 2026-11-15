@@ -12,8 +12,8 @@ class SettlementsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ReconciliationResponse GetReconciliation(
-        const std::string& organization, const models::ReconciliationRequest& request) const;
-    models::CounterpartySettlementsResponse GetBalances(const std::string& organization,
+        const boost::uuids::uuid& organization, const models::ReconciliationRequest& request) const;
+    models::CounterpartySettlementsResponse GetBalances(const boost::uuids::uuid& organization,
         const models::CounterpartySettlementsRequest& request) const;
 
   private:

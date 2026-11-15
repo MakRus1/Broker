@@ -15,15 +15,15 @@ class FinancialLabelsComponent final : public userver::components::ComponentBase
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::FinancialLabelFilterValuesResult GetFinancialLabelFilterValues(
-        const std::string& organization,
+        const boost::uuids::uuid& organization,
         const models::FinancialLabelFilterValuesRequest& request) const;
-    models::FinancialLabel SaveFinancialLabel(const std::string& organization,
+    models::FinancialLabel SaveFinancialLabel(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,
         const models::SaveFinancialLabelRequest& request) const;
-    models::FinancialLabel FindFinancialLabel(
-        const std::string& organization, const models::GetFinancialLabelRequest& request) const;
-    models::FinancialLabelListResult ListFinancialLabels(
-        const std::string& organization, const models::ListFinancialLabelsRequest& request) const;
+    models::FinancialLabel FindFinancialLabel(const boost::uuids::uuid& organization,
+        const models::GetFinancialLabelRequest& request) const;
+    models::FinancialLabelListResult ListFinancialLabels(const boost::uuids::uuid& organization,
+        const models::ListFinancialLabelsRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

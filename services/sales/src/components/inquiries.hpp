@@ -16,15 +16,15 @@ class InquiriesComponent final : public userver::components::ComponentBase {
     InquiriesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::Inquiry SaveInquiry(const std::string& organization,
+    models::Inquiry SaveInquiry(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const;
     models::Inquiry FindInquiry(
-        const std::string& organization, const boost::uuids::uuid& id) const;
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     std::vector<models::InquiryHistoryEntry> GetInquiryHistory(
-        const std::string& organization, const models::HistoryRequest& request) const;
-    models::ShipmentCreationContext PrepareShipmentCreation(const std::string& organization,
+        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
+    models::ShipmentCreationContext PrepareShipmentCreation(const boost::uuids::uuid& organization,
         std::string_view access_token, const models::Inquiry& inquiry) const;
-    models::Inquiry StartShipmentCreation(const std::string& organization,
+    models::Inquiry StartShipmentCreation(const boost::uuids::uuid& organization,
         const platform::auth::Identity& actor, const models::CreateShipmentRequest& request,
         const models::ShipmentCreationContext& creation) const;
 

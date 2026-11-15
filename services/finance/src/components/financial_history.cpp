@@ -324,7 +324,7 @@ userver::yaml_config::Schema FinancialHistoryComponent::GetStaticConfigSchema() 
 }
 
 models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
-    const std::string& organization, const models::FinancialHistoryRequest& body,
+    const boost::uuids::uuid& organization, const models::FinancialHistoryRequest& body,
     models::FinancialHistorySource source, const models::FinancialHistoryAccess& access) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{

@@ -19,8 +19,8 @@ std::optional<Result> ReadReplay(const pg::ResultSet& rows, const Request& reque
 }
 
 template <typename Result, typename Request>
-std::optional<Result> FindReplay(pg::Transaction& transaction, const std::string& organization,
-    const std::string& action, const Request& request) {
+std::optional<Result> FindReplay(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const std::string& action, const Request& request) {
     transaction.Execute(sql::kLockIdempotency, organization, action, request.idempotency_key);
     const auto rows =
         transaction.Execute(sql::kFindIdempotency, organization, action, request.idempotency_key);
@@ -31,14 +31,14 @@ std::optional<Result> FindReplay(pg::Transaction& transaction, const std::string
 // по-прежнему защищены FindReplay внутри транзакции создания.
 template <typename Result, typename Request>
 std::optional<Result> FindSavedReplay(const pg::ClusterPtr& cluster,
-    const std::string& organization, const std::string& action, const Request& request) {
+    const boost::uuids::uuid& organization, const std::string& action, const Request& request) {
     const auto rows = cluster->Execute(pg::ClusterHostType::kMaster, sql::kFindIdempotency,
         organization, action, request.idempotency_key);
     return ReadReplay<Result>(rows, request);
 }
 
 template <typename Request, typename Result>
-void SaveReplay(pg::Transaction& transaction, const std::string& organization,
+void SaveReplay(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const std::string& action, const Request& request, const Result& result) {
     transaction.Execute(sql::kSaveIdempotency, organization, action, request.idempotency_key,
         Document(request), Document(result));

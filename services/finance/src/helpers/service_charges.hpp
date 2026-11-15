@@ -17,7 +17,7 @@ inline std::vector<models::ServiceCharge> ConvertServiceCharges(const pg::Result
 }
 
 inline std::vector<models::ServiceChargeInvoice> LoadServiceChargeInvoices(
-    pg::Transaction& transaction, const std::string& organization,
+    pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const std::vector<models::ServiceCharge>& items) {
     std::vector<models::ServiceChargeInvoice> result;
     std::vector<boost::uuids::uuid> service_charge_ids;

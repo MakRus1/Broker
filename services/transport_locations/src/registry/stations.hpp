@@ -8,7 +8,7 @@ namespace transport_locations::registry_query {
 namespace registry = platform::registry;
 
 namespace station_fields {
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kName{"name", "lower(name) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kCountry{"country_code", "country_code"};
 inline constexpr registry::Field<std::string> kSearch{"query",

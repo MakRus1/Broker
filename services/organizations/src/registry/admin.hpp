@@ -7,7 +7,7 @@ namespace organizations::registry_query {
 namespace registry = platform::registry;
 
 namespace organization_fields {
-inline constexpr registry::Field<std::string> kId{"id", "o.id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "o.id", "UUID", true};
 inline constexpr registry::Field<std::string> kName{"name", "lower(o.name) COLLATE \"C\""};
 inline constexpr auto kEnabled = registry::Field<bool>{"enabled", "o.enabled", "BOOLEAN"}.SortedAs(
     "(CASE WHEN o.enabled THEN '1' ELSE '0' END) COLLATE \"C\"");

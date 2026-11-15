@@ -38,10 +38,10 @@ userver::yaml_config::Schema ServiceChargesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::string& organization,
-    const platform::auth::Identity& identity, const models::SaveServiceChargeRequest& request,
-    const models::ServiceChargeParties& parties, const models::ConversionRate& exchange_rate,
-    bool can_write_invoices) const {
+models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
+    const models::SaveServiceChargeRequest& request, const models::ServiceChargeParties& parties,
+    const models::ConversionRate& exchange_rate, bool can_write_invoices) const {
     const auto& body = request;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Тот же порядок блокировок, что при включении услуги: услуга, затем счёт.
@@ -89,7 +89,8 @@ models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::stri
 }
 
 models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
-    const std::string& organization, const models::ListServiceChargesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListServiceChargesRequest& request) const {
     const auto& scope = request.scope;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
@@ -137,7 +138,7 @@ models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
 }
 
 models::ServiceCharge ServiceChargesComponent::FindServiceCharge(
-    const std::string& organization, const models::GetServiceChargeRequest& request) const {
+    const boost::uuids::uuid& organization, const models::GetServiceChargeRequest& request) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetServiceCharge, organization, request.id);
     if (rows.IsEmpty())
@@ -206,7 +207,8 @@ bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Ide
 }
 
 models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRegistry(
-    const std::string& organization, const models::ServiceChargeRegistryRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ServiceChargeRegistryRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -255,7 +257,8 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
 }
 
 models::ServiceChargeFilterValuesResult ServiceChargesComponent::GetServiceChargeFilterValues(
-    const std::string& organization, models::ServiceChargeFilterValuesRequest request) const {
+    const boost::uuids::uuid& organization,
+    models::ServiceChargeFilterValuesRequest request) const {
     try {
         models::ServiceChargeFilterValuesResult result;
         result.fields = platform::registry::DescribeFields<models::RegistryField>(

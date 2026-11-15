@@ -17,11 +17,11 @@ class ContractsComponent final : public userver::components::ComponentBase {
 
     void ValidateContractParties(
         std::string_view access_token, const models::SaveContractRequest&) const;
-    models::Contract SaveContract(const std::string& organization,
+    models::Contract SaveContract(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, std::int64_t expected_revision,
         models::pg::ContractRaw value) const;
     models::Contract FindContract(
-        const std::string& organization, const boost::uuids::uuid& id) const;
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
 
   private:
     clients::counterparties::Client counterparties_;

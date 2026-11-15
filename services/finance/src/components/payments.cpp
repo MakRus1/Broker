@@ -34,8 +34,8 @@ models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
     throw std::logic_error("Неизвестный вид платежа");
 }
 
-models::PaymentDetails LoadPayment(
-    pg::Transaction& transaction, const std::string& organization, const boost::uuids::uuid& id) {
+models::PaymentDetails LoadPayment(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) {
     const auto rows = transaction.Execute(sql::kGetPayment, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"payment_not_found", "Платёж не найден"};
@@ -52,8 +52,8 @@ models::PaymentDetails LoadPayment(
     return result;
 }
 
-models::PaymentInvoice LoadInvoiceBalance(
-    pg::Transaction& transaction, const std::string& organization, const boost::uuids::uuid& id) {
+models::PaymentInvoice LoadInvoiceBalance(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) {
     const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
@@ -88,7 +88,7 @@ userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organization,
+models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SavePaymentRequest& request,
     models::pg::PaymentRaw value) const {
     const auto& body = request;
@@ -153,7 +153,7 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
 }
 
 models::PaymentDetails PaymentsComponent::FindPayment(
-    const std::string& organization, const models::InvoiceBalanceRequest& request) const {
+    const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -163,7 +163,7 @@ models::PaymentDetails PaymentsComponent::FindPayment(
 }
 
 models::PaymentListResult PaymentsComponent::ListPayments(
-    const std::string& organization, const models::ListPaymentsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListPaymentsRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -206,7 +206,8 @@ models::PaymentListResult PaymentsComponent::ListPayments(
 }
 
 models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(
-    const std::string& organization, const models::PaymentFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::PaymentFilterValuesRequest& request) const {
     try {
         models::PaymentFilterValuesResult result;
         result.fields = platform::registry::DescribeFields<models::RegistryField>(
@@ -231,7 +232,8 @@ models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(
 }
 
 models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
-    const std::string& organization, const models::PaymentInvoiceCandidatesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::PaymentInvoiceCandidatesRequest& request) const {
     const auto& body = request;
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kPaymentInvoiceCandidates,
@@ -254,7 +256,7 @@ models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
 }
 
 models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
-    const std::string& organization, const models::InvoiceBalanceRequest& request) const {
+    const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -264,7 +266,7 @@ models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
 }
 
 models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
-    const std::string& organization, const models::PaymentCandidatesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::PaymentCandidatesRequest& request) const {
     const auto& body = request;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{

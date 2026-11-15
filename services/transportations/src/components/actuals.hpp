@@ -16,16 +16,16 @@ class ActualsComponent final : public userver::components::ComponentBase {
     ActualsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::Transportation RecordActual(const std::string& organization,
+    models::Transportation RecordActual(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
         const models::RecordActualRequest&, const models::ShipmentContext&) const;
-    models::Transportation CorrectActual(const std::string& organization,
+    models::Transportation CorrectActual(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
         const models::CorrectActualRequest&, const models::ShipmentContext&) const;
 
   private:
     template <typename Request>
-    models::Transportation ApplyActualChange(const std::string& organization,
+    models::Transportation ApplyActualChange(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token, const Request&,
         const models::ShipmentContext&, route_rules::ActualChange) const;
     userver::storages::postgres::ClusterPtr cluster_;

@@ -28,8 +28,7 @@ void InboxComponent::CheckOrganization(
     namespace api = clients::organizations::ApiOrganizationsAccess;
     try {
         organizations_.ApiOrganizationsAccess(
-            api::Request{.body = {.organization_id = userver::utils::ToString(organization),
-                             .permission = "shipments.read"}},
+            api::Request{.body = {.organization_id = organization, .permission = "shipments.read"}},
             access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};

@@ -10,6 +10,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/http/url.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace organizations {
@@ -75,7 +76,7 @@ User KeycloakUsers::Find(const std::string& username) const try {
         "identity_provider_unavailable", "Провайдер пользователей временно недоступен"};
 }
 
-User KeycloakUsers::Create(const std::string& request_id, const std::string& username,
+User KeycloakUsers::Create(const boost::uuids::uuid& request_id, const std::string& username,
     const std::string& email, const std::string& last_name, const std::string& first_name,
     const std::optional<std::string>& middle_name, const std::string& temporary_password) const
     try {
@@ -89,7 +90,8 @@ User KeycloakUsers::Create(const std::string& request_id, const std::string& use
     if (middle_name.has_value())
         body["attributes"]["middle_name"].PushBack(middle_name.value());
     body["enabled"] = true;
-    body["attributes"]["broker-provisioning-id"].PushBack(request_id);
+    const auto provisioning_id = userver::utils::ToString(request_id);
+    body["attributes"]["broker-provisioning-id"].PushBack(provisioning_id);
     userver::formats::json::ValueBuilder credential;
     credential["type"] = "password";
     credential["value"] = temporary_password;
@@ -107,7 +109,7 @@ User KeycloakUsers::Create(const std::string& request_id, const std::string& use
     const auto value = Lookup(username);
     const auto provisioning = value["attributes"]["broker-provisioning-id"];
     if (provisioning.IsMissing() || provisioning.GetSize() != 1 ||
-        !boost::iequals(provisioning[0].As<std::string>(), request_id))
+        !boost::iequals(provisioning[0].As<std::string>(), provisioning_id))
         throw ApiError<409>{
             "username_taken", "Логин уже занят. Используйте добавление существующего пользователя"};
     return converters::Convert(value);

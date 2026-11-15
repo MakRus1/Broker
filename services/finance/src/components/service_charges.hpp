@@ -20,20 +20,22 @@ class ServiceChargesComponent final : public userver::components::ComponentBase 
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    models::ServiceCharge SaveServiceCharge(const std::string& organization,
+    models::ServiceCharge SaveServiceCharge(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SaveServiceChargeRequest& request,
         const models::ServiceChargeParties& parties, const models::ConversionRate& exchange_rate,
         bool can_write_invoices) const;
-    models::ServiceChargeListResult ListServiceCharges(
-        const std::string& organization, const models::ListServiceChargesRequest& request) const;
-    models::ServiceCharge FindServiceCharge(
-        const std::string& organization, const models::GetServiceChargeRequest& request) const;
+    models::ServiceChargeListResult ListServiceCharges(const boost::uuids::uuid& organization,
+        const models::ListServiceChargesRequest& request) const;
+    models::ServiceCharge FindServiceCharge(const boost::uuids::uuid& organization,
+        const models::GetServiceChargeRequest& request) const;
     bool ApplyServiceChargeImport(const platform::auth::Identity& identity,
         const models::ImportServiceChargesRequest& request) const;
     models::ServiceChargeRegistryResult ListServiceChargeRegistry(
-        const std::string& organization, const models::ServiceChargeRegistryRequest& request) const;
+        const boost::uuids::uuid& organization,
+        const models::ServiceChargeRegistryRequest& request) const;
     models::ServiceChargeFilterValuesResult GetServiceChargeFilterValues(
-        const std::string& organization, models::ServiceChargeFilterValuesRequest request) const;
+        const boost::uuids::uuid& organization,
+        models::ServiceChargeFilterValuesRequest request) const;
 
   private:
     models::ReportingSummary BuildReporting(const std::string&,

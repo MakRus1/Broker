@@ -29,8 +29,9 @@ namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 using shipments::ApiError;
 
-std::string GenerateShipmentNumber(pg::Transaction& transaction, const std::string& organization,
-    userver::utils::datetime::Date date, const auto& settings) {
+std::string GenerateShipmentNumber(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, userver::utils::datetime::Date date,
+    const auto& settings) {
     const auto period = platform::DocumentNumberPeriod(date, settings.ResetNumberYearly);
     const auto sequence = transaction.Execute(sql::kNextShipmentNumber, organization, period)
                               .template AsSingleRow<std::int64_t>();
@@ -40,15 +41,16 @@ std::string GenerateShipmentNumber(pg::Transaction& transaction, const std::stri
     return result;
 }
 
-void RememberCargo(pg::Transaction& transaction, const std::string& organization,
+void RememberCargo(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const boost::uuids::uuid& customer, const std::optional<std::string>& description) {
     if (description.has_value())
         transaction.Execute(sql::kRememberCargo, organization, customer, description.value(),
             userver::utils::text::ToLower(description.value()));
 }
 
-models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
-    const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
+models::Shipment InsertShipment(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const models::CreateShipmentRequest& body,
+    const configs::ShipmentSettings& settings) {
     auto card = shipments::helpers::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
@@ -123,7 +125,7 @@ std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
         "customer_directory_unavailable", "Некорректный ответ справочника контрагентов"};
 }
 
-void ShipmentsComponent::ValidateLogist(const std::string& organization,
+void ShipmentsComponent::ValidateLogist(const boost::uuids::uuid& organization,
     std::string_view access_token, const std::optional<std::string>& subject) const try {
     if (!subject)
         return;
@@ -147,7 +149,7 @@ void ShipmentsComponent::ValidateLogist(const std::string& organization,
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
-    const std::string& organization, const ShipmentSource& source,
+    const boost::uuids::uuid& organization, const ShipmentSource& source,
     const json::Value& document) const {
     const auto saved = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindSourceShipment,
         organization, source.Producer, source.Type, source.Id);
@@ -162,9 +164,10 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
 
 // Один сценарий для ручного создания и команд доверенных сервисов.
 // Источник участвует только в дедупликации и связи, не выбирает бизнес-ветку.
-models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
-    const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
-    const ShipmentSource& source, const json::Value& document) const {
+models::Shipment ShipmentsComponent::CreateShipmentFromSource(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& actor,
+    const models::CreateShipmentRequest& body, const ShipmentSource& source,
+    const json::Value& document) const {
     const auto settings = settings_.Effective(organization, std::optional{body.customer_id});
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -193,7 +196,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string&
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
-    const std::string& organization, const models::CreateShipmentRequest& request,
+    const boost::uuids::uuid& organization, const models::CreateShipmentRequest& request,
     const ShipmentSource& source, const json::Value& document) const {
     if (const auto saved = helpers::FindSavedReplay<models::Shipment>(
             cluster_, organization, "create_shipment", request);
@@ -203,7 +206,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
 }
 
 models::Shipment ShipmentsComponent::GetShipment(
-    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
@@ -212,7 +215,7 @@ models::Shipment ShipmentsComponent::GetShipment(
 }
 
 std::int64_t ShipmentsComponent::GetRouteUsageVersion(
-    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetRouteUsageVersion, organization, shipment_id);
     if (rows.IsEmpty())
@@ -221,7 +224,7 @@ std::int64_t ShipmentsComponent::GetRouteUsageVersion(
     return rows.AsSingleRow<std::int64_t>();
 }
 
-models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organization,
+models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request,
     const std::optional<std::int64_t>& route_usage_version) const {
     try {
@@ -271,7 +274,8 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
 }
 
 std::vector<models::TransportationContext> ShipmentsComponent::GetTransportationContexts(
-    const std::string& organization, const std::vector<boost::uuids::uuid>& shipment_ids) const {
+    const boost::uuids::uuid& organization,
+    const std::vector<boost::uuids::uuid>& shipment_ids) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids);
     std::vector<models::TransportationContext> result;
@@ -291,8 +295,8 @@ std::vector<models::TransportationContext> ShipmentsComponent::GetTransportation
     return result;
 }
 
-void ShipmentsComponent::RegisterRouteUsage(
-    const std::string& organization, const models::RegisterRouteUsageRequest& request) const {
+void ShipmentsComponent::RegisterRouteUsage(const boost::uuids::uuid& organization,
+    const models::RegisterRouteUsageRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto rows = transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (rows.IsEmpty())

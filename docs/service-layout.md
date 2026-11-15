@@ -8,12 +8,13 @@
 ```text
 services/<service>/
 ├── service.yaml                   # Инфраструктура, клиенты, конфиги и библиотеки
+├── codegen.lock                   # Отпечаток входов OpenAPI-генератора
 ├── client-api.yaml                # include либо exclude для экспорта HTTP API
 ├── CMakeLists.txt
 ├── Makefile                       # Команды из каталога сервиса
 ├── configs/                       # userver и переменные окружения
 ├── docs/
-│   ├── api/                       # Серверные ручки OpenAPI и codegen.lock
+│   ├── api/                       # Серверные ручки OpenAPI
 │   └── components/schemas/        # Общие HTTP-схемы, ссылки из API
 ├── proto/                         # gRPC-контракты
 ├── postgresql/

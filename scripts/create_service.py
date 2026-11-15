@@ -28,7 +28,8 @@ def _create(name, postgres=False, grpc=False):
     if destination.exists() or destination.is_symlink():
         raise ValueError(f'Сервис уже существует: {destination}')
     registered = [ROOT / 'CMakeLists.txt', ROOT / '.github/service-deps.yaml', ROOT / 'docker-compose.yml']
-    registry_lock = services / 'configs/docs/api/codegen.lock'
+    configs_service = services / 'configs'
+    registry_lock = configs_service / 'codegen.lock'
     if registry_lock.is_file():
         registered.append(registry_lock)
     before = {p: p.read_bytes() for p in registered}
@@ -78,7 +79,7 @@ def _create(name, postgres=False, grpc=False):
             (ROOT / '.github/service-deps.yaml').write_text(yaml.safe_dump(deps, sort_keys=False, indent=2))
             if registry_lock.exists():
                 from generate import digest, load
-                registry_lock.write_text(digest(registry_lock.parents[2], load(registry_lock.parents[2])))
+                registry_lock.write_text(digest(configs_service, load(configs_service)))
             if postgres:
                 compose['services'][f'postgres-{name}'] = {
                     'image': 'postgres:16.8-alpine',

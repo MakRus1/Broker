@@ -31,7 +31,7 @@ class UpdateTest(unittest.TestCase):
             export(consumer)
             with patch('clients.ROOT', root):
                 update(provider)
-                lock = (consumer / 'docs/api/codegen.lock').read_bytes()
+                lock = (consumer / 'codegen.lock').read_bytes()
                 before = client_outputs(consumer, UniqueLoader, load)
                 source = provider / 'docs/api/new.yaml'
                 source.write_text(yaml.safe_dump({'openapi': '3.0.3', 'paths': {
@@ -39,7 +39,7 @@ class UpdateTest(unittest.TestCase):
                 changed = update(provider)
                 self.assertNotIn('consumer', changed)
                 self.assertIn('configs', changed)
-                self.assertEqual(lock, (consumer / 'docs/api/codegen.lock').read_bytes())
+                self.assertEqual(lock, (consumer / 'codegen.lock').read_bytes())
                 after = client_outputs(consumer, UniqueLoader, load)
                 self.assertNotEqual(before, after)
                 self.assertIn('Fresh::Response Fresh(', after['include/clients/api/client.hpp'])
@@ -48,7 +48,7 @@ class UpdateTest(unittest.TestCase):
                         'application/json': {'schema': {'type': 'object', 'properties': {
                             'extra': {'type': 'string'}}}}}}}}}}}))
                 update(provider)
-                self.assertEqual(lock, (consumer / 'docs/api/codegen.lock').read_bytes())
+                self.assertEqual(lock, (consumer / 'codegen.lock').read_bytes())
                 self.assertIn('extra', client_outputs(consumer, UniqueLoader, load)['include/clients/api/client.hpp'])
                 for service in (provider, consumer, root / 'services/configs'):
                     run(service, check=True)

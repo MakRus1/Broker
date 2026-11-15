@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — новые данные договора с его идентификатором.
+-- $3 — ожидаемая редакция.
 UPDATE contracts AS stored
 SET
     own_company_id = value.own_company_id,

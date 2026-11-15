@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового договора.
 INSERT INTO contracts (
     organization_id,
     id,

@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — идентификаторы незавершённых операций создания перевозок.
 WITH shipment_transportations AS (
     SELECT type, container_type_code, container_ownership, operation_id
     FROM transportations

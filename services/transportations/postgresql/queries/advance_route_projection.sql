@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — входящая редакция маршрута поставки.
 INSERT INTO shipment_route_projections (organization_id, shipment_id, revision)
 VALUES ($1::UUID, $2::UUID, $3::BIGINT)
 ON CONFLICT (organization_id, shipment_id) DO UPDATE

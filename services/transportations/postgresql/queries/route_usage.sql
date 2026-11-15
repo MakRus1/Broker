@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
 SELECT segments.document
 FROM route_segments AS segments
 JOIN transportations AS transportation

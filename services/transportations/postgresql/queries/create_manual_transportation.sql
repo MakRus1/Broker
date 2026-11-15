@@ -1,3 +1,11 @@
+-- $1 — организация.
+-- $2 — идентификатор перевозки.
+-- $3 — идентификатор поставки.
+-- $4 — тип перевозки.
+-- $5 — признак опасного груза.
+-- $6 — код типа контейнера.
+-- $7 — принадлежность контейнера.
+-- $8 — номер контейнера.
 INSERT INTO transportations (
     organization_id, id, shipment_id, ordinal, type, hazardous, container_type_code, container_ownership, container_number
 )

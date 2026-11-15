@@ -8,7 +8,7 @@
 #include <userver/formats/json.hpp>
 
 namespace shipments::helpers {
-inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& organization,
+inline void QueueRouteChanged(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, const models::Shipment& before,
     const models::Shipment& after) {
     namespace json = userver::formats::json;
@@ -22,7 +22,8 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
         .revision = after.revision,
         .shipment_id = after.id,
         .shipment_number = after.number};
-    const auto id = organization + ":" + after.id + ":" + std::to_string(after.revision);
+    const auto id = userver::utils::ToString(organization) + ":" +
+        userver::utils::ToString(after.id) + ":" + std::to_string(after.revision);
     const clients::notifications::models::PublishedEvent event{
         .value = clients::notifications::models::ShipmentRouteChanged{
             .id = id, .organization_id = organization, .payload = payload}};
@@ -30,9 +31,11 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
         json::ValueBuilder(event).ExtractValue());
 }
 
-inline void QueueShipmentCreated(pg::Transaction& transaction, const std::string& organization,
-    const platform::auth::Identity& actor, const models::Shipment& shipment) {
-    const auto id = organization + ":created:" + shipment.id;
+inline void QueueShipmentCreated(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& actor,
+    const models::Shipment& shipment) {
+    const auto id = userver::utils::ToString(organization) +
+        ":created:" + userver::utils::ToString(shipment.id);
     const clients::notifications::models::PublishedEvent event{
         .value = clients::notifications::models::ShipmentCreated{.id = id,
             .organization_id = organization,

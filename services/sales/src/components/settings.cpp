@@ -15,7 +15,7 @@ using sales::ApiError;
 
 void ValidateStages(
     const models::UpdateSalesSettingsRequest& request, const models::SalesSettings& previous) {
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& stage : request.stages) {
         if (!ids.insert(stage.id).second || userver::utils::text::Trim(stage.name).empty())
             throw ApiError<400>{"invalid_stage", "Этапы должны иметь уникальные коды и названия"};
@@ -42,7 +42,7 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::SalesSettings SettingsComponent::GetSettings(const std::string& organization) const {
+models::SalesSettings SettingsComponent::GetSettings(const boost::uuids::uuid& organization) const {
     return helpers::ReadSalesSettings(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings, organization));
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -18,7 +19,7 @@ struct Identity {
     std::string Subject;
     std::set<std::string> Permissions;
     std::string DisplayName;
-    std::optional<std::string> Organization;
+    std::optional<boost::uuids::uuid> Organization;
     std::string ClientId;
 
     std::string ActorId() const {
@@ -26,7 +27,7 @@ struct Identity {
     }
 };
 
-inline const std::string& GetOrganization(const Identity& identity) {
+inline const boost::uuids::uuid& GetOrganization(const Identity& identity) {
     if (!identity.Organization.has_value())
         throw Forbidden{};
     return identity.Organization.value();

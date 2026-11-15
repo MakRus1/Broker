@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <components/inbox.hpp>
 #include <converters/notifications.hpp>
 #include <notifications/sql_queries.hpp>
@@ -7,6 +6,7 @@
 #include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace notifications {
@@ -24,7 +24,7 @@ userver::yaml_config::Schema InboxComponent::GetStaticConfigSchema() {
 }
 
 void InboxComponent::CheckOrganization(
-    const std::string& access_token, const std::string& organization) const {
+    const std::string& access_token, const boost::uuids::uuid& organization) const {
     namespace api = clients::organizations::ApiOrganizationsAccess;
     try {
         organizations_.ApiOrganizationsAccess(
@@ -64,11 +64,8 @@ int InboxComponent::MarkNotificationsRead(const models::ReadNotificationsRequest
     const platform::auth::Identity& identity, const std::string& access_token) const {
     CheckOrganization(access_token, request.organization_id);
 
-    std::vector<boost::uuids::uuid> ids;
-    for (const auto& id : request.ids)
-        ids.push_back(boost::uuids::string_generator{}(id));
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kReadNotifications,
-        request.organization_id, identity.Issuer, identity.Subject, ids, request.dismiss);
+        request.organization_id, identity.Issuer, identity.Subject, request.ids, request.dismiss);
     return static_cast<int>(rows.Size());
 }
 }  // namespace notifications

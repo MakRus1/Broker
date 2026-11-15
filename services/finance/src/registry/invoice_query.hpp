@@ -14,20 +14,21 @@ namespace registry_fields {
 
 // Поля SQL и каталог API определяются здесь; общий конструктор добавляет фильтры и курсор.
 using Date = userver::utils::datetime::Date;
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 inline constexpr auto kNumber =
     registry::Field<std::string>{"number", "lower(number) COLLATE \"C\""}.SortedAs(
         "lower(number) COLLATE public.registry_number_order");
-inline constexpr registry::Field<std::string> kOwnCompany{
+inline constexpr registry::Field<boost::uuids::uuid> kOwnCompany{
     "own_company_id", "own_company_id", "UUID"};
-inline constexpr registry::Field<std::string> kCounterparty{
+inline constexpr registry::Field<boost::uuids::uuid> kCounterparty{
     "counterparty_id", "counterparty_id", "UUID"};
 inline constexpr registry::Field<Date> kDate{"invoice_date", "invoice_date", "DATE"};
 inline constexpr auto kDueDate = registry::Field<Date>{"due_date", "due_date", "DATE"}.SortedAs(
     "COALESCE(due_date, DATE '9999-12-31')");
-inline constexpr registry::Field<std::string> kContract{"contract_id", "contract_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kContract{
+    "contract_id", "contract_id", "UUID"};
 inline constexpr registry::Field<std::string> kDirection{"direction", "direction"};
 inline constexpr registry::Field<std::string> kCurrency{"currency", "currency"};
 inline constexpr auto kArchived = registry::Field<bool>{"archived", "archived", "BOOLEAN"}.SortedAs(
@@ -74,7 +75,8 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(const models::ListInvoicesRequest& request,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     using namespace registry_fields;
     registry::QueryBuilder query{
         sql::kListInvoices, registry::RegistryOrderBy(kFields, request.sort), request.descending};

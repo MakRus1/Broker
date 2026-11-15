@@ -12,7 +12,7 @@ WITH related_documents AS MATERIALIZED (
     FROM invoice_history
     WHERE organization_id = $1::UUID AND $8::BOOLEAN
       AND snapshot @> jsonb_build_object('charges',
-          jsonb_build_array(jsonb_build_object('id', $2::TEXT)))
+          jsonb_build_array(jsonb_build_object('id', $2::UUID)))
 ), related_revisions AS (
 SELECT 'invoice'::TEXT AS source, event.invoice_id AS entity_id,
        event.revision, event.actor, event.occurred_at AS occurred_at,
@@ -41,11 +41,11 @@ FROM related_revisions
 WHERE (previous IS NOT NULL OR revision = 1)
   AND (
       COALESCE(snapshot->'charges', '[]'::JSONB)
-          @> jsonb_build_array(jsonb_build_object('id', $2::TEXT))
+          @> jsonb_build_array(jsonb_build_object('id', $2::UUID))
       AND COALESCE(snapshot#>>'{invoice,archived}', 'false') <> 'true'
   ) IS DISTINCT FROM (
       COALESCE(previous->'charges', '[]'::JSONB)
-          @> jsonb_build_array(jsonb_build_object('id', $2::TEXT))
+          @> jsonb_build_array(jsonb_build_object('id', $2::UUID))
       AND COALESCE(previous#>>'{invoice,archived}', 'false') <> 'true'
   )
 )

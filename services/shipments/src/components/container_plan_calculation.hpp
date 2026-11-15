@@ -5,5 +5,5 @@
 namespace shipments::container_plan {
 models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snapshot,
     const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
-    const std::optional<std::string>& after_id, std::int64_t limit);
+    const std::optional<boost::uuids::uuid>& after, std::int64_t limit);
 }  // namespace shipments::container_plan

@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <components/contracts.hpp>
 #include <contracts/sql_queries.hpp>
 #include <converters/contracts.hpp>
@@ -12,6 +11,8 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
@@ -21,8 +22,8 @@ namespace sql = contracts::sql;
 using contracts::ApiError;
 using contracts::helpers::ReadNumbering;
 
-std::string GenerateContractNumber(pg::Transaction& transaction, const std::string& organization,
-    userver::utils::datetime::Date date) {
+std::string GenerateContractNumber(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, userver::utils::datetime::Date date) {
     const auto settings = ReadNumbering(transaction.Execute(sql::kGetNumbering, organization));
     const auto sequence =
         transaction
@@ -67,11 +68,8 @@ void ContractsComponent::ValidateContractParties(
                 continue;
             const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
                 {.body = {.counterparty_id = id}}, token);
-            const auto found =
-                std::find_if(accounts.items.begin(), accounts.items.end(), [&](const auto& item) {
-                    return boost::uuids::string_generator{}(item.id) ==
-                        boost::uuids::string_generator{}(account.value());
-                });
+            const auto found = std::find_if(accounts.items.begin(), accounts.items.end(),
+                [&](const auto& item) { return item.id == account.value(); });
             if (found == accounts.items.end())
                 throw ApiError<400>{"invalid_account", "Счёт не принадлежит выбранной стороне"};
             if (found->archived || found->currency != value.currency)
@@ -95,7 +93,7 @@ void ContractsComponent::ValidateContractParties(
 }
 
 models::Contract ContractsComponent::FindContract(
-    const std::string& organization, const std::string& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())
@@ -103,7 +101,7 @@ models::Contract ContractsComponent::FindContract(
     return converters::Convert(rows.AsSingleRow<models::pg::ContractRaw>());
 }
 
-models::Contract ContractsComponent::SaveContract(const std::string& organization,
+models::Contract ContractsComponent::SaveContract(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::int64_t expected_revision,
     models::pg::ContractRaw value) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});

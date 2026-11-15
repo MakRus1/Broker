@@ -12,8 +12,9 @@ class NumberingComponent final : public userver::components::ComponentBase {
     NumberingComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    void RequireAdministrator(const std::string& organization, std::string_view access_token) const;
-    models::ContractNumbering GetNumbering(const std::string& organization) const;
+    void RequireAdministrator(
+        const boost::uuids::uuid& organization, std::string_view access_token) const;
+    models::ContractNumbering GetNumbering(const boost::uuids::uuid& organization) const;
     models::ContractNumbering SaveNumbering(const models::UpdateContractNumberingRequest&) const;
 
   private:

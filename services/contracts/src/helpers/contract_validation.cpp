@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <helpers/contract_validation.hpp>
 #include <limits>
 #include <models/errors.hpp>
@@ -22,9 +21,7 @@ void NormalizeAndValidateContract(models::SaveContractRequest& value) {
         throw ApiError<400>{
             "invalid_valid_until", "Срок действия не может быть раньше даты договора"};
 
-    const auto own = boost::uuids::string_generator{}(value.own_company_id);
-    const auto counterparty = boost::uuids::string_generator{}(value.counterparty_id);
-    if (own == counterparty)
+    if (value.own_company_id == value.counterparty_id)
         throw ApiError<400>{"same_parties", "Выберите разные стороны договора"};
 
     value.number = number;

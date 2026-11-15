@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <userver/storages/postgres/parameter_store.hpp>
 #include <userver/storages/postgres/query.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/datetime/date.hpp>
 #include <vector>
 
@@ -108,7 +109,7 @@ struct BuiltQuery {
 class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending,
-        Field<std::string> identity = {"id", "id", "UUID", true})
+        FieldDefinition identity = Field<boost::uuids::uuid>{"id", "id", "UUID", true})
         : order_(order), descending_(descending), identity_(identity) {
         statement_ = selection.GetStatementView();
         selection_name_ = selection.GetOptionalNameView().has_value()
@@ -182,7 +183,16 @@ class QueryBuilder {
         }
         std::string condition;
         if (!present.empty()) {
-            auto parameter = Bind(present, std::string{field.PgType} + "[]");
+            std::string parameter;
+            if (field.PgType == "UUID") {
+                std::vector<boost::uuids::uuid> ids;
+                ids.reserve(present.size());
+                for (const auto& value : present)
+                    ids.push_back(userver::utils::BoostUuidFromString(value));
+                parameter = Bind(ids, "UUID[]");
+            } else {
+                parameter = Bind(present, std::string{field.PgType} + "[]");
+            }
             if (fold)
                 parameter = "ARRAY(SELECT lower(value) FROM unnest(" + parameter + ") AS value)";
             condition = std::string{field.Expression} + (array ? " && " : " = ANY(") + parameter +
@@ -226,7 +236,7 @@ class QueryBuilder {
 
     // Курсорная пагинация
 
-    template <typename T> void After(const std::optional<std::string>& id, const T& key) {
+    template <typename Id, typename T> void After(const std::optional<Id>& id, const T& key) {
         if (!id.has_value())
             return;
         const std::string comparison = descending_ ? " < " : " > ";
@@ -248,8 +258,12 @@ class QueryBuilder {
     BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
         std::string_view join, const std::optional<std::string>& after, int limit,
         std::string_view key_type = "TEXT", std::string_view value_source = {}) && {
-        if (after.has_value())
-            AddCondition(key, " > " + Bind(after.value(), key_type));
+        if (after.has_value()) {
+            const auto parameter = key_type == "UUID"
+                ? Bind(userver::utils::BoostUuidFromString(after.value()), key_type)
+                : Bind(after.value(), key_type);
+            AddCondition(key, " > " + parameter);
+        }
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(selection.GetStatementView()),
             fmt::arg("key", key), fmt::arg("label", label), fmt::arg("facet_join", join),
@@ -295,7 +309,7 @@ class QueryBuilder {
 
     Order order_;
     bool descending_;
-    Field<std::string> identity_;
+    FieldDefinition identity_;
     std::string statement_;
     std::string selection_name_;
     std::string conditions_;

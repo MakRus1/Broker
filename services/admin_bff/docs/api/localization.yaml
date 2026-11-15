@@ -17,6 +17,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
       responses:
         '200':
           description: Успех
@@ -70,6 +71,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 version:
                   type: integer
                   format: int64
@@ -132,6 +134,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 version:
                   type: integer
                   format: int64

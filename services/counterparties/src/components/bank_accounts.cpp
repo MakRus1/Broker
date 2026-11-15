@@ -26,7 +26,7 @@ userver::yaml_config::Schema BankAccountsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::BankAccount BankAccountsComponent::SaveBankAccount(const std::string& organization,
+models::BankAccount BankAccountsComponent::SaveBankAccount(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveBankAccountRequest& request) const {
     try {
         if (request.expected_revision == std::numeric_limits<std::int64_t>::max())
@@ -79,7 +79,7 @@ models::BankAccount BankAccountsComponent::SaveBankAccount(const std::string& or
 }
 
 std::vector<models::BankAccount> BankAccountsComponent::ListBankAccounts(
-    const std::string& organization, const models::ListBankAccountsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListBankAccountsRequest& request) const {
     const auto owner = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.counterparty_id);
     if (owner.IsEmpty())

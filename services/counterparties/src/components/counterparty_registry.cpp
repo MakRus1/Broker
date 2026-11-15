@@ -23,7 +23,8 @@ userver::yaml_config::Schema CounterpartyRegistry::GetStaticConfigSchema() {
 }
 
 models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
-    const std::string& organization, const models::ListCounterpartiesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListCounterpartiesRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -48,9 +49,7 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
         std::optional<models::CounterpartyRegistryCursor> cursor;
         if (more)
             cursor = models::CounterpartyRegistryCursor{
-                .id = boost::uuids::to_string(rows.back().Counterparty.Id),
-                .scope = scope,
-                .value = rows.back().SortKey};
+                .id = rows.back().Counterparty.Id, .scope = scope, .value = rows.back().SortKey};
         transaction.Commit();
 
         std::vector<models::Counterparty> items;
@@ -64,7 +63,8 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
 }
 
 models::CounterpartyFilterValuesResult CounterpartyRegistry::GetCounterpartyFilterValues(
-    const std::string& organization, const models::CounterpartyFilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::CounterpartyFilterValuesRequest& request) const {
     try {
         models::CounterpartyFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(registry_fields::kFields);

@@ -12,8 +12,8 @@ namespace {
 namespace models = sales::models;
 using sales::ApiError;
 
-void ValidateStage(const models::SalesSettings& settings, const std::string& id,
-    const std::optional<std::string>& previous) {
+void ValidateStage(const models::SalesSettings& settings, const boost::uuids::uuid& id,
+    const std::optional<boost::uuids::uuid>& previous) {
     for (const auto& stage : settings.stages)
         if (stage.id == id && (stage.enabled || previous == id))
             return;
@@ -35,15 +35,16 @@ userver::yaml_config::Schema CardsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::SalesCard CardsComponent::SaveCard(const std::string& organization,
+models::SalesCard CardsComponent::SaveCard(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveSalesCardRequest& request) const {
     const auto& value = request;
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockSettings, organization);
     const auto previous = transaction.Execute(sql::kLockCards, organization, value.id);
-    const auto previous_stage =
-        previous.IsEmpty() ? std::nullopt : std::optional{previous.AsSingleRow<std::string>()};
+    const auto previous_stage = previous.IsEmpty()
+        ? std::nullopt
+        : std::optional{previous.AsSingleRow<boost::uuids::uuid>()};
     ValidateStage(helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, organization)),
         value.stage_id, previous_stage);
 
@@ -70,7 +71,7 @@ models::SalesCard CardsComponent::SaveCard(const std::string& organization,
 }
 
 models::SalesCard CardsComponent::FindCard(
-    const std::string& organization, const std::string& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetCards, organization, id);
     if (rows.IsEmpty())
@@ -80,7 +81,7 @@ models::SalesCard CardsComponent::FindCard(
 }
 
 std::vector<models::SalesHistoryEntry> CardsComponent::GetCardHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryCards,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::SalesHistoryEntry> response;

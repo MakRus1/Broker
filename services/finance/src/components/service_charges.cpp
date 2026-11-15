@@ -3,7 +3,6 @@
 #include <converters/invoice.hpp>
 #include <converters/service_charge_input.hpp>
 #include <finance/sql_queries.hpp>
-#include <helpers/document_parties.hpp>
 #include <helpers/exchange_amounts.hpp>
 #include <helpers/finance_settings.hpp>
 #include <helpers/history/snapshot.hpp>
@@ -39,16 +38,15 @@ userver::yaml_config::Schema ServiceChargesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::string& organization,
-    const platform::auth::Identity& identity, const models::SaveServiceChargeRequest& request,
-    const models::ServiceChargeParties& parties, const models::ConversionRate& exchange_rate,
-    bool can_write_invoices) const {
+models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
+    const models::SaveServiceChargeRequest& request, const models::ServiceChargeParties& parties,
+    const models::ConversionRate& exchange_rate, bool can_write_invoices) const {
     const auto& body = request;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Тот же порядок блокировок, что при включении услуги: услуга, затем счёт.
     if (request.expected_revision != 0)
-        transaction.Execute(sql::kLockServiceCharges, organization,
-            std::vector{boost::uuids::string_generator{}(request.id)});
+        transaction.Execute(sql::kLockServiceCharges, organization, std::vector{request.id});
     const auto labels =
         transaction.Execute(sql::kGetFinancialLabel, organization, request.label_id);
     if (labels.IsEmpty())
@@ -91,7 +89,8 @@ models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::stri
 }
 
 models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
-    const std::string& organization, const models::ListServiceChargesRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListServiceChargesRequest& request) const {
     const auto& scope = request.scope;
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
@@ -139,7 +138,7 @@ models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
 }
 
 models::ServiceCharge ServiceChargesComponent::FindServiceCharge(
-    const std::string& organization, const models::GetServiceChargeRequest& request) const {
+    const boost::uuids::uuid& organization, const models::GetServiceChargeRequest& request) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetServiceCharge, organization, request.id);
     if (rows.IsEmpty())
@@ -163,13 +162,18 @@ bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Ide
     if (inserted.IsEmpty()) {
         const auto old = transaction.Execute(
             sql::kGetServiceChargeImport, command.organization_id, producer, command.id);
-        if (old.AsSingleRow<userver::formats::json::Value>() != document)
+        const auto saved = old.AsSingleRow<userver::formats::json::Value>();
+        if (saved != document &&
+            userver::formats::json::ValueBuilder(
+                models::ParseModelJson(
+                    saved, std::type_identity<models::ImportServiceChargesRequest>{}))
+                    .ExtractValue() != document)
             throw ApiError<409>{
                 "import_conflict", "Ключ переноса уже использован для другого расчёта"};
         transaction.Commit();
         return true;
     }
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& item : command.items) {
         const auto& charge = item.charge;
         if (!ids.insert(charge.id).second || charge.expected_revision != 0 || !charge.shipment_id ||
@@ -203,7 +207,8 @@ bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Ide
 }
 
 models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRegistry(
-    const std::string& organization, const models::ServiceChargeRegistryRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ServiceChargeRegistryRequest& request) const {
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
@@ -234,7 +239,7 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
             const auto& last = rows.back();
             cursor = models::ServiceChargeRegistryCursor{
                 .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Charge.Id),
+                .id = last.Charge.Id,
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }
@@ -252,7 +257,8 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
 }
 
 models::ServiceChargeFilterValuesResult ServiceChargesComponent::GetServiceChargeFilterValues(
-    const std::string& organization, models::ServiceChargeFilterValuesRequest request) const {
+    const boost::uuids::uuid& organization,
+    models::ServiceChargeFilterValuesRequest request) const {
     try {
         models::ServiceChargeFilterValuesResult result;
         result.fields = platform::registry::DescribeFields<models::RegistryField>(

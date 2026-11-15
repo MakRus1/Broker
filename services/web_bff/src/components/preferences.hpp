@@ -12,11 +12,11 @@ class PreferencesComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::preferences::ListPreferencesResult GetWorkspacePreferences(
-        const std::string& organization, const std::string& token) const;
+        const boost::uuids::uuid& organization, const std::string& token) const;
     models::preferences::Preference SavePersonalPreference(
         const models::preferences::SavePreferenceRequest&, const std::string& token) const;
     models::RegistryDefaultsResult ListRoleRegistryDefaults(
-        const std::string& organization, const std::string& token) const;
+        const boost::uuids::uuid& organization, const std::string& token) const;
     models::RegistryDefault SaveRoleRegistryDefault(
         const models::SaveRegistryDefaultRequest&, const std::string& token) const;
 

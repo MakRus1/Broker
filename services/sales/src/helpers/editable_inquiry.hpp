@@ -10,8 +10,8 @@ namespace sales::helpers {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 
-inline models::Inquiry LockEditableInquiry(
-    pg::Transaction& transaction, const std::string& organization, const std::string& id) {
+inline models::Inquiry LockEditableInquiry(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) {
     const auto rows = transaction.Execute(sql::kLockInquiries, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Входящий запрос не найден"};

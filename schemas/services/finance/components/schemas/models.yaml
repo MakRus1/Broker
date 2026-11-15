@@ -24,6 +24,7 @@ FinancialLabel:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -70,6 +71,7 @@ SaveFinancialLabelRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -116,6 +118,7 @@ GetFinancialLabelRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 FinancialLabelError:
@@ -199,6 +202,7 @@ FinancialLabelRegistryCursor:
   properties:
     id:
       format: uuid
+      x-cpp-type: uuid
       type: string
     scope:
       pattern: ^[a-f0-9]{64}$
@@ -248,17 +252,21 @@ ServiceCharge:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     label_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     label_name:
       type: string
       minLength: 1
@@ -270,11 +278,13 @@ ServiceCharge:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_name:
       type: string
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     contract_number:
       type: string
@@ -373,9 +383,11 @@ SaveServiceChargeRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     target_invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     target_invoice_revision:
       type: integer
       format: int64
@@ -383,14 +395,17 @@ SaveServiceChargeRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     label_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     direction:
       $ref: '#/ServiceChargeDirection'
     unit:
@@ -398,9 +413,11 @@ SaveServiceChargeRequest:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     quantity_milli:
       type: integer
@@ -473,10 +490,12 @@ ServiceChargeScope:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
   required:
   - shipment_id
@@ -490,6 +509,7 @@ ListServiceChargesRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     limit:
       type: integer
@@ -557,6 +577,7 @@ Invoice:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     direction:
       $ref: '#/InvoiceDirection'
     number:
@@ -573,24 +594,29 @@ Invoice:
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_name:
       type: string
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_name:
       type: string
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     contract_number:
       type: string
@@ -641,6 +667,7 @@ SaveInvoiceRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     direction:
       $ref: '#/InvoiceDirection'
     number:
@@ -658,20 +685,25 @@ SaveInvoiceRequest:
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     currency:
       type: string
@@ -690,12 +722,14 @@ SaveInvoiceRequest:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 0
     previous_invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
   - direction
@@ -732,6 +766,7 @@ GetInvoiceRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 ListInvoicesRequest:
@@ -774,20 +809,24 @@ ListInvoiceCandidatesRequest:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     currency:
       type: string
       pattern: ^[A-Z]{3}$
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     limit:
       type: integer
@@ -809,9 +848,11 @@ ServiceChargeInvoice:
     service_charge_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     number:
       type: string
     direction:
@@ -838,6 +879,7 @@ InvoiceRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
@@ -854,15 +896,18 @@ AddInvoiceServiceChargeRequest:
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     service_charge_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
     previous_invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - invoice_id
   - service_charge_id
@@ -874,6 +919,7 @@ GetServiceChargeRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 DetachInvoiceServiceChargeRequest:
@@ -883,9 +929,11 @@ DetachInvoiceServiceChargeRequest:
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     service_charge_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - invoice_id
   - service_charge_id
@@ -901,6 +949,7 @@ Payment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     number:
       type: string
       minLength: 1
@@ -908,20 +957,24 @@ Payment:
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_name:
       type: string
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_name:
       type: string
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     currency:
       type: string
@@ -973,6 +1026,7 @@ PaymentAllocation:
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     amount_minor:
       type: integer
       format: int64
@@ -1030,6 +1084,7 @@ SavePaymentRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     number:
       type: string
       minLength: 1
@@ -1037,16 +1092,20 @@ SavePaymentRequest:
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     currency:
       type: string
@@ -1160,9 +1219,11 @@ PaymentInvoiceCandidatesRequest:
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     currency:
       type: string
       minLength: 3
@@ -1173,6 +1234,7 @@ PaymentInvoiceCandidatesRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -1181,6 +1243,7 @@ PaymentInvoiceCandidatesRequest:
     payment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - kind
   - own_company_id
@@ -1194,6 +1257,7 @@ InvoiceBalanceRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 PaymentAvailable:
@@ -1333,6 +1397,7 @@ ServiceChargeRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
@@ -1374,12 +1439,15 @@ CounterpartySettlementsRequest:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     currency:
       type: string
       pattern: ^[A-Z]{3}$
@@ -1434,6 +1502,7 @@ InvoicePrintRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       format: int64
@@ -1595,22 +1664,15 @@ FinancialHistoryReference:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       description: Сохранённое имя или номер связанного документа; не локализуется.
-FinancialHistoryFormat:
-  type: string
-  enum:
-  - text
-  - date
-  - money
-  - quantity
-  - percent
-  - rate
-  - boolean
-  - enum
-  - reference
 FinancialHistoryValue:
+  oneOf:
+  - $ref: '#/FinancialHistoryScalarValue'
+  - $ref: '#/FinancialHistoryReferenceValue'
+FinancialHistoryScalarValue:
   type: object
   additionalProperties: false
   required:
@@ -1619,16 +1681,39 @@ FinancialHistoryValue:
   properties:
     value:
       type: string
-      description: 'Исходное значение: целое число для денежных/числовых форматов,
-        true/false для boolean, код для enum, ID для reference.'
+      description: Исходное значение. Целые числа передаются строкой для сохранения
+        точности.
     format:
-      $ref: '#/FinancialHistoryFormat'
+      type: string
+      enum:
+      - text
+      - date
+      - money
+      - quantity
+      - percent
+      - rate
+      - boolean
+      - enum
     currency:
       type: string
+FinancialHistoryReferenceValue:
+  type: object
+  additionalProperties: false
+  required:
+  - value
+  - format
+  properties:
+    value:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    format:
+      type: string
+      enum:
+      - reference
     display_name:
       type: string
-      description: Сохранённое имя связанного объекта для reference. ID остаётся в
-        value.
+      description: Сохранённое имя связанного объекта.
 FinancialHistoryChange:
   type: object
   additionalProperties: false
@@ -1660,6 +1745,7 @@ FinancialHistoryCursor:
     entity_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       format: int64
@@ -1703,6 +1789,7 @@ FinancialHistoryRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     before:
       $ref: '#/FinancialHistoryCursor'
     limit:
@@ -1735,12 +1822,15 @@ ReconciliationRequest:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     contract_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     currency:
       type: string
       pattern: ^[A-Z]{3}$
@@ -1782,6 +1872,7 @@ ReconciliationOperation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/ReconciliationKind'
     date:
@@ -1848,9 +1939,11 @@ ImportServiceChargesRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     actor_subject:
       type: string
       maxLength: 256
@@ -1882,6 +1975,7 @@ ServiceChargeImportSource:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       format: int64
@@ -1897,6 +1991,7 @@ GetFinanceSettingsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - organization_id
 UpdateFinanceSettingsRequest:
@@ -1906,6 +2001,7 @@ UpdateFinanceSettingsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     reporting_currency:
       type: string
       pattern: ^[A-Z]{3}$
@@ -1992,12 +2088,14 @@ PaymentCandidatesRequest:
     invoice_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     query:
       type: string
       maxLength: 200
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1

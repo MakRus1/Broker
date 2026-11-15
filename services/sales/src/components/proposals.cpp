@@ -22,7 +22,7 @@ namespace json = userver::formats::json;
 namespace sql = sales::sql;
 using sales::ApiError;
 
-void StoreProposal(pg::Transaction& transaction, const std::string& organization,
+void StoreProposal(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const models::Proposal& value, std::int64_t expected, const std::string& actor) {
 
     const auto document = json::ValueBuilder(value).ExtractValue();
@@ -53,7 +53,7 @@ userver::yaml_config::Schema ProposalsComponent::GetStaticConfigSchema() {
 }
 
 models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
-    const std::string& organization, std::string_view token, const models::Inquiry& inquiry,
+    const boost::uuids::uuid& organization, std::string_view token, const models::Inquiry& inquiry,
     models::ProposalInput& input) const try {
     const auto settings = finance_.ApiV1FinanceSettingsGet({}, token);
     const auto customer =
@@ -62,8 +62,8 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
     models::ProposalCalculation data{.InquiryRevision = inquiry.revision,
         .CustomerName = customer.name,
         .ReportingCurrency = settings.reporting_currency};
-    std::map<std::pair<std::string, std::int64_t>, models::Rfq> rfq_revisions;
-    std::map<std::string, clients::finance::models::FinancialLabel> labels;
+    std::map<std::pair<boost::uuids::uuid, std::int64_t>, models::Rfq> rfq_revisions;
+    std::map<boost::uuids::uuid, clients::finance::models::FinancialLabel> labels;
     for (auto& line : input.lines) {
         if (line.quote_source) {
             const auto& source = *line.quote_source;
@@ -137,7 +137,7 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
     throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса справочников"};
 }
 
-models::Proposal ProposalsComponent::SaveProposal(const std::string& organization,
+models::Proposal ProposalsComponent::SaveProposal(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::int64_t expected_revision,
     models::Proposal value) const {
 
@@ -169,7 +169,7 @@ models::Proposal ProposalsComponent::SaveProposal(const std::string& organizatio
 }
 
 std::vector<models::Proposal> ProposalsComponent::ListProposals(
-    const std::string& organization, const std::string& inquiry_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kListProposals, organization, inquiry_id);
     std::vector<models::Proposal> result;
@@ -180,7 +180,7 @@ std::vector<models::Proposal> ProposalsComponent::ListProposals(
     return result;
 }
 
-models::Proposal ProposalsComponent::ApplyProposalAction(const std::string& organization,
+models::Proposal ProposalsComponent::ApplyProposalAction(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::ProposalActionRequest& request) const {
     const auto before = helpers::ReadProposal(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetProposal, organization, request.id));
@@ -229,7 +229,7 @@ models::Proposal ProposalsComponent::ApplyProposalAction(const std::string& orga
 }
 
 std::vector<models::ProposalHistoryEntry> ProposalsComponent::GetProposalHistory(
-    const std::string& organization, const models::HistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryProposals,
         organization, request.id, request.after_revision.value_or(0));
     std::vector<models::ProposalHistoryEntry> result;

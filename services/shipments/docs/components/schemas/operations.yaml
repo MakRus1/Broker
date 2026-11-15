@@ -126,6 +126,7 @@ SettingsGetBusinessRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - organization_id
 SettingsUpdateBusinessRequest:
@@ -135,6 +136,7 @@ SettingsUpdateBusinessRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       format: int64

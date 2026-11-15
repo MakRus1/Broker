@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
 #include <models/pg/bank_account_raw.hpp>
 #include <openapi/models.hpp>
 
@@ -9,10 +8,10 @@ inline models::BankAccount Convert(const models::pg::BankAccountRaw& row) {
         .bank_name = row.BankName,
         .bic = row.Bic,
         .correspondent_account = row.CorrespondentAccount,
-        .counterparty_id = boost::uuids::to_string(row.CounterpartyId),
+        .counterparty_id = row.CounterpartyId,
         .currency = row.Currency,
         .iban = row.Iban,
-        .id = boost::uuids::to_string(row.Id),
+        .id = row.Id,
         .is_primary = row.IsPrimary,
         .name = row.Name,
         .number = row.Number,
@@ -21,8 +20,8 @@ inline models::BankAccount Convert(const models::pg::BankAccountRaw& row) {
 }
 
 inline models::pg::BankAccountRaw Convert(const models::BankAccount& value) {
-    return {.Id = boost::uuids::string_generator{}(value.id),
-        .CounterpartyId = boost::uuids::string_generator{}(value.counterparty_id),
+    return {.Id = value.id,
+        .CounterpartyId = value.counterparty_id,
         .Name = value.name,
         .Number = value.number,
         .Currency = value.currency,
@@ -38,9 +37,8 @@ inline models::pg::BankAccountRaw Convert(const models::BankAccount& value) {
 
 inline models::BankAccount Convert(const models::SaveBankAccountRequest& input) {
     models::BankAccount value;
-    value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
-    value.counterparty_id =
-        boost::uuids::to_string(boost::uuids::string_generator{}(input.counterparty_id));
+    value.id = input.id;
+    value.counterparty_id = input.counterparty_id;
     value.name = input.name;
     value.number = input.number;
     value.currency = input.currency;

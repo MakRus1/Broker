@@ -10,6 +10,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -42,9 +43,11 @@ SeaDetails:
     departure_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     arrival_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     departure_date:
       type: string
       format: date
@@ -62,6 +65,7 @@ AirDetails:
     carrier_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     origin_airport:
       $ref: '#/TransportLocation'
     destination_airport:
@@ -104,6 +108,7 @@ LocationListCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     value:
       type: string
       maxLength: 1024
@@ -122,6 +127,7 @@ ListLocationsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     country_code:
       type: string
       pattern: ^[A-Z]{2}$

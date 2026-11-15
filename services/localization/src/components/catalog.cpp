@@ -6,6 +6,8 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace localization {
@@ -24,7 +26,7 @@ userver::yaml_config::Schema CatalogComponent::GetStaticConfigSchema() {
 }
 
 void CatalogComponent::CheckOrganization(
-    const std::string& access_token, const std::string& organization) const {
+    const std::string& access_token, const boost::uuids::uuid& organization) const {
     namespace api = clients::organizations::ApiOrganizationsMembershipGet;
     try {
         organizations_.ApiOrganizationsMembershipGet(

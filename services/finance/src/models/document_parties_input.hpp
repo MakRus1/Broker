@@ -1,14 +1,15 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <optional>
 #include <string>
 
 namespace finance::models {
 struct DocumentPartiesInput {
-    std::string OwnCompanyId;
-    std::string CounterpartyId;
-    std::optional<std::string> OwnBankAccountId;
-    std::optional<std::string> CounterpartyBankAccountId;
-    std::optional<std::string> ContractId;
+    boost::uuids::uuid OwnCompanyId;
+    boost::uuids::uuid CounterpartyId;
+    std::optional<boost::uuids::uuid> OwnBankAccountId;
+    std::optional<boost::uuids::uuid> CounterpartyBankAccountId;
+    std::optional<boost::uuids::uuid> ContractId;
     std::string Currency;
     bool Archived = false;
 };

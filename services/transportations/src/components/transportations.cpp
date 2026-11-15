@@ -53,7 +53,7 @@ userver::yaml_config::Schema TransportationsComponent::GetStaticConfigSchema() {
 }
 
 models::Transportation TransportationsComponent::FindTransportation(
-    const std::string& organization, const std::string& id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
 
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
@@ -65,7 +65,7 @@ models::Transportation TransportationsComponent::FindTransportation(
 }
 
 models::TransportationHistoryResult TransportationsComponent::GetTransportationHistory(
-    const std::string& organization, const models::ListHistoryRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ListHistoryRequest& request) const {
     // Наличие перевозки и её история проверяются в одном снимке.
 
     auto transaction =
@@ -82,7 +82,7 @@ models::TransportationHistoryResult TransportationsComponent::GetTransportationH
 }
 
 models::Transportation TransportationsComponent::CreateTransportation(
-    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::CreateTransportationRequest& request,
     const models::ShipmentContext& source) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
@@ -93,7 +93,10 @@ models::Transportation TransportationsComponent::CreateTransportation(
     const auto saved = transaction.Execute(sql::kFindCommand, organization, request.id);
     if (!saved.IsEmpty()) {
         const auto command = saved.AsSingleRow<models::pg::SavedCommand>();
-        if (command.Payload != helpers::Document(request))
+        if (command.Payload != helpers::Document(request) &&
+            helpers::Document(models::ParseModelJson(
+                command.Payload, std::type_identity<models::CreateTransportationRequest>{})) !=
+                helpers::Document(request))
             throw ApiError<409>{"idempotency_conflict", "Содержимое команды создания изменено"};
         auto result = converters::RestoreTransportation(command.Result);
         transaction.Commit();
@@ -120,7 +123,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
 }
 
 models::Transportation TransportationsComponent::UpdateTransportation(
-    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::UpdateTransportationRequest& request,
     const models::ShipmentContext& source) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
@@ -148,7 +151,7 @@ models::Transportation TransportationsComponent::UpdateTransportation(
 }
 
 models::ContainerFactsResult TransportationsComponent::GetContainerFacts(
-    const std::string& organization, const models::ContainerFactsRequest& request) const {
+    const boost::uuids::uuid& organization, const models::ContainerFactsRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kContainerFacts,
         organization, request.shipment_id, request.pending_operation_ids);
     return converters::Convert(rows.AsContainer<std::vector<models::pg::ContainerFact>>());
@@ -163,7 +166,9 @@ models::EnsureTransportationsResult TransportationsComponent::CreateTransportati
     const auto rows = transaction.Execute(sql::kFindCommand, organization, request.operation_id);
     if (!rows.IsEmpty()) {
         const auto saved = rows.AsSingleRow<models::pg::SavedCommand>();
-        if (saved.Payload != helpers::Document(request))
+        if (saved.Payload != helpers::Document(request) &&
+            helpers::Document(models::ParseModelJson(saved.Payload,
+                std::type_identity<models::EnsureCreatedRequest>{})) != helpers::Document(request))
             throw ApiError<409>{"protocol_conflict", "Содержимое операции изменено"};
         const auto result =
             models::ParseModelJson(saved.Result, std::type_identity<models::CreationOperation>{});
@@ -184,7 +189,7 @@ models::EnsureTransportationsResult TransportationsComponent::CreateTransportati
                 .Execute(sql::kCreateTransportation, organization, request.shipment_id,
                     request.item_id, request.operation_id, ordinal, request.container_type_code,
                     models::EnumValue(request.container_ownership))
-                .AsSingleRow<std::string>());
+                .AsSingleRow<boost::uuids::uuid>());
     }
     result.status = models::OperationStatus::Succeeded;
     transaction.Execute(

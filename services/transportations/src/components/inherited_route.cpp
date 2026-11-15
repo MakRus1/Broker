@@ -19,7 +19,7 @@ bool HasRouteData(const models::RouteSegment& segment) {
 }
 
 const models::ShipmentContext& FindShipmentContext(
-    const std::vector<models::ShipmentContext>& contexts, const std::string& shipment_id) {
+    const std::vector<models::ShipmentContext>& contexts, const boost::uuids::uuid& shipment_id) {
     const auto found = std::find_if(contexts.begin(), contexts.end(),
         [&](const auto& item) { return item.shipment_id == shipment_id; });
     if (found == contexts.end())

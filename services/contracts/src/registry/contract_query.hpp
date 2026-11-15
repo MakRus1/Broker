@@ -7,7 +7,8 @@
 
 namespace contracts::registry_query {
 inline registry::QueryBuilder BuildRegistryFilters(const models::ListContractsRequest& request,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     using namespace registry_fields;
     registry::QueryBuilder query{
         sql::kListContracts, registry::RegistryOrderBy(kFields, request.sort), request.descending};

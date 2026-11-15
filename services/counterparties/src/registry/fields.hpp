@@ -8,9 +8,9 @@ namespace registry = platform::registry;
 namespace registry_fields {
 
 // SQL-поля: выражения фильтрации и, при необходимости, отдельный порядок сортировки.
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
 
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 
 inline constexpr registry::Field<std::string> kName{"name", "lower(name) COLLATE \"C\""};

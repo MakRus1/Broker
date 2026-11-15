@@ -57,6 +57,7 @@ GetCatalogRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     locale:
       type: string
       enum:
@@ -72,6 +73,7 @@ GetEditorRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
 SaveCatalogRequest:
   type: object
   additionalProperties: false
@@ -79,6 +81,7 @@ SaveCatalogRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     version:
       type: integer
       format: int64
@@ -95,6 +98,7 @@ PublishCatalogRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     version:
       type: integer
       format: int64

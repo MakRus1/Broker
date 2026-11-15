@@ -12,9 +12,9 @@ class ContractRegistry final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ContractListResult ListContracts(
-        const std::string& organization, const models::ListContractsRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListContractsRequest&) const;
     models::ContractFilterValuesResult GetContractFilterValues(
-        const std::string& organization, const models::ContractFilterValuesRequest&) const;
+        const boost::uuids::uuid& organization, const models::ContractFilterValuesRequest&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

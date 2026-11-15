@@ -24,7 +24,8 @@ userver::yaml_config::Schema TransportationRegistry::GetStaticConfigSchema() {
 }
 
 models::TransportationListResult TransportationRegistry::ListTransportations(
-    const std::string& organization, const models::ListTransportationsRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListTransportationsRequest& request) const {
     try {
         const auto scope = platform::registry::CursorScope(request, organization);
         const auto order =
@@ -50,16 +51,14 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
             page.pop_back();
         std::optional<models::RegistryCursor> next_cursor;
         if (has_more)
-            next_cursor =
-                models::RegistryCursor{.id = boost::uuids::to_string(page.back().Transportation.Id),
-                    .scope = scope,
-                    .value = page.back().SortKey};
+            next_cursor = models::RegistryCursor{
+                .id = page.back().Transportation.Id, .scope = scope, .value = page.back().SortKey};
 
         const auto rows = converters::Convert(page);
-        std::vector<std::string> ids;
+        std::vector<boost::uuids::uuid> ids;
         ids.reserve(rows.size());
         for (const auto& row : rows)
-            ids.push_back(boost::uuids::to_string(row.Id));
+            ids.push_back(row.Id);
 
         // Все плечи страницы читаются одним запросом, без N+1.
         const auto route_segments = ids.empty()
@@ -76,7 +75,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
 }
 
 models::RegistryValuesResult TransportationRegistry::GetFilterValues(
-    const std::string& organization, const models::FilterValuesRequest& request) const {
+    const boost::uuids::uuid& organization, const models::FilterValuesRequest& request) const {
     try {
         const bool route = request.scope == models::FilterValuesScope::Route;
         models::RegistryValuesResult result;

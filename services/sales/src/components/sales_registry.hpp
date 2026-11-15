@@ -11,13 +11,13 @@ class SalesRegistry final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RegistryPage<models::SalesCard> ListCards(
-        const std::string& organization, const models::ListSalesRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListSalesRequest&) const;
     models::RegistryPage<models::Inquiry> ListInquiries(
-        const std::string& organization, const models::ListSalesRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListSalesRequest&) const;
     models::RegistryFilterValues GetCardsFilterValues(
-        const std::string& organization, const models::SalesFilterValuesRequest&) const;
+        const boost::uuids::uuid& organization, const models::SalesFilterValuesRequest&) const;
     models::RegistryFilterValues GetInquiriesFilterValues(
-        const std::string& organization, const models::SalesFilterValuesRequest&) const;
+        const boost::uuids::uuid& organization, const models::SalesFilterValuesRequest&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

@@ -11,8 +11,8 @@ namespace registry = platform::registry;
 namespace registry_fields {
 
 // SQL-поля и подписи каталога финансовых меток.
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
 inline constexpr registry::Field<std::string> kName{"name", "lower(name) COLLATE \"C\""};
 inline constexpr std::string_view kDirectionLabel =
@@ -41,7 +41,7 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(
-    const models::ListFinancialLabelsRequest& request, const std::string& organization,
+    const models::ListFinancialLabelsRequest& request, const boost::uuids::uuid& organization,
     const std::optional<std::string>& exclude = std::nullopt) {
     using namespace registry_fields;
     registry::QueryBuilder query{sql::kListFinancialLabels,

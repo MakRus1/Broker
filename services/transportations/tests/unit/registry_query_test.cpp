@@ -1,12 +1,14 @@
 #include <platform/calendar_date.hpp>
 #include <registry/query.hpp>
 #include <userver/utest/utest.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 
 namespace pg = userver::storages::postgres;
 
 namespace transportations::registry_query {
 namespace {
-const std::string kOrganization = "00000000-0000-0000-0000-000000000001";
+const auto kOrganization =
+    userver::utils::BoostUuidFromString("00000000-0000-0000-0000-000000000001");
 
 std::string Statement(const registry::BuiltQuery& query) {
     return std::string{query.Statement.GetStatementView()};
@@ -35,7 +37,7 @@ UTEST(RegistryQuery, ValuesNeverBecomeSqlText) {
     const auto sql = Statement(query);
     EXPECT_EQ(query.Parameters.Size(), 4);
     EXPECT_EQ(sql.find(unsafe), std::string::npos);
-    EXPECT_EQ(sql.find(kOrganization), std::string::npos);
+    EXPECT_EQ(sql.find(userver::utils::ToString(kOrganization)), std::string::npos);
     EXPECT_NE(sql.find("LIKE lower($2::TEXT)"), std::string::npos);
     EXPECT_NE(sql.find("hazardous = ANY($3::BOOLEAN[])"), std::string::npos);
     EXPECT_NE(sql.find("FALSE"), std::string::npos);
@@ -193,7 +195,8 @@ UTEST(RegistryQuery, CursorInheritsTheSortCollation) {
     registry::QueryBuilder query{selection,
         registry::OrderBy(std::array<registry::FieldDefinition, 1>{number}, "number"), false};
     query.After(
-        std::optional<std::string>{"11111111-1111-4111-8111-111111111111"}, std::string{"s-2"});
+        std::optional{userver::utils::BoostUuidFromString("11111111-1111-4111-8111-111111111111")},
+        std::string{"s-2"});
     const auto built = std::move(query).Build(10);
     const auto sql = built.Statement.GetStatementView();
     EXPECT_NE(

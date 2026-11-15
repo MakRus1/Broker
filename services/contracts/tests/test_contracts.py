@@ -112,3 +112,30 @@ async def test_registry_filters_and_sorting(api,directory):
     await api.post('/api/v1/contracts/list',{'filters':[{'field':'unknown','values':['1']}]},expected=400)
     first=await api.post('/api/v1/contracts/list',{'limit':1,'sort':'contract_date'})
     await api.post('/api/v1/contracts/list',{'limit':1,'sort':'number','cursor':first['next_cursor']},expected=400)
+
+
+async def test_organization_header_is_a_uuid(service_client, auth_key, mockserver):
+    organization = 'abcdefab-1234-4234-8234-abcdefabcdef'
+
+    roles = ['contracts.read', 'counterparties.read']
+
+    @mockserver.json_handler('/organizations/access')
+    def access(request):
+        assert request.json['organization_id'] == organization
+        return {'organization_id': organization, 'permissions': roles}
+
+    token = auth_key.token(
+        'author', roles=roles,
+        claims={'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': roles}}},
+    )
+    headers = {
+        'Authorization': 'Bearer ' + token,
+        'X-Organization-Id': organization.upper(),
+    }
+    response = await service_client.post('/api/v1/contracts/list', json={}, headers=headers)
+    assert response.status == 200, response.text
+    assert response.json()['items'] == []
+
+    headers['X-Organization-Id'] = 'invalid-organization'
+    response = await service_client.post('/api/v1/contracts/list', json={}, headers=headers)
+    assert response.status == 403, response.text

@@ -12,6 +12,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -21,7 +22,8 @@ namespace pg = userver::storages::postgres;
 using shipments::ApiError;
 
 configs::ShipmentSettings ReadPlatformSettings(const platform::configs::Snapshot& snapshot,
-    const std::string& organization, const std::optional<std::string>& customer = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<boost::uuids::uuid>& customer = std::nullopt) {
     return snapshot.Get(configs::SHIPMENT_SETTINGS,
         config_contexts::ShipmentOrganizationContext{
             .CustomerId = customer, .OrganizationId = organization});
@@ -84,7 +86,7 @@ std::optional<models::pg::OrganizationShipmentRules> ReadStoredRules(const pg::R
 }
 
 configs::ShipmentSettings ResolveEffectiveSettings(const platform::configs::Snapshot& snapshot,
-    const std::string& organization, const std::optional<std::string>& customer,
+    const boost::uuids::uuid& organization, const std::optional<boost::uuids::uuid>& customer,
     const std::optional<models::pg::OrganizationShipmentRules>& stored) {
     const auto limits = ReadPlatformSettings(snapshot, organization);
     auto defaults =
@@ -109,19 +111,20 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
 }
 
 std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
-    const std::string& organization) const {
+    const boost::uuids::uuid& organization) const {
     return ReadStoredRules(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization));
 }
 
-configs::ShipmentSettings SettingsComponent::Effective(
-    const std::string& organization, const std::optional<std::string>& customer) const {
+configs::ShipmentSettings SettingsComponent::Effective(const boost::uuids::uuid& organization,
+    const std::optional<boost::uuids::uuid>& customer) const {
     return ResolveEffectiveSettings(
         configs_.GetSnapshot(), organization, customer, LoadRules(organization));
 }
 
 configs::ShipmentSettings SettingsComponent::Effective(pg::Transaction& transaction,
-    const std::string& organization, const std::optional<std::string>& customer) const {
+    const boost::uuids::uuid& organization,
+    const std::optional<boost::uuids::uuid>& customer) const {
     return ResolveEffectiveSettings(configs_.GetSnapshot(), organization, customer,
         ReadStoredRules(transaction.Execute(sql::kGetOrganizationShipmentRules, organization)));
 }
@@ -169,7 +172,7 @@ models::ShipmentDictionaries SettingsComponent::GetDictionaries() const {
 }
 
 models::ShipmentBusinessSettings SettingsComponent::GetBusinessSettings(
-    const std::string& organization) const {
+    const boost::uuids::uuid& organization) const {
     const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), organization);
     const auto stored = LoadRules(organization);
     const auto effective = ResolveShipmentSettings(limits, limits, stored);
@@ -184,7 +187,7 @@ models::ShipmentBusinessSettings SettingsComponent::GetBusinessSettings(
 }
 
 models::ShipmentBusinessSettings SettingsComponent::SaveBusinessSettings(
-    const std::string& organization, const platform::auth::Identity& actor,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& actor,
     const models::ShipmentBusinessRules& requested_rules, std::int64_t expected_revision) const {
     const auto rules = converters::Convert(requested_rules);
     const auto limits = ReadPlatformSettings(configs_.GetSnapshot(), organization);

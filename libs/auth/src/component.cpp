@@ -12,11 +12,14 @@
 #include <userver/components/component_config.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 #include <userver/formats/parse/common_containers.hpp>
+#include <userver/formats/serialize/boost_uuid.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/server/handlers/handler_config.hpp>
 #include <userver/server/handlers/http_handler_base.hpp>
 #include <userver/server/http/http_response.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/periodic_task.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 #include <variant>
@@ -40,9 +43,19 @@ class Middleware final : public userver::server::middlewares::HttpMiddlewareBase
         int status = 401;
         std::string error = "unauthorized";
         try {
+            std::optional<boost::uuids::uuid> organization;
+            const auto& organization_header = request.GetHeader("X-Organization-Id");
+            if (!organization_header.empty()) {
+                if (organization_header.size() != 36)
+                    throw platform::auth::Forbidden{};
+                try {
+                    organization = userver::utils::BoostUuidFromString(organization_header);
+                } catch (const std::runtime_error&) {
+                    throw platform::auth::Forbidden{};
+                }
+            }
             context.SetData("platform-auth",
-                auth_.Authorize(path_, request.GetHeader("Authorization"),
-                    request.GetHeader("X-Organization-Id")));
+                auth_.Authorize(path_, request.GetHeader("Authorization"), organization));
             context.SetData(
                 "platform-auth-access-token", request.GetHeader("Authorization").substr(7));
         } catch (const platform::auth::Unavailable&) {
@@ -187,7 +200,7 @@ bool Component::IsProtected(std::string_view path) const {
 }
 
 Identity Component::Authorize(const std::string& path, const std::string& authorization,
-    const std::string& organization) const {
+    const std::optional<boost::uuids::uuid>& organization) const {
     if (authorization.size() < 8 ||
         !std::equal(authorization.begin(), authorization.begin() + 7, "bearer ",
             [](unsigned char a, unsigned char b) { return std::tolower(a) == b; }))
@@ -201,12 +214,10 @@ Identity Component::Authorize(const std::string& path, const std::string& author
         state_->PlatformUrl.empty() ? state_->OrganizationUrl : state_->PlatformUrl;
     if (permission->second != "authenticated" && !access_url.empty() &&
         service_client == state_->ServiceClients.end()) {
-        if (organization.size() > 36)
-            throw Forbidden{};
         userver::formats::json::ValueBuilder body;
         body["permission"] = permission->second;
-        if (!organization.empty())
-            body["organization_id"] = organization;
+        if (organization.has_value())
+            body["organization_id"] = *organization;
         try {
             const auto response =
                 state_->Client.CreateRequest()
@@ -225,9 +236,8 @@ Identity Component::Authorize(const std::string& path, const std::string& author
             const auto result = userver::formats::json::FromString(response->body());
             identity.Permissions = result["permissions"].As<std::set<std::string>>();
             if (state_->PlatformUrl.empty()) {
-                identity.Organization = result["organization_id"].As<std::string>();
-                if (!identity.Organization.has_value() || identity.Organization.value().empty() ||
-                    (!organization.empty() && identity.Organization.value() != organization))
+                identity.Organization = result["organization_id"].As<boost::uuids::uuid>();
+                if (organization.has_value() && identity.Organization != organization)
                     throw Unavailable{};
             }
             if (!identity.Permissions.contains(permission->second))

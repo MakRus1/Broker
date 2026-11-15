@@ -12,9 +12,10 @@ class CounterpartyRegistry final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::CounterpartyListResult ListCounterparties(
-        const std::string& organization, const models::ListCounterpartiesRequest&) const;
+        const boost::uuids::uuid& organization, const models::ListCounterpartiesRequest&) const;
     models::CounterpartyFilterValuesResult GetCounterpartyFilterValues(
-        const std::string& organization, const models::CounterpartyFilterValuesRequest&) const;
+        const boost::uuids::uuid& organization,
+        const models::CounterpartyFilterValuesRequest&) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

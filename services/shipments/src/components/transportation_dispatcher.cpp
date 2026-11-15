@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <helpers/outbox.hpp>
 #include <models/pg/creation_operation.hpp>
@@ -7,6 +6,7 @@
 #include <userver/components/component_config.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -26,7 +26,7 @@ TransportationDispatcher::TransportationDispatcher(
         [this](const auto& message) { return SendOperation(message); },
         [](pg::Transaction& transaction, const platform::outbox::Message& message,
             const models::pg::CreationOperation& result) {
-            const auto organization = message.Payload["organization_id"].As<std::string>();
+            const auto organization = message.Payload["organization_id"].As<boost::uuids::uuid>();
             transaction.Execute(sql::kCompleteOperation, organization, result);
         });
     outbox.RegisterHandler(std::string{helpers::kProjectShipmentRoute},
@@ -50,14 +50,13 @@ models::pg::CreationOperation TransportationDispatcher::SendOperation(
     if (value.status == Status::Succeeded &&
         value.transportation_ids.size() != static_cast<std::size_t>(value.quantity))
         throw std::runtime_error("Несогласованное количество перевозок");
-    const std::set<std::string> unique_ids(
+    const std::set<boost::uuids::uuid> unique_ids(
         value.transportation_ids.begin(), value.transportation_ids.end());
     if (unique_ids.size() != value.transportation_ids.size())
         throw std::runtime_error("Повторяющиеся ID в результате операции");
     const auto document = json::ValueBuilder(value).ExtractValue();
-    return models::pg::CreationOperation{
-        .Id = boost::uuids::string_generator{}(request.body.operation_id),
-        .ItemId = boost::uuids::string_generator{}(value.item_id),
+    return models::pg::CreationOperation{.Id = request.body.operation_id,
+        .ItemId = value.item_id,
         .Quantity = value.quantity,
         .Status = clients::transportations::models::EnumValue(value.status),
         .Result = document};

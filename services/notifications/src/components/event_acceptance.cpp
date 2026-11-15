@@ -6,6 +6,7 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 #include <variant>
 
@@ -15,6 +16,21 @@ void ValidateRecipient(
     if (delivery.RecipientIssuer != identity.Issuer)
         throw platform::http::HandlerError<400>{"invalid_recipient_issuer",
             "Получатель должен принадлежать провайдеру пользователей отправителя"};
+}
+
+bool MatchesStoredEvent(const userver::storages::postgres::ResultSet& saved,
+    const userver::formats::json::Value& document) {
+    namespace json = userver::formats::json;
+    namespace models = notifications::models;
+    if (saved.IsEmpty())
+        return false;
+    const auto payload = saved.AsSingleRow<json::Value>();
+    if (payload == document)
+        return true;
+
+    const auto event =
+        models::ParseModelJson(payload, std::type_identity<models::PublishedEvent>{});
+    return json::ValueBuilder(event).ExtractValue() == document;
 }
 }  // namespace
 
@@ -48,10 +64,9 @@ void EventAcceptanceComponent::AcceptEvent(
             const auto inserted = transaction.Execute(sql::kAcceptEvent, identity.ClientId,
                 event.organization_id, event.id, type, version, document);
             if (inserted.IsEmpty()) {
-                if (!transaction
-                         .Execute(sql::kGetEvent, identity.ClientId, event.organization_id,
-                             event.id, type, version, document)
-                         .template AsSingleRow<bool>())
+                const auto saved = transaction.Execute(sql::kGetEvent, identity.ClientId,
+                    event.organization_id, event.id, type, version);
+                if (!MatchesStoredEvent(saved, document))
                     throw platform::http::HandlerError<409>{
                         "event_conflict", "Событие с этим ключом уже принято с другими данными"};
             } else if (delivery.RecipientSubject.has_value()) {

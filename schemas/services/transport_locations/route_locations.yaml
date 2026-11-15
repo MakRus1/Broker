@@ -190,6 +190,7 @@ paths:
                 id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
               required:
               - id
       responses:
@@ -204,6 +205,7 @@ paths:
                   id:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                 required:
                 - id
         '400':

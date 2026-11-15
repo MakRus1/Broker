@@ -13,8 +13,9 @@
 namespace {
 namespace models = shipments::models;
 
-std::set<std::string> RouteCounterparties(const std::vector<models::ShipmentRouteSegment>& stages) {
-    std::set<std::string> ids;
+std::set<boost::uuids::uuid> RouteCounterparties(
+    const std::vector<models::ShipmentRouteSegment>& stages) {
+    std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& id) {
         if (id.has_value())
             ids.insert(id.value());
@@ -94,7 +95,7 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
     std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& location) {
         if (location.has_value())
-            ids.insert(boost::uuids::string_generator{}(location.value().id));
+            ids.insert(location.value().id);
     };
 
     for (const auto& segment : segments) {
@@ -112,12 +113,8 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
     if (ids.empty())
         return result;
 
-    std::vector<std::string> requested;
-    for (const auto& id : ids)
-        requested.push_back(boost::uuids::to_string(id));
-
     const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
-        {.body = {.ids = requested}}, access_token);
+        {.body = {.ids = {ids.begin(), ids.end()}}}, access_token);
 
     for (const auto& value : response.items) {
         auto location = converters::Convert(value);
@@ -140,7 +137,8 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
 }
 
 void ShipmentRoutes::CheckExistingRouteUsage(std::string_view access_token,
-    const std::string& shipment_id, const std::vector<std::string>& changed) const try {
+    const boost::uuids::uuid& shipment_id, const std::vector<boost::uuids::uuid>& changed) const
+    try {
     if (changed.empty())
         return;
 

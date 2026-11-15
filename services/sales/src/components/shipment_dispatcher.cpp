@@ -16,7 +16,7 @@ namespace json = userver::formats::json;
 namespace pg = userver::storages::postgres;
 
 void ShipmentDispatcher::TransferProposal(const ShipmentCommand& command,
-    const std::string& shipment_id, const std::string& token) const {
+    const boost::uuids::uuid& shipment_id, const std::string& token) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetInquiries,
         command.organization_id, command.source.id);
     if (rows.IsEmpty())
@@ -63,7 +63,7 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
 
 models::ShipmentDelivery ShipmentDispatcher::DeliverShipmentCreation(
     const ShipmentCommand& command) const {
-    std::string shipment_id;
+    boost::uuids::uuid shipment_id;
     try {
         const auto result = shipments_.ApiInternalV1ShipmentsEnsureCreated(
             {.body = {.actor_issuer = command.actor_issuer,
@@ -103,8 +103,8 @@ void ShipmentDispatcher::CompleteShipmentCreation(pg::Transaction& transaction,
 
     if (result.Rejection.has_value()) {
         namespace notification = clients::notifications::models;
-        const auto event_id =
-            "inquiry-shipment-failed:" + id + ":" + std::to_string(inquiry.revision);
+        const auto event_id = "inquiry-shipment-failed:" + userver::utils::ToString(id) + ":" +
+            std::to_string(inquiry.revision);
         const notification::PublishedEvent event{
             .value = notification::InquiryShipmentCreationFailed{.id = event_id,
                 .organization_id = organization,

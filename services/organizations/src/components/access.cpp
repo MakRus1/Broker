@@ -76,7 +76,7 @@ models::AccessMineResult AccessComponent::FindMyOrganizations(
         identity.Issuer, identity.Subject);
 
     return models::AccessMineResult{
-        .managed_organization_ids = managed.AsContainer<std::vector<std::string>>(),
+        .managed_organization_ids = managed.AsContainer<std::vector<boost::uuids::uuid>>(),
         .organizations = ConvertRows<models::pg::OrganizationRaw>(rows),
         .platform_admin = IsPlatformAdmin(identity)};
 }

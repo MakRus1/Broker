@@ -45,8 +45,7 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     const auto previous = shipment.AsSingleRow<models::pg::ShipmentRaw>();
     helpers::CheckRevision(previous.Revision, request.expected_revision);
 
-    const auto settings = settings_.Effective(
-        transaction, organization, boost::uuids::to_string(previous.CustomerId));
+    const auto settings = settings_.Effective(transaction, organization, previous.CustomerId);
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};
@@ -69,7 +68,7 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
 }
 
 ContainerPlanSnapshot ContainerPlanComponent::LoadPlan(
-    const std::string& organization, const std::string& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
     if (transaction.Execute(sql::kGetShipment, organization, shipment_id).IsEmpty())

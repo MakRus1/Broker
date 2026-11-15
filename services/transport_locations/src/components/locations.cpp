@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <components/locations.hpp>
 #include <converters/locations.hpp>
 #include <helpers/database.hpp>
@@ -8,6 +7,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -43,11 +43,9 @@ models::LocationListResult LocationsComponent::List(
     models::LocationListResult result;
     result.items = registry::ConvertItems(rows, [](const auto& row) { return Convert(row); });
     if (more) {
-        result.next = boost::uuids::to_string(rows.back().Value.Id);
-        result.next_cursor =
-            models::LocationListCursor{.id = boost::uuids::to_string(rows.back().Value.Id),
-                .scope = scope,
-                .value = rows.back().SortKey};
+        result.next = rows.back().Value.Id;
+        result.next_cursor = models::LocationListCursor{
+            .id = rows.back().Value.Id, .scope = scope, .value = rows.back().SortKey};
     }
     transaction.Commit();
     return result;
@@ -76,7 +74,7 @@ models::TransportLocation LocationsComponent::Save(
     }
 }
 
-void LocationsComponent::Archive(const std::string& id) const {
+void LocationsComponent::Archive(const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kArchiveRouteLocation, id);
     if (rows.IsEmpty())
@@ -84,12 +82,9 @@ void LocationsComponent::Archive(const std::string& id) const {
 }
 
 std::vector<models::TransportLocation> LocationsComponent::GetBatch(
-    const std::vector<std::string>& requested_ids) const {
-    std::vector<boost::uuids::uuid> ids;
-    ids.reserve(requested_ids.size());
-    for (const auto& id : requested_ids)
-        ids.push_back(boost::uuids::string_generator{}(id));
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRouteLocations, ids);
+    const std::vector<boost::uuids::uuid>& requested_ids) const {
+    const auto rows =
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRouteLocations, requested_ids);
     std::vector<models::TransportLocation> result;
     for (const auto& row : rows.AsSetOf<models::pg::TransportLocationRaw>())
         result.push_back(Convert(row));

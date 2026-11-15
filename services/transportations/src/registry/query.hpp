@@ -13,9 +13,9 @@ namespace registry = platform::registry;
 namespace registry_fields {
 
 // SQL-поля: выражения фильтрации и, при необходимости, отдельный порядок сортировки.
-inline constexpr registry::Field<std::string> kId{"id", "transportations.id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "transportations.id", "UUID", true};
 
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "transportations.organization_id", "UUID"};
 
 inline constexpr auto kNumber = registry::Field<std::string>{"container_number",
@@ -40,10 +40,11 @@ inline constexpr auto kHazardous =
     registry::Field<bool>{"hazardous", "transportations.hazardous", "BOOLEAN"}.SortedAs(
         "(CASE WHEN transportations.hazardous THEN 'true' ELSE 'false' END) COLLATE \"C\"");
 
-inline constexpr registry::Field<std::string> kShipment{
+inline constexpr registry::Field<boost::uuids::uuid> kShipment{
     "shipment_id", "transportations.shipment_id", "UUID"};
 
-inline constexpr registry::Field<std::string> kItem{"item_id", "transportations.item_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kItem{
+    "item_id", "transportations.item_id", "UUID"};
 
 // Каталог API: доступные операции и источники отображаемых значений.
 inline constexpr std::array<registry::RegistryField, 9> kFields{{
@@ -69,7 +70,7 @@ inline constexpr auto kSortableFields = registry::SortableFields(kFields);
 
 // Общие условия страницы и списка вариантов: организация и применённые фильтры.
 inline registry::QueryBuilder BuildRegistryFilters(
-    const models::ListTransportationsRequest& request, const std::string& organization,
+    const models::ListTransportationsRequest& request, const boost::uuids::uuid& organization,
     const std::optional<std::string>& exclude = std::nullopt) {
     using namespace registry_fields;
     registry::QueryBuilder query{sql::kListTransportations,

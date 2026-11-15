@@ -1,6 +1,4 @@
 #include <array>
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <components/financial_history.hpp>
 #include <finance/sql_queries.hpp>
 #include <map>
@@ -12,6 +10,7 @@
 #include <span>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json/value.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/chrono.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
@@ -23,25 +22,29 @@ namespace pg = userver::storages::postgres;
 using finance::ApiError;
 
 using Json = userver::formats::json::Value;
-using Format = models::FinancialHistoryFormat;
+using Format = models::FinancialHistoryScalarValue_format;
+using ReferenceFormat = models::FinancialHistoryReferenceValue_format;
 using FieldKey = models::FinancialHistoryField;
 using Source = models::FinancialHistorySource;
 using Action = models::FinancialHistoryAction;
 using Reference = models::FinancialHistoryReference;
 using Value = models::FinancialHistoryValue;
+using ScalarValue = models::FinancialHistoryScalarValue;
+using ReferenceValue = models::FinancialHistoryReferenceValue;
 
 struct Field {
     FieldKey Key;
-    Format ValueFormat = Format::Text;
+    std::variant<Format, ReferenceFormat> ValueFormat = Format::Text;
     const char* NameKey = nullptr;
 };
 
-constexpr std::array kChargeFields{Field{FieldKey::LabelId, Format::Reference, "label_name"},
+constexpr std::array kChargeFields{
+    Field{FieldKey::LabelId, ReferenceFormat::Reference, "label_name"},
     Field{FieldKey::Direction, Format::Enum},
-    Field{FieldKey::CounterpartyId, Format::Reference, "counterparty_name"},
-    Field{FieldKey::ContractId, Format::Reference, "contract_number"},
-    Field{FieldKey::ShipmentId, Format::Reference},
-    Field{FieldKey::TransportationId, Format::Reference},
+    Field{FieldKey::CounterpartyId, ReferenceFormat::Reference, "counterparty_name"},
+    Field{FieldKey::ContractId, ReferenceFormat::Reference, "contract_number"},
+    Field{FieldKey::ShipmentId, ReferenceFormat::Reference},
+    Field{FieldKey::TransportationId, ReferenceFormat::Reference},
     Field{FieldKey::QuantityMilli, Format::Quantity}, Field{FieldKey::Unit, Format::Enum},
     Field{FieldKey::PriceMinor, Format::Money}, Field{FieldKey::Currency},
     Field{FieldKey::ServiceDate, Format::Date}, Field{FieldKey::InvoiceCurrency},
@@ -57,22 +60,22 @@ constexpr std::array kChargeFields{Field{FieldKey::LabelId, Format::Reference, "
 constexpr std::array kInvoiceFields{Field{FieldKey::Number},
     Field{FieldKey::Direction, Format::Enum}, Field{FieldKey::InvoiceDate, Format::Date},
     Field{FieldKey::DueDate, Format::Date},
-    Field{FieldKey::OwnCompanyId, Format::Reference, "own_company_name"},
-    Field{FieldKey::CounterpartyId, Format::Reference, "counterparty_name"},
-    Field{FieldKey::OwnBankAccountId, Format::Reference},
-    Field{FieldKey::CounterpartyBankAccountId, Format::Reference},
-    Field{FieldKey::ContractId, Format::Reference, "contract_number"}, Field{FieldKey::Currency},
-    Field{FieldKey::NetMinor, Format::Money}, Field{FieldKey::VatMinor, Format::Money},
-    Field{FieldKey::TotalMinor, Format::Money}, Field{FieldKey::Note},
-    Field{FieldKey::Archived, Format::Boolean}};
+    Field{FieldKey::OwnCompanyId, ReferenceFormat::Reference, "own_company_name"},
+    Field{FieldKey::CounterpartyId, ReferenceFormat::Reference, "counterparty_name"},
+    Field{FieldKey::OwnBankAccountId, ReferenceFormat::Reference},
+    Field{FieldKey::CounterpartyBankAccountId, ReferenceFormat::Reference},
+    Field{FieldKey::ContractId, ReferenceFormat::Reference, "contract_number"},
+    Field{FieldKey::Currency}, Field{FieldKey::NetMinor, Format::Money},
+    Field{FieldKey::VatMinor, Format::Money}, Field{FieldKey::TotalMinor, Format::Money},
+    Field{FieldKey::Note}, Field{FieldKey::Archived, Format::Boolean}};
 constexpr std::array kPaymentFields{Field{FieldKey::Number}, Field{FieldKey::Kind, Format::Enum},
     Field{FieldKey::PaymentDate, Format::Date},
-    Field{FieldKey::OwnCompanyId, Format::Reference, "own_company_name"},
-    Field{FieldKey::CounterpartyId, Format::Reference, "counterparty_name"},
-    Field{FieldKey::OwnBankAccountId, Format::Reference},
-    Field{FieldKey::CounterpartyBankAccountId, Format::Reference}, Field{FieldKey::Currency},
-    Field{FieldKey::AmountMinor, Format::Money}, Field{FieldKey::Purpose}, Field{FieldKey::Note},
-    Field{FieldKey::Archived, Format::Boolean}};
+    Field{FieldKey::OwnCompanyId, ReferenceFormat::Reference, "own_company_name"},
+    Field{FieldKey::CounterpartyId, ReferenceFormat::Reference, "counterparty_name"},
+    Field{FieldKey::OwnBankAccountId, ReferenceFormat::Reference},
+    Field{FieldKey::CounterpartyBankAccountId, ReferenceFormat::Reference},
+    Field{FieldKey::Currency}, Field{FieldKey::AmountMinor, Format::Money},
+    Field{FieldKey::Purpose}, Field{FieldKey::Note}, Field{FieldKey::Archived, Format::Boolean}};
 
 struct DocumentSnapshot {
     std::optional<std::string> Name;
@@ -85,8 +88,8 @@ struct Snapshot {
     DocumentSnapshot Document;
     std::optional<std::string> ActorName;
     std::optional<models::PaymentKind> PaymentKind;
-    std::map<std::string, DocumentSnapshot> Charges;
-    std::map<std::string, std::int64_t> Allocations;
+    std::map<boost::uuids::uuid, DocumentSnapshot> Charges;
+    std::map<boost::uuids::uuid, std::int64_t> Allocations;
 };
 
 // JSONB — формат хранения. Ниже этой границы история работает с типизированными снимками.
@@ -108,7 +111,16 @@ DocumentSnapshot ReadDocumentSnapshot(
             : Json{};
         if (raw.IsMissing() || raw.IsNull())
             continue;
-        Value value{.format = field.ValueFormat};
+        if (std::holds_alternative<ReferenceFormat>(field.ValueFormat)) {
+            ReferenceValue value{.value = raw.As<boost::uuids::uuid>()};
+            if (field.NameKey != nullptr)
+                value.display_name =
+                    document[field.NameKey].As<std::optional<std::string>>(std::nullopt);
+            result.Fields.emplace(field.Key, Value{.value = std::move(value)});
+            continue;
+        }
+
+        ScalarValue value{.format = std::get<Format>(field.ValueFormat)};
         if (raw.IsString())
             value.value = raw.As<std::string>();
         else if (raw.IsBool())
@@ -117,13 +129,10 @@ DocumentSnapshot ReadDocumentSnapshot(
             value.value = std::to_string(raw.As<std::int64_t>());
         else
             continue;
-        if (field.NameKey != nullptr)
-            value.display_name =
-                document[field.NameKey].As<std::optional<std::string>>(std::nullopt);
-        if (field.ValueFormat == Format::Money)
+        if (value.format == Format::Money)
             value.currency = document[key.starts_with("invoice_") ? "invoice_currency" : "currency"]
                                  .As<std::optional<std::string>>(std::nullopt);
-        result.Fields.emplace(field.Key, std::move(value));
+        result.Fields.emplace(field.Key, Value{.value = std::move(value)});
     }
     return result;
 }
@@ -139,7 +148,7 @@ Snapshot ReadSnapshot(const Json& snapshot, Source source) {
         result.Document = ReadDocumentSnapshot(snapshot["invoice"], kInvoiceFields, "number");
         if (snapshot["charges"].IsArray())
             for (const auto& charge : snapshot["charges"])
-                result.Charges.emplace(charge["id"].As<std::string>(""),
+                result.Charges.emplace(charge["id"].As<boost::uuids::uuid>(),
                     ReadDocumentSnapshot(charge, kChargeFields, "label_name"));
         break;
     case Source::Payment:
@@ -149,11 +158,25 @@ Snapshot ReadSnapshot(const Json& snapshot, Source source) {
                 snapshot["payment"]["kind"].As<std::string>(), models::PaymentKind{});
         if (snapshot["allocations"].IsArray())
             for (const auto& allocation : snapshot["allocations"])
-                result.Allocations.emplace(allocation["invoice_id"].As<std::string>(""),
+                result.Allocations.emplace(allocation["invoice_id"].As<boost::uuids::uuid>(),
                     allocation["amount_minor"].As<std::int64_t>(0));
         break;
     }
     return result;
+}
+
+bool SameHistoryValue(const Value& left, const Value& right) {
+    return std::visit(
+        [&](const auto& value) {
+            const auto* other = std::get_if<std::decay_t<decltype(value)>>(&right.value);
+            if (!other || value.value != other->value)
+                return false;
+            if constexpr (requires { value.display_name; })
+                return value.display_name == other->display_name;
+            else
+                return true;
+        },
+        left.value);
 }
 
 void AppendFieldChanges(std::vector<models::FinancialHistoryChange>& changes,
@@ -165,8 +188,7 @@ void AppendFieldChanges(std::vector<models::FinancialHistoryChange>& changes,
         const bool had_value = old != before.Fields.end();
         const bool has_value = current != after.Fields.end();
         if ((!had_value && !has_value) ||
-            (had_value && has_value && old->second.value == current->second.value &&
-                old->second.display_name == current->second.display_name))
+            (had_value && has_value && SameHistoryValue(old->second, current->second)))
             continue;
         changes.push_back({.after = has_value ? std::optional{current->second} : std::nullopt,
             .before = had_value ? std::optional{old->second} : std::nullopt,
@@ -177,7 +199,7 @@ void AppendFieldChanges(std::vector<models::FinancialHistoryChange>& changes,
 
 void AppendInvoiceChargeChanges(std::vector<models::FinancialHistoryChange>& changes,
     const Snapshot& before, const Snapshot& after) {
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& [id, charge] : before.Charges)
         ids.insert(id);
     for (const auto& [id, charge] : after.Charges)
@@ -193,7 +215,7 @@ void AppendInvoiceChargeChanges(std::vector<models::FinancialHistoryChange>& cha
         if (was && included) {
             AppendFieldChanges(changes, kChargeFields, old->second, current->second, subject);
         } else {
-            const Value linked{.format = Format::Boolean, .value = "true"};
+            const Value linked{.value = ScalarValue{.format = Format::Boolean, .value = "true"}};
             changes.push_back({.after = included ? std::optional{linked} : std::nullopt,
                 .before = was ? std::optional{linked} : std::nullopt,
                 .field = FieldKey::Charges,
@@ -205,9 +227,9 @@ void AppendInvoiceChargeChanges(std::vector<models::FinancialHistoryChange>& cha
 std::optional<Value> PaymentAllocationValue(std::int64_t amount, const Snapshot& snapshot) {
     if (amount == 0)
         return std::nullopt;
-    return Value{.currency = snapshot.Document.Currency,
-        .format = Format::Money,
-        .value = std::to_string(amount)};
+    return Value{.value = ScalarValue{.currency = snapshot.Document.Currency,
+                     .format = Format::Money,
+                     .value = std::to_string(amount)}};
 }
 
 struct HistoryRecord {
@@ -218,7 +240,8 @@ struct HistoryRecord {
 };
 
 models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source requested,
-    const std::string& requested_id, const std::map<std::string, std::string>& invoice_names) {
+    const boost::uuids::uuid& requested_id,
+    const std::map<boost::uuids::uuid, std::string>& invoice_names) {
     const auto& after = record.Current;
     const Snapshot empty;
     const auto& before = record.Previous.has_value() ? record.Previous.value() : empty;
@@ -246,20 +269,19 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
         event.action = included ? Action::InvoiceLinked : Action::InvoiceUnlinked;
         event.reference = Reference{
             .id = record.Cursor.entity_id, .name = after.Document.Name, .source = Source::Invoice};
-        event.changes.push_back(
-            {.after = included ? std::optional{Value{.display_name = after.Document.Name,
-                                     .format = Format::Reference,
-                                     .value = record.Cursor.entity_id}}
-                               : std::nullopt,
-                .before = was ? std::optional{Value{.display_name = before.Document.Name,
-                                    .format = Format::Reference,
-                                    .value = record.Cursor.entity_id}}
-                              : std::nullopt,
-                .field = FieldKey::Invoice});
+        event.changes.push_back({.after = included
+                ? std::optional{Value{.value = ReferenceValue{.display_name = after.Document.Name,
+                                          .value = record.Cursor.entity_id}}}
+                : std::nullopt,
+            .before = was
+                ? std::optional{Value{.value = ReferenceValue{.display_name = before.Document.Name,
+                                          .value = record.Cursor.entity_id}}}
+                : std::nullopt,
+            .field = FieldKey::Invoice});
         return event;
     }
     // В архивном платеже распределения сохранены в снимке, но уже не оплачивают счета.
-    const auto allocated = [](const Snapshot& snapshot, const std::string& invoice) {
+    const auto allocated = [](const Snapshot& snapshot, const boost::uuids::uuid& invoice) {
         return !snapshot.Document.Archived && snapshot.Allocations.contains(invoice)
             ? snapshot.Allocations.at(invoice)
             : std::int64_t{0};
@@ -285,7 +307,7 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
     }
     if (source == Source::Payment) {
         AppendFieldChanges(event.changes, kPaymentFields, before.Document, after.Document);
-        std::set<std::string> ids;
+        std::set<boost::uuids::uuid> ids;
         for (const auto& [id, amount] : before.Allocations)
             ids.insert(id);
         for (const auto& [id, amount] : after.Allocations)
@@ -324,7 +346,7 @@ userver::yaml_config::Schema FinancialHistoryComponent::GetStaticConfigSchema() 
 }
 
 models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
-    const std::string& organization, const models::FinancialHistoryRequest& body,
+    const boost::uuids::uuid& organization, const models::FinancialHistoryRequest& body,
     models::FinancialHistorySource source, const models::FinancialHistoryAccess& access) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
@@ -335,7 +357,8 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     if (transaction.Execute(exists, organization, body.id).IsEmpty())
         throw ApiError<404>{"not_found", "Документ не найден в организации"};
     std::optional<pg::TimePointTz> before_time;
-    std::optional<std::string> before_source, before_id;
+    std::optional<std::string> before_source;
+    std::optional<boost::uuids::uuid> before_id;
     std::optional<std::int64_t> before_revision;
     if (body.before.has_value()) {
         const auto& before = body.before.value();
@@ -358,7 +381,7 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     const bool load_invoice_names = source == Source::Payment && access.IncludeInvoiceNames;
     for (const auto& row : stored_rows) {
         const auto event_source = models::ParseEnumScalar(row.Source, Source{});
-        HistoryRecord record{.Cursor = {.entity_id = boost::uuids::to_string(row.EntityId),
+        HistoryRecord record{.Cursor = {.entity_id = row.EntityId,
                                  .occurred_at = row.OccurredAt.GetUnderlying(),
                                  .revision = row.Revision,
                                  .source = event_source},
@@ -369,20 +392,20 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
             record.Previous = ReadSnapshot(row.Previous.value(), event_source);
         if (load_invoice_names) {
             for (const auto& [id, amount] : record.Current.Allocations)
-                invoice_ids.insert(boost::uuids::string_generator{}(id));
+                invoice_ids.insert(id);
             if (record.Previous.has_value())
                 for (const auto& [id, amount] : record.Previous.value().Allocations)
-                    invoice_ids.insert(boost::uuids::string_generator{}(id));
+                    invoice_ids.insert(id);
         }
         history.push_back(std::move(record));
     }
-    std::map<std::string, std::string> invoice_names;
+    std::map<boost::uuids::uuid, std::string> invoice_names;
     if (!invoice_ids.empty()) {
         const auto names = transaction.Execute(sql::kHistoryInvoiceNames, organization,
             std::vector<boost::uuids::uuid>{invoice_ids.begin(), invoice_ids.end()});
         for (const auto& row : names) {
             const auto invoice = row.As<models::InvoiceNameRow>(pg::kRowTag);
-            invoice_names.emplace(boost::uuids::to_string(invoice.Id), invoice.Number);
+            invoice_names.emplace(invoice.Id, invoice.Number);
         }
     }
     transaction.Commit();

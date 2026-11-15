@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace transportations::route_rules {
-std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request);
+std::vector<boost::uuids::uuid> GetRailwayStationIds(const models::SetRouteRequest& request);
 void ResolveRailwayStations(models::SetRouteRequest& request,
     const models::Transportation& previous, const models::RailwayStations& stations);
 // ЖД-участок хранит отправление и назначение только в rail.

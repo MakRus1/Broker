@@ -12,12 +12,13 @@
 namespace sales::registry_query {
 namespace registry = platform::registry;
 using Date = userver::utils::datetime::Date;
-inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
-inline constexpr registry::Field<std::string> kOrganization{
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "organization_id", "UUID"};
-inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
+    "customer_id", "customer_id", "UUID"};
 inline constexpr registry::Field<std::string> kManager{"manager_subject", "manager_subject"};
-inline constexpr registry::Field<std::string> kStage{"stage_id", "stage_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kStage{"stage_id", "stage_id", "UUID"};
 inline constexpr registry::Field<std::string> kSource{"source", "source"};
 inline constexpr registry::Field<std::string> kAction{
     "next_action", "COALESCE(btrim(next_action), '')"};
@@ -30,7 +31,8 @@ inline constexpr registry::Field<std::string> kCargo{"cargo_description", "cargo
 inline constexpr registry::Field<Date> kReady{"ready_date", "ready_date", "DATE"};
 inline constexpr registry::Field<Date> kDelivery{
     "desired_delivery_date", "desired_delivery_date", "DATE"};
-inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kShipment{
+    "shipment_id", "shipment_id", "UUID"};
 inline constexpr registry::Field<bool> kHasContacts{"has_contacts", R"(EXISTS (
     SELECT 1 FROM sales_contacts AS contact
     WHERE contact.organization_id = sales_cards.organization_id
@@ -62,7 +64,8 @@ inline constexpr std::array<registry::RegistryField, 8> kInquiryFields{{
 }};
 
 inline registry::QueryBuilder CardsFilters(const models::ListSalesRequest& body,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     registry::QueryBuilder query{
         sql::kListCards, registry::RegistryOrderBy(kCardFields, body.sort), body.descending};
     query.WhereEqual(kOrganization, organization);
@@ -76,7 +79,8 @@ inline const registry::Definition kCardsRegistry{
     kCardFields, sql::kCardsFilterValues, &CardsFilters};
 
 inline registry::QueryBuilder InquiriesFilters(const models::ListSalesRequest& body,
-    const std::string& organization, const std::optional<std::string>& exclude = std::nullopt) {
+    const boost::uuids::uuid& organization,
+    const std::optional<std::string>& exclude = std::nullopt) {
     registry::QueryBuilder query{
         sql::kListInquiries, registry::RegistryOrderBy(kInquiryFields, body.sort), body.descending};
     query.WhereEqual(kOrganization, organization);

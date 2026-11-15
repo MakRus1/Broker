@@ -21,8 +21,8 @@ class ShipmentDispatcher final : public userver::components::ComponentBase {
     models::ShipmentDelivery DeliverShipmentCreation(const ShipmentCommand&) const;
     void CompleteShipmentCreation(userver::storages::postgres::Transaction&, const ShipmentCommand&,
         const models::ShipmentDelivery&) const;
-    void TransferProposal(
-        const ShipmentCommand&, const std::string& shipment_id, const std::string& token) const;
+    void TransferProposal(const ShipmentCommand&, const boost::uuids::uuid& shipment_id,
+        const std::string& token) const;
 
     clients::finance::Client finance_;
     clients::shipments::Client shipments_;

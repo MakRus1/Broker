@@ -30,6 +30,7 @@ paths:
                     items:
                       type: string
                       format: uuid
+                      x-cpp-type: uuid
         '400':
           description: Некорректные данные
           content:
@@ -544,6 +545,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
       responses:
         '200':
           description: Успех
@@ -620,6 +622,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 id:
                   type: string
                   minLength: 1
@@ -707,6 +710,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 id:
                   type: string
                   minLength: 1

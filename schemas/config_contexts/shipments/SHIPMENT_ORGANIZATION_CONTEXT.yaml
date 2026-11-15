@@ -4,7 +4,9 @@ schema:
   properties:
     organization_id:
       type: string
-      minLength: 1
+      format: uuid
+      x-cpp-type: uuid
     customer_id:
       type: string
-      minLength: 1
+      format: uuid
+      x-cpp-type: uuid

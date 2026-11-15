@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <openapi/models.hpp>
 
 namespace sales::models {

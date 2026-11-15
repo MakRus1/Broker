@@ -25,7 +25,8 @@ userver::yaml_config::Schema ShipmentRegistryComponent::GetStaticConfigSchema() 
 }
 
 models::ShipmentsFilterValuesResult ShipmentRegistryComponent::GetShipmentFilterValues(
-    const models::ShipmentsFilterValuesRequest& request, const std::string& organization) const {
+    const models::ShipmentsFilterValuesRequest& request,
+    const boost::uuids::uuid& organization) const {
     try {
         models::ShipmentsFilterValuesResult result;
         result.fields = registry::DescribeFields<models::RegistryField>(
@@ -50,7 +51,7 @@ models::ShipmentsFilterValuesResult ShipmentRegistryComponent::GetShipmentFilter
 }
 
 models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
-    const models::ListShipmentsRequest& request, const std::string& organization) const {
+    const models::ListShipmentsRequest& request, const boost::uuids::uuid& organization) const {
     try {
         const auto scope = platform::registry::CursorScope(request, organization);
         const auto order =
@@ -82,7 +83,7 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
             const auto& last = rows.back();
             cursor = models::ShipmentRegistryCursor{
                 .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Shipment.Id),
+                .id = last.Shipment.Id,
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }

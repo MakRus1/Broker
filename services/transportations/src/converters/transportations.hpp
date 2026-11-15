@@ -24,13 +24,13 @@ inline models::RouteSegment Convert(const userver::formats::json::Value& documen
 inline models::Transportation Convert(const models::pg::TransportationRaw& row) {
     models::Transportation result;
     result.container_number = row.ContainerNumber;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
-    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.shipment_id = row.ShipmentId;
     if (row.ItemId.has_value())
-        result.item_id = boost::uuids::to_string(row.ItemId.value());
+        result.item_id = row.ItemId.value();
     if (row.OperationId.has_value())
-        result.operation_id = boost::uuids::to_string(row.OperationId.value());
+        result.operation_id = row.OperationId.value();
     result.container_type_code = row.ContainerType;
     if (row.Ownership.has_value())
         result.container_ownership =

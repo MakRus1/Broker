@@ -1,6 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <clients/finance/client.hpp>
 #include <events/shipment_command.hpp>
 #include <openapi/models.hpp>
@@ -8,25 +6,24 @@
 
 namespace sales::converters {
 inline clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody ToServiceChargeImport(
-    const ShipmentCommand& command, const std::string& shipment_id, const models::Inquiry& inquiry,
-    const models::Proposal& proposal) {
+    const ShipmentCommand& command, const boost::uuids::uuid& shipment_id,
+    const models::Inquiry& inquiry, const models::Proposal& proposal) {
     namespace fm = clients::finance::models;
-    const auto namespace_id = boost::uuids::string_generator{}(proposal.input.id);
+    const auto namespace_id = proposal.input.id;
     clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody batch;
     batch.organization_id = command.organization_id;
     batch.source = {
         .id = proposal.input.id, .revision = proposal.revision, .type = "sales.proposal"};
-    batch.id = boost::uuids::to_string(userver::utils::generators::GenerateBoostUuidV5(
-        namespace_id, std::to_string(proposal.revision)));
+    batch.id = userver::utils::generators::GenerateBoostUuidV5(
+        namespace_id, std::to_string(proposal.revision));
     batch.actor_subject = command.actor_subject;
     batch.actor_issuer = command.actor_issuer;
     for (const auto& line : proposal.lines) {
         const auto add = [&](const models::ProposalPrice& price, bool income) {
             fm::SaveServiceChargeRequest charge;
-            charge.id = boost::uuids::to_string(
-                userver::utils::generators::GenerateBoostUuidV5(namespace_id,
-                    line.input.id + (income ? ":sale:" : ":purchase:") +
-                        std::to_string(proposal.revision)));
+            charge.id = userver::utils::generators::GenerateBoostUuidV5(namespace_id,
+                userver::utils::ToString(line.input.id) + (income ? ":sale:" : ":purchase:") +
+                    std::to_string(proposal.revision));
             charge.shipment_id = shipment_id;
             charge.label_id = line.input.label_id;
             charge.unit =

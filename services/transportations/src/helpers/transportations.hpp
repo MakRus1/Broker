@@ -9,7 +9,7 @@ namespace transportations::helpers {
 enum class ReadMode { Snapshot, ForUpdate };
 
 inline models::Transportation ReadTransportation(pg::Transaction& transaction,
-    const std::string& organization, const std::string& id, ReadMode mode) {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& id, ReadMode mode) {
     const auto rows = transaction.Execute(
         mode == ReadMode::ForUpdate ? sql::kLockTransportation : sql::kGetTransportation,
         organization, id);

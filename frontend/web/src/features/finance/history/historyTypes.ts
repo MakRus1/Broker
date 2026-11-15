@@ -59,13 +59,17 @@ export interface HistoryReference {
   id: string;
   name?: string;
 }
-export interface HistoryValue {
-  value: string;
-  format:
-    'text' | 'date' | 'money' | 'quantity' | 'percent' | 'rate' | 'boolean' | 'enum' | 'reference';
-  currency?: string;
-  display_name?: string;
-}
+export type HistoryValue =
+  | {
+      format: 'text' | 'date' | 'money' | 'quantity' | 'percent' | 'rate' | 'boolean' | 'enum';
+      value: string;
+      currency?: string;
+    }
+  | {
+      format: 'reference';
+      value: string;
+      display_name?: string;
+    };
 export interface HistoryCursor {
   source: 'service_charge' | 'invoice' | 'payment';
   entity_id: string;

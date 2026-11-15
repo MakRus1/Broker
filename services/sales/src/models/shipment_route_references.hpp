@@ -6,9 +6,9 @@
 
 namespace sales::models {
 struct ShipmentRouteReferences {
-    std::set<std::string> LocationIds;
-    std::set<std::string> CounterpartyIds;
+    std::set<boost::uuids::uuid> LocationIds;
+    std::set<boost::uuids::uuid> CounterpartyIds;
 };
 
-using TransportLocations = std::map<std::string, TransportLocation>;
+using TransportLocations = std::map<boost::uuids::uuid, TransportLocation>;
 }  // namespace sales::models

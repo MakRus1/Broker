@@ -116,3 +116,19 @@ async def test_stale_publish_keeps_newer_draft(api):
     published = await api.post(ROOT + 'publish', {'version': latest['version']}, user='translator')
     assert published['published'] == updated
     assert published.get('draft') is None
+
+
+async def test_existing_editor_scope_keeps_draft_after_uuid_normalization(api, pgsql):
+    organization = 'abcdefab-1234-4234-8234-abcdefabcdef'
+    scope = {'organization_id': organization}
+    saved = await api.post(ROOT + 'save', scope | {'version': 0, 'catalog': CATALOG}, user='translator')
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('UPDATE localization_editor SET scope = upper(scope) WHERE scope = %s', (organization,))
+    assert await api.post(ROOT + 'get', scope, user='translator') == saved
+    updated = await api.post(ROOT + 'save', scope | {'version': saved['version'], 'catalog': EMPTY}, user='translator')
+    assert updated['version'] == saved['version'] + 1
+    published = await api.post(ROOT + 'publish', scope | {'version': updated['version']}, user='translator')
+    assert published['revision'] == 1
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM localization_editor WHERE lower(scope) = %s', (organization,))
+        assert cursor.fetchone()[0] == 1

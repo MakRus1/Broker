@@ -16,10 +16,10 @@ class RoutesComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RouteUsageResult FindRouteUsage(
-        const std::string& organization, const std::string& shipment_id) const;
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
     models::RouteProjectionResult ApplyShipmentRouteProjection(
         const models::ShipmentRouteProjection&) const;
-    models::Transportation SaveRoute(const std::string& organization,
+    models::Transportation SaveRoute(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
         const models::SetRouteRequest&, const models::ShipmentContext&) const;
 

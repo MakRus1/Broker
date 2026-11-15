@@ -62,6 +62,7 @@ ShipmentNotificationPayload:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -116,6 +117,7 @@ ShipmentRouteChanged:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     payload:
       $ref: '#/ShipmentNotificationPayload'
 ShipmentCreated:
@@ -145,6 +147,7 @@ ShipmentCreated:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     payload:
       $ref: '#/ShipmentNotificationPayload'
 InquiryShipmentCreationFailed:
@@ -174,6 +177,7 @@ InquiryShipmentCreationFailed:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     payload:
       $ref: '#/InquiryShipmentCreationFailedPayload'
 InquiryShipmentCreationFailedPayload:
@@ -189,6 +193,7 @@ InquiryShipmentCreationFailedPayload:
     inquiry_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     inquiry_number:
       type: string
       minLength: 1
@@ -231,6 +236,7 @@ RfqAssigned:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     payload:
       $ref: '#/RfqNotificationPayload'
 RfqReady:
@@ -260,6 +266,7 @@ RfqReady:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     payload:
       $ref: '#/RfqNotificationPayload'
 RfqNotificationPayload:
@@ -269,6 +276,7 @@ RfqNotificationPayload:
     rfq_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     rfq_title:
       type: string
       minLength: 1
@@ -303,6 +311,7 @@ ListNotificationsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -311,6 +320,7 @@ ListNotificationsRequest:
     before:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - organization_id
 ReadNotificationsRequest:
@@ -320,11 +330,13 @@ ReadNotificationsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     ids:
       type: array
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
       minItems: 1
       maxItems: 100
     dismiss:

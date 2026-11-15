@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <components/container_plan_calculation.hpp>
 #include <converters/shipments.hpp>
@@ -44,14 +43,13 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
         result.Unplanned.push_back(std::move(unplanned));
     }
 
-    std::map<std::string, std::int64_t> materialized;
+    std::map<boost::uuids::uuid, std::int64_t> materialized;
     for (const auto& operation : facts.operations)
         materialized.emplace(operation.operation_id, operation.created_quantity);
 
     for (const auto& operation : pending)
         result.Totals[{operation.ContainerType, operation.Ownership}].Pending +=
-            std::max<std::int64_t>(
-                0, operation.Quantity - materialized[boost::uuids::to_string(operation.Id)]);
+            std::max<std::int64_t>(0, operation.Quantity - materialized[operation.Id]);
 
     return result;
 }
@@ -61,14 +59,10 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
 namespace shipments::container_plan {
 models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snapshot,
     const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
-    const std::optional<std::string>& after_id, std::int64_t limit) {
+    const std::optional<boost::uuids::uuid>& after, std::int64_t limit) {
     auto plan = ReconcileContainerPlan(snapshot, facts);
     models::ContainerPlanListResult result;
     result.unplanned_items = std::move(plan.Unplanned);
-
-    const auto after = after_id.has_value()
-        ? std::optional{boost::uuids::string_generator{}(after_id.value())}
-        : std::nullopt;
 
     for (const auto& row : snapshot.Items) {
         if (after.has_value() && row.Id <= after.value())

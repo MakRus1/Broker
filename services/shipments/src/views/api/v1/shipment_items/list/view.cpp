@@ -21,7 +21,7 @@ Response View::Handle(
     api::RequestBody fact_request;
     fact_request.shipment_id = body.shipment_id;
     for (const auto& operation : snapshot.Pending)
-        fact_request.pending_operation_ids.push_back(boost::uuids::to_string(operation.Id));
+        fact_request.pending_operation_ids.push_back(operation.Id);
     const auto facts = deps.transportations.ApiV1TransportationsContainerFact(
         {.body = std::move(fact_request)}, platform::auth::GetAccessToken(context));
 

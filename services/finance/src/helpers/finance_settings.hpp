@@ -19,7 +19,7 @@ inline models::FinanceSettings ReadFinanceSettings(const pg::ResultSet& rows) {
 }
 
 inline models::FinanceSettings LoadFinanceSettings(
-    const pg::ClusterPtr& cluster, const std::string& organization) {
+    const pg::ClusterPtr& cluster, const boost::uuids::uuid& organization) {
     return ReadFinanceSettings(
         cluster->Execute(pg::ClusterHostType::kMaster, sql::kGetFinanceSettings, organization));
 }

@@ -6,6 +6,7 @@
 #include <string>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
 namespace shipments {
@@ -14,9 +15,9 @@ namespace pg = userver::storages::postgres;
 inline constexpr pg::TransactionOptions kReadOnlySnapshotTransaction{
     pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
-template <typename Request, typename Result>
-void WriteAudit(pg::Transaction& transaction, const std::string& organization,
-    const platform::auth::Identity& identity, const std::string& action, const std::string& id,
+template <typename Request, typename Result, typename Id>
+void WriteAudit(pg::Transaction& transaction, const boost::uuids::uuid& organization,
+    const platform::auth::Identity& identity, const std::string& action, const Id& id,
     const Request& request, const Result& result) {
     // Снимок аудита сохраняется атомарно с изменением данных.
     userver::formats::json::ValueBuilder document;

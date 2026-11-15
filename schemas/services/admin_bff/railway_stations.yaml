@@ -88,6 +88,7 @@ paths:
                 id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 uic_code:
                   type: string
                   pattern: ^[0-9]{7}$
@@ -152,6 +153,7 @@ paths:
                 id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
               required:
               - id
       responses:
@@ -166,6 +168,7 @@ paths:
                   id:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                 required:
                 - id
         '400':

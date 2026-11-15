@@ -29,8 +29,9 @@ namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 using shipments::ApiError;
 
-std::string GenerateShipmentNumber(pg::Transaction& transaction, const std::string& organization,
-    userver::utils::datetime::Date date, const auto& settings) {
+std::string GenerateShipmentNumber(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, userver::utils::datetime::Date date,
+    const auto& settings) {
     const auto period = platform::DocumentNumberPeriod(date, settings.ResetNumberYearly);
     const auto sequence = transaction.Execute(sql::kNextShipmentNumber, organization, period)
                               .template AsSingleRow<std::int64_t>();
@@ -40,15 +41,16 @@ std::string GenerateShipmentNumber(pg::Transaction& transaction, const std::stri
     return result;
 }
 
-void RememberCargo(pg::Transaction& transaction, const std::string& organization,
+void RememberCargo(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const boost::uuids::uuid& customer, const std::optional<std::string>& description) {
     if (description.has_value())
         transaction.Execute(sql::kRememberCargo, organization, customer, description.value(),
             userver::utils::text::ToLower(description.value()));
 }
 
-models::Shipment InsertShipment(pg::Transaction& transaction, const std::string& organization,
-    const models::CreateShipmentRequest& body, const configs::ShipmentSettings& settings) {
+models::Shipment InsertShipment(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const models::CreateShipmentRequest& body,
+    const configs::ShipmentSettings& settings) {
     auto card = shipments::helpers::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
@@ -71,7 +73,14 @@ std::optional<boost::uuids::uuid> ValidateShipmentReplay(
     if (saved.IsEmpty())
         return std::nullopt;
     const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
-    if (stored.Payload != document)
+    const auto normalized = [&] {
+        if (stored.Payload.HasMember("shipment"))
+            return shipments::helpers::Document(models::ParseModelJson(
+                stored.Payload, std::type_identity<models::EnsureShipmentRequest>{}));
+        return shipments::helpers::Document(models::ParseModelJson(
+            stored.Payload, std::type_identity<models::CreateShipmentRequest>{}));
+    };
+    if (stored.Payload != document && normalized() != document)
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
     return stored.ShipmentId;
 }
@@ -96,7 +105,7 @@ userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
 }
 
 std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
-    std::string_view access_token, const std::string& customer) const try {
+    std::string_view access_token, const boost::uuids::uuid& customer) const try {
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
     const auto result = counterparties_.ApiV1CounterpartiesGet(
         api::Request{.body = {.id = customer}}, access_token);
@@ -116,7 +125,7 @@ std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
         "customer_directory_unavailable", "Некорректный ответ справочника контрагентов"};
 }
 
-void ShipmentsComponent::ValidateLogist(const std::string& organization,
+void ShipmentsComponent::ValidateLogist(const boost::uuids::uuid& organization,
     std::string_view access_token, const std::optional<std::string>& subject) const try {
     if (!subject)
         return;
@@ -140,10 +149,10 @@ void ShipmentsComponent::ValidateLogist(const std::string& organization,
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
-    const std::string& organization, const ShipmentSource& source,
+    const boost::uuids::uuid& organization, const ShipmentSource& source,
     const json::Value& document) const {
     const auto saved = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kFindSourceShipment,
-        organization, source.Producer, source.Type, source.Id);
+        organization, source.Producer, source.Type, source.Id, source.ManualIdempotencyKey);
     const auto shipment_id = ValidateShipmentReplay(saved, document);
     if (!shipment_id.has_value())
         return std::nullopt;
@@ -155,16 +164,19 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
 
 // Один сценарий для ручного создания и команд доверенных сервисов.
 // Источник участвует только в дедупликации и связи, не выбирает бизнес-ветку.
-models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
-    const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
-    const ShipmentSource& source, const json::Value& document) const {
-    const auto settings = settings_.Effective(organization, body.customer_id);
+models::Shipment ShipmentsComponent::CreateShipmentFromSource(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& actor,
+    const models::CreateShipmentRequest& body, const ShipmentSource& source,
+    const json::Value& document) const {
+    const auto settings = settings_.Effective(organization, std::optional{body.customer_id});
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const auto lock_key = source.Id.has_value() ? userver::utils::ToString(*source.Id)
+                                                : source.ManualIdempotencyKey.value();
     transaction.Execute(
-        sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, source.Id);
-    const auto saved = transaction.Execute(
-        sql::kFindSourceShipment, organization, source.Producer, source.Type, source.Id);
+        sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, lock_key);
+    const auto saved = transaction.Execute(sql::kFindSourceShipment, organization, source.Producer,
+        source.Type, source.Id, source.ManualIdempotencyKey);
     if (const auto shipment_id = ValidateShipmentReplay(saved, document); shipment_id.has_value()) {
         const auto shipment = converters::Convert(
             transaction.Execute(sql::kGetShipment, organization, shipment_id.value())
@@ -175,7 +187,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string&
 
     const auto result = InsertShipment(transaction, organization, body, settings);
     transaction.Execute(sql::kLinkSourceShipment, organization, source.Producer, source.Type,
-        source.Id, result.id, document);
+        source.Id, source.ManualIdempotencyKey, result.id, document);
 
     helpers::WriteAudit(
         transaction, organization, actor, "create_shipment", result.id, body, result);
@@ -186,7 +198,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string&
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
-    const std::string& organization, const models::CreateShipmentRequest& request,
+    const boost::uuids::uuid& organization, const models::CreateShipmentRequest& request,
     const ShipmentSource& source, const json::Value& document) const {
     if (const auto saved = helpers::FindSavedReplay<models::Shipment>(
             cluster_, organization, "create_shipment", request);
@@ -196,7 +208,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
 }
 
 models::Shipment ShipmentsComponent::GetShipment(
-    const std::string& organization, const std::string& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
@@ -205,7 +217,7 @@ models::Shipment ShipmentsComponent::GetShipment(
 }
 
 std::int64_t ShipmentsComponent::GetRouteUsageVersion(
-    const std::string& organization, const std::string& shipment_id) const {
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetRouteUsageVersion, organization, shipment_id);
     if (rows.IsEmpty())
@@ -214,7 +226,7 @@ std::int64_t ShipmentsComponent::GetRouteUsageVersion(
     return rows.AsSingleRow<std::int64_t>();
 }
 
-models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organization,
+models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request,
     const std::optional<std::int64_t>& route_usage_version) const {
     try {
@@ -240,9 +252,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
                     "Данные участков изменились. Обновите поставку и повторите сохранение"};
         }
 
-        helpers::ValidateCard(card,
-            settings_.Effective(
-                transaction, organization, boost::uuids::to_string(card.CustomerId)),
+        helpers::ValidateCard(card, settings_.Effective(transaction, organization, card.CustomerId),
             dictionaries, &previous);
 
         const auto result =
@@ -265,14 +275,30 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
     }
 }
 
-std::vector<models::Shipment> ShipmentsComponent::GetShipments(
-    const std::string& organization, const std::vector<std::string>& shipment_ids) const {
-    return converters::Convert(cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids));
+std::vector<models::TransportationContext> ShipmentsComponent::GetTransportationContexts(
+    const boost::uuids::uuid& organization,
+    const std::vector<boost::uuids::uuid>& shipment_ids) const {
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids);
+    std::vector<models::TransportationContext> result;
+    result.reserve(rows.Size());
+    for (const auto& shipment : rows.AsSetOf<models::pg::ShipmentRaw>()) {
+        models::TransportationContext context{.carriage_terms = shipment.CarriageTerms,
+            .incoterms = shipment.Incoterms,
+            .loading = shipment.Loading,
+            .revision = shipment.Revision,
+            .route_segments = {},
+            .shipment_id = shipment.Id};
+        context.route_segments.reserve(shipment.RouteSegments.size());
+        for (const auto& segment : shipment.RouteSegments)
+            context.route_segments.push_back(converters::Convert(segment));
+        result.push_back(std::move(context));
+    }
+    return result;
 }
 
-void ShipmentsComponent::RegisterRouteUsage(
-    const std::string& organization, const models::RegisterRouteUsageRequest& request) const {
+void ShipmentsComponent::RegisterRouteUsage(const boost::uuids::uuid& organization,
+    const models::RegisterRouteUsageRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto rows = transaction.Execute(sql::kLockShipment, organization, request.shipment_id);
     if (rows.IsEmpty())
@@ -282,9 +308,8 @@ void ShipmentsComponent::RegisterRouteUsage(
         throw ApiError<409>{"shipment_revision_conflict",
             "Поставка изменилась. Обновите перевозку и повторите сохранение"};
     for (const auto& id : request.segment_ids) {
-        const auto found =
-            std::find_if(shipment.RouteSegments.begin(), shipment.RouteSegments.end(),
-                [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
+        const auto found = std::find_if(shipment.RouteSegments.begin(),
+            shipment.RouteSegments.end(), [&](const auto& segment) { return segment.Id == id; });
         if (found == shipment.RouteSegments.end())
             throw ApiError<409>{"route_changed", "Маршрут поставки изменён. Обновите перевозку"};
     }

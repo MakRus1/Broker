@@ -10,6 +10,7 @@ Organization:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -71,6 +72,7 @@ OrganizationAccess:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     permissions:
       type: array
       items:
@@ -96,6 +98,7 @@ CreateOrganizationRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -112,6 +115,7 @@ UpdateOrganizationRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -137,9 +141,11 @@ CreateMemberRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     request_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     username:
       type: string
       minLength: 3
@@ -184,6 +190,7 @@ AddMemberRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     username:
       type: string
       minLength: 1
@@ -206,6 +213,7 @@ UpdateMemberRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     subject:
       type: string
       minLength: 1
@@ -306,6 +314,7 @@ UpdateMemberProfileRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     last_name:
       type: string
       maxLength: 100
@@ -342,6 +351,7 @@ OrganizationListCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     value:
       type: string
       maxLength: 1024
@@ -373,6 +383,7 @@ ListOrganizationsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -404,6 +415,7 @@ ListMembersRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     after:
       type: string
     limit:

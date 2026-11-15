@@ -11,9 +11,10 @@ class ShipmentRegistryComponent final : public userver::components::ComponentBas
         const userver::components::ComponentContext& context);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ShipmentsListResult FindShipments(
-        const models::ListShipmentsRequest& request, const std::string& organization) const;
+        const models::ListShipmentsRequest& request, const boost::uuids::uuid& organization) const;
     models::ShipmentsFilterValuesResult GetShipmentFilterValues(
-        const models::ShipmentsFilterValuesRequest& request, const std::string& organization) const;
+        const models::ShipmentsFilterValuesRequest& request,
+        const boost::uuids::uuid& organization) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

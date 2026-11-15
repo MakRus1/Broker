@@ -22,7 +22,8 @@ userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-models::FinanceSettings SettingsComponent::GetSettings(const std::string& organization) const {
+models::FinanceSettings SettingsComponent::GetSettings(
+    const boost::uuids::uuid& organization) const {
     return helpers::LoadFinanceSettings(cluster_, organization);
 }
 

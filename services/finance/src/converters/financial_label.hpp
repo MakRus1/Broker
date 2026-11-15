@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
 #include <models/financial_label_registry_row.hpp>
 #include <models/pg/financial_label_raw.hpp>
 #include <openapi/models.hpp>
@@ -8,7 +7,7 @@ namespace finance::converters {
 
 inline models::FinancialLabel Convert(const models::pg::FinancialLabelRaw& value) {
     models::FinancialLabel result;
-    result.id = boost::uuids::to_string(value.Id);
+    result.id = value.Id;
     result.name = value.Name;
     result.direction = models::ParseEnumScalar(value.Direction, models::FinancialLabelDirection{});
     result.unit = models::ParseEnumScalar(value.Unit, models::FinancialLabelUnit{});

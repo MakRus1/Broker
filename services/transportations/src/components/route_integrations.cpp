@@ -9,8 +9,8 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
-std::set<std::string> RouteCounterparties(const auto& stages) {
-    std::set<std::string> ids;
+std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
+    std::set<boost::uuids::uuid> ids;
     for (const auto& stage : stages) {
         if (stage.contractor_id.has_value())
             ids.insert(stage.contractor_id.value());
@@ -39,13 +39,13 @@ userver::yaml_config::Schema RouteIntegrations::GetStaticConfigSchema() {
 }
 
 models::ShipmentContext RouteIntegrations::GetShipmentContext(
-    std::string_view access_token, const std::string& shipment_id) const {
+    std::string_view access_token, const boost::uuids::uuid& shipment_id) const {
     const auto contexts = FindShipmentContexts(access_token, {shipment_id});
     return route_rules::FindShipmentContext(contexts, shipment_id);
 }
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
-    std::string_view access_token, const std::vector<std::string>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
     namespace api = clients::shipments::ApiV1ShipmentsTransportationContexts;
     if (ids.empty())
         return {};
@@ -65,7 +65,7 @@ std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
 }
 
 void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
-    const ShipmentContext& source, const std::vector<std::string>& ids) const try {
+    const ShipmentContext& source, const std::vector<boost::uuids::uuid>& ids) const try {
     if (ids.empty())
         return;
     namespace api = clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage;
@@ -127,7 +127,7 @@ void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_toke
 }
 
 models::RailwayStations RouteIntegrations::FindRailwayStations(
-    std::string_view access_token, const std::vector<std::string>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
     models::RailwayStations stations;
     if (ids.empty())
         return stations;

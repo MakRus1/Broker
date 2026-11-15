@@ -5,12 +5,15 @@ Contract:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     number:
       type: string
       maxLength: 128
@@ -28,10 +31,12 @@ Contract:
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     payment_delay_days:
       type: integer
@@ -68,12 +73,15 @@ SaveContractRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     own_company_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     number:
       type: string
       maxLength: 128
@@ -92,10 +100,12 @@ SaveContractRequest:
     own_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     counterparty_bank_account_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     payment_delay_days:
       type: integer
@@ -132,6 +142,7 @@ GetContractRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 ListContractsRequest:
@@ -245,6 +256,7 @@ ContractRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
@@ -306,6 +318,7 @@ UpdateContractNumberingRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       format: int64

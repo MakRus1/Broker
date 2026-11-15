@@ -32,10 +32,10 @@ inline models::pg::ShipmentData ConvertData(const models::pg::ShipmentRaw& row) 
 
 inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     models::Shipment result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
     result.number = row.Number;
-    result.customer_id = boost::uuids::to_string(row.CustomerId);
+    result.customer_id = row.CustomerId;
     result.reference = row.Reference;
     result.shipment_date = row.ShipmentDate;
     result.logist.emplace(row.Logist);
@@ -50,7 +50,7 @@ inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     for (const auto& segment : row.RouteSegments)
         result.route_segments.push_back(Convert(segment));
     if (row.RecipientId.has_value())
-        result.recipient_id = boost::uuids::to_string(row.RecipientId.value());
+        result.recipient_id = row.RecipientId.value();
     else
         result.recipient_id.emplace(std::nullopt);
     return result;
@@ -58,9 +58,9 @@ inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
 
 inline models::ShipmentItem Convert(const models::pg::ShipmentItem& row) {
     models::ShipmentItem result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
-    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.shipment_id = row.ShipmentId;
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
@@ -71,9 +71,9 @@ inline models::ShipmentItem Convert(const models::pg::ShipmentItem& row) {
 inline models::ContainerPlanItem Convert(
     const models::pg::ShipmentItem& row, const ContainerTotals& totals) {
     models::ContainerPlanItem result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
-    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.shipment_id = row.ShipmentId;
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
@@ -91,8 +91,8 @@ inline models::CreationOperation Convert(const models::pg::CreationOperation& ro
         return models::ParseModelJson(
             row.Result.value(), std::type_identity<models::CreationOperation>{});
     models::CreationOperation result;
-    result.id = boost::uuids::to_string(row.Id);
-    result.item_id = boost::uuids::to_string(row.ItemId);
+    result.id = row.Id;
+    result.item_id = row.ItemId;
     result.quantity = row.Quantity;
     result.status = models::ParseEnumScalar(row.Status, models::OperationStatus{});
     return result;

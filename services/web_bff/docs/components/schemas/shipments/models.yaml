@@ -16,9 +16,11 @@ CreationOperation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     quantity:
       type: integer
       minimum: 1
@@ -30,6 +32,7 @@ CreationOperation:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
     rejection_code:
       type: string
       maxLength: 128
@@ -46,6 +49,7 @@ Shipment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -57,6 +61,7 @@ Shipment:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     reference:
       type: string
       maxLength: 256
@@ -66,6 +71,7 @@ Shipment:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -123,6 +129,7 @@ ShipmentItem:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -130,6 +137,7 @@ ShipmentItem:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     container_type_code:
       type: string
       minLength: 1
@@ -165,6 +173,7 @@ CreateShipmentRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     reference:
       type: string
       maxLength: 256
@@ -178,6 +187,7 @@ CreateShipmentRequest:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -234,6 +244,7 @@ GetShipmentRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - shipment_id
 ListShipmentsRequest:
@@ -248,6 +259,7 @@ ListShipmentsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     sort:
       type: string
       default: id
@@ -271,6 +283,7 @@ UpdateShipmentRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -284,6 +297,7 @@ UpdateShipmentRequest:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -328,6 +342,7 @@ UpdateShipmentRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     route_segments:
       type: array
       maxItems: 30
@@ -343,6 +358,7 @@ AddItemRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -374,6 +390,7 @@ ListItemsRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -382,6 +399,7 @@ ListItemsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - shipment_id
 UpdateItemRequest:
@@ -391,6 +409,7 @@ UpdateItemRequest:
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -410,6 +429,7 @@ CreateOperationRequest:
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -434,6 +454,7 @@ GetOperationRequest:
     operation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - operation_id
 ShipmentSettings:
@@ -488,6 +509,7 @@ CargoSuggestionsRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - customer_id
 DeleteCargoSuggestionRequest:
@@ -501,6 +523,7 @@ DeleteCargoSuggestionRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - value
   - customer_id
@@ -511,6 +534,7 @@ GetShipmentSettingsRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required: []
 DictionaryValue:
   type: object
@@ -555,6 +579,7 @@ ShipmentRouteSegment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     type:
       type: string
       minLength: 1
@@ -578,6 +603,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -610,9 +636,11 @@ SeaDetails:
     departure_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     arrival_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     departure_date:
       type: string
       format: date
@@ -630,6 +658,7 @@ AirDetails:
     carrier_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     origin_airport:
       $ref: '#/TransportLocation'
     destination_airport:
@@ -660,6 +689,7 @@ ShipmentRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
@@ -689,6 +719,7 @@ ContainerPlanItem:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -696,6 +727,7 @@ ContainerPlanItem:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     container_type_code:
       type: string
       minLength: 1

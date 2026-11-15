@@ -57,7 +57,7 @@ models::Proposal CalculateProposal(
     result.reporting.currency = result.reporting_currency;
     std::map<std::string, models::ProposalTotal> totals;
     std::map<std::string, std::int64_t> rates;
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     const auto accumulate = [&](const models::ProposalPrice& price,
                                 const models::ProposalAmounts& amount, bool sale) {
         auto& total = totals[price.currency];

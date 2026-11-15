@@ -15,11 +15,11 @@ class RouteIntegrations final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ShipmentContext GetShipmentContext(
-        std::string_view access_token, const std::string& shipment_id) const;
+        std::string_view access_token, const boost::uuids::uuid& shipment_id) const;
     std::vector<models::ShipmentContext> FindShipmentContexts(
-        std::string_view access_token, const std::vector<std::string>&) const;
+        std::string_view access_token, const std::vector<boost::uuids::uuid>&) const;
     void RegisterRouteUsage(std::string_view access_token, const models::ShipmentContext&,
-        const std::vector<std::string>&) const;
+        const std::vector<boost::uuids::uuid>&) const;
     // Проверяет связанные данные и заменяет станции в запросе каноническими значениями.
     void PrepareRoute(std::string_view access_token, models::SetRouteRequest&,
         const models::Transportation& previous) const;
@@ -29,7 +29,7 @@ class RouteIntegrations final : public userver::components::ComponentBase {
         const std::vector<models::SetRouteSegmentsItem>&,
         const std::vector<models::RouteSegment>&) const;
     models::RailwayStations FindRailwayStations(
-        std::string_view access_token, const std::vector<std::string>&) const;
+        std::string_view access_token, const std::vector<boost::uuids::uuid>&) const;
 
     clients::shipments::Client shipments_;
     clients::counterparties::Client counterparties_;

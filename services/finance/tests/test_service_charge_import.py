@@ -27,6 +27,10 @@ async def test_import_is_atomic_idempotent_and_service_only(api,service_client,a
         assert cursor.fetchone()[0]==1
         cursor.execute('SELECT label_name, counterparty_name, net_minor, vat_minor, total_minor FROM service_charges')
         assert cursor.fetchall()==[('Зафиксированное имя','Зафиксированный клиент',12345,2469,14814)]
+        cursor.execute(
+            "UPDATE service_charge_imports SET document = jsonb_set(document, '{items,0,charge,id}', to_jsonb(%s::text)) WHERE id = %s",
+            (item['charge']['id'].upper(), batch['id']),
+        )
         # Re-delivery must not revert subsequent user edits.
         cursor.execute('UPDATE service_charges SET note=%s, revision=2',('Изменено пользователем',))
     assert (await send(batch)).status==200

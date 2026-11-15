@@ -22,8 +22,8 @@ inline void RequirePlatformAdmin(const platform::auth::Identity& identity) {
         throw ApiError<403>{"platform_admin_required", "Нужны права администратора платформы"};
 }
 
-inline void RequireAdministrator(pg::Transaction& transaction, const std::string& organization,
-    const platform::auth::Identity& identity) {
+inline void RequireAdministrator(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity) {
     const auto organizations = transaction.Execute(sql::kLockOrganization, organization);
     if (organizations.IsEmpty())
         throw ApiError<404>{"organization_not_found", "Организация не найдена"};
@@ -38,7 +38,7 @@ inline void RequireAdministrator(pg::Transaction& transaction, const std::string
 }
 
 inline models::pg::OrganizationRoleRaw RequireRole(
-    pg::Transaction& transaction, const std::string& organization, const std::string& role) {
+    pg::Transaction& transaction, const boost::uuids::uuid& organization, const std::string& role) {
     const auto rows = transaction.Execute(sql::kGetRole, organization, role);
     if (rows.IsEmpty())
         throw ApiError<400>{"invalid_role", "Выберите существующую роль организации"};

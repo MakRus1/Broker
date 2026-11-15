@@ -17,12 +17,12 @@ namespace pg = userver::storages::postgres;
 namespace sql = counterparties::sql;
 using counterparties::ApiError;
 
-void CheckDuplicate(pg::Transaction& transaction, const std::string& organization,
+void CheckDuplicate(pg::Transaction& transaction, const boost::uuids::uuid& organization,
     const models::Counterparty& value) {
     if (!value.tax_id.has_value())
         return;
-    transaction.Execute(sql::kLockRequisites,
-        organization + ":" + value.country_code.value() + ":" + value.tax_id.value());
+    transaction.Execute(
+        sql::kLockRequisites, organization, value.country_code.value(), value.tax_id.value());
     const auto duplicate = transaction.Execute(
         sql::kFindDuplicate, organization, value.country_code, value.tax_id, value.id);
     if (!duplicate.IsEmpty())
@@ -48,7 +48,7 @@ userver::yaml_config::Schema CounterpartiesComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
 }
 
-void CounterpartiesComponent::ValidateLogist(const std::string& organization,
+void CounterpartiesComponent::ValidateLogist(const boost::uuids::uuid& organization,
     std::string_view token, const std::optional<std::string>& subject) const {
     if (!subject.has_value())
         return;
@@ -75,9 +75,9 @@ void CounterpartiesComponent::ValidateLogist(const std::string& organization,
         throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
 }
 
-models::Counterparty CounterpartiesComponent::CreateCounterparty(const std::string& organization,
-    const platform::auth::Identity& identity, const models::CreateCounterpartyRequest& request,
-    const models::Counterparty& value) const {
+models::Counterparty CounterpartiesComponent::CreateCounterparty(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
+    const models::CreateCounterpartyRequest& request, const models::Counterparty& value) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockCounterpartyIdentity, organization, value.id);
     CheckDuplicate(transaction, organization, value);
@@ -100,11 +100,11 @@ models::Counterparty CounterpartiesComponent::CreateCounterparty(const std::stri
     return result;
 }
 
-models::Counterparty CounterpartiesComponent::UpdateCounterparty(const std::string& organization,
-    const platform::auth::Identity& identity,
+models::Counterparty CounterpartiesComponent::UpdateCounterparty(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::UpdateCounterpartyRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto id = boost::uuids::to_string(boost::uuids::string_generator{}(request.id));
+    const auto id = request.id;
     transaction.Execute(sql::kLockCounterpartyIdentity, organization, id);
     const auto rows = transaction.Execute(sql::kLockCounterparty, organization, id);
     if (rows.IsEmpty())
@@ -130,7 +130,7 @@ models::Counterparty CounterpartiesComponent::UpdateCounterparty(const std::stri
 }
 
 models::Counterparty CounterpartiesComponent::FindCounterparty(
-    const std::string& organization, const models::GetCounterpartyRequest& request) const {
+    const boost::uuids::uuid& organization, const models::GetCounterpartyRequest& request) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.id);
     if (rows.IsEmpty())
@@ -139,7 +139,7 @@ models::Counterparty CounterpartiesComponent::FindCounterparty(
 }
 
 models::Counterparty CounterpartiesComponent::SetCounterpartyArchived(
-    const std::string& organization, const platform::auth::Identity& identity,
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::SetArchivedCounterpartyRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto rows = transaction.Execute(sql::kLockCounterparty, organization, request.id);
@@ -164,7 +164,8 @@ models::Counterparty CounterpartiesComponent::SetCounterpartyArchived(
 }
 
 std::vector<models::CounterpartyEvent> CounterpartiesComponent::GetCounterpartyHistory(
-    const std::string& organization, const models::ListCounterpartyHistoryRequest& request) const {
+    const boost::uuids::uuid& organization,
+    const models::ListCounterpartyHistoryRequest& request) const {
     // Физического удаления карточек нет; история читается отдельным атомарным запросом.
     if (cluster_
             ->Execute(pg::ClusterHostType::kMaster, sql::kGetCounterparty, organization, request.id)

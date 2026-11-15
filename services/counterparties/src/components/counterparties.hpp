@@ -14,19 +14,20 @@ class CounterpartiesComponent final : public userver::components::ComponentBase 
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    void ValidateLogist(const std::string& organization, std::string_view access_token,
+    void ValidateLogist(const boost::uuids::uuid& organization, std::string_view access_token,
         const std::optional<std::string>& subject) const;
-    models::Counterparty CreateCounterparty(const std::string& organization,
+    models::Counterparty CreateCounterparty(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::CreateCounterpartyRequest&,
         const models::Counterparty& value) const;
-    models::Counterparty UpdateCounterparty(const std::string& organization,
+    models::Counterparty UpdateCounterparty(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::UpdateCounterpartyRequest&) const;
     models::Counterparty FindCounterparty(
-        const std::string& organization, const models::GetCounterpartyRequest&) const;
-    models::Counterparty SetCounterpartyArchived(const std::string& organization,
+        const boost::uuids::uuid& organization, const models::GetCounterpartyRequest&) const;
+    models::Counterparty SetCounterpartyArchived(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::SetArchivedCounterpartyRequest&) const;
     std::vector<models::CounterpartyEvent> GetCounterpartyHistory(
-        const std::string& organization, const models::ListCounterpartyHistoryRequest&) const;
+        const boost::uuids::uuid& organization,
+        const models::ListCounterpartyHistoryRequest&) const;
 
   private:
     clients::organizations::Client organizations_;

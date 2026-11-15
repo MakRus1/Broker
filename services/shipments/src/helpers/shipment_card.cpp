@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <converters/shipments.hpp>
 #include <helpers/dictionaries.hpp>
 #include <helpers/shipment_card.hpp>
@@ -15,10 +14,7 @@ void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row)
     if (request.shipment_date.has_value())
         row.ShipmentDate = request.shipment_date.value();
     if (request.recipient_id.has_value()) {
-        const auto value = request.recipient_id.value();
-        row.RecipientId = value.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.value())}
-            : std::nullopt;
+        row.RecipientId = request.recipient_id.value();
     }
     if (request.logist.has_value())
         row.Logist = platform::TrimToOptional(request.logist.value());
@@ -40,7 +36,7 @@ void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row)
         row.DeliveryAddress = platform::TrimToOptional(request.delivery_address.value());
     if (request.route_segments.has_value()) {
         row.RouteSegments.clear();
-        std::set<std::string> ids;
+        std::set<boost::uuids::uuid> ids;
         for (const auto& segment : request.route_segments.value()) {
             if (!ids.insert(segment.id).second)
                 throw shipments::ApiError<400>{
@@ -60,7 +56,7 @@ namespace shipments::helpers {
 models::pg::ShipmentData CreateShipmentCard(
     const models::CreateShipmentRequest& request, const configs::ShipmentSettings& settings) {
     models::pg::ShipmentData card;
-    card.CustomerId = boost::uuids::string_generator{}(request.customer_id);
+    card.CustomerId = request.customer_id;
     card.Reference = request.reference.value_or("");
     card.ShipmentDate = platform::CurrentUtcDate();
     card.Status = settings.Statuses.front();
@@ -75,7 +71,7 @@ models::pg::ShipmentData UpdateShipmentCard(
     if (request.reference.has_value())
         card.Reference = request.reference.value();
     if (request.customer_id.has_value())
-        card.CustomerId = boost::uuids::string_generator{}(request.customer_id.value());
+        card.CustomerId = request.customer_id.value();
     if (request.number.has_value()) {
         card.Number = userver::utils::text::Trim(request.number.value());
         if (card.Number.empty())
@@ -125,10 +121,10 @@ void ValidateCard(const models::pg::ShipmentData& row, const configs::ShipmentSe
         previous != nullptr ? previous->Loading : std::nullopt);
 }
 
-std::vector<std::string> ChangedRouteSegments(
+std::vector<boost::uuids::uuid> ChangedRouteSegments(
     const std::vector<models::ShipmentRouteSegment>& previous,
     const std::vector<models::ShipmentRouteSegment>& next) {
-    std::vector<std::string> changed;
+    std::vector<boost::uuids::uuid> changed;
     for (const auto& stage : previous) {
         const auto& id = stage.id;
         const auto found =

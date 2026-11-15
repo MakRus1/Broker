@@ -15,29 +15,20 @@ inline models::ServiceChargeDirection ToServiceChargeDirection(models::InvoiceDi
     throw std::logic_error("Неизвестное направление счёта");
 }
 
-inline std::optional<boost::uuids::uuid> InvoiceId(const std::optional<std::string>& value) {
-    return value.has_value() ? std::optional{boost::uuids::string_generator{}(value.value())}
-                             : std::nullopt;
-}
-
-inline std::optional<std::string> InvoiceId(const std::optional<boost::uuids::uuid>& value) {
-    return value.has_value() ? std::optional{boost::uuids::to_string(value.value())} : std::nullopt;
-}
-
 inline models::Invoice Convert(const models::pg::InvoiceRaw& value) {
     models::Invoice result;
-    result.id = boost::uuids::to_string(value.Id);
+    result.id = value.Id;
     result.direction = models::ParseEnumScalar(value.Direction, models::InvoiceDirection{});
     result.number = value.Number;
     result.invoice_date = value.InvoiceDate;
     result.due_date = value.DueDate;
-    result.own_company_id = boost::uuids::to_string(value.OwnCompanyId);
+    result.own_company_id = value.OwnCompanyId;
     result.own_company_name = value.OwnCompanyName;
-    result.counterparty_id = boost::uuids::to_string(value.CounterpartyId);
+    result.counterparty_id = value.CounterpartyId;
     result.counterparty_name = value.CounterpartyName;
-    result.own_bank_account_id = InvoiceId(value.OwnBankAccountId);
-    result.counterparty_bank_account_id = InvoiceId(value.CounterpartyBankAccountId);
-    result.contract_id = InvoiceId(value.ContractId);
+    result.own_bank_account_id = value.OwnBankAccountId;
+    result.counterparty_bank_account_id = value.CounterpartyBankAccountId;
+    result.contract_id = value.ContractId;
     result.contract_number = value.ContractNumber;
     result.currency = value.Currency;
     result.note = value.Note;

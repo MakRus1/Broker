@@ -22,7 +22,7 @@ class Component final : public userver::server::middlewares::HttpMiddlewareFacto
         const std::string& client, const std::string& nonce) const;
     bool IsProtected(std::string_view path) const;
     Identity Authorize(const std::string& path, const std::string& authorization,
-        const std::string& organization = {}) const;
+        const std::optional<boost::uuids::uuid>& organization = std::nullopt) const;
 
   private:
     std::unique_ptr<userver::server::middlewares::HttpMiddlewareBase> Create(

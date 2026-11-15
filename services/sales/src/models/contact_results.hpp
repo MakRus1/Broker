@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <openapi/models.hpp>
 
 namespace sales::models {
@@ -9,7 +10,7 @@ struct ContactAddition {
 
 struct ContactsPage {
     std::vector<models::SalesContact> items;
-    std::optional<std::string> next_before;
+    std::optional<boost::uuids::uuid> next_before;
 };
 
 }  // namespace sales::models

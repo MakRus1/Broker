@@ -18,20 +18,20 @@ class ProposalsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     // Подставляет снимки исходных котировок в input и загружает данные для расчёта.
-    models::ProposalCalculation PrepareProposalCalculation(const std::string& organization,
+    models::ProposalCalculation PrepareProposalCalculation(const boost::uuids::uuid& organization,
         std::string_view access_token, const models::Inquiry& inquiry,
         models::ProposalInput& input) const;
 
-    models::Proposal SaveProposal(const std::string& organization,
+    models::Proposal SaveProposal(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, std::int64_t expected_revision,
         models::Proposal value) const;
     std::vector<models::Proposal> ListProposals(
-        const std::string& organization, const std::string& inquiry_id) const;
-    models::Proposal ApplyProposalAction(const std::string& organization,
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const;
+    models::Proposal ApplyProposalAction(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,
         const models::ProposalActionRequest& request) const;
     std::vector<models::ProposalHistoryEntry> GetProposalHistory(
-        const std::string& organization, const models::HistoryRequest& request) const;
+        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

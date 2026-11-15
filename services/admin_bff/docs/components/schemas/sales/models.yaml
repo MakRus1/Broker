@@ -18,6 +18,7 @@ SalesStage:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -59,12 +60,15 @@ SalesCard:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     manager_subject:
       type: string
       minLength: 1
@@ -72,6 +76,7 @@ SalesCard:
     stage_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     source:
       type: string
       maxLength: 200
@@ -102,9 +107,11 @@ SaveSalesCardRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     manager_subject:
       type: string
       minLength: 1
@@ -112,6 +119,7 @@ SaveSalesCardRequest:
     stage_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     source:
       type: string
       maxLength: 200
@@ -148,12 +156,15 @@ Inquiry:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     manager_subject:
       type: string
       minLength: 1
@@ -205,6 +216,7 @@ Inquiry:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     converting:
       type: boolean
     conversion_error:
@@ -227,9 +239,11 @@ SaveInquiryRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     manager_subject:
       type: string
       minLength: 1
@@ -289,6 +303,7 @@ IdRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 CreateShipmentRequest:
@@ -298,6 +313,7 @@ CreateShipmentRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       format: int64
@@ -312,6 +328,7 @@ ListSalesRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -334,6 +351,7 @@ ListSalesRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required: []
 SalesHistoryEntry:
   type: object
@@ -384,6 +402,7 @@ HistoryRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     after_revision:
       type: integer
       format: int64
@@ -397,6 +416,7 @@ UpdateSalesSettingsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       format: int64
@@ -425,6 +445,7 @@ GetSalesSettingsRequest:
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - organization_id
 ShipmentRouteSegment:
@@ -434,6 +455,7 @@ ShipmentRouteSegment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     type:
       type: string
       minLength: 1
@@ -459,9 +481,11 @@ SeaDetails:
     departure_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     arrival_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     departure_date:
       type: string
       format: date
@@ -479,6 +503,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -509,6 +534,7 @@ AirDetails:
     carrier_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     origin_airport:
       $ref: '#/TransportLocation'
     destination_airport:
@@ -602,6 +628,7 @@ SalesRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$

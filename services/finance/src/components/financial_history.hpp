@@ -11,7 +11,7 @@ class FinancialHistoryComponent final : public userver::components::ComponentBas
     FinancialHistoryComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::FinancialHistoryResponse GetHistory(const std::string& organization,
+    models::FinancialHistoryResponse GetHistory(const boost::uuids::uuid& organization,
         const models::FinancialHistoryRequest& body, models::FinancialHistorySource source,
         const models::FinancialHistoryAccess& access) const;
 

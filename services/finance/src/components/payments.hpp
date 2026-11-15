@@ -19,21 +19,22 @@ class PaymentsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
 
-    models::PaymentDetails SavePayment(const std::string& organization,
+    models::PaymentDetails SavePayment(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SavePaymentRequest& request,
         models::pg::PaymentRaw value) const;
     models::PaymentDetails FindPayment(
-        const std::string& organization, const models::InvoiceBalanceRequest& request) const;
+        const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const;
     models::PaymentListResult ListPayments(
-        const std::string& organization, const models::ListPaymentsRequest& request) const;
-    models::PaymentFilterValuesResult GetPaymentFilterValues(
-        const std::string& organization, const models::PaymentFilterValuesRequest& request) const;
-    models::PaymentInvoiceCandidatesResult ListInvoiceCandidates(const std::string& organization,
+        const boost::uuids::uuid& organization, const models::ListPaymentsRequest& request) const;
+    models::PaymentFilterValuesResult GetPaymentFilterValues(const boost::uuids::uuid& organization,
+        const models::PaymentFilterValuesRequest& request) const;
+    models::PaymentInvoiceCandidatesResult ListInvoiceCandidates(
+        const boost::uuids::uuid& organization,
         const models::PaymentInvoiceCandidatesRequest& request) const;
     models::PaymentInvoice GetInvoiceBalance(
-        const std::string& organization, const models::InvoiceBalanceRequest& request) const;
-    models::AvailablePayments ListPaymentCandidates(
-        const std::string& organization, const models::PaymentCandidatesRequest& request) const;
+        const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const;
+    models::AvailablePayments ListPaymentCandidates(const boost::uuids::uuid& organization,
+        const models::PaymentCandidatesRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

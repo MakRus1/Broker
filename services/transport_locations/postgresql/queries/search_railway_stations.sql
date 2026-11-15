@@ -1,3 +1,4 @@
+-- $1 — строка поиска по названию, коду ЕСР, коду UIC или поисковым словам.
 SELECT ROW(id, name, country_code, esr_code, uic_code, esr_source)::public.railway_station_v2
 FROM railway_stations
 WHERE NOT archived AND lower(name || ' ' || coalesce(esr_code, '') || ' ' || coalesce(uic_code, '') || ' ' || search_terms) COLLATE "C" LIKE '%' || lower($1) || '%'

@@ -1,3 +1,4 @@
+-- $1 — записи морских портов из источника.
 -- Пятисимвольный LOCODE — устойчивый ключ источника.
 -- Ручные трёхсимвольные коды связываются только вместе со страной.
 INSERT INTO sea_port_sources (locode, location_id, name, country_code, search_terms)

@@ -1,3 +1,9 @@
+-- $1 — идентификатор точки маршрута.
+-- $2 — вид точки маршрута.
+-- $3 — название точки маршрута.
+-- $4 — код страны.
+-- $5 — код точки маршрута.
+-- $6 — разрешить обновление записи при совпадении идентификатора.
 INSERT INTO route_locations (id, kind, name, country_code, code, manual_override)
 VALUES ($1::UUID, $2, $3, $4, $5, TRUE)
 ON CONFLICT (id) DO UPDATE

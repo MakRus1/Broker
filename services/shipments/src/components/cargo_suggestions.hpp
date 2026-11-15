@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <string>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
@@ -12,8 +13,8 @@ class CargoSuggestionsComponent final : public userver::components::ComponentBas
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     std::vector<std::string> FindSuggestions(const std::string& organization,
-        const std::string& customer, const std::string& query) const;
-    bool RemoveSuggestion(const std::string& organization, const std::string& customer,
+        const boost::uuids::uuid& customer, const std::string& query) const;
+    bool RemoveSuggestion(const std::string& organization, const boost::uuids::uuid& customer,
         const std::string& value) const;
 
   private:

@@ -123,6 +123,7 @@ ShipmentItem:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -130,6 +131,7 @@ ShipmentItem:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     container_type_code:
       type: string
       minLength: 1
@@ -374,6 +376,7 @@ ListItemsRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -382,6 +385,7 @@ ListItemsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - shipment_id
 UpdateItemRequest:
@@ -391,6 +395,7 @@ UpdateItemRequest:
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -488,6 +493,7 @@ CargoSuggestionsRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - customer_id
 DeleteCargoSuggestionRequest:
@@ -501,6 +507,7 @@ DeleteCargoSuggestionRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - value
   - customer_id
@@ -863,6 +870,7 @@ ContainerPlanItem:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -870,6 +878,7 @@ ContainerPlanItem:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     container_type_code:
       type: string
       minLength: 1

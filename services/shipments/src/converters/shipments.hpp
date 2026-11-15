@@ -58,9 +58,9 @@ inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
 
 inline models::ShipmentItem Convert(const models::pg::ShipmentItem& row) {
     models::ShipmentItem result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
-    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.shipment_id = row.ShipmentId;
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});
@@ -71,9 +71,9 @@ inline models::ShipmentItem Convert(const models::pg::ShipmentItem& row) {
 inline models::ContainerPlanItem Convert(
     const models::pg::ShipmentItem& row, const ContainerTotals& totals) {
     models::ContainerPlanItem result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
-    result.shipment_id = boost::uuids::to_string(row.ShipmentId);
+    result.shipment_id = row.ShipmentId;
     result.container_type_code = row.ContainerType;
     result.container_ownership =
         models::ParseEnumScalar(row.Ownership, models::ContainerOwnership{});

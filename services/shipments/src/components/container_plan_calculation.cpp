@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <components/container_plan_calculation.hpp>
 #include <converters/shipments.hpp>
@@ -61,14 +60,10 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
 namespace shipments::container_plan {
 models::ContainerPlanListResult BuildPlanPage(const ContainerPlanSnapshot& snapshot,
     const clients::transportations::ApiV1TransportationsContainerFact::Response& facts,
-    const std::optional<std::string>& after_id, std::int64_t limit) {
+    const std::optional<boost::uuids::uuid>& after, std::int64_t limit) {
     auto plan = ReconcileContainerPlan(snapshot, facts);
     models::ContainerPlanListResult result;
     result.unplanned_items = std::move(plan.Unplanned);
-
-    const auto after = after_id.has_value()
-        ? std::optional{boost::uuids::string_generator{}(after_id.value())}
-        : std::nullopt;
 
     for (const auto& row : snapshot.Items) {
         if (after.has_value() && row.Id <= after.value())

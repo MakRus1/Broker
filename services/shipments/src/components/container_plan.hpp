@@ -16,7 +16,7 @@ class ContainerPlanComponent final : public userver::components::ComponentBase {
     models::ShipmentItem AddPlannedContainer(
         const models::AddItemRequest&, const platform::auth::Identity&) const;
     ContainerPlanSnapshot LoadPlan(
-        const std::string& organization, const std::string& shipment_id) const;
+        const std::string& organization, const boost::uuids::uuid& shipment_id) const;
     models::ShipmentItem UpdatePlannedContainer(
         const models::UpdateItemRequest&, const platform::auth::Identity&) const;
 

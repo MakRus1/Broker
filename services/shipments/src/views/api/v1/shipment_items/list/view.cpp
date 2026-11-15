@@ -19,7 +19,7 @@ Response View::Handle(
 
     namespace api = clients::transportations::ApiV1TransportationsContainerFact;
     api::RequestBody fact_request;
-    fact_request.shipment_id = body.shipment_id;
+    fact_request.shipment_id = boost::uuids::to_string(body.shipment_id);
     for (const auto& operation : snapshot.Pending)
         fact_request.pending_operation_ids.push_back(boost::uuids::to_string(operation.Id));
     const auto facts = deps.transportations.ApiV1TransportationsContainerFact(

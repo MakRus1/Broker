@@ -1,5 +1,4 @@
 #pragma once
-#include <userver/utils/boost_uuid4.hpp>
 
 #include <array>
 #include <cstdint>
@@ -13,6 +12,7 @@
 #include <type_traits>
 #include <userver/storages/postgres/parameter_store.hpp>
 #include <userver/storages/postgres/query.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/datetime/date.hpp>
 #include <vector>
 
@@ -258,8 +258,12 @@ class QueryBuilder {
     BuiltQuery BuildValues(const pg::Query& selection, std::string_view key, std::string_view label,
         std::string_view join, const std::optional<std::string>& after, int limit,
         std::string_view key_type = "TEXT", std::string_view value_source = {}) && {
-        if (after.has_value())
-            AddCondition(key, " > " + Bind(after.value(), key_type));
+        if (after.has_value()) {
+            const auto parameter = key_type == "UUID"
+                ? Bind(userver::utils::BoostUuidFromString(after.value()), key_type)
+                : Bind(after.value(), key_type);
+            AddCondition(key, " > " + parameter);
+        }
         const auto limit_parameter = Bind(limit, "INTEGER");
         auto statement = fmt::format(fmt::runtime(selection.GetStatementView()),
             fmt::arg("key", key), fmt::arg("label", label), fmt::arg("facet_join", join),

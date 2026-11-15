@@ -136,8 +136,11 @@ inline BuiltQuery BuildValues(QueryBuilder builder, const pg::Query& selection,
     const std::optional<std::string>& after, int limit, std::string_view value_source = {}) {
     if (field.Kind() == "date")
         throw FilterError{"Для даты используйте диапазон"};
-    if (after.has_value())
+    if (after.has_value()) {
+        if (field.Field.PgType == "UUID" && after->empty())
+            throw FilterError{"Некорректный идентификатор"};
         ValidateValue(field, after.value());
+    }
     std::string key =
         field.Array ? "registry_value.value COLLATE \"C\"" : std::string{field.MatchSql()};
     const std::string label = field.Array ? "registry_value.value" : std::string{field.ValueSql};

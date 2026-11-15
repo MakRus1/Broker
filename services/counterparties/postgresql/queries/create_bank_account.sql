@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового банковского счёта.
 INSERT INTO bank_accounts (
     organization_id,
     id,

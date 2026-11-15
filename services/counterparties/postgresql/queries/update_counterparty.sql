@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — новые данные контрагента с его идентификатором.
 UPDATE counterparties AS stored
 SET name = value.name,
     legal_name = value.legal_name,

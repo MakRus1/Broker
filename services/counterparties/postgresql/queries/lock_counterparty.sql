@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор контрагента.
 SELECT ROW(
     id, name, revision, archived, legal_name, country_code,
     tax_id, registration_id, legal_address, roles, contacts, kpp, logist, own_company

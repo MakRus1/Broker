@@ -10,7 +10,10 @@ std::optional<Result> ReadReplay(const pg::ResultSet& rows, const Request& reque
     if (rows.IsEmpty())
         return std::nullopt;
     const auto saved = rows.template AsSingleRow<models::pg::IdempotentResult>();
-    if (saved.Request != Document(request))
+    const auto document = Document(request);
+    // Ранее сохранённый запрос может содержать UUID в верхнем регистре.
+    if (saved.Request != document &&
+        Document(models::ParseModelJson(saved.Request, std::type_identity<Request>{})) != document)
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другим запросом"};
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});
 }

@@ -32,7 +32,7 @@ userver::yaml_config::Schema TransportationOperationsComponent::GetStaticConfigS
 }
 
 models::CreationOperation TransportationOperationsComponent::GetCreationOperation(
-    const std::string& organization, const std::string& operation_id) const {
+    const std::string& organization, const boost::uuids::uuid& operation_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetOperation, organization, operation_id);
     if (rows.IsEmpty())
@@ -60,14 +60,14 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     helpers::CheckRevision(item.Revision, request.expected_revision);
 
     models::CreationOperation result;
-    result.id = boost::uuids::to_string(boost::uuids::random_generator{}());
-    result.item_id = boost::uuids::to_string(item.Id);
+    result.id = boost::uuids::random_generator{}();
+    result.item_id = item.Id;
     result.quantity = request.quantity;
     result.status = models::OperationStatus::Pending;
 
     namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
     api::RequestBody payload;
-    payload.operation_id = result.id;
+    payload.operation_id = boost::uuids::to_string(result.id);
     payload.organization_id = organization;
     payload.shipment_id = boost::uuids::to_string(item.ShipmentId);
     payload.item_id = boost::uuids::to_string(item.Id);
@@ -81,7 +81,8 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     // Payload сохраняется один раз и не пересобирается из изменяемой позиции при повторах.
     const auto document = userver::formats::json::FromString(api::ToJson(payload));
     transaction.Execute(sql::kCreateOperation, organization, result.id, item.Id, request.quantity);
-    platform::outbox::Enqueue(transaction, helpers::kCreateTransportations, result.id, document);
+    platform::outbox::Enqueue(
+        transaction, helpers::kCreateTransportations, payload.operation_id, document);
     helpers::SaveReplay(transaction, organization, "create_operation", request, result);
 
     helpers::WriteAudit(

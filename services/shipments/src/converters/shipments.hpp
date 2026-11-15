@@ -91,8 +91,8 @@ inline models::CreationOperation Convert(const models::pg::CreationOperation& ro
         return models::ParseModelJson(
             row.Result.value(), std::type_identity<models::CreationOperation>{});
     models::CreationOperation result;
-    result.id = boost::uuids::to_string(row.Id);
-    result.item_id = boost::uuids::to_string(row.ItemId);
+    result.id = row.Id;
+    result.item_id = row.ItemId;
     result.quantity = row.Quantity;
     result.status = models::ParseEnumScalar(row.Status, models::OperationStatus{});
     return result;

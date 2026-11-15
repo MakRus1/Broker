@@ -12,7 +12,7 @@ class TransportationOperationsComponent final : public userver::components::Comp
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::CreationOperation GetCreationOperation(
-        const std::string& organization, const std::string& operation_id) const;
+        const std::string& organization, const boost::uuids::uuid& operation_id) const;
     models::CreationOperation RequestTransportations(
         const platform::auth::Identity&, const models::CreateOperationRequest&) const;
 

@@ -33,7 +33,7 @@ async def setup_item(api, quantity=5):
     return shipment, item
 
 
-async def test_reservation_replay_and_quantity(api):
+async def test_reservation_replay_and_quantity(api, pgsql):
     _, item = await setup_item(api)
     body = {
         'item_id': item['id'],
@@ -42,6 +42,12 @@ async def test_reservation_replay_and_quantity(api):
         'idempotency_key': str(uuid4()),
     }
     first = await api.post('/api/v1/transportation-operations/create', body, expected=202)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "UPDATE idempotent_results SET request = jsonb_set("
+            "request, '{item_id}', to_jsonb(%s::text)) WHERE key = %s",
+            (item['id'].upper(), body['idempotency_key']),
+        )
     assert await api.post('/api/v1/transportation-operations/create', body, expected=202) == first
     await api.post(
         '/api/v1/transportation-operations/create', {**body, 'quantity': 2}, expected=409

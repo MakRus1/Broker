@@ -171,8 +171,10 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(
     const auto settings = settings_.Effective(organization, std::optional{body.customer_id});
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    transaction.Execute(sql::kLockIdempotency, organization, source.Producer + ":" + source.Type,
-        source.ManualIdempotencyKey, source.Id);
+    const auto lock_key = source.Id.has_value() ? userver::utils::ToString(*source.Id)
+                                                : source.ManualIdempotencyKey.value();
+    transaction.Execute(
+        sql::kLockIdempotency, organization, source.Producer + ":" + source.Type, lock_key);
     const auto saved = transaction.Execute(sql::kFindSourceShipment, organization, source.Producer,
         source.Type, source.Id, source.ManualIdempotencyKey);
     if (const auto shipment_id = ValidateShipmentReplay(saved, document); shipment_id.has_value()) {

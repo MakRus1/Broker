@@ -7,31 +7,22 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/formats/serialize/boost_uuid.hpp>
 #include <userver/utils/text_light.hpp>
-#include <utility>
+#include <variant>
 
 namespace platform::registry {
-namespace detail {
-inline std::string HashCursorScope(userver::formats::json::ValueBuilder value) {
+template <typename Request>
+std::string CursorScope(
+    const Request& request, const std::variant<boost::uuids::uuid, std::string_view>& scope) {
+    userver::formats::json::ValueBuilder value{request};
     value.Remove("cursor");
     value.Remove("after");
     value.Remove("limit");
+    if (const auto* organization = std::get_if<boost::uuids::uuid>(&scope))
+        value["organization_id"] = *organization;
+    else
+        value["registry"] = std::get<std::string_view>(scope);
     return userver::crypto::hash::Sha256(
         userver::formats::json::ToStableString(value.ExtractValue()));
-}
-}  // namespace detail
-
-template <typename Request>
-std::string CursorScope(const Request& request, const boost::uuids::uuid& organization) {
-    userver::formats::json::ValueBuilder value{request};
-    value["organization_id"] = organization;
-    return detail::HashCursorScope(std::move(value));
-}
-
-template <typename Request>
-std::string GlobalCursorScope(const Request& request, std::string_view registry) {
-    userver::formats::json::ValueBuilder value{request};
-    value["registry"] = registry;
-    return detail::HashCursorScope(std::move(value));
 }
 
 inline std::optional<std::string> SearchPattern(const std::optional<std::string>& query) {

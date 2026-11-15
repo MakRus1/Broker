@@ -47,13 +47,10 @@ class ServicesTest(unittest.TestCase):
             self.assertFalse(list((directory / 'postgresql').rglob('*.sql')))
             config = yaml.safe_load((directory / 'configs/static_config.yaml').read_text())['components_manager']['components']
             self.assertEqual(config['handler-ping']['path'], '/ping')
-            self.assertEqual(config['handler-ping-ready']['path'], '/ping/ready')
+            self.assertNotIn('handler-ping-ready', config)
             self.assertTrue(config['handler-ping']['monitor-handler'])
             self.assertEqual('postgres-main' in config, pg)
             self.assertEqual('grpc-server' in config, grpc)
-            self.assertEqual('platform-grpc-readiness' in config, grpc)
-            if grpc:
-                self.assertTrue(config['grpc-server-middlewares-pipeline']['middlewares']['platform-grpc-readiness']['enabled'])
             main = (directory / 'src/main.cpp').read_text()
             self.assertIn('.Append<userver::server::handlers::Ping>()', main)
             self.assertNotIn('HelloGrpc', main)

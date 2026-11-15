@@ -10,7 +10,6 @@
 #include <userver/ugrpc/server/component_list.hpp>
 #include <userver/utils/daemon_run.hpp>
 
-#include <bootstrap/ping.hpp>
 #include <components/bank_accounts.hpp>
 #include <components/counterparties.hpp>
 #include <components/counterparty_registry.hpp>
@@ -29,7 +28,6 @@
 #include <platform/auth/component.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
-#include <platform/readiness.hpp>
 #include <userver/clients/http/component.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
@@ -48,7 +46,6 @@ int main(int argc, char* argv[]) {
             .Append<platform::HttpTelemetryFactory>()
             .Append<platform::HttpTelemetryPipeline>()
             .Append<userver::server::handlers::Ping>()
-            .Append<counterparties::PingReady>()
             .Append<userver::server::handlers::ServerMonitor>()
             .AppendComponentList(userver::ugrpc::client::MinimalComponentList())
             .Append<userver::ugrpc::client::ClientFactoryComponent>("grpc-otlp-factory")
@@ -58,12 +55,11 @@ int main(int argc, char* argv[]) {
     component_list.Append<counterparties::DaData>();
 
     // SERVICE_REGISTRATION_BEGIN
-    component_list.Append<platform::Readiness>().Append<platform::HttpReadinessFactory>();
     component_list.Append<platform::auth::Component>();
     component_list.Append<userver::components::HttpClient>("auth-http-client");
     component_list.AppendComponentList(userver::dynamic_config::updater::ComponentList());
     component_list.Append<platform::configs::DeliverySink<::configs::DeliveryContract>>();
-    component_list.Append<platform::configs::ConfigReadiness>();
+    component_list.Append<platform::configs::ConfigStartup<::configs::DeliveryContract>>();
     component_list.Append<counterparties::clients::organizations::Component>();
     component_list.Append<userver::components::Postgres>("postgres-counterparties");
     // SERVICE_REGISTRATION_END

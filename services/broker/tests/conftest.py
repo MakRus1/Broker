@@ -14,7 +14,7 @@ pytest_plugins = ['pytest_userver.plugins.core', 'pytest_userver.plugins.postgre
 @pytest.fixture(scope='session')
 async def service_http_ping_url(monitor_baseurl):
     # Готовность проверяется на внутреннем listener до первого запроса testsuite.
-    return monitor_baseurl.rstrip('/') + '/ping/ready'
+    return monitor_baseurl.rstrip('/') + '/ping'
 
 
 USERVER_CONFIG_HOOKS = ['userver_config_trace_probe']
@@ -31,13 +31,6 @@ def userver_config_trace_probe():
     def patch(config, config_vars):
         components = config['components_manager']['components']
         components['grpc-probe-factory'] = {'load-enabled': '$is-testing'}
-        components['handler-readiness-control'] = {
-            'load-enabled': '$is-testing',
-            'monitor-handler': True,
-            'path': '/internal/readiness-control',
-            'method': 'GET',
-            'task_processor': 'main-task-processor',
-        }
         components['handler-trace-probe'] = {
             'load-enabled': '$is-testing',
             'path': '/internal/trace-probe',

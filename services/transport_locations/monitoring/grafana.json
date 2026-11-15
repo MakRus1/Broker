@@ -271,7 +271,7 @@
       "id": 201,
       "title": "Доступность /metrics",
       "type": "timeseries",
-      "description": "Успех сбора Prometheus. Готовность принимать бизнес-запросы проверяется отдельно через /ping/ready.",
+      "description": "Успех сбора Prometheus. Готовность принимать бизнес-запросы проверяется отдельно через /ping.",
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheus}"

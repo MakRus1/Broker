@@ -178,7 +178,7 @@ def standard(section):
                 query('up'),
                 'short',
                 '{{instance}}',
-                'Успех сбора Prometheus. Готовность принимать бизнес-запросы проверяется отдельно через /ping/ready.',
+                'Успех сбора Prometheus. Готовность принимать бизнес-запросы проверяется отдельно через /ping.',
             ),
             panel('Время работы процесса', query('engine_uptime_seconds'), 's'),
             panel(

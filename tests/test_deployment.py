@@ -196,8 +196,8 @@ class DeploymentTest(unittest.TestCase):
                 self.assertFalse(spec['automountServiceAccountToken'])
                 container = spec['containers'][0]
                 self.assertIn('@sha256:', container['image'])
-                self.assertEqual(container['readinessProbe']['httpGet']['path'], '/ping/ready')
-                self.assertEqual(container['livenessProbe']['httpGet']['path'], '/ping')
+                for probe in ('startupProbe', 'readinessProbe', 'livenessProbe'):
+                    self.assertEqual(container[probe]['httpGet']['path'], '/ping')
                 self.assertTrue(container['securityContext']['runAsNonRoot'])
             self.assertEqual(
                 len([obj for obj in phases['migrations'] if obj['kind'] == 'Job']),

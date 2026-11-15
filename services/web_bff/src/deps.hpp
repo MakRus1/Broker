@@ -19,7 +19,6 @@
 #include <configs/keys.hpp>
 #include <platform/configs/components.hpp>
 #include <platform/configs/runtime.hpp>
-#include <platform/readiness.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
 
@@ -31,7 +30,6 @@ struct Deps {
     Cities& cities;
     PreferencesComponent& preferences;
     // SERVICE_DEPS_FIELDS_BEGIN
-    platform::Readiness* readiness;
     platform::configs::Source configs;
     clients::contracts::Client contracts;
     clients::counterparties::Client counterparties;
@@ -53,7 +51,6 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
         .cities = component_context.FindComponent<Cities>(),
         .preferences = component_context.FindComponent<PreferencesComponent>(),
         // SERVICE_DEPS_INIT_BEGIN
-        .readiness = &component_context.FindComponent<platform::Readiness>(),
         .configs =
             platform::configs::Source{
                 component_context.FindComponent<userver::components::DynamicConfig>().GetSource()},

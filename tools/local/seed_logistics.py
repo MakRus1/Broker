@@ -64,7 +64,7 @@ import hashlib
 version = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
 for attempt in range(60):
     try:
-        with urlopen('http://organizations:8132/ping/ready', timeout=2):
+        with urlopen('http://organizations:8132/ping', timeout=2):
             break
     except OSError:
         if attempt == 59:

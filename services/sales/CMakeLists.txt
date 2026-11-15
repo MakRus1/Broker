@@ -16,7 +16,6 @@ add_library(
     src/components/proposals.cpp
     src/components/settings.cpp
     src/components/rfq.cpp
-    src/bootstrap/ping.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(

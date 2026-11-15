@@ -94,12 +94,10 @@ components_manager:
             response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
-        platform-readiness: {}
-        platform-http-readiness: {}
         platform-config-delivery:
             load-enabled: $config-updates-enabled
-        platform-config-readiness:
-            rules: []
+        platform-config-startup:
+            load-enabled: $config-wait-for-snapshot
         postgres-configs:
             dbconnection: $pg-connection
             dbconnection#env: DB_CONNECTION
@@ -228,11 +226,6 @@ components_manager:
                 environment: $environment
         handler-ping:
             path: /ping
-            method: GET
-            task_processor: main-task-processor
-            monitor-handler: true
-        handler-ping-ready:
-            path: /ping/ready
             method: GET
             task_processor: main-task-processor
             monitor-handler: true

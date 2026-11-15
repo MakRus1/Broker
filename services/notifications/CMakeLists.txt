@@ -5,7 +5,6 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/bootstrap/ping.cpp
     src/components/inbox.cpp
     src/components/event_acceptance.cpp
     ${OPENAPI_GEN_SRCS}

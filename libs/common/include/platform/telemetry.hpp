@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
-#include <platform/readiness.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -93,7 +92,6 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
     HttpTelemetryPipeline(const userver::components::ComponentConfig& config,
         const userver::components::ComponentContext& context)
         : PipelineBuilder(config, context),
-          readiness_enabled_(context.FindComponentOptional<HttpReadinessFactory>() != nullptr),
           extra_(config["extra-middlewares"].As<std::vector<std::string>>({})),
           final_(config["final-middlewares"].As<std::vector<std::string>>({})) {}
 
@@ -107,11 +105,7 @@ class HttpTelemetryPipeline final : public userver::server::middlewares::Pipelin
             throw std::logic_error("HTTP tracing middleware is required");
         const auto position = std::distance(pipeline.begin(), tracing) + 1;
         pipeline.insert(pipeline.begin() + position, std::string(HttpTelemetryFactory::kName));
-        if (readiness_enabled_)
-            pipeline.insert(
-                pipeline.begin() + position + 1, std::string(HttpReadinessFactory::kName));
-        pipeline.insert(pipeline.begin() + position + 1 + (readiness_enabled_ ? 1 : 0),
-            extra_.begin(), extra_.end());
+        pipeline.insert(pipeline.begin() + position + 1, extra_.begin(), extra_.end());
         // После серверных расширений, включая перехват исключений testsuite.
         pipeline.insert(pipeline.end(), final_.begin(), final_.end());
         return pipeline;
@@ -135,7 +129,6 @@ properties:
     }
 
   private:
-    const bool readiness_enabled_;
     const std::vector<std::string> extra_;
     const std::vector<std::string> final_;
 };

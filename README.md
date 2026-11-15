@@ -64,7 +64,7 @@ Namespace и имя клиентского метода выводятся из 
 `make gen` также работает из каталога сервиса без SERVICE.
 SQL-запросы генерируются из `postgresql/queries`; `src/deps.hpp` общий на сервис.
 Метаданные логов и трасс автоматически добавляет middleware.
-Новый сервис автоматически получает `/ping`, `/ping/ready` и `/metrics` на служебном listener.
+Новый сервис автоматически получает `/ping`, и `/metrics` на служебном listener.
 
 Структура сервиса: [docs/service-layout.md](docs/service-layout.md).
 Подключение БД, gRPC и библиотек: [docs/service-manifest.md](docs/service-manifest.md).

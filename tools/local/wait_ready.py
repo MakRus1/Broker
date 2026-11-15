@@ -8,7 +8,7 @@ import urllib.request
 
 def wait(port, timeout):
     deadline = time.monotonic() + timeout
-    url = f'http://127.0.0.1:{port}/ping/ready'
+    url = f'http://127.0.0.1:{port}/ping'
     last_error = ''
     while time.monotonic() < deadline:
         try:

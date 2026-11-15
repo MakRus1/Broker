@@ -1,5 +1,6 @@
 #pragma once
 #include <deps.hpp>
+#include <userver/server/request/request_context.hpp>
 #include <views/api/admin/route_locations/list/requests.hpp>
 #include <views/api/admin/route_locations/list/responses.hpp>
 

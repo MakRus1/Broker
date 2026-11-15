@@ -102,7 +102,7 @@ if __name__ == '__main__':
         secrets = json.loads((root / '.local/auth-secrets.json').read_text())
         for attempt in range(60):
             try:
-                with urlopen('http://localization:8182/ping/ready', timeout=2):
+                with urlopen('http://localization:8182/ping', timeout=2):
                     break
             except OSError:
                 if attempt == 59:

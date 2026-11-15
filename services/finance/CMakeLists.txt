@@ -5,7 +5,6 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/bootstrap/ping.cpp
     src/components/document_parties.cpp
     src/components/financial_history.cpp
     src/converters/cbr_exchange_rates.cpp

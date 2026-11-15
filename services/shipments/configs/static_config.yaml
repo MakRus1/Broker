@@ -140,12 +140,10 @@ components_manager:
             base-url: $client-transport_locations-base-url
         client-transportations:
             base-url: $client-transportations-base-url
-        platform-readiness: {}
-        platform-http-readiness: {}
         platform-config-delivery:
             load-enabled: $config-updates-enabled
-        platform-config-readiness:
-            rules: []
+        platform-config-startup:
+            load-enabled: $config-wait-for-snapshot
         platform-outbox:
             postgres-component: postgres-shipments
         postgres-shipments:
@@ -305,11 +303,6 @@ components_manager:
                 environment: $environment
         handler-ping:
             path: /ping
-            method: GET
-            task_processor: main-task-processor
-            monitor-handler: true
-        handler-ping-ready:
-            path: /ping/ready
             method: GET
             task_processor: main-task-processor
             monitor-handler: true

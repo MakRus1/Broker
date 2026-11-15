@@ -5,7 +5,6 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
-    src/bootstrap/ping.cpp
     src/components/dadata.cpp
     src/components/counterparty_registry.cpp
     src/helpers/counterparty_validation.cpp

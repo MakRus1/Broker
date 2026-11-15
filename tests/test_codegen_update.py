@@ -52,15 +52,6 @@ class UpdateTest(unittest.TestCase):
                 self.assertIn('extra', client_outputs(consumer, UniqueLoader, load)['include/clients/api/client.hpp'])
                 for service in (provider, consumer, root / 'services/configs'):
                     run(service, check=True)
-                # У критичной зависимости hash схемы находится в отслеживаемом
-                # статическом конфиге. Его команда тоже обновляет автоматически.
-                manifest['critical_dependencies'] = {'configs': {'BROKER_HTTP_CLIENT_CONFIG': {
-                    'max_age_seconds': 5}}}
-                (consumer / 'service.yaml').write_text(yaml.safe_dump(manifest))
-                update(consumer)
-                source.write_text(source.read_text().replace('/fresh:', '/fresh_updated:'))
-                self.assertIn('consumer', update(provider))
-                run(consumer, check=True)
                 # Повтор команды не переписывает файлы и не находит зависимых обновлений.
                 self.assertEqual(update(provider), ['broker'])
 

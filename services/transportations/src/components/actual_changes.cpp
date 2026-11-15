@@ -1,18 +1,16 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <components/actual_changes.hpp>
 #include <components/route_validation.hpp>
 #include <models/errors.hpp>
 
 namespace transportations::route_rules {
-std::size_t ApplyActual(models::Transportation& transportation, const std::string& route_segment_id,
-    models::EventKind event, std::chrono::system_clock::time_point occurred_at,
-    ActualChange change) {
-    const auto requested = boost::uuids::string_generator{}(route_segment_id);
-    const auto found = std::find_if(transportation.route_segments.begin(),
-        transportation.route_segments.end(), [&](const auto& route_segment) {
-            return boost::uuids::string_generator{}(route_segment.id) == requested;
-        });
+std::size_t ApplyActual(models::Transportation& transportation,
+    const boost::uuids::uuid& route_segment_id, models::EventKind event,
+    std::chrono::system_clock::time_point occurred_at, ActualChange change) {
+    const auto requested = route_segment_id;
+    const auto found =
+        std::find_if(transportation.route_segments.begin(), transportation.route_segments.end(),
+            [&](const auto& route_segment) { return route_segment.id == requested; });
     if (found == transportation.route_segments.end())
         throw ApiError<404>{"not_found", "Плечо не найдено"};
     if (found->mode == models::TransportMode::Sea || found->mode == models::TransportMode::Air)

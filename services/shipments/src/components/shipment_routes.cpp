@@ -144,11 +144,10 @@ void ShipmentRoutes::CheckExistingRouteUsage(std::string_view access_token,
 
     namespace api = clients::transportations::ApiV1TransportationRoutesUsage;
     const auto result = transportations_.ApiV1TransportationRoutesUsage(
-        api::Request{.body = {.shipment_id = userver::utils::ToString(shipment_id)}}, access_token);
+        api::Request{.body = {.shipment_id = shipment_id}}, access_token);
 
     for (const auto& id : result.segment_ids)
-        if (std::find(changed.begin(), changed.end(), userver::utils::BoostUuidFromString(id)) !=
-            changed.end())
+        if (std::find(changed.begin(), changed.end(), id) != changed.end())
             throw ApiError<409>{"route_segment_in_use",
                 "Нельзя удалить или изменить тип участка с данными перевозок"};
 } catch (const platform::http::HandlerErrorBase&) {

@@ -43,14 +43,13 @@ ContainerPlan ReconcileContainerPlan(const ContainerPlanSnapshot& snapshot,
         result.Unplanned.push_back(std::move(unplanned));
     }
 
-    std::map<std::string, std::int64_t> materialized;
+    std::map<boost::uuids::uuid, std::int64_t> materialized;
     for (const auto& operation : facts.operations)
         materialized.emplace(operation.operation_id, operation.created_quantity);
 
     for (const auto& operation : pending)
         result.Totals[{operation.ContainerType, operation.Ownership}].Pending +=
-            std::max<std::int64_t>(
-                0, operation.Quantity - materialized[boost::uuids::to_string(operation.Id)]);
+            std::max<std::int64_t>(0, operation.Quantity - materialized[operation.Id]);
 
     return result;
 }

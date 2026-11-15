@@ -32,7 +32,7 @@ userver::yaml_config::Schema RoutesComponent::GetStaticConfigSchema() {
 }
 
 models::RouteUsageResult RoutesComponent::FindRouteUsage(
-    const std::string& organization, const std::string& shipment_id) const {
+    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockShipmentTransportations, organization, shipment_id);
@@ -40,7 +40,7 @@ models::RouteUsageResult RoutesComponent::FindRouteUsage(
                           .AsContainer<std::vector<json::Value>>();
     transaction.Commit();
 
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& segment : converters::Convert(rows))
         if (route_rules::HasRouteData(segment))
             ids.insert(segment.id);
@@ -72,12 +72,11 @@ models::Transportation RoutesComponent::SaveRoute(const std::string& organizatio
     const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
     if (request.route_segments.size() != source.route_segments.size())
         throw ApiError<409>{"inherited_route", "Состав маршрута изменяется только в поставке"};
-    std::vector<std::string> used;
+    std::vector<boost::uuids::uuid> used;
     for (std::size_t i = 0; i < source.route_segments.size(); ++i) {
         const auto& input = request.route_segments[i];
         const auto& stage = source.route_segments[i];
-        if (input.id != userver::utils::ToString(stage.id) ||
-            models::EnumValue(input.mode) != stage.type)
+        if (input.id != stage.id || models::EnumValue(input.mode) != stage.type)
             throw ApiError<409>{
                 "inherited_route", "Порядок и типы участков изменяются только в поставке"};
         if (route_rules::HasRouteData(converters::Convert(input)))

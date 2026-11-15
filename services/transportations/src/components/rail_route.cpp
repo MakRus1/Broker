@@ -26,8 +26,8 @@ void ResolveStation(std::optional<models::RailwayStation>& station,
 }  // namespace
 
 namespace transportations::route_rules {
-std::vector<std::string> GetRailwayStationIds(const models::SetRouteRequest& request) {
-    std::set<std::string> ids;
+std::vector<boost::uuids::uuid> GetRailwayStationIds(const models::SetRouteRequest& request) {
+    std::set<boost::uuids::uuid> ids;
     for (const auto& segment : request.route_segments) {
         if (!segment.rail.has_value())
             continue;

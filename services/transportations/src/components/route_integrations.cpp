@@ -9,8 +9,8 @@
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
-std::set<std::string> RouteCounterparties(const auto& stages) {
-    std::set<std::string> ids;
+std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
+    std::set<boost::uuids::uuid> ids;
     for (const auto& stage : stages) {
         if (stage.contractor_id.has_value())
             ids.insert(stage.contractor_id.value());
@@ -39,23 +39,19 @@ userver::yaml_config::Schema RouteIntegrations::GetStaticConfigSchema() {
 }
 
 models::ShipmentContext RouteIntegrations::GetShipmentContext(
-    std::string_view access_token, const std::string& shipment_id) const {
+    std::string_view access_token, const boost::uuids::uuid& shipment_id) const {
     const auto contexts = FindShipmentContexts(access_token, {shipment_id});
     return route_rules::FindShipmentContext(contexts, shipment_id);
 }
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
-    std::string_view access_token, const std::vector<std::string>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
     namespace api = clients::shipments::ApiV1ShipmentsTransportationContexts;
     if (ids.empty())
         return {};
-    std::vector<boost::uuids::uuid> shipment_ids;
-    shipment_ids.reserve(ids.size());
-    for (const auto& id : ids)
-        shipment_ids.push_back(userver::utils::BoostUuidFromString(id));
     return shipments_
         .ApiV1ShipmentsTransportationContexts(
-            api::Request{.body = {.shipment_ids = std::move(shipment_ids)}}, access_token)
+            api::Request{.body = {.shipment_ids = ids}}, access_token)
         .items;
 } catch (const platform::http::CancelledError&) {
 
@@ -69,17 +65,13 @@ std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
 }
 
 void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
-    const ShipmentContext& source, const std::vector<std::string>& ids) const try {
+    const ShipmentContext& source, const std::vector<boost::uuids::uuid>& ids) const try {
     if (ids.empty())
         return;
-    std::vector<boost::uuids::uuid> segment_ids;
-    segment_ids.reserve(ids.size());
-    for (const auto& id : ids)
-        segment_ids.push_back(userver::utils::BoostUuidFromString(id));
     namespace api = clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage;
     shipments_.ApiV1ShipmentsRouteSegmentsRegisterUsage(
         api::Request{.body = {.expected_revision = source.revision,
-                         .segment_ids = std::move(segment_ids),
+                         .segment_ids = ids,
                          .shipment_id = source.shipment_id}},
         access_token);
 } catch (const clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage::Error409& error) {
@@ -112,8 +104,8 @@ void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_toke
         if (old.contains(id))
             continue;
         try {
-            const auto response = counterparties_.ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(id)}}, access_token);
+            const auto response =
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token);
             if (response.counterparty.archived)
                 throw ApiError<400>{
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};
@@ -135,18 +127,14 @@ void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_toke
 }
 
 models::RailwayStations RouteIntegrations::FindRailwayStations(
-    std::string_view access_token, const std::vector<std::string>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
     models::RailwayStations stations;
     if (ids.empty())
         return stations;
-    std::vector<boost::uuids::uuid> requested;
-    requested.reserve(ids.size());
-    for (const auto& id : ids)
-        requested.push_back(userver::utils::BoostUuidFromString(id));
-    const auto response = transport_locations_.ApiV1RailwayStationsGetBatch(
-        {.body = {.ids = std::move(requested)}}, access_token);
+    const auto response =
+        transport_locations_.ApiV1RailwayStationsGetBatch({.body = {.ids = ids}}, access_token);
     for (const auto& value : response.items)
-        stations.emplace(userver::utils::ToString(value.id), converters::Convert(value));
+        stations.emplace(value.id, converters::Convert(value));
     return stations;
 } catch (const platform::http::CancelledError&) {
 

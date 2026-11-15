@@ -9,9 +9,10 @@
 namespace shipments::helpers {
 inline void QueueRouteProjection(pg::Transaction& transaction, const std::string& organization,
     const models::Shipment& shipment) {
-    clients::transportations::models::ShipmentRouteProjection body{.organization_id = organization,
+    clients::transportations::models::ShipmentRouteProjection body{
+        .organization_id = userver::utils::BoostUuidFromString(organization),
         .revision = shipment.revision,
-        .shipment_id = userver::utils::ToString(shipment.id)};
+        .shipment_id = shipment.id};
     body.route_segments.reserve(shipment.route_segments.size());
     for (const auto& segment : shipment.route_segments)
         body.route_segments.push_back(converters::ToRouteProjection(segment));

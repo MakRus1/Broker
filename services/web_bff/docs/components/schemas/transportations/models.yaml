@@ -16,9 +16,11 @@ CreationOperation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     quantity:
       type: integer
       minimum: 1
@@ -30,6 +32,7 @@ CreationOperation:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
     rejection_code:
       type: string
       maxLength: 128
@@ -46,6 +49,7 @@ Transportation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -53,12 +57,15 @@ Transportation:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     operation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     container_type_code:
       type: string
       minLength: 1
@@ -98,6 +105,7 @@ RouteSegment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     mode:
       $ref: '#/TransportMode'
     origin:
@@ -107,6 +115,7 @@ RouteSegment:
     contractor_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     planned_departure_at:
       type: string
       format: date-time
@@ -169,6 +178,7 @@ SetRouteSegmentsItem:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     mode:
       $ref: '#/TransportMode'
     origin:
@@ -178,6 +188,7 @@ SetRouteSegmentsItem:
     contractor_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     planned_departure_at:
       type: string
       format: date-time
@@ -252,6 +263,7 @@ GetTransportationRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - transportation_id
 ListTransportationsRequest:
@@ -266,6 +278,7 @@ ListTransportationsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     sort:
       type: string
       default: id
@@ -294,15 +307,19 @@ EnsureCreatedRequest:
     operation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     item_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     organization_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     quantity:
       type: integer
       minimum: 1
@@ -332,6 +349,7 @@ SetRouteRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -353,9 +371,11 @@ RecordActualRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     route_segment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -378,9 +398,11 @@ CorrectActualRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     route_segment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -408,6 +430,7 @@ ListHistoryRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     before:
       type: integer
       minimum: 1
@@ -441,6 +464,7 @@ TransportationEvent:
     route_segment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     event_kind:
       $ref: '#/EventKind'
     revision:
@@ -474,9 +498,11 @@ CreateTransportationRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     type:
       $ref: '#/TransportationType'
     hazardous:
@@ -503,6 +529,7 @@ UpdateTransportationRequest:
     transportation_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -543,6 +570,7 @@ RailwayStation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     uic_code:
       type: string
       pattern: ^[0-9]{7}$
@@ -589,6 +617,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -621,9 +650,11 @@ SeaDetails:
     departure_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     arrival_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     departure_date:
       type: string
       format: date
@@ -641,6 +672,7 @@ AirDetails:
     carrier_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     origin_airport:
       $ref: '#/TransportLocation'
     destination_airport:
@@ -668,6 +700,7 @@ InternationalRoadDetails:
     loading_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     planned_loading_date:
       type: string
       format: date
@@ -734,6 +767,7 @@ RegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     value:
       type: string
       maxLength: 256

@@ -21,10 +21,16 @@ def command():
     }
 
 
-async def test_inbox_concurrent_replay(api):
+async def test_inbox_concurrent_replay(api, pgsql):
     body = command()
     a, b = await asyncio.gather(api.post(PATH, body), api.post(PATH, body))
     assert a == b
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "UPDATE processed_commands SET payload = jsonb_set(payload, '{shipment_id}', to_jsonb(%s::text)) WHERE operation_id = %s",
+            (body['shipment_id'].upper(), body['operation_id']),
+        )
+    assert await api.post(PATH, body) == a
     assert len(set(a['operation']['transportation_ids'])) == 5
     listed = await api.post(
         '/api/v1/transportations/list',

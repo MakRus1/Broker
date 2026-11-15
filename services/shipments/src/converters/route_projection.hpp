@@ -7,7 +7,7 @@ inline clients::transportations::models::TransportLocation ToRouteProjection(
     const models::TransportLocation& value) {
     return {.code = value.code,
         .country_code = value.country_code,
-        .id = userver::utils::ToString(value.id),
+        .id = value.id,
         .kind = clients::transportations::models::ParseEnumScalar(models::EnumValue(value.kind),
             clients::transportations::models::TransportLocationKind{}),
         .name = value.name};
@@ -16,13 +16,9 @@ inline clients::transportations::models::TransportLocation ToRouteProjection(
 inline clients::transportations::models::SeaDetails ToRouteProjection(
     const models::SeaDetails& value) {
     clients::transportations::models::SeaDetails result{
-        .arrival_terminal_id = value.arrival_terminal_id
-            ? std::optional{userver::utils::ToString(*value.arrival_terminal_id)}
-            : std::nullopt,
+        .arrival_terminal_id = value.arrival_terminal_id,
         .departure_date = value.departure_date,
-        .departure_terminal_id = value.departure_terminal_id
-            ? std::optional{userver::utils::ToString(*value.departure_terminal_id)}
-            : std::nullopt,
+        .departure_terminal_id = value.departure_terminal_id,
         .eta = value.eta,
         .vessel = value.vessel,
         .voyage = value.voyage};
@@ -36,8 +32,7 @@ inline clients::transportations::models::SeaDetails ToRouteProjection(
 inline clients::transportations::models::AirDetails ToRouteProjection(
     const models::AirDetails& value) {
     clients::transportations::models::AirDetails result{.arrival_date = value.arrival_date,
-        .carrier_id = value.carrier_id ? std::optional{userver::utils::ToString(*value.carrier_id)}
-                                       : std::nullopt,
+        .carrier_id = value.carrier_id,
         .departure_date = value.departure_date,
         .eta = value.eta,
         .etd = value.etd,
@@ -52,7 +47,7 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
 inline clients::transportations::models::ProjectedRouteSegment ToRouteProjection(
     const models::ShipmentRouteSegment& value) {
     clients::transportations::models::ProjectedRouteSegment result{
-        .id = userver::utils::ToString(value.id), .type = value.type};
+        .id = value.id, .type = value.type};
     if (value.sea.has_value())
         result.sea = ToRouteProjection(value.sea.value());
     if (value.air.has_value())

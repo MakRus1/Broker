@@ -37,6 +37,7 @@ RouteUsageResult:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
   required:
   - segment_ids
 ContainerFactsRequest:
@@ -49,11 +50,13 @@ ContainerFactsRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     pending_operation_ids:
       type: array
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
 ContainerFactsResult:
   type: object
   additionalProperties: false

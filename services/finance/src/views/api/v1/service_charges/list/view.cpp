@@ -24,13 +24,18 @@ Response View::Handle(
             const auto transportation =
                 deps.transportations
                     .ApiV1TransportationsGet(
-                        {.body = {.transportation_id = scope.transportation_id.value()}}, token)
+                        {.body = {.transportation_id = userver::utils::BoostUuidFromString(
+                                      scope.transportation_id.value())}},
+                        token)
                     .transportation;
-            if (!helpers::SameId(transportation.shipment_id, scope.shipment_id.value()))
+            if (transportation.shipment_id !=
+                userver::utils::BoostUuidFromString(scope.shipment_id.value()))
                 throw ApiError<400>{"wrong_shipment", "Перевозка относится к другой поставке"};
         } else if (scope.shipment_id.has_value()) {
             deps.shipments.ApiV1ShipmentsGet(
-                {.body = {.shipment_id = scope.shipment_id.value()}}, token);
+                {.body = {.shipment_id =
+                              userver::utils::BoostUuidFromString(scope.shipment_id.value())}},
+                token);
         }
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden_reference", "Нет доступа к связанным данным услуги"};

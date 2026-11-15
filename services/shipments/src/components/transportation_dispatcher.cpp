@@ -1,4 +1,3 @@
-#include <boost/uuid/string_generator.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <helpers/outbox.hpp>
 #include <models/pg/creation_operation.hpp>
@@ -50,14 +49,13 @@ models::pg::CreationOperation TransportationDispatcher::SendOperation(
     if (value.status == Status::Succeeded &&
         value.transportation_ids.size() != static_cast<std::size_t>(value.quantity))
         throw std::runtime_error("Несогласованное количество перевозок");
-    const std::set<std::string> unique_ids(
+    const std::set<boost::uuids::uuid> unique_ids(
         value.transportation_ids.begin(), value.transportation_ids.end());
     if (unique_ids.size() != value.transportation_ids.size())
         throw std::runtime_error("Повторяющиеся ID в результате операции");
     const auto document = json::ValueBuilder(value).ExtractValue();
-    return models::pg::CreationOperation{
-        .Id = boost::uuids::string_generator{}(request.body.operation_id),
-        .ItemId = boost::uuids::string_generator{}(value.item_id),
+    return models::pg::CreationOperation{.Id = request.body.operation_id,
+        .ItemId = value.item_id,
         .Quantity = value.quantity,
         .Status = clients::transportations::models::EnumValue(value.status),
         .Result = document};

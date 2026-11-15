@@ -13,7 +13,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Transportation FindTransportation(
-        const std::string& organization, const std::string& id) const;
+        const std::string& organization, const boost::uuids::uuid& id) const;
     models::TransportationHistoryResult GetTransportationHistory(
         const std::string& organization, const models::ListHistoryRequest&) const;
     models::Transportation CreateTransportation(const std::string& organization,

@@ -5,6 +5,6 @@
 namespace transportations::route_rules {
 bool HasRouteData(const models::RouteSegment&);
 const models::ShipmentContext& FindShipmentContext(
-    const std::vector<models::ShipmentContext>&, const std::string&);
+    const std::vector<models::ShipmentContext>&, const boost::uuids::uuid&);
 void InheritRoute(models::Transportation&, const models::ShipmentContext&);
 }  // namespace transportations::route_rules

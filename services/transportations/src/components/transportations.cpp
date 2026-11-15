@@ -53,7 +53,7 @@ userver::yaml_config::Schema TransportationsComponent::GetStaticConfigSchema() {
 }
 
 models::Transportation TransportationsComponent::FindTransportation(
-    const std::string& organization, const std::string& id) const {
+    const std::string& organization, const boost::uuids::uuid& id) const {
 
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
@@ -93,7 +93,10 @@ models::Transportation TransportationsComponent::CreateTransportation(
     const auto saved = transaction.Execute(sql::kFindCommand, organization, request.id);
     if (!saved.IsEmpty()) {
         const auto command = saved.AsSingleRow<models::pg::SavedCommand>();
-        if (command.Payload != helpers::Document(request))
+        if (command.Payload != helpers::Document(request) &&
+            helpers::Document(models::ParseModelJson(
+                command.Payload, std::type_identity<models::CreateTransportationRequest>{})) !=
+                helpers::Document(request))
             throw ApiError<409>{"idempotency_conflict", "Содержимое команды создания изменено"};
         auto result = converters::RestoreTransportation(command.Result);
         transaction.Commit();
@@ -158,12 +161,14 @@ models::EnsureTransportationsResult TransportationsComponent::CreateTransportati
     const models::EnsureCreatedRequest& request, const platform::auth::Identity& identity) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto organization = request.organization_id;
+    const auto organization = userver::utils::ToString(request.organization_id);
     transaction.Execute(sql::kLockCommand, organization, request.operation_id);
     const auto rows = transaction.Execute(sql::kFindCommand, organization, request.operation_id);
     if (!rows.IsEmpty()) {
         const auto saved = rows.AsSingleRow<models::pg::SavedCommand>();
-        if (saved.Payload != helpers::Document(request))
+        if (saved.Payload != helpers::Document(request) &&
+            helpers::Document(models::ParseModelJson(saved.Payload,
+                std::type_identity<models::EnsureCreatedRequest>{})) != helpers::Document(request))
             throw ApiError<409>{"protocol_conflict", "Содержимое операции изменено"};
         const auto result =
             models::ParseModelJson(saved.Result, std::type_identity<models::CreationOperation>{});
@@ -184,7 +189,7 @@ models::EnsureTransportationsResult TransportationsComponent::CreateTransportati
                 .Execute(sql::kCreateTransportation, organization, request.shipment_id,
                     request.item_id, request.operation_id, ordinal, request.container_type_code,
                     models::EnumValue(request.container_ownership))
-                .AsSingleRow<std::string>());
+                .AsSingleRow<boost::uuids::uuid>());
     }
     result.status = models::OperationStatus::Succeeded;
     transaction.Execute(

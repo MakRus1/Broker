@@ -19,10 +19,9 @@ bool HasRouteData(const models::RouteSegment& segment) {
 }
 
 const models::ShipmentContext& FindShipmentContext(
-    const std::vector<models::ShipmentContext>& contexts, const std::string& shipment_id) {
-    const auto id = userver::utils::BoostUuidFromString(shipment_id);
+    const std::vector<models::ShipmentContext>& contexts, const boost::uuids::uuid& shipment_id) {
     const auto found = std::find_if(
-        contexts.begin(), contexts.end(), [&](const auto& item) { return item.shipment_id == id; });
+        contexts.begin(), contexts.end(), [&](const auto& item) { return item.shipment_id == shipment_id; });
     if (found == contexts.end())
         throw ApiError<404>{"shipment_not_found", "Поставка не найдена"};
     return *found;
@@ -33,9 +32,9 @@ void InheritRoute(models::Transportation& transportation, const models::Shipment
     for (const auto& stage : source.route_segments) {
         const auto found =
             std::find_if(transportation.route_segments.begin(), transportation.route_segments.end(),
-                [&](const auto& local) { return local.id == userver::utils::ToString(stage.id); });
+                [&](const auto& local) { return local.id == stage.id; });
         auto value = found == transportation.route_segments.end() ? models::RouteSegment{} : *found;
-        value.id = userver::utils::ToString(stage.id);
+        value.id = stage.id;
         value.inherited = true;
         value.mode = models::ParseEnumScalar(stage.type, models::TransportMode{});
         value.sea.reset();

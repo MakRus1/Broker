@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <components/rail_route.hpp>
 #include <components/road_route.hpp>
 #include <components/route_dates.hpp>
@@ -25,7 +24,7 @@ void ValidateRoute(const models::SetRouteRequest& request) {
         "Проверьте последовательность дат ЖД-участка"};
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
-        if (!ids.insert(boost::uuids::string_generator{}(route_segment.id)).second)
+        if (!ids.insert(route_segment.id).second)
             throw ApiError<400>{"invalid_request", "ID плеч должны отличаться"};
         CheckInterval(route_segment.planned_departure_at, route_segment.planned_arrival_at);
         if (!route_segment.rail.has_value())

@@ -4,5 +4,5 @@
 #include <string>
 
 namespace transportations::models {
-using RailwayStations = std::map<std::string, RailwayStation>;
+using RailwayStations = std::map<boost::uuids::uuid, RailwayStation>;
 }  // namespace transportations::models

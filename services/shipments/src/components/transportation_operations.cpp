@@ -67,10 +67,10 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
 
     namespace api = clients::transportations::ApiInternalV1TransportationsEnsureCreated;
     api::RequestBody payload;
-    payload.operation_id = boost::uuids::to_string(result.id);
-    payload.organization_id = organization;
-    payload.shipment_id = boost::uuids::to_string(item.ShipmentId);
-    payload.item_id = boost::uuids::to_string(item.Id);
+    payload.operation_id = result.id;
+    payload.organization_id = userver::utils::BoostUuidFromString(organization);
+    payload.shipment_id = item.ShipmentId;
+    payload.item_id = item.Id;
     payload.quantity = request.quantity;
     payload.schema_version =
         clients::transportations::models::EnsureCreatedRequest_schema_version::Value1;
@@ -81,8 +81,8 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     // Payload сохраняется один раз и не пересобирается из изменяемой позиции при повторах.
     const auto document = userver::formats::json::FromString(api::ToJson(payload));
     transaction.Execute(sql::kCreateOperation, organization, result.id, item.Id, request.quantity);
-    platform::outbox::Enqueue(
-        transaction, helpers::kCreateTransportations, payload.operation_id, document);
+    platform::outbox::Enqueue(transaction, helpers::kCreateTransportations,
+        userver::utils::ToString(payload.operation_id), document);
     helpers::SaveReplay(transaction, organization, "create_operation", request, result);
 
     helpers::WriteAudit(

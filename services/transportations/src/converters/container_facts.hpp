@@ -8,8 +8,8 @@ inline models::ContainerFactsResult Convert(const std::vector<models::pg::Contai
     models::ContainerFactsResult result;
     for (const auto& row : rows) {
         if (row.OperationId.has_value()) {
-            result.operations.push_back({.created_quantity = row.Quantity,
-                .operation_id = boost::uuids::to_string(row.OperationId.value())});
+            result.operations.push_back(
+                {.created_quantity = row.Quantity, .operation_id = row.OperationId.value()});
             continue;
         }
         models::ContainerFact fact;

@@ -16,7 +16,7 @@ class RoutesComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RouteUsageResult FindRouteUsage(
-        const std::string& organization, const std::string& shipment_id) const;
+        const std::string& organization, const boost::uuids::uuid& shipment_id) const;
     models::RouteProjectionResult ApplyShipmentRouteProjection(
         const models::ShipmentRouteProjection&) const;
     models::Transportation SaveRoute(const std::string& organization,

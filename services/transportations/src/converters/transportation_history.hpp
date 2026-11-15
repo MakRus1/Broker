@@ -1,6 +1,7 @@
 #pragma once
 #include <converters/transportations.hpp>
 #include <models/pg/transportation_event.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 
 namespace transportations::converters {
 inline models::TransportationEvent Convert(const models::pg::TransportationEvent& row) {
@@ -16,7 +17,7 @@ inline models::TransportationEvent Convert(const models::pg::TransportationEvent
     if (request.HasMember("reason"))
         result.reason = request["reason"].As<std::string>();
     if (request.HasMember("route_segment_id"))
-        result.route_segment_id = request["route_segment_id"].As<std::string>();
+        result.route_segment_id = request["route_segment_id"].As<boost::uuids::uuid>();
     if (request.HasMember("event_kind"))
         result.event_kind =
             models::ParseEnumScalar(request["event_kind"].As<std::string>(), models::EventKind{});

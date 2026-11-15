@@ -14,7 +14,7 @@ Response View::Handle(
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
     auto result = deps.transportation_registry->ListTransportations(organization, request.body);
-    std::set<std::string> shipment_ids;
+    std::set<boost::uuids::uuid> shipment_ids;
     for (const auto& item : result.items)
         shipment_ids.insert(item.shipment_id);
 

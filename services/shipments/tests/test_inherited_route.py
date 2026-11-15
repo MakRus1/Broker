@@ -14,7 +14,7 @@ async def test_contexts_are_scoped_and_terms_are_current(api):
             expected=201,
         )
     )['shipment']
-    body = {'shipment_ids': [shipment['id']]}
+    body = {'shipment_ids': [shipment['id'].upper()]}
     response = await api.post(
         '/api/v1/shipments/transportation-contexts', body, roles=['transportations.read']
     )
@@ -43,7 +43,7 @@ async def test_used_stage_cannot_be_removed_or_retyped(api, transportation_route
         {
             'shipment_id': shipment['id'],
             'expected_revision': 1,
-            'segment_ids': [sea['id']],
+            'segment_ids': [sea['id'].upper()],
         },
         roles=['transportations.read', 'transportations.write'],
     )

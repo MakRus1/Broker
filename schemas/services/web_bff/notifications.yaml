@@ -17,6 +17,7 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 limit:
                   type: integer
                   minimum: 1
@@ -25,6 +26,7 @@ paths:
                 before:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
               required:
               - organization_id
       responses:
@@ -86,11 +88,13 @@ paths:
                 organization_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 ids:
                   type: array
                   items:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                   minItems: 1
                   maxItems: 100
                 dismiss:

@@ -6,6 +6,7 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 #include <variant>
 
@@ -48,10 +49,15 @@ void EventAcceptanceComponent::AcceptEvent(
             const auto inserted = transaction.Execute(sql::kAcceptEvent, identity.ClientId,
                 event.organization_id, event.id, type, version, document);
             if (inserted.IsEmpty()) {
-                if (!transaction
-                         .Execute(sql::kGetEvent, identity.ClientId, event.organization_id,
-                             event.id, type, version, document)
-                         .template AsSingleRow<bool>())
+                const auto saved = transaction.Execute(sql::kGetEvent, identity.ClientId,
+                    event.organization_id, event.id, type, version);
+                using Event = std::decay_t<decltype(event)>;
+                if (saved.IsEmpty() ||
+                    userver::formats::json::ValueBuilder(
+                        models::ParseModelJson(
+                            saved.template AsSingleRow<userver::formats::json::Value>(),
+                            std::type_identity<Event>{}))
+                            .ExtractValue() != document)
                     throw platform::http::HandlerError<409>{
                         "event_conflict", "Событие с этим ключом уже принято с другими данными"};
             } else if (delivery.RecipientSubject.has_value()) {

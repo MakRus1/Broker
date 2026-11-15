@@ -146,6 +146,23 @@ async def test_event_identity_cannot_be_reused_with_different_payload(publish):
     assert (await publish(event(revision=3), envelope_changes={'id': 'stable-event'})).status == 409
 
 
+async def test_retry_matches_legacy_uppercase_uuid(publish, pgsql):
+    event_key = {'id': 'legacy-event'}
+    assert (await publish(event(), envelope_changes=event_key)).status == 200
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "UPDATE notification_events SET payload = jsonb_set("
+            "payload, '{payload,shipment_id}', to_jsonb(%s::text)) WHERE event_id = %s",
+            (SHIPMENT.upper(), event_key['id']),
+        )
+
+    assert (await publish(event(), envelope_changes=event_key)).status == 200
+    assert (await publish(event(shipment_number='different'), envelope_changes=event_key)).status == 409
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT count(*) FROM notifications')
+        assert cursor.fetchone()[0] == 1
+
+
 async def test_typed_envelope_is_stored_without_duplicate_organization(publish, pgsql):
     assert (await publish(event())).status == 200
     with pgsql['db_1'].cursor() as cursor:

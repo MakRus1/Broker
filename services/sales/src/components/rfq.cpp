@@ -160,23 +160,24 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
             .recipient_issuer = identity.Issuer,
             .recipient_subject = recipient,
             .revision = value.revision,
-            .rfq_id = value.input.id,
+            .rfq_id = userver::utils::BoostUuidFromString(value.input.id),
             .rfq_title = value.input.title};
     };
     if (!previous || previous->input.responsible_subject != value.input.responsible_subject) {
         const auto id = "rfq-assigned:" + value.input.id + ":" + std::to_string(value.revision);
         const events::PublishedEvent event{
             .value = events::RfqAssigned{.id = id,
-                .organization_id = organization,
+                .organization_id = userver::utils::BoostUuidFromString(organization),
                 .payload = payload(value.input.responsible_subject)}};
         platform::outbox::Enqueue(transaction, kPublishNotification, id, event);
     }
     if (value.input.status == models::RfqStatus::Ready &&
         (!previous || previous->input.status != models::RfqStatus::Ready)) {
         const auto id = "rfq-ready:" + value.input.id + ":" + std::to_string(value.revision);
-        const events::PublishedEvent event{.value = events::RfqReady{.id = id,
-                                               .organization_id = organization,
-                                               .payload = payload(inquiry.manager_subject)}};
+        const events::PublishedEvent event{
+            .value = events::RfqReady{.id = id,
+                .organization_id = userver::utils::BoostUuidFromString(organization),
+                .payload = payload(inquiry.manager_subject)}};
         platform::outbox::Enqueue(transaction, kPublishNotification, id, event);
     }
 

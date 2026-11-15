@@ -20,12 +20,13 @@ inline void QueueRouteChanged(pg::Transaction& transaction, const std::string& o
         .recipient_issuer = actor.Issuer,
         .recipient_subject = after.logist.value_or(std::nullopt),
         .revision = after.revision,
-        .shipment_id = after.id,
+        .shipment_id = userver::utils::BoostUuidFromString(after.id),
         .shipment_number = after.number};
     const auto id = organization + ":" + after.id + ":" + std::to_string(after.revision);
     const clients::notifications::models::PublishedEvent event{
-        .value = clients::notifications::models::ShipmentRouteChanged{
-            .id = id, .organization_id = organization, .payload = payload}};
+        .value = clients::notifications::models::ShipmentRouteChanged{.id = id,
+            .organization_id = userver::utils::BoostUuidFromString(organization),
+            .payload = payload}};
     platform::outbox::Enqueue(transaction, platform::notifications::kPublishEventTopic, id,
         json::ValueBuilder(event).ExtractValue());
 }
@@ -35,12 +36,12 @@ inline void QueueShipmentCreated(pg::Transaction& transaction, const std::string
     const auto id = organization + ":created:" + shipment.id;
     const clients::notifications::models::PublishedEvent event{
         .value = clients::notifications::models::ShipmentCreated{.id = id,
-            .organization_id = organization,
+            .organization_id = userver::utils::BoostUuidFromString(organization),
             .payload = {.actor_subject = actor.Subject,
                 .recipient_issuer = actor.Issuer,
                 .recipient_subject = shipment.logist.value_or(std::nullopt),
                 .revision = shipment.revision,
-                .shipment_id = shipment.id,
+                .shipment_id = userver::utils::BoostUuidFromString(shipment.id),
                 .shipment_number = shipment.number}}};
     platform::outbox::Enqueue(transaction, platform::notifications::kPublishEventTopic, id,
         userver::formats::json::ValueBuilder(event).ExtractValue());

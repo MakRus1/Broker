@@ -107,8 +107,8 @@ void ShipmentDispatcher::CompleteShipmentCreation(pg::Transaction& transaction,
             "inquiry-shipment-failed:" + id + ":" + std::to_string(inquiry.revision);
         const notification::PublishedEvent event{
             .value = notification::InquiryShipmentCreationFailed{.id = event_id,
-                .organization_id = organization,
-                .payload = {.inquiry_id = inquiry.id,
+                .organization_id = userver::utils::BoostUuidFromString(organization),
+                .payload = {.inquiry_id = userver::utils::BoostUuidFromString(inquiry.id),
                     .inquiry_number = inquiry.number,
                     .recipient_issuer = command.actor_issuer,
                     .recipient_subject = inquiry.manager_subject,

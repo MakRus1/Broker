@@ -1,5 +1,4 @@
 #include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <clients/transportations/client.hpp>
 #include <components/transportation_operations.hpp>
 #include <converters/shipments.hpp>
@@ -81,8 +80,8 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
     // Payload сохраняется один раз и не пересобирается из изменяемой позиции при повторах.
     const auto document = userver::formats::json::FromString(api::ToJson(payload));
     transaction.Execute(sql::kCreateOperation, organization, result.id, item.Id, request.quantity);
-    platform::outbox::Enqueue(transaction, helpers::kCreateTransportations,
-        userver::utils::ToString(payload.operation_id), document);
+    platform::outbox::Enqueue(
+        transaction, helpers::kCreateTransportations, payload.operation_id, document);
     helpers::SaveReplay(transaction, organization, "create_operation", request, result);
 
     helpers::WriteAudit(

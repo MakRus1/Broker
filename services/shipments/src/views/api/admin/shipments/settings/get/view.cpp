@@ -1,12 +1,13 @@
 #include <components/settings.hpp>
+#include <helpers/organization_admin.hpp>
 #include <utility>
 #include <views/api/admin/shipments/settings/get/view.hpp>
-#include <views/api/admin/shipments/settings/require_administrator.hpp>
 
 namespace shipments::views::api::admin::shipments::settings::get {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    RequireAdministrator(deps.organizations, context, request.body.organization_id);
+    helpers::RequireOrganizationAdministrator(
+        deps.organizations, context, request.body.organization_id);
 
     const auto organization = request.body.organization_id;
     auto result = deps.settings->GetBusinessSettings(organization);

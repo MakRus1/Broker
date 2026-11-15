@@ -195,8 +195,7 @@ models::Inquiry InquiriesComponent::StartShipmentCreation(const boost::uuids::uu
 
     const auto document = json::ValueBuilder(command).ExtractValue();
     transaction.Execute(sql::kStartConversion, organization, inquiry.id, document);
-    platform::outbox::Enqueue(
-        transaction, kCreateShipment, userver::utils::ToString(inquiry.id), command);
+    platform::outbox::Enqueue(transaction, kCreateShipment, inquiry.id, command);
     const auto rows = transaction.Execute(sql::kGetInquiries, organization, inquiry.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Запись не найдена в организации"};

@@ -8,6 +8,7 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/testsuite/testsuite_support.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace platform::outbox {
@@ -18,6 +19,11 @@ void Enqueue(pg::Transaction& transaction, std::string_view topic, std::string_v
     if (topic.empty() || key.empty())
         throw std::invalid_argument{"Тип и ключ сообщения outbox должны быть заполнены"};
     transaction.Execute(sql::kEnqueue, std::string{topic}, std::string{key}, payload);
+}
+
+void Enqueue(pg::Transaction& transaction, std::string_view topic, const boost::uuids::uuid& key,
+    const userver::formats::json::Value& payload) {
+    Enqueue(transaction, topic, userver::utils::ToString(key), payload);
 }
 
 void EnqueueLatest(pg::Transaction& transaction, std::string_view topic, std::string_view key,

@@ -3,9 +3,10 @@
 #include <models/errors.hpp>
 #include <platform/auth/organization_admin.hpp>
 
-namespace shipments::views::api::admin::shipments::settings {
-inline void RequireAdministrator(const clients::organizations::Client& organizations,
-    userver::server::request::RequestContext& context, const boost::uuids::uuid& organization) try {
+namespace shipments::helpers {
+inline void RequireOrganizationAdministrator(const clients::organizations::Client& organizations,
+    const userver::server::request::RequestContext& context,
+    const boost::uuids::uuid& organization) try {
     platform::auth::RequireOrganizationAdministrator(organizations, context, organization);
 } catch (const platform::http::ErrorByStatus<403>&) {
 
@@ -21,4 +22,4 @@ inline void RequireAdministrator(const clients::organizations::Client& organizat
 } catch (const platform::http::ContractError&) {
     throw ApiError<503>{"organizations_unavailable", "Некорректный ответ проверки доступа"};
 }
-}  // namespace shipments::views::api::admin::shipments::settings
+}  // namespace shipments::helpers

@@ -27,6 +27,8 @@ namespace pg = userver::storages::postgres;
 // среди ещё не подтверждённых сообщений; получатель также обязан быть идемпотентным.
 void Enqueue(pg::Transaction&, std::string_view topic, std::string_view key,
     const userver::formats::json::Value& payload);
+void Enqueue(pg::Transaction&, std::string_view topic, const boost::uuids::uuid& key,
+    const userver::formats::json::Value& payload);
 // Заменяет недоставленное состояние, инвалидируя старый lease и подтверждение.
 void EnqueueLatest(pg::Transaction&, std::string_view topic, std::string_view key,
     const userver::formats::json::Value& payload);
@@ -42,6 +44,13 @@ template <typename Payload> struct Task {
 
 template <typename Payload>
 void Enqueue(pg::Transaction& transaction, Task<Payload> task, std::string_view key,
+    const Payload& payload) {
+    Enqueue(
+        transaction, task.Name, key, userver::formats::json::ValueBuilder(payload).ExtractValue());
+}
+
+template <typename Payload>
+void Enqueue(pg::Transaction& transaction, Task<Payload> task, const boost::uuids::uuid& key,
     const Payload& payload) {
     Enqueue(
         transaction, task.Name, key, userver::formats::json::ValueBuilder(payload).ExtractValue());

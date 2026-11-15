@@ -1047,5 +1047,5 @@ ShipmentSource:
       pattern: ^[a-z][a-z0-9_.-]*$
     id:
       type: string
-      minLength: 1
-      maxLength: 200
+      format: uuid
+      x-cpp-type: uuid

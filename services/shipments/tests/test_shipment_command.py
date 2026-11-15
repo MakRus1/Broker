@@ -16,6 +16,11 @@ async def test_command_is_generic_idempotent_and_transactional(service_client, a
     assert [response.status for response in responses]==[200]*4, [r.text for r in responses]
     ids={response.json()['shipment']['id'] for response in responses}
     assert len(ids)==1
+    upper_source = {**command['source'], 'id': command['source']['id'].upper()}
+    replay = await send({**command, 'source': upper_source})
+    assert replay.status == 200
+    assert replay.json()['shipment']['id'] in ids
+    assert (await send({**command, 'source': {**command['source'], 'id': 'not-a-uuid'}})).status == 400
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT count(*) FROM shipment_sources')
         assert cursor.fetchone()[0]==1

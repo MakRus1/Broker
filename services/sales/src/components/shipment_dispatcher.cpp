@@ -103,8 +103,8 @@ void ShipmentDispatcher::CompleteShipmentCreation(pg::Transaction& transaction,
 
     if (result.Rejection.has_value()) {
         namespace notification = clients::notifications::models;
-        const auto event_id =
-            "inquiry-shipment-failed:" + id + ":" + std::to_string(inquiry.revision);
+        const auto event_id = "inquiry-shipment-failed:" + userver::utils::ToString(id) + ":" +
+            std::to_string(inquiry.revision);
         const notification::PublishedEvent event{
             .value = notification::InquiryShipmentCreationFailed{.id = event_id,
                 .organization_id = organization,

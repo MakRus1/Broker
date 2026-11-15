@@ -31,7 +31,7 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
     shipment_models::EnsureShipmentRequest command;
     command.organization_id = organization;
     command.source.type = kInquirySourceType;
-    command.source.id = userver::utils::ToString(inquiry.id);
+    command.source.id = inquiry.id;
     command.actor_subject = actor.Subject;
     command.actor_issuer = actor.Issuer;
     command.shipment = std::move(shipment);

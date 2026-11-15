@@ -15,7 +15,7 @@ using sales::ApiError;
 
 void ValidateStages(
     const models::UpdateSalesSettingsRequest& request, const models::SalesSettings& previous) {
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& stage : request.stages) {
         if (!ids.insert(stage.id).second || userver::utils::text::Trim(stage.name).empty())
             throw ApiError<400>{"invalid_stage", "Этапы должны иметь уникальные коды и названия"};

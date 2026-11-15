@@ -57,15 +57,13 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
     models::ProposalInput& input) const try {
     const auto settings = finance_.ApiV1FinanceSettingsGet({}, token);
     const auto customer =
-        counterparties_
-            .ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
             .counterparty;
     models::ProposalCalculation data{.InquiryRevision = inquiry.revision,
         .CustomerName = customer.name,
         .ReportingCurrency = settings.reporting_currency};
-    std::map<std::pair<std::string, std::int64_t>, models::Rfq> rfq_revisions;
-    std::map<std::string, clients::finance::models::FinancialLabel> labels;
+    std::map<std::pair<boost::uuids::uuid, std::int64_t>, models::Rfq> rfq_revisions;
+    std::map<boost::uuids::uuid, clients::finance::models::FinancialLabel> labels;
     for (auto& line : input.lines) {
         if (line.quote_source) {
             const auto& source = *line.quote_source;
@@ -85,7 +83,9 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
             label_position =
                 labels
                     .emplace(line.label_id,
-                        finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token)
+                        finance_
+                            .ApiV1FinancialLabelsGet(
+                                {.body = {.id = userver::utils::ToString(line.label_id)}}, token)
                             .label)
                     .first;
 
@@ -99,10 +99,7 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
         data.LabelNames.emplace(line.label_id, label.name);
         if (line.supplier_id && !data.SupplierNames.contains(*line.supplier_id)) {
             const auto supplier =
-                counterparties_
-                    .ApiV1CounterpartiesGet(
-                        {.body = {.id = userver::utils::BoostUuidFromString(*line.supplier_id)}},
-                        token)
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = *line.supplier_id}}, token)
                     .counterparty;
             if (supplier.archived)
                 throw ApiError<400>{"archived_supplier", "Поставщик находится в архиве"};
@@ -174,7 +171,7 @@ models::Proposal ProposalsComponent::SaveProposal(const std::string& organizatio
 }
 
 std::vector<models::Proposal> ProposalsComponent::ListProposals(
-    const std::string& organization, const std::string& inquiry_id) const {
+    const std::string& organization, const boost::uuids::uuid& inquiry_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kListProposals, organization, inquiry_id);
     std::vector<models::Proposal> result;

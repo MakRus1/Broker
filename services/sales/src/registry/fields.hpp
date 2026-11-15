@@ -15,9 +15,10 @@ using Date = userver::utils::datetime::Date;
 inline constexpr registry::Field<std::string> kId{"id", "id", "UUID", true};
 inline constexpr registry::Field<std::string> kOrganization{
     "organization_id", "organization_id", "UUID"};
-inline constexpr registry::Field<std::string> kCustomer{"customer_id", "customer_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
+    "customer_id", "customer_id", "UUID"};
 inline constexpr registry::Field<std::string> kManager{"manager_subject", "manager_subject"};
-inline constexpr registry::Field<std::string> kStage{"stage_id", "stage_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kStage{"stage_id", "stage_id", "UUID"};
 inline constexpr registry::Field<std::string> kSource{"source", "source"};
 inline constexpr registry::Field<std::string> kAction{
     "next_action", "COALESCE(btrim(next_action), '')"};
@@ -30,7 +31,8 @@ inline constexpr registry::Field<std::string> kCargo{"cargo_description", "cargo
 inline constexpr registry::Field<Date> kReady{"ready_date", "ready_date", "DATE"};
 inline constexpr registry::Field<Date> kDelivery{
     "desired_delivery_date", "desired_delivery_date", "DATE"};
-inline constexpr registry::Field<std::string> kShipment{"shipment_id", "shipment_id", "UUID"};
+inline constexpr registry::Field<boost::uuids::uuid> kShipment{
+    "shipment_id", "shipment_id", "UUID"};
 inline constexpr registry::Field<bool> kHasContacts{"has_contacts", R"(EXISTS (
     SELECT 1 FROM sales_contacts AS contact
     WHERE contact.organization_id = sales_cards.organization_id

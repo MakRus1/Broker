@@ -96,7 +96,7 @@ models::Inquiry InquiriesComponent::SaveInquiry(const std::string& organization,
 }
 
 models::Inquiry InquiriesComponent::FindInquiry(
-    const std::string& organization, const std::string& id) const {
+    const std::string& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetInquiries, organization, id);
     if (rows.IsEmpty())
@@ -122,9 +122,7 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     const std::string& organization, std::string_view token, const models::Inquiry& inquiry) const
     try {
     const auto party =
-        counterparties_
-            .ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Клиент находится в архиве"};
@@ -133,7 +131,9 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
         .RouteSegments = inquiry.route_segments};
     if (creation.Logist) {
         const auto employees = organizations_.ApiOrganizationsEmployeesList(
-            {.body = {.limit = 1, .organization_id = organization, .subject = creation.Logist}},
+            {.body = {.limit = 1,
+                 .organization_id = userver::utils::BoostUuidFromString(organization),
+                 .subject = creation.Logist}},
             token);
         if (employees.items.empty())
             throw ApiError<400>{
@@ -143,23 +143,16 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     const auto references = route_rules::CollectReferences(creation.RouteSegments);
     models::TransportLocations locations;
     if (!references.LocationIds.empty()) {
-        std::vector<boost::uuids::uuid> ids;
-        ids.reserve(references.LocationIds.size());
-        for (const auto& id : references.LocationIds)
-            ids.push_back(userver::utils::BoostUuidFromString(id));
         const auto response = transport_locations_.ApiV1RouteLocationsGetBatch(
-            {.body = {.ids = std::move(ids)}}, token);
+            {.body = {.ids = {references.LocationIds.begin(), references.LocationIds.end()}}},
+            token);
         for (const auto& location : response.items)
-            locations.emplace(
-                userver::utils::ToString(location.id), converters::ToTransportLocation(location));
+            locations.emplace(location.id, converters::ToTransportLocation(location));
     }
     route_rules::ResolveLocations(creation.RouteSegments, locations);
     for (const auto& id : references.CounterpartyIds) {
         const auto counterparty =
-            counterparties_
-                .ApiV1CounterpartiesGet(
-                    {.body = {.id = userver::utils::BoostUuidFromString(id)}}, token)
-                .counterparty;
+            counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, token).counterparty;
         if (counterparty.archived)
             throw ApiError<400>{
                 "invalid_route_counterparty", "Выберите действующего контрагента участка"};
@@ -204,7 +197,8 @@ models::Inquiry InquiriesComponent::StartShipmentCreation(const std::string& org
 
     const auto document = json::ValueBuilder(command).ExtractValue();
     transaction.Execute(sql::kStartConversion, organization, inquiry.id, document);
-    platform::outbox::Enqueue(transaction, kCreateShipment, inquiry.id, command);
+    platform::outbox::Enqueue(
+        transaction, kCreateShipment, userver::utils::ToString(inquiry.id), command);
     const auto rows = transaction.Execute(sql::kGetInquiries, organization, inquiry.id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Запись не найдена в организации"};

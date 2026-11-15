@@ -11,9 +11,9 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
     namespace shipment_models = clients::shipments::models;
     constexpr auto kInquirySourceType = "sales.inquiry";
     shipment_models::CreateShipmentRequest shipment;
-    shipment.customer_id = userver::utils::BoostUuidFromString(inquiry.customer_id);
-    shipment.idempotency_key =
-        std::string{kInquirySourceType} + ":" + inquiry.id + ":" + std::to_string(inquiry.revision);
+    shipment.customer_id = inquiry.customer_id;
+    shipment.idempotency_key = std::string{kInquirySourceType} + ":" +
+        userver::utils::ToString(inquiry.id) + ":" + std::to_string(inquiry.revision);
     shipment.reference = inquiry.number;
     shipment.cargo_description = inquiry.cargo_description;
     shipment.carriage_terms = inquiry.carriage_terms;
@@ -31,7 +31,7 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
     shipment_models::EnsureShipmentRequest command;
     command.organization_id = userver::utils::BoostUuidFromString(organization);
     command.source.type = kInquirySourceType;
-    command.source.id = inquiry.id;
+    command.source.id = userver::utils::ToString(inquiry.id);
     command.actor_subject = actor.Subject;
     command.actor_issuer = actor.Issuer;
     command.shipment = std::move(shipment);

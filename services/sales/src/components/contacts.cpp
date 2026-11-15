@@ -53,7 +53,10 @@ models::ContactAddition ContactsComponent::AddContact(const std::string& organiz
         std::type_identity<models::SalesCard>{});
     if (!previous.IsEmpty()) {
         const auto saved = previous.AsSingleRow<models::StoredContact>(pg::kRowTag);
-        if (saved.Request != document)
+        if (saved.Request != document &&
+            json::ValueBuilder(models::ParseModelJson(saved.Request,
+                                   std::type_identity<models::AddSalesContactRequest>{}))
+                    .ExtractValue() != document)
             throw ApiError<409>{
                 "contact_conflict", "Запись контакта уже сохранена с другими данными"};
         auto contact =

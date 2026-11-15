@@ -14,13 +14,13 @@ void ValidateInput(const models::RfqInput& input) {
         throw ApiError<400>{"empty_title", "Укажите название запроса ставок"};
     if (input.status == models::RfqStatus::Ready && input.quotes.empty())
         throw ApiError<400>{"quotes_required", "Добавьте хотя бы одну котировку"};
-    std::set<std::string> quote_ids;
+    std::set<boost::uuids::uuid> quote_ids;
     for (const auto& quote : input.quotes) {
         if (!quote_ids.insert(quote.id).second)
             throw ApiError<400>{"duplicate_quote", "У котировок должны быть разные идентификаторы"};
         if (userver::utils::text::Trim(quote.title).empty())
             throw ApiError<400>{"empty_quote_title", "Укажите название варианта поставщика"};
-        std::set<std::string> lines;
+        std::set<boost::uuids::uuid> lines;
         for (const auto& line : quote.lines) {
             if (!lines.insert(line.id).second)
                 throw ApiError<400>{"duplicate_line", "У строк должны быть разные идентификаторы"};

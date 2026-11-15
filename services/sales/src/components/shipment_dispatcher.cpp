@@ -16,7 +16,7 @@ namespace json = userver::formats::json;
 namespace pg = userver::storages::postgres;
 
 void ShipmentDispatcher::TransferProposal(const ShipmentCommand& command,
-    const std::string& shipment_id, const std::string& token) const {
+    const boost::uuids::uuid& shipment_id, const std::string& token) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetInquiries,
         command.organization_id, command.source.id);
     if (rows.IsEmpty())
@@ -63,7 +63,7 @@ ShipmentDispatcher::ShipmentDispatcher(const userver::components::ComponentConfi
 
 models::ShipmentDelivery ShipmentDispatcher::DeliverShipmentCreation(
     const ShipmentCommand& command) const {
-    std::string shipment_id;
+    boost::uuids::uuid shipment_id;
     try {
         const auto result = shipments_.ApiInternalV1ShipmentsEnsureCreated(
             {.body = {.actor_issuer = command.actor_issuer,
@@ -72,7 +72,7 @@ models::ShipmentDelivery ShipmentDispatcher::DeliverShipmentCreation(
                  .shipment = command.shipment,
                  .source = command.source}},
             tokens_.GetAccessToken());
-        shipment_id = userver::utils::ToString(result.shipment.id);
+        shipment_id = result.shipment.id;
     } catch (const platform::http::ErrorByStatus<400>& error) {
         return {.ShipmentId = std::nullopt, .Rejection = std::string{error.what()}.substr(0, 2000)};
     }
@@ -108,7 +108,7 @@ void ShipmentDispatcher::CompleteShipmentCreation(pg::Transaction& transaction,
         const notification::PublishedEvent event{
             .value = notification::InquiryShipmentCreationFailed{.id = event_id,
                 .organization_id = organization,
-                .payload = {.inquiry_id = userver::utils::BoostUuidFromString(inquiry.id),
+                .payload = {.inquiry_id = inquiry.id,
                     .inquiry_number = inquiry.number,
                     .recipient_issuer = command.actor_issuer,
                     .recipient_subject = inquiry.manager_subject,

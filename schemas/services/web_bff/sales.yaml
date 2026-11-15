@@ -809,6 +809,7 @@ paths:
                   next_before:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                 required:
                 - items
         '400':

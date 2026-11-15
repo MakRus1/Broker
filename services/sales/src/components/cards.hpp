@@ -14,7 +14,7 @@ class CardsComponent final : public userver::components::ComponentBase {
     models::SalesCard SaveCard(const std::string& organization,
         const platform::auth::Identity& identity,
         const models::SaveSalesCardRequest& request) const;
-    models::SalesCard FindCard(const std::string& organization, const std::string& id) const;
+    models::SalesCard FindCard(const std::string& organization, const boost::uuids::uuid& id) const;
     std::vector<models::SalesHistoryEntry> GetCardHistory(
         const std::string& organization, const models::HistoryRequest& request) const;
 

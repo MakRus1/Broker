@@ -15,9 +15,9 @@ class RfqComponent final : public userver::components::ComponentBase {
     RfqComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    models::Rfq FindRfq(const std::string& organization, const std::string& id) const;
+    models::Rfq FindRfq(const std::string& organization, const boost::uuids::uuid& id) const;
     std::vector<models::Rfq> ListRfqs(
-        const std::string& organization, const std::string& inquiry_id) const;
+        const std::string& organization, const boost::uuids::uuid& inquiry_id) const;
     std::vector<models::RfqHistoryEntry> GetRfqHistory(
         const std::string& organization, const models::HistoryRequest& request) const;
     // Проверяет клиента и ответственного, заполняет снимки поставщиков и меток в input.
@@ -26,7 +26,7 @@ class RfqComponent final : public userver::components::ComponentBase {
     models::Rfq SaveRfq(const std::string& organization, const platform::auth::Identity& identity,
         std::int64_t expected, models::RfqInput input) const;
     models::Rfq FindRfqRevision(
-        const std::string& organization, const std::string& id, std::int64_t revision) const;
+        const std::string& organization, const boost::uuids::uuid& id, std::int64_t revision) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

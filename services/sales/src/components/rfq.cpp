@@ -43,12 +43,13 @@ userver::yaml_config::Schema RfqComponent::GetStaticConfigSchema() {
     return userver::components::ComponentBase::GetStaticConfigSchema();
 }
 
-models::Rfq RfqComponent::FindRfq(const std::string& organization, const std::string& id) const {
+models::Rfq RfqComponent::FindRfq(
+    const std::string& organization, const boost::uuids::uuid& id) const {
     return Read(cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetRfq, organization, id));
 }
 
 std::vector<models::Rfq> RfqComponent::ListRfqs(
-    const std::string& organization, const std::string& inquiry_id) const {
+    const std::string& organization, const boost::uuids::uuid& inquiry_id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListRfqs, organization, inquiry_id);
     std::vector<models::Rfq> result;
@@ -74,29 +75,24 @@ std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
 void RfqComponent::PrepareRfq(const std::string& organization, std::string_view token,
     const models::Inquiry& inquiry, models::RfqInput& input) const try {
     const auto party =
-        counterparties_
-            .ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
+        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
-    const auto employees =
-        organizations_.ApiOrganizationsEmployeesList({.body = {.limit = 1,
-                                                          .organization_id = organization,
-                                                          .subject = input.responsible_subject}},
-            token);
+    const auto employees = organizations_.ApiOrganizationsEmployeesList(
+        {.body = {.limit = 1,
+             .organization_id = userver::utils::BoostUuidFromString(organization),
+             .subject = input.responsible_subject}},
+        token);
     if (employees.items.empty())
         throw ApiError<400>{"invalid_manager", "Выберите действующего сотрудника организации"};
 
-    std::map<std::string, std::string> suppliers;
-    std::map<std::string, std::string> labels;
+    std::map<boost::uuids::uuid, std::string> suppliers;
+    std::map<boost::uuids::uuid, std::string> labels;
     for (auto& quote : input.quotes) {
         if (!suppliers.contains(quote.supplier_id)) {
             const auto supplier =
-                counterparties_
-                    .ApiV1CounterpartiesGet(
-                        {.body = {.id = userver::utils::BoostUuidFromString(quote.supplier_id)}},
-                        token)
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = quote.supplier_id}}, token)
                     .counterparty;
             if (supplier.archived)
                 throw ApiError<400>{"archived_supplier", "Поставщик в архиве"};
@@ -106,7 +102,10 @@ void RfqComponent::PrepareRfq(const std::string& organization, std::string_view 
         for (auto& line : quote.lines) {
             if (!labels.contains(line.label_id)) {
                 const auto label =
-                    finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
+                    finance_
+                        .ApiV1FinancialLabelsGet(
+                            {.body = {.id = userver::utils::ToString(line.label_id)}}, token)
+                        .label;
                 if (label.archived ||
                     label.direction == clients::finance::models::FinancialLabelDirection::Income)
                     throw ApiError<400>{"invalid_label", "Выберите метку для расхода"};
@@ -165,11 +164,12 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
             .recipient_issuer = identity.Issuer,
             .recipient_subject = recipient,
             .revision = value.revision,
-            .rfq_id = userver::utils::BoostUuidFromString(value.input.id),
+            .rfq_id = value.input.id,
             .rfq_title = value.input.title};
     };
     if (!previous || previous->input.responsible_subject != value.input.responsible_subject) {
-        const auto id = "rfq-assigned:" + value.input.id + ":" + std::to_string(value.revision);
+        const auto id = "rfq-assigned:" + userver::utils::ToString(value.input.id) + ":" +
+            std::to_string(value.revision);
         const events::PublishedEvent event{
             .value = events::RfqAssigned{.id = id,
                 .organization_id = userver::utils::BoostUuidFromString(organization),
@@ -178,7 +178,8 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
     }
     if (value.input.status == models::RfqStatus::Ready &&
         (!previous || previous->input.status != models::RfqStatus::Ready)) {
-        const auto id = "rfq-ready:" + value.input.id + ":" + std::to_string(value.revision);
+        const auto id = "rfq-ready:" + userver::utils::ToString(value.input.id) + ":" +
+            std::to_string(value.revision);
         const events::PublishedEvent event{
             .value = events::RfqReady{.id = id,
                 .organization_id = userver::utils::BoostUuidFromString(organization),
@@ -191,7 +192,7 @@ models::Rfq RfqComponent::SaveRfq(const std::string& organization,
 }
 
 models::Rfq RfqComponent::FindRfqRevision(
-    const std::string& organization, const std::string& id, std::int64_t revision) const {
+    const std::string& organization, const boost::uuids::uuid& id, std::int64_t revision) const {
     return Read(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetRfqRevision, organization, id, revision));
 }

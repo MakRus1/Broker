@@ -206,7 +206,7 @@ async def test_stage_filter_labels_and_search(api):
     missing = await api.post('/api/v1/sales/cards/filter-values', {**body, 'query': 'нет такого'})
     assert missing['values'] == []
 
-async def test_contact_history_updates_next_action_once_and_checks_access(api):
+async def test_contact_history_updates_next_action_once_and_checks_access(api, pgsql):
     await settings(api)
     value = card()
     saved = (await api.post('/api/v1/sales/cards/save', value))['item']
@@ -217,6 +217,11 @@ async def test_contact_history_updates_next_action_once_and_checks_access(api):
     assert result['card']['revision'] == 2
     assert result['card']['next_action'] == contact['next_action']
     assert result['item']['author_subject'] == 'author'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "UPDATE sales_contacts SET request = jsonb_set(request, '{card_id}', to_jsonb(%s::text)) WHERE id = %s",
+            (contact['card_id'].upper(), contact['id']),
+        )
     assert (await api.post('/api/v1/sales/contacts/add', contact)) == result
     await api.post('/api/v1/sales/contacts/add', {**contact, 'result': 'Другая запись'}, expected=409)
     await api.post('/api/v1/sales/contacts/add', {**contact, 'id': str(uuid.uuid4())}, expected=409)

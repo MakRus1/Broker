@@ -2,13 +2,14 @@
 #include <components/rfq_rules.hpp>
 #include <models/errors.hpp>
 #include <userver/utest/utest.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 
 UTEST(ProposalCalculation, UsesProvidedRatesAndPreservesApprovedAmounts) {
     sales::models::ProposalInput input;
     input.calculation_date = {2026, 11, 8};
     auto& line = input.lines.emplace_back();
-    line.id = "sale";
-    line.label_id = "freight";
+    line.id = userver::utils::generators::GenerateBoostUuid();
+    line.label_id = userver::utils::generators::GenerateBoostUuid();
     line.quantity_milli = 1000;
     line.unit = sales::models::FinancialLabelUnit::Transportation;
     line.sale.currency = "USD";
@@ -18,12 +19,12 @@ UTEST(ProposalCalculation, UsesProvidedRatesAndPreservesApprovedAmounts) {
     line.sale.vat_rate_basis_points = 2000;
     line.purchase = line.sale;
     line.purchase->price_minor = 200000;
-    line.supplier_id = "supplier";
+    line.supplier_id = userver::utils::generators::GenerateBoostUuid();
     sales::models::ProposalCalculation data{.InquiryRevision = 7,
         .CustomerName = "Клиент",
         .ReportingCurrency = "RUB",
-        .LabelNames = {{"freight", "Фрахт"}},
-        .SupplierNames = {{"supplier", "Линия"}},
+        .LabelNames = {{line.label_id, "Фрахт"}},
+        .SupplierNames = {{*line.supplier_id, "Линия"}},
         .Rates = {{"USD", 90000000}}};
 
     const auto proposal = sales::proposal_rules::CalculateProposal(input, data);
@@ -41,23 +42,23 @@ UTEST(ProposalCalculation, UsesProvidedRatesAndPreservesApprovedAmounts) {
 UTEST(RfqQuote, AppliesStoredVersionAndRejectsChangedRoute) {
     sales::models::Inquiry inquiry;
     auto& segment = inquiry.route_segments.emplace_back();
-    segment.id = "11111111-1111-4111-8111-111111111111";
+    segment.id = userver::utils::generators::GenerateBoostUuid();
     segment.type = "sea";
     sales::models::Rfq rfq;
-    rfq.input.inquiry_id = "inquiry";
+    rfq.input.inquiry_id = userver::utils::generators::GenerateBoostUuid();
     rfq.input.status = sales::models::RfqStatus::Ready;
     rfq.input.route_segment_id = segment.id;
     rfq.route_segment = segment;
     auto& quote = rfq.input.quotes.emplace_back();
-    quote.id = "quote";
-    quote.supplier_id = "supplier";
+    quote.id = userver::utils::generators::GenerateBoostUuid();
+    quote.supplier_id = userver::utils::generators::GenerateBoostUuid();
     auto& quoted = quote.lines.emplace_back();
-    quoted.id = "line";
-    quoted.label_id = "freight";
+    quoted.id = userver::utils::generators::GenerateBoostUuid();
+    quoted.label_id = userver::utils::generators::GenerateBoostUuid();
     quoted.quantity_milli = 2000;
     quoted.price.price_minor = 80000;
     sales::models::ProposalInput input;
-    input.inquiry_id = "inquiry";
+    input.inquiry_id = rfq.input.inquiry_id;
     sales::models::ProposalLine line;
     line.quote_source.emplace();
     line.quote_source->quote_id = quote.id;
@@ -68,7 +69,7 @@ UTEST(RfqQuote, AppliesStoredVersionAndRejectsChangedRoute) {
     ASSERT_TRUE(line.purchase.has_value());
     EXPECT_EQ(line.purchase->price_minor, 80000);
     EXPECT_EQ(line.quantity_milli, 2000);
-    EXPECT_EQ(line.supplier_id, "supplier");
+    EXPECT_EQ(line.supplier_id, quote.supplier_id);
     inquiry.route_segments[0].type = "air";
     EXPECT_THROW(sales::rfq_rules::ApplyQuote(input, inquiry, rfq, line), sales::ApiError<400>);
 }

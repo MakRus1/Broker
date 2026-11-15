@@ -26,7 +26,7 @@ class ProposalsComponent final : public userver::components::ComponentBase {
         const platform::auth::Identity& identity, std::int64_t expected_revision,
         models::Proposal value) const;
     std::vector<models::Proposal> ListProposals(
-        const std::string& organization, const std::string& inquiry_id) const;
+        const std::string& organization, const boost::uuids::uuid& inquiry_id) const;
     models::Proposal ApplyProposalAction(const std::string& organization,
         const platform::auth::Identity& identity,
         const models::ProposalActionRequest& request) const;

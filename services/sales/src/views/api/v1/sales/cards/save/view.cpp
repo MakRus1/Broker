@@ -13,15 +13,13 @@ Response View::Handle(
 
     const auto party =
         deps.counterparties
-            .ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(request.body.customer_id)}},
-                token)
+            .ApiV1CounterpartiesGet({.body = {.id = request.body.customer_id}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
     const auto employees = deps.organizations.ApiOrganizationsEmployeesList(
         {.body = {.limit = 1,
-             .organization_id = organization,
+             .organization_id = userver::utils::BoostUuidFromString(organization),
              .subject = request.body.manager_subject}},
         token);
     if (employees.items.empty())

@@ -18,7 +18,8 @@ class InquiriesComponent final : public userver::components::ComponentBase {
     static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Inquiry SaveInquiry(const std::string& organization,
         const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const;
-    models::Inquiry FindInquiry(const std::string& organization, const std::string& id) const;
+    models::Inquiry FindInquiry(
+        const std::string& organization, const boost::uuids::uuid& id) const;
     std::vector<models::InquiryHistoryEntry> GetInquiryHistory(
         const std::string& organization, const models::HistoryRequest& request) const;
     models::ShipmentCreationContext PrepareShipmentCreation(const std::string& organization,

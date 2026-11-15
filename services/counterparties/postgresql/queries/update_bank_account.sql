@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — новые данные банковского счёта с идентификаторами счёта и контрагента.
 UPDATE bank_accounts AS stored
 SET name = value.name,
     number = value.number,

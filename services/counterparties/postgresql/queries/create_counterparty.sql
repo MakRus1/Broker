@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового контрагента.
 INSERT INTO counterparties (
     organization_id, id, name, legal_name, country_code, tax_id,
     registration_id, legal_address, roles, contacts, kpp, logist, own_company

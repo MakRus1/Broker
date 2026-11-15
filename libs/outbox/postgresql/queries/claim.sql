@@ -1,3 +1,5 @@
+-- $1 — тема сообщения.
+-- $2 — срок аренды доставки в секундах.
 WITH candidate AS (
     SELECT id
     FROM outbox

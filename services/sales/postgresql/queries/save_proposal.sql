@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — снимок предложения в JSON.
+-- $3 — ожидаемая редакция (0 для создания).
 INSERT INTO sales_proposals (organization_id, inquiry_id, id, revision, status, document)
 SELECT $1::UUID, ($2->'input'->>'inquiry_id')::UUID, ($2->'input'->>'id')::UUID,
     ($2->>'revision')::BIGINT, $2->>'status', $2::JSONB

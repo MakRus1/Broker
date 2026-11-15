@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные карточки работы с клиентом в JSON.
 INSERT INTO sales_cards (
     organization_id,
     id,

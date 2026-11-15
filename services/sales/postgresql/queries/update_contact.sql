@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор контакта.
+-- $3 — данные контакта в JSON.
 UPDATE sales_contacts
 SET kind = $3->>'kind',
     contact_date = ($3->>'contact_date')::DATE,

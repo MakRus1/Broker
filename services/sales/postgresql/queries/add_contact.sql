@@ -1,3 +1,7 @@
+-- $1 — организация.
+-- $2 — данные контакта в JSON.
+-- $3 — subject автора контакта.
+-- $4 — issuer автора контакта.
 INSERT INTO sales_contacts (
     organization_id, id, card_id, kind, contact_date, result,
     author_subject, author_issuer, next_action, next_action_date, request

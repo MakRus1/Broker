@@ -1,3 +1,7 @@
+-- $1 — организация.
+-- $2 — идентификатор входящего запроса.
+-- $3 — идентификатор предложения.
+-- $4 — согласованная редакция предложения.
 UPDATE sales_inquiries
 SET accepted_proposal_id = $3::UUID,
     accepted_proposal_revision = $4::BIGINT,

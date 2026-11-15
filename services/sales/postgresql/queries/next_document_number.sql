@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — вид документа.
+-- $3 — признак ежегодного сброса счётчика.
 INSERT INTO document_number_counters AS counter (organization_id, kind, period, value)
 VALUES (
     $1::UUID,

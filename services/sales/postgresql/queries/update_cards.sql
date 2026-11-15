@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — данные карточки работы с клиентом в JSON.
+-- $3 — ожидаемая редакция.
 UPDATE sales_cards AS target
 SET manager_subject = value.manager_subject,
     stage_id = value.stage_id,

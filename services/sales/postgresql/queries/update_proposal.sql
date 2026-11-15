@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — снимок предложения в JSON.
+-- $3 — ожидаемая редакция.
 UPDATE sales_proposals
 SET document = $2::JSONB, revision = ($2->>'revision')::BIGINT, status = $2->>'status'
 WHERE organization_id = $1::UUID AND id = ($2->'input'->>'id')::UUID

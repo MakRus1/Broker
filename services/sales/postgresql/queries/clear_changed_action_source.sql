@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные карточки работы с клиентом в JSON.
 DELETE FROM sales_card_action_sources AS source
 USING sales_cards AS card
 WHERE source.organization_id = $1::UUID AND source.card_id = ($2->>'id')::UUID

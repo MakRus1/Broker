@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор контакта, из которого взято следующее действие.
+-- $3 — данные контакта в JSON.
 UPDATE sales_cards AS card
 SET next_action = $3->>'next_action',
     next_action_date = ($3->>'next_action_date')::DATE,

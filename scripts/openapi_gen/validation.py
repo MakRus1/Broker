@@ -8,7 +8,7 @@ from functools import lru_cache
 
 SCHEMA_KEYS = {'type', 'items', 'description', 'title', 'enum', 'format', 'default',
                'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf',
-               'minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems'}
+               'minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems', 'x-cpp-type'}
 FORMATS = {'string': {'uuid', 'date', 'date-time', 'byte', 'password'},
            'integer': {'int32', 'int64'}, 'number': {'float', 'double'}}
 DATE_TIME = r'\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})'
@@ -33,6 +33,14 @@ def validate_schema(schema):
     fmt = schema.get('format')
     if fmt is not None and (not isinstance(fmt, str) or fmt not in FORMATS.get(kind, set())):
         raise ValueError(f'Unsupported format {fmt!r} for {kind}')
+    if 'x-cpp-type' in schema:
+        cpp_type = schema['x-cpp-type']
+        if cpp_type != 'uuid':
+            raise ValueError(f'Unsupported x-cpp-type: {cpp_type!r}')
+        if kind != 'string' or fmt != 'uuid':
+            raise ValueError('x-cpp-type: uuid requires a string with format: uuid')
+        if {'enum', 'pattern', 'minLength', 'maxLength'} & schema.keys():
+            raise ValueError('x-cpp-type: uuid cannot be combined with string constraints or enum')
     groups = {'minimum': {'integer', 'number'}, 'maximum': {'integer', 'number'},
               'exclusiveMinimum': {'integer', 'number'}, 'exclusiveMaximum': {'integer', 'number'},
               'multipleOf': {'integer', 'number'}, 'minLength': {'string'}, 'maxLength': {'string'},

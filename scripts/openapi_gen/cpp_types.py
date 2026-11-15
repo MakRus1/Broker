@@ -47,6 +47,8 @@ def literal(typ, value, scope=''):
         return f'{type_cpp(typ, scope)}::{enum_labels(typ)[typ.schema["enum"].index(value)]}'
     if typ.kind == 'array':
         return type_cpp(typ, scope) + '{' + ', '.join(literal(typ.item, item, scope) for item in value) + '}'
+    if typ.schema.get('x-cpp-type') == 'uuid':
+        return 'broker_codegen::ParseScalar<boost::uuids::uuid>(' + quoted(value) + ')'
     if typ.kind == 'string' and typ.schema.get('format') == 'date-time':
         return 'platform::ParseTimestamp(' + quoted(value) + ')'
     if typ.kind == 'string' and typ.schema.get('format') == 'date':
@@ -91,6 +93,8 @@ return userver::formats::json::ValueBuilder(EnumValue(value)).ExtractValue();
 def validator(typ, name):
     if typ.nullable:
         return validator(replace(typ, nullable=False), name + '_value') + f'inline void Validate_{name}(const {typ.cpp}& value) {{ if (value.has_value()) Validate_{name}_value(value.value()); }}\n'
+    if typ.schema.get('x-cpp-type') == 'uuid':
+        return f'inline void Validate_{name}(const {typ.cpp}&) {{}}\n'
     before = validator(typ.item, name + '_item') if typ.item else ''
     raw = 'EnumValue(value)' if typ.enum_name else 'value'
     if typ.kind == 'string' and typ.schema.get('format') == 'date':

@@ -16,9 +16,11 @@ Notification:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     entity_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     entity_number:
       type: string
       minLength: 1

@@ -77,6 +77,41 @@ class CodegenTest(unittest.TestCase):
         self.assertIn('std::optional<bool>', result['include/views/items/by_id/requests.hpp'])
         self.assertNotIn('RequestBody', result['include/views/items/by_id/requests.hpp'])
 
+    def test_uuid_cpp_mapping_is_opt_in(self):
+        data = spec()
+        path = data['paths']['/items/{id}']
+        string_uuid = {'type': 'string', 'format': 'uuid'}
+        cpp_uuid = {**string_uuid, 'x-cpp-type': 'uuid'}
+        path['parameters'][0]['schema'] = cpp_uuid
+        response = path['get']['responses']['204']
+        response['content'] = {'application/json': {'schema': {
+            'type': 'object',
+            'required': ['id', 'legacy_id'],
+            'properties': {
+                'id': cpp_uuid,
+                'legacy_id': string_uuid,
+                'related': {'type': 'array', 'items': cpp_uuid},
+            },
+        }}}
+        path['get']['responses']['200'] = path['get']['responses'].pop('204')
+        generated = outputs('demo', parse_spec(data), set())
+        prefix = 'include/views/items/by_id/'
+        self.assertIn('boost::uuids::uuid id', generated[prefix + 'requests.hpp'])
+        self.assertIn('std::string legacy_id', generated[prefix + 'responses.hpp'])
+        self.assertIn('std::vector<boost::uuids::uuid>', generated[prefix + 'responses.hpp'])
+        self.assertIn('ParseScalar<boost::uuids::uuid>',
+                      generated['src/views/items/by_id/handler.cpp'])
+
+    def test_cpp_type_requires_a_supported_schema_mapping(self):
+        from model import parse_type
+        for schema in (
+            {'type': 'string', 'format': 'uuid', 'x-cpp-type': 'unknown'},
+            {'type': 'string', 'format': 'uuid', 'x-cpp-type': True},
+            {'type': 'string', 'x-cpp-type': 'uuid'},
+        ):
+            with self.subTest(schema=schema), self.assertRaisesRegex(ValueError, 'x-cpp-type'):
+                parse_type(schema)
+
     def test_explicit_rejection_of_unsupported_contracts(self):
         for key, value in [('nullable', 'yes'), ('enum', []), ('format', 'unknown'), ('minimum', 0), ('default', 3)]:
             with self.subTest(key=key):

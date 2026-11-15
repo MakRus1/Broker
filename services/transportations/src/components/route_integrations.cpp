@@ -49,9 +49,13 @@ std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
     namespace api = clients::shipments::ApiV1ShipmentsTransportationContexts;
     if (ids.empty())
         return {};
+    std::vector<boost::uuids::uuid> shipment_ids;
+    shipment_ids.reserve(ids.size());
+    for (const auto& id : ids)
+        shipment_ids.push_back(userver::utils::BoostUuidFromString(id));
     return shipments_
         .ApiV1ShipmentsTransportationContexts(
-            api::Request{.body = {.shipment_ids = ids}}, access_token)
+            api::Request{.body = {.shipment_ids = std::move(shipment_ids)}}, access_token)
         .items;
 } catch (const platform::http::CancelledError&) {
 
@@ -68,10 +72,14 @@ void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
     const ShipmentContext& source, const std::vector<std::string>& ids) const try {
     if (ids.empty())
         return;
+    std::vector<boost::uuids::uuid> segment_ids;
+    segment_ids.reserve(ids.size());
+    for (const auto& id : ids)
+        segment_ids.push_back(userver::utils::BoostUuidFromString(id));
     namespace api = clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage;
     shipments_.ApiV1ShipmentsRouteSegmentsRegisterUsage(
         api::Request{.body = {.expected_revision = source.revision,
-                         .segment_ids = ids,
+                         .segment_ids = std::move(segment_ids),
                          .shipment_id = source.shipment_id}},
         access_token);
 } catch (const clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage::Error409& error) {

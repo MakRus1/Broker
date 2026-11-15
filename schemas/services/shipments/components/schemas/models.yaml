@@ -649,6 +649,7 @@ TransportationContext:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -677,6 +678,7 @@ TransportationContextsRequest:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
   required:
   - shipment_ids
 RegisterRouteUsageRequest:
@@ -686,6 +688,7 @@ RegisterRouteUsageRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -697,6 +700,7 @@ RegisterRouteUsageRequest:
       items:
         type: string
         format: uuid
+        x-cpp-type: uuid
   required:
   - shipment_id
   - expected_revision

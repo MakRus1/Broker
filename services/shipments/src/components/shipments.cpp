@@ -265,10 +265,25 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
     }
 }
 
-std::vector<models::Shipment> ShipmentsComponent::GetShipments(
-    const std::string& organization, const std::vector<std::string>& shipment_ids) const {
-    return converters::Convert(cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids));
+std::vector<models::TransportationContext> ShipmentsComponent::GetTransportationContexts(
+    const std::string& organization, const std::vector<boost::uuids::uuid>& shipment_ids) const {
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kTransportationContexts, organization, shipment_ids);
+    std::vector<models::TransportationContext> result;
+    result.reserve(rows.Size());
+    for (const auto& shipment : rows.AsSetOf<models::pg::ShipmentRaw>()) {
+        models::TransportationContext context{.carriage_terms = shipment.CarriageTerms,
+            .incoterms = shipment.Incoterms,
+            .loading = shipment.Loading,
+            .revision = shipment.Revision,
+            .route_segments = {},
+            .shipment_id = shipment.Id};
+        context.route_segments.reserve(shipment.RouteSegments.size());
+        for (const auto& segment : shipment.RouteSegments)
+            context.route_segments.push_back(converters::Convert(segment));
+        result.push_back(std::move(context));
+    }
+    return result;
 }
 
 void ShipmentsComponent::RegisterRouteUsage(
@@ -282,9 +297,8 @@ void ShipmentsComponent::RegisterRouteUsage(
         throw ApiError<409>{"shipment_revision_conflict",
             "Поставка изменилась. Обновите перевозку и повторите сохранение"};
     for (const auto& id : request.segment_ids) {
-        const auto found =
-            std::find_if(shipment.RouteSegments.begin(), shipment.RouteSegments.end(),
-                [&](const auto& segment) { return boost::uuids::to_string(segment.Id) == id; });
+        const auto found = std::find_if(shipment.RouteSegments.begin(),
+            shipment.RouteSegments.end(), [&](const auto& segment) { return segment.Id == id; });
         if (found == shipment.RouteSegments.end())
             throw ApiError<409>{"route_changed", "Маршрут поставки изменён. Обновите перевозку"};
     }

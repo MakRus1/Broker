@@ -24,8 +24,8 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
 
     models::Shipment GetShipment(
         const std::string& organization, const std::string& shipment_id) const;
-    std::vector<models::Shipment> GetShipments(
-        const std::string& organization, const std::vector<std::string>& shipment_ids) const;
+    std::vector<models::TransportationContext> GetTransportationContexts(
+        const std::string& organization, const std::vector<boost::uuids::uuid>& shipment_ids) const;
     models::Shipment UpdateShipment(const std::string& organization,
         const platform::auth::Identity&, const models::UpdateShipmentRequest&,
         const std::optional<std::int64_t>& route_usage_version) const;

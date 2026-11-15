@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор карточки работы с клиентом.
+-- $3 — редакция, после которой читать историю (исключительно).
 SELECT jsonb_build_object(
     'revision', revision, 'actor', actor, 'created_at', created_at, 'snapshot', snapshot)
 FROM sales_history

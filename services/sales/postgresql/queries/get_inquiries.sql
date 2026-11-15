@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор входящего запроса.
 SELECT jsonb_strip_nulls(
         (to_jsonb(value) - 'conversion')
         || jsonb_build_object(

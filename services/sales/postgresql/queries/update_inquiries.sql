@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — данные входящего запроса в JSON.
+-- $3 — ожидаемая редакция.
 UPDATE sales_inquiries AS target
 SET manager_subject = value.manager_subject,
     status = value.status,

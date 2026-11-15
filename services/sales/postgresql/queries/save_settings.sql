@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — ожидаемая редакция при обновлении.
+-- $3 — этапы работы с клиентом в JSON.
+-- $4 — шаблон номера входящего запроса.
+-- $5 — признак ежегодного сброса счётчика.
 INSERT INTO sales_settings (organization_id, revision, stages, inquiry_number_template, reset_number_yearly)
 VALUES ($1::UUID, 1, $3::JSONB, $4::TEXT, $5::BOOLEAN)
 ON CONFLICT (organization_id) DO UPDATE

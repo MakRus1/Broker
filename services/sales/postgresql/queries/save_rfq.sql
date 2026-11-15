@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — снимок запроса ставок в JSON.
+-- $3 — ожидаемая редакция при обновлении.
 INSERT INTO sales_rfqs (organization_id, id, inquiry_id, revision, document)
 VALUES ($1::UUID, ($2->'input'->>'id')::UUID, ($2->'input'->>'inquiry_id')::UUID,
     ($2->>'revision')::BIGINT, $2::JSONB)

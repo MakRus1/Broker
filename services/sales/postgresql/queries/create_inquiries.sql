@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — данные входящего запроса в JSON.
+-- $3 — номер входящего запроса.
 INSERT INTO sales_inquiries (
     organization_id,
     id,

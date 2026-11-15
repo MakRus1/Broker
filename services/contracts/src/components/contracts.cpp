@@ -57,9 +57,7 @@ void ContractsComponent::ValidateContractParties(
     try {
         for (const auto& id : {value.own_company_id, value.counterparty_id}) {
             const auto party =
-                counterparties_
-                    .ApiV1CounterpartiesGet({.body = {.id = userver::utils::ToString(id)}}, token)
-                    .counterparty;
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, token).counterparty;
             if (party.archived)
                 throw ApiError<409>{"archived_party", "Выберите действующие стороны договора"};
             if (id == value.own_company_id && !party.own_company)
@@ -69,11 +67,9 @@ void ContractsComponent::ValidateContractParties(
             if (!account.has_value())
                 continue;
             const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
-                {.body = {.counterparty_id = userver::utils::ToString(id)}}, token);
-            const auto found =
-                std::find_if(accounts.items.begin(), accounts.items.end(), [&](const auto& item) {
-                    return userver::utils::BoostUuidFromString(item.id) == account.value();
-                });
+                {.body = {.counterparty_id = id}}, token);
+            const auto found = std::find_if(accounts.items.begin(), accounts.items.end(),
+                [&](const auto& item) { return item.id == account.value(); });
             if (found == accounts.items.end())
                 throw ApiError<400>{"invalid_account", "Счёт не принадлежит выбранной стороне"};
             if (found->archived || found->currency != value.currency)

@@ -39,7 +39,9 @@ Response View::Handle(
 
         const auto party =
             deps.counterparties
-                .ApiV1CounterpartiesGet({.body = {.id = body.counterparty_id}}, token)
+                .ApiV1CounterpartiesGet(
+                    {.body = {.id = userver::utils::BoostUuidFromString(body.counterparty_id)}},
+                    token)
                 .counterparty;
         if (party.archived && !body.archived)
             throw ApiError<409>{"archived_party", "Выберите действующего контрагента"};

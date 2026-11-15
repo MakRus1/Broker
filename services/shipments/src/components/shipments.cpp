@@ -99,7 +99,7 @@ std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
     std::string_view access_token, const std::string& customer) const try {
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
     const auto result = counterparties_.ApiV1CounterpartiesGet(
-        api::Request{.body = {.id = customer}}, access_token);
+        api::Request{.body = {.id = userver::utils::BoostUuidFromString(customer)}}, access_token);
 
     return result.counterparty.logist.value_or(std::nullopt);
 } catch (const platform::http::ErrorByStatus<404>&) {

@@ -104,7 +104,7 @@ models::Counterparty CounterpartiesComponent::UpdateCounterparty(const std::stri
     const platform::auth::Identity& identity,
     const models::UpdateCounterpartyRequest& request) const {
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto id = boost::uuids::to_string(boost::uuids::string_generator{}(request.id));
+    const auto id = request.id;
     transaction.Execute(sql::kLockCounterpartyIdentity, organization, id);
     const auto rows = transaction.Execute(sql::kLockCounterparty, organization, id);
     if (rows.IsEmpty())

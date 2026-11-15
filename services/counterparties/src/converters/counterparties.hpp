@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
 #include <models/pg/counterparty_raw.hpp>
 #include <openapi/models.hpp>
 #include <vector>
@@ -7,7 +6,7 @@
 namespace counterparties::converters {
 inline models::Counterparty Convert(const models::pg::CounterpartyRaw& row) {
     models::Counterparty result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.name = row.Name;
     result.revision = row.Revision;
     result.archived = row.Archived;
@@ -35,7 +34,7 @@ inline std::vector<std::string> Convert(const std::vector<models::CounterpartyRo
 }
 
 inline models::pg::CounterpartyRaw Convert(const models::Counterparty& value) {
-    return {.Id = boost::uuids::string_generator{}(value.id),
+    return {.Id = value.id,
         .Name = value.name,
         .Revision = value.revision,
         .Archived = value.archived,
@@ -53,7 +52,7 @@ inline models::pg::CounterpartyRaw Convert(const models::Counterparty& value) {
 
 inline models::Counterparty Convert(const models::CreateCounterpartyRequest& input) {
     models::Counterparty value;
-    value.id = boost::uuids::to_string(boost::uuids::string_generator{}(input.id));
+    value.id = input.id;
     value.revision = 1;
     value.archived = false;
     value.own_company = input.own_company.value_or(false);

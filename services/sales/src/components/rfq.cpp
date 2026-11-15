@@ -74,7 +74,9 @@ std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
 void RfqComponent::PrepareRfq(const std::string& organization, std::string_view token,
     const models::Inquiry& inquiry, models::RfqInput& input) const try {
     const auto party =
-        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+        counterparties_
+            .ApiV1CounterpartiesGet(
+                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
@@ -91,7 +93,10 @@ void RfqComponent::PrepareRfq(const std::string& organization, std::string_view 
     for (auto& quote : input.quotes) {
         if (!suppliers.contains(quote.supplier_id)) {
             const auto supplier =
-                counterparties_.ApiV1CounterpartiesGet({.body = {.id = quote.supplier_id}}, token)
+                counterparties_
+                    .ApiV1CounterpartiesGet(
+                        {.body = {.id = userver::utils::BoostUuidFromString(quote.supplier_id)}},
+                        token)
                     .counterparty;
             if (supplier.archived)
                 throw ApiError<400>{"archived_supplier", "Поставщик в архиве"};

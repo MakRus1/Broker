@@ -48,9 +48,7 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
         std::optional<models::CounterpartyRegistryCursor> cursor;
         if (more)
             cursor = models::CounterpartyRegistryCursor{
-                .id = boost::uuids::to_string(rows.back().Counterparty.Id),
-                .scope = scope,
-                .value = rows.back().SortKey};
+                .id = rows.back().Counterparty.Id, .scope = scope, .value = rows.back().SortKey};
         transaction.Commit();
 
         std::vector<models::Counterparty> items;

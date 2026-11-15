@@ -122,7 +122,9 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     const std::string& organization, std::string_view token, const models::Inquiry& inquiry) const
     try {
     const auto party =
-        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+        counterparties_
+            .ApiV1CounterpartiesGet(
+                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Клиент находится в архиве"};
@@ -154,7 +156,10 @@ models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     route_rules::ResolveLocations(creation.RouteSegments, locations);
     for (const auto& id : references.CounterpartyIds) {
         const auto counterparty =
-            counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, token).counterparty;
+            counterparties_
+                .ApiV1CounterpartiesGet(
+                    {.body = {.id = userver::utils::BoostUuidFromString(id)}}, token)
+                .counterparty;
         if (counterparty.archived)
             throw ApiError<400>{
                 "invalid_route_counterparty", "Выберите действующего контрагента участка"};

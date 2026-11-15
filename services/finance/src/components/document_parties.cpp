@@ -25,7 +25,9 @@ models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
         for (const bool own_company : {true, false}) {
             const auto& id = own_company ? input.OwnCompanyId : input.CounterpartyId;
             const auto party =
-                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token)
+                counterparties_
+                    .ApiV1CounterpartiesGet(
+                        {.body = {.id = userver::utils::BoostUuidFromString(id)}}, access_token)
                     .counterparty;
             if (party.archived && !input.Archived)
                 throw ApiError<409>{"archived_party", "Выберите действующие стороны документа"};
@@ -37,9 +39,12 @@ models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
                 own_company ? input.OwnBankAccountId : input.CounterpartyBankAccountId;
             if (account_id) {
                 const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
-                    {.body = {.counterparty_id = id}}, access_token);
-                const auto account = std::find_if(accounts.items.begin(), accounts.items.end(),
-                    [&](const auto& item) { return helpers::SameId(item.id, *account_id); });
+                    {.body = {.counterparty_id = userver::utils::BoostUuidFromString(id)}},
+                    access_token);
+                const auto account = std::find_if(
+                    accounts.items.begin(), accounts.items.end(), [&](const auto& item) {
+                        return item.id == userver::utils::BoostUuidFromString(*account_id);
+                    });
                 if (account == accounts.items.end() || account->currency != input.Currency ||
                     (account->archived && !input.Archived))
                     throw ApiError<400>{
@@ -90,18 +95,26 @@ models::InvoicePrintData DocumentPartiesComponent::PrepareInvoicePrintData(
     try {
         data.supplier = converters::ConvertPrintParty(
             counterparties_
-                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.own_company_id}}, token)
+                .ApiV1CounterpartiesGet({.body = {.id = userver::utils::BoostUuidFromString(
+                                                      data.invoice.own_company_id)}},
+                    token)
                 .counterparty);
         data.customer = converters::ConvertPrintParty(
             counterparties_
-                .ApiV1CounterpartiesGet({.body = {.id = data.invoice.counterparty_id}}, token)
+                .ApiV1CounterpartiesGet({.body = {.id = userver::utils::BoostUuidFromString(
+                                                      data.invoice.counterparty_id)}},
+                    token)
                 .counterparty);
         if (data.invoice.own_bank_account_id.has_value()) {
             const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
-                {.body = {.counterparty_id = data.invoice.own_company_id}}, token);
+                {.body = {.counterparty_id =
+                              userver::utils::BoostUuidFromString(data.invoice.own_company_id)}},
+                token);
             const auto found = std::find_if(
                 accounts.items.begin(), accounts.items.end(), [&](const auto& account) {
-                    return helpers::SameId(account.id, data.invoice.own_bank_account_id.value());
+                    return account.id ==
+                        userver::utils::BoostUuidFromString(
+                            data.invoice.own_bank_account_id.value());
                 });
             if (found == accounts.items.end() || found->currency != data.invoice.currency)
                 throw ApiError<409>{"invalid_print_account",

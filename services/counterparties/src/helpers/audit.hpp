@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/uuid/uuid.hpp>
 #include <counterparties/sql_queries.hpp>
 #include <models/errors.hpp>
 #include <optional>
@@ -6,6 +7,7 @@
 #include <string>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
 namespace counterparties {
@@ -14,8 +16,8 @@ namespace pg = userver::storages::postgres;
 
 template <typename Request, typename Result>
 void WriteAudit(pg::Transaction& transaction, const std::string& organization,
-    const platform::auth::Identity& identity, const std::string& action, const std::string& id,
-    const Request& request, const Result& result,
+    const platform::auth::Identity& identity, const std::string& action,
+    const boost::uuids::uuid& id, const Request& request, const Result& result,
     const std::optional<Result>& previous = std::nullopt) {
     // Снимок аудита сохраняется атомарно с изменением данных.
     userver::formats::json::ValueBuilder document;

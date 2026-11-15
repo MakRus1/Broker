@@ -13,7 +13,9 @@ Response View::Handle(
 
     const auto party =
         deps.counterparties
-            .ApiV1CounterpartiesGet({.body = {.id = request.body.customer_id}}, token)
+            .ApiV1CounterpartiesGet(
+                {.body = {.id = userver::utils::BoostUuidFromString(request.body.customer_id)}},
+                token)
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};

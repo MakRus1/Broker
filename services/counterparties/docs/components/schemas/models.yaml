@@ -34,8 +34,8 @@ Counterparty:
   properties:
     id:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       maxLength: 256
@@ -122,8 +122,8 @@ CreateCounterpartyRequest:
   properties:
     id:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       maxLength: 256
@@ -184,8 +184,8 @@ UpdateCounterpartyRequest:
   properties:
     id:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -249,8 +249,8 @@ GetCounterpartyRequest:
   properties:
     id:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
   required:
   - id
 SetArchivedCounterpartyRequest:
@@ -259,8 +259,8 @@ SetArchivedCounterpartyRequest:
   properties:
     id:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -276,8 +276,8 @@ ListCounterpartiesRequest:
   properties:
     after:
       type: string
-      maxLength: 256
       format: uuid
+      x-cpp-type: uuid
     limit:
       type: integer
       minimum: 1
@@ -364,6 +364,7 @@ ListCounterpartyHistoryRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     before:
       type: integer
       minimum: 1
@@ -456,6 +457,7 @@ CounterpartyRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$
@@ -532,9 +534,11 @@ BankAccount:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -594,9 +598,11 @@ SaveBankAccountRequest:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     name:
       type: string
       minLength: 1
@@ -657,6 +663,7 @@ ListBankAccountsRequest:
     counterparty_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - counterparty_id
 CounterpartyFilterValuesRequest:

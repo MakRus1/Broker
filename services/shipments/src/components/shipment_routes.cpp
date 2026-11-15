@@ -67,8 +67,8 @@ void ShipmentRoutes::ValidateRouteCounterparties(std::string_view access_token,
             continue;
 
         try {
-            const auto response =
-                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token);
+            const auto response = counterparties_.ApiV1CounterpartiesGet(
+                {.body = {.id = userver::utils::BoostUuidFromString(id)}}, access_token);
             if (response.counterparty.archived)
                 throw ApiError<400>{
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};

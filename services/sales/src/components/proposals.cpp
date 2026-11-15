@@ -57,7 +57,9 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
     models::ProposalInput& input) const try {
     const auto settings = finance_.ApiV1FinanceSettingsGet({}, token);
     const auto customer =
-        counterparties_.ApiV1CounterpartiesGet({.body = {.id = inquiry.customer_id}}, token)
+        counterparties_
+            .ApiV1CounterpartiesGet(
+                {.body = {.id = userver::utils::BoostUuidFromString(inquiry.customer_id)}}, token)
             .counterparty;
     models::ProposalCalculation data{.InquiryRevision = inquiry.revision,
         .CustomerName = customer.name,
@@ -97,7 +99,10 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
         data.LabelNames.emplace(line.label_id, label.name);
         if (line.supplier_id && !data.SupplierNames.contains(*line.supplier_id)) {
             const auto supplier =
-                counterparties_.ApiV1CounterpartiesGet({.body = {.id = *line.supplier_id}}, token)
+                counterparties_
+                    .ApiV1CounterpartiesGet(
+                        {.body = {.id = userver::utils::BoostUuidFromString(*line.supplier_id)}},
+                        token)
                     .counterparty;
             if (supplier.archived)
                 throw ApiError<400>{"archived_supplier", "Поставщик находится в архиве"};

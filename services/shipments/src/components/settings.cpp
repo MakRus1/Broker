@@ -12,6 +12,7 @@
 #include <userver/components/component_context.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/text.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
@@ -115,14 +116,16 @@ std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRule
 }
 
 configs::ShipmentSettings SettingsComponent::Effective(
-    const std::string& organization, const std::optional<std::string>& customer) const {
-    return ResolveEffectiveSettings(
-        configs_.GetSnapshot(), organization, customer, LoadRules(organization));
+    const std::string& organization, const std::optional<boost::uuids::uuid>& customer) const {
+    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization,
+        customer ? std::optional{userver::utils::ToString(*customer)} : std::nullopt,
+        LoadRules(organization));
 }
 
 configs::ShipmentSettings SettingsComponent::Effective(pg::Transaction& transaction,
-    const std::string& organization, const std::optional<std::string>& customer) const {
-    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization, customer,
+    const std::string& organization, const std::optional<boost::uuids::uuid>& customer) const {
+    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization,
+        customer ? std::optional{userver::utils::ToString(*customer)} : std::nullopt,
         ReadStoredRules(transaction.Execute(sql::kGetOrganizationShipmentRules, organization)));
 }
 

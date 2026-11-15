@@ -60,6 +60,7 @@ Shipment:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     reference:
       type: string
       maxLength: 256
@@ -69,6 +70,7 @@ Shipment:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -170,6 +172,7 @@ CreateShipmentRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     reference:
       type: string
       maxLength: 256
@@ -183,6 +186,7 @@ CreateShipmentRequest:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -289,6 +293,7 @@ UpdateShipmentRequest:
     recipient_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
       nullable: true
     logist:
       description: Идентификатор сотрудника организации (subject), не ФИО
@@ -333,6 +338,7 @@ UpdateShipmentRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     route_segments:
       type: array
       maxItems: 30
@@ -524,6 +530,7 @@ GetShipmentSettingsRequest:
     customer_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required: []
 DictionaryValue:
   type: object

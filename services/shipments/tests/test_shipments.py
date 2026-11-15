@@ -169,6 +169,11 @@ async def test_list_pagination_and_counters(api):
 async def test_idempotent_replay_has_one_audit_entry(api, pgsql):
     body = {'customer_id': str(uuid4()), 'idempotency_key': str(uuid4())}
     first = await api.post('/api/v1/shipments/create', body, expected=201)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            "UPDATE shipment_sources SET payload = jsonb_set(payload, '{customer_id}', to_jsonb(%s::text)) WHERE shipment_id = %s",
+            (body['customer_id'].upper(), first['shipment']['id']),
+        )
     assert await api.post('/api/v1/shipments/create', body, expected=201) == first
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(

@@ -35,7 +35,7 @@ inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     result.id = boost::uuids::to_string(row.Id);
     result.revision = row.Revision;
     result.number = row.Number;
-    result.customer_id = boost::uuids::to_string(row.CustomerId);
+    result.customer_id = row.CustomerId;
     result.reference = row.Reference;
     result.shipment_date = row.ShipmentDate;
     result.logist.emplace(row.Logist);
@@ -50,7 +50,7 @@ inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     for (const auto& segment : row.RouteSegments)
         result.route_segments.push_back(Convert(segment));
     if (row.RecipientId.has_value())
-        result.recipient_id = boost::uuids::to_string(row.RecipientId.value());
+        result.recipient_id = row.RecipientId.value();
     else
         result.recipient_id.emplace(std::nullopt);
     return result;

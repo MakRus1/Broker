@@ -18,7 +18,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
     std::optional<std::string> GetCustomerLogist(
-        std::string_view access_token, const std::string& customer_id) const;
+        std::string_view access_token, const boost::uuids::uuid& customer_id) const;
     void ValidateLogist(const std::string& organization, std::string_view access_token,
         const std::optional<std::string>& subject) const;
 

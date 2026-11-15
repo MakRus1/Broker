@@ -71,7 +71,14 @@ std::optional<boost::uuids::uuid> ValidateShipmentReplay(
     if (saved.IsEmpty())
         return std::nullopt;
     const auto stored = saved.AsSingleRow<models::ShipmentSourceRecord>(pg::kRowTag);
-    if (stored.Payload != document)
+    const auto normalized = [&] {
+        if (stored.Payload.HasMember("shipment"))
+            return shipments::helpers::Document(models::ParseModelJson(
+                stored.Payload, std::type_identity<models::EnsureShipmentRequest>{}));
+        return shipments::helpers::Document(models::ParseModelJson(
+            stored.Payload, std::type_identity<models::CreateShipmentRequest>{}));
+    };
+    if (stored.Payload != document && normalized() != document)
         throw ApiError<409>{"idempotency_conflict", "Ключ уже использован с другими данными"};
     return stored.ShipmentId;
 }
@@ -96,10 +103,10 @@ userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
 }
 
 std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
-    std::string_view access_token, const std::string& customer) const try {
+    std::string_view access_token, const boost::uuids::uuid& customer) const try {
     namespace api = clients::counterparties::ApiV1CounterpartiesGet;
     const auto result = counterparties_.ApiV1CounterpartiesGet(
-        api::Request{.body = {.id = userver::utils::BoostUuidFromString(customer)}}, access_token);
+        api::Request{.body = {.id = customer}}, access_token);
 
     return result.counterparty.logist.value_or(std::nullopt);
 } catch (const platform::http::ErrorByStatus<404>&) {
@@ -158,7 +165,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(
 models::Shipment ShipmentsComponent::CreateShipmentFromSource(const std::string& organization,
     const platform::auth::Identity& actor, const models::CreateShipmentRequest& body,
     const ShipmentSource& source, const json::Value& document) const {
-    const auto settings = settings_.Effective(organization, body.customer_id);
+    const auto settings = settings_.Effective(organization, std::optional{body.customer_id});
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(
@@ -240,9 +247,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const std::string& organizat
                     "Данные участков изменились. Обновите поставку и повторите сохранение"};
         }
 
-        helpers::ValidateCard(card,
-            settings_.Effective(
-                transaction, organization, boost::uuids::to_string(card.CustomerId)),
+        helpers::ValidateCard(card, settings_.Effective(transaction, organization, card.CustomerId),
             dictionaries, &previous);
 
         const auto result =

@@ -11,7 +11,7 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
     namespace shipment_models = clients::shipments::models;
     constexpr auto kInquirySourceType = "sales.inquiry";
     shipment_models::CreateShipmentRequest shipment;
-    shipment.customer_id = inquiry.customer_id;
+    shipment.customer_id = userver::utils::BoostUuidFromString(inquiry.customer_id);
     shipment.idempotency_key =
         std::string{kInquirySourceType} + ":" + inquiry.id + ":" + std::to_string(inquiry.revision);
     shipment.reference = inquiry.number;

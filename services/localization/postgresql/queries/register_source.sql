@@ -1,3 +1,4 @@
+-- $1 — массив исходных переводов в JSON с ключами, текстами на русском и английском и параметрами подстановки.
 INSERT INTO localization_source AS current (key, ru, en, parameters)
 SELECT key, ru, en, parameters
 FROM jsonb_to_recordset($1::JSONB) AS source(key TEXT, ru TEXT, en TEXT, parameters TEXT[])

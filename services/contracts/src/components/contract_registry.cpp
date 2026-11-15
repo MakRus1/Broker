@@ -54,7 +54,7 @@ models::ContractListResult ContractRegistry::ListContracts(
             const auto& last = rows.back();
             cursor = models::ContractRegistryCursor{
                 .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Contract.Id),
+                .id = last.Contract.Id,
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }

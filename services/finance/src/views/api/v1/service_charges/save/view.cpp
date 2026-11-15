@@ -46,9 +46,13 @@ Response View::Handle(
         parties.CounterpartyName = party.name;
         if (body.contract_id.has_value()) {
             const auto contract =
-                deps.contracts.ApiV1ContractsGet({.body = {.id = body.contract_id.value()}}, token)
+                deps.contracts
+                    .ApiV1ContractsGet({.body = {.id = userver::utils::BoostUuidFromString(
+                                                     body.contract_id.value())}},
+                        token)
                     .contract;
-            if (!helpers::SameId(contract.counterparty_id, body.counterparty_id))
+            if (contract.counterparty_id !=
+                userver::utils::BoostUuidFromString(body.counterparty_id))
                 throw ApiError<400>{"wrong_contract", "Договор относится к другому контрагенту"};
             if (contract.currency != body.invoice_currency)
                 throw ApiError<400>{

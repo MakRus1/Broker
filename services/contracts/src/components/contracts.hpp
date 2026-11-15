@@ -20,7 +20,8 @@ class ContractsComponent final : public userver::components::ComponentBase {
     models::Contract SaveContract(const std::string& organization,
         const platform::auth::Identity& identity, std::int64_t expected_revision,
         models::pg::ContractRaw value) const;
-    models::Contract FindContract(const std::string& organization, const std::string& id) const;
+    models::Contract FindContract(
+        const std::string& organization, const boost::uuids::uuid& id) const;
 
   private:
     clients::counterparties::Client counterparties_;

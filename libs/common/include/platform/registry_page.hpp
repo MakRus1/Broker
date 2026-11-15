@@ -23,12 +23,12 @@ inline void ValidateCursorKey(CursorKeyType type, std::string_view value) {
 template <typename Request>
 BuiltQuery BuildPage(
     QueryBuilder builder, std::span<const RegistryField> fields, const Request& request) {
-    std::optional<std::string> after;
+    using Cursor = typename std::remove_cvref_t<decltype(request.cursor)>::value_type;
+    std::optional<decltype(Cursor::id)> after;
     if (request.cursor.has_value())
         after = request.cursor.value().id;
     else if constexpr (requires { request.after; })
         after = request.after;
-    using Cursor = typename std::remove_cvref_t<decltype(request.cursor)>::value_type;
     if constexpr (requires(Cursor cursor) {
                       cursor.date_value;
                       cursor.text_value;

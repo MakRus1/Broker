@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/uuid/string_generator.hpp>
 #include <components/contracts.hpp>
 #include <contracts/sql_queries.hpp>
 #include <converters/contracts.hpp>
@@ -12,6 +11,8 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
@@ -56,7 +57,9 @@ void ContractsComponent::ValidateContractParties(
     try {
         for (const auto& id : {value.own_company_id, value.counterparty_id}) {
             const auto party =
-                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, token).counterparty;
+                counterparties_
+                    .ApiV1CounterpartiesGet({.body = {.id = userver::utils::ToString(id)}}, token)
+                    .counterparty;
             if (party.archived)
                 throw ApiError<409>{"archived_party", "Выберите действующие стороны договора"};
             if (id == value.own_company_id && !party.own_company)
@@ -66,11 +69,10 @@ void ContractsComponent::ValidateContractParties(
             if (!account.has_value())
                 continue;
             const auto accounts = counterparties_.ApiV1CounterpartiesBankAccountsList(
-                {.body = {.counterparty_id = id}}, token);
+                {.body = {.counterparty_id = userver::utils::ToString(id)}}, token);
             const auto found =
                 std::find_if(accounts.items.begin(), accounts.items.end(), [&](const auto& item) {
-                    return boost::uuids::string_generator{}(item.id) ==
-                        boost::uuids::string_generator{}(account.value());
+                    return userver::utils::BoostUuidFromString(item.id) == account.value();
                 });
             if (found == accounts.items.end())
                 throw ApiError<400>{"invalid_account", "Счёт не принадлежит выбранной стороне"};
@@ -95,7 +97,7 @@ void ContractsComponent::ValidateContractParties(
 }
 
 models::Contract ContractsComponent::FindContract(
-    const std::string& organization, const std::string& id) const {
+    const std::string& organization, const boost::uuids::uuid& id) const {
     const auto rows =
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetContract, organization, id);
     if (rows.IsEmpty())

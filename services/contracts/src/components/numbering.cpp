@@ -7,6 +7,8 @@
 #include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
+#include <userver/utils/boost_uuid4.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace contracts {
@@ -25,10 +27,10 @@ userver::yaml_config::Schema NumberingComponent::GetStaticConfigSchema() {
 }
 
 void NumberingComponent::RequireAdministrator(
-    const std::string& organization, std::string_view token) const {
+    const boost::uuids::uuid& organization, std::string_view token) const {
     try {
         organizations_.ApiOrganizationsAdministrationCheck(
-            {.body = {.organization_id = organization}}, token);
+            {.body = {.organization_id = userver::utils::ToString(organization)}}, token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {
@@ -45,7 +47,8 @@ void NumberingComponent::RequireAdministrator(
     }
 }
 
-models::ContractNumbering NumberingComponent::GetNumbering(const std::string& organization) const {
+models::ContractNumbering NumberingComponent::GetNumbering(
+    const boost::uuids::uuid& organization) const {
     return helpers::ReadNumbering(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetNumbering, organization));
 }

@@ -49,10 +49,15 @@ models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
 
         if (input.ContractId) {
             const auto contract =
-                contracts_.ApiV1ContractsGet({.body = {.id = *input.ContractId}}, access_token)
+                contracts_
+                    .ApiV1ContractsGet(
+                        {.body = {.id = userver::utils::BoostUuidFromString(*input.ContractId)}},
+                        access_token)
                     .contract;
-            if (!helpers::SameId(contract.own_company_id, input.OwnCompanyId) ||
-                !helpers::SameId(contract.counterparty_id, input.CounterpartyId) ||
+            if (contract.own_company_id !=
+                    userver::utils::BoostUuidFromString(input.OwnCompanyId) ||
+                contract.counterparty_id !=
+                    userver::utils::BoostUuidFromString(input.CounterpartyId) ||
                 contract.currency != input.Currency)
                 throw ApiError<400>{
                     "wrong_contract", "Стороны и валюта должны соответствовать договору"};

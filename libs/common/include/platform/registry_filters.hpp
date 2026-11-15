@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <boost/uuid/string_generator.hpp>
 #include <platform/registry_query.hpp>
 #include <set>
@@ -161,6 +162,17 @@ struct ValueRow {
     std::string Value;
     std::string Label;
 };
+
+// Запрос читает на одну строку больше, чтобы определить наличие следующей страницы.
+template <typename Result>
+void FillFilterValues(Result& result, const std::vector<ValueRow>& rows, std::size_t limit) {
+    const auto count = std::min(rows.size(), limit);
+    result.values.reserve(count);
+    for (std::size_t index = 0; index < count; ++index)
+        result.values.push_back({.label = rows[index].Label, .value = rows[index].Value});
+    if (count != 0 && rows.size() > count)
+        result.next_after = result.values.back().value;
+}
 
 template <typename Model> std::vector<Model> DescribeFields(std::span<const RegistryField> fields) {
     std::vector<Model> result;

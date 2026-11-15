@@ -69,11 +69,7 @@ models::RegistryFilterValues ReadFilterValues(const pg::ClusterPtr& cluster,
         const auto rows =
             cluster->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
-
-        for (std::size_t i = 0; i < rows.size() && i < static_cast<std::size_t>(request.limit); ++i)
-            result.values.push_back({.label = rows[i].Label, .value = rows[i].Value});
-        if (rows.size() > static_cast<std::size_t>(request.limit))
-            result.next_after = result.values.back().value;
+        platform::registry::FillFilterValues(result, rows, request.limit);
         return result;
     } catch (const registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};

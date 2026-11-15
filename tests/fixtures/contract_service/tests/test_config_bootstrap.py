@@ -51,7 +51,8 @@ async def test_startup_waits_for_configs(service_binary, service_config, tmp_pat
                 except aiohttp.ClientConnectionError:
                     pass
                 else:
-                    assert response.status == 500
+                    # Monitor может принять соединение до регистрации обработчика.
+                    assert response.status in {404, 500}
                 with pytest.raises(aiohttp.ClientConnectionError):
                     await client.get(f'http://127.0.0.1:{port}/items/1')
                 unavailable_request.clear()

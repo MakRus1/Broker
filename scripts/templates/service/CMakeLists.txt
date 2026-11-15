@@ -5,6 +5,7 @@ broker_openapi_generate("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(
     ${PROJECT_NAME}_objs OBJECT
+    src/main.cpp
     ${OPENAPI_GEN_SRCS}
 )
 target_link_libraries(
@@ -24,7 +25,7 @@ broker_openapi_apply(${PROJECT_NAME}_objs)
 target_compile_definitions(${PROJECT_NAME}_objs PUBLIC BROKER_VERSION="${CMAKE_PROJECT_VERSION}")
 
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_objs)
 if(OPENAPI_VIEW_SRCS)
     target_sources(${PROJECT_NAME} PRIVATE ${OPENAPI_VIEW_SRCS})

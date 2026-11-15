@@ -1,3 +1,4 @@
+-- $1 — идентификаторы импортированных станций у поставщика.
 INSERT INTO railway_stations (
     id, name, country_code, esr_code, uic_code, esr_source, search_terms, manual_override
 )

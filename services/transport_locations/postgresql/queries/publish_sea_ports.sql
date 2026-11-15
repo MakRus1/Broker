@@ -1,3 +1,4 @@
+-- $1 — коды LOCODE импортированных морских портов.
 INSERT INTO route_locations (id, kind, name, country_code, code, search_terms)
 SELECT
     source.location_id,

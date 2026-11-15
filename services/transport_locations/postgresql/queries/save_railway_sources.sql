@@ -1,3 +1,4 @@
+-- $1 — записи железнодорожных станций из источника.
 INSERT INTO railway_station_sources (
     source_id, station_id, name, country_code, esr_code, uic_code, search_terms
 )

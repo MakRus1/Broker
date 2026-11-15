@@ -1,3 +1,5 @@
+-- $1 — вид точки маршрута.
+-- $2 — строка поиска по названию, коду или поисковым словам (пустая строка отключает фильтр).
 SELECT ROW(id, kind, name, country_code, code)::public.transport_location_v1
 FROM route_locations
 WHERE kind = $1 AND NOT archived

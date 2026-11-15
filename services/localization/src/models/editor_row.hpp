@@ -1,10 +1,12 @@
 #pragma once
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <userver/formats/json/value.hpp>
 
 namespace localization::models {
 struct EditorRow {
+    std::string Scope;
     std::int64_t Version;
     std::int64_t Revision;
     std::optional<userver::formats::json::Value> Draft;

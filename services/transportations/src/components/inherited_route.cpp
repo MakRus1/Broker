@@ -20,8 +20,8 @@ bool HasRouteData(const models::RouteSegment& segment) {
 
 const models::ShipmentContext& FindShipmentContext(
     const std::vector<models::ShipmentContext>& contexts, const boost::uuids::uuid& shipment_id) {
-    const auto found = std::find_if(
-        contexts.begin(), contexts.end(), [&](const auto& item) { return item.shipment_id == shipment_id; });
+    const auto found = std::find_if(contexts.begin(), contexts.end(),
+        [&](const auto& item) { return item.shipment_id == shipment_id; });
     if (found == contexts.end())
         throw ApiError<404>{"shipment_not_found", "Поставка не найдена"};
     return *found;

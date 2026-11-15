@@ -51,7 +51,8 @@ userver::yaml_config::Schema EditorComponent::GetStaticConfigSchema() {
 
 models::CatalogEditorState EditorComponent::GetEditorState(
     const models::GetEditorRequest& request) const {
-    const auto scope = request.organization_id.value_or("global");
+    const auto scope =
+        request.organization_id ? userver::utils::ToString(*request.organization_id) : "global";
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
@@ -62,7 +63,8 @@ models::CatalogEditorState EditorComponent::GetEditorState(
 
 models::CatalogEditorState EditorComponent::SaveDraft(
     const models::SaveCatalogRequest& request) const {
-    const auto scope = request.organization_id.value_or("global");
+    const auto scope =
+        request.organization_id ? userver::utils::ToString(*request.organization_id) : "global";
     const auto& catalog = request.catalog;
     if (scope != "global") {
         for (const auto* entries : {&catalog.ru, &catalog.en})
@@ -82,7 +84,7 @@ models::CatalogEditorState EditorComponent::SaveDraft(
 
     const auto source = tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>();
     const auto encoded = helpers::ValidateAndEncodeCatalog(catalog, source);
-    tx.Execute(sql::kSaveEditor, scope, encoded);
+    tx.Execute(sql::kSaveEditor, row.Scope, encoded);
 
     auto result = ReadEditorSnapshot(tx, scope);
     tx.Commit();
@@ -91,7 +93,8 @@ models::CatalogEditorState EditorComponent::SaveDraft(
 
 models::CatalogEditorState EditorComponent::PublishDraft(
     const models::PublishCatalogRequest& request) const {
-    const auto scope = request.organization_id.value_or("global");
+    const auto scope =
+        request.organization_id ? userver::utils::ToString(*request.organization_id) : "global";
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     tx.Execute(sql::kEnsureEditor, scope);
     const auto row =
@@ -113,7 +116,7 @@ models::CatalogEditorState EditorComponent::PublishDraft(
             tx.Execute(
                 sql::kPublishOrganizationCatalog, scope, locale, valid[locale], row.Revision + 1);
     }
-    tx.Execute(sql::kPublishEditor, scope);
+    tx.Execute(sql::kPublishEditor, row.Scope);
 
     auto result = ReadEditorSnapshot(tx, scope);
     tx.Commit();

@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — issuer токена получателя.
+-- $3 — subject получателя.
+-- $4 — идентификаторы уведомлений, которые нужно отметить прочитанными.
+-- $5 — признак скрытия уведомлений из входящих.
 UPDATE notifications
 SET read_at = COALESCE(read_at, now()),
     dismissed_at = CASE WHEN $5::BOOLEAN THEN COALESCE(dismissed_at, now()) ELSE dismissed_at END

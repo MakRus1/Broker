@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — issuer токена получателя.
+-- $3 — subject получателя.
+-- $4 — идентификатор уведомления, раньше которого читать список (NULL для первой страницы).
+-- $5 — максимальное число уведомлений.
 SELECT id, entity_id, entity_number, entity_revision,
     created_at, read_at IS NOT NULL, event_type
 FROM notifications

@@ -1,3 +1,4 @@
+-- $1 — код локали.
 SELECT entry.key, entry.value
 FROM localization_catalogs AS catalog
 CROSS JOIN LATERAL jsonb_each(catalog.messages) AS entry

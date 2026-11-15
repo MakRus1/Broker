@@ -1,3 +1,5 @@
+-- $1 — идентификатор организации (NULL возвращает только общий каталог).
+-- $2 — код локали.
 SELECT
     COALESCE(
         (SELECT messages FROM localization_catalogs WHERE locale = $2),

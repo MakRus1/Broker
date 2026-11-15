@@ -1,3 +1,4 @@
+-- $1 — область каталога (global или идентификатор организации).
 SELECT
     COALESCE(jsonb_object_agg(locale, messages) FILTER (WHERE scope = $1), '{}'::JSONB),
     COALESCE(jsonb_object_agg(locale, messages) FILTER (WHERE scope = 'global' AND $1 <> 'global'), '{}'::JSONB)

@@ -40,6 +40,7 @@ class ServicesTest(unittest.TestCase):
             name = f'sample_{int(pg)}{int(grpc)}'
             directory = create_service.create(name, pg, grpc)
             run(directory, check=True)
+            self.assertTrue((directory / 'codegen.lock').is_file())
             self.assertFalse(list(directory.rglob('*.pyc')))
             self.assertFalse(list((directory / 'docs/api').glob('*.yaml')))
             self.assertFalse(list((directory / 'src/views').rglob('view.cpp')))

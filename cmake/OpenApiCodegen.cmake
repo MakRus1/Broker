@@ -38,7 +38,7 @@ function(broker_openapi_generate SERVICE_DIR)
     add_custom_command(OUTPUT ${generated}
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --check
         COMMAND "${Python3_EXECUTABLE}" "${gen}" --service-dir "${SERVICE_DIR}" --output-dir "${out}"
-        DEPENDS ${permission_schemas} ${service_manifest} ${client_specs} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/docs/api/codegen.lock"
+        DEPENDS ${permission_schemas} ${service_manifest} ${client_specs} "${CMAKE_SOURCE_DIR}/.clang-format" ${specs} ${generator_files} ${views} "${SERVICE_DIR}/configs/static_config.yaml" "${SERVICE_DIR}/codegen.lock"
         VERBATIM)
     add_custom_target(${PROJECT_NAME}_codegen DEPENDS ${generated})
     file(GLOB_RECURSE view_sources CONFIGURE_DEPENDS "${SERVICE_DIR}/src/views/*.cpp")

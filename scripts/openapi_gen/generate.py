@@ -124,7 +124,7 @@ def run(service, check=False, output=None):
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
     expected_lock = digest(service, ops, feature_files)
-    lock = service / 'docs/api/codegen.lock'
+    lock = service / 'codegen.lock'
     if check:
         errors = []
         if not lock.exists() or lock.read_text() != expected_lock:

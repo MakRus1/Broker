@@ -163,15 +163,9 @@ public:
 private:
     std::array<bool, N> provided_{};
 };
-inline void CheckFormat(const std::string& value, const std::string& format);
-
 template <typename T> T ParseScalar(const std::string& text) {
     if constexpr (std::is_enum_v<T>) return ParseEnumScalar(text, T{});
     else if constexpr (std::is_same_v<T, std::string>) return text;
-    else if constexpr (std::is_same_v<T, boost::uuids::uuid>) {
-        CheckFormat(text, "uuid");
-        return userver::utils::BoostUuidFromString(text);
-    }
     else if constexpr (std::is_same_v<T, userver::utils::datetime::Date>) { return platform::ParseCalendarDate(text); }
     else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) return platform::ParseTimestamp(text);
     else if constexpr (std::is_same_v<T, bool>) {
@@ -214,6 +208,13 @@ template <typename T> userver::formats::json::Value CalendarDateJson(const std::
     for (const auto& value : values) result.PushBack(CalendarDateJson(value));
     return result.ExtractValue();
 }
+inline void CheckFormat(const std::string& value, const std::string& format);
+
+template <> inline boost::uuids::uuid ParseScalar<boost::uuids::uuid>(const std::string& text) {
+    CheckFormat(text, "uuid");
+    return userver::utils::BoostUuidFromString(text);
+}
+
 template <typename T> T ParseJson(const userver::formats::json::Value& value) {
     if constexpr (IsOptional<T>::value) {
         if (value.IsNull()) return std::nullopt;

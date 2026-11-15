@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные карточки поставки.
 INSERT INTO shipments (
     organization_id,
     number,

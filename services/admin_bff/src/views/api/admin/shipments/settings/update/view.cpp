@@ -8,7 +8,8 @@ Response View::Handle(
     namespace api = clients::shipments::ApiAdminShipmentsSettingsUpdate;
     const auto result = deps.shipments.ApiAdminShipmentsSettingsUpdate(
         api::Request{.body = {.expected_revision = request.body.expected_revision,
-                         .organization_id = request.body.organization_id,
+                         .organization_id =
+                             userver::utils::BoostUuidFromString(request.body.organization_id),
                          .rules = {.container_types = request.body.rules.container_types,
                              .number_template = request.body.rules.number_template,
                              .planned_containers = request.body.rules.planned_containers,

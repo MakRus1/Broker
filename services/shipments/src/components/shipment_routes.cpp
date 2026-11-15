@@ -13,8 +13,9 @@
 namespace {
 namespace models = shipments::models;
 
-std::set<std::string> RouteCounterparties(const std::vector<models::ShipmentRouteSegment>& stages) {
-    std::set<std::string> ids;
+std::set<boost::uuids::uuid> RouteCounterparties(
+    const std::vector<models::ShipmentRouteSegment>& stages) {
+    std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& id) {
         if (id.has_value())
             ids.insert(id.value());
@@ -67,8 +68,8 @@ void ShipmentRoutes::ValidateRouteCounterparties(std::string_view access_token,
             continue;
 
         try {
-            const auto response = counterparties_.ApiV1CounterpartiesGet(
-                {.body = {.id = userver::utils::BoostUuidFromString(id)}}, access_token);
+            const auto response =
+                counterparties_.ApiV1CounterpartiesGet({.body = {.id = id}}, access_token);
             if (response.counterparty.archived)
                 throw ApiError<400>{
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};
@@ -94,7 +95,7 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
     std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& location) {
         if (location.has_value())
-            ids.insert(boost::uuids::string_generator{}(location.value().id));
+            ids.insert(location.value().id);
     };
 
     for (const auto& segment : segments) {
@@ -136,16 +137,18 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
 }
 
 void ShipmentRoutes::CheckExistingRouteUsage(std::string_view access_token,
-    const std::string& shipment_id, const std::vector<std::string>& changed) const try {
+    const boost::uuids::uuid& shipment_id, const std::vector<boost::uuids::uuid>& changed) const
+    try {
     if (changed.empty())
         return;
 
     namespace api = clients::transportations::ApiV1TransportationRoutesUsage;
     const auto result = transportations_.ApiV1TransportationRoutesUsage(
-        api::Request{.body = {.shipment_id = shipment_id}}, access_token);
+        api::Request{.body = {.shipment_id = userver::utils::ToString(shipment_id)}}, access_token);
 
     for (const auto& id : result.segment_ids)
-        if (std::find(changed.begin(), changed.end(), id) != changed.end())
+        if (std::find(changed.begin(), changed.end(), userver::utils::BoostUuidFromString(id)) !=
+            changed.end())
             throw ApiError<409>{"route_segment_in_use",
                 "Нельзя удалить или изменить тип участка с данными перевозок"};
 } catch (const platform::http::HandlerErrorBase&) {

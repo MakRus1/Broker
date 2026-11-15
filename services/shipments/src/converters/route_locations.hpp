@@ -7,7 +7,7 @@ inline models::TransportLocation Convert(
     const clients::transport_locations::models::TransportLocation& value) {
     return {.code = value.code,
         .country_code = value.country_code,
-        .id = userver::utils::ToString(value.id),
+        .id = value.id,
         .kind = models::ParseEnumScalar(clients::transport_locations::models::EnumValue(value.kind),
             models::TransportLocationKind{}),
         .name = value.name};

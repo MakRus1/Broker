@@ -6,7 +6,7 @@ namespace transportations::converters {
 inline models::TransportLocation Convert(
     const clients::shipments::models::TransportLocation& value) {
     models::TransportLocation result;
-    result.id = value.id;
+    result.id = userver::utils::ToString(value.id);
     result.kind = value.kind == clients::shipments::models::TransportLocationKind::SeaPort
         ? models::TransportLocationKind::SeaPort
         : models::TransportLocationKind::Airport;
@@ -26,9 +26,10 @@ inline models::SeaDetails Convert(const clients::shipments::models::SeaDetails& 
     if (value.eta.has_value())
         result.eta = value.eta.value();
     if (value.departure_terminal_id.has_value())
-        result.departure_terminal_id = value.departure_terminal_id.value();
+        result.departure_terminal_id =
+            userver::utils::ToString(value.departure_terminal_id.value());
     if (value.arrival_terminal_id.has_value())
-        result.arrival_terminal_id = value.arrival_terminal_id.value();
+        result.arrival_terminal_id = userver::utils::ToString(value.arrival_terminal_id.value());
     if (value.departure_date.has_value())
         result.departure_date = value.departure_date.value();
     if (value.vessel.has_value())
@@ -41,7 +42,7 @@ inline models::SeaDetails Convert(const clients::shipments::models::SeaDetails& 
 inline models::AirDetails Convert(const clients::shipments::models::AirDetails& value) {
     models::AirDetails result;
     if (value.carrier_id.has_value())
-        result.carrier_id = value.carrier_id.value();
+        result.carrier_id = userver::utils::ToString(value.carrier_id.value());
     if (value.origin_airport.has_value())
         result.origin_airport = Convert(value.origin_airport.value());
     if (value.destination_airport.has_value())

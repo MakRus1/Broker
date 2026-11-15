@@ -13,7 +13,7 @@ models::pg::ShipmentData UpdateShipmentCard(
 void ValidateCard(const models::pg::ShipmentData& card, const configs::ShipmentSettings& settings,
     const std::vector<models::pg::ShipmentDictionaryValue>& dictionaries,
     const models::pg::ShipmentRaw* previous = nullptr);
-std::vector<std::string> ChangedRouteSegments(
+std::vector<boost::uuids::uuid> ChangedRouteSegments(
     const std::vector<models::ShipmentRouteSegment>& previous,
     const std::vector<models::ShipmentRouteSegment>& next);
 }  // namespace shipments::helpers

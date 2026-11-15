@@ -76,7 +76,8 @@ models::Transportation RoutesComponent::SaveRoute(const std::string& organizatio
     for (std::size_t i = 0; i < source.route_segments.size(); ++i) {
         const auto& input = request.route_segments[i];
         const auto& stage = source.route_segments[i];
-        if (input.id != stage.id || models::EnumValue(input.mode) != stage.type)
+        if (input.id != userver::utils::ToString(stage.id) ||
+            models::EnumValue(input.mode) != stage.type)
             throw ApiError<409>{
                 "inherited_route", "Порядок и типы участков изменяются только в поставке"};
         if (route_rules::HasRouteData(converters::Convert(input)))

@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
 #include <models/pg/air_details.hpp>
 #include <models/pg/sea_details.hpp>
 #include <models/pg/shipment_route_segment.hpp>
@@ -9,7 +8,7 @@
 namespace shipments::converters {
 inline models::TransportLocation Convert(const models::pg::TransportLocation& value) {
     models::TransportLocation result;
-    result.id = boost::uuids::to_string(value.Id);
+    result.id = value.Id;
     result.kind = models::ParseEnumScalar(value.Kind, models::TransportLocationKind{});
     result.name = value.Name;
     result.country_code = value.CountryCode;
@@ -20,7 +19,7 @@ inline models::TransportLocation Convert(const models::pg::TransportLocation& va
 
 inline models::pg::TransportLocation Convert(const models::TransportLocation& value) {
     models::pg::TransportLocation result;
-    result.Id = boost::uuids::string_generator{}(value.id);
+    result.Id = value.id;
     result.Kind = models::EnumValue(value.kind);
     result.Name = value.name;
     result.CountryCode = value.country_code;
@@ -38,9 +37,9 @@ inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
     if (value.Eta.has_value())
         result.eta = value.Eta.value();
     if (value.DepartureTerminalId.has_value())
-        result.departure_terminal_id = boost::uuids::to_string(value.DepartureTerminalId.value());
+        result.departure_terminal_id = value.DepartureTerminalId.value();
     if (value.ArrivalTerminalId.has_value())
-        result.arrival_terminal_id = boost::uuids::to_string(value.ArrivalTerminalId.value());
+        result.arrival_terminal_id = value.ArrivalTerminalId.value();
     if (value.DepartureDate.has_value())
         result.departure_date = value.DepartureDate.value();
     if (value.Vessel.has_value())
@@ -59,11 +58,9 @@ inline models::pg::SeaDetails Convert(const models::SeaDetails& value) {
     if (value.eta.has_value())
         result.Eta = value.eta.value();
     if (value.departure_terminal_id.has_value())
-        result.DepartureTerminalId =
-            boost::uuids::string_generator{}(value.departure_terminal_id.value());
+        result.DepartureTerminalId = value.departure_terminal_id.value();
     if (value.arrival_terminal_id.has_value())
-        result.ArrivalTerminalId =
-            boost::uuids::string_generator{}(value.arrival_terminal_id.value());
+        result.ArrivalTerminalId = value.arrival_terminal_id.value();
     if (value.departure_date.has_value())
         result.DepartureDate = value.departure_date.value();
     if (value.vessel.has_value())
@@ -76,7 +73,7 @@ inline models::pg::SeaDetails Convert(const models::SeaDetails& value) {
 inline models::AirDetails Convert(const models::pg::AirDetails& value) {
     models::AirDetails result;
     if (value.CarrierId.has_value())
-        result.carrier_id = boost::uuids::to_string(value.CarrierId.value());
+        result.carrier_id = value.CarrierId.value();
     if (value.OriginAirport.has_value())
         result.origin_airport = Convert(value.OriginAirport.value());
     if (value.DestinationAirport.has_value())
@@ -97,7 +94,7 @@ inline models::AirDetails Convert(const models::pg::AirDetails& value) {
 inline models::pg::AirDetails Convert(const models::AirDetails& value) {
     models::pg::AirDetails result;
     if (value.carrier_id.has_value())
-        result.CarrierId = boost::uuids::string_generator{}(value.carrier_id.value());
+        result.CarrierId = value.carrier_id.value();
     if (value.origin_airport.has_value())
         result.OriginAirport = Convert(value.origin_airport.value());
     if (value.destination_airport.has_value())
@@ -117,7 +114,7 @@ inline models::pg::AirDetails Convert(const models::AirDetails& value) {
 
 inline models::ShipmentRouteSegment Convert(const models::pg::ShipmentRouteSegment& value) {
     models::ShipmentRouteSegment result;
-    result.id = boost::uuids::to_string(value.Id);
+    result.id = value.Id;
     result.type = value.Type;
     if (value.Sea.has_value())
         result.sea = Convert(value.Sea.value());
@@ -128,7 +125,7 @@ inline models::ShipmentRouteSegment Convert(const models::pg::ShipmentRouteSegme
 
 inline models::pg::ShipmentRouteSegment Convert(const models::ShipmentRouteSegment& value) {
     models::pg::ShipmentRouteSegment result;
-    result.Id = boost::uuids::string_generator{}(value.id);
+    result.Id = value.id;
     result.Type = value.type;
     if (value.sea.has_value())
         result.Sea = Convert(value.sea.value());

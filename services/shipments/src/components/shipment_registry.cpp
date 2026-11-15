@@ -82,7 +82,7 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
             const auto& last = rows.back();
             cursor = models::ShipmentRegistryCursor{
                 .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Shipment.Id),
+                .id = last.Shipment.Id,
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }

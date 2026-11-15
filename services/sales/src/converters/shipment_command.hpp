@@ -29,7 +29,7 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
             shipment_models::ParseModelJson(json::ValueBuilder(segment).ExtractValue(),
                 std::type_identity<shipment_models::ShipmentRouteSegment>{}));
     shipment_models::EnsureShipmentRequest command;
-    command.organization_id = organization;
+    command.organization_id = userver::utils::BoostUuidFromString(organization);
     command.source.type = kInquirySourceType;
     command.source.id = inquiry.id;
     command.actor_subject = actor.Subject;

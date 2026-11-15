@@ -17,8 +17,9 @@ class ShipmentRoutes final : public userver::components::ComponentBase {
     void ResolveRoute(std::string_view access_token,
         std::vector<models::ShipmentRouteSegment>& segments,
         const std::vector<models::ShipmentRouteSegment>& previous) const;
-    void CheckExistingRouteUsage(std::string_view access_token, const std::string& shipment_id,
-        const std::vector<std::string>& changed_segments) const;
+    void CheckExistingRouteUsage(std::string_view access_token,
+        const boost::uuids::uuid& shipment_id,
+        const std::vector<boost::uuids::uuid>& changed_segments) const;
 
   private:
     route_details::RouteLocations LoadRouteLocations(

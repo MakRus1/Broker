@@ -33,9 +33,9 @@ void InheritRoute(models::Transportation& transportation, const models::Shipment
     for (const auto& stage : source.route_segments) {
         const auto found =
             std::find_if(transportation.route_segments.begin(), transportation.route_segments.end(),
-                [&](const auto& local) { return local.id == stage.id; });
+                [&](const auto& local) { return local.id == userver::utils::ToString(stage.id); });
         auto value = found == transportation.route_segments.end() ? models::RouteSegment{} : *found;
-        value.id = stage.id;
+        value.id = userver::utils::ToString(stage.id);
         value.inherited = true;
         value.mode = models::ParseEnumScalar(stage.type, models::TransportMode{});
         value.sea.reset();

@@ -49,6 +49,7 @@ Shipment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     revision:
       type: integer
       minimum: 1
@@ -243,6 +244,7 @@ GetShipmentRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
   required:
   - shipment_id
 ListShipmentsRequest:
@@ -257,6 +259,7 @@ ListShipmentsRequest:
     after:
       type: string
       format: uuid
+      x-cpp-type: uuid
     sort:
       type: string
       default: id
@@ -280,6 +283,7 @@ UpdateShipmentRequest:
     shipment_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     expected_revision:
       type: integer
       minimum: 1
@@ -575,6 +579,7 @@ ShipmentRouteSegment:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     type:
       type: string
       minLength: 1
@@ -598,6 +603,7 @@ TransportLocation:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     kind:
       $ref: '#/TransportLocationKind'
     name:
@@ -630,9 +636,11 @@ SeaDetails:
     departure_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     arrival_terminal_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     departure_date:
       type: string
       format: date
@@ -650,6 +658,7 @@ AirDetails:
     carrier_id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     origin_airport:
       $ref: '#/TransportLocation'
     destination_airport:
@@ -680,6 +689,7 @@ ShipmentRegistryCursor:
     id:
       type: string
       format: uuid
+      x-cpp-type: uuid
     scope:
       type: string
       pattern: ^[a-f0-9]{64}$

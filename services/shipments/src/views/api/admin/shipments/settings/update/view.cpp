@@ -6,7 +6,7 @@
 namespace shipments::views::api::admin::shipments::settings::update {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    const auto& organization = request.body.organization_id;
+    const auto organization = userver::utils::ToString(request.body.organization_id);
     RequireAdministrator(deps.organizations, context, organization);
     auto result = deps.settings->SaveBusinessSettings(organization,
         platform::auth::GetIdentity(context), request.body.rules, request.body.expected_revision);

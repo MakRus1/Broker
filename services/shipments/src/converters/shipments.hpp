@@ -32,7 +32,7 @@ inline models::pg::ShipmentData ConvertData(const models::pg::ShipmentRaw& row) 
 
 inline models::Shipment Convert(const models::pg::ShipmentRaw& row) {
     models::Shipment result;
-    result.id = boost::uuids::to_string(row.Id);
+    result.id = row.Id;
     result.revision = row.Revision;
     result.number = row.Number;
     result.customer_id = row.CustomerId;

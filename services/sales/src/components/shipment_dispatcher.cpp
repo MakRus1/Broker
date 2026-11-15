@@ -72,7 +72,7 @@ models::ShipmentDelivery ShipmentDispatcher::DeliverShipmentCreation(
                  .shipment = command.shipment,
                  .source = command.source}},
             tokens_.GetAccessToken());
-        shipment_id = result.shipment.id;
+        shipment_id = userver::utils::ToString(result.shipment.id);
     } catch (const platform::http::ErrorByStatus<400>& error) {
         return {.ShipmentId = std::nullopt, .Rejection = std::string{error.what()}.substr(0, 2000)};
     }
@@ -107,7 +107,7 @@ void ShipmentDispatcher::CompleteShipmentCreation(pg::Transaction& transaction,
             "inquiry-shipment-failed:" + id + ":" + std::to_string(inquiry.revision);
         const notification::PublishedEvent event{
             .value = notification::InquiryShipmentCreationFailed{.id = event_id,
-                .organization_id = userver::utils::BoostUuidFromString(organization),
+                .organization_id = organization,
                 .payload = {.inquiry_id = userver::utils::BoostUuidFromString(inquiry.id),
                     .inquiry_number = inquiry.number,
                     .recipient_issuer = command.actor_issuer,

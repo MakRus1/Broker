@@ -203,7 +203,7 @@ std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
 }
 
 models::Shipment ShipmentsComponent::GetShipment(
-    const std::string& organization, const std::string& shipment_id) const {
+    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
@@ -212,7 +212,7 @@ models::Shipment ShipmentsComponent::GetShipment(
 }
 
 std::int64_t ShipmentsComponent::GetRouteUsageVersion(
-    const std::string& organization, const std::string& shipment_id) const {
+    const std::string& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetRouteUsageVersion, organization, shipment_id);
     if (rows.IsEmpty())

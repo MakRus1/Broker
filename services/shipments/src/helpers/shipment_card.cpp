@@ -36,7 +36,7 @@ void ApplyCard(const Request& request, shipments::models::pg::ShipmentData& row)
         row.DeliveryAddress = platform::TrimToOptional(request.delivery_address.value());
     if (request.route_segments.has_value()) {
         row.RouteSegments.clear();
-        std::set<std::string> ids;
+        std::set<boost::uuids::uuid> ids;
         for (const auto& segment : request.route_segments.value()) {
             if (!ids.insert(segment.id).second)
                 throw shipments::ApiError<400>{
@@ -121,10 +121,10 @@ void ValidateCard(const models::pg::ShipmentData& row, const configs::ShipmentSe
         previous != nullptr ? previous->Loading : std::nullopt);
 }
 
-std::vector<std::string> ChangedRouteSegments(
+std::vector<boost::uuids::uuid> ChangedRouteSegments(
     const std::vector<models::ShipmentRouteSegment>& previous,
     const std::vector<models::ShipmentRouteSegment>& next) {
-    std::vector<std::string> changed;
+    std::vector<boost::uuids::uuid> changed;
     for (const auto& stage : previous) {
         const auto& id = stage.id;
         const auto found =

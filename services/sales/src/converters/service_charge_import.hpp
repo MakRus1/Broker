@@ -13,7 +13,7 @@ inline clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody ToS
     namespace fm = clients::finance::models;
     const auto namespace_id = boost::uuids::string_generator{}(proposal.input.id);
     clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody batch;
-    batch.organization_id = command.organization_id;
+    batch.organization_id = userver::utils::ToString(command.organization_id);
     batch.source = {
         .id = proposal.input.id, .revision = proposal.revision, .type = "sales.proposal"};
     batch.id = boost::uuids::to_string(userver::utils::generators::GenerateBoostUuidV5(

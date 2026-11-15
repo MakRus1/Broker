@@ -7,7 +7,9 @@ Response View::Handle(
     const auto& session = platform::browser::GetBrowserSession(context);
     namespace api = clients::shipments::ApiAdminShipmentsSettingsGet;
     const auto result = deps.shipments.ApiAdminShipmentsSettingsGet(
-        api::Request{.body = {.organization_id = request.body.organization_id}}, session.Access);
+        api::Request{.body = {.organization_id = userver::utils::BoostUuidFromString(
+                                  request.body.organization_id)}},
+        session.Access);
     Response200 response{.allowed_container_types = result.allowed_container_types,
         .planned_containers_allowed = result.planned_containers_allowed,
         .revision = result.revision,

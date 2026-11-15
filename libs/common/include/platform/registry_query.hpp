@@ -108,7 +108,7 @@ struct BuiltQuery {
 class QueryBuilder {
   public:
     QueryBuilder(const pg::Query& selection, Order order, bool descending,
-        Field<std::string> identity = {"id", "id", "UUID", true})
+        FieldDefinition identity = {"id", "id", "UUID", true})
         : order_(order), descending_(descending), identity_(identity) {
         statement_ = selection.GetStatementView();
         selection_name_ = selection.GetOptionalNameView().has_value()
@@ -295,7 +295,7 @@ class QueryBuilder {
 
     Order order_;
     bool descending_;
-    Field<std::string> identity_;
+    FieldDefinition identity_;
     std::string statement_;
     std::string selection_name_;
     std::string conditions_;

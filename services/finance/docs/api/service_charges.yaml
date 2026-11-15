@@ -88,6 +88,7 @@ paths:
                   next_after:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                     nullable: true
                   summary:
                     $ref: ../components/schemas/models.yaml#/ServiceChargeSummary

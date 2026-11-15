@@ -1,6 +1,4 @@
 #include <array>
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <components/financial_history.hpp>
 #include <finance/sql_queries.hpp>
 #include <map>
@@ -12,6 +10,7 @@
 #include <span>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json/value.hpp>
+#include <userver/formats/parse/boost_uuid.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/chrono.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
@@ -85,8 +84,8 @@ struct Snapshot {
     DocumentSnapshot Document;
     std::optional<std::string> ActorName;
     std::optional<models::PaymentKind> PaymentKind;
-    std::map<std::string, DocumentSnapshot> Charges;
-    std::map<std::string, std::int64_t> Allocations;
+    std::map<boost::uuids::uuid, DocumentSnapshot> Charges;
+    std::map<boost::uuids::uuid, std::int64_t> Allocations;
 };
 
 // JSONB — формат хранения. Ниже этой границы история работает с типизированными снимками.
@@ -139,7 +138,7 @@ Snapshot ReadSnapshot(const Json& snapshot, Source source) {
         result.Document = ReadDocumentSnapshot(snapshot["invoice"], kInvoiceFields, "number");
         if (snapshot["charges"].IsArray())
             for (const auto& charge : snapshot["charges"])
-                result.Charges.emplace(charge["id"].As<std::string>(""),
+                result.Charges.emplace(charge["id"].As<boost::uuids::uuid>(),
                     ReadDocumentSnapshot(charge, kChargeFields, "label_name"));
         break;
     case Source::Payment:
@@ -149,7 +148,7 @@ Snapshot ReadSnapshot(const Json& snapshot, Source source) {
                 snapshot["payment"]["kind"].As<std::string>(), models::PaymentKind{});
         if (snapshot["allocations"].IsArray())
             for (const auto& allocation : snapshot["allocations"])
-                result.Allocations.emplace(allocation["invoice_id"].As<std::string>(""),
+                result.Allocations.emplace(allocation["invoice_id"].As<boost::uuids::uuid>(),
                     allocation["amount_minor"].As<std::int64_t>(0));
         break;
     }
@@ -177,7 +176,7 @@ void AppendFieldChanges(std::vector<models::FinancialHistoryChange>& changes,
 
 void AppendInvoiceChargeChanges(std::vector<models::FinancialHistoryChange>& changes,
     const Snapshot& before, const Snapshot& after) {
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& [id, charge] : before.Charges)
         ids.insert(id);
     for (const auto& [id, charge] : after.Charges)
@@ -218,7 +217,8 @@ struct HistoryRecord {
 };
 
 models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source requested,
-    const std::string& requested_id, const std::map<std::string, std::string>& invoice_names) {
+    const boost::uuids::uuid& requested_id,
+    const std::map<boost::uuids::uuid, std::string>& invoice_names) {
     const auto& after = record.Current;
     const Snapshot empty;
     const auto& before = record.Previous.has_value() ? record.Previous.value() : empty;
@@ -249,17 +249,17 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
         event.changes.push_back(
             {.after = included ? std::optional{Value{.display_name = after.Document.Name,
                                      .format = Format::Reference,
-                                     .value = record.Cursor.entity_id}}
+                                     .value = userver::utils::ToString(record.Cursor.entity_id)}}
                                : std::nullopt,
                 .before = was ? std::optional{Value{.display_name = before.Document.Name,
                                     .format = Format::Reference,
-                                    .value = record.Cursor.entity_id}}
+                                    .value = userver::utils::ToString(record.Cursor.entity_id)}}
                               : std::nullopt,
                 .field = FieldKey::Invoice});
         return event;
     }
     // В архивном платеже распределения сохранены в снимке, но уже не оплачивают счета.
-    const auto allocated = [](const Snapshot& snapshot, const std::string& invoice) {
+    const auto allocated = [](const Snapshot& snapshot, const boost::uuids::uuid& invoice) {
         return !snapshot.Document.Archived && snapshot.Allocations.contains(invoice)
             ? snapshot.Allocations.at(invoice)
             : std::int64_t{0};
@@ -285,7 +285,7 @@ models::FinancialHistoryEvent BuildEvent(const HistoryRecord& record, Source req
     }
     if (source == Source::Payment) {
         AppendFieldChanges(event.changes, kPaymentFields, before.Document, after.Document);
-        std::set<std::string> ids;
+        std::set<boost::uuids::uuid> ids;
         for (const auto& [id, amount] : before.Allocations)
             ids.insert(id);
         for (const auto& [id, amount] : after.Allocations)
@@ -335,7 +335,8 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     if (transaction.Execute(exists, organization, body.id).IsEmpty())
         throw ApiError<404>{"not_found", "Документ не найден в организации"};
     std::optional<pg::TimePointTz> before_time;
-    std::optional<std::string> before_source, before_id;
+    std::optional<std::string> before_source;
+    std::optional<boost::uuids::uuid> before_id;
     std::optional<std::int64_t> before_revision;
     if (body.before.has_value()) {
         const auto& before = body.before.value();
@@ -358,7 +359,7 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     const bool load_invoice_names = source == Source::Payment && access.IncludeInvoiceNames;
     for (const auto& row : stored_rows) {
         const auto event_source = models::ParseEnumScalar(row.Source, Source{});
-        HistoryRecord record{.Cursor = {.entity_id = boost::uuids::to_string(row.EntityId),
+        HistoryRecord record{.Cursor = {.entity_id = row.EntityId,
                                  .occurred_at = row.OccurredAt.GetUnderlying(),
                                  .revision = row.Revision,
                                  .source = event_source},
@@ -369,20 +370,20 @@ models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
             record.Previous = ReadSnapshot(row.Previous.value(), event_source);
         if (load_invoice_names) {
             for (const auto& [id, amount] : record.Current.Allocations)
-                invoice_ids.insert(boost::uuids::string_generator{}(id));
+                invoice_ids.insert(id);
             if (record.Previous.has_value())
                 for (const auto& [id, amount] : record.Previous.value().Allocations)
-                    invoice_ids.insert(boost::uuids::string_generator{}(id));
+                    invoice_ids.insert(id);
         }
         history.push_back(std::move(record));
     }
-    std::map<std::string, std::string> invoice_names;
+    std::map<boost::uuids::uuid, std::string> invoice_names;
     if (!invoice_ids.empty()) {
         const auto names = transaction.Execute(sql::kHistoryInvoiceNames, organization,
             std::vector<boost::uuids::uuid>{invoice_ids.begin(), invoice_ids.end()});
         for (const auto& row : names) {
             const auto invoice = row.As<models::InvoiceNameRow>(pg::kRowTag);
-            invoice_names.emplace(boost::uuids::to_string(invoice.Id), invoice.Number);
+            invoice_names.emplace(invoice.Id, invoice.Number);
         }
     }
     transaction.Commit();

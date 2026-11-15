@@ -28,7 +28,8 @@ Response View::Handle(
         throw ApiError<503>{"organizations_unavailable", "Некорректный ответ сервиса организаций"};
     }
 
-    auto result = deps.settings->GetSettings(request.body.organization_id);
+    auto result =
+        deps.settings->GetSettings(userver::utils::ToString(request.body.organization_id));
 
     return Response200{.incoming_number_template = std::move(result.incoming_number_template),
         .outgoing_number_template = std::move(result.outgoing_number_template),

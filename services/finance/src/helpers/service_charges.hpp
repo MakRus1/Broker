@@ -22,7 +22,7 @@ inline std::vector<models::ServiceChargeInvoice> LoadServiceChargeInvoices(
     std::vector<models::ServiceChargeInvoice> result;
     std::vector<boost::uuids::uuid> service_charge_ids;
     for (const auto& charge : items)
-        service_charge_ids.push_back(boost::uuids::string_generator{}(charge.id));
+        service_charge_ids.push_back(charge.id);
     const auto invoices =
         transaction.Execute(sql::kListServiceChargeInvoices, organization, service_charge_ids);
     for (const auto& row : invoices) {
@@ -30,10 +30,10 @@ inline std::vector<models::ServiceChargeInvoice> LoadServiceChargeInvoices(
         result.push_back(models::ServiceChargeInvoice{
             .direction = models::ParseEnumScalar(assignment.Direction, models::InvoiceDirection{}),
             .invoice_date = assignment.InvoiceDate,
-            .invoice_id = boost::uuids::to_string(assignment.InvoiceId),
+            .invoice_id = assignment.InvoiceId,
             .number = assignment.Number,
             .read_only = assignment.ReadOnly,
-            .service_charge_id = boost::uuids::to_string(assignment.ServiceChargeId)});
+            .service_charge_id = assignment.ServiceChargeId});
     }
     return result;
 }

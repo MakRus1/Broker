@@ -83,9 +83,7 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
             label_position =
                 labels
                     .emplace(line.label_id,
-                        finance_
-                            .ApiV1FinancialLabelsGet(
-                                {.body = {.id = userver::utils::ToString(line.label_id)}}, token)
+                        finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token)
                             .label)
                     .first;
 

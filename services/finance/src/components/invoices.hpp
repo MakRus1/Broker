@@ -43,13 +43,13 @@ class InvoicesComponent final : public userver::components::ComponentBase {
 
     // Используют транзакцию вызывающего сценария.
     models::InvoiceDetails FindInvoice(userver::storages::postgres::Transaction& transaction,
-        const std::string& organization, const std::string& id) const;
+        const std::string& organization, const boost::uuids::uuid& id) const;
 
     models::InvoiceDetails IncludeServiceCharge(
         userver::storages::postgres::Transaction& transaction, const std::string& organization,
         const platform::auth::Identity& identity, const models::pg::ServiceChargeRaw& charge,
-        const std::string& invoice_id, std::int64_t expected_revision,
-        const std::optional<std::string>& previous_invoice_id = std::nullopt) const;
+        const boost::uuids::uuid& invoice_id, std::int64_t expected_revision,
+        const std::optional<boost::uuids::uuid>& previous_invoice_id = std::nullopt) const;
 
     void UpdateServiceChargeSnapshot(userver::storages::postgres::Transaction& transaction,
         const std::string& organization, const platform::auth::Identity& identity,
@@ -69,7 +69,7 @@ class InvoicesComponent final : public userver::components::ComponentBase {
 
     void CheckInvoiceAssignment(userver::storages::postgres::Transaction& transaction,
         const std::string& organization, const boost::uuids::uuid& service_charge_id,
-        const std::optional<std::string>& previous) const;
+        const std::optional<boost::uuids::uuid>& previous) const;
 
     userver::storages::postgres::ClusterPtr cluster_;
 };

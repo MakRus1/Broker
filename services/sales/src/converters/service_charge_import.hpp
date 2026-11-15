@@ -1,6 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <clients/finance/client.hpp>
 #include <events/shipment_command.hpp>
 #include <openapi/models.hpp>
@@ -13,29 +11,26 @@ inline clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody ToS
     namespace fm = clients::finance::models;
     const auto namespace_id = proposal.input.id;
     clients::finance::ApiInternalV1ServiceChargesApplyImport::RequestBody batch;
-    batch.organization_id = userver::utils::ToString(command.organization_id);
-    batch.source = {.id = userver::utils::ToString(proposal.input.id),
-        .revision = proposal.revision,
-        .type = "sales.proposal"};
-    batch.id = boost::uuids::to_string(userver::utils::generators::GenerateBoostUuidV5(
-        namespace_id, std::to_string(proposal.revision)));
+    batch.organization_id = command.organization_id;
+    batch.source = {
+        .id = proposal.input.id, .revision = proposal.revision, .type = "sales.proposal"};
+    batch.id = userver::utils::generators::GenerateBoostUuidV5(
+        namespace_id, std::to_string(proposal.revision));
     batch.actor_subject = command.actor_subject;
     batch.actor_issuer = command.actor_issuer;
     for (const auto& line : proposal.lines) {
         const auto add = [&](const models::ProposalPrice& price, bool income) {
             fm::SaveServiceChargeRequest charge;
-            charge.id = boost::uuids::to_string(
-                userver::utils::generators::GenerateBoostUuidV5(namespace_id,
-                    userver::utils::ToString(line.input.id) + (income ? ":sale:" : ":purchase:") +
-                        std::to_string(proposal.revision)));
-            charge.shipment_id = userver::utils::ToString(shipment_id);
-            charge.label_id = userver::utils::ToString(line.input.label_id);
+            charge.id = userver::utils::generators::GenerateBoostUuidV5(namespace_id,
+                userver::utils::ToString(line.input.id) + (income ? ":sale:" : ":purchase:") +
+                    std::to_string(proposal.revision));
+            charge.shipment_id = shipment_id;
+            charge.label_id = line.input.label_id;
             charge.unit =
                 fm::ParseEnumScalar(models::EnumValue(line.input.unit), fm::FinancialLabelUnit{});
             charge.direction =
                 income ? fm::ServiceChargeDirection::Income : fm::ServiceChargeDirection::Expense;
-            charge.counterparty_id =
-                userver::utils::ToString(income ? inquiry.customer_id : *line.input.supplier_id);
+            charge.counterparty_id = income ? inquiry.customer_id : *line.input.supplier_id;
             charge.quantity_milli = line.input.quantity_milli;
             charge.price_minor = price.price_minor;
             charge.currency = price.currency;

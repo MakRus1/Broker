@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/uuid/string_generator.hpp>
 #include <converters/financial_label.hpp>
 #include <helpers/exchange_amounts.hpp>
 #include <models/conversion_rate.hpp>
@@ -37,22 +36,20 @@ inline models::pg::ServiceChargeRaw ToServiceCharge(const models::SaveServiceCha
             note.reset();
     }
     return {
-        .Id = boost::uuids::string_generator{}(value.id),
-        .ShipmentId = value.shipment_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.shipment_id.value())}
-            : std::nullopt,
+        .Id = value.id,
+        .ShipmentId =
+            value.shipment_id.has_value() ? std::optional{value.shipment_id.value()} : std::nullopt,
         .TransportationId = value.transportation_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.transportation_id.value())}
+            ? std::optional{value.transportation_id.value()}
             : std::nullopt,
-        .LabelId = boost::uuids::string_generator{}(value.label_id),
+        .LabelId = value.label_id,
         .LabelName = label.name,
         .Direction = models::EnumValue(value.direction),
         .Unit = models::EnumValue(value.unit),
-        .CounterpartyId = boost::uuids::string_generator{}(value.counterparty_id),
+        .CounterpartyId = value.counterparty_id,
         .CounterpartyName = parties.CounterpartyName,
-        .ContractId = value.contract_id.has_value()
-            ? std::optional{boost::uuids::string_generator{}(value.contract_id.value())}
-            : std::nullopt,
+        .ContractId =
+            value.contract_id.has_value() ? std::optional{value.contract_id.value()} : std::nullopt,
         .ContractNumber = parties.ContractNumber,
         .QuantityMilli = value.quantity_milli,
         .PriceMinor = value.price_minor,

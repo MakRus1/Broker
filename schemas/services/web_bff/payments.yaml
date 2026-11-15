@@ -222,6 +222,7 @@ paths:
                   next_after:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                     nullable: true
                 required:
                 - items
@@ -302,12 +303,14 @@ paths:
                 invoice_id:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 query:
                   type: string
                   maxLength: 200
                 after:
                   type: string
                   format: uuid
+                  x-cpp-type: uuid
                 limit:
                   type: integer
                   minimum: 1
@@ -331,6 +334,7 @@ paths:
                   next_after:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                     nullable: true
                 required:
                 - items

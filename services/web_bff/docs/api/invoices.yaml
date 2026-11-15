@@ -200,6 +200,7 @@ paths:
                   next_after:
                     type: string
                     format: uuid
+                    x-cpp-type: uuid
                     nullable: true
                 required:
                 - items

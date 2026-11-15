@@ -35,7 +35,7 @@ models::InvoiceDirection PaymentInvoiceDirection(models::PaymentKind kind) {
 }
 
 models::PaymentDetails LoadPayment(
-    pg::Transaction& transaction, const std::string& organization, const std::string& id) {
+    pg::Transaction& transaction, const std::string& organization, const boost::uuids::uuid& id) {
     const auto rows = transaction.Execute(sql::kGetPayment, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"payment_not_found", "Платёж не найден"};
@@ -43,8 +43,8 @@ models::PaymentDetails LoadPayment(
     result.payment = converters::Convert(rows.AsSingleRow<models::pg::PaymentRaw>());
     for (const auto& row : transaction.Execute(sql::kGetPaymentAllocations, organization, id)) {
         const auto allocation = row.As<models::PaymentAllocationRow>(pg::kRowTag);
-        result.allocations.push_back({.amount_minor = allocation.AmountMinor,
-            .invoice_id = boost::uuids::to_string(allocation.InvoiceId)});
+        result.allocations.push_back(
+            {.amount_minor = allocation.AmountMinor, .invoice_id = allocation.InvoiceId});
         if (!result.payment.archived)
             result.allocated_minor += allocation.AmountMinor;
     }
@@ -53,7 +53,7 @@ models::PaymentDetails LoadPayment(
 }
 
 models::PaymentInvoice LoadInvoiceBalance(
-    pg::Transaction& transaction, const std::string& organization, const std::string& id) {
+    pg::Transaction& transaction, const std::string& organization, const boost::uuids::uuid& id) {
     const auto rows = transaction.Execute(sql::kGetInvoice, organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
@@ -98,9 +98,7 @@ models::PaymentDetails PaymentsComponent::SavePayment(const std::string& organiz
         if (item.amount_minor > value.AmountMinor - allocated)
             throw ApiError<400>{"payment_overallocated", "Распределение превышает сумму платежа"};
         allocated += item.amount_minor;
-        if (!allocations
-                 .emplace(boost::uuids::string_generator{}(item.invoice_id), item.amount_minor)
-                 .second)
+        if (!allocations.emplace(item.invoice_id, item.amount_minor).second)
             throw ApiError<400>{"duplicate_invoice", "Счёт указан несколько раз"};
     }
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -196,7 +194,7 @@ models::PaymentListResult PaymentsComponent::ListPayments(
             const auto& last = rows.back();
             cursor =
                 models::InvoiceRegistryCursor{.date_value = date_sort ? last.DateKey : std::nullopt,
-                    .id = boost::uuids::to_string(last.Payment.Id),
+                    .id = last.Payment.Id,
                     .scope = scope,
                     .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }

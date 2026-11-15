@@ -102,9 +102,7 @@ models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
         std::optional<models::FinancialLabelRegistryCursor> cursor;
         if (more)
             cursor = models::FinancialLabelRegistryCursor{
-                .id = boost::uuids::to_string(rows.back().Label.Id),
-                .scope = scope,
-                .value = rows.back().SortKey};
+                .id = rows.back().Label.Id, .scope = scope, .value = rows.back().SortKey};
         transaction.Commit();
         return models::FinancialLabelListResult{
             .items = converters::Convert(rows), .next_cursor = cursor};

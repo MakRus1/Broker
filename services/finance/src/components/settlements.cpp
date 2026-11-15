@@ -56,7 +56,7 @@ models::ReconciliationResponse SettlementsComponent::GetReconciliation(
             .currency = row.Currency,
             .date = row.DocumentDate.value(),
             .debit_minor = row.DebitMinor,
-            .id = boost::uuids::to_string(row.DocumentId.value()),
+            .id = row.DocumentId.value(),
             .kind = models::ParseEnumScalar(row.Kind.value(), models::ReconciliationKind{}),
             .number = row.Number,
             .own_company_name = row.OwnCompanyName});

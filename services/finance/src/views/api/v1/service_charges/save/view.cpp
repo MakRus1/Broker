@@ -1,5 +1,4 @@
 #include <components/service_charges.hpp>
-#include <helpers/document_parties.hpp>
 #include <helpers/exchange_amounts.hpp>
 #include <models/errors.hpp>
 #include <permissions/permissions.hpp>
@@ -28,38 +27,27 @@ Response View::Handle(
             const auto transportation =
                 deps.transportations
                     .ApiV1TransportationsGet(
-                        {.body = {.transportation_id = userver::utils::BoostUuidFromString(
-                                      scope.transportation_id.value())}},
-                        token)
+                        {.body = {.transportation_id = scope.transportation_id.value()}}, token)
                     .transportation;
-            if (transportation.shipment_id !=
-                userver::utils::BoostUuidFromString(scope.shipment_id.value()))
+            if (transportation.shipment_id != scope.shipment_id.value())
                 throw ApiError<400>{"wrong_shipment", "Перевозка относится к другой поставке"};
         } else if (scope.shipment_id.has_value()) {
             deps.shipments.ApiV1ShipmentsGet(
-                {.body = {.shipment_id =
-                              userver::utils::BoostUuidFromString(scope.shipment_id.value())}},
-                token);
+                {.body = {.shipment_id = scope.shipment_id.value()}}, token);
         }
 
         const auto party =
             deps.counterparties
-                .ApiV1CounterpartiesGet(
-                    {.body = {.id = userver::utils::BoostUuidFromString(body.counterparty_id)}},
-                    token)
+                .ApiV1CounterpartiesGet({.body = {.id = body.counterparty_id}}, token)
                 .counterparty;
         if (party.archived && !body.archived)
             throw ApiError<409>{"archived_party", "Выберите действующего контрагента"};
         parties.CounterpartyName = party.name;
         if (body.contract_id.has_value()) {
             const auto contract =
-                deps.contracts
-                    .ApiV1ContractsGet({.body = {.id = userver::utils::BoostUuidFromString(
-                                                     body.contract_id.value())}},
-                        token)
+                deps.contracts.ApiV1ContractsGet({.body = {.id = body.contract_id.value()}}, token)
                     .contract;
-            if (contract.counterparty_id !=
-                userver::utils::BoostUuidFromString(body.counterparty_id))
+            if (contract.counterparty_id != body.counterparty_id)
                 throw ApiError<400>{"wrong_contract", "Договор относится к другому контрагенту"};
             if (contract.currency != body.invoice_currency)
                 throw ApiError<400>{

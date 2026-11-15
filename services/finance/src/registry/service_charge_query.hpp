@@ -14,13 +14,13 @@ namespace registry = platform::registry;
 
 namespace fields {
 using Date = userver::utils::datetime::Date;
-inline constexpr registry::Field<std::string> kId{"id", "charge.id", "UUID", true};
+inline constexpr registry::Field<boost::uuids::uuid> kId{"id", "charge.id", "UUID", true};
 inline constexpr registry::Field<std::string> kOrganization{
     "organization_id", "charge.organization_id", "UUID"};
 inline constexpr registry::Field<std::string> kLabel{"label_name",
     "lower(charge.label_name COLLATE public.registry_number_order) COLLATE "
     "public.registry_number_order"};
-inline constexpr registry::Field<std::string> kCounterparty{
+inline constexpr registry::Field<boost::uuids::uuid> kCounterparty{
     "counterparty_id", "charge.counterparty_id", "UUID"};
 inline constexpr registry::Field<std::string> kDirection{"direction", "charge.direction"};
 inline constexpr registry::Field<Date> kDate{"service_date", "charge.service_date", "DATE"};
@@ -31,9 +31,9 @@ inline constexpr auto kInvoice =
         "public.registry_number_order"}
         .SortedAs("COALESCE(lower(invoice_number COLLATE public.registry_number_order), '') "
                   "COLLATE public.registry_number_order");
-inline constexpr registry::Field<std::string> kShipment{
+inline constexpr registry::Field<boost::uuids::uuid> kShipment{
     "shipment_id", "charge.shipment_id", "UUID"};
-inline constexpr registry::Field<std::string> kTransportation{
+inline constexpr registry::Field<boost::uuids::uuid> kTransportation{
     "transportation_id", "charge.transportation_id", "UUID"};
 inline constexpr auto kArchived =
     registry::Field<bool>{"archived", "charge.archived", "BOOLEAN"}.SortedAs(

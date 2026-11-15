@@ -3,7 +3,6 @@
 #include <converters/invoice.hpp>
 #include <converters/service_charge_input.hpp>
 #include <finance/sql_queries.hpp>
-#include <helpers/document_parties.hpp>
 #include <helpers/exchange_amounts.hpp>
 #include <helpers/finance_settings.hpp>
 #include <helpers/history/snapshot.hpp>
@@ -47,8 +46,7 @@ models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(const std::stri
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     // Тот же порядок блокировок, что при включении услуги: услуга, затем счёт.
     if (request.expected_revision != 0)
-        transaction.Execute(sql::kLockServiceCharges, organization,
-            std::vector{boost::uuids::string_generator{}(request.id)});
+        transaction.Execute(sql::kLockServiceCharges, organization, std::vector{request.id});
     const auto labels =
         transaction.Execute(sql::kGetFinancialLabel, organization, request.label_id);
     if (labels.IsEmpty())
@@ -163,13 +161,18 @@ bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Ide
     if (inserted.IsEmpty()) {
         const auto old = transaction.Execute(
             sql::kGetServiceChargeImport, command.organization_id, producer, command.id);
-        if (old.AsSingleRow<userver::formats::json::Value>() != document)
+        const auto saved = old.AsSingleRow<userver::formats::json::Value>();
+        if (saved != document &&
+            userver::formats::json::ValueBuilder(
+                models::ParseModelJson(
+                    saved, std::type_identity<models::ImportServiceChargesRequest>{}))
+                    .ExtractValue() != document)
             throw ApiError<409>{
                 "import_conflict", "Ключ переноса уже использован для другого расчёта"};
         transaction.Commit();
         return true;
     }
-    std::set<std::string> ids;
+    std::set<boost::uuids::uuid> ids;
     for (const auto& item : command.items) {
         const auto& charge = item.charge;
         if (!ids.insert(charge.id).second || charge.expected_revision != 0 || !charge.shipment_id ||
@@ -234,7 +237,7 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
             const auto& last = rows.back();
             cursor = models::ServiceChargeRegistryCursor{
                 .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = boost::uuids::to_string(last.Charge.Id),
+                .id = last.Charge.Id,
                 .scope = scope,
                 .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
         }

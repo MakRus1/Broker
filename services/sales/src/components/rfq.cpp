@@ -102,10 +102,7 @@ void RfqComponent::PrepareRfq(const std::string& organization, std::string_view 
         for (auto& line : quote.lines) {
             if (!labels.contains(line.label_id)) {
                 const auto label =
-                    finance_
-                        .ApiV1FinancialLabelsGet(
-                            {.body = {.id = userver::utils::ToString(line.label_id)}}, token)
-                        .label;
+                    finance_.ApiV1FinancialLabelsGet({.body = {.id = line.label_id}}, token).label;
                 if (label.archived ||
                     label.direction == clients::finance::models::FinancialLabelDirection::Income)
                     throw ApiError<400>{"invalid_label", "Выберите метку для расхода"};

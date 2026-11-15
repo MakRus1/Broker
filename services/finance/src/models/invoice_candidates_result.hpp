@@ -4,6 +4,6 @@
 namespace finance::models {
 struct InvoiceCandidatesResult {
     std::vector<models::ServiceCharge> items;
-    std::optional<std::string> next_after;
+    std::optional<boost::uuids::uuid> next_after;
 };
 }  // namespace finance::models

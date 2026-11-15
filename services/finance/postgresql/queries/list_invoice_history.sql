@@ -12,7 +12,7 @@ WITH related_documents AS MATERIALIZED (
     FROM payment_history
     WHERE organization_id = $1::UUID AND $8::BOOLEAN
       AND snapshot @> jsonb_build_object('allocations',
-          jsonb_build_array(jsonb_build_object('invoice_id', $2::TEXT)))
+          jsonb_build_array(jsonb_build_object('invoice_id', $2::UUID::TEXT)))
 ), related_revisions AS (
 SELECT 'payment'::TEXT AS source, event.payment_id AS entity_id,
        event.revision, event.actor, event.changed_at AS occurred_at,
@@ -30,13 +30,13 @@ WHERE event.organization_id = $1::UUID
         ELSE COALESCE((
             SELECT (allocation->>'amount_minor')::BIGINT
             FROM jsonb_array_elements(snapshot->'allocations') AS allocation
-            WHERE allocation->>'invoice_id' = $2::TEXT
+            WHERE allocation->>'invoice_id' = $2::UUID::TEXT
         ), 0) END AS allocated_minor,
         CASE WHEN previous#>>'{payment,archived}' = 'true' THEN 0
         ELSE COALESCE((
             SELECT (allocation->>'amount_minor')::BIGINT
             FROM jsonb_array_elements(previous->'allocations') AS allocation
-            WHERE allocation->>'invoice_id' = $2::TEXT
+            WHERE allocation->>'invoice_id' = $2::UUID::TEXT
         ), 0) END AS previous_allocated_minor
     FROM related_revisions
 ), history AS (

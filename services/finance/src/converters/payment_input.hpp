@@ -1,6 +1,5 @@
 #pragma once
 #include <converters/invoice.hpp>
-#include <helpers/document_parties.hpp>
 #include <limits>
 #include <models/errors.hpp>
 #include <models/pg/payment_raw.hpp>
@@ -15,18 +14,18 @@ inline models::pg::PaymentRaw ToPayment(const models::SavePaymentRequest& body) 
     if (!platform::IsCalendarDateInRange(
             body.payment_date, std::chrono::year{1900} / 1 / 1, std::chrono::year{9999} / 12 / 31))
         throw ApiError<400>{"invalid_date", "Дата должна быть не раньше 01.01.1900"};
-    if (helpers::SameId(body.own_company_id, body.counterparty_id))
+    if (body.own_company_id == body.counterparty_id)
         throw ApiError<400>{"same_parties", "Выберите разные стороны платежа"};
-    models::pg::PaymentRaw value{.Id = boost::uuids::string_generator{}(body.id),
+    models::pg::PaymentRaw value{.Id = body.id,
         .Kind = models::EnumValue(body.kind),
         .Number = userver::utils::text::Trim(body.number),
         .PaymentDate = body.payment_date,
-        .OwnCompanyId = boost::uuids::string_generator{}(body.own_company_id),
+        .OwnCompanyId = body.own_company_id,
         .OwnCompanyName = {},
-        .CounterpartyId = boost::uuids::string_generator{}(body.counterparty_id),
+        .CounterpartyId = body.counterparty_id,
         .CounterpartyName = {},
-        .OwnBankAccountId = InvoiceId(body.own_bank_account_id),
-        .CounterpartyBankAccountId = InvoiceId(body.counterparty_bank_account_id),
+        .OwnBankAccountId = body.own_bank_account_id,
+        .CounterpartyBankAccountId = body.counterparty_bank_account_id,
         .Currency = body.currency,
         .AmountMinor = body.amount_minor,
         .Purpose = body.purpose,

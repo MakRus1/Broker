@@ -25,7 +25,7 @@ inline models::pg::FinancialLabelRaw ToFinancialLabel(
     std::optional<std::int32_t> rate;
     if (value.vat_rate_basis_points.has_value())
         rate = static_cast<std::int32_t>(value.vat_rate_basis_points.value());
-    return {.Id = boost::uuids::string_generator{}(value.id),
+    return {.Id = value.id,
         .Name = name,
         .Direction = models::EnumValue(value.direction),
         .Unit = models::EnumValue(value.unit),

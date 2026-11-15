@@ -1,3 +1,7 @@
+-- $1 — организация.
+-- $2 — шаблон номера договора.
+-- $3 — признак ежегодного сброса счётчика.
+-- $4 — ожидаемая редакция (0 для создания настроек).
 WITH updated AS (
     UPDATE contract_numbering
     SET number_template = $2::TEXT, reset_number_yearly = $3::BOOLEAN, revision = revision + 1

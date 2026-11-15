@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — идентификатор перевозки (NULL считает итоги по всей поставке).
 WITH amounts AS (
     SELECT
         $3::UUID IS NOT NULL OR transportation_id IS NULL AS direct,

@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор счёта.
+-- $3 — идентификатор платежа, исключаемого из расчёта.
 SELECT COALESCE(SUM(allocation.amount_minor), 0)::BIGINT
 FROM payment_allocations AS allocation
 JOIN payments AS payment

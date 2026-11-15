@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификаторы начислений.
 SELECT line.service_charge_id, invoice.id, invoice.number, invoice.direction, invoice.invoice_date,
     EXISTS (
         SELECT 1

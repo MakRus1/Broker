@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового начисления.
 INSERT INTO service_charges (
     organization_id,
     id,

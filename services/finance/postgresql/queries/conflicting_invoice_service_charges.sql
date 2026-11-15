@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификаторы проверяемых начислений.
+-- $3 — идентификатор счёта, который исключается из проверки.
 SELECT service_charge_id
 FROM invoice_service_charges
 WHERE organization_id = $1::UUID

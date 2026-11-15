@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — идентификатор перевозки (NULL выбирает всю поставку).
 SELECT service_date, currency, invoice_currency, total_minor, invoice_total_minor,
     direction, transportation_id
 FROM service_charges

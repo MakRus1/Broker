@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификаторы счетов.
 SELECT ROW(
     invoice.id,
     invoice.direction,

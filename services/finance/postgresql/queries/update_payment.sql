@@ -1,3 +1,6 @@
+-- $1 — организация.
+-- $2 — новые данные платежа.
+-- $3 — ожидаемая редакция.
 UPDATE payments AS payment
 SET
     kind = value.kind,

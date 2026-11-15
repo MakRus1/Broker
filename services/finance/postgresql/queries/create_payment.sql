@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — данные нового платежа.
 INSERT INTO payments (
     organization_id,
     id,

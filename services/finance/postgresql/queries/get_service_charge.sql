@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификатор начисления.
 SELECT ROW(
     charge.id,
     charge.shipment_id,

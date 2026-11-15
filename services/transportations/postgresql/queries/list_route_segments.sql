@@ -1,3 +1,5 @@
+-- $1 — организация.
+-- $2 — идентификаторы перевозок.
 SELECT ROW(
     transportation_id,
     document

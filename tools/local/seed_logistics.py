@@ -9,6 +9,16 @@ import uuid
 default_roles = (Path('/workspaces/broker/services/organizations/postgresql/queries/create_default_roles.sql')
                  .read_text().replace('$1::UUID', "'11111111-1111-4111-8111-111111111111'::UUID").rstrip().removesuffix(';') + ' ON CONFLICT DO NOTHING;')
 
+add_member = (
+    Path('/workspaces/broker/services/organizations/postgresql/queries/add_member.sql')
+    .read_text()
+    .replace('$1', "'11111111-1111-4111-8111-111111111111'")
+    .replace('$2', "'http://localhost:18888/realms/broker'")
+    .replace('$3', "ROW(:'subject', :'username', :'username', :'username' || '@localhost.test', "
+                  ":'role', TRUE, 1, NULL, NULL, NULL)")
+    .rstrip().removesuffix(';') + ' ON CONFLICT DO NOTHING;'
+)
+
 users = json.loads(Path('/cache/logistics-users.json').read_text())
 for index, subject in enumerate(users[:2]):
     uuid.UUID(subject)
@@ -22,12 +32,7 @@ for index, subject in enumerate(users[:2]):
         input="""INSERT INTO organizations (id, name)
             VALUES ('11111111-1111-4111-8111-111111111111', 'Демонстрационная организация')
             ON CONFLICT DO NOTHING;
-        """ + default_roles + """
-        INSERT INTO memberships
-            (organization_id, issuer, subject, username, display_name, email, role)
-        VALUES ('11111111-1111-4111-8111-111111111111',
-            'http://localhost:18888/realms/broker', :'subject', :'username', :'username',
-            :'username' || '@localhost.test', :'role') ON CONFLICT DO NOTHING;""",
+        """ + default_roles + '\n' + add_member,
     )
 print('Локальные сотрудники привязаны к демонстрационной организации')
 

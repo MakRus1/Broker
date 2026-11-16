@@ -1,9 +1,19 @@
 -- $1 — организация.
 -- $2 — issuer токена пользователя.
 -- $3 — данные участника организации, включая subject и роль.
-INSERT INTO memberships AS m (
-    organization_id, issuer, subject, username, display_name, email, role, last_name, first_name, middle_name
+WITH input AS (
+    SELECT ($3::public.member_v2).*
+), identity AS (
+    -- При конкурентном добавлении в две организации обе операции получают один profile_id.
+    INSERT INTO user_identities AS i (issuer, subject, profile_id)
+    SELECT $2, subject, gen_random_uuid() FROM input
+    ON CONFLICT (issuer, subject) DO UPDATE SET profile_id = i.profile_id
+    RETURNING profile_id
+), profile AS (
+    INSERT INTO user_profiles (id, display_name, last_name, first_name, middle_name)
+    SELECT profile_id, display_name, last_name, first_name, middle_name
+    FROM identity CROSS JOIN input
+    ON CONFLICT (id) DO NOTHING
 )
-SELECT $1::UUID, $2, v.subject, v.username, v.display_name, v.email, v.role, v.last_name, v.first_name, v.middle_name
-FROM (SELECT ($3::public.member_v2).*) AS v
-RETURNING ROW(m.subject, m.username, m.display_name, m.email, m.role, m.enabled, m.revision, m.last_name, m.first_name, m.middle_name)::public.member_v2;
+INSERT INTO memberships (organization_id, issuer, subject, username, email, role)
+SELECT $1::UUID, $2, subject, username, email, role FROM input;

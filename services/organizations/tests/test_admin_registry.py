@@ -2,7 +2,7 @@
 
 from uuid import UUID
 import pytest
-from conftest import ORGANIZATION, OTHER_ORGANIZATION, ISSUER
+from conftest import ORGANIZATION, OTHER_ORGANIZATION, insert_member
 
 ORGS = '/api/admin/organizations/list'
 MEMBERS = '/api/admin/organizations/members/list'
@@ -16,24 +16,11 @@ def registry_records(pgsql):
             [(str(UUID(int=100 + i)), f'Alpha-{i%3}', i % 2 == 0) for i in range(18)],
         )
         for organization in [ORGANIZATION, OTHER_ORGANIZATION]:
-            cursor.executemany(
-                '''INSERT INTO memberships
-                (organization_id,issuer,subject,username,display_name,email,role,enabled)
-                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)''',
-                [
-                    (
-                        organization,
-                        ISSUER,
-                        f'member-{i:02}',
-                        f'user-{i:02}',
-                        f'Employee-{i%3}',
-                        f'user-{i:02}@example.test',
-                        'operator' if i % 2 else 'viewer',
-                        i % 3 != 0,
-                    )
-                    for i in range(18)
-                ],
-            )
+            for i in range(18):
+                insert_member(
+                    cursor, organization, f'member-{i:02}', 'operator' if i % 2 else 'viewer',
+                    username=f'user-{i:02}', name=f'Employee-{i%3}', enabled=i % 3 != 0,
+                )
 
 
 async def pages(api, path, query, **kwargs):

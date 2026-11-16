@@ -115,8 +115,9 @@ models::MemberResult MembersComponent::CreateMember(
             transaction.Commit();
             return models::MemberResult{.member = member};
         }
+        transaction.Execute(sql::kAddMember, organization, identity.Issuer, Convert(user, role));
         const auto member = Convert(
-            transaction.Execute(sql::kAddMember, organization, identity.Issuer, Convert(user, role))
+            transaction.Execute(sql::kGetMembership, organization, identity.Issuer, user.Subject)
                 .AsSingleRow<models::pg::MemberRaw>());
         transaction.Execute(sql::kCompleteProvisioning, request.request_id, user.Subject);
         WriteAudit(transaction, organization, identity, "member.created", member);
@@ -143,9 +144,11 @@ models::MemberResult MembersComponent::AddExistingMember(
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         RequireAdministrator(transaction, request.organization_id, identity);
+        transaction.Execute(
+            sql::kAddMember, request.organization_id, identity.Issuer, Convert(user, request.role));
         const auto member = Convert(transaction
-                                        .Execute(sql::kAddMember, request.organization_id,
-                                            identity.Issuer, Convert(user, request.role))
+                                        .Execute(sql::kGetMembership, request.organization_id,
+                                            identity.Issuer, user.Subject)
                                         .AsSingleRow<models::pg::MemberRaw>());
         WriteAudit(transaction, request.organization_id, identity, "member.added", member);
 
@@ -194,27 +197,20 @@ models::MemberResult MembersComponent::UpdateMemberAccess(
 models::MemberResult MembersComponent::UpdateMemberProfile(
     const models::UpdateMemberProfileRequest& request,
     const platform::auth::Identity& identity) const {
-    {
-        auto access = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        RequireAdministrator(access, request.organization_id, identity);
-        access.Commit();
-    }
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    RequireAdministrator(transaction, request.organization_id, identity);
+
     const auto last = userver::utils::text::Trim(request.last_name);
     const auto first = userver::utils::text::Trim(request.first_name);
     const auto middle = platform::TrimToOptional(request.middle_name.value_or(std::nullopt));
     if (last.empty() || first.empty())
         throw ApiError<400>{"invalid_profile", "Укажите фамилию и имя"};
-    const auto existing = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetMembership,
-        request.organization_id, identity.Issuer, request.subject);
-    if (existing.IsEmpty())
-        throw ApiError<404>{"member_not_found", "Сотрудник не найден"};
-    // Сетевой вызов выполняется до транзакции БД. Повторное задание ФИО идемпотентно.
-    const auto user = keycloak_users_.UpdateProfile(request.subject, last, first, middle);
 
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    RequireAdministrator(transaction, request.organization_id, identity);
-    transaction.Execute(sql::kUpdateMemberProfile, identity.Issuer, request.subject,
-        user.DisplayName, user.LastName, user.FirstName, user.MiddleName);
+    const auto changed = transaction.Execute(sql::kUpdateMemberProfile, request.organization_id,
+        identity.Issuer, request.subject, last, first, middle);
+    if (changed.IsEmpty())
+        throw ApiError<404>{"member_not_found", "Сотрудник не найден"};
+
     const auto member = Convert(
         transaction
             .Execute(sql::kGetMembership, request.organization_id, identity.Issuer, request.subject)

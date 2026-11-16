@@ -11,6 +11,7 @@
 #include <models/pg/service_charge_raw.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/invoice_query.hpp>
 #include <set>
 #include <span>
@@ -197,8 +198,7 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
+        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::InvoiceRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
             rows, body.limit, scope, [](const auto& row) { return row.Invoice.Id; }, date_sort);

@@ -3,6 +3,7 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <models/shipment_registry_row.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -61,8 +62,7 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
         auto transaction =
             cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
+        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::ShipmentRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::ShipmentRegistryCursor>(
             rows, request.limit, scope, [](const auto& row) { return row.Shipment.Id; }, date_sort);

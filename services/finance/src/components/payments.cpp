@@ -12,6 +12,7 @@
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/payment_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/payment_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -177,8 +178,7 @@ models::PaymentListResult PaymentsComponent::ListPayments(
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
+        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::PaymentRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
             rows, body.limit, scope, [](const auto& row) { return row.Payment.Id; }, date_sort);

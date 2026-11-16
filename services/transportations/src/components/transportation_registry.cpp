@@ -4,6 +4,7 @@
 #include <helpers/database.hpp>
 #include <models/pg/route_segment.hpp>
 #include <models/transportation_registry_row.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -43,8 +44,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
         // Перевозки и плечи страницы должны относиться к одному снимку.
         auto transaction =
             cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
-        transaction.Execute(sql::kRegistryPlan);
-        auto page = transaction.Execute(query.Statement, query.Parameters)
+        auto page = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::TransportationRegistryRow>>(pg::kRowTag);
         const auto next_cursor = platform::registry::FinishListPage<models::RegistryCursor>(
             page, request.limit, scope, [](const auto& row) { return row.Transportation.Id; });
@@ -102,8 +102,7 @@ models::RegistryValuesResult TransportationRegistry::GetFilterValues(
         // Custom plan сохраняет селективность условий и вариантов связанной коллекции.
         auto transaction =
             cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
-        transaction.Execute(sql::kRegistryPlan);
-        const auto rows = transaction.Execute(query.Statement, query.Parameters)
+        const auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                               .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
         transaction.Commit();
 

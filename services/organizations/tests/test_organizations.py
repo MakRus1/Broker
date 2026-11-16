@@ -84,6 +84,13 @@ async def test_access_is_scoped_to_membership_role(api, user, permission, status
     )
 
 
+async def test_access_without_requested_permission_returns_effective_permissions(api):
+    result = await api.call('/api/organizations/access', {}, user='viewer')
+    assert result['organization_id'] == ORGANIZATION
+    assert 'shipments.read' in result['permissions']
+    assert 'shipments.write' not in result['permissions']
+
+
 async def test_last_administrator_cannot_be_disabled_or_demoted(api):
     for role, enabled in [('viewer', True), ('administrator', False)]:
         result = await api.call(
@@ -116,6 +123,7 @@ async def test_disabling_membership_revokes_access_without_disabling_other_organ
     await api.call(
         '/api/organizations/access', {'permission': 'shipments.read'}, user='viewer', expected=403
     )
+    await api.call('/api/organizations/access', {}, user='viewer', expected=403)
     await api.call(
         '/api/organizations/access', {'permission': 'shipments.read'}, user='other-admin'
     )
@@ -539,7 +547,7 @@ async def test_membership_check_does_not_replace_permission_check(api):
     assert membership == {'organization_id': ORGANIZATION}
     await api.call(
         '/api/organizations/access',
-        {'organization_id': ORGANIZATION},
+        {'organization_id': ORGANIZATION, 'permission': ''},
         user='viewer',
         expected=400,
     )

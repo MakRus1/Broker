@@ -770,3 +770,23 @@ async def test_financial_history_keeps_structured_context(browser, mockserver, p
     response = await browser.post(endpoint, dict(id=ID, limit=30, before=cursor))
     assert response.status == 200, response.text
     assert response.json() == result
+
+
+async def test_sales_session_can_open_inbox_without_shipment_permission(browser, mockserver):
+    organization = '11111111-1111-4111-8111-111111111111'
+
+    @mockserver.json_handler('/api/organizations/access')
+    def access(request):
+        assert request.json == {}
+        return {'organization_id': organization, 'permissions': ['sales.read']}
+
+    @mockserver.json_handler('/api/v1/notifications/list')
+    def inbox(request):
+        assert request.json['organization_id'] == organization
+        return {'items': []}
+
+    session = await browser.sign_in()
+    assert session['permissions'] == ['sales.read']
+    response = await browser.post('/api/notifications/list', {'organization_id': organization})
+    assert response.status == 200
+    assert response.json() == {'items': []}

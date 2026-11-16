@@ -23,6 +23,8 @@ class MembersComponent final : public userver::components::ComponentBase {
     models::MemberResult UpdateMemberProfile(
         const models::UpdateMemberProfileRequest&, const platform::auth::Identity&) const;
 
+    std::optional<std::string> FindProfileDisplayName(const platform::auth::Identity&) const;
+
   private:
     const KeycloakUsers& keycloak_users_;
     userver::storages::postgres::ClusterPtr cluster_;

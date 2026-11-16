@@ -6,9 +6,10 @@ Response View::Handle(Request&&, userver::server::request::RequestContext& conte
     const auto& session = platform::browser::GetBrowserSession(context);
     // Для сессии нужны все права пользователя в его единственной доступной организации.
     const auto access = deps.organizations.ApiOrganizationsAccess({}, session.Access);
+    const auto profile = deps.organizations.ApiOrganizationsProfile({}, session.Access);
     return Response200{.actor = session.User.ActorId(),
         .csrf_token = session.Csrf,
-        .display_name = session.User.DisplayName,
+        .display_name = profile.display_name.value_or(session.User.DisplayName),
         .organization_id = access.organization_id,
         .permissions = access.permissions,
         .subject = session.User.Subject};

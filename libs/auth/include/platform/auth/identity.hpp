@@ -21,6 +21,7 @@ struct Identity {
     std::string DisplayName;
     std::optional<boost::uuids::uuid> Organization;
     std::string ClientId;
+    std::string Login;
 
     std::string ActorId() const {
         return Issuer + "#" + Subject;

@@ -42,6 +42,8 @@ dashboard:
   tags:
   - logistics
 http_logging:
+  redact_fields:
+    "/api/organizations/employees/list": [display_name, query]
   exclude_paths:
   - /auth/**
   - /api/session

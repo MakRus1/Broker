@@ -36,6 +36,9 @@ dashboard:
   tags:
   - admin
 http_logging:
+  redact_fields:
+    "/api/admin/organizations/members/*": [display_name, last_name, first_name, middle_name, query, cursor]
+    "/api/configs/drafts/*": [author_name, approved_by_name]
   exclude_paths:
   - /auth/**
   - /api/session

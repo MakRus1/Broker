@@ -20,6 +20,7 @@ paths:
 - /api/organizations/employees/list
 - /api/organizations/me
 - /api/organizations/membership/get
+- /api/organizations/profile
 - /api/organizations/registry-defaults/get
 - /api/organizations/registry-defaults/list
 - /api/organizations/registry-defaults/save

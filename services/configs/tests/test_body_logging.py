@@ -1,4 +1,4 @@
-"""Логи административного API содержат тело запроса и полученный драфт."""
+"""Логи административного API сохраняют логин автора черновика."""
 
 import json
 
@@ -30,6 +30,35 @@ async def test_draft_bodies_are_logged(admin_client, service_client, valid):
     incoming = next(record for record in records if record.get('_type') == 'request')
     outgoing = next(record for record in records if record.get('_type') == 'response')
     assert json.loads(incoming['body']) == request_body
-    assert json.loads(outgoing['body']) == response.json()
+    expected = response.json()
     if valid:
-        assert json.loads(outgoing['body'])['value'] == request_body['value']
+        assert expected['author_login'] == 'author'
+        assert 'author_name' not in expected
+        assert expected['value'] == request_body['value']
+    assert json.loads(outgoing['body']) == expected
+
+
+async def test_legacy_draft_name_is_masked(admin_client, service_client, pgsql):
+    response = await admin_client.post('/admin/configs/drafts/create', json={
+        'config_name': 'SHIPMENT_TERMS_CONFIG',
+        'description': 'Старый черновик',
+        'expected_config_version': 0,
+        'value': terms(True, 60),
+    })
+    assert response.status == 201
+    draft_id = response.json()['id']
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(
+            """UPDATE config_drafts SET document = (document - 'author_login')
+               || jsonb_build_object('author_name', %s::TEXT) WHERE id = %s""",
+            ('Имя из старого черновика', draft_id),
+        )
+
+    path = '/admin/configs/drafts/get'
+    async with service_client.capture_logs() as capture:
+        response = await admin_client.post(path, json={'id': draft_id})
+        assert response.status == 200
+    assert response.json()['author_name'] == 'Имя из старого черновика'
+    records = capture.select(trace_id=response.headers['X-Trace-Id'], meta_type=path)
+    outgoing = next(record for record in records if record.get('_type') == 'response')
+    assert json.loads(outgoing['body']) == {**response.json(), 'author_name': '***'}

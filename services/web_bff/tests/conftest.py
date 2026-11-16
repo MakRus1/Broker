@@ -136,3 +136,13 @@ def organization_access(mockserver, oidc):
         roles = oidc['claims'].get('resource_access', {}).get('broker-logistics', {}).get('roles',
             ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.read'])
         return {'organization_id': '11111111-1111-4111-8111-111111111111', 'permissions': roles}
+
+
+@pytest.fixture(autouse=True)
+def organization_profile(mockserver):
+    @mockserver.json_handler('/api/organizations/profile')
+    def profile(request):
+        assert request.method == 'GET'
+        return {}
+
+    return profile

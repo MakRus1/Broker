@@ -56,7 +56,9 @@ Draft ReadDraft(std::int64_t id, const Json& document) {
         .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
         .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
         .AuthorName = Optional<std::string>(document, "author_name"),
-        .ApprovedByName = Optional<std::string>(document, "approved_by_name")};
+        .ApprovedByName = Optional<std::string>(document, "approved_by_name"),
+        .AuthorLogin = Optional<std::string>(document, "author_login"),
+        .ApprovedByLogin = Optional<std::string>(document, "approved_by_login")};
 }
 
 Json WriteDraft(const Draft& draft) {
@@ -67,6 +69,10 @@ Json WriteDraft(const Draft& draft) {
         document["author_name"] = draft.AuthorName.value();
     if (draft.ApprovedByName.has_value())
         document["approved_by_name"] = draft.ApprovedByName.value();
+    if (draft.AuthorLogin.has_value())
+        document["author_login"] = draft.AuthorLogin.value();
+    if (draft.ApprovedByLogin.has_value())
+        document["approved_by_login"] = draft.ApprovedByLogin.value();
     document["description"] = draft.Description;
     document["version"] = draft.Version;
     document["status"] = std::string(StatusName(draft.Status));

@@ -29,8 +29,13 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
       </div>
       <p>{draft.description}</p>
       <p className="muted">
-        Автор: <Actor actor={draft.author} name={draft.author_name} session={session} /> · Версия
-        драфта {draft.version} ·{' '}
+        Автор:{' '}
+        <Actor
+          actor={draft.author}
+          name={draft.author_login ?? draft.author_name}
+          session={session}
+        />{' '}
+        · Версия драфта {draft.version} ·{' '}
         {draft.base_value === null
           ? 'Первоначальное создание'
           : `На основе версии ${draft.base_version}`}
@@ -38,7 +43,11 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
       {draft.approved_by && (
         <p className="muted">
           Подтвердил:{' '}
-          <Actor actor={draft.approved_by} name={draft.approved_by_name} session={session} />
+          <Actor
+            actor={draft.approved_by}
+            name={draft.approved_by_login ?? draft.approved_by_name}
+            session={session}
+          />
         </p>
       )}
       <ValueDiff before={draft.base_value} after={draft.value} />
@@ -97,8 +106,8 @@ export function DraftDetails({ workspace }: { workspace: Workspace }) {
                   actor={event.actor}
                   name={
                     event.action === 'approve'
-                      ? event.snapshot.approved_by_name
-                      : event.snapshot.author_name
+                      ? (event.snapshot.approved_by_login ?? event.snapshot.approved_by_name)
+                      : (event.snapshot.author_login ?? event.snapshot.author_name)
                   }
                   session={session}
                 />{' '}

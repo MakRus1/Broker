@@ -790,3 +790,19 @@ async def test_sales_session_can_open_inbox_without_shipment_permission(browser,
     response = await browser.post('/api/notifications/list', {'organization_id': organization})
     assert response.status == 200
     assert response.json() == {'items': []}
+
+
+async def test_session_refreshes_display_name_from_organizations(browser, mockserver):
+    display_name = 'Имя из Organizations'
+
+    @mockserver.json_handler('/api/organizations/profile')
+    def profile(request):
+        return {'display_name': display_name}
+
+    session = await browser.sign_in()
+    assert session['display_name'] == display_name
+
+    display_name = 'Обновлённое имя'
+    response = await browser.get('/api/session')
+    assert response.status == 200
+    assert response.json()['display_name'] == display_name

@@ -14,6 +14,7 @@ auth:
     /api/internal/permissions/releases/reconcile: organizations.register_permissions
     /api/organizations/access: authenticated
     /api/organizations/me: authenticated
+    /api/organizations/profile: authenticated
     /api/admin/organizations/list: authenticated
     /api/admin/organizations/create: authenticated
     /api/admin/organizations/update: authenticated
@@ -37,6 +38,10 @@ auth:
   service-clients:
     organizations.register_permissions: permission-publisher
 http_logging:
+  redact_fields:
+    "/api/admin/organizations/members/*": [display_name, last_name, first_name, middle_name, query, cursor]
+    "/api/organizations/employees/list": [display_name, query]
+    "/api/organizations/profile": [display_name]
   exclude_paths:
   - /api/admin/organizations/members/create
 service_accounts:

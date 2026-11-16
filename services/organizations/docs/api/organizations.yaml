@@ -3,6 +3,32 @@ info:
   title: Организации и сотрудники
   version: '1'
 paths:
+  /api/organizations/profile:
+    get:
+      summary: Получить отображаемое имя текущего пользователя
+      responses:
+        '200':
+          description: Профиль пользователя. Поле display_name отсутствует, если профиль ещё не создан.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  display_name:
+                    type: string
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
+        '403':
+          description: Нет доступа
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/organizations.yaml#/ApiError
   /api/organizations/access:
     post:
       summary: Получить права пользователя в организации

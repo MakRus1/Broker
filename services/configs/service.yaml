@@ -25,3 +25,6 @@ auth:
     /admin/configs/history: configs.read
     /admin/configs/list: configs.read
   platform-access: true
+http_logging:
+  redact_fields:
+    "/admin/configs/drafts/*": [author_name, approved_by_name]

@@ -23,6 +23,10 @@ ConfigDraft:
       minimum: 1
     config_name:
       type: string
+    author_login:
+      type: string
+    approved_by_login:
+      type: string
     author_name:
       type: string
       maxLength: 2048
@@ -74,6 +78,10 @@ DraftSnapshot:
   - value
   properties:
     config_name:
+      type: string
+    author_login:
+      type: string
+    approved_by_login:
       type: string
     author_name:
       type: string

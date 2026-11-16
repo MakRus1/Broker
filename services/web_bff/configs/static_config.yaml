@@ -672,6 +672,13 @@ components_manager:
             load-enabled: $config-updates-enabled
         platform-config-startup:
             load-enabled: $config-wait-for-snapshot
+        postgres-web-bff:
+            dbconnection: $pg-connection
+            dbconnection#env: DB_CONNECTION
+            blocking_task_processor: fs-task-processor
+            dns_resolver: async
+            sync-start: true
+            connlimit_mode: manual
         dynamic-config:
             defaults:
                 HTTP_CLIENT_CONNECTION_POOL_SIZE: 1000
@@ -709,6 +716,7 @@ components_manager:
         auth-http-client:
             wait-for-dynamic-configs: false
         browser-sessions:
+            postgres-component: postgres-web-bff
             origin: $web-origin
             issuer: $auth-issuer
             token-url: $web-token-url

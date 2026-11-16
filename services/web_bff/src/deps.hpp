@@ -21,6 +21,8 @@
 #include <platform/configs/runtime.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
+#include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/postgres/component.hpp>
 
 // SERVICE_DEPS_INCLUDES_END
 
@@ -42,6 +44,7 @@ struct Deps {
     clients::transport_locations::Client transport_locations;
     clients::transportations::Client transportations;
     clients::user_preferences::Client user_preferences;
+    userver::storages::postgres::ClusterPtr pg_cluster;
     // SERVICE_DEPS_FIELDS_END
     platform::browser::Sessions* sessions;
 };
@@ -72,6 +75,9 @@ inline Deps ResolveDeps(const userver::components::ComponentContext& component_c
             component_context.FindComponent<clients::transportations::Component>().GetClient(),
         .user_preferences =
             component_context.FindComponent<clients::user_preferences::Component>().GetClient(),
+        .pg_cluster =
+            component_context.FindComponent<userver::components::Postgres>("postgres-web-bff")
+                .GetCluster(),
         // SERVICE_DEPS_INIT_END
         .sessions = &component_context.FindComponent<platform::browser::Sessions>(),
     };

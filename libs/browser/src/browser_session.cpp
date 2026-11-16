@@ -21,22 +21,19 @@ class BrowserSessionMiddleware final : public userver::server::middlewares::Http
   private:
     void Authenticate(const Http& http, userver::server::request::RequestContext& context) const {
         const auto id = http.GetCookie(sessions_.CookieName(sessions_.SessionCookie));
-        const auto session = sessions_.Get(id);
-        std::lock_guard lock(session->Mutex);
-        sessions_.EnsureFresh(*session);
+        auto session = sessions_.GetAuthenticated(id);
         if (http.GetMethodStr() == "POST") {
             if (http.GetHeader("Origin") != sessions_.Origin ||
-                http.GetHeader("X-CSRF-Token") != session->Csrf)
+                http.GetHeader("X-CSRF-Token") != session.Csrf)
                 throw platform::auth::Forbidden{};
             const auto& type = http.GetHeader("Content-Type");
             if (type != "application/json" && !type.starts_with("application/json;"))
                 throw std::invalid_argument("JSON content type is required");
         }
-        context.SetData("platform-auth", session->User);
+        context.SetData("platform-auth", session.User);
         context.SetData("browser-session",
-            platform::browser::BrowserSession{
-                session->User, session->Access, session->Csrf, id, &http});
-        // Снимок изолирован от обновления токенов; сеть и logout выполняются без этого mutex.
+            platform::browser::BrowserSession{std::move(session.User), std::move(session.Access),
+                std::move(session.Csrf), id, &http});
     }
 
     void HandleRequest(userver::server::http::HttpRequest& http,

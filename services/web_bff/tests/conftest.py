@@ -1,6 +1,14 @@
 # SERVICE_TESTS_BEGIN
 import pytest
-pytest_plugins = ['pytest_userver.plugins.core']
+from testsuite.databases.pgsql import discover
+@pytest.fixture(scope='session')
+def initial_data_path(service_source_dir):
+    return [service_source_dir / 'postgresql/data']
+@pytest.fixture(scope='session')
+def pgsql_local(service_source_dir, pgsql_local_create):
+    databases = discover.find_schemas('web_bff', [service_source_dir / 'postgresql/schemas'])
+    return pgsql_local_create(list(databases.values()))
+pytest_plugins = ['pytest_userver.plugins.core', 'pytest_userver.plugins.postgresql']
 # SERVICE_TESTS_END
 
 @pytest.fixture(scope='session')
@@ -73,6 +81,9 @@ def oidc(mockserver, auth_key):
         else:
             assert grant == 'refresh_token'
             assert form['refresh_token'] == 'server-only-refresh'
+            if delay := state.get('refresh_delay'):
+                import asyncio
+                await asyncio.sleep(delay)
         claims = {'aud': 'broker-logistics', 'resource_access': {'broker-logistics': {'roles': ['organizations.read_employees', 'shipments.read', 'shipments.write', 'transportations.read']}}, 'azp': 'broker-web', 'preferred_username': 'author', **state['claims']}
         identity = {'typ': 'ID', 'aud': 'broker-web', 'azp': 'broker-web',
                     'nonce': state['nonce'], **state['id_claims']}

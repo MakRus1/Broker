@@ -1,3 +1,4 @@
+#include <browser_storage/sql_queries.hpp>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <platform/browser/sessions.hpp>
@@ -10,11 +11,29 @@
 #include <userver/formats/json.hpp>
 #include <userver/http/url.hpp>
 #include <userver/server/handlers/exceptions.hpp>
+#include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/exceptions.hpp>
+#include <userver/storages/postgres/io/chrono.hpp>
+#include <userver/storages/postgres/transaction.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 using userver::http::UrlEncode;
 using HttpClient = userver::components::HttpClient;
+namespace pg = userver::storages::postgres;
+namespace sql = browser_storage::sql;
+constexpr std::int64_t kMaxPendingLogins = 1000;
+constexpr std::int64_t kMaxLocalSessions = 2000;
+constexpr auto kTokenRefreshLeadTime = std::chrono::seconds{30};
+
+struct StoredSession {
+    std::string Actor, Access, Refresh, Csrf;
+    pg::TimePointTz TokenExpires, Expires;
+};
+
+bool NeedsRefresh(platform::browser::Clock::time_point expires) {
+    return expires <= platform::browser::Clock::now() + kTokenRefreshLeadTime;
+}
 
 std::string Random() {
     std::string bytes(32, '\0');
@@ -45,6 +64,8 @@ Sessions::Sessions(const userver::components::ComponentConfig& config,
       revoke_url_(config["revoke-url"].As<std::string>()),
       client_(config["client-id"].As<std::string>()),
       secure_(config["secure-cookie"].As<bool>(true)) {
+    if (const auto postgres = config["postgres-component"].As<std::optional<std::string>>())
+        cluster_ = context.FindComponent<userver::components::Postgres>(*postgres).GetCluster();
     if (SessionCookie.empty() || LoginCookie.empty() || SessionCookie == LoginCookie ||
         Origin.empty() || Origin.back() == '/' || client_.empty() ||
         (secure_ &&
@@ -52,6 +73,14 @@ Sessions::Sessions(const userver::components::ComponentConfig& config,
                 !token_url_.starts_with("https://") || !revoke_url_.starts_with("https://"))) ||
         (!secure_ && !Origin.starts_with("http://localhost:")))
         throw std::invalid_argument("Invalid browser origin or TLS configuration");
+
+    if (cluster_) {
+        cleanup_task_.Start("browser-session-cleanup",
+            userver::utils::PeriodicTask::Settings{std::chrono::minutes{1}}, [this] {
+                cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredLogins);
+                cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredSessions);
+            });
+    }
 }
 
 void Sessions::Cleanup() {
@@ -62,11 +91,13 @@ void Sessions::Cleanup() {
 
 std::pair<std::string, std::string> Sessions::Begin() {
     const auto state = Random();
-    const Pending pending{Random(), Random(), Clock::now() + std::chrono::minutes{5}};
-    {
+    const Pending pending{Random(), Random(), Clock::now() + kLoginTtl};
+    if (cluster_) {
+        StorePending(state, pending);
+    } else {
         std::lock_guard lock(mutex_);
         Cleanup();
-        if (pending_.size() >= 1000)
+        if (pending_.size() >= static_cast<std::size_t>(kMaxPendingLogins))
             throw CapacityExceeded{};
         pending_.emplace(state, pending);
     }
@@ -107,16 +138,7 @@ void Sessions::Tokens(Session& session, const userver::formats::json::Value& tok
 }
 
 std::string Sessions::Complete(const std::string& state, const std::string& code) {
-    Pending pending;
-    {
-        std::lock_guard lock(mutex_);
-        Cleanup();
-        const auto found = pending_.find(state);
-        if (found == pending_.end())
-            throw userver::server::handlers::Unauthorized{};
-        pending = found->second;
-        pending_.erase(found);  // Authorization code и state используются только один раз.
-    }
+    const auto pending = ConsumePending(state);
     const auto tokens = Exchange("grant_type=authorization_code&client_id=" + UrlEncode(client_) +
         "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") + "&code=" + UrlEncode(code) +
         "&code_verifier=" + UrlEncode(pending.Verifier));
@@ -133,17 +155,21 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     }
     Tokens(*session, tokens);
     session->Csrf = Random();
-    session->Expires = Clock::now() + std::chrono::hours{8};
+    session->Expires = Clock::now() + kSessionTtl;
     const auto id = Random();
-    std::lock_guard lock(mutex_);
-    Cleanup();
-    if (sessions_.size() >= 2000)
-        throw CapacityExceeded{};
-    sessions_.emplace(id, std::move(session));
+    if (cluster_) {
+        StoreSession(id, *session);
+    } else {
+        std::lock_guard lock(mutex_);
+        Cleanup();
+        if (sessions_.size() >= static_cast<std::size_t>(kMaxLocalSessions))
+            throw CapacityExceeded{};
+        sessions_.emplace(id, std::move(session));
+    }
     return id;
 }
 
-std::shared_ptr<Session> Sessions::Get(const std::string& id) {
+std::shared_ptr<Session> Sessions::GetLocal(const std::string& id) {
     std::lock_guard lock(mutex_);
     const auto found = sessions_.find(id);
     if (found == sessions_.end())
@@ -155,39 +181,151 @@ std::shared_ptr<Session> Sessions::Get(const std::string& id) {
     return found->second;
 }
 
-void Sessions::EnsureFresh(Session& session) {
-    if (session.Expires <= Clock::now())
+SessionSnapshot Sessions::GetAuthenticated(const std::string& id) {
+    if (id.empty())
         throw userver::server::handlers::Unauthorized{};
-    if (session.TokenExpires <= Clock::now() + std::chrono::seconds{30}) {
-        const auto tokens = Exchange("grant_type=refresh_token&client_id=" + UrlEncode(client_) +
-            "&refresh_token=" + UrlEncode(session.Refresh));
-        platform::auth::Identity identity;
-        try {
-            identity = auth_.VerifyAccess(tokens["access_token"].As<std::string>());
-        } catch (const platform::auth::Unavailable&) {
-            throw;
-        } catch (const std::bad_alloc&) {
-            throw;
-        } catch (const std::exception&) {
-            throw userver::server::handlers::Unauthorized{};
-        }
-        if (identity.ActorId() != session.User.ActorId())
-            throw userver::server::handlers::Unauthorized{};
-        Tokens(session, tokens);
-        session.User = identity;
-    }
+    if (cluster_)
+        return GetStored(id);
+
+    const auto session = GetLocal(id);
+    std::lock_guard lock(session->Mutex);
+    if (session->Expires <= Clock::now())
+        throw userver::server::handlers::Unauthorized{};
+    if (NeedsRefresh(session->TokenExpires))
+        Refresh(*session, session->User.ActorId());
+    return {session->User, session->Access, session->Csrf};
 }
 
-void Sessions::Logout(const std::string& id) {
-    auto session = Get(id);
+platform::auth::Identity Sessions::VerifyAccess(const std::string& token) const try {
+    return auth_.VerifyAccess(token);
+} catch (const platform::auth::Unavailable&) {
+
+    throw;
+} catch (const std::bad_alloc&) {
+    throw;
+} catch (const std::exception&) {
+    throw userver::server::handlers::Unauthorized{};
+}
+
+void Sessions::Refresh(Session& session, const std::string& actor) {
+    const auto tokens = Exchange("grant_type=refresh_token&client_id=" + UrlEncode(client_) +
+        "&refresh_token=" + UrlEncode(session.Refresh));
+    auto identity = VerifyAccess(tokens["access_token"].As<std::string>());
+    if (identity.ActorId() != actor)
+        throw userver::server::handlers::Unauthorized{};
+    Tokens(session, tokens);
+    session.User = std::move(identity);
+}
+
+void Sessions::StorePending(const std::string& state, const Pending& pending) try {
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    transaction.Execute(sql::kLockSessionCapacity, std::string{"browser_login_attempts"});
+    transaction.Execute(sql::kClearExpiredLogins);
+    if (transaction
+            .Execute(sql::kCreatePendingLogin, Challenge(state), pending.Verifier, pending.Nonce,
+                pg::TimePointTz{pending.Expires}, kMaxPendingLogins)
+            .IsEmpty())
+        throw CapacityExceeded{};
+    transaction.Commit();
+} catch (const pg::Error&) {
+
+    throw platform::auth::Unavailable{};
+}
+
+Pending Sessions::ConsumePending(const std::string& state) try {
+    if (cluster_) {
+        const auto rows = cluster_->Execute(
+            pg::ClusterHostType::kMaster, sql::kConsumePendingLogin, Challenge(state));
+        if (rows.IsEmpty())
+            throw userver::server::handlers::Unauthorized{};
+
+        struct LoginRow {
+            std::string Verifier, Nonce;
+        };
+
+        auto login = rows.AsSingleRow<LoginRow>(pg::kRowTag);
+        return {std::move(login.Verifier), std::move(login.Nonce), {}};
+    }
+
+    std::lock_guard lock(mutex_);
+    Cleanup();
+    auto login = pending_.extract(state);
+    if (login.empty())
+        throw userver::server::handlers::Unauthorized{};
+    return std::move(login.mapped());
+} catch (const pg::Error&) {
+
+    throw platform::auth::Unavailable{};
+}
+
+void Sessions::StoreSession(const std::string& id, const Session& session) try {
+    cluster_->Execute(pg::ClusterHostType::kMaster, sql::kCreateSession, Challenge(id),
+        session.User.ActorId(), session.Access, session.Refresh, session.Csrf,
+        pg::TimePointTz{session.TokenExpires}, pg::TimePointTz{session.Expires});
+} catch (const pg::Error&) {
+
+    throw platform::auth::Unavailable{};
+}
+
+SessionSnapshot Sessions::GetStored(const std::string& id) try {
+    const auto key = Challenge(id);
+    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kReadSession, key);
+    if (rows.IsEmpty())
+        throw userver::server::handlers::Unauthorized{};
+    auto stored = rows.AsSingleRow<StoredSession>(pg::kRowTag);
+    if (!NeedsRefresh(stored.TokenExpires))
+        return {VerifyAccess(stored.Access), std::move(stored.Access), std::move(stored.Csrf)};
+
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    const auto locked = transaction.Execute(sql::kLockSession, key);
+    if (locked.IsEmpty())
+        throw userver::server::handlers::Unauthorized{};
+    stored = locked.AsSingleRow<StoredSession>(pg::kRowTag);
+    if (stored.Expires.GetUnderlying() <= Clock::now())
+        throw userver::server::handlers::Unauthorized{};
+    if (!NeedsRefresh(stored.TokenExpires)) {
+        transaction.Commit();
+        return {VerifyAccess(stored.Access), std::move(stored.Access), std::move(stored.Csrf)};
+    }
+
+    Session session;
+    session.Refresh = std::move(stored.Refresh);
+    Refresh(session, stored.Actor);
+    transaction.Execute(sql::kUpdateSessionTokens, key, session.Access, session.Refresh,
+        pg::TimePointTz{session.TokenExpires});
+    transaction.Commit();
+    return {std::move(session.User), std::move(session.Access), std::move(stored.Csrf)};
+} catch (const pg::Error&) {
+
+    throw platform::auth::Unavailable{};
+}
+
+std::string Sessions::RemoveSession(const std::string& id) try {
+    if (cluster_) {
+        const auto rows =
+            cluster_->Execute(pg::ClusterHostType::kMaster, sql::kDeleteSession, Challenge(id));
+        if (rows.IsEmpty())
+            throw userver::server::handlers::Unauthorized{};
+        return rows.AsSingleRow<std::string>();
+    }
+
+    auto session = GetLocal(id);
     {
         std::lock_guard lock(mutex_);
         sessions_.erase(id);
     }
     std::lock_guard lock(session->Mutex);
+    return std::move(session->Refresh);
+} catch (const pg::Error&) {
+
+    throw platform::auth::Unavailable{};
+}
+
+void Sessions::Logout(const std::string& id) {
+    const auto refresh = RemoveSession(id);
     try {
-        const auto form = "client_id=" + UrlEncode(client_) +
-            "&token=" + UrlEncode(session->Refresh) + "&token_type_hint=refresh_token";
+        const auto form = "client_id=" + UrlEncode(client_) + "&token=" + UrlEncode(refresh) +
+            "&token_type_hint=refresh_token";
         auto request = http_.CreateRequest();
         request.post(revoke_url_, form)
             .headers({{"Content-Type", "application/x-www-form-urlencoded"}})
@@ -224,6 +362,7 @@ type: object
 description: Серверные сессии браузерного BFF
 additionalProperties: false
 properties:
+    postgres-component: {type: string, description: Компонент общего PostgreSQL-хранилища сессий}
     session-cookie: {type: string, description: Имя cookie сессии, default: broker_session}
     login-cookie: {type: string, description: Имя cookie входа, default: broker_login}
     origin: {type: string, description: Публичный origin приложения}

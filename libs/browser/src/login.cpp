@@ -19,7 +19,8 @@ std::string Login::HandleRequestThrow(
     const auto& language = http.GetArg("language");
     if (language == "ru" || language == "en")
         url += "&ui_locales=" + language;
-    http.GetHttpResponse().SetCookie(sessions_.Cookie(sessions_.LoginCookie, state, 300));
+    http.GetHttpResponse().SetCookie(
+        sessions_.Cookie(sessions_.LoginCookie, state, Sessions::kLoginTtl.count()));
     return detail::Redirect(http, url);
 }
 
@@ -38,7 +39,8 @@ std::string LoginCallback::HandleRequestThrow(
         return detail::JsonError(
             http, 400, "invalid_login", "Вход не завершён. Начните вход заново.");
     const auto id = sessions_.Complete(state, http.GetArg("code"));
-    response.SetCookie(sessions_.Cookie(sessions_.SessionCookie, id, 28800));
+    response.SetCookie(
+        sessions_.Cookie(sessions_.SessionCookie, id, Sessions::kSessionTtl.count()));
     return detail::Redirect(http, "/");
 }
 }  // namespace platform::browser

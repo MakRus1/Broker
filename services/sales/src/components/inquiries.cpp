@@ -105,19 +105,6 @@ models::Inquiry InquiriesComponent::FindInquiry(
         rows.AsSingleRow<json::Value>(), std::type_identity<models::Inquiry>{});
 }
 
-std::vector<models::InquiryHistoryEntry> InquiriesComponent::GetInquiryHistory(
-    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryInquiries,
-        organization, request.id, request.after_revision.value_or(0));
-    std::vector<models::InquiryHistoryEntry> response;
-    response.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<json::Value>())
-        response.push_back(
-            models::ParseModelJson(row, std::type_identity<models::InquiryHistoryEntry>{}));
-
-    return response;
-}
-
 models::ShipmentCreationContext InquiriesComponent::PrepareShipmentCreation(
     const boost::uuids::uuid& organization, std::string_view token,
     const models::Inquiry& inquiry) const try {

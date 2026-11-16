@@ -149,16 +149,4 @@ models::SalesContact ContactsComponent::UpdateContact(const boost::uuids::uuid& 
     return contact;
 }
 
-std::vector<models::SalesContactHistoryEntry> ContactsComponent::GetContactHistory(
-    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryContacts,
-        organization, request.id, request.after_revision.value_or(0));
-    std::vector<models::SalesContactHistoryEntry> response;
-    response.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<json::Value>())
-        response.push_back(
-            models::ParseModelJson(row, std::type_identity<models::SalesContactHistoryEntry>{}));
-
-    return response;
-}
 }  // namespace sales

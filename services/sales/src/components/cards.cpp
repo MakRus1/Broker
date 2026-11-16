@@ -80,17 +80,4 @@ models::SalesCard CardsComponent::FindCard(
         rows.AsSingleRow<json::Value>(), std::type_identity<models::SalesCard>{});
 }
 
-std::vector<models::SalesHistoryEntry> CardsComponent::GetCardHistory(
-    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryCards,
-        organization, request.id, request.after_revision.value_or(0));
-    std::vector<models::SalesHistoryEntry> response;
-    response.reserve(rows.Size());
-    for (const auto& row : rows.AsSetOf<json::Value>())
-        response.push_back(
-            models::ParseModelJson(row, std::type_identity<models::SalesHistoryEntry>{}));
-
-    return response;
-}
-
 }  // namespace sales

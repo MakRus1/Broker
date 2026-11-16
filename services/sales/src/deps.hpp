@@ -1,4 +1,5 @@
 #pragma once
+#include <components/sales_history.hpp>
 #include <components/sales_registry.hpp>
 
 #include <components/cards.hpp>
@@ -30,6 +31,7 @@ namespace sales {
 
 struct Deps {
     SalesRegistry* registry;
+    SalesHistoryComponent* history;
     CardsComponent* cards;
     ContactsComponent* contacts;
     InquiriesComponent* inquiries;
@@ -51,6 +53,7 @@ struct Deps {
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
         .registry = &component_context.FindComponent<SalesRegistry>(),
+        .history = &component_context.FindComponent<SalesHistoryComponent>(),
         .cards = &component_context.FindComponent<CardsComponent>(),
         .contacts = &component_context.FindComponent<ContactsComponent>(),
         .inquiries = &component_context.FindComponent<InquiriesComponent>(),

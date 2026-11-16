@@ -18,8 +18,6 @@ class RfqComponent final : public userver::components::ComponentBase {
     models::Rfq FindRfq(const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     std::vector<models::Rfq> ListRfqs(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const;
-    std::vector<models::RfqHistoryEntry> GetRfqHistory(
-        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
     // Проверяет клиента и ответственного, заполняет снимки поставщиков и меток в input.
     void PrepareRfq(const boost::uuids::uuid& organization, std::string_view access_token,
         const models::Inquiry& inquiry, models::RfqInput& input) const;

@@ -20,8 +20,6 @@ class ContactsComponent final : public userver::components::ComponentBase {
     models::SalesContact UpdateContact(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,
         const models::UpdateSalesContactRequest& request) const;
-    std::vector<models::SalesContactHistoryEntry> GetContactHistory(
-        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

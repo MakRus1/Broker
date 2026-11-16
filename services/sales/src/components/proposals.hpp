@@ -30,8 +30,6 @@ class ProposalsComponent final : public userver::components::ComponentBase {
     models::Proposal ApplyProposalAction(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,
         const models::ProposalActionRequest& request) const;
-    std::vector<models::ProposalHistoryEntry> GetProposalHistory(
-        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

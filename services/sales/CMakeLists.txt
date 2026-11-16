@@ -7,6 +7,7 @@ add_library(
     ${PROJECT_NAME}_objs OBJECT
     src/components/shipment_dispatcher.cpp
     src/components/sales_registry.cpp
+    src/components/sales_history.cpp
     src/components/proposal_calculation.cpp
     src/components/rfq_rules.cpp
     src/components/shipment_route.cpp

@@ -26,19 +26,14 @@ models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
         auto rows =
             cluster->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<models::RegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(request.limit);
-        if (more)
-            rows.pop_back();
-
         models::RegistryPage<Item> response;
+        response.next_cursor = registry::FinishListPage<models::SalesRegistryCursor>(
+            rows, request.limit, scope, [](const auto& row) { return row.Id; }, date_sort);
         response.items.reserve(rows.size());
         for (const auto& row : rows)
             response.items.push_back(
                 models::ParseModelJson(row.Document, std::type_identity<Item>{}));
 
-        if (more)
-            response.next_cursor = registry::MakeListCursor<models::SalesRegistryCursor>(
-                response.items.back().id, rows.back(), scope, date_sort);
         return response;
     } catch (const registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};

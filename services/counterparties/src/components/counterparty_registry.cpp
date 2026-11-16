@@ -31,9 +31,7 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
         const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
         if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
             throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        if (body.cursor.has_value() && body.cursor.value().scope != scope)
-            throw ApiError<400>{
-                "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+        platform::registry::ValidateListCursor(body.cursor, scope);
 
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
@@ -43,13 +41,8 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::CounterpartyRegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(body.limit);
-        if (more)
-            rows.pop_back();
-        std::optional<models::CounterpartyRegistryCursor> cursor;
-        if (more)
-            cursor = models::CounterpartyRegistryCursor{
-                .id = rows.back().Counterparty.Id, .scope = scope, .value = rows.back().SortKey};
+        const auto cursor = platform::registry::FinishListPage<models::CounterpartyRegistryCursor>(
+            rows, body.limit, scope, [](const auto& row) { return row.Counterparty.Id; });
         transaction.Commit();
 
         std::vector<models::Counterparty> items;

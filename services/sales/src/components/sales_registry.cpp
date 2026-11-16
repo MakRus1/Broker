@@ -20,13 +20,7 @@ models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
         const bool date_sort =
             registry::RegistryOrderBy(definition.Fields, request.sort).CursorType ==
             registry::CursorKeyType::Date;
-        if (request.cursor.has_value()) {
-            const auto& cursor = request.cursor.value();
-            if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
-                date_sort == cursor.text_value.has_value())
-                throw ApiError<400>{
-                    "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
+        registry::ValidateListCursor(request.cursor, scope, date_sort);
 
         const auto query = registry::BuildPage(definition, request, organization);
         auto rows =
@@ -42,14 +36,9 @@ models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
             response.items.push_back(
                 models::ParseModelJson(row.Document, std::type_identity<Item>{}));
 
-        if (more) {
-            const auto& last = rows.back();
-            response.next_cursor =
-                models::SalesRegistryCursor{.date_value = date_sort ? last.DateKey : std::nullopt,
-                    .id = response.items.back().id,
-                    .scope = scope,
-                    .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
-        }
+        if (more)
+            response.next_cursor = registry::MakeListCursor<models::SalesRegistryCursor>(
+                response.items.back().id, rows.back(), scope, date_sort);
         return response;
     } catch (const registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};

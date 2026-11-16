@@ -23,7 +23,7 @@ using HttpClient = userver::components::HttpClient;
 namespace pg = userver::storages::postgres;
 namespace sql = browser_storage::sql;
 constexpr std::int64_t kMaxPendingLogins = 1000;
-constexpr std::int64_t kMaxSessions = 2000;
+constexpr std::int64_t kMaxLocalSessions = 2000;
 constexpr auto kTokenRefreshLeadTime = std::chrono::seconds{30};
 
 struct StoredSession {
@@ -162,7 +162,7 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     } else {
         std::lock_guard lock(mutex_);
         Cleanup();
-        if (sessions_.size() >= static_cast<std::size_t>(kMaxSessions))
+        if (sessions_.size() >= static_cast<std::size_t>(kMaxLocalSessions))
             throw CapacityExceeded{};
         sessions_.emplace(id, std::move(session));
     }
@@ -259,16 +259,9 @@ Pending Sessions::ConsumePending(const std::string& state) try {
 }
 
 void Sessions::StoreSession(const std::string& id, const Session& session) try {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    transaction.Execute(sql::kLockSessionCapacity, std::string{"browser_sessions"});
-    transaction.Execute(sql::kClearExpiredSessions);
-    if (transaction
-            .Execute(sql::kCreateSession, Challenge(id), session.User.ActorId(), session.Access,
-                session.Refresh, session.Csrf, pg::TimePointTz{session.TokenExpires},
-                pg::TimePointTz{session.Expires}, kMaxSessions)
-            .IsEmpty())
-        throw CapacityExceeded{};
-    transaction.Commit();
+    cluster_->Execute(pg::ClusterHostType::kMaster, sql::kCreateSession, Challenge(id),
+        session.User.ActorId(), session.Access, session.Refresh, session.Csrf,
+        pg::TimePointTz{session.TokenExpires}, pg::TimePointTz{session.Expires});
 } catch (const pg::Error&) {
 
     throw platform::auth::Unavailable{};

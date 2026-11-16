@@ -5,8 +5,5 @@
 -- $5 — CSRF-токен.
 -- $6 — срок действия токена доступа.
 -- $7 — срок действия сессии.
--- $8 — максимальное число сессий.
 INSERT INTO browser_sessions (id, actor, access_token, refresh_token, csrf, token_expires_at, expires_at)
-SELECT $1, $2, $3, $4, $5, $6, $7
-WHERE (SELECT count(*) FROM browser_sessions) < $8
-RETURNING id;
+VALUES ($1, $2, $3, $4, $5, $6, $7);

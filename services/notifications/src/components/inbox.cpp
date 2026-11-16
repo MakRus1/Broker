@@ -25,11 +25,10 @@ userver::yaml_config::Schema InboxComponent::GetStaticConfigSchema() {
 
 void InboxComponent::CheckOrganization(
     const std::string& access_token, const boost::uuids::uuid& organization) const {
-    namespace api = clients::organizations::ApiOrganizationsAccess;
+    namespace api = clients::organizations::ApiOrganizationsMembershipGet;
     try {
-        organizations_.ApiOrganizationsAccess(
-            api::Request{.body = {.organization_id = organization, .permission = "shipments.read"}},
-            access_token);
+        organizations_.ApiOrganizationsMembershipGet(
+            api::Request{.body = {.organization_id = organization}}, access_token);
     } catch (const platform::http::ErrorByStatus<403>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {

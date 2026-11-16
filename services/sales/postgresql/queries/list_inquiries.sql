@@ -1,4 +1,5 @@
-SELECT jsonb_strip_nulls(
+SELECT value.id,
+    jsonb_strip_nulls(
         (to_jsonb(value) - 'conversion')
         || jsonb_build_object(
             'converting', conversion IS NOT NULL

@@ -55,13 +55,7 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
         if (request.after.has_value() &&
             (request.cursor.has_value() || !order.ById || request.descending))
             throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        if (request.cursor.has_value()) {
-            const auto& cursor = request.cursor.value();
-            if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
-                date_sort == cursor.text_value.has_value())
-                throw ApiError<400>{
-                    "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
+        platform::registry::ValidateListCursor(request.cursor, scope, date_sort);
         const auto query =
             platform::registry::BuildPage(registry_query::kRegistry, request, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
@@ -70,18 +64,8 @@ models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::ShipmentRegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(request.limit);
-        if (more)
-            rows.pop_back();
-        std::optional<models::ShipmentRegistryCursor> cursor;
-        if (more) {
-            const auto& last = rows.back();
-            cursor = models::ShipmentRegistryCursor{
-                .date_value = date_sort ? last.DateKey : std::nullopt,
-                .id = last.Shipment.Id,
-                .scope = scope,
-                .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
-        }
+        const auto cursor = platform::registry::FinishListPage<models::ShipmentRegistryCursor>(
+            rows, request.limit, scope, [](const auto& row) { return row.Shipment.Id; }, date_sort);
         transaction.Commit();
         return models::ShipmentsListResult{
             .items = converters::Convert(rows), .next_cursor = cursor};

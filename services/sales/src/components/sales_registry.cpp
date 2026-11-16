@@ -20,36 +20,20 @@ models::RegistryPage<Item> ReadPage(const pg::ClusterPtr& cluster,
         const bool date_sort =
             registry::RegistryOrderBy(definition.Fields, request.sort).CursorType ==
             registry::CursorKeyType::Date;
-        if (request.cursor.has_value()) {
-            const auto& cursor = request.cursor.value();
-            if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
-                date_sort == cursor.text_value.has_value())
-                throw ApiError<400>{
-                    "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
+        registry::ValidateListCursor(request.cursor, scope, date_sort);
 
         const auto query = registry::BuildPage(definition, request, organization);
         auto rows =
             cluster->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<models::RegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(request.limit);
-        if (more)
-            rows.pop_back();
-
         models::RegistryPage<Item> response;
+        response.next_cursor = registry::FinishListPage<models::SalesRegistryCursor>(
+            rows, request.limit, scope, [](const auto& row) { return row.Id; }, date_sort);
         response.items.reserve(rows.size());
         for (const auto& row : rows)
             response.items.push_back(
                 models::ParseModelJson(row.Document, std::type_identity<Item>{}));
 
-        if (more) {
-            const auto& last = rows.back();
-            response.next_cursor =
-                models::SalesRegistryCursor{.date_value = date_sort ? last.DateKey : std::nullopt,
-                    .id = response.items.back().id,
-                    .scope = scope,
-                    .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
-        }
         return response;
     } catch (const registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};

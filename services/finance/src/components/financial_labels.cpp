@@ -80,9 +80,7 @@ models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
     try {
         const auto& body = request;
         const auto scope = platform::registry::CursorScope(body, organization);
-        if (body.cursor.has_value() && body.cursor.value().scope != scope)
-            throw ApiError<400>{
-                "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+        platform::registry::ValidateListCursor(body.cursor, scope);
         const auto query =
             platform::registry::BuildPage(registry_query::labels::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
@@ -92,13 +90,9 @@ models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::FinancialLabelRegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(body.limit);
-        if (more)
-            rows.pop_back();
-        std::optional<models::FinancialLabelRegistryCursor> cursor;
-        if (more)
-            cursor = models::FinancialLabelRegistryCursor{
-                .id = rows.back().Label.Id, .scope = scope, .value = rows.back().SortKey};
+        const auto cursor =
+            platform::registry::FinishListPage<models::FinancialLabelRegistryCursor>(
+                rows, body.limit, scope, [](const auto& row) { return row.Label.Id; });
         transaction.Commit();
         return models::FinancialLabelListResult{
             .items = converters::Convert(rows), .next_cursor = cursor};

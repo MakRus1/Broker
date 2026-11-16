@@ -19,6 +19,49 @@ inline void ValidateCursorKey(CursorKeyType type, std::string_view value) {
             "invalid_cursor", "Некорректное числовое значение курсора"};
 }
 
+template <typename Cursor>
+void ValidateListCursor(
+    const std::optional<Cursor>& cursor, const std::string& scope, bool date_sort = false) {
+    if (!cursor)
+        return;
+    bool valid = cursor->scope == scope;
+    if constexpr (requires {
+                      cursor->date_value;
+                      cursor->text_value;
+                  })
+        valid = valid && (date_sort == cursor->date_value.has_value()) &&
+            (date_sort != cursor->text_value.has_value());
+    if (!valid)
+        throw platform::http::HandlerError<400>{
+            "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
+}
+
+template <typename Cursor, typename Id, typename Row>
+Cursor MakeListCursor(
+    const Id& id, const Row& row, const std::string& scope, bool date_sort = false) {
+    if constexpr (requires {
+                      row.DateKey;
+                      row.TextKey;
+                  })
+        return {.date_value = date_sort ? row.DateKey : std::nullopt,
+            .id = id,
+            .scope = scope,
+            .text_value = date_sort ? std::nullopt : std::optional{row.TextKey}};
+    else
+        return {.id = id, .scope = scope, .value = row.SortKey};
+}
+
+// Запрос читает на одну строку больше. Курсор указывает на последнюю возвращаемую строку.
+template <typename Cursor, typename Row, typename GetId>
+std::optional<Cursor> FinishListPage(std::vector<Row>& rows, std::size_t limit,
+    const std::string& scope, GetId get_id, bool date_sort = false) {
+    if (rows.size() <= limit || limit == 0)
+        return std::nullopt;
+    rows.resize(limit);
+    const auto& last = rows.back();
+    return MakeListCursor<Cursor>(get_id(last), last, scope, date_sort);
+}
+
 // Каталог и ограничения области остаются в сервисе. Курсор и границы страницы — общие.
 template <typename Request>
 BuiltQuery BuildPage(

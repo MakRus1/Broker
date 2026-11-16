@@ -190,13 +190,7 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
         const auto order = platform::registry::RegistryOrderBy(
             registry_query::invoices::registry_fields::kFields, body.sort);
         const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
-        if (body.cursor.has_value()) {
-            const auto& cursor = body.cursor.value();
-            if (cursor.scope != scope || date_sort != cursor.date_value.has_value() ||
-                date_sort == cursor.text_value.has_value())
-                throw ApiError<400>{
-                    "invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
-        }
+        platform::registry::ValidateListCursor(body.cursor, scope, date_sort);
         const auto query =
             platform::registry::BuildPage(registry_query::invoices::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
@@ -206,18 +200,8 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
         transaction.Execute(sql::kRegistryPlan);
         auto rows = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::InvoiceRegistryRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(body.limit);
-        if (more)
-            rows.pop_back();
-        std::optional<models::InvoiceRegistryCursor> cursor;
-        if (more) {
-            const auto& last = rows.back();
-            cursor =
-                models::InvoiceRegistryCursor{.date_value = date_sort ? last.DateKey : std::nullopt,
-                    .id = last.Invoice.Id,
-                    .scope = scope,
-                    .text_value = date_sort ? std::nullopt : std::optional{last.TextKey}};
-        }
+        const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
+            rows, body.limit, scope, [](const auto& row) { return row.Invoice.Id; }, date_sort);
         transaction.Commit();
         return models::InvoiceListResult{.items = converters::Convert(rows), .next_cursor = cursor};
     } catch (const platform::registry::FilterError& error) {

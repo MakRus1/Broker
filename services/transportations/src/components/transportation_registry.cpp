@@ -46,13 +46,8 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
         transaction.Execute(sql::kRegistryPlan);
         auto page = transaction.Execute(query.Statement, query.Parameters)
                         .AsContainer<std::vector<models::TransportationRegistryRow>>(pg::kRowTag);
-        const bool has_more = page.size() > static_cast<std::size_t>(request.limit);
-        if (has_more)
-            page.pop_back();
-        std::optional<models::RegistryCursor> next_cursor;
-        if (has_more)
-            next_cursor = models::RegistryCursor{
-                .id = page.back().Transportation.Id, .scope = scope, .value = page.back().SortKey};
+        const auto next_cursor = platform::registry::FinishListPage<models::RegistryCursor>(
+            page, request.limit, scope, [](const auto& row) { return row.Transportation.Id; });
 
         const auto rows = converters::Convert(page);
         std::vector<boost::uuids::uuid> ids;

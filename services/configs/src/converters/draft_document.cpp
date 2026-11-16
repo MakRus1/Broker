@@ -55,8 +55,6 @@ Draft ReadDraft(std::int64_t id, const Json& document) {
         .Value = Optional<Json>(document, "value"),
         .SourceRevision = Optional<std::int64_t>(document, "source_revision"),
         .PublishedRevision = Optional<std::int64_t>(document, "published_revision"),
-        .AuthorName = Optional<std::string>(document, "author_name"),
-        .ApprovedByName = Optional<std::string>(document, "approved_by_name"),
         .AuthorLogin = Optional<std::string>(document, "author_login"),
         .ApprovedByLogin = Optional<std::string>(document, "approved_by_login")};
 }
@@ -65,10 +63,6 @@ Json WriteDraft(const Draft& draft) {
     userver::formats::json::ValueBuilder document;
     document["config_name"] = draft.ConfigName;
     document["author"] = draft.Author;
-    if (draft.AuthorName.has_value())
-        document["author_name"] = draft.AuthorName.value();
-    if (draft.ApprovedByName.has_value())
-        document["approved_by_name"] = draft.ApprovedByName.value();
     if (draft.AuthorLogin.has_value())
         document["author_login"] = draft.AuthorLogin.value();
     if (draft.ApprovedByLogin.has_value())

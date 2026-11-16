@@ -20,10 +20,8 @@ inline models::DraftStatus ToApiStatus(DraftStatus status) {
 template <typename Result = models::ConfigDraft> inline Result ToApiDraft(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
         .approved_by_login = draft.ApprovedByLogin,
-        .approved_by_name = draft.ApprovedByName,
         .author = draft.Author,
         .author_login = draft.AuthorLogin,
-        .author_name = draft.AuthorName,
         .base_value = draft.BaseValue,
         .base_version = draft.BaseVersion,
         .config_name = draft.ConfigName,
@@ -39,10 +37,8 @@ template <typename Result = models::ConfigDraft> inline Result ToApiDraft(const 
 inline models::DraftSnapshot ToApiSnapshot(const Draft& draft) {
     return {.approved_by = draft.ApprovedBy,
         .approved_by_login = draft.ApprovedByLogin,
-        .approved_by_name = draft.ApprovedByName,
         .author = draft.Author,
         .author_login = draft.AuthorLogin,
-        .author_name = draft.AuthorName,
         .base_value = draft.BaseValue,
         .base_version = draft.BaseVersion,
         .config_name = draft.ConfigName,

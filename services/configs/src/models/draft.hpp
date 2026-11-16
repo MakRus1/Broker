@@ -20,8 +20,6 @@ struct Draft {
     std::optional<Json> Value;
     std::optional<std::int64_t> SourceRevision;
     std::optional<std::int64_t> PublishedRevision;
-    std::optional<std::string> AuthorName;
-    std::optional<std::string> ApprovedByName;
     std::optional<std::string> AuthorLogin;
     std::optional<std::string> ApprovedByLogin;
 };

@@ -27,12 +27,6 @@ ConfigDraft:
       type: string
     approved_by_login:
       type: string
-    author_name:
-      type: string
-      maxLength: 2048
-    approved_by_name:
-      type: string
-      maxLength: 2048
     author:
       type: string
       maxLength: 2048
@@ -83,12 +77,6 @@ DraftSnapshot:
       type: string
     approved_by_login:
       type: string
-    author_name:
-      type: string
-      maxLength: 2048
-    approved_by_name:
-      type: string
-      maxLength: 2048
     author:
       type: string
       maxLength: 2048

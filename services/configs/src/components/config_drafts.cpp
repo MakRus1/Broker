@@ -181,8 +181,6 @@ Draft ConfigStore::CreateDraft(const models::CreateConfigDraftRequest& request,
         .Value = value,
         .SourceRevision = request.source_revision,
         .PublishedRevision = std::nullopt,
-        .AuthorName = std::nullopt,
-        .ApprovedByName = std::nullopt,
         .AuthorLogin = identity.Login,
         .ApprovedByLogin = std::nullopt};
     draft.Id = transaction.Execute(sql::kInsertDraft, converters::WriteDraft(draft))

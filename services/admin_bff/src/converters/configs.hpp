@@ -20,10 +20,8 @@ inline models::DraftStatus ToBrowserStatus(clients::config_admin::models::DraftS
 template <typename Response, typename Draft> Response ToBrowserDraft(const Draft& draft) {
     return {.approved_by = draft.approved_by,
         .approved_by_login = draft.approved_by_login,
-        .approved_by_name = draft.approved_by_name,
         .author = draft.author,
         .author_login = draft.author_login,
-        .author_name = draft.author_name,
         .base_value = draft.base_value,
         .base_version = draft.base_version,
         .config_name = draft.config_name,
@@ -40,10 +38,8 @@ inline models::DraftSnapshot ToBrowserSnapshot(
     const clients::config_admin::models::DraftSnapshot& draft) {
     return {.approved_by = draft.approved_by,
         .approved_by_login = draft.approved_by_login,
-        .approved_by_name = draft.approved_by_name,
         .author = draft.author,
         .author_login = draft.author_login,
-        .author_name = draft.author_name,
         .base_value = draft.base_value,
         .base_version = draft.base_version,
         .config_name = draft.config_name,

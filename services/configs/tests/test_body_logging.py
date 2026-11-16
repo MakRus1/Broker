@@ -38,7 +38,7 @@ async def test_draft_bodies_are_logged(admin_client, service_client, valid):
     assert json.loads(outgoing['body']) == expected
 
 
-async def test_legacy_draft_name_is_masked(admin_client, service_client, pgsql):
+async def test_legacy_draft_name_is_omitted_from_response_and_logs(admin_client, service_client, pgsql):
     response = await admin_client.post('/admin/configs/drafts/create', json={
         'config_name': 'SHIPMENT_TERMS_CONFIG',
         'description': 'Старый черновик',
@@ -58,7 +58,8 @@ async def test_legacy_draft_name_is_masked(admin_client, service_client, pgsql):
     async with service_client.capture_logs() as capture:
         response = await admin_client.post(path, json={'id': draft_id})
         assert response.status == 200
-    assert response.json()['author_name'] == 'Имя из старого черновика'
+    assert 'author_name' not in response.json()
+    assert 'author_login' not in response.json()
     records = capture.select(trace_id=response.headers['X-Trace-Id'], meta_type=path)
     outgoing = next(record for record in records if record.get('_type') == 'response')
-    assert json.loads(outgoing['body']) == {**response.json(), 'author_name': '***'}
+    assert json.loads(outgoing['body']) == response.json()

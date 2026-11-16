@@ -84,8 +84,9 @@ async def test_access_is_scoped_to_membership_role(api, user, permission, status
     )
 
 
-async def test_access_without_requested_permission_returns_effective_permissions(api):
-    result = await api.call('/api/organizations/access', {}, user='viewer')
+@pytest.mark.parametrize('body', [{}, {'organization_id': ORGANIZATION}])
+async def test_access_without_requested_permission_returns_effective_permissions(api, body):
+    result = await api.call('/api/organizations/access', body, user='viewer')
     assert result['organization_id'] == ORGANIZATION
     assert 'shipments.read' in result['permissions']
     assert 'shipments.write' not in result['permissions']

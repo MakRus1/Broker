@@ -39,6 +39,8 @@ struct Pending {
 class Sessions final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "browser-sessions";
+    static constexpr auto kLoginTtl = std::chrono::seconds{std::chrono::minutes{5}};
+    static constexpr auto kSessionTtl = std::chrono::seconds{std::chrono::hours{8}};
     Sessions(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();

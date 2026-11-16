@@ -22,6 +22,8 @@ using userver::http::UrlEncode;
 using HttpClient = userver::components::HttpClient;
 namespace pg = userver::storages::postgres;
 namespace sql = browser_storage::sql;
+constexpr std::int64_t kMaxPendingLogins = 1000;
+constexpr std::int64_t kMaxSessions = 2000;
 
 struct StoredSession {
     std::string Actor, Access, Refresh, Csrf;
@@ -88,13 +90,13 @@ void Sessions::Cleanup() {
 
 std::pair<std::string, std::string> Sessions::Begin() {
     const auto state = Random();
-    const Pending pending{Random(), Random(), Clock::now() + std::chrono::minutes{5}};
+    const Pending pending{Random(), Random(), Clock::now() + kLoginTtl};
     if (cluster_) {
         StorePending(state, pending);
     } else {
         std::lock_guard lock(mutex_);
         Cleanup();
-        if (pending_.size() >= 1000)
+        if (pending_.size() >= static_cast<std::size_t>(kMaxPendingLogins))
             throw CapacityExceeded{};
         pending_.emplace(state, pending);
     }
@@ -152,14 +154,14 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     }
     Tokens(*session, tokens);
     session->Csrf = Random();
-    session->Expires = Clock::now() + std::chrono::hours{8};
+    session->Expires = Clock::now() + kSessionTtl;
     const auto id = Random();
     if (cluster_) {
         StoreSession(id, *session);
     } else {
         std::lock_guard lock(mutex_);
         Cleanup();
-        if (sessions_.size() >= 2000)
+        if (sessions_.size() >= static_cast<std::size_t>(kMaxSessions))
             throw CapacityExceeded{};
         sessions_.emplace(id, std::move(session));
     }
@@ -219,7 +221,8 @@ void Sessions::StorePending(const std::string& state, const Pending& pending) tr
     transaction.Execute(sql::kLockSessionCapacity, std::string{"browser_login_attempts"});
     transaction.Execute(sql::kClearExpiredLogins);
     if (transaction
-            .Execute(sql::kCreatePendingLogin, Challenge(state), pending.Verifier, pending.Nonce)
+            .Execute(sql::kCreatePendingLogin, Challenge(state), pending.Verifier, pending.Nonce,
+                pg::TimePointTz{pending.Expires}, kMaxPendingLogins)
             .IsEmpty())
         throw CapacityExceeded{};
     transaction.Commit();
@@ -261,7 +264,7 @@ void Sessions::StoreSession(const std::string& id, const Session& session) try {
     if (transaction
             .Execute(sql::kCreateSession, Challenge(id), session.User.ActorId(), session.Access,
                 session.Refresh, session.Csrf, pg::TimePointTz{session.TokenExpires},
-                pg::TimePointTz{session.Expires})
+                pg::TimePointTz{session.Expires}, kMaxSessions)
             .IsEmpty())
         throw CapacityExceeded{};
     transaction.Commit();

@@ -39,7 +39,8 @@ auth:
     organizations.register_permissions: permission-publisher
 http_logging:
   redact_fields:
-    "/api/admin/organizations/members/*": [display_name, last_name, first_name, middle_name, query, cursor]
+    "/api/admin/organizations/members/*": [display_name, last_name, first_name, middle_name]
+    /api/admin/organizations/members/list: [query, cursor, next_cursor]
     "/api/organizations/employees/list": [display_name, query]
     "/api/organizations/profile": [display_name]
   exclude_paths:

@@ -71,14 +71,13 @@ RegistryDefaultsSaveResult:
 AccessResolveOrganizationRequest:
   type: object
   additionalProperties: false
-  required:
-  - permission
   properties:
     organization_id:
       type: string
       format: uuid
       x-cpp-type: uuid
     permission:
+      description: Право, которое требуется проверить. Без этого поля возвращаются действующие права участника организации.
       type: string
       minLength: 1
       maxLength: 100

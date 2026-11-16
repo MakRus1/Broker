@@ -3,6 +3,7 @@
 #include <converters/contracts.hpp>
 #include <models/contract_registry_row.hpp>
 #include <models/errors.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/contract_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -37,8 +38,7 @@ models::ContractListResult ContractRegistry::ListContracts(
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
+        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::ContractRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::ContractRegistryCursor>(
             rows, body.limit, scope, [](const auto& row) { return row.Contract.Id; }, date_sort);

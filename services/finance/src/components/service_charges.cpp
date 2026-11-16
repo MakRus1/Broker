@@ -16,6 +16,7 @@
 #include <platform/auth/identity.hpp>
 #include <platform/charge_amounts.hpp>
 #include <platform/date_validation.hpp>
+#include <platform/registry_read.hpp>
 #include <registry/service_charge_query.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -222,8 +223,7 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
             pg::TransactionOptions{
                 pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-        transaction.Execute(sql::kRegistryPlan);
-        auto rows = transaction.Execute(query.Statement, query.Parameters)
+        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::ServiceChargeRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::ServiceChargeRegistryCursor>(
             rows, body.limit, scope, [](const auto& row) { return row.Charge.Id; }, date_sort);

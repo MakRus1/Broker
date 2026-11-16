@@ -5,6 +5,7 @@
 #include <models/pg/member_raw.hpp>
 #include <models/provisioning_row.hpp>
 #include <platform/contact_validation.hpp>
+#include <platform/registry_read.hpp>
 #include <platform/text.hpp>
 #include <registry/admin.hpp>
 #include <userver/components/component_context.hpp>
@@ -38,8 +39,7 @@ models::MembersListResult MembersComponent::ListMembers(
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
 
     const auto query = MemberQuery(request);
-    transaction.Execute(sql::kRegistryPlan);
-    auto rows = transaction.Execute(query.Statement, query.Parameters)
+    auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                     .AsContainer<std::vector<registry::Row<models::pg::MemberRaw>>>(pg::kRowTag);
 
     const bool more = rows.size() > static_cast<std::size_t>(request.limit);

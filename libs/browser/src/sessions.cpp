@@ -283,10 +283,7 @@ SessionSnapshot Sessions::GetStored(const std::string& id) try {
     if (!NeedsRefresh(stored.TokenExpires))
         return {VerifyAccess(stored.Access), std::move(stored.Access), std::move(stored.Csrf)};
 
-    // Ожидание блокировки может включать обмен токенов на другой реплике.
-    const pg::CommandControl refresh_timeout{std::chrono::seconds{7}, std::chrono::seconds{6}};
-    auto transaction =
-        cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{}, refresh_timeout);
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto locked = transaction.Execute(sql::kLockSession, key);
     if (locked.IsEmpty())
         throw userver::server::handlers::Unauthorized{};

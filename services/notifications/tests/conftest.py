@@ -52,12 +52,12 @@ def auth_jwks(mockserver, auth_key):
 
 
 @pytest.fixture(autouse=True)
-def organization_access(mockserver):
+def organization_membership(mockserver):
     import base64
     import json
 
-    @mockserver.handler('/api/organizations/access')
-    def access(request):
+    @mockserver.handler('/api/organizations/membership/get')
+    def membership(request):
         payload = json.loads(
             base64.urlsafe_b64decode(request.headers['Authorization'].split('.')[1] + '==')
         )
@@ -72,7 +72,7 @@ def organization_access(mockserver):
                 status=403, json={'error': 'forbidden', 'message': 'Нет доступа'}
             )
         return mockserver.make_response(
-            json={'organization_id': organization, 'permissions': ['shipments.read']}
+            json={'organization_id': organization}
         )
 
 

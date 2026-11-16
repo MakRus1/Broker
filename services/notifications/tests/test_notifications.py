@@ -87,9 +87,9 @@ async def test_pagination_is_scoped_and_stable(api, publish):
     assert (await api.post(LIST_PATH, {'organization_id': ORGANIZATION, 'before': first[0]['id']}, user='colleague'))['items'] == []
 
 
-async def test_live_permission_revocation(api, publish, mockserver):
+async def test_live_membership_revocation(api, publish, mockserver):
     await publish(event())
-    @mockserver.handler('/api/organizations/access')
+    @mockserver.handler('/api/organizations/membership/get')
     def revoked(request):
         return mockserver.make_response(status=403, json={'error': 'forbidden', 'message': 'Нет доступа'})
     await api.post(LIST_PATH, {'organization_id': ORGANIZATION}, expected=403)
@@ -239,6 +239,7 @@ async def test_rfq_notifications_replay_actor_and_event_types(api, service_clien
     assert (await send(ready)).status == 200
     items = (await api.post(LIST_PATH, {'organization_id':ORGANIZATION}))['items']
     assert len(items) == 2
+    assert await api.post(READ_PATH, {'organization_id': ORGANIZATION, 'ids': [items[0]['id']]}) == {'updated': 1}
     assert {v['event_type'] for v in items} == {'sales.rfq.assigned','sales.rfq.ready'}
     assert all(v['entity_id'] == SHIPMENT for v in items)
     own = {**body,'id':'rfq-own:2','payload':{**body['payload'],'revision':2,'actor_subject':'author'}}
@@ -254,10 +255,9 @@ async def test_inbox_access_failure_does_not_change_notifications(
     await publish(event())
     item = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items'][0]
 
-    @mockserver.handler('/api/organizations/access')
+    @mockserver.handler('/api/organizations/membership/get')
     def unavailable(request):
-        assert request.json['organization_id'] == ORGANIZATION
-        assert request.json['permission'] == 'shipments.read'
+        assert request.json == {'organization_id': ORGANIZATION}
         if failure == 'invalid_json':
             return mockserver.make_response(response='invalid organization response', status=200)
         return mockserver.make_response(status=failure, json={'error': 'test', 'message': 'test'})

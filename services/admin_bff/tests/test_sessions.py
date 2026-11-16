@@ -160,3 +160,12 @@ async def test_session_permissions_are_refreshed_from_organizations(browser, pla
     response = await browser.get('/api/session')
     assert response.status == 200
     assert response.json() == {**session, 'permissions': []}
+
+
+async def test_session_prefers_organizations_profile(browser, mockserver):
+    @mockserver.json_handler('/api/organizations/profile')
+    def profile(request):
+        return {'display_name': 'Имя из Organizations'}
+
+    session = await browser.sign_in()
+    assert session['display_name'] == 'Имя из Organizations'

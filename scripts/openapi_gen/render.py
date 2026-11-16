@@ -251,7 +251,7 @@ template <typename T> T ParseJson(const userver::formats::json::Value& value) {
 COMMON += VALIDATION_RUNTIME
 
 
-def handler(service, op, deps):
+def handler(service, op, deps, redact_fields=()):
     dep_include = '#include <deps.hpp>\n' if deps else ''
     ctor = 'using HttpHandlerBase::HttpHandlerBase;'
     private = ''
@@ -261,16 +261,28 @@ def handler(service, op, deps):
         private = 'private:\n    Deps deps_;'
         ctor_source = '''Handler::Handler(const userver::components::ComponentConfig& config, const userver::components::ComponentContext& context)
     : HttpHandlerBase(config, context), deps_(ResolveDeps(context)) {}'''
+    logging_headers = ''
+    logging_methods = ''
+    if redact_fields:
+        logging_headers = '#include <platform/http_log_redaction.hpp>\n'
+        fields = ', '.join(quote(field) for field in redact_fields)
+        for method in ('GetRequestBodyForLogging', 'GetResponseDataForLogging'):
+            logging_methods += f"""
+    std::string {method}(const userver::server::http::HttpRequest&,
+        userver::server::request::RequestContext&, const std::string& body) const override {{
+        return ::platform::http::RedactLogBody(body, {{{fields}}});
+    }}
+"""
     header = f'''#pragma once
 #include <userver/server/handlers/http_handler_base.hpp>
-{dep_include}
+{dep_include}{logging_headers}
 namespace {service}::views::{op.ns} {{
 class Handler final : public userver::server::handlers::HttpHandlerBase {{
 public:
     static constexpr std::string_view kName = "{op.handler}";
     {ctor}
     std::string HandleRequestThrow(const userver::server::http::HttpRequest&, userver::server::request::RequestContext&) const override;
-{private}
+{logging_methods}{private}
 }};
 }}
 '''
@@ -361,7 +373,8 @@ std::string Handler::HandleRequestThrow(const userver::server::http::HttpRequest
     return format_cpp(header), format_cpp(source)
 
 
-def outputs(service, operations, dependencies):
+def outputs(service, operations, dependencies, logging=None):
+    from http_logging import redacted_fields
     from models_render import render_models, bind_operation
     result = {'include/openapi/runtime.hpp': COMMON,
               'include/openapi/models.hpp': render_models(collect_models(operations), f'{service}::models')}
@@ -373,7 +386,7 @@ def outputs(service, operations, dependencies):
         result[f'{base}/types.hpp'] = preamble(service, op, include_types=False) + ''.join(enums(typ) for typ in enum_types(op)) + f'\n}}  // namespace {service}::views::{op.ns}\n'
         result[f'{base}/requests.hpp'] = requests(service, op)
         result[f'{base}/responses.hpp'] = responses(service, op)
-        hpp, cpp = handler(service, op, op.rel in dependencies)
+        hpp, cpp = handler(service, op, op.rel in dependencies, redacted_fields(op.path, logging))
         result[f'{base}/handler.hpp'] = hpp
         result[f'src/views/{op.rel}/handler.cpp'] = cpp
         includes.append(f'#include <views/{op.rel}/handler.hpp>')

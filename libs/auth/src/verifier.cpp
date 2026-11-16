@@ -99,9 +99,13 @@ Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) c
         .Permissions = {},
         .DisplayName = subject,
         .Organization = std::nullopt,
-        .ClientId = {}};
+        .ClientId = {},
+        .Login = {}};
     const auto payload = userver::formats::json::FromString(decoded.get_payload());
     identity.ClientId = payload["azp"].As<std::string>("");
+    identity.Login = payload["preferred_username"].As<std::string>(subject);
+    if (identity.Login.empty())
+        identity.Login = subject;
     const auto family = payload["family_name"].As<std::string>("");
     const auto given = payload["given_name"].As<std::string>("");
     const auto middle = payload["middle_name"].As<std::string>("");
@@ -110,7 +114,7 @@ Identity Verifier::VerifyKind(const std::string& token, std::string_view kind) c
         ? family + (given.empty() ? "" : " " + given) + (middle.empty() ? "" : " " + middle)
         : !full_name.empty() ? full_name
         : !given.empty()     ? given
-                             : payload["preferred_username"].As<std::string>(subject);
+                             : identity.Login;
     const auto roles = payload["resource_access"][impl_->Config.RolesClient]["roles"];
     if (!roles.IsMissing())
         identity.Permissions = roles.As<std::set<std::string>>();

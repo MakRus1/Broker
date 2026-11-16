@@ -22,8 +22,8 @@ export interface Draft {
   id: number;
   config_name: string;
   author: string;
-  author_name?: string;
-  approved_by_name?: string;
+  author_login?: string;
+  approved_by_login?: string;
   description: string;
   version: number;
   status: 'draft' | 'published' | 'cancelled';

@@ -6,7 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts/openapi_gen'))
-from http_logging import body_limits, policy
+from http_logging import body_limits, policy, redacted_fields
 from generate import UniqueLoader, configuration, load
 import yaml
 
@@ -27,6 +27,18 @@ class HttpLoggingTest(unittest.TestCase):
         self.assertEqual(body_limits('/configs/values', None), (32768, 32768))
         self.assertEqual(body_limits('/one', policy({})), (32768, 32768))
 
+    def test_redaction_matches_paths_and_combines_fields(self):
+        selected = policy({
+            'http_logging': {'redact_fields': {
+                '/members/*': ['display_name', 'last_name'],
+                '/members/list': ['display_name', 'query'],
+            }},
+        })
+        self.assertEqual(redacted_fields('/members/list', selected),
+                         ['display_name', 'last_name', 'query'])
+        self.assertEqual(redacted_fields('/other', selected), [])
+        self.assertEqual(body_limits('/members/list', selected), (32768, 32768))
+
     def test_invalid_policy_is_rejected(self):
         for value in [
             None,
@@ -35,6 +47,9 @@ class HttpLoggingTest(unittest.TestCase):
             {'exclude_paths': ['relative']},
             {'exclude_paths': ['/x', '/x']},
             {'unknown': True},
+            {'redact_fields': ['/x']},
+            {'redact_fields': {'relative': ['name']}},
+            {'redact_fields': {'/x': ['']}},
             {'request_body_limit': -1},
             {'response_body_limit': True},
         ]:

@@ -270,21 +270,22 @@ async def test_no_changes_do_not_create_draft(admin_client):
     assert stored.json() == draft
 
 
-async def test_display_names_are_saved_from_verified_token(admin_client):
+async def test_logins_are_saved_from_verified_token(admin_client):
     draft = await create(admin_client)
-    assert draft['author_name'] == 'author'
+    assert draft['author_login'] == 'author'
     published = await action(admin_client, 'approve', draft, actor='reviewer')
-    assert published['approved_by_name'] == 'reviewer'
+    assert published['approved_by_login'] == 'reviewer'
     stored = await admin_client.post(PREFIX + 'get', json={'id': draft['id']})
-    assert stored.json()['author_name'] == 'author'
-    assert stored.json()['approved_by_name'] == 'reviewer'
+    assert stored.json()['author_login'] == 'author'
+    assert stored.json()['approved_by_login'] == 'reviewer'
 
 
-async def test_display_name_comes_from_signed_claim(admin_client, access_token):
+async def test_login_comes_from_signed_claim(admin_client, access_token):
     response = await admin_client.post(PREFIX + 'create', headers={
-        'Authorization': 'Bearer ' + access_token('author', claims={'preferred_username': 'Максим'})}, json={
+        'Authorization': 'Bearer ' + access_token('author', claims={'preferred_username': 'maxim', 'given_name': 'Максим'})}, json={
         'config_name': NAME, 'description': 'Проверка имени',
         'expected_config_version': 0, 'value': terms(True, 60)})
     assert response.status == 201
-    assert response.json()['author_name'] == 'Максим'
+    assert response.json()['author_login'] == 'maxim'
+    assert 'author_name' not in response.json()
     assert response.json()['author'] == 'http://broker-test-issuer#author'

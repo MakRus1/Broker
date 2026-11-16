@@ -181,8 +181,8 @@ Draft ConfigStore::CreateDraft(const models::CreateConfigDraftRequest& request,
         .Value = value,
         .SourceRevision = request.source_revision,
         .PublishedRevision = std::nullopt,
-        .AuthorName = identity.DisplayName,
-        .ApprovedByName = std::nullopt};
+        .AuthorLogin = identity.Login,
+        .ApprovedByLogin = std::nullopt};
     draft.Id = transaction.Execute(sql::kInsertDraft, converters::WriteDraft(draft))
                    .AsSingleRow<std::int64_t>();
     WriteDraftEvent(transaction, draft, identity.ActorId(), "create");
@@ -260,7 +260,7 @@ Draft ConfigStore::ApproveDraft(const models::ConfigDraftActionRequest& request,
     draft.PublishedRevision = published.Id;
     draft.Status = DraftStatus::Published;
     draft.ApprovedBy = identity.ActorId();
-    draft.ApprovedByName = identity.DisplayName;
+    draft.ApprovedByLogin = identity.Login;
     ++draft.Version;
     SaveDraft(transaction, draft, identity.ActorId(), "approve");
     transaction.Commit();

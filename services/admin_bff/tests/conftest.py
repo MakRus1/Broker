@@ -124,3 +124,13 @@ def browser(service_client, login):
 def platform_access(mockserver):
     from tests.support.platform_access import install
     return install(mockserver)
+
+
+@pytest.fixture(autouse=True)
+def organization_profile(mockserver):
+    @mockserver.json_handler('/api/organizations/profile')
+    def profile(request):
+        assert request.method == 'GET'
+        return {}
+
+    return profile

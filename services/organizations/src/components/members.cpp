@@ -220,4 +220,14 @@ models::MemberResult MembersComponent::UpdateMemberProfile(
     transaction.Commit();
     return models::MemberResult{.member = member};
 }
+
+std::optional<std::string> MembersComponent::FindProfileDisplayName(
+    const platform::auth::Identity& identity) const {
+    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetProfileDisplayName,
+        identity.Issuer, identity.Subject);
+    if (rows.IsEmpty())
+        return std::nullopt;
+
+    return rows.AsSingleRow<std::string>();
+}
 }  // namespace organizations

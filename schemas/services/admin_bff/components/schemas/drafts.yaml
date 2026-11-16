@@ -23,12 +23,10 @@ ConfigDraft:
       minimum: 1
     config_name:
       type: string
-    author_name:
+    author_login:
       type: string
-      maxLength: 2048
-    approved_by_name:
+    approved_by_login:
       type: string
-      maxLength: 2048
     author:
       type: string
       maxLength: 2048
@@ -75,12 +73,10 @@ DraftSnapshot:
   properties:
     config_name:
       type: string
-    author_name:
+    author_login:
       type: string
-      maxLength: 2048
-    approved_by_name:
+    approved_by_login:
       type: string
-      maxLength: 2048
     author:
       type: string
       maxLength: 2048

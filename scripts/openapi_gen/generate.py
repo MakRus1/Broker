@@ -119,7 +119,8 @@ def run(service, check=False, output=None):
             raise StaleGeneration('Обвязка service.yaml устарела; выполните make gen: ' + ', '.join(stale))
     ops = load(service, feature_files)
     manifest = service / 'service.yaml'
-    auth.validate(yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}, ops)
+    spec = yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}
+    auth.validate(spec, ops)
     dependencies = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
     config_path = service / 'configs/static_config.yaml'
     expected_config = configuration(service, ops, feature_files.get(config_path))
@@ -142,7 +143,7 @@ def run(service, check=False, output=None):
         generated_clients = client_outputs(service, UniqueLoader, load)
         generated_clients.update(configs.outputs(service, UniqueLoader))
         generated_clients.update(permissions.outputs(service, UniqueLoader))
-        generated = outputs(service.name, ops, dependencies)
+        generated = outputs(service.name, ops, dependencies, logging_policy(spec))
         generated.update(generated_clients)
         # Удаляем только файлы, ранее созданные этим генератором.
         manifest = output / 'manifest.json'
@@ -198,7 +199,9 @@ def main():
         if args.list_outputs:
             ops = load(service)
             deps = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
-            generated = outputs(service.name, ops, deps)
+            manifest = service / 'service.yaml'
+            spec = yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}
+            generated = outputs(service.name, ops, deps, logging_policy(spec))
             generated.update(client_outputs(service, UniqueLoader, load))
             generated.update(configs.outputs(service, UniqueLoader))
             generated.update(permissions.outputs(service, UniqueLoader))

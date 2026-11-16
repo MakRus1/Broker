@@ -599,3 +599,34 @@ async def test_missing_member_has_no_profile_update(api, pgsql):
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute("SELECT count(*) FROM access_audit WHERE action='member.profile_updated'")
         assert cursor.fetchone()[0] == 0
+
+
+async def test_profile_returns_only_current_users_name(api):
+    assert await api.call('/api/organizations/profile', user='viewer') == {'display_name': 'viewer'}
+    assert await api.call('/api/organizations/profile') == {}
+
+
+async def test_employee_logs_mask_name_and_search(api, service_client, auth_key):
+    import json
+
+    token = auth_key.token('org-admin', claims={'azp': 'broker-web', 'aud': 'broker-logistics'})
+    path = '/api/organizations/employees/list'
+    request = {'organization_id': ORGANIZATION, 'query': 'viewer', 'limit': 2}
+
+    async with service_client.capture_logs() as capture:
+        response = await api.call(path, request, user='org-admin')
+        invalid = await service_client.post(
+            path,
+            data='{"query":"unparsed-name"',
+            headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+        )
+    assert response['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+    assert invalid.status == 400
+    records = capture.select(meta_type=path)
+    incoming = [record['body'] for record in records if record.get('_type') == 'request']
+    outgoing = [record['body'] for record in records if record.get('_type') == 'response']
+    assert '<body omitted>' in incoming
+    assert any(json.loads(body) == {**request, 'query': '***'}
+               for body in incoming if body.startswith('{'))
+    assert any(json.loads(body) == {'items': [{'subject': 'viewer', 'display_name': '***'}]}
+               for body in outgoing if body.startswith('{'))

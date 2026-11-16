@@ -26,6 +26,21 @@ RELEASE = {
 
 
 class DeploymentTest(unittest.TestCase):
+    def test_web_replicas_share_postgresql(self):
+        with tempfile.TemporaryDirectory() as directory:
+            phases = staging.render(RELEASE, Path(directory))
+        web = next(obj for obj in phases['services'] if obj['kind'] == 'Deployment'
+                   and obj['metadata']['name'] == 'web-bff')
+        self.assertEqual(web['spec']['replicas'], 2)
+        self.assertTrue(any(
+            obj['kind'] == 'Cluster' and obj['metadata']['name'] == 'web-bff-postgres'
+            for obj in phases['databases']
+        ))
+        self.assertTrue(any(
+            obj['kind'] == 'Job' and obj['metadata']['labels']['broker/service'] == 'web_bff'
+            for obj in phases['migrations']
+        ))
+
     def test_config_admin_uses_monitor_listener_instead_of_public_listener(self):
         import base64
         import yaml

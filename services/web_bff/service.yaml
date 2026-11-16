@@ -3,6 +3,9 @@ libraries:
 - common
 - auth
 - browser
+postgresql:
+  enabled: true
+  cluster: web-bff
 clients:
   shipments:
     service: shipments

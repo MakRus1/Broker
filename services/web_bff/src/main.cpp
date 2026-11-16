@@ -45,6 +45,7 @@
 #include <platform/configs/runtime.hpp>
 #include <userver/dynamic_config/storage/component.hpp>
 #include <userver/dynamic_config/updater/component_list.hpp>
+#include <userver/storages/postgres/component.hpp>
 
 // SERVICE_INCLUDES_END
 
@@ -90,6 +91,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<web_bff::clients::transport_locations::Component>();
     component_list.Append<web_bff::clients::transportations::Component>();
     component_list.Append<web_bff::clients::user_preferences::Component>();
+    component_list.Append<userver::components::Postgres>("postgres-web-bff");
     // SERVICE_REGISTRATION_END
 
     component_list.Append<userver::components::HttpClient>("cities-http-client");

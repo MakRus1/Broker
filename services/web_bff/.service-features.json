@@ -1,4 +1,4 @@
 {
-  "postgresql": false,
+  "postgresql": true,
   "grpc": false
 }

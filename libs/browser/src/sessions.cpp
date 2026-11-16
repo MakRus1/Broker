@@ -24,6 +24,7 @@ namespace pg = userver::storages::postgres;
 namespace sql = browser_storage::sql;
 constexpr std::int64_t kMaxPendingLogins = 1000;
 constexpr std::int64_t kMaxSessions = 2000;
+constexpr auto kTokenRefreshLeadTime = std::chrono::seconds{30};
 
 struct StoredSession {
     std::string Actor, Access, Refresh, Csrf;
@@ -31,7 +32,7 @@ struct StoredSession {
 };
 
 bool NeedsRefresh(platform::browser::Clock::time_point expires) {
-    return expires <= platform::browser::Clock::now() + std::chrono::seconds{30};
+    return expires <= platform::browser::Clock::now() + kTokenRefreshLeadTime;
 }
 
 std::string Random() {

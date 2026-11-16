@@ -68,6 +68,11 @@ async def test_inquiry_dates_and_agreement(api):
     value['status'] = 'in_progress'
     await api.post('/api/v1/sales/inquiries/save', value)
 
+    history = await api.post('/api/v1/sales/inquiries/history', {
+        'id': value['id'], 'after_revision': 1})
+    assert [(item['revision'], item['snapshot']['status']) for item in history['items']] == [
+        (2, 'agreed'), (3, 'in_progress')]
+
 @pytest.mark.uservice_oneshot(config_hooks=['configure_dispatcher'])
 async def test_creation_retry_freezes_snapshot(api, mockserver):
     import asyncio

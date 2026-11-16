@@ -356,6 +356,7 @@ components_manager:
             method: POST
             task_processor: main-task-processor
         sales-registry: {}
+        sales-history: {}
         sales-cards: {}
         sales-contacts: {}
         sales-inquiries: {}

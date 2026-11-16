@@ -228,16 +228,4 @@ models::Proposal ProposalsComponent::ApplyProposalAction(const boost::uuids::uui
     return value;
 }
 
-std::vector<models::ProposalHistoryEntry> ProposalsComponent::GetProposalHistory(
-    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryProposals,
-        organization, request.id, request.after_revision.value_or(0));
-    std::vector<models::ProposalHistoryEntry> result;
-    for (const auto& row : rows)
-        result.push_back(models::ParseModelJson(
-            row[0].As<json::Value>(), std::type_identity<models::ProposalHistoryEntry>{}));
-
-    return result;
-}
-
 }  // namespace sales

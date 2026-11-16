@@ -60,18 +60,6 @@ std::vector<models::Rfq> RfqComponent::ListRfqs(
     return result;
 }
 
-std::vector<models::RfqHistoryEntry> RfqComponent::GetRfqHistory(
-    const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {
-    const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kHistoryRfqs,
-        organization, request.id, request.after_revision.value_or(0));
-    std::vector<models::RfqHistoryEntry> result;
-    for (const auto& row : rows)
-        result.push_back(models::ParseModelJson(
-            row[0].As<json::Value>(), std::type_identity<models::RfqHistoryEntry>{}));
-
-    return result;
-}
-
 void RfqComponent::PrepareRfq(const boost::uuids::uuid& organization, std::string_view token,
     const models::Inquiry& inquiry, models::RfqInput& input) const try {
     const auto party =

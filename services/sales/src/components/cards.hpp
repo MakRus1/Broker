@@ -16,8 +16,6 @@ class CardsComponent final : public userver::components::ComponentBase {
         const models::SaveSalesCardRequest& request) const;
     models::SalesCard FindCard(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
-    std::vector<models::SalesHistoryEntry> GetCardHistory(
-        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

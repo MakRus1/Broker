@@ -20,8 +20,6 @@ class InquiriesComponent final : public userver::components::ComponentBase {
         const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const;
     models::Inquiry FindInquiry(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
-    std::vector<models::InquiryHistoryEntry> GetInquiryHistory(
-        const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;
     models::ShipmentCreationContext PrepareShipmentCreation(const boost::uuids::uuid& organization,
         std::string_view access_token, const models::Inquiry& inquiry) const;
     models::Inquiry StartShipmentCreation(const boost::uuids::uuid& organization,

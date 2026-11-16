@@ -1,4 +1,4 @@
-#include <components/contacts.hpp>
+#include <components/sales_history.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/sales/contacts/history/view.hpp>
 
@@ -8,6 +8,6 @@ Response View::Handle(
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
 
-    return Response200{.items = deps.contacts->GetContactHistory(organization, request.body)};
+    return Response200{.items = deps.history->GetContactHistory(organization, request.body)};
 }
 }  // namespace sales::views::api::v1::sales::contacts::history

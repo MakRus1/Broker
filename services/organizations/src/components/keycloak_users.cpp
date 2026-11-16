@@ -128,51 +128,6 @@ User KeycloakUsers::Create(const boost::uuids::uuid& request_id, const std::stri
         "identity_provider_unavailable", "Создание пользователя не завершено. Повторите запрос"};
 }
 
-User KeycloakUsers::UpdateProfile(const std::string& subject, const std::string& last_name,
-    const std::string& first_name, const std::optional<std::string>& middle_name) const try {
-    const auto response = MakeRequest().get(base_url_ + "/users/" + subject).retry(0).perform();
-    if (response->status_code() == 404)
-        throw ApiError<404>{"user_not_found", "Пользователь не найден"};
-    if (response->status_code() != 200)
-        throw ApiError<503>{"identity_provider_unavailable", "Не удалось прочитать профиль"};
-    const auto current = userver::formats::json::FromString(response->body());
-    if (!current["serviceAccountClientId"].IsMissing())
-        throw ApiError<400>{"invalid_user", "Нельзя менять профиль служебной учётной записи"};
-    userver::formats::json::ValueBuilder profile(current);
-    profile["lastName"] = last_name;
-    profile["firstName"] = first_name;
-    if (middle_name.has_value()) {
-        profile["attributes"]["middle_name"] =
-            userver::formats::json::ValueBuilder(userver::formats::common::Type::kArray);
-        profile["attributes"]["middle_name"].PushBack(middle_name.value());
-    } else if (!current["attributes"].IsMissing() && !current["attributes"].IsNull()) {
-        profile["attributes"].Remove("middle_name");
-    }
-    profile.Remove("credentials");
-    const auto document = profile.ExtractValue();
-    const auto updated =
-        MakeRequest()
-            .put(base_url_ + "/users/" + subject, userver::formats::json::ToString(document))
-            .retry(0)
-            .perform();
-    if (updated->status_code() != 204)
-        throw ApiError<503>{"identity_provider_unavailable", "Не удалось обновить профиль"};
-    return converters::Convert(document);
-} catch (const userver::clients::http::CancelException&) {
-
-    throw;
-} catch (const userver::clients::http::BadArgumentException&) {
-    throw;
-} catch (const userver::clients::http::TechnicalError&) {
-    throw;
-} catch (const userver::clients::http::BaseException&) {
-    throw ApiError<503>{
-        "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
-} catch (const userver::formats::json::Exception&) {
-    throw ApiError<503>{
-        "identity_provider_unavailable", "Не удалось обновить ФИО. Повторите запрос"};
-}
-
 userver::yaml_config::Schema KeycloakUsers::GetStaticConfigSchema() {
     return userver::yaml_config::MergeSchemas<userver::components::ComponentBase>(R"(
 type: object

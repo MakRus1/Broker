@@ -15,8 +15,6 @@ class KeycloakUsers final : public userver::components::ComponentBase {
     KeycloakUsers(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     static userver::yaml_config::Schema GetStaticConfigSchema();
-    User UpdateProfile(const std::string& subject, const std::string& last_name,
-        const std::string& first_name, const std::optional<std::string>& middle_name) const;
     User Find(const std::string& username) const;
     User Create(const boost::uuids::uuid& request_id, const std::string& username,
         const std::string& email, const std::string& last_name, const std::string& first_name,

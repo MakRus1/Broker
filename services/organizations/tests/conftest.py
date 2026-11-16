@@ -82,6 +82,23 @@ def identity_provider(mockserver, auth_key):
     return state
 
 
+def insert_member(cursor, organization, subject, role, *, username=None, name=None, enabled=True):
+    username = username or subject
+    query = (Path(__file__).resolve().parents[1] / 'postgresql/queries/add_member.sql').read_text()
+    query = query.replace('$1', '%(organization)s').replace('$2', '%(issuer)s').replace('$3', '%(member)s')
+    cursor.execute(query, {
+        'organization': organization,
+        'issuer': ISSUER,
+        'member': (subject, username, name or subject, username + '@example.test', role, True, 1,
+                   None, None, None),
+    })
+    if not enabled:
+        cursor.execute(
+            'UPDATE memberships SET enabled = false WHERE organization_id=%s AND issuer=%s AND subject=%s',
+            (organization, ISSUER, subject),
+        )
+
+
 @pytest.fixture(autouse=True)
 def memberships(pgsql):
     import sys
@@ -102,10 +119,7 @@ def memberships(pgsql):
             (ORGANIZATION, 'viewer', 'viewer'),
             (OTHER_ORGANIZATION, 'other-admin', 'administrator'),
         ]:
-            cursor.execute('''INSERT INTO memberships
-                (organization_id, issuer, subject, username, display_name, email, role)
-                VALUES (%s,%s,%s,%s,%s,%s,%s)''',
-                (organization, ISSUER, subject, subject, subject, subject + '@example.test', role))
+            insert_member(cursor, organization, subject, role)
 
 
 @pytest.fixture

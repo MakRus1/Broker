@@ -19,7 +19,7 @@ inline constexpr registry::Field<std::string> kSubject{"subject", "m.subject", "
 inline constexpr registry::Field<boost::uuids::uuid> kOrganization{
     "organization_id", "m.organization_id", "UUID"};
 inline constexpr registry::Field<std::string> kName{
-    "display_name", "lower(m.display_name) COLLATE \"C\""};
+    "display_name", "lower(p.display_name) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kUsername{
     "username", "lower(m.username) COLLATE \"C\""};
 inline constexpr registry::Field<std::string> kEmail{"email", "lower(m.email) COLLATE \"C\""};
@@ -28,7 +28,7 @@ inline constexpr auto kRole = registry::Field<std::string>{"role", "m.role"}.Sor
 inline constexpr auto kEnabled = registry::Field<bool>{"enabled", "m.enabled", "BOOLEAN"}.SortedAs(
     "(CASE WHEN m.enabled THEN '1' ELSE '0' END) COLLATE \"C\"");
 inline constexpr registry::Field<std::string> kSearch{
-    "query", "lower(m.display_name || ' ' || m.username || ' ' || m.email) COLLATE \"C\""};
+    "query", "lower(p.display_name || ' ' || m.username || ' ' || m.email) COLLATE \"C\""};
 inline constexpr std::array<registry::FieldDefinition, 6> kSorts{
     kSubject, kName, kUsername, kEmail, kRole, kEnabled};
 }  // namespace member_fields

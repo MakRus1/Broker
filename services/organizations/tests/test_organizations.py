@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 import pytest
-from conftest import ORGANIZATION, OTHER_ORGANIZATION
+from conftest import ORGANIZATION, OTHER_ORGANIZATION, insert_member
 
 ADMIN = '/api/admin/organizations'
 
@@ -407,36 +407,16 @@ async def test_invalid_middle_name_from_provider_is_not_silently_discarded(
 
 
 async def test_manual_profile_update_changes_all_memberships(api, mockserver, pgsql):
-    from conftest import ISSUER
-
-    calls = []
-    profile = {
-        'id': 'viewer',
-        'username': 'viewer',
-        'enabled': True,
-        'firstName': 'Старое цельное ФИО',
-        'email': 'viewer@example.test',
-        'attributes': {'keep': ['existing'], 'middle_name': ['Старое']},
-    }
-
     @mockserver.handler('/admin/realms/broker/users/viewer')
-    def user(request):
-        calls.append(request.method)
-        if request.method == 'GET':
-            return mockserver.make_response(json=profile)
-        assert request.method == 'PUT'
-        assert 'credentials' not in request.json
-        assert request.json['attributes']['keep'] == ['existing']
-        profile.update(request.json)
-        return mockserver.make_response(status=204)
+    def unavailable(request):
+        return mockserver.make_response(status=503)
 
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute(
-            '''INSERT INTO memberships
-            (organization_id,issuer,subject,username,display_name,email,role)
-            VALUES (%s,%s,'viewer','viewer','Старое ФИО','viewer@example.test','viewer')''',
-            (OTHER_ORGANIZATION, ISSUER),
-        )
+        insert_member(cursor, OTHER_ORGANIZATION, 'viewer', 'viewer', name='Устаревшее ФИО')
+    employees = await api.call('/api/organizations/employees/list',
+                               {'organization_id': OTHER_ORGANIZATION, 'subject': 'viewer'}, user='other-admin')
+    assert employees['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+
     body = {
         'organization_id': ORGANIZATION,
         'subject': 'viewer',
@@ -450,23 +430,26 @@ async def test_manual_profile_update_changes_all_memberships(api, mockserver, pg
         user='org-admin',
         expected=403,
     )
-    assert calls == []
     member = (await api.call(ADMIN + '/members/update-profile', body, user='org-admin'))['member']
     assert member['display_name'] == 'Иванов Иван Иванович'
-    assert profile['lastName'] == 'Иванов'
-    assert profile['firstName'] == 'Иван'
-    assert profile['attributes']['middle_name'] == ['Иванович']
+    assert member['revision'] == 2
+    for organization, admin in [(ORGANIZATION, 'org-admin'), (OTHER_ORGANIZATION, 'other-admin')]:
+        employees = await api.call('/api/organizations/employees/list',
+                                   {'organization_id': organization, 'subject': 'viewer'}, user=admin)
+        assert employees['items'] == [{'subject': 'viewer', 'display_name': 'Иванов Иван Иванович'}]
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
-            "SELECT display_name,last_name,first_name,middle_name FROM memberships WHERE subject='viewer'"
+            """SELECT p.display_name, p.last_name, p.first_name, p.middle_name
+               FROM user_profiles p JOIN user_identities i ON i.profile_id = p.id
+               WHERE i.subject = 'viewer'"""
         )
-        assert cursor.fetchall() == [('Иванов Иван Иванович', 'Иванов', 'Иван', 'Иванович')] * 2
+        assert cursor.fetchall() == [('Иванов Иван Иванович', 'Иванов', 'Иван', 'Иванович')]
     cleared = (await api.call(ADMIN + '/members/update-profile', {**body, 'middle_name': None}))[
         'member'
     ]
     assert cleared['display_name'] == 'Иванов Иван'
     assert cleared['middle_name'] is None
-    assert 'middle_name' not in profile['attributes']
+    assert unavailable.times_called == 0
 
 
 @pytest.mark.parametrize(
@@ -586,55 +569,6 @@ async def test_disabled_member_cannot_read_personal_preferences(api):
     )
 
 
-@pytest.mark.parametrize('revocation', ['disabled', 'role'])
-async def test_profile_update_rechecks_administrator_after_keycloak(
-    api, mockserver, pgsql, revocation
-):
-    from conftest import ISSUER
-
-    calls = []
-    profile = {
-        'id': 'viewer', 'username': 'viewer', 'enabled': True,
-        'firstName': 'Old', 'email': 'viewer@example.test',
-    }
-
-    @mockserver.handler('/admin/realms/broker/users/viewer')
-    def user(request):
-        calls.append(request.method)
-        if request.method == 'GET':
-            return mockserver.make_response(json=profile)
-        assert request.method == 'PUT'
-        profile.update(request.json)
-        with pgsql['db_1'].cursor() as cursor:
-            if revocation == 'disabled':
-                cursor.execute(
-                    "UPDATE memberships SET enabled=false WHERE organization_id=%s AND subject='org-admin'",
-                    (ORGANIZATION,),
-                )
-            else:
-                cursor.execute(
-                    "UPDATE memberships SET role='viewer' WHERE organization_id=%s AND subject='org-admin'",
-                    (ORGANIZATION,),
-                )
-        return mockserver.make_response(status=204)
-
-    body = {
-        'organization_id': ORGANIZATION, 'subject': 'viewer',
-        'last_name': 'New', 'first_name': 'Name',
-    }
-    await api.call(ADMIN + '/members/update-profile', body, user='org-admin', expected=403)
-    assert calls == ['GET', 'PUT']
-    assert profile['lastName'] == 'New'
-    with pgsql['db_1'].cursor() as cursor:
-        cursor.execute(
-            "SELECT display_name, revision FROM memberships WHERE issuer=%s AND subject='viewer'",
-            (ISSUER,),
-        )
-        assert cursor.fetchall() == [('viewer', 1)]
-        cursor.execute("SELECT count(*) FROM access_audit WHERE action='member.profile_updated'")
-        assert cursor.fetchone()[0] == 0
-
-
 @pytest.mark.parametrize('response', [
     'not json: test-management-token',
     '{}',
@@ -655,31 +589,13 @@ async def test_invalid_keycloak_lookup_is_safe(api, mockserver, response):
     assert 'test-management-token' not in str(result)
 
 
-@pytest.mark.parametrize('failure', ['read_status', 'read_json', 'write_status'])
-async def test_keycloak_profile_failure_is_safe(api, mockserver, pgsql, failure):
-    calls = []
-
-    @mockserver.handler('/admin/realms/broker/users/viewer')
-    def user(request):
-        calls.append(request.method)
-        if request.method == 'GET':
-            if failure == 'read_status':
-                return mockserver.make_response(status=500)
-            if failure == 'read_json':
-                return mockserver.make_response(response='not json: test-management-token')
-            return mockserver.make_response(json={
-                'id': 'viewer', 'username': 'viewer', 'enabled': True,
-            })
-        return mockserver.make_response(status=500)
-
+async def test_missing_member_has_no_profile_update(api, pgsql):
     result = await api.call(
         ADMIN + '/members/update-profile',
-        {'organization_id': ORGANIZATION, 'subject': 'viewer', 'last_name': 'New', 'first_name': 'Name'},
-        user='org-admin', expected=503,
+        {'organization_id': ORGANIZATION, 'subject': 'other-admin', 'last_name': 'New', 'first_name': 'Name'},
+        user='org-admin', expected=404,
     )
-    assert result['error'] == 'identity_provider_unavailable'
-    assert 'test-management-token' not in str(result)
-    assert calls == (['GET', 'PUT'] if failure == 'write_status' else ['GET'])
+    assert result['error'] == 'member_not_found'
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute("SELECT display_name, revision FROM memberships WHERE subject='viewer'")
-        assert cursor.fetchall() == [('viewer', 1)]
+        cursor.execute("SELECT count(*) FROM access_audit WHERE action='member.profile_updated'")
+        assert cursor.fetchone()[0] == 0

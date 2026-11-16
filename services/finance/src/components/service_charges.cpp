@@ -272,12 +272,7 @@ models::ServiceChargeFilterValuesResult ServiceChargesComponent::GetServiceCharg
         const auto rows =
             cluster_->Execute(pg::ClusterHostType::kMaster, query.Statement, query.Parameters)
                 .AsContainer<std::vector<platform::registry::ValueRow>>(pg::kRowTag);
-        const bool more = rows.size() > static_cast<std::size_t>(request.limit);
-        for (std::size_t index = 0;
-             index < rows.size() && index < static_cast<std::size_t>(request.limit); ++index)
-            result.values.push_back({.label = rows[index].Label, .value = rows[index].Value});
-        if (more)
-            result.next_after = result.values.back().value;
+        platform::registry::FillFilterValues(result, rows, request.limit);
         return result;
     } catch (const platform::registry::FilterError& error) {
         throw ApiError<400>{"invalid_filter", error.what()};

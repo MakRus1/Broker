@@ -45,8 +45,7 @@ std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
     if (ids.empty())
         return {};
     return shipments_
-        .ApiV1ShipmentsRouteContexts(
-            api::Request{.body = {.shipment_ids = ids}}, access_token)
+        .ApiV1ShipmentsRouteContexts(api::Request{.body = {.shipment_ids = ids}}, access_token)
         .items;
 } catch (const platform::http::CancelledError&) {
 

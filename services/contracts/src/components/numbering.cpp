@@ -9,7 +9,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace contracts {
 namespace pg = userver::storages::postgres;
@@ -20,10 +19,6 @@ NumberingComponent::NumberingComponent(const userver::components::ComponentConfi
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-contracts").GetCluster()) {
-}
-
-userver::yaml_config::Schema NumberingComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 void NumberingComponent::RequireAdministrator(

@@ -13,7 +13,6 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = contracts::models;
@@ -46,10 +45,6 @@ ContractsComponent::ContractsComponent(const userver::components::ComponentConfi
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-contracts").GetCluster()) {
-}
-
-userver::yaml_config::Schema ContractsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 void ContractsComponent::ValidateContractParties(

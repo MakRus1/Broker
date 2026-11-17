@@ -9,7 +9,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace counterparties {
 namespace pg = userver::storages::postgres;
@@ -21,10 +20,6 @@ BankAccountsComponent::BankAccountsComponent(const userver::components::Componen
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-counterparties")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema BankAccountsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::BankAccount BankAccountsComponent::SaveBankAccount(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveBankAccountRequest& request) const {
@@ -55,8 +50,8 @@ models::BankAccount BankAccountsComponent::SaveBankAccount(const boost::uuids::u
         } else {
             if (request.expected_revision != 0)
                 throw ApiError<404>{"not_found", "Банковский счёт не найден"};
-            if (transaction.Execute(sql::kListBankAccounts, organization, value.counterparty_id)
-                    .Size() >= 100)
+            if (transaction.Execute(sql::kCountBankAccounts, organization, value.counterparty_id)
+                    .AsSingleRow<std::int64_t>() >= 100)
                 throw ApiError<409>{
                     "account_limit", "У юридического лица уже 100 банковских счетов"};
         }

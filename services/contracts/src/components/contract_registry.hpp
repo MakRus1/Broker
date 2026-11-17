@@ -10,7 +10,6 @@ class ContractRegistry final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "contracts-registry";
     ContractRegistry(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ContractListResult ListContracts(
         const boost::uuids::uuid& organization, const models::ListContractsRequest&) const;
     models::ContractFilterValuesResult GetContractFilterValues(

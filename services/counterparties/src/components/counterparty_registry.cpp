@@ -6,7 +6,6 @@
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace counterparties {
 namespace pg = userver::storages::postgres;
@@ -18,10 +17,6 @@ CounterpartyRegistry::CounterpartyRegistry(const userver::components::ComponentC
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-counterparties")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema CounterpartyRegistry::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
     const boost::uuids::uuid& organization,

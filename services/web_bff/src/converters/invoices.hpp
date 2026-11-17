@@ -112,9 +112,9 @@ inline std::optional<models::finance::InvoiceRegistryCursor> Convert(
     return value.has_value() ? std::optional{Convert(value.value())} : std::nullopt;
 }
 
-inline clients::finance::ApiV1InvoicesCandidates::RequestBody Convert(
+inline clients::finance::ApiV1InvoicesServiceChargeCandidates::RequestBody Convert(
     const models::finance::ListInvoiceCandidatesRequest& value) {
-    clients::finance::ApiV1InvoicesCandidates::RequestBody result;
+    clients::finance::ApiV1InvoicesServiceChargeCandidates::RequestBody result;
     result.direction = clients::finance::models::ParseEnumScalar(
         models::finance::EnumValue(value.direction), clients::finance::models::InvoiceDirection{});
     result.counterparty_id = value.counterparty_id;

@@ -2,9 +2,9 @@
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <utility>
-#include <views/api/v1/invoices/candidates/view.hpp>
+#include <views/api/v1/invoices/service_charge_candidates/view.hpp>
 
-namespace finance::views::api::v1::invoices::candidates {
+namespace finance::views::api::v1::invoices::service_charge_candidates {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& identity = platform::auth::GetIdentity(context);
@@ -15,4 +15,4 @@ Response View::Handle(
     return Response200{
         .items = std::move(result.items), .next_after = std::move(result.next_after)};
 }
-}  // namespace finance::views::api::v1::invoices::candidates
+}  // namespace finance::views::api::v1::invoices::service_charge_candidates

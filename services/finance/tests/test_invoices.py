@@ -76,12 +76,12 @@ async def test_candidates_pagination_and_archive(api, charge, invoice_references
     items=[(await saved_entry(api, charge))[1] for _ in range(3)]
     value=invoice([items[0]['id']]); await api.post(BASE+'save',value)
     query=dict(direction='outgoing',counterparty_id=PARTY,currency='RUB',contract_id=CONTRACT,invoice_id=None,after=None,limit=1)
-    first=await api.post(BASE+'candidates',query)
-    second=await api.post(BASE+'candidates',{**query,'after':first['next_after']})
+    first=await api.post(BASE+'service-charge-candidates',query)
+    second=await api.post(BASE+'service-charge-candidates',{**query,'after':first['next_after']})
     assert len(first['items'])==len(second['items'])==1
     assert first['items'][0]['id']!=second['items'][0]['id']
     assert items[0]['id'] not in [first['items'][0]['id'],second['items'][0]['id']]
-    own=await api.post(BASE+'candidates',{**query,'invoice_id':value['id'],'limit':100})
+    own=await api.post(BASE+'service-charge-candidates',{**query,'invoice_id':value['id'],'limit':100})
     assert len(own['items'])==3
     listing=dict(direction='outgoing',limit=50,filters=[{'field':'archived','values':['false']},{'field':'number','query':'ИС'},{'field':'counterparty_id','values':[PARTY]}])
     assert len((await api.post(BASE+'list',listing))['items'])==1

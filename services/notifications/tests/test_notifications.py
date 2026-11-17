@@ -4,7 +4,7 @@ from conftest import ISSUER, ORGANIZATION, OTHER_ORGANIZATION
 
 EVENT_PATH = '/api/internal/v1/events/publish'
 LIST_PATH = '/api/v1/notifications/list'
-READ_PATH = '/api/v1/notifications/read'
+READ_PATH = '/api/v1/notifications/mark-read'
 SHIPMENT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 
 

@@ -32,7 +32,7 @@ it('учитывает изменение маршрута и связей сч�
   ])
     expect(isDataMutation(path)).toBe(true);
   for (const path of [
-    '/api/v1/invoices/candidates',
+    '/api/v1/invoices/service-charge-candidates',
     '/api/v1/payments/invoice-balance',
     '/api/v1/shipments/filter-values',
     '/api/localization/save',

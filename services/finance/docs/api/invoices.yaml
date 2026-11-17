@@ -175,7 +175,7 @@ paths:
                 $ref: ../components/schemas/models.yaml#/FinancialLabelError
       security:
       - bearerAuth: []
-  /api/v1/invoices/candidates:
+  /api/v1/invoices/service-charge-candidates:
     post:
       summary: Начисления, доступные для включения в счёт
       requestBody:

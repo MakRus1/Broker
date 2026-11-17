@@ -4,7 +4,7 @@ generated: true
 paths:
 - /api/internal/v1/events/publish
 - /api/v1/notifications/list
-- /api/v1/notifications/read
+- /api/v1/notifications/mark-read
 default:
   '**default**':
     timeout: 1000

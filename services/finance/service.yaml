@@ -20,7 +20,7 @@ auth:
     /api/v1/invoices/save: finance.write_invoices
     /api/v1/invoices/get: finance.read_invoices
     /api/v1/invoices/list: finance.read_invoices
-    /api/v1/invoices/candidates: finance.read_invoices
+    /api/v1/invoices/service-charge-candidates: finance.read_invoices
     /api/v1/invoices/filter-values: finance.read_invoices
     /api/v1/invoices/add-service-charge: finance.write_invoices
     /api/v1/service-charges/get: finance.read_service_charges

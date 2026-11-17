@@ -18,7 +18,6 @@ class ServiceChargesComponent final : public userver::components::ComponentBase 
     static constexpr std::string_view kName = "finance-service-charges";
     ServiceChargesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::ServiceCharge SaveServiceCharge(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SaveServiceChargeRequest& request,

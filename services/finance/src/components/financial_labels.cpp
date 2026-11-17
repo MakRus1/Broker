@@ -11,7 +11,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {
 namespace pg = userver::storages::postgres;
@@ -22,10 +21,6 @@ FinancialLabelsComponent::FinancialLabelsComponent(
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema FinancialLabelsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::FinancialLabelFilterValuesResult FinancialLabelsComponent::GetFinancialLabelFilterValues(
     const boost::uuids::uuid& organization,

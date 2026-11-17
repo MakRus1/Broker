@@ -10,7 +10,6 @@ class SettingsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "finance-settings";
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::FinanceSettings GetSettings(const boost::uuids::uuid& organization) const;
     models::FinanceSettings UpdateSettings(
         const models::UpdateFinanceSettingsRequest& request) const;

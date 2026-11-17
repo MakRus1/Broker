@@ -7,7 +7,6 @@
 #include <platform/document_number.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {
 namespace pg = userver::storages::postgres;
@@ -17,10 +16,6 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::FinanceSettings SettingsComponent::GetSettings(
     const boost::uuids::uuid& organization) const {

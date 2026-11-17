@@ -13,10 +13,6 @@ DocumentPartiesComponent::DocumentPartiesComponent(
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       contracts_(context.FindComponent<clients::contracts::Component>().GetClient()) {}
 
-userver::yaml_config::Schema DocumentPartiesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
     std::string_view access_token, const models::DocumentPartiesInput& input) const {
     models::DocumentParties result;

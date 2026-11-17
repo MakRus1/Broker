@@ -17,7 +17,6 @@
 #include <span>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace helpers = finance::helpers;
@@ -76,10 +75,6 @@ InvoicesComponent::InvoicesComponent(const userver::components::ComponentConfig&
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema InvoicesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
     const boost::uuids::uuid& organization, const models::InvoicePrintRequest& request) const {

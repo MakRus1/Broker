@@ -15,7 +15,6 @@ class PaymentsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "finance-payments";
     PaymentsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::PaymentDetails SavePayment(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SavePaymentRequest& request,

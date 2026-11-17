@@ -12,7 +12,6 @@ class FinancialLabelsComponent final : public userver::components::ComponentBase
     static constexpr std::string_view kName = "finance-financial-labels";
     FinancialLabelsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::FinancialLabelFilterValuesResult GetFinancialLabelFilterValues(
         const boost::uuids::uuid& organization,

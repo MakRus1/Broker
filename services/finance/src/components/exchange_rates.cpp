@@ -4,8 +4,8 @@
 #include <fmt/chrono.h>
 #include <helpers/exchange_amounts.hpp>
 #include <map>
+#include <models/cached_exchange_quote.hpp>
 #include <models/errors.hpp>
-#include <models/exchange_quote.hpp>
 #include <platform/date_validation.hpp>
 #include <platform/http_client.hpp>
 #include <userver/clients/http/component.hpp>
@@ -82,25 +82,26 @@ models::ConversionRate ExchangeRates::GetConversionRate(
     LoadRatesForDate(date);
     const auto rows = pg_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetExchangeRates, date, std::vector{from, to});
-    std::map<std::string, std::pair<std::int64_t, std::int64_t>> quotes;
+    std::map<std::string, models::CachedExchangeQuote> quotes;
     for (const auto& row : rows) {
-        const auto quote = row.As<models::ExchangeQuote>(pg::kRowTag);
-        quotes.emplace(quote.Currency, std::pair{quote.Value, quote.Nominal});
+        const auto quote = row.As<models::CachedExchangeQuote>(pg::kRowTag);
+        quotes.emplace(quote.Currency, quote);
     }
     if (!quotes.contains(from) || !quotes.contains(to))
         throw ApiError<503>{"exchange_rate_missing",
             "ЦБ не публикует курс выбранной валюты на эту дату. Укажите курс вручную"};
-    const auto [from_value, from_nominal] = quotes.at(from);
-    const auto [to_value, to_nominal] = quotes.at(to);
-    const helpers::WideAmount denominator = helpers::WideAmount{from_nominal} * to_value;
+    const auto& from_quote = quotes.at(from);
+    const auto& to_quote = quotes.at(to);
+    const helpers::WideAmount denominator =
+        helpers::WideAmount{from_quote.Nominal} * to_quote.Value;
     const helpers::WideAmount rate =
-        (helpers::WideAmount{from_value} * to_nominal * 1000000 + denominator / 2) / denominator;
+        (helpers::WideAmount{from_quote.Value} * to_quote.Nominal * 1000000 + denominator / 2) /
+        denominator;
     if (rate <= 0 || rate > 1000000000000LL)
         throw ApiError<503>{
             "exchange_rate_range", "Курс выходит за допустимый диапазон. Укажите курс вручную"};
     return {.Millionths = rate.convert_to<std::int64_t>(),
-        .Date = pg_->Execute(pg::ClusterHostType::kMaster, sql::kGetExchangeDay, date)
-                    .AsSingleRow<userver::utils::datetime::Date>(),
+        .Date = from_quote.EffectiveDate,
         .Source = "cbr"};
 }
 

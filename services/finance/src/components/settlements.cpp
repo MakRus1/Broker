@@ -9,7 +9,6 @@
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/date.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {
 namespace pg = userver::storages::postgres;
@@ -19,10 +18,6 @@ SettlementsComponent::SettlementsComponent(const userver::components::ComponentC
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema SettlementsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ReconciliationResponse SettlementsComponent::GetReconciliation(
     const boost::uuids::uuid& organization, const models::ReconciliationRequest& request) const {

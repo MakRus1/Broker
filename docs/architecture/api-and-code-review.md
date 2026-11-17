@@ -14,8 +14,8 @@
 | Текущий путь после префикса | Кандидат | Что проверить |
 | --- | --- | --- |
 | `shipments/get`, `shipments/list` | Сохранить | Операции различаются по имени, обе принимают тело. |
-| `shipments/transportation-contexts` | `shipments/route-contexts` | Пакетная выборка контекста для перевозок. Сверить имя с фактическим составом ответа. |
-| `shipments/route-segments/register-usage` | `shipment-routes/register-usage` | Команда регистрации использования участков. Сохранить явное имя побочного эффекта. |
+| `shipments/transportation-contexts` | `shipments/route-contexts` | Пакетная выборка участков, общих условий маршрута и ревизии поставки. |
+| `shipments/route-segments/register-usage` | Сохранить | Первый сегмент указывает на сервис Shipments. Остальная часть пути называет объект и действие. |
 | `transportation-operations/create` | Сохранить до пересмотра создания перевозок | Это запуск операции, а `transportations/create` создаёт перевозку. Сначала проверить границы двух сценариев. |
 | `shipments/ensure-created`, `transportations/ensure-created` | Сохранить | Внутренние команды гарантируют существование результата по ключу источника. |
 

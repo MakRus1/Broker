@@ -201,7 +201,7 @@ async def test_conflicting_save_does_not_register_route_usage_twice(
     both_loaded = asyncio.Event()
     loaded = 0
 
-    @mockserver.json_handler('/api/v1/shipments/transportation-contexts')
+    @mockserver.json_handler('/api/v1/shipments/route-contexts')
     async def load(request):
         nonlocal loaded
         loaded += 1

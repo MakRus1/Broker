@@ -41,11 +41,11 @@ models::ShipmentContext RouteIntegrations::GetShipmentContext(
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
     std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
-    namespace api = clients::shipments::ApiV1ShipmentsTransportationContexts;
+    namespace api = clients::shipments::ApiV1ShipmentsRouteContexts;
     if (ids.empty())
         return {};
     return shipments_
-        .ApiV1ShipmentsTransportationContexts(
+        .ApiV1ShipmentsRouteContexts(
             api::Request{.body = {.shipment_ids = ids}}, access_token)
         .items;
 } catch (const platform::http::CancelledError&) {

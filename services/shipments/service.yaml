@@ -43,7 +43,7 @@ auth:
     /api/v1/shipments/dictionaries: shipments.read
     /api/admin/shipments/settings/get: authenticated
     /api/admin/shipments/settings/update: authenticated
-    /api/v1/shipments/transportation-contexts: transportations.read
+    /api/v1/shipments/route-contexts: transportations.read
     /api/v1/shipments/route-segments/register-usage: transportations.write
     /api/v1/shipments/filter-values: shipments.read
     /api/internal/v1/shipments/ensure-created: shipments.create

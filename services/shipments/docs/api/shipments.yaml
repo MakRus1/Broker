@@ -532,7 +532,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/models.yaml#/ApiError
-  /api/v1/shipments/transportation-contexts:
+  /api/v1/shipments/route-contexts:
     post:
       summary: Маршруты и общие условия для перевозок
       requestBody:

@@ -98,7 +98,7 @@ async def test_shared_fields_roundtrip_and_patch(api, locations, pgsql):
     selected = (await api.post('/api/v1/shipments/get', {'shipment_id': created['id']}))['shipment']
     assert selected == created
     contexts = await api.post(
-        '/api/v1/shipments/transportation-contexts',
+        '/api/v1/shipments/route-contexts',
         {'shipment_ids': [created['id']]},
         roles=['transportations.read'],
     )

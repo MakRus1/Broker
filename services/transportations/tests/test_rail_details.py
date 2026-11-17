@@ -176,7 +176,7 @@ async def test_shipment_context_failure_is_reported_as_dependency_error(
 ):
     transportation, _ = await create_rail(api, shipment_routes)
 
-    @mockserver.handler('/api/v1/shipments/transportation-contexts')
+    @mockserver.handler('/api/v1/shipments/route-contexts')
     def unavailable(request):
         if failure == 'status':
             return mockserver.make_response(status=503)

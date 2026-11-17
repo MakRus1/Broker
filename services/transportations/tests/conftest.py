@@ -91,7 +91,7 @@ def shipment_routes(mockserver):
     contexts = {}
     registrations = []
 
-    @mockserver.json_handler('/api/v1/shipments/transportation-contexts')
+    @mockserver.json_handler('/api/v1/shipments/route-contexts')
     def load(request):
         return {'items': [contexts.get(identifier, {
             'shipment_id': identifier, 'revision': 1, 'route_segments': [],

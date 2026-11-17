@@ -7,7 +7,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace pg = userver::storages::postgres;
@@ -21,10 +20,6 @@ ConfigStore::ConfigStore(const userver::components::ComponentConfig& config,
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-configs").GetCluster()),
       allow_self_approval_(context.FindComponent<DraftPolicy>().AllowSelfApproval()) {}
-
-userver::yaml_config::Schema ConfigStore::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 Revision ConfigStore::Current() const {
     return cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision)

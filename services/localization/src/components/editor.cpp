@@ -9,7 +9,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace localization {
 namespace pg = userver::storages::postgres;
@@ -18,10 +17,9 @@ template <int Status> using ApiError = platform::http::HandlerError<Status>;
 
 // В транзакции записи версия и каталоги читаются из одного снимка.
 models::CatalogEditorState EditorComponent::ReadEditorSnapshot(
-    pg::Transaction& tx, const std::string& scope) const {
+    pg::Transaction& tx, const std::string& scope, const json::Value& source) const {
     models::CatalogEditorState result;
-    result.source =
-        converters::DecodeCatalog(tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>());
+    result.source = converters::DecodeCatalog(source);
     result.version = 0;
     result.revision = 0;
     const auto state = tx.Execute(sql::kGetEditor, scope);
@@ -45,10 +43,6 @@ EditorComponent::EditorComponent(const userver::components::ComponentConfig& con
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()) {
 }
 
-userver::yaml_config::Schema EditorComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 models::CatalogEditorState EditorComponent::GetEditorState(
     const models::GetEditorRequest& request) const {
     const auto scope =
@@ -56,7 +50,8 @@ models::CatalogEditorState EditorComponent::GetEditorState(
     auto tx = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    auto result = ReadEditorSnapshot(tx, scope);
+    const auto source = tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>();
+    auto result = ReadEditorSnapshot(tx, scope, source);
     tx.Commit();
     return result;
 }
@@ -86,7 +81,7 @@ models::CatalogEditorState EditorComponent::SaveDraft(
     const auto encoded = helpers::ValidateAndEncodeCatalog(catalog, source);
     tx.Execute(sql::kSaveEditor, row.Scope, encoded);
 
-    auto result = ReadEditorSnapshot(tx, scope);
+    auto result = ReadEditorSnapshot(tx, scope, source);
     tx.Commit();
     return result;
 }
@@ -118,7 +113,7 @@ models::CatalogEditorState EditorComponent::PublishDraft(
     }
     tx.Execute(sql::kPublishEditor, row.Scope);
 
-    auto result = ReadEditorSnapshot(tx, scope);
+    auto result = ReadEditorSnapshot(tx, scope, source);
     tx.Commit();
     return result;
 }

@@ -20,7 +20,6 @@ class DirectorySyncComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "directory-sync";
     DirectorySyncComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     void Run(const std::string& source, const SyncPolicy& policy, int requests,
         const std::function<void(const boost::uuids::uuid&)>& sync) const;
 

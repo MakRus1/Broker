@@ -8,7 +8,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace localization {
 namespace pg = userver::storages::postgres;
@@ -20,10 +19,6 @@ SourcesComponent::SourcesComponent(const userver::components::ComponentConfig& c
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()) {
-}
-
-userver::yaml_config::Schema SourcesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 int SourcesComponent::RegisterSourceCatalog(const models::EditableCatalog& catalog) const {

@@ -1,16 +1,11 @@
 #include <components/session.hpp>
 #include <userver/components/component_context.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace admin_bff {
 AdminSessionComponent::AdminSessionComponent(const userver::components::ComponentConfig& config,
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema AdminSessionComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::AdminSession AdminSessionComponent::GetAdminSession(
     const platform::browser::BrowserSession& session) const {

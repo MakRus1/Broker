@@ -9,7 +9,6 @@ class SourcesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "localization-sources";
     SourcesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     int RegisterSourceCatalog(const models::EditableCatalog&) const;
 
   private:

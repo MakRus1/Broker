@@ -10,7 +10,6 @@ class RolesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "organizations-roles";
     RolesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RolesListResult ListRoles(
         const models::OrganizationIdentity&, const platform::auth::Identity&) const;
     models::OrganizationRoleResult CreateRole(

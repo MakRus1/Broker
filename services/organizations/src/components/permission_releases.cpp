@@ -12,7 +12,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json/serialize.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 using namespace organizations;
@@ -49,10 +48,6 @@ PermissionReleasesComponent::PermissionReleasesComponent(
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema PermissionReleasesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::PermissionReleaseResult PermissionReleasesComponent::RegisterPermissionRelease(
     const models::PermissionReleasesUpsertRequest& request) const {

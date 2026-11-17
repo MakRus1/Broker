@@ -12,7 +12,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace organizations {
 using namespace helpers;
@@ -25,10 +24,6 @@ MembersComponent::MembersComponent(const userver::components::ComponentConfig& c
     : ComponentBase(config, context), keycloak_users_(context.FindComponent<KeycloakUsers>()),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema MembersComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::MembersListResult MembersComponent::ListMembers(
     const models::ListMembersRequest& request, const platform::auth::Identity& identity) const {

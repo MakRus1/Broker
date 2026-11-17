@@ -10,7 +10,6 @@ class AccessComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "organizations-access";
     AccessComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::OrganizationIdentity CheckMembership(
         const models::OrganizationIdentity&, const platform::auth::Identity&) const;
     models::OrganizationAccess ResolveOrganizationAccess(

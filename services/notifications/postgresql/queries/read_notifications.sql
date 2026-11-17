@@ -10,5 +10,4 @@ WHERE organization_id = $1::UUID
     AND recipient_issuer = $2
     AND recipient_subject = $3
     AND id = ANY($4::UUID[])
-    AND (read_at IS NULL OR ($5::BOOLEAN AND dismissed_at IS NULL))
-RETURNING id;
+    AND (read_at IS NULL OR ($5::BOOLEAN AND dismissed_at IS NULL));

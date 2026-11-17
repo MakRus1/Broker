@@ -7,7 +7,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace organizations {
 using namespace helpers;
@@ -19,10 +18,6 @@ RolesComponent::RolesComponent(const userver::components::ComponentConfig& confi
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema RolesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::RolesListResult RolesComponent::ListRoles(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {

@@ -12,7 +12,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace pg = userver::storages::postgres;
@@ -36,10 +35,6 @@ AccessComponent::AccessComponent(const userver::components::ComponentConfig& con
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema AccessComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::OrganizationIdentity AccessComponent::CheckMembership(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {

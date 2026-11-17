@@ -3,6 +3,7 @@
 #include <clients/organizations/client.hpp>
 #include <components/settings.hpp>
 #include <models/errors.hpp>
+#include <models/shipment_route_snapshot.hpp>
 #include <models/shipment_source.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
@@ -29,7 +30,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     models::Shipment UpdateShipment(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::UpdateShipmentRequest&,
         const std::optional<std::int64_t>& route_usage_version) const;
-    std::int64_t GetRouteUsageVersion(
+    models::ShipmentRouteSnapshot GetShipmentRouteSnapshot(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
     void RegisterRouteUsage(
         const boost::uuids::uuid& organization, const models::RegisterRouteUsageRequest&) const;

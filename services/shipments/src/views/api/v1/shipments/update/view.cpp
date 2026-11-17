@@ -22,13 +22,14 @@ Response View::Handle(
 
     std::optional<std::int64_t> route_usage_version;
     if (body.route_segments.has_value()) {
-        route_usage_version = deps.shipments->GetRouteUsageVersion(organization, body.shipment_id);
-        const auto previous = deps.shipments->GetShipment(organization, body.shipment_id);
-        helpers::CheckRevision(previous.revision, body.expected_revision);
+        const auto previous =
+            deps.shipments->GetShipmentRouteSnapshot(organization, body.shipment_id);
+        helpers::CheckRevision(previous.Revision, body.expected_revision);
+        route_usage_version = previous.UsageVersion;
         auto& route = body.route_segments.value();
-        deps.shipment_routes->ResolveRoute(access_token, route, previous.route_segments);
+        deps.shipment_routes->ResolveRoute(access_token, route, previous.RouteSegments);
         deps.shipment_routes->CheckExistingRouteUsage(access_token, body.shipment_id,
-            helpers::ChangedRouteSegments(previous.route_segments, route));
+            helpers::ChangedRouteSegments(previous.RouteSegments, route));
     }
 
     return Response200{

@@ -13,7 +13,6 @@ class ShipmentRoutes final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "shipment-routes";
     ShipmentRoutes(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     void ResolveRoute(std::string_view access_token,
         std::vector<models::ShipmentRouteSegment>& segments,
         const std::vector<models::ShipmentRouteSegment>& previous) const;

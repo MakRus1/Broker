@@ -13,7 +13,6 @@ class RouteIntegrations final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "transportations-route-integrations";
     RouteIntegrations(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ShipmentContext GetShipmentContext(
         std::string_view access_token, const boost::uuids::uuid& shipment_id) const;
     std::vector<models::ShipmentContext> FindShipmentContexts(

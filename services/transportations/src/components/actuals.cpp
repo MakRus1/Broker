@@ -8,7 +8,6 @@
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace transportations {
 namespace pg = userver::storages::postgres;
@@ -20,10 +19,6 @@ ActualsComponent::ActualsComponent(const userver::components::ComponentConfig& c
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()),
       integrations_(context.FindComponent<RouteIntegrations>()) {}
-
-userver::yaml_config::Schema ActualsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 template <typename Request>
 models::Transportation ActualsComponent::ApplyActualChange(const boost::uuids::uuid& organization,

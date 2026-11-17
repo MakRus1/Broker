@@ -19,7 +19,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = transportations::models;
@@ -47,10 +46,6 @@ TransportationsComponent::TransportationsComponent(
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema TransportationsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::Transportation TransportationsComponent::FindTransportation(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {

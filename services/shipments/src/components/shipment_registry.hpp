@@ -9,7 +9,6 @@ class ShipmentRegistryComponent final : public userver::components::ComponentBas
     static constexpr std::string_view kName = "shipment-registry";
     ShipmentRegistryComponent(const userver::components::ComponentConfig& config,
         const userver::components::ComponentContext& context);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ShipmentsListResult FindShipments(
         const models::ListShipmentsRequest& request, const boost::uuids::uuid& organization) const;
     models::ShipmentsFilterValuesResult GetShipmentFilterValues(

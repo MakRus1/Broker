@@ -10,7 +10,6 @@ class TransportationOperationsComponent final : public userver::components::Comp
     static constexpr std::string_view kName = "shipments-transportation-operations";
     TransportationOperationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::CreationOperation GetCreationOperation(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& operation_id) const;
     models::CreationOperation RequestTransportations(

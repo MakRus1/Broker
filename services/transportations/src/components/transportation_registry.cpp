@@ -8,7 +8,6 @@
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace transportations {
 namespace pg = userver::storages::postgres;
@@ -19,10 +18,6 @@ TransportationRegistry::TransportationRegistry(const userver::components::Compon
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema TransportationRegistry::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::TransportationListResult TransportationRegistry::ListTransportations(
     const boost::uuids::uuid& organization,

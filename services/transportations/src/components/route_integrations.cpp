@@ -6,7 +6,6 @@
 #include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
@@ -33,10 +32,6 @@ RouteIntegrations::RouteIntegrations(const userver::components::ComponentConfig&
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       transport_locations_(
           context.FindComponent<clients::transport_locations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema RouteIntegrations::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ShipmentContext RouteIntegrations::GetShipmentContext(
     std::string_view access_token, const boost::uuids::uuid& shipment_id) const {

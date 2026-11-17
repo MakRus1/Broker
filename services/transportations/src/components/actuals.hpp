@@ -15,7 +15,6 @@ class ActualsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "transportations-actuals";
     ActualsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Transportation RecordActual(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
         const models::RecordActualRequest&, const models::ShipmentContext&) const;

@@ -14,7 +14,6 @@ class RoutesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "transportations-routes";
     RoutesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RouteUsageResult FindRouteUsage(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
     models::RouteProjectionResult ApplyShipmentRouteProjection(

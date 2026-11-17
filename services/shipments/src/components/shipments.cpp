@@ -20,7 +20,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = shipments::models;
@@ -99,10 +98,6 @@ ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfi
       settings_(context.FindComponent<SettingsComponent>()),
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema ShipmentsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
     std::string_view access_token, const boost::uuids::uuid& customer) const try {

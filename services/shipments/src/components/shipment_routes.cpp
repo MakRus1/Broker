@@ -8,7 +8,6 @@
 #include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = shipments::models;
@@ -53,10 +52,6 @@ ShipmentRoutes::ShipmentRoutes(const userver::components::ComponentConfig& confi
       transport_locations_(
           context.FindComponent<clients::transport_locations::Component>().GetClient()),
       transportations_(context.FindComponent<clients::transportations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema ShipmentRoutes::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 void ShipmentRoutes::ValidateRouteCounterparties(std::string_view access_token,
     const std::vector<models::ShipmentRouteSegment>& stages,

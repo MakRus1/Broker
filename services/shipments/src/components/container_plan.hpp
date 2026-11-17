@@ -12,7 +12,6 @@ class ContainerPlanComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "shipments-container-plan";
     ContainerPlanComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ShipmentItem AddPlannedContainer(
         const models::AddItemRequest&, const platform::auth::Identity&) const;
     ContainerPlanSnapshot LoadPlan(

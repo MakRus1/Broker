@@ -13,7 +13,6 @@
 #include <platform/outbox/component.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
 namespace pg = userver::storages::postgres;
@@ -24,10 +23,6 @@ TransportationOperationsComponent::TransportationOperationsComponent(
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()) {
-}
-
-userver::yaml_config::Schema TransportationOperationsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 models::CreationOperation TransportationOperationsComponent::GetCreationOperation(

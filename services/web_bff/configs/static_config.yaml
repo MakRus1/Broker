@@ -44,8 +44,8 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-notifications-read:
-            path: /api/notifications/read
+        handler-api-notifications-mark_read:
+            path: /api/notifications/mark-read
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -224,12 +224,6 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-v1-invoices-candidates:
-            path: /api/v1/invoices/candidates
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
         handler-api-v1-invoices-detach_service_charge:
             path: /api/v1/invoices/detach-service-charge
             method: POST
@@ -268,6 +262,12 @@ components_manager:
             response_data_size_log_limit: 32768
         handler-api-v1-invoices-save:
             path: /api/v1/invoices/save
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-invoices-service_charge_candidates:
+            path: /api/v1/invoices/service-charge-candidates
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768

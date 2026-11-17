@@ -113,7 +113,7 @@ paths:
                 $ref: components/schemas/notifications.yaml#/ApiError
       security:
       - bearerAuth: []
-  /api/v1/notifications/read:
+  /api/v1/notifications/mark-read:
     post:
       summary: Отметить выбранные уведомления прочитанными
       requestBody:

@@ -15,7 +15,7 @@ auth:
   protected-prefix: /api/
   permissions:
     /api/v1/notifications/list: authenticated
-    /api/v1/notifications/read: authenticated
+    /api/v1/notifications/mark-read: authenticated
     /api/internal/v1/events/publish: notifications.publish
   service-clients:
     notifications.publish:

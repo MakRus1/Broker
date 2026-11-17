@@ -1,8 +1,8 @@
 #include <components/inbox.hpp>
 #include <platform/auth/identity.hpp>
-#include <views/api/v1/notifications/read/view.hpp>
+#include <views/api/v1/notifications/mark_read/view.hpp>
 
-namespace notifications::views::api::v1::notifications::read {
+namespace notifications::views::api::v1::notifications::mark_read {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     const auto& identity = platform::auth::GetIdentity(context);
@@ -11,4 +11,4 @@ Response View::Handle(
     return Response200{
         .updated = deps.inbox->MarkNotificationsRead(request.body, identity, access_token)};
 }
-}  // namespace notifications::views::api::v1::notifications::read
+}  // namespace notifications::views::api::v1::notifications::mark_read

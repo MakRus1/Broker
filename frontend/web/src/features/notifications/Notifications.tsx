@@ -60,7 +60,7 @@ function ServerNotifications() {
     let failures = 0;
     store.setRemoteRead(async (ids, dismiss = false) => {
       await request(
-        '/api/notifications/read',
+        '/api/notifications/mark-read',
         session,
         {
           organization_id: session.organization_id,

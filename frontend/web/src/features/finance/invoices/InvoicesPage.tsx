@@ -280,7 +280,7 @@ export function InvoicesPage({
     const controller = new AbortController();
     setCandidateLoading(true);
     request<{ items: ServiceCharge[]; next_after: string | null }>(
-      '/api/v1/invoices/candidates',
+      '/api/v1/invoices/service-charge-candidates',
       session,
       {
         direction,
@@ -321,7 +321,7 @@ export function InvoicesPage({
     setCandidateFailure('');
     try {
       const r = await request<{ items: ServiceCharge[]; next_after: string | null }>(
-        '/api/v1/invoices/candidates',
+        '/api/v1/invoices/service-charge-candidates',
         session,
         {
           direction,

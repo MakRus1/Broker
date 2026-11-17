@@ -8,7 +8,7 @@ paths:
 - /api/localization/catalog
 - /api/logout
 - /api/notifications/list
-- /api/notifications/read
+- /api/notifications/mark-read
 - /api/organizations/employees/list
 - /api/preferences/list
 - /api/preferences/roles/list
@@ -38,7 +38,6 @@ paths:
 - /api/v1/financial-labels/list
 - /api/v1/financial-labels/save
 - /api/v1/invoices/add-service-charge
-- /api/v1/invoices/candidates
 - /api/v1/invoices/detach-service-charge
 - /api/v1/invoices/filter-values
 - /api/v1/invoices/get
@@ -46,6 +45,7 @@ paths:
 - /api/v1/invoices/list
 - /api/v1/invoices/print-data
 - /api/v1/invoices/save
+- /api/v1/invoices/service-charge-candidates
 - /api/v1/payments/filter-values
 - /api/v1/payments/get
 - /api/v1/payments/history

@@ -21,8 +21,8 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
-        handler-api-v1-notifications-read:
-            path: /api/v1/notifications/read
+        handler-api-v1-notifications-mark_read:
+            path: /api/v1/notifications/mark-read
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 0
@@ -55,7 +55,7 @@ components_manager:
             permissions:
                 /api/internal/v1/events/publish: notifications.publish
                 /api/v1/notifications/list: authenticated
-                /api/v1/notifications/read: authenticated
+                /api/v1/notifications/mark-read: authenticated
             service-clients:
                 notifications.publish:
                 - shipments-dispatcher

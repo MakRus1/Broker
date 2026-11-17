@@ -35,10 +35,15 @@ async def test_one_payment_many_invoices_and_partial_payments(api, charge, invoi
     body=payment([allocation(first['id'],10000),allocation(second['id'],5000)])
     result=await api.post(BASE+'save',body)
     assert result['allocated_minor']==15000 and result['unallocated_minor']==5000
+    assert {item['invoice_id']: item['amount_minor'] for item in result['allocations']} == {
+        first['id']: 10000, second['id']: 5000,
+    }
     balance=await api.post(BASE+'invoice-balance',{'id':first['id']})
     assert balance['paid_minor']==10000 and balance['outstanding_minor']==2000
     await api.post(BASE+'save',payment([allocation(first['id'],2000)],amount_minor=2000))
-    assert (await api.post(BASE+'invoice-balance',{'id':first['id']}))['outstanding_minor']==0
+    balance = await api.post(BASE+'invoice-balance', {'id': first['id']})
+    assert balance['outstanding_minor'] == 0
+    assert balance['paid_minor'] == sum(item['amount_minor'] for item in balance['payments']) == 12000
     await api.post(BASE+'save',payment([allocation(first['id'],1)]),expected=409)
 
 async def test_invalid_distribution_rolls_back_payment_and_allocations(api, charge, invoice_references):

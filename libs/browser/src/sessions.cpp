@@ -23,7 +23,6 @@ using HttpClient = userver::components::HttpClient;
 namespace pg = userver::storages::postgres;
 namespace sql = browser_storage::sql;
 constexpr std::int64_t kMaxPendingLogins = 1000;
-constexpr std::int64_t kMaxLocalSessions = 2000;
 constexpr auto kTokenRefreshLeadTime = std::chrono::seconds{30};
 
 struct StoredSession {
@@ -63,9 +62,11 @@ Sessions::Sessions(const userver::components::ComponentConfig& config,
       token_url_(config["token-url"].As<std::string>()),
       revoke_url_(config["revoke-url"].As<std::string>()),
       client_(config["client-id"].As<std::string>()),
-      secure_(config["secure-cookie"].As<bool>(true)) {
-    if (const auto postgres = config["postgres-component"].As<std::optional<std::string>>())
-        cluster_ = context.FindComponent<userver::components::Postgres>(*postgres).GetCluster();
+      secure_(config["secure-cookie"].As<bool>(true)),
+      cluster_(context
+                   .FindComponent<userver::components::Postgres>(
+                       config["postgres-component"].As<std::string>())
+                   .GetCluster()) {
     if (SessionCookie.empty() || LoginCookie.empty() || SessionCookie == LoginCookie ||
         Origin.empty() || Origin.back() == '/' || client_.empty() ||
         (secure_ &&
@@ -74,33 +75,17 @@ Sessions::Sessions(const userver::components::ComponentConfig& config,
         (!secure_ && !Origin.starts_with("http://localhost:")))
         throw std::invalid_argument("Invalid browser origin or TLS configuration");
 
-    if (cluster_) {
-        cleanup_task_.Start("browser-session-cleanup",
-            userver::utils::PeriodicTask::Settings{std::chrono::minutes{1}}, [this] {
-                cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredLogins);
-                cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredSessions);
-            });
-    }
-}
-
-void Sessions::Cleanup() {
-    const auto now = Clock::now();
-    std::erase_if(pending_, [now](const auto& pair) { return pair.second.Expires <= now; });
-    std::erase_if(sessions_, [now](const auto& pair) { return pair.second->Expires <= now; });
+    cleanup_task_.Start("browser-session-cleanup",
+        userver::utils::PeriodicTask::Settings{std::chrono::minutes{1}}, [this] {
+            cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredLogins);
+            cluster_->Execute(pg::ClusterHostType::kMaster, sql::kClearExpiredSessions);
+        });
 }
 
 std::pair<std::string, std::string> Sessions::Begin() {
     const auto state = Random();
-    const Pending pending{Random(), Random(), Clock::now() + kLoginTtl};
-    if (cluster_) {
-        StorePending(state, pending);
-    } else {
-        std::lock_guard lock(mutex_);
-        Cleanup();
-        if (pending_.size() >= static_cast<std::size_t>(kMaxPendingLogins))
-            throw CapacityExceeded{};
-        pending_.emplace(state, pending);
-    }
+    const Pending pending{Random(), Random()};
+    StorePending(state, pending);
     const auto url = issuer_ +
         "/protocol/openid-connect/auth?response_type=code&scope=openid%20profile&client_id=" +
         UrlEncode(client_) + "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") +
@@ -142,9 +127,9 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     const auto tokens = Exchange("grant_type=authorization_code&client_id=" + UrlEncode(client_) +
         "&redirect_uri=" + UrlEncode(Origin + "/auth/callback") + "&code=" + UrlEncode(code) +
         "&code_verifier=" + UrlEncode(pending.Verifier));
-    auto session = std::make_shared<Session>();
+    Session session;
     try {
-        session->User = auth_.VerifyLogin(tokens["access_token"].As<std::string>(),
+        session.User = auth_.VerifyLogin(tokens["access_token"].As<std::string>(),
             tokens["id_token"].As<std::string>(), client_, pending.Nonce);
     } catch (const platform::auth::Unavailable&) {
         throw;
@@ -153,47 +138,12 @@ std::string Sessions::Complete(const std::string& state, const std::string& code
     } catch (const std::exception&) {
         throw userver::server::handlers::Unauthorized{};
     }
-    Tokens(*session, tokens);
-    session->Csrf = Random();
-    session->Expires = Clock::now() + kSessionTtl;
+    Tokens(session, tokens);
+    session.Csrf = Random();
+    session.Expires = Clock::now() + kSessionTtl;
     const auto id = Random();
-    if (cluster_) {
-        StoreSession(id, *session);
-    } else {
-        std::lock_guard lock(mutex_);
-        Cleanup();
-        if (sessions_.size() >= static_cast<std::size_t>(kMaxLocalSessions))
-            throw CapacityExceeded{};
-        sessions_.emplace(id, std::move(session));
-    }
+    StoreSession(id, session);
     return id;
-}
-
-std::shared_ptr<Session> Sessions::GetLocal(const std::string& id) {
-    std::lock_guard lock(mutex_);
-    const auto found = sessions_.find(id);
-    if (found == sessions_.end())
-        throw userver::server::handlers::Unauthorized{};
-    if (found->second->Expires <= Clock::now()) {
-        sessions_.erase(found);
-        throw userver::server::handlers::Unauthorized{};
-    }
-    return found->second;
-}
-
-SessionSnapshot Sessions::GetAuthenticated(const std::string& id) {
-    if (id.empty())
-        throw userver::server::handlers::Unauthorized{};
-    if (cluster_)
-        return GetStored(id);
-
-    const auto session = GetLocal(id);
-    std::lock_guard lock(session->Mutex);
-    if (session->Expires <= Clock::now())
-        throw userver::server::handlers::Unauthorized{};
-    if (NeedsRefresh(session->TokenExpires))
-        Refresh(*session, session->User.ActorId());
-    return {session->User, session->Access, session->Csrf};
 }
 
 platform::auth::Identity Sessions::VerifyAccess(const std::string& token) const try {
@@ -223,7 +173,7 @@ void Sessions::StorePending(const std::string& state, const Pending& pending) tr
     transaction.Execute(sql::kClearExpiredLogins);
     if (transaction
             .Execute(sql::kCreatePendingLogin, Challenge(state), pending.Verifier, pending.Nonce,
-                pg::TimePointTz{pending.Expires}, kMaxPendingLogins)
+                pg::TimePointTz{Clock::now() + kLoginTtl}, kMaxPendingLogins)
             .IsEmpty())
         throw CapacityExceeded{};
     transaction.Commit();
@@ -233,26 +183,11 @@ void Sessions::StorePending(const std::string& state, const Pending& pending) tr
 }
 
 Pending Sessions::ConsumePending(const std::string& state) try {
-    if (cluster_) {
-        const auto rows = cluster_->Execute(
-            pg::ClusterHostType::kMaster, sql::kConsumePendingLogin, Challenge(state));
-        if (rows.IsEmpty())
-            throw userver::server::handlers::Unauthorized{};
-
-        struct LoginRow {
-            std::string Verifier, Nonce;
-        };
-
-        auto login = rows.AsSingleRow<LoginRow>(pg::kRowTag);
-        return {std::move(login.Verifier), std::move(login.Nonce), {}};
-    }
-
-    std::lock_guard lock(mutex_);
-    Cleanup();
-    auto login = pending_.extract(state);
-    if (login.empty())
+    const auto rows = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kConsumePendingLogin, Challenge(state));
+    if (rows.IsEmpty())
         throw userver::server::handlers::Unauthorized{};
-    return std::move(login.mapped());
+    return rows.AsSingleRow<Pending>(pg::kRowTag);
 } catch (const pg::Error&) {
 
     throw platform::auth::Unavailable{};
@@ -267,7 +202,10 @@ void Sessions::StoreSession(const std::string& id, const Session& session) try {
     throw platform::auth::Unavailable{};
 }
 
-SessionSnapshot Sessions::GetStored(const std::string& id) try {
+SessionSnapshot Sessions::GetAuthenticated(const std::string& id) try {
+    if (id.empty())
+        throw userver::server::handlers::Unauthorized{};
+
     const auto key = Challenge(id);
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kReadSession, key);
     if (rows.IsEmpty())
@@ -301,21 +239,11 @@ SessionSnapshot Sessions::GetStored(const std::string& id) try {
 }
 
 std::string Sessions::RemoveSession(const std::string& id) try {
-    if (cluster_) {
-        const auto rows =
-            cluster_->Execute(pg::ClusterHostType::kMaster, sql::kDeleteSession, Challenge(id));
-        if (rows.IsEmpty())
-            throw userver::server::handlers::Unauthorized{};
-        return rows.AsSingleRow<std::string>();
-    }
-
-    auto session = GetLocal(id);
-    {
-        std::lock_guard lock(mutex_);
-        sessions_.erase(id);
-    }
-    std::lock_guard lock(session->Mutex);
-    return std::move(session->Refresh);
+    const auto rows =
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kDeleteSession, Challenge(id));
+    if (rows.IsEmpty())
+        throw userver::server::handlers::Unauthorized{};
+    return rows.AsSingleRow<std::string>();
 } catch (const pg::Error&) {
 
     throw platform::auth::Unavailable{};

@@ -7,7 +7,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace notifications {
 namespace pg = userver::storages::postgres;
@@ -18,10 +17,6 @@ InboxComponent::InboxComponent(const userver::components::ComponentConfig& confi
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema InboxComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 void InboxComponent::CheckOrganization(
     const std::string& access_token, const boost::uuids::uuid& organization) const {
@@ -65,6 +60,6 @@ int InboxComponent::MarkNotificationsRead(const models::ReadNotificationsRequest
 
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kReadNotifications,
         request.organization_id, identity.Issuer, identity.Subject, request.ids, request.dismiss);
-    return static_cast<int>(rows.Size());
+    return static_cast<int>(rows.RowsAffected());
 }
 }  // namespace notifications

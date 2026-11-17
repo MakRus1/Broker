@@ -11,7 +11,6 @@ class InboxComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "notifications-inbox";
     InboxComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     std::vector<models::Notification> ListNotifications(const models::ListNotificationsRequest&,
         const platform::auth::Identity&, const std::string& access_token) const;
     int MarkNotificationsRead(const models::ReadNotificationsRequest&,

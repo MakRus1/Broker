@@ -7,7 +7,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 #include <variant>
 
 namespace {
@@ -42,10 +41,6 @@ EventAcceptanceComponent::EventAcceptanceComponent(
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()) {
-}
-
-userver::yaml_config::Schema EventAcceptanceComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 void EventAcceptanceComponent::AcceptEvent(

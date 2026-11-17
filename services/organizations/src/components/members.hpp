@@ -11,7 +11,6 @@ class MembersComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "organizations-members";
     MembersComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::MembersListResult ListMembers(
         const models::ListMembersRequest&, const platform::auth::Identity&) const;
     models::MemberResult CreateMember(

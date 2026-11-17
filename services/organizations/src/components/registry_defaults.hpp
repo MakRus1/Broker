@@ -10,7 +10,6 @@ class RegistryDefaultsComponent final : public userver::components::ComponentBas
     static constexpr std::string_view kName = "organizations-registry-defaults";
     RegistryDefaultsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RegistryDefaultsGetResult GetOwnRegistryDefaults(
         const models::OrganizationIdentity&, const platform::auth::Identity&) const;
     models::RegistryDefaultsListResult ListRoleRegistryDefaults(

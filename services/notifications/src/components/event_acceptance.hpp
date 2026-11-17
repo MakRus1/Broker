@@ -10,7 +10,6 @@ class EventAcceptanceComponent final : public userver::components::ComponentBase
     static constexpr std::string_view kName = "notifications-event-acceptance";
     EventAcceptanceComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     void AcceptEvent(const models::PublishedEvent&, const platform::auth::Identity&) const;
 
   private:

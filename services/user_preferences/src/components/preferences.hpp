@@ -11,7 +11,6 @@ class PreferencesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "user-preferences";
     PreferencesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     std::vector<models::Preference> ListPreferences(const models::ListPreferencesRequest&,
         const platform::auth::Identity&, const std::string& access_token) const;
     models::Preference SavePreference(const models::SavePreferenceRequest&,

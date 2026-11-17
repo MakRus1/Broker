@@ -7,7 +7,6 @@
 #include <models/registry_default_row.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 using namespace organizations;
@@ -33,10 +32,6 @@ RegistryDefaultsComponent::RegistryDefaultsComponent(
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-organizations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema RegistryDefaultsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::RegistryDefaultsGetResult RegistryDefaultsComponent::GetOwnRegistryDefaults(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {

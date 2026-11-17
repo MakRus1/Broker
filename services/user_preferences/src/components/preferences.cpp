@@ -9,7 +9,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace user_preferences {
 namespace pg = userver::storages::postgres;
@@ -20,10 +19,6 @@ PreferencesComponent::PreferencesComponent(const userver::components::ComponentC
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema PreferencesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 void PreferencesComponent::CheckOrganization(
     const std::string& access_token, const boost::uuids::uuid& organization) const {

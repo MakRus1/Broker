@@ -9,7 +9,6 @@ class PermissionReleasesComponent final : public userver::components::ComponentB
     static constexpr std::string_view kName = "organizations-permission-releases";
     PermissionReleasesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::PermissionReleaseResult RegisterPermissionRelease(
         const models::PermissionReleasesUpsertRequest&) const;
     models::PermissionReleaseResult ActivatePermissionRelease(

@@ -10,7 +10,6 @@ class OrganizationsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "organizations-organizations";
     OrganizationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::OrganizationsListResult ListOrganizations(
         const models::ListOrganizationsRequest&) const;
     models::OrganizationResult CreateOrganization(

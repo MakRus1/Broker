@@ -46,6 +46,7 @@ async def test_duplicate_after_processing_and_read(api, publish):
     assert item['event_type'] == 'shipment.route_changed'
     assert item['read'] is False
     assert await api.post(READ_PATH, {'organization_id': ORGANIZATION, 'ids': [item['id']]}) == {'updated': 1}
+    assert await api.post(READ_PATH, {'organization_id': ORGANIZATION, 'ids': [item['id']]}) == {'updated': 0}
     # Событие уже обработано; поздний повтор не создаёт новое уведомление и не сбрасывает прочтение.
     assert (await publish(event())).status == 200
     items = (await api.post(LIST_PATH, {'organization_id': ORGANIZATION}))['items']

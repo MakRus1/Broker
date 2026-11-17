@@ -10,7 +10,6 @@
 #include <platform/auth/identity.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace shipments {
 namespace pg = userver::storages::postgres;
@@ -21,10 +20,6 @@ ContainerPlanComponent::ContainerPlanComponent(const userver::components::Compon
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       settings_(context.FindComponent<SettingsComponent>()) {}
-
-userver::yaml_config::Schema ContainerPlanComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     const models::AddItemRequest& request, const platform::auth::Identity& actor) const {

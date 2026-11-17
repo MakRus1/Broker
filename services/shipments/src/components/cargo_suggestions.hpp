@@ -11,7 +11,6 @@ class CargoSuggestionsComponent final : public userver::components::ComponentBas
     static constexpr std::string_view kName = "shipments-cargo-suggestions";
     CargoSuggestionsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     std::vector<std::string> FindSuggestions(const boost::uuids::uuid& organization,
         const boost::uuids::uuid& customer, const std::string& query) const;
     bool RemoveSuggestion(const boost::uuids::uuid& organization,

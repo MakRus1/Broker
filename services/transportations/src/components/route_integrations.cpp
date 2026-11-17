@@ -6,7 +6,6 @@
 #include <platform/http_client.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
@@ -34,10 +33,6 @@ RouteIntegrations::RouteIntegrations(const userver::components::ComponentConfig&
       transport_locations_(
           context.FindComponent<clients::transport_locations::Component>().GetClient()) {}
 
-userver::yaml_config::Schema RouteIntegrations::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 models::ShipmentContext RouteIntegrations::GetShipmentContext(
     std::string_view access_token, const boost::uuids::uuid& shipment_id) const {
     const auto contexts = FindShipmentContexts(access_token, {shipment_id});
@@ -46,12 +41,11 @@ models::ShipmentContext RouteIntegrations::GetShipmentContext(
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
     std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
-    namespace api = clients::shipments::ApiV1ShipmentsTransportationContexts;
+    namespace api = clients::shipments::ApiV1ShipmentsRouteContexts;
     if (ids.empty())
         return {};
     return shipments_
-        .ApiV1ShipmentsTransportationContexts(
-            api::Request{.body = {.shipment_ids = ids}}, access_token)
+        .ApiV1ShipmentsRouteContexts(api::Request{.body = {.shipment_ids = ids}}, access_token)
         .items;
 } catch (const platform::http::CancelledError&) {
 

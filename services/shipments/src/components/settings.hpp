@@ -13,7 +13,6 @@ class SettingsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "shipments-settings";
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     configs::ShipmentSettings Effective(
         const boost::uuids::uuid&, const std::optional<boost::uuids::uuid>& = std::nullopt) const;
     configs::ShipmentSettings Effective(userver::storages::postgres::Transaction& transaction,

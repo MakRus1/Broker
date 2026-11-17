@@ -14,7 +14,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/boost_uuid4.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = shipments::models;
@@ -105,10 +104,6 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()) {}
-
-userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
     const boost::uuids::uuid& organization) const {

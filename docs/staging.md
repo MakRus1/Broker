@@ -78,6 +78,7 @@ PostgreSQL закреплены в `tools/deploy/postgres/operator.json`. Офи
 Оператор общий
 для Kubernetes-кластера, но данные и настройки PostgreSQL принадлежат сервисам.
 Документация: [CloudNativePG](https://cloudnative-pg.io/docs/1.30/).
+[Результаты экспериментов с отказами и сетевым разрывом](architecture/failover-experiments.md).
 
 ### Перенос существующего staging
 

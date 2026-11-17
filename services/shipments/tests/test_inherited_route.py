@@ -16,13 +16,13 @@ async def test_contexts_are_scoped_and_terms_are_current(api):
     )['shipment']
     body = {'shipment_ids': [shipment['id'].upper()]}
     response = await api.post(
-        '/api/v1/shipments/transportation-contexts', body, roles=['transportations.read']
+        '/api/v1/shipments/route-contexts', body, roles=['transportations.read']
     )
     assert response['items'][0]['route_segments'] == [stage]
     assert response['items'][0]['incoterms'] == 'FOB'
     assert (
         await api.post(
-            '/api/v1/shipments/transportation-contexts',
+            '/api/v1/shipments/route-contexts',
             body,
             user='other',
             roles=['transportations.read'],

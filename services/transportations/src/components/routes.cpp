@@ -14,7 +14,6 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace transportations {
 namespace pg = userver::storages::postgres;
@@ -26,10 +25,6 @@ RoutesComponent::RoutesComponent(const userver::components::ComponentConfig& con
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()),
       integrations_(context.FindComponent<RouteIntegrations>()) {}
-
-userver::yaml_config::Schema RoutesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::RouteUsageResult RoutesComponent::FindRouteUsage(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {

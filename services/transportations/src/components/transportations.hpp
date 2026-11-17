@@ -11,7 +11,6 @@ class TransportationsComponent final : public userver::components::ComponentBase
     static constexpr std::string_view kName = "transportations-transportations";
     TransportationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Transportation FindTransportation(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     models::TransportationHistoryResult GetTransportationHistory(

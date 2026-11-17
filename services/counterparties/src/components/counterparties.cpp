@@ -9,7 +9,6 @@
 #include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = counterparties::models;
@@ -43,10 +42,6 @@ CounterpartiesComponent::CounterpartiesComponent(const userver::components::Comp
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-counterparties")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema CounterpartiesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 void CounterpartiesComponent::ValidateLogist(const boost::uuids::uuid& organization,
     std::string_view token, const std::optional<std::string>& subject) const {

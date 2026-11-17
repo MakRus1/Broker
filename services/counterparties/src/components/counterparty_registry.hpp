@@ -10,7 +10,6 @@ class CounterpartyRegistry final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "counterparties-registry";
     CounterpartyRegistry(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::CounterpartyListResult ListCounterparties(
         const boost::uuids::uuid& organization, const models::ListCounterpartiesRequest&) const;
     models::CounterpartyFilterValuesResult GetCounterpartyFilterValues(

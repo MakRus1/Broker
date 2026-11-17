@@ -10,7 +10,6 @@ class BankAccountsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "counterparties-bank-accounts";
     BankAccountsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::BankAccount SaveBankAccount(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::SaveBankAccountRequest&) const;
     std::vector<models::BankAccount> ListBankAccounts(

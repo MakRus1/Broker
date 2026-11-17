@@ -13,7 +13,6 @@ class ContractsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "contracts-contracts";
     ContractsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     void ValidateContractParties(
         std::string_view access_token, const models::SaveContractRequest&) const;

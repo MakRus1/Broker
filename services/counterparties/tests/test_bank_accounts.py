@@ -115,3 +115,30 @@ async def test_account_uuid_case_and_revision_overflow(api):
     assert updated['id'] == body['id']
     assert updated['revision'] == 2
     await save(api, {**body, 'expected_revision': 9223372036854775807}, expected=400)
+
+
+async def test_account_limit_counts_archived_accounts_and_allows_edit(api, pgsql):
+    party = await owner(api)
+    body = account(party)
+    created = (await save(api, body))['account']
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO bank_accounts (
+                organization_id, id, counterparty_id, name, number, currency,
+                bank_name, is_primary, archived, revision)
+            SELECT organization_id, gen_random_uuid(), counterparty_id,
+                'Счёт ' || index, lpad(index::text, 20, '0'), currency,
+                bank_name, false, index % 2 = 0, 1
+            FROM bank_accounts CROSS JOIN generate_series(1, 98) AS index
+            WHERE id = %s::uuid
+        """, (created['id'],))
+    last = account(party, number='40702810000000000002', is_primary=False)
+    await save(api, last)
+    error = await save(api, account(
+        party, number='40702810000000000003', is_primary=False,
+    ), expected=409)
+    assert error['error'] == 'account_limit'
+    edited = (await save(api, {**body, 'expected_revision': 1, 'name': 'Исправленный'}))['account']
+    assert edited['revision'] == 2
+    another = await owner(api)
+    await save(api, account(another))

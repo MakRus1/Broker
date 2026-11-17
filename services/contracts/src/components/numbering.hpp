@@ -11,7 +11,6 @@ class NumberingComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "contracts-numbering";
     NumberingComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     void RequireAdministrator(
         const boost::uuids::uuid& organization, std::string_view access_token) const;
     models::ContractNumbering GetNumbering(const boost::uuids::uuid& organization) const;

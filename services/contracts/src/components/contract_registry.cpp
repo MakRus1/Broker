@@ -7,7 +7,6 @@
 #include <registry/contract_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace contracts {
 namespace pg = userver::storages::postgres;
@@ -17,10 +16,6 @@ ContractRegistry::ContractRegistry(const userver::components::ComponentConfig& c
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-contracts").GetCluster()) {
-}
-
-userver::yaml_config::Schema ContractRegistry::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
 }
 
 models::ContractListResult ContractRegistry::ListContracts(

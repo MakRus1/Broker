@@ -12,7 +12,6 @@ class CounterpartiesComponent final : public userver::components::ComponentBase 
     static constexpr std::string_view kName = "counterparties-cards";
     CounterpartiesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     void ValidateLogist(const boost::uuids::uuid& organization, std::string_view access_token,
         const std::optional<std::string>& subject) const;

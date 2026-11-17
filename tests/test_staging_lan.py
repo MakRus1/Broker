@@ -20,6 +20,29 @@ from test_deployment import RELEASE
 
 
 class LanTest(unittest.TestCase):
+    def test_web_read_retry_preserves_the_regular_ingress(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'lan').mkdir()
+            (root / 'lan/enabled').write_text('true\n')
+            objects = staging_manifest.render(RELEASE, root)['monitoring']
+
+        route = next(obj for obj in objects if obj['kind'] == 'IngressRoute')
+        rule = route['spec']['routes'][0]
+        self.assertEqual(route['spec']['tls']['secretName'], 'staging-lan-tls')
+        self.assertIn('Host(`web.broker.home.arpa`)', rule['match'])
+        self.assertIn('Method(`GET`)', rule['match'])
+        self.assertNotIn('/auth/', rule['match'])
+        self.assertNotIn('PathPrefix(`/`)', rule['match'])
+        self.assertEqual(rule['services'][0]['nativeLB'], False)
+        middleware = next(obj for obj in objects if obj['kind'] == 'Middleware')
+        self.assertEqual(middleware['spec']['retry'], {'attempts': 2})
+        transport = next(obj for obj in objects if obj['kind'] == 'ServersTransport')
+        self.assertEqual(transport['spec']['forwardingTimeouts'], {'dialTimeout': '350ms'})
+        ingress = next(obj for obj in objects if obj['metadata']['name'] == 'web-bff-lan')
+        self.assertNotIn('traefik.ingress.kubernetes.io/router.middlewares',
+                         ingress['metadata']['annotations'])
+
     def test_http_clients_resolve_declared_providers(self):
         with tempfile.TemporaryDirectory() as directory:
             phases = staging_manifest.render(RELEASE, Path(directory))

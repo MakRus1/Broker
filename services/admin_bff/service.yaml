@@ -3,6 +3,9 @@ libraries:
 - common
 - auth
 - browser
+postgresql:
+  enabled: true
+  cluster: admin-bff
 clients:
   config_admin:
     service: configs

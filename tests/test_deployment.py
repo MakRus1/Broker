@@ -26,20 +26,24 @@ RELEASE = {
 
 
 class DeploymentTest(unittest.TestCase):
-    def test_web_replicas_share_postgresql(self):
+    def test_bff_replicas_each_share_their_own_postgresql(self):
         with tempfile.TemporaryDirectory() as directory:
             phases = staging.render(RELEASE, Path(directory))
-        web = next(obj for obj in phases['services'] if obj['kind'] == 'Deployment'
-                   and obj['metadata']['name'] == 'web-bff')
-        self.assertEqual(web['spec']['replicas'], 2)
-        self.assertTrue(any(
-            obj['kind'] == 'Cluster' and obj['metadata']['name'] == 'web-bff-postgres'
-            for obj in phases['databases']
-        ))
-        self.assertTrue(any(
-            obj['kind'] == 'Job' and obj['metadata']['labels']['broker/service'] == 'web_bff'
-            for obj in phases['migrations']
-        ))
+        for service in ('web_bff', 'admin_bff'):
+            with self.subTest(service=service):
+                name = service.replace('_', '-')
+                app = next(obj for obj in phases['services'] if obj['kind'] == 'Deployment'
+                           and obj['metadata']['name'] == name)
+                self.assertEqual(app['spec']['replicas'], 2)
+                self.assertEqual(app['spec']['strategy']['type'], 'RollingUpdate')
+                self.assertTrue(any(
+                    obj['kind'] == 'Cluster' and obj['metadata']['name'] == f'{name}-postgres'
+                    for obj in phases['databases']
+                ))
+                self.assertTrue(any(
+                    obj['kind'] == 'Job' and obj['metadata']['labels']['broker/service'] == service
+                    for obj in phases['migrations']
+                ))
 
     def test_config_admin_uses_monitor_listener_instead_of_public_listener(self):
         import base64
@@ -179,8 +183,6 @@ class DeploymentTest(unittest.TestCase):
             self.assertEqual(
                 web_bff['spec']['template']['spec']['containers'][0]['env'], registry_env
             )
-            bff = next(app for app in apps if app['metadata']['name'] == 'admin-bff')
-            self.assertEqual(bff['spec']['strategy']['type'], 'Recreate')
             variables = next(
                 obj
                 for obj in phases['services']
@@ -270,12 +272,6 @@ class DeploymentTest(unittest.TestCase):
                 [obj['metadata']['name'] for obj in first['services']],
                 [obj['metadata']['name'] for obj in second['services']],
             )
-            bff = root / 'services/admin_bff/platform.yaml'
-            config = yaml.safe_load(bff.read_text())
-            config['environments']['staging'] = {'application': {'replicas': 2}}
-            bff.write_text(yaml.safe_dump(config))
-            with self.assertRaisesRegex(ValueError, 'сессий'):
-                staging.render(RELEASE, path, root=root)
 
     def test_selected_manifests_exclude_other_services_and_migrations(self):
         from unittest.mock import patch
@@ -298,7 +294,7 @@ class DeploymentTest(unittest.TestCase):
                                     for obj in objects
                                 )
                             )
-                    self.assertEqual(bool(jobs), services == ['configs'])
+                    self.assertEqual(bool(jobs), bool(services))
 
                 with patch('staging._apply', side_effect=check) as apply:
                     staging.apply(path, 'ctx', services, infrastructure)

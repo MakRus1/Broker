@@ -189,9 +189,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             postgres=manifest.get('postgresql', {}).get('enabled', False),
         )
         deployments[name] = profile['application']
-        # Сессии Admin BFF пока хранятся в памяти одного процесса.
-        if name == 'admin_bff' and deployments[name]['replicas'] != 1:
-            raise ValueError(f'{name}: несколько реплик требуют общего хранилища сессий')
     if not re.fullmatch(r'[a-z0-9]+(?:[.-][a-z0-9]+)*', settings['cluster_domain']):
         raise ValueError('platform.yaml: неверный cluster_domain')
     addresses = {
@@ -628,9 +625,6 @@ def render(release, directory, *, root=ROOT, environment='staging'):
             jobs.append(migration_name)
         for obj in [*apps[app_start:], *migrations[migration_start:]]:
             obj['metadata'].setdefault('labels', {})['broker/service'] = name
-    for obj in apps:
-        if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'admin-bff':
-            obj['spec']['strategy'] = {'type': 'Recreate'}
     phases = {
         'namespace': [ns],
         'infrastructure': infra,

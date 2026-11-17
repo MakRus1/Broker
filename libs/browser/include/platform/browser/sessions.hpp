@@ -1,12 +1,8 @@
 #pragma once
 #include <chrono>
-#include <map>
-#include <memory>
-#include <mutex>
 #include <platform/auth/component.hpp>
 #include <userver/clients/http/client.hpp>
 #include <userver/components/component_base.hpp>
-#include <userver/engine/mutex.hpp>
 #include <userver/server/http/http_response_cookie.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/utils/periodic_task.hpp>
@@ -20,7 +16,6 @@ class CapacityExceeded final : public std::runtime_error {
 using Clock = std::chrono::system_clock;
 
 struct Session {
-    userver::engine::Mutex Mutex;
     std::string Access, Refresh, Csrf;
     platform::auth::Identity User;
     Clock::time_point TokenExpires, Expires;
@@ -33,7 +28,6 @@ struct SessionSnapshot {
 
 struct Pending {
     std::string Verifier, Nonce;
-    Clock::time_point Expires;
 };
 
 class Sessions final : public userver::components::ComponentBase {
@@ -59,11 +53,8 @@ class Sessions final : public userver::components::ComponentBase {
   private:
     userver::formats::json::Value Exchange(const std::string& form) const;
     void Tokens(Session& session, const userver::formats::json::Value& tokens);
-    void Cleanup();
     void Refresh(Session& session, const std::string& actor);
     platform::auth::Identity VerifyAccess(const std::string& token) const;
-    std::shared_ptr<Session> GetLocal(const std::string& id);
-    SessionSnapshot GetStored(const std::string& id);
     void StorePending(const std::string& state, const Pending& pending);
     Pending ConsumePending(const std::string& state);
     void StoreSession(const std::string& id, const Session& session);
@@ -73,9 +64,6 @@ class Sessions final : public userver::components::ComponentBase {
     const std::string issuer_, token_url_, revoke_url_, client_;
     const bool secure_;
     userver::storages::postgres::ClusterPtr cluster_;
-    std::mutex mutex_;
-    std::map<std::string, Pending> pending_;
-    std::map<std::string, std::shared_ptr<Session>> sessions_;
     userver::utils::PeriodicTask cleanup_task_;
 };
 }  // namespace platform::browser

@@ -9,7 +9,6 @@ class RailwayStationsComponent final : public userver::components::ComponentBase
     static constexpr std::string_view kName = "railway-stations";
     RailwayStationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::StationListResult List(const models::ListStationsRequest& request) const;
     models::RailwayStation Save(const models::SaveStationRequest& request) const;
     void Archive(const boost::uuids::uuid& id) const;

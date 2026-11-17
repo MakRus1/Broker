@@ -10,7 +10,6 @@
 #include <userver/storages/postgres/exceptions.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/text.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace transport_locations {
 using namespace helpers;
@@ -22,10 +21,6 @@ LocationsComponent::LocationsComponent(const userver::components::ComponentConfi
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transport_locations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema LocationsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::LocationListResult LocationsComponent::List(
     const models::ListLocationsRequest& request) const {

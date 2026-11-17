@@ -17,7 +17,6 @@ class ConfigStore final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "config-store";
     ConfigStore(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     bool AllowSelfApproval() const {
         return allow_self_approval_;

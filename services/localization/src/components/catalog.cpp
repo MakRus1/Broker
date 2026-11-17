@@ -8,7 +8,6 @@
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace localization {
 namespace pg = userver::storages::postgres;
@@ -20,10 +19,6 @@ CatalogComponent::CatalogComponent(const userver::components::ComponentConfig& c
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-main").GetCluster()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema CatalogComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 void CatalogComponent::CheckOrganization(
     const std::string& access_token, const boost::uuids::uuid& organization) const {

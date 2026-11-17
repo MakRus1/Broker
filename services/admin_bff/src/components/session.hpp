@@ -10,7 +10,6 @@ class AdminSessionComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "admin-session";
     AdminSessionComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::AdminSession GetAdminSession(const platform::browser::BrowserSession&) const;
 
   private:

@@ -9,7 +9,6 @@ class LocationsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "route-locations";
     LocationsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::LocationListResult List(const models::ListLocationsRequest& request) const;
     models::TransportLocation Save(const models::SaveLocationRequest& request) const;
     void Archive(const boost::uuids::uuid& id) const;

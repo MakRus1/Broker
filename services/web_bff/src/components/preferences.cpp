@@ -2,7 +2,6 @@
 #include <converters/preferences.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace web_bff {
 using converters::Convert;
@@ -12,10 +11,6 @@ PreferencesComponent::PreferencesComponent(const userver::components::ComponentC
     : ComponentBase(config, context),
       preferences_(context.FindComponent<clients::user_preferences::Component>().GetClient()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema PreferencesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::preferences::ListPreferencesResult PreferencesComponent::GetWorkspacePreferences(
     const boost::uuids::uuid& organization, const std::string& token) const {

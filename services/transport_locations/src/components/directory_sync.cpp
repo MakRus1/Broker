@@ -5,7 +5,6 @@
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/boost_uuid4.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace transport_locations {
 DirectorySyncComponent::DirectorySyncComponent(const userver::components::ComponentConfig& config,
@@ -13,10 +12,6 @@ DirectorySyncComponent::DirectorySyncComponent(const userver::components::Compon
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transport_locations")
                    .GetCluster()) {}
-
-userver::yaml_config::Schema DirectorySyncComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 // Аренда перекрывает HTTP-запросы с повторами и запас для публикации в БД.
 // Повторы планируются через БД; ожидание не держит соединение.

@@ -10,7 +10,6 @@ class CatalogComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "localization-catalog";
     CatalogComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     std::vector<models::Translation> GetOrganizationCatalog(
         const models::GetCatalogRequest&, const std::string& access_token) const;
     std::vector<models::Translation> GetPublicCatalog(const std::string& locale) const;

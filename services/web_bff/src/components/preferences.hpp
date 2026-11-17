@@ -10,7 +10,6 @@ class PreferencesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "workspace-preferences";
     PreferencesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::preferences::ListPreferencesResult GetWorkspacePreferences(
         const boost::uuids::uuid& organization, const std::string& token) const;
     models::preferences::Preference SavePersonalPreference(

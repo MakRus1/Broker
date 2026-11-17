@@ -16,6 +16,8 @@
 #include <registry/payment_query.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/array_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
@@ -59,11 +61,11 @@ models::PaymentInvoice LoadInvoiceBalance(pg::Transaction& transaction,
     if (rows.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
     const auto invoice = converters::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>());
-    const auto paid =
-        transaction.Execute(sql::kInvoicePaid, organization, id).AsSingleRow<std::int64_t>();
+    std::int64_t paid = 0;
     std::vector<models::InvoicePayment> payments;
     for (const auto& row : transaction.Execute(sql::kInvoicePayments, organization, id)) {
         const auto allocation = row.As<models::InvoicePaymentRow>(pg::kRowTag);
+        paid += allocation.AmountMinor;
         payments.push_back({.amount_minor = allocation.AmountMinor,
             .payment = converters::Convert(allocation.Payment)});
     }
@@ -144,8 +146,18 @@ models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& 
                 "invoice_overpaid", "Распределение превышает остаток счёта. Обновите данные"};
     }
     transaction.Execute(sql::kDeletePaymentAllocations, organization, value.Id);
-    for (const auto& [id, amount] : allocations)
-        transaction.Execute(sql::kCreatePaymentAllocation, organization, value.Id, id, amount);
+    if (!allocations.empty()) {
+        std::vector<boost::uuids::uuid> invoice_ids;
+        std::vector<std::int64_t> amounts;
+        invoice_ids.reserve(allocations.size());
+        amounts.reserve(allocations.size());
+        for (const auto& [id, amount] : allocations) {
+            invoice_ids.push_back(id);
+            amounts.push_back(amount);
+        }
+        transaction.Execute(
+            sql::kCreatePaymentAllocations, organization, value.Id, invoice_ids, amounts);
+    }
     auto result = LoadPayment(transaction, organization, body.id);
     transaction.Execute(sql::kWritePaymentHistory, organization, value.Id, value.Revision,
         identity.ActorId(), helpers::HistorySnapshot(result, identity));

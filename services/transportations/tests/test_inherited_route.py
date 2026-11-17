@@ -228,8 +228,12 @@ async def test_conflicting_save_does_not_register_route_usage_twice(
 
 
 @pytest.mark.parametrize('rollback', [False, True])
+@pytest.mark.parametrize('path', [
+    '/api/v1/transportation-routes/set',
+    '/api/v1/transportation-actuals/record',
+])
 async def test_usage_waits_for_registered_save_to_commit_or_rollback(
-    api, shipment_routes, mockserver, pgsql, rollback
+    api, shipment_routes, mockserver, pgsql, rollback, path
 ):
     body = command()
     created = await api.post(PATH, body)
@@ -257,13 +261,14 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
         await asyncio.wait_for(release_registration.wait(), 5)
         return {'registered': True}
 
-    save = asyncio.create_task(api.post(
-        '/api/v1/transportation-actuals/record',
-        {'transportation_id': identifier, 'expected_revision': 1,
-         'route_segment_id': stage['id'], 'event_kind': 'departure',
-         'occurred_at': '2026-10-20T09:00:00+00:00'},
-        expected=500 if rollback else 200,
-    ))
+    change = {'transportation_id': identifier, 'expected_revision': 1}
+    if path.endswith('/set'):
+        change['route_segments'] = [stage]
+    else:
+        change.update(route_segment_id=stage['id'], event_kind='departure',
+                      occurred_at='2026-10-20T09:00:00+00:00')
+
+    save = asyncio.create_task(api.post(path, change, expected=500 if rollback else 200))
     usage = None
     try:
         await asyncio.wait_for(registered.wait(), 5)

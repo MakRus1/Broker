@@ -13,6 +13,9 @@
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/postgres/io/array_types.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
+#include <userver/storages/postgres/io/uuid.hpp>
 #include <userver/utils/text.hpp>
 
 namespace transportations {
@@ -30,6 +33,7 @@ models::RouteUsageResult RoutesComponent::FindRouteUsage(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    // Отдельное чтение после блокировки видит зафиксированные за время ожидания изменения.
     transaction.Execute(sql::kLockShipmentTransportations, organization, shipment_id);
     const auto rows = transaction.Execute(sql::kRouteUsage, organization, shipment_id)
                           .AsContainer<std::vector<json::Value>>();
@@ -67,15 +71,12 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
     const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
     if (request.route_segments.size() != source.route_segments.size())
         throw ApiError<409>{"inherited_route", "Состав маршрута изменяется только в поставке"};
-    std::vector<boost::uuids::uuid> used;
     for (std::size_t i = 0; i < source.route_segments.size(); ++i) {
         const auto& input = request.route_segments[i];
         const auto& stage = source.route_segments[i];
         if (input.id != stage.id || models::EnumValue(input.mode) != stage.type)
             throw ApiError<409>{
                 "inherited_route", "Порядок и типы участков изменяются только в поставке"};
-        if (route_rules::HasRouteData(converters::Convert(input)))
-            used.push_back(input.id);
     }
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -85,21 +86,32 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
     helpers::CheckRevision(result.revision, request.expected_revision);
     route_rules::InheritRoute(result, source);
 
-    integrations_.RegisterRouteUsage(access_token, source, used);
-
+    std::vector<boost::uuids::uuid> used;
+    std::vector<boost::uuids::uuid> segment_ids;
+    std::vector<json::Value> documents;
+    segment_ids.reserve(request.route_segments.size());
+    documents.reserve(request.route_segments.size());
     for (std::size_t i = 0; i < request.route_segments.size(); ++i) {
         auto& stored = result.route_segments[i];
         auto value = converters::Convert(request.route_segments[i]);
+        if (route_rules::HasRouteData(value))
+            used.push_back(value.id);
+
         value.inherited = stored.inherited;
         value.sea = stored.sea;
         value.air = stored.air;
         value.actual_departure_at = stored.actual_departure_at;
         value.actual_arrival_at = stored.actual_arrival_at;
         route_rules::ValidateActualTimes(value);
-        transaction.Execute(sql::kInsertRouteSegment, organization, result.id, value.id,
-            static_cast<std::int64_t>(i), converters::ToStoredRouteSegment(value));
+        segment_ids.push_back(value.id);
+        documents.push_back(converters::ToStoredRouteSegment(value));
         stored = std::move(value);
     }
+
+    integrations_.RegisterRouteUsage(access_token, source, used);
+    if (!segment_ids.empty())
+        transaction.Execute(
+            sql::kSaveRouteSegments, organization, result.id, segment_ids, documents);
 
     transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
     ++result.revision;

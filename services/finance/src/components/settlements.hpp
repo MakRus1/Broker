@@ -10,7 +10,6 @@ class SettlementsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "finance-settlements";
     SettlementsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::ReconciliationResponse GetReconciliation(
         const boost::uuids::uuid& organization, const models::ReconciliationRequest& request) const;
     models::CounterpartySettlementsResponse GetBalances(const boost::uuids::uuid& organization,

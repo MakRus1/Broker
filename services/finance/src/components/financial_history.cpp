@@ -14,7 +14,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/chrono.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = finance::models;
@@ -340,10 +339,6 @@ FinancialHistoryComponent::FinancialHistoryComponent(
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema FinancialHistoryComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     const boost::uuids::uuid& organization, const models::FinancialHistoryRequest& body,

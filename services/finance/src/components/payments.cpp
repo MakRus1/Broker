@@ -18,7 +18,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/array_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace converters = finance::converters;
@@ -85,10 +84,6 @@ PaymentsComponent::PaymentsComponent(const userver::components::ComponentConfig&
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
-
-userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SavePaymentRequest& request,

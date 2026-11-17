@@ -22,7 +22,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace finance {
 namespace pg = userver::storages::postgres;
@@ -34,10 +33,6 @@ ServiceChargesComponent::ServiceChargesComponent(const userver::components::Comp
           context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()),
       exchange_rates_(context.FindComponent<ExchangeRates>()),
       invoices_(context.FindComponent<InvoicesComponent>()) {}
-
-userver::yaml_config::Schema ServiceChargesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ServiceCharge ServiceChargesComponent::SaveServiceCharge(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,

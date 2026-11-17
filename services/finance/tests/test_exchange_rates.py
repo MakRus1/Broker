@@ -35,6 +35,10 @@ async def test_cbr_cross_rate_nominal_and_persistent_cache(api,cbr):
     weekend=await api.post(RATES,{**query,'date':'2026-10-31','to_currency':'RUB'})
     assert weekend['date']=='2026-10-30'
     assert weekend['rate_millionths']==100000000
+    cbr['status'] = 503
+    assert await api.post(RATES, {
+        **query, 'date': '2026-10-31', 'to_currency': 'RUB',
+    }) == weekend
 
 async def test_missing_invalid_and_identity_rates(api,cbr):
     body={'date':'2026-10-30','from_currency':'RUB','to_currency':'RUB'}

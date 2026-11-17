@@ -17,7 +17,6 @@ class InvoicesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "finance-invoices";
     InvoicesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::InvoicePrintSnapshot ReadInvoicePrintSnapshot(
         const boost::uuids::uuid& organization, const models::InvoicePrintRequest& request) const;

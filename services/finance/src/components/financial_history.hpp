@@ -10,7 +10,6 @@ class FinancialHistoryComponent final : public userver::components::ComponentBas
     static constexpr std::string_view kName = "finance-history";
     FinancialHistoryComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::FinancialHistoryResponse GetHistory(const boost::uuids::uuid& organization,
         const models::FinancialHistoryRequest& body, models::FinancialHistorySource source,
         const models::FinancialHistoryAccess& access) const;

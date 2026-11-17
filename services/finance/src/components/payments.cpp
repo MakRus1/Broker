@@ -6,6 +6,7 @@
 #include <map>
 #include <models/errors.hpp>
 #include <models/invoice_balance_row.hpp>
+#include <models/invoice_paid_row.hpp>
 #include <models/invoice_payment_row.hpp>
 #include <models/payment_allocation_row.hpp>
 #include <models/payment_available_row.hpp>
@@ -124,10 +125,18 @@ models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& 
         previous_allocations.AsSetOf<models::PaymentAllocationRow>(pg::kRowTag))
         ids.insert(allocation.InvoiceId);
     // Платёж блокируется первым; все счета — в едином порядке. HTTP уже завершён.
-    const auto invoices = transaction.Execute(
-        sql::kLockInvoices, organization, std::vector<boost::uuids::uuid>{ids.begin(), ids.end()});
+    const std::vector<boost::uuids::uuid> locked_invoice_ids{ids.begin(), ids.end()};
+    const auto invoices = transaction.Execute(sql::kLockInvoices, organization, locked_invoice_ids);
     if (invoices.Size() != ids.size())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден в организации"};
+    std::map<boost::uuids::uuid, std::int64_t> paid_by_invoice;
+    if (!value.Archived && !allocations.empty()) {
+        const auto rows = transaction.Execute(
+            sql::kInvoiceOtherPayments, organization, locked_invoice_ids, value.Id);
+        for (const auto& row : rows.AsSetOf<models::InvoicePaidRow>(pg::kRowTag))
+            paid_by_invoice.emplace(row.InvoiceId, row.PaidMinor);
+    }
+
     for (const auto& invoice : invoices.AsSetOf<models::pg::InvoiceRaw>()) {
         const auto found = allocations.find(invoice.Id);
         if (value.Archived || found == allocations.end())
@@ -138,10 +147,9 @@ models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& 
             invoice.CounterpartyId != value.CounterpartyId)
             throw ApiError<400>{"incompatible_invoice",
                 "Выберите действующий счёт с теми же сторонами, валютой и направлением"};
-        const auto paid =
-            transaction.Execute(sql::kInvoiceOtherPayments, organization, invoice.Id, value.Id)
-                .AsSingleRow<std::int64_t>();
-        if (found->second > invoice.TotalMinor - paid)
+        const auto paid = paid_by_invoice.find(invoice.Id);
+        const auto paid_minor = paid == paid_by_invoice.end() ? 0 : paid->second;
+        if (found->second > invoice.TotalMinor - paid_minor)
             throw ApiError<409>{
                 "invoice_overpaid", "Распределение превышает остаток счёта. Обновите данные"};
     }

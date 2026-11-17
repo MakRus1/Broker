@@ -1,4 +1,3 @@
-#include <components/invoices.hpp>
 #include <components/payments.hpp>
 #include <converters/payment.hpp>
 #include <finance/sql_queries.hpp>
@@ -85,8 +84,7 @@ PaymentsComponent::PaymentsComponent(const userver::components::ComponentConfig&
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(
-          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()),
-      invoices_(context.FindComponent<InvoicesComponent>()) {}
+          context.FindComponent<userver::components::Postgres>("postgres-finance").GetCluster()) {}
 
 userver::yaml_config::Schema PaymentsComponent::GetStaticConfigSchema() {
     return ComponentBase::GetStaticConfigSchema();
@@ -270,14 +268,17 @@ models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
         pg::TransactionOptions{
             pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
-    const auto invoice = invoices_.FindInvoice(transaction, organization, body.invoice_id).invoice;
-    if (invoice.archived)
+    const auto invoices = transaction.Execute(sql::kGetInvoice, organization, body.invoice_id);
+    if (invoices.IsEmpty())
+        throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
+    const auto invoice = invoices.AsSingleRow<models::pg::InvoiceRaw>();
+    if (invoice.Archived)
         throw ApiError<409>{"invoice_archived", "Счёт находится в архиве"};
-    const auto kind = invoice.direction == models::InvoiceDirection::Outgoing
+    const auto kind = invoice.Direction == models::EnumValue(models::InvoiceDirection::Outgoing)
         ? models::PaymentKind::Receipt
         : models::PaymentKind::Disbursement;
     const auto rows = transaction.Execute(sql::kPaymentCandidates, organization,
-        models::EnumValue(kind), invoice.own_company_id, invoice.counterparty_id, invoice.currency,
+        models::EnumValue(kind), invoice.OwnCompanyId, invoice.CounterpartyId, invoice.Currency,
         body.query, body.after, body.limit + 1);
     models::AvailablePayments response;
     for (std::size_t index = 0; index < rows.Size() && index < static_cast<std::size_t>(body.limit);

@@ -207,3 +207,16 @@ async def test_one_disbursement_adds_many_invoices_preserving_existing_allocatio
         balance = await api.post(BASE + 'invoice-balance', {'id': document['id']})
         assert balance['paid_minor'] == amount
         assert balance['payments'][0]['payment']['kind'] == 'disbursement'
+
+@pytest.mark.parametrize('state', ['missing', 'foreign', 'archived'])
+async def test_payment_candidates_require_available_invoice(api, charge, invoice_references, state):
+    document, _, _ = await billed(api, charge)
+    if state == 'archived':
+        await api.post('/api/v1/invoices/save', {
+            **document, 'expected_revision': 1, 'archived': True,
+        })
+    result = await api.post(BASE + 'payment-candidates', {
+        'invoice_id': str(uuid4()) if state == 'missing' else document['id'],
+    }, user='other' if state == 'foreign' else 'author',
+        expected=409 if state == 'archived' else 404)
+    assert result['error'] == ('invoice_archived' if state == 'archived' else 'invoice_not_found')

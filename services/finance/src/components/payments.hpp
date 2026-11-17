@@ -10,8 +10,6 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace finance {
-class InvoicesComponent;
-
 class PaymentsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "finance-payments";
@@ -38,7 +36,6 @@ class PaymentsComponent final : public userver::components::ComponentBase {
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
-    InvoicesComponent& invoices_;
 };
 }  // namespace finance
 

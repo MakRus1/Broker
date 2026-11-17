@@ -128,7 +128,7 @@ async def test_account_limit_counts_archived_accounts_and_allows_edit(api, pgsql
                 bank_name, is_primary, archived, revision)
             SELECT organization_id, gen_random_uuid(), counterparty_id,
                 'Счёт ' || index, lpad(index::text, 20, '0'), currency,
-                bank_name, false, index % 2 = 0, 1
+                bank_name, false, mod(index, 2) = 0, 1
             FROM bank_accounts CROSS JOIN generate_series(1, 98) AS index
             WHERE id = %s::uuid
         """, (created['id'],))

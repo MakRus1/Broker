@@ -354,11 +354,13 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(pg::Transaction& 
     std::vector<boost::uuids::uuid> invoice_ids{invoice_id};
     if (previous_invoice_id.has_value())
         invoice_ids.push_back(previous_invoice_id.value());
-    transaction.Execute(sql::kLockInvoices, organization, invoice_ids);
-    const auto invoices = transaction.Execute(sql::kGetInvoice, organization, invoice_id);
-    if (invoices.IsEmpty())
+    const auto invoices = transaction.Execute(sql::kLockInvoices, organization, invoice_ids)
+                              .AsContainer<std::vector<models::pg::InvoiceRaw>>();
+    const auto target = std::find_if(invoices.begin(), invoices.end(),
+        [&](const auto& invoice) { return invoice.Id == invoice_id; });
+    if (target == invoices.end())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};
-    auto value = invoices.AsSingleRow<models::pg::InvoiceRaw>();
+    auto value = *target;
     if (value.Archived)
         throw ApiError<409>{"archived_invoice", "Выберите действующий счёт"};
     if (value.Revision != expected_revision ||

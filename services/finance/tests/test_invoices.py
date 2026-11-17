@@ -198,6 +198,12 @@ async def test_detach_and_reassign_service_recalculate_both_invoices(api,charge,
     _,second=await saved_entry(api,charge)
     left=invoice([first['id']]);right=invoice([second['id']])
     await api.post(BASE+'save',left);await api.post(BASE+'save',right)
+    previous = await api.post(BASE+'get', {'id': left['id']})
+    await api.post(BASE+'add-service-charge', {
+        'service_charge_id': first['id'], 'invoice_id': str(uuid4()),
+        'expected_revision': 1, 'previous_invoice_id': left['id'],
+    }, expected=404)
+    assert await api.post(BASE+'get', {'id': left['id']}) == previous
     moved=await api.post(BASE+'add-service-charge',{'service_charge_id':first['id'],'invoice_id':right['id'],'expected_revision':1,'previous_invoice_id':left['id']})
     assert moved['invoice']['total_minor']==24000
     old=await api.post(BASE+'get',{'id':left['id']})

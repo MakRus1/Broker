@@ -1,6 +1,7 @@
 #include <boost/uuid/string_generator.hpp>
 #include <components/shipments.hpp>
 #include <configs/keys.hpp>
+#include <converters/route_details.hpp>
 #include <converters/shipments.hpp>
 #include <helpers/database.hpp>
 #include <helpers/idempotency.hpp>
@@ -11,6 +12,7 @@
 #include <models/pg/shipment_data.hpp>
 #include <models/pg/shipment_dictionary_value.hpp>
 #include <models/pg/shipment_raw.hpp>
+#include <models/shipment_route_snapshot_row.hpp>
 #include <models/shipment_source_record.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
@@ -211,14 +213,20 @@ models::Shipment ShipmentsComponent::GetShipment(
     return converters::Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
 }
 
-std::int64_t ShipmentsComponent::GetRouteUsageVersion(
+models::ShipmentRouteSnapshot ShipmentsComponent::GetShipmentRouteSnapshot(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetRouteUsageVersion, organization, shipment_id);
+        pg::ClusterHostType::kMaster, sql::kGetShipmentRouteSnapshot, organization, shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
 
-    return rows.AsSingleRow<std::int64_t>();
+    const auto row = rows.AsSingleRow<models::ShipmentRouteSnapshotRow>(pg::kRowTag);
+    models::ShipmentRouteSnapshot result{
+        .Revision = row.Revision, .UsageVersion = row.UsageVersion};
+    result.RouteSegments.reserve(row.RouteSegments.size());
+    for (const auto& segment : row.RouteSegments)
+        result.RouteSegments.push_back(converters::Convert(segment));
+    return result;
 }
 
 models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& organization,

@@ -475,6 +475,49 @@ def render(root, ns, platform, lan, *, environment='staging'):
                 },
             }
         )
+    objects += [
+        {
+            'apiVersion': 'traefik.io/v1alpha1',
+            'kind': 'Middleware',
+            'metadata': {'name': 'web-read-retry', 'namespace': ns},
+            'spec': {'retry': {'attempts': 2}},
+        },
+        {
+            'apiVersion': 'traefik.io/v1alpha1',
+            'kind': 'ServersTransport',
+            'metadata': {'name': 'web-read-transport', 'namespace': ns},
+            'spec': {'forwardingTimeouts': {'dialTimeout': '350ms'}},
+        },
+        {
+            'apiVersion': 'traefik.io/v1alpha1',
+            'kind': 'IngressRoute',
+            'metadata': {'name': 'web-read-lan', 'namespace': ns},
+            'spec': {
+                'entryPoints': ['websecure'],
+                'tls': {'secretName': 'staging-lan-tls'},
+                'routes': [
+                    {
+                        'kind': 'Rule',
+                        'match': (
+                            f'Host(`{lan["web_host"]}`) && Method(`GET`) && '
+                            '(Path(`/`) || Path(`/index.html`) || PathPrefix(`/assets/`) || '
+                            'Path(`/api/session`) || Path(`/localization/catalog`))'
+                        ),
+                        'priority': 1000,
+                        'middlewares': [{'name': 'web-read-retry'}],
+                        'services': [
+                            {
+                                'name': 'web-bff',
+                                'port': 8180,
+                                'nativeLB': False,
+                                'serversTransport': 'web-read-transport',
+                            }
+                        ],
+                    }
+                ],
+            },
+        },
+    ]
     return objects
 
 

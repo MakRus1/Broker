@@ -5,27 +5,43 @@ import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
 import { EmployeeName } from '../../../shared/profile/EmployeeName';
 import { useLocalization } from '../../localization/Localization';
 import { registryValueLabel } from '../../registry/registryLabels';
+import { useRegistryFreshness } from '../../registry/useRegistryFreshness';
 import type { Inquiry } from '../types';
 import { RfqEditor } from './RfqEditor';
 import { RfqDetails } from './RfqDetails';
 import type { Rfq } from './types';
 import './rfq.css';
-export function SalesRfqs({ inquiry, session }: { inquiry: Inquiry; session: Session }) {
+export function SalesRfqs({
+  inquiry,
+  session,
+  active,
+}: {
+  inquiry: Inquiry;
+  session: Session;
+  active: boolean;
+}) {
   const { translate, locale } = useLocalization();
   const [items, setItems] = useState<Rfq[]>([]);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Rfq>();
+  const freshness = useRegistryFreshness([session, inquiry.id]);
   const write =
     session.permissions.includes('sales.write') && !inquiry.shipment_id && !inquiry.converting;
   useEffect(() => {
+    if (!active || freshness.isFresh()) return;
+    setError('');
     const c = new AbortController();
     request<{ items: Rfq[] }>('/api/v1/sales/rfqs/list', session, { id: inquiry.id }, c.signal)
-      .then((r) => setItems(r.items))
+      .then((r) => {
+        if (c.signal.aborted) return;
+        setItems(r.items);
+        freshness.complete();
+      })
       .catch((e) => {
         if (!c.signal.aborted) setError(e.message);
       });
     return () => c.abort();
-  }, [session, inquiry.id]);
+  }, [session, inquiry.id, active, freshness.version]);
   if (draft)
     return (
       <RfqEditor

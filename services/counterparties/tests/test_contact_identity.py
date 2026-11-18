@@ -14,7 +14,7 @@ async def test_contact_id_survives_edits_and_creation_replay(api):
     replay = (await api.post('/api/v1/counterparties/create', body, expected=201))['counterparty']
     assert replay == first
     changed = (await api.post('/api/v1/counterparties/update', {
-        'id': first['id'], 'expected_revision': first['revision'],
+        'id': first['id'], 'expected_revision': first['revision'], 'name': first['name'],
         'contacts': [{**contact, 'email': 'new@example.test', 'phone': '+7 999 123-45-67'}],
     }))['counterparty']
     assert changed['contacts'][0]['id'] == contact['id']

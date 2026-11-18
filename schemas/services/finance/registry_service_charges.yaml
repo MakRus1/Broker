@@ -70,6 +70,12 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Сервис авторизации временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
       security:
       - bearerAuth: []
   /api/v1/service-charges/filter-values:
@@ -105,6 +111,24 @@ paths:
                     type: string
         '400':
           description: Некорректные фильтры или неизвестное поле
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '401':
+          description: Требуется вход в систему
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '403':
+          description: Недостаточно прав для чтения реестра
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/models.yaml#/FinancialLabelError
+        '503':
+          description: Сервис авторизации временно недоступен
           content:
             application/json:
               schema:

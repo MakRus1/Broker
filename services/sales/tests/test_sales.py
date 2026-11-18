@@ -415,10 +415,12 @@ async def test_create_shipment_requires_sales_write_and_shipment_creation(api):
         '/api/v1/sales/inquiries/create-shipment', command,
         roles=[*references, 'sales.write', 'shipments.write'], expected=403,
     )
-    await api.post(
+    forbidden = await api.post(
         '/api/v1/sales/inquiries/create-shipment', command,
         roles=[*references, 'shipments.create'], expected=403,
     )
+    assert forbidden['error'] == 'forbidden'
+    assert forbidden['message']
     await api.post(
         '/api/v1/sales/inquiries/create-shipment', command,
         roles=[*references, 'sales.write', 'shipments.create'], expected=404,

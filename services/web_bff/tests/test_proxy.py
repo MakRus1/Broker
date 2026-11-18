@@ -806,3 +806,30 @@ async def test_session_refreshes_display_name_from_organizations(browser, mockse
     response = await browser.get('/api/session')
     assert response.status == 200
     assert response.json()['display_name'] == display_name
+
+
+@pytest.mark.parametrize('service', [
+    'shipments', 'transportations', 'counterparties', 'contracts', 'financial-labels',
+    'service-charges', 'invoices', 'payments',
+])
+@pytest.mark.parametrize('status', [401, 403])
+async def test_filter_metadata_preserves_auth_errors(browser, mockserver, service, status):
+    await browser.sign_in()
+    path = f'/api/v1/{service}/filter-values'
+    error = {
+        'error': 'unauthorized' if status == 401 else 'forbidden',
+        'message': 'Нет доступа к реестру',
+    }
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        return mockserver.make_response(status=status, json=error)
+
+    registry = {}
+    if service == 'payments':
+        registry['kind'] = 'receipt'
+    elif service == 'invoices':
+        registry['direction'] = 'incoming'
+    response = await browser.post(path, {'registry': registry})
+    assert response.status == status, response.text
+    assert response.json() == error

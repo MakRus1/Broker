@@ -66,6 +66,24 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/contracts/models.yaml#/ContractError
+        '401':
+          description: Требуется вход в систему
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/contracts/models.yaml#/ContractError
+        '403':
+          description: Недостаточно прав для чтения реестра
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/contracts/models.yaml#/ContractError
+        '503':
+          description: Сервис авторизации временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/contracts/models.yaml#/ContractError
 components:
   securitySchemes:
     BrowserSession:

@@ -173,7 +173,7 @@ components_manager:
                 /api/v1/shipments/cargo-suggestions: shipments.read
                 /api/v1/shipments/cargo-suggestions/remove: shipments.write
                 /api/v1/shipments/create: shipments.create
-                /api/v1/shipments/dictionaries: shipments.read
+                /api/v1/shipments/dictionaries: authenticated
                 /api/v1/shipments/filter-values: shipments.read
                 /api/v1/shipments/get: shipments.read
                 /api/v1/shipments/list: shipments.read

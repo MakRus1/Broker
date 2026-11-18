@@ -35,6 +35,7 @@ import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { ShipmentPanel } from './ShipmentPanel';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
+import { ShipmentConditionsFields, type ShipmentDictionaries } from './ShipmentConditionsFields';
 
 export interface ShipmentSettings {
   number_template: string;
@@ -46,12 +47,6 @@ export interface ShipmentSettings {
   customer_logist?: string | null;
 }
 type DictionaryValue = { code: string; name: string };
-type ShipmentDictionaries = {
-  incoterms: DictionaryValue[];
-  carriage_terms: DictionaryValue[];
-  loading: DictionaryValue[];
-  route_types: DictionaryValue[];
-};
 
 type Props = {
   active?: boolean;
@@ -858,62 +853,21 @@ function ShipmentCard({
                     </div>
                   )}
                 </div>
-                <div className="shipment-fields three" data-workflow-field="terms">
-                  <Select
-                    label="Incoterms"
-                    value={draft.incoterms}
-                    onChange={(v) => set('incoterms', v)}
-                    options={list(dictionaries?.incoterms ?? [])}
-                  />
-                  <Select
-                    label={translate('shipment.carriageTerms')}
-                    value={draft.carriage_terms}
-                    onChange={(v) => set('carriage_terms', v)}
-                    options={list(dictionaries?.carriage_terms ?? [])}
-                  />
-                  <Select
-                    label={translate('shipment.loading')}
-                    value={draft.loading}
-                    onChange={(v) => set('loading', v)}
-                    options={list(dictionaries?.loading ?? [])}
-                  />
-                </div>
+                <ShipmentConditionsFields
+                  section="terms"
+                  value={draft}
+                  dictionaries={dictionaries}
+                  session={props.session}
+                  onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
+                />
               </RecordSection>
               <RecordSection title={translate('shipment.delivery')}>
-                <div className="shipment-fields" data-workflow-field="delivery">
-                  <DirectoryLookup
-                    session={props.session}
-                    kind="cities"
-                    label={translate('shipment.deliveryCity')}
-                    value={draft.delivery_city}
-                    onChange={(value, country) => {
-                      setDraft((old) => ({
-                        ...old,
-                        delivery_city: value,
-                        ...(country ? { delivery_country: country } : {}),
-                      }));
-                    }}
-                  />
-                  <label>
-                    {translate('shipment.countryCode')}
-                    <input
-                      maxLength={2}
-                      pattern="[A-Z]{2}"
-                      placeholder="RU"
-                      value={draft.delivery_country}
-                      onChange={(e) => set('delivery_country', e.target.value.toUpperCase())}
-                    />
-                  </label>
-                  <label className="full">
-                    {translate('shipment.deliveryAddress')}
-                    <textarea
-                      maxLength={1000}
-                      rows={2}
-                      value={draft.delivery_address}
-                      onChange={(e) => set('delivery_address', e.target.value)}
-                    />
-                  </label>
-                </div>
+                <ShipmentConditionsFields
+                  section="delivery"
+                  value={draft}
+                  session={props.session}
+                  onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
+                />
               </RecordSection>
               <RecordSection title={translate('shipment.additional')}>
                 <div className="shipment-fields">

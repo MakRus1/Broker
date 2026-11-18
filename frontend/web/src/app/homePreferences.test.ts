@@ -5,7 +5,7 @@ import {
   restoreFavorites,
   visibleSections,
 } from './homePreferences';
-import { sectionForCard, sectionRegistry } from './workspaceSections';
+import { sectionForCard, sectionRegistry, canOpenWorkspace } from './workspaceSections';
 import { restoreRecentCards } from '../features/search/recentCards';
 it('restores bounded favorites without duplicate or unsafe targets', () => {
   expect(
@@ -50,4 +50,22 @@ it('shares safely decoded recent records between home and global search', () => 
       { ...hit, title: 123 },
     ]),
   ).toEqual([hit]);
+});
+
+it('requires section access for registry, direct links and related forms', () => {
+  const card = '11111111-1111-4111-8111-111111111111';
+  expect(canOpenWorkspace('/', [])).toBe(true);
+  for (const path of [
+    '/shipments',
+    `/shipments/${card}`,
+    '/shipments/new',
+    `/shipments/${card}/edit`,
+  ]) {
+    expect(canOpenWorkspace(path, ['sales.read'])).toBe(false);
+    expect(canOpenWorkspace(path, ['shipments.read'])).toBe(true);
+  }
+  expect(canOpenWorkspace(`/rfqs/${card}`, ['sales.read'])).toBe(true);
+  expect(canOpenWorkspace(`/rfqs/${card}`, [])).toBe(false);
+  expect(canOpenWorkspace(`/bank-accounts/new/${card}`, ['counterparties.read'])).toBe(true);
+  expect(canOpenWorkspace(`/contracts/${card}`, ['counterparties.read'])).toBe(false);
 });

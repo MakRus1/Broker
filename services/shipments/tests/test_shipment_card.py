@@ -441,3 +441,10 @@ async def test_creation_and_editing_permissions_are_independent(api):
     await api.post('/api/v1/shipments/update', change, roles=creator, expected=403)
     updated = (await api.post('/api/v1/shipments/update', change, roles=editor))['shipment']
     assert updated['reference'] == change['reference']
+
+
+async def test_shared_dictionaries_do_not_require_shipment_access(api):
+    dictionaries = await api.post('/api/v1/shipments/dictionaries', {}, roles=[])
+    assert any(value['code'] == 'FOB' for value in dictionaries['incoterms'])
+    await api.post('/api/v1/shipments/list', {}, roles=[], expected=403)
+    await api.post('/api/v1/shipments/filter-values', {'registry': {}}, roles=[], expected=403)

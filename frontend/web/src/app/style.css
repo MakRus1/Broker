@@ -1111,9 +1111,25 @@ button.danger:hover:not(:disabled) {
     padding: 32px 12px 22px;
     z-index: 30;
     overflow: hidden;
+    height: 100dvh;
     transition:
       width 160ms ease,
       box-shadow 160ms ease;
+  }
+  .sidebar-heading,
+  .sidebar .nav-label,
+  .sidebar .profile {
+    flex-shrink: 0;
+  }
+  .sidebar nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    align-content: start;
+    scrollbar-width: thin;
+    margin-bottom: 12px;
   }
   .sidebar .brand {
     min-height: 35px;
@@ -1147,7 +1163,7 @@ button.danger:hover:not(:disabled) {
   .sidebar nav button {
     white-space: nowrap;
     min-height: 46px;
-    width: 48px;
+    width: 100%;
     padding: 12px 13px;
     gap: 12px;
   }
@@ -1176,9 +1192,10 @@ button.danger:hover:not(:disabled) {
     visibility: visible;
     opacity: 1;
   }
-  .sidebar:is(:hover, :has(:focus-visible)) nav button,
-  .navigation-pinned .sidebar nav button {
-    width: 201px;
+  .sidebar .navigation-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .sidebar:is(:hover, :has(:focus-visible)) .nav-label,
   .navigation-pinned .sidebar .nav-label {

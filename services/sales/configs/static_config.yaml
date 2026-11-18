@@ -212,7 +212,7 @@ components_manager:
                 /api/v1/sales/contacts/history: sales.read
                 /api/v1/sales/contacts/list: sales.read
                 /api/v1/sales/contacts/update: sales.write
-                /api/v1/sales/inquiries/create-shipment: sales.write
+                /api/v1/sales/inquiries/create-shipment: shipments.create
                 /api/v1/sales/inquiries/filter-values: sales.read
                 /api/v1/sales/inquiries/get: sales.read
                 /api/v1/sales/inquiries/history: sales.read
@@ -236,6 +236,12 @@ components_manager:
                 - sales.read
                 - finance.read_financial_labels
                 - finance.read_calculation_settings
+                shipments.create:
+                - shipments.read
+                shipments.read:
+                - organizations.read_employees
+                - counterparties.read
+                - transport_locations.read
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

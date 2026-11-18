@@ -28,7 +28,7 @@ auth:
   roles-client: broker-logistics
   protected-prefix: /api/
   permissions:
-    /api/v1/shipments/create: shipments.write
+    /api/v1/shipments/create: shipments.create
     /api/v1/shipments/get: shipments.read
     /api/v1/shipments/list: shipments.read
     /api/v1/shipments/update: shipments.write
@@ -46,10 +46,10 @@ auth:
     /api/v1/shipments/route-contexts: transportations.read
     /api/v1/shipments/route-segments/register-usage: transportations.write
     /api/v1/shipments/filter-values: shipments.read
-    /api/internal/v1/shipments/ensure-created: shipments.create
+    /api/internal/v1/shipments/ensure-created: shipments.ensure_created
   organization-access: true
   service-clients:
-    shipments.create: sales-dispatcher
+    shipments.ensure_created: sales-dispatcher
 service_accounts:
   dispatcher:
     client_id: shipments-dispatcher

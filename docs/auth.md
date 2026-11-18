@@ -49,7 +49,7 @@ auth:
   roles-client: broker-logistics
   protected-prefix: /api/
   permissions:
-    /api/v1/shipments/create: shipments.write
+    /api/v1/shipments/create: shipments.create
     /api/v1/shipments/get: shipments.read
 ```
 

@@ -9,7 +9,7 @@ async def test_command_is_generic_idempotent_and_transactional(service_client, a
         'organization_id':ORGANIZATION,'actor_subject':'author','actor_issuer':ISSUER,
         'source':{'type':'sales.inquiry','id':str(uuid4())},
         'shipment':{'customer_id':str(uuid4()),'idempotency_key':str(uuid4()),'reference':'ENQ-12','logist':'logist-author','route_segments':[]}}
-    token=auth_key.token('service-account-sales',roles=['shipments.create'],claims={'azp':'sales-dispatcher'})
+    token=auth_key.token('service-account-sales',roles=['shipments.ensure_created'],claims={'azp':'sales-dispatcher'})
     async def send(value):
         return await service_client.post(PATH,json=value,headers={'Authorization':'Bearer '+token})
     responses=await asyncio.gather(*(send(command) for _ in range(4)))
@@ -28,6 +28,6 @@ async def test_command_is_generic_idempotent_and_transactional(service_client, a
         assert cursor.fetchone()[0]==1
     conflicting={**command,'shipment':{**command['shipment'],'reference':'Changed'}}
     assert (await send(conflicting)).status==409
-    forged=auth_key.token('author',roles=['shipments.create'],claims={'azp':'broker-web'})
+    forged=auth_key.token('author',roles=['shipments.ensure_created'],claims={'azp':'broker-web'})
     assert (await service_client.post(PATH,json=command,headers={'Authorization':'Bearer '+forged})).status==403
     assert (await send({**command,'actor_issuer':'https://other-issuer.invalid'})).status==400

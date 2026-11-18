@@ -33,6 +33,7 @@ USER_PERMISSIONS = [
     'transport_locations.read',
     'shipments.read',
     'shipments.write',
+    'shipments.create',
     'transportations.read',
     'transportations.write',
 ]

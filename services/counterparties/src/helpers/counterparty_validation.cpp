@@ -4,6 +4,9 @@
 #include <models/errors.hpp>
 #include <platform/contact_validation.hpp>
 #include <platform/text.hpp>
+#include <set>
+#include <userver/formats/json.hpp>
+#include <userver/utils/boost_uuid5.hpp>
 
 namespace counterparties::helpers {
 models::Counterparty NormalizeAndValidateCounterparty(models::Counterparty value) {
@@ -25,6 +28,7 @@ models::Counterparty NormalizeAndValidateCounterparty(models::Counterparty value
         throw ApiError<400>{"empty_name", "Укажите название контрагента"};
     if (value.tax_id.has_value() && !value.country_code.has_value())
         throw ApiError<400>{"country_required", "Укажите страну для налогового номера"};
+    std::set<boost::uuids::uuid> contact_ids;
     for (auto& contact : value.contacts) {
         contact.name = userver::utils::text::Trim(contact.name);
         contact.position.emplace(platform::TrimToOptional(contact.position.value_or(std::nullopt)));
@@ -38,6 +42,12 @@ models::Counterparty NormalizeAndValidateCounterparty(models::Counterparty value
             throw ApiError<400>{"empty_contact", "Укажите имя контактного лица"};
         if (email.has_value() && !platform::IsEmail(email.value()))
             throw ApiError<400>{"invalid_email", "Проверьте email контактного лица"};
+        if (!contact.id.has_value())
+            contact.id = userver::utils::generators::GenerateBoostUuidV5(value.id,
+                userver::formats::json::ToString(
+                    userver::formats::json::ValueBuilder(contact).ExtractValue()));
+        if (!contact_ids.insert(contact.id.value()).second)
+            throw ApiError<400>{"duplicate_contact", "Контактное лицо указано несколько раз"};
     }
     return value;
 }

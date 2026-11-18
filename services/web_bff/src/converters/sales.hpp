@@ -292,6 +292,7 @@ Result Convert(const models::sales::SalesFilterValuesRequest& value) {
 template <typename Result = clients::sales::models::SaveInquiryRequest>
 Result Convert(const models::sales::SaveInquiryRequest& value) {
     Result result;
+    result.contact_id = value.contact_id;
     result.cargo_description = value.cargo_description;
     result.carriage_terms = value.carriage_terms;
     result.customer_id = value.customer_id;
@@ -540,6 +541,7 @@ inline models::sales::InquiryStatus Convert(const clients::sales::models::Inquir
 
 inline models::sales::Inquiry Convert(const clients::sales::models::Inquiry& value) {
     models::sales::Inquiry result;
+    result.contact_id = value.contact_id;
     result.accepted_proposal_id = value.accepted_proposal_id;
     result.accepted_proposal_revision = value.accepted_proposal_revision;
     result.cargo_description = value.cargo_description;

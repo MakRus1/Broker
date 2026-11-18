@@ -7,17 +7,17 @@ import { Select } from '../../shared/ui/Select';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { useLocalization } from '../localization/Localization';
 import type { SalesCard } from './types';
-import './salesContacts.css';
+import './salesInteractions.css';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 
-type ContactKind = 'call' | 'email' | 'meeting' | 'other';
-interface Contact {
+type InteractionKind = 'call' | 'email' | 'meeting' | 'other';
+interface Interaction {
   id: string;
   revision: number;
   card_id: string;
-  kind: ContactKind;
+  kind: InteractionKind;
   contact_date: string;
   result: string;
   author_subject: string;
@@ -26,8 +26,8 @@ interface Contact {
   next_action?: string;
   next_action_date?: string;
 }
-const kinds: ContactKind[] = ['call', 'email', 'meeting', 'other'];
-export function SalesContacts({
+const kinds: InteractionKind[] = ['call', 'email', 'meeting', 'other'];
+export function SalesInteractions({
   card,
   session,
   onSaved,
@@ -37,7 +37,7 @@ export function SalesContacts({
   onSaved: (card: SalesCard) => void;
 }) {
   const { translate } = useLocalization();
-  const [items, setItems] = useState<Contact[]>([]);
+  const [items, setItems] = useState<Interaction[]>([]);
   const [before, setBefore] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [failure, setFailure] = useState('');
@@ -45,14 +45,14 @@ export function SalesContacts({
   const [form, setForm] = useState<{
     id: string;
     revision?: number;
-    kind: ContactKind;
+    kind: InteractionKind;
     contact_date: string;
     result: string;
     next_action: string;
     next_action_date: string;
   }>();
   const [history, setHistory] = useState<
-    { revision: number; actor: string; created_at: string; snapshot: Contact }[]
+    { revision: number; actor: string; created_at: string; snapshot: Interaction }[]
   >([]);
   const [historyError, setHistoryError] = useState('');
   const original = form?.revision ? items.find((item) => item.id === form.id) : undefined;
@@ -84,7 +84,7 @@ export function SalesContacts({
   });
   useEffect(() => {
     const controller = new AbortController();
-    request<{ items: Contact[]; next_before?: string }>(
+    request<{ items: Interaction[]; next_before?: string }>(
       '/api/v1/sales/contacts/list',
       session,
       { card_id: card.id },
@@ -108,7 +108,7 @@ export function SalesContacts({
     setBusy(true);
     setFailure('');
     try {
-      const result = await request<{ item: Contact; card: SalesCard }>(
+      const result = await request<{ item: Interaction; card: SalesCard }>(
         form.revision ? '/api/v1/sales/contacts/update' : '/api/v1/sales/contacts/add',
         session,
         {
@@ -148,7 +148,7 @@ export function SalesContacts({
       setBusy(false);
     }
   }
-  async function edit(item: Contact) {
+  async function edit(item: Interaction) {
     if (!session.permissions.includes('sales.write') || form || busy) return;
     setForm({
       id: item.id,
@@ -178,7 +178,7 @@ export function SalesContacts({
     setBusy(true);
     setFailure('');
     try {
-      const result = await request<{ items: Contact[]; next_before?: string }>(
+      const result = await request<{ items: Interaction[]; next_before?: string }>(
         '/api/v1/sales/contacts/list',
         session,
         { card_id: card.id, before },
@@ -195,9 +195,9 @@ export function SalesContacts({
     }
   }
   return (
-    <section className="sales-contacts">
-      <div className="sales-contacts-heading">
-        <h2>{translate('sales.contacts')}</h2>
+    <section className="sales-interactions">
+      <div className="sales-interactions-heading">
+        <h2>{translate('sales.interactions')}</h2>
         {session.permissions.includes('sales.write') && !form && (
           <button
             className="primary"
@@ -214,7 +214,7 @@ export function SalesContacts({
               setFailure('');
             }}
           >
-            {translate('sales.contact.add')}
+            {translate('sales.interaction.add')}
           </button>
         )}
       </div>
@@ -222,29 +222,29 @@ export function SalesContacts({
       <DraftRecovery recovery={recovery} />
       {form && (
         <form className="document-editor" onSubmit={save}>
-          <h3>{translate(form.revision ? 'sales.contact.edit' : 'sales.contact.add')}</h3>
-          <div className="sales-contact-fields">
+          <h3>{translate(form.revision ? 'sales.interaction.edit' : 'sales.interaction.add')}</h3>
+          <div className="sales-interaction-fields">
             <div>
               <Select
-                label={translate('sales.contact.kind')}
+                label={translate('sales.interaction.kind')}
                 value={form.kind}
-                onChange={(kind) => setForm({ ...form, kind: kind as ContactKind })}
+                onChange={(kind) => setForm({ ...form, kind: kind as InteractionKind })}
                 options={kinds.map((kind) => ({
                   value: kind,
-                  label: translate(`sales.contact.${kind}`),
+                  label: translate(`sales.interaction.${kind}`),
                 }))}
               />
             </div>
             <label>
-              {translate('sales.contact.date')}
+              {translate('sales.interaction.date')}
               <IsoDateInput
                 required
                 value={form.contact_date}
                 onChange={(contact_date) => setForm({ ...form, contact_date })}
               />
             </label>
-            <label className="sales-contact-wide">
-              {translate('sales.contact.result')}
+            <label className="sales-interaction-wide">
+              {translate('sales.interaction.result')}
               <textarea
                 required
                 maxLength={10000}
@@ -254,7 +254,7 @@ export function SalesContacts({
               />
             </label>
             <label>
-              {translate('sales.contact.nextAction')}
+              {translate('sales.interaction.nextAction')}
               <input
                 maxLength={1000}
                 value={form.next_action}
@@ -262,7 +262,7 @@ export function SalesContacts({
               />
             </label>
             <label>
-              {translate('sales.contact.nextDate')}
+              {translate('sales.interaction.nextDate')}
               <IsoDateInput
                 value={form.next_action_date}
                 onChange={(next_action_date) => setForm({ ...form, next_action_date })}
@@ -270,14 +270,14 @@ export function SalesContacts({
             </label>
           </div>
           <p className="muted">
-            {translate(form.revision ? 'sales.contact.editHint' : 'sales.contact.nextHint')}
+            {translate(form.revision ? 'sales.interaction.editHint' : 'sales.interaction.nextHint')}
           </p>
           {failure && (
             <p className="error" role="alert">
               {failure}
             </p>
           )}
-          <div className="sales-contact-actions">
+          <div className="sales-interaction-actions">
             <button
               type="button"
               disabled={busy}
@@ -292,7 +292,7 @@ export function SalesContacts({
               {translate('action.cancel')}
             </button>
             <button className="primary" disabled={busy}>
-              {translate(form.revision ? 'action.save' : 'sales.contact.save')}
+              {translate(form.revision ? 'action.save' : 'sales.interaction.save')}
             </button>
           </div>
         </form>
@@ -327,22 +327,22 @@ export function SalesContacts({
                     label: translate(
                       (
                         {
-                          kind: 'sales.contact.kind',
-                          contact_date: 'sales.contact.date',
-                          result: 'sales.contact.result',
-                          next_action: 'sales.contact.nextAction',
-                          next_action_date: 'sales.contact.nextDate',
+                          kind: 'sales.interaction.kind',
+                          contact_date: 'sales.interaction.date',
+                          result: 'sales.interaction.result',
+                          next_action: 'sales.interaction.nextAction',
+                          next_action_date: 'sales.interaction.nextDate',
                         } as const
                       )[field],
                     ),
                     before: index
                       ? field === 'kind'
-                        ? translate(`sales.contact.${history[index - 1].snapshot.kind}`)
+                        ? translate(`sales.interaction.${history[index - 1].snapshot.kind}`)
                         : (history[index - 1].snapshot[field] ?? '—')
                       : '—',
                     after:
                       field === 'kind'
-                        ? translate(`sales.contact.${entry.snapshot.kind}`)
+                        ? translate(`sales.interaction.${entry.snapshot.kind}`)
                         : (entry.snapshot[field] ?? '—'),
                   }))}
               />
@@ -356,17 +356,19 @@ export function SalesContacts({
         </p>
       )}
       {!loaded && !failure && <p>{translate('common.loading')}</p>}
-      {loaded && items.length === 0 && <p className="muted">{translate('sales.contact.empty')}</p>}
-      <div className="sales-contact-list">
+      {loaded && items.length === 0 && (
+        <p className="muted">{translate('sales.interaction.empty')}</p>
+      )}
+      <div className="sales-interaction-list">
         {items.map((item) => (
           <article
-            className={`sales-contact${session.permissions.includes('sales.write') && !form ? ' sales-contact-editable' : ''}`}
+            className={`sales-interaction${session.permissions.includes('sales.write') && !form ? ' sales-interaction-editable' : ''}`}
             key={item.id}
             role={session.permissions.includes('sales.write') && !form ? 'button' : undefined}
             tabIndex={session.permissions.includes('sales.write') && !form ? 0 : undefined}
             aria-label={
               session.permissions.includes('sales.write') && !form
-                ? `${translate('sales.contact.edit')}: ${item.result}`
+                ? `${translate('sales.interaction.edit')}: ${item.result}`
                 : undefined
             }
             onClick={() => void edit(item)}
@@ -377,17 +379,17 @@ export function SalesContacts({
               }
             }}
           >
-            <div className="sales-contact-meta">
-              <strong>{translate(`sales.contact.${item.kind}`)}</strong>
+            <div className="sales-interaction-meta">
+              <strong>{translate(`sales.interaction.${item.kind}`)}</strong>
               <time dateTime={item.contact_date}>
                 {item.contact_date.split('-').reverse().join('.')}
               </time>
               <EmployeeName subject={item.author_subject} session={session} />
             </div>
-            <p className="sales-contact-result">{item.result}</p>
+            <p className="sales-interaction-result">{item.result}</p>
             {item.next_action && (
               <p className="muted">
-                {translate('sales.contact.nextAction')}: {item.next_action} ·{' '}
+                {translate('sales.interaction.nextAction')}: {item.next_action} ·{' '}
                 {item.next_action_date?.split('-').reverse().join('.')}
               </p>
             )}
@@ -396,7 +398,7 @@ export function SalesContacts({
       </div>
       {before && (
         <button disabled={busy} onClick={() => void loadMore()}>
-          {translate('sales.contact.more')}
+          {translate('sales.interaction.more')}
         </button>
       )}
     </section>

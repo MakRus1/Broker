@@ -10,6 +10,11 @@ CounterpartyContact:
   type: object
   additionalProperties: false
   properties:
+    id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+
     name:
       type: string
       maxLength: 256

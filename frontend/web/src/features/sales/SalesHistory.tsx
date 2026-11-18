@@ -1,3 +1,4 @@
+import { CustomerContactPerson } from './CustomerContacts';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
 import { useEffect, useState, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
@@ -157,6 +158,14 @@ function SalesHistoryChanges({
     const old = before && 'status' in before ? before : undefined;
     add('registryField.number', old?.number, after.number, plain);
     add('sales.status', old?.status, after.status, (status) => translate(`sales.status.${status}`));
+    add('sales.contactPerson', old?.contact_id, after.contact_id, (id) => (
+      <CustomerContactPerson
+        customerId={after.customer_id}
+        session={session}
+        active={true}
+        contactId={id}
+      />
+    ));
     add('sales.cargo', old?.cargo_description, after.cargo_description, plain);
     add('sales.readyDate', old?.ready_date, after.ready_date, date);
     add('sales.deliveryDate', old?.desired_delivery_date, after.desired_delivery_date, date);

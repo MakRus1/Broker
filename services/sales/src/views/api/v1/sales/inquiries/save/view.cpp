@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <components/inquiries.hpp>
 #include <models/errors.hpp>
 #include <platform/auth/identity.hpp>
@@ -17,6 +18,11 @@ Response View::Handle(
             .counterparty;
     if (party.archived)
         throw ApiError<409>{"archived_customer", "Выберите действующего клиента"};
+    if (request.body.contact_id.has_value() &&
+        std::none_of(party.contacts.begin(), party.contacts.end(),
+            [&](const auto& contact) { return contact.id == request.body.contact_id; }))
+        throw ApiError<400>{"invalid_contact", "Выберите контактное лицо этого клиента"};
+
     const auto employees = deps.organizations.ApiOrganizationsEmployeesList(
         {.body = {.limit = 1,
              .organization_id = organization,

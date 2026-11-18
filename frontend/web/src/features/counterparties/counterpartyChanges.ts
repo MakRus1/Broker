@@ -38,6 +38,7 @@ const fields = {
 } as const;
 export type HistoryField = keyof typeof fields;
 function comparable(snapshot: CounterpartySnapshot | undefined, key: HistoryField): unknown {
+  if (key === 'contacts') return snapshot?.contacts?.map(({ id: _id, ...contact }) => contact);
   const value = snapshot?.[key];
   // Порядок ролей не является изменением; null и неизвестное значение различаются.
   return key === 'roles' && Array.isArray(value) ? [...value].sort() : value;

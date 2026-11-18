@@ -24,7 +24,8 @@ import {
 } from '../shipments/ShipmentConditionsFields';
 import { SalesRegistry } from './SalesRegistry';
 import { SalesHistory } from './SalesHistory';
-import { SalesContacts } from './SalesContacts';
+import { SalesInteractions } from './SalesInteractions';
+import { CustomerContacts, CustomerContactPerson } from './CustomerContacts';
 import { InquiryShipmentLink } from './InquiryShipmentLink';
 import {
   saveSalesBody,
@@ -310,7 +311,9 @@ export function SalesPage({
         <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
           {[
             'main',
-            ...(resource === 'cards' ? ['contacts', 'inquiries'] : ['rfqs', 'proposals']),
+            ...(resource === 'cards'
+              ? ['interactions', 'contacts', 'inquiries']
+              : ['contacts', 'rfqs', 'proposals']),
             'history',
           ].map((name) => (
             <button
@@ -325,13 +328,15 @@ export function SalesPage({
                   ? 'rfq.title'
                   : name === 'proposals'
                     ? 'proposal.title'
-                    : name === 'contacts'
-                      ? 'sales.contacts'
-                      : name === 'main'
-                        ? 'sales.main'
-                        : name === 'history'
-                          ? 'sales.history'
-                          : 'sales.inquiries',
+                    : name === 'interactions'
+                      ? 'sales.interactions'
+                      : name === 'contacts'
+                        ? 'sales.contacts'
+                        : name === 'main'
+                          ? 'sales.main'
+                          : name === 'history'
+                            ? 'sales.history'
+                            : 'sales.inquiries',
               )}
             </button>
           ))}
@@ -344,8 +349,15 @@ export function SalesPage({
       )}
       {!draft ? (
         <p>{translate('common.loading')}</p>
-      ) : tab === 'contacts' && resource === 'cards' && !editing ? (
-        <SalesContacts
+      ) : tab === 'contacts' && !editing ? (
+        <CustomerContacts
+          customerId={draft.customer_id}
+          session={session}
+          active={active}
+          contactId={'status' in draft ? draft.contact_id : undefined}
+        />
+      ) : tab === 'interactions' && resource === 'cards' && !editing ? (
+        <SalesInteractions
           card={draft as SalesCard}
           session={session}
           onSaved={(card) => {
@@ -409,7 +421,16 @@ export function SalesPage({
                   <CustomerSelect
                     items={emptyParties}
                     value={draft.customer_id}
-                    onChange={(id) => set('customer_id', id)}
+                    onChange={(id) =>
+                      setDraft(
+                        (old) =>
+                          old && {
+                            ...old,
+                            customer_id: id,
+                            ...('status' in old ? { contact_id: undefined } : {}),
+                          },
+                      )
+                    }
                     session={session}
                     disabled={!creating}
                     required
@@ -422,6 +443,17 @@ export function SalesPage({
                     onChange={(subject) => set('manager_subject', subject)}
                     session={session}
                   />
+                  {'status' in draft && draft.customer_id && (
+                    <fieldset className="sales-editor-fields" disabled={frozen}>
+                      <CustomerContactPerson
+                        customerId={draft.customer_id}
+                        session={session}
+                        active={active}
+                        contactId={draft.contact_id}
+                        onChange={(contact_id) => set('contact_id', contact_id || undefined)}
+                      />
+                    </fieldset>
+                  )}
                 </div>
               </RecordSection>
               {'stage_id' in draft ? (
@@ -602,6 +634,21 @@ export function SalesPage({
                 </dd>
               </div>
             </dl>
+            {'status' in draft && (
+              <dl className="record-layout-details sales-details">
+                <div>
+                  <dt>{translate('sales.contactPerson')}</dt>
+                  <dd>
+                    <CustomerContactPerson
+                      customerId={draft.customer_id}
+                      session={session}
+                      active={active}
+                      contactId={draft.contact_id}
+                    />
+                  </dd>
+                </div>
+              </dl>
+            )}
           </RecordSection>
           {'stage_id' in draft ? (
             <RecordSection title={translate('sales.work')}>

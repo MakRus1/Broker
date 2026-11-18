@@ -1,0 +1,18 @@
+.sales-customer-contacts {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+.sales-customer-contacts-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.sales-customer-contacts-heading .record-layout-section-heading {
+  margin: 0;
+}
+.sales-customer-contacts-heading .record-layout-actions {
+  flex-shrink: 0;
+}

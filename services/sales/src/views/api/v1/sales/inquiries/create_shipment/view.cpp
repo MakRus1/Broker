@@ -1,5 +1,4 @@
 #include <components/inquiries.hpp>
-#include <models/errors.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <views/api/v1/sales/inquiries/create_shipment/view.hpp>
@@ -7,8 +6,7 @@
 namespace sales::views::api::v1::sales::inquiries::create_shipment {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) {
-    if (!platform::auth::HasPermission(context, permissions::SALES_WRITE))
-        throw ApiError<403>{"forbidden", "Нет права на изменение продаж"};
+    platform::auth::CheckPermission(context, permissions::SALES_WRITE);
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
     const auto before = deps.inquiries->FindInquiry(organization, request.body.id);

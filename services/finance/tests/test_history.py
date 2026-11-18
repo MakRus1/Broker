@@ -50,7 +50,7 @@ async def test_service_assignment_and_removal_are_visible_from_service(api, char
     assert events[0]['action'] == 'invoice_unlinked'
     assert 'after' not in fields(events[0])['invoice']
     assert fields(events[0])['invoice']['before']['value'] == document['id']
-    own_only = await api.post('/api/v1/service-charges/history', dict(id=item['id'],limit=50), roles=['finance.read_service_charges','shipments.read','transportations.read','counterparties.read','organizations.read_employees'])
+    own_only = await api.post('/api/v1/service-charges/history', dict(id=item['id'],limit=50), roles=['finance.read_service_charges','shipments.read','transportations.read','counterparties.read','organizations.read_employees', 'transport_locations.read', 'finance.read_calculation_settings'])
     assert [e['cursor']['source'] for e in own_only['items']] == ['service_charge']
 
 async def test_invoice_lines_have_own_before_after_values(api, charge, invoice_references):
@@ -85,7 +85,7 @@ async def test_payment_allocation_changes_and_archive_appear_in_invoice_history(
     payments=(await history(api,'payments',body['id']))['items']
     assert fields(payments[0])[f"allocations.{document['id']}"]['before']['value']=='8000'
     assert any(c.get('subject') == dict(source='invoice', id=document['id'], name='ИС-1') for c in payments[0]['changes'])
-    own_only=await api.post('/api/v1/invoices/history',dict(id=document['id'],limit=50),roles=['finance.read_invoices','finance.read_service_charges','shipments.read','transportations.read','counterparties.read','organizations.read_employees'])
+    own_only=await api.post('/api/v1/invoices/history',dict(id=document['id'],limit=50),roles=['finance.read_invoices','finance.read_service_charges','shipments.read','transportations.read','counterparties.read','organizations.read_employees', 'transport_locations.read', 'finance.read_calculation_settings'])
     assert [e['cursor']['source'] for e in own_only['items']]==['invoice']
 
 async def test_changes_to_other_allocations_do_not_pollute_invoice_history(api, charge, invoice_references):

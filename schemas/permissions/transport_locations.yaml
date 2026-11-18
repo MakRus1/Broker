@@ -1,0 +1,5 @@
+transport_locations.read:
+  name: Просмотр портов, аэропортов и железнодорожных станций
+  group: Транспортные справочники
+  scope: organization
+  requires: []

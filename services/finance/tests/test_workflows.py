@@ -121,7 +121,7 @@ async def test_service_charge_without_invoice_permission_cannot_change_linked_in
     roles = [
         'finance.write_service_charges', 'finance.read_service_charges',
         'finance.read_invoices', 'shipments.read', 'transportations.read',
-        'contracts.read', 'counterparties.read',
+        'contracts.read', 'counterparties.read', 'transport_locations.read', 'finance.read_calculation_settings',
     ]
     result = await api.post('/api/v1/service-charges/save', {
         **body, 'expected_revision': 1, 'price_minor': 50000,

@@ -255,8 +255,8 @@ components_manager:
                 /api/internal/v1/service-charges/apply-import: finance.import_service_charges
                 /api/v1/counterparty-reconciliation/get: finance.read_invoices
                 /api/v1/counterparty-settlements/get: finance.read_invoices
-                /api/v1/exchange-rates/get: finance.read_service_charges
-                /api/v1/finance/settings/get: finance.read_service_charges
+                /api/v1/exchange-rates/get: finance.read_calculation_settings
+                /api/v1/finance/settings/get: finance.read_calculation_settings
                 /api/v1/financial-labels/filter-values: finance.read_financial_labels
                 /api/v1/financial-labels/get: finance.read_financial_labels
                 /api/v1/financial-labels/list: finance.read_financial_labels
@@ -296,6 +296,7 @@ components_manager:
                 finance.read_service_charges:
                 - shipments.read
                 - transportations.read
+                - finance.read_calculation_settings
                 finance.write_financial_labels:
                 - finance.read_financial_labels
                 finance.write_invoices:
@@ -315,6 +316,9 @@ components_manager:
                 shipments.read:
                 - organizations.read_employees
                 - counterparties.read
+                - transport_locations.read
+                transportations.read:
+                - transport_locations.read
             service-clients:
                 finance.import_service_charges:
                 - sales-dispatcher

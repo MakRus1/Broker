@@ -202,7 +202,7 @@ async def test_audit_failure_rolls_back_reservation(api, pgsql, service_client, 
             'counterparties.read',
             'organizations.read_employees',
             'shipments.read',
-            'shipments.write',
+            'shipments.write', 'transport_locations.read',
         ]
         token = auth_key.token(
             'author',

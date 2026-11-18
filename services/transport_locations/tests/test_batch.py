@@ -44,3 +44,15 @@ async def test_active_batch_for_route_validation(api, records):
 async def test_batch_empty_and_permission_boundary(api, resource, body):
     assert await api.post(f'/api/v1/{resource}/get-batch', body) == {'items': []}
     await api.post(f'/api/v1/{resource}/get-batch', body, roles=[], expected=403)
+
+
+@pytest.mark.parametrize('path,body', [
+    ('/api/v1/route-locations/search', {'kind': 'sea_port'}),
+    ('/api/v1/railway-stations/search', {'query': ''}),
+    ('/api/v1/route-locations/get-batch', {'ids': []}),
+    ('/api/v1/railway-stations/get-batch', {'ids': []}),
+])
+async def test_directory_reader_does_not_need_shipment_or_transportation_access(api, path, body):
+    result = await api.post(path, body, roles=['transport_locations.read'])
+    assert 'items' in result
+    await api.post(path, body, roles=['sales.read'], expected=403)

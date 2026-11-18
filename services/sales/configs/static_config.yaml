@@ -231,8 +231,11 @@ components_manager:
                 sales.read:
                 - counterparties.read
                 - organizations.read_employees
+                - transport_locations.read
                 sales.write:
                 - sales.read
+                - finance.read_financial_labels
+                - finance.read_calculation_settings
             organization-url: $organization-access-url
         auth-http-client:
             wait-for-dynamic-configs: false

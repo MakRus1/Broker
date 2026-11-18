@@ -277,7 +277,7 @@ async def test_history_read_permission_does_not_grant_writes(api):
     result = await api.post(
         '/api/v1/transportations/history',
         {'transportation_id': identifier},
-        roles=['transportations.read'],
+        roles=['transportations.read', 'transport_locations.read'],
     )
     assert result['items'] == []
     await api.post(
@@ -287,6 +287,6 @@ async def test_history_read_permission_does_not_grant_writes(api):
             'expected_revision': 1,
             'route_segments': [route_segment()],
         },
-        roles=['transportations.read'],
+        roles=['transportations.read', 'transport_locations.read'],
         expected=403,
     )

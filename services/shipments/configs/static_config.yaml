@@ -187,8 +187,11 @@ components_manager:
                 shipments.read:
                 - organizations.read_employees
                 - counterparties.read
+                - transport_locations.read
                 shipments.write:
                 - shipments.read
+                transportations.read:
+                - transport_locations.read
                 transportations.write:
                 - transportations.read
             service-clients:

@@ -34,7 +34,7 @@ async def test_rfq_permissions_isolation_revision_and_history(api):
     await api.post(BASE+'save', value, expected=409)
     await api.post(BASE+'get', {'id':value['id']}, user='other', expected=404)
     assert (await api.post(BASE+'list', {'id':incoming['id']}, user='other'))['items'] == []
-    await api.post(BASE+'save', value, roles=['sales.read'], expected=403)
+    await api.post(BASE+'save', value, roles=['sales.read', 'transport_locations.read'], expected=403)
     value.update(expected_revision=1, quotes=[quote(), quote(11000)], status='ready')
     saved = (await api.post(BASE+'save', value))['item']
     assert len(saved['input']['quotes']) == 2

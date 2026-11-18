@@ -29,7 +29,7 @@ async def test_fact_groups_and_pending_materialization(api, pgsql):
     response = await api.post(
         '/api/v1/transportations/container-fact',
         {'shipment_id': shipment, 'pending_operation_ids': [operation]},
-        roles=['shipments.read', 'organizations.read_employees', 'counterparties.read'],
+        roles=['shipments.read', 'organizations.read_employees', 'counterparties.read', 'transport_locations.read'],
     )
     groups = {
         (row.get('container_type_code'), row.get('container_ownership')): row['quantity']

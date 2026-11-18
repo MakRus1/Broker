@@ -5,9 +5,12 @@ sales.read:
   requires:
   - counterparties.read
   - organizations.read_employees
+  - transport_locations.read
 sales.write:
   name: Изменение продаж и входящих запросов
   group: Продажи
   scope: organization
   requires:
   - sales.read
+  - finance.read_financial_labels
+  - finance.read_calculation_settings

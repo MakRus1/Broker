@@ -338,7 +338,7 @@ export function SalesPage({
           }}
         />
       ) : tab === 'rfqs' && inquiry && !editing ? (
-        <SalesRfqs inquiry={inquiry} session={session} />
+        <SalesRfqs inquiry={inquiry} session={session} active={active} />
       ) : tab === 'proposals' && inquiry && !editing ? (
         <SalesProposals
           inquiry={inquiry}

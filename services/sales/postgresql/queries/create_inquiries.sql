@@ -6,6 +6,7 @@ INSERT INTO sales_inquiries (
     id,
     number,
     customer_id,
+    contact_id,
     manager_subject,
     status,
     cargo_description,
@@ -25,6 +26,7 @@ SELECT
     value.id,
     $3::TEXT,
     value.customer_id,
+    value.contact_id,
     value.manager_subject,
     value.status,
     value.cargo_description,
@@ -41,6 +43,7 @@ SELECT
 FROM jsonb_to_record($2::JSONB) AS value (
     id UUID,
     customer_id UUID,
+    contact_id UUID,
     manager_subject TEXT,
     status TEXT,
     cargo_description TEXT,

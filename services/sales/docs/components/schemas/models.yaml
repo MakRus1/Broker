@@ -165,6 +165,10 @@ Inquiry:
       type: string
       format: uuid
       x-cpp-type: uuid
+    contact_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
     manager_subject:
       type: string
       minLength: 1
@@ -250,6 +254,10 @@ SaveInquiryRequest:
       format: uuid
       x-cpp-type: uuid
     customer_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    contact_id:
       type: string
       format: uuid
       x-cpp-type: uuid

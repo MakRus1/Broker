@@ -317,7 +317,7 @@ export function CounterpartyForm({
                 onClick={() =>
                   set('contacts', [
                     ...draft.contacts,
-                    { name: '', position: '', email: '', phone: '' },
+                    { id: crypto.randomUUID(), name: '', position: '', email: '', phone: '' },
                   ])
                 }
               >

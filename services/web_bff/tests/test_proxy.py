@@ -833,3 +833,31 @@ async def test_filter_metadata_preserves_auth_errors(browser, mockserver, servic
     response = await browser.post(path, {'registry': registry})
     assert response.status == status, response.text
     assert response.json() == error
+
+
+async def test_inquiry_contact_and_counterparty_contact_ids_are_preserved(browser, mockserver):
+    await browser.sign_in()
+    contact_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    person = {'id': contact_id, 'name': 'Анна', 'position': 'Менеджер', 'email': 'anna@example.test', 'phone': '+79991234567'}
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def customer(request):
+        return {'counterparty': {**COUNTERPARTY, 'contacts': [person]}}
+
+    response = await browser.post('/api/v1/counterparties/get', {'id': COUNTERPARTY['id']})
+    assert response.status == 200, response.text
+    assert response.json()['counterparty']['contacts'] == [person]
+
+    @mockserver.json_handler('/api/v1/sales/inquiries/save')
+    def save(request):
+        assert request.json['contact_id'] == contact_id
+        return {'item': {'id': ID, 'organization_id': ID, 'customer_id': CUSTOMER, 'manager_subject': 'author',
+                         'number': 'ENQ-1', 'revision': 1, 'status': 'draft', 'route_segments': [],
+                         'converting': False, 'contact_id': contact_id}}
+
+    response = await browser.post('/api/v1/sales/inquiries/save', {
+        'id': ID, 'customer_id': CUSTOMER, 'manager_subject': 'author', 'expected_revision': 0,
+        'status': 'draft', 'route_segments': [], 'contact_id': contact_id,
+    })
+    assert response.status == 200, response.text
+    assert response.json()['item']['contact_id'] == contact_id

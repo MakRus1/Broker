@@ -8,6 +8,7 @@ export const counterpartyRoles = {
 } as const;
 export type CounterpartyRole = keyof typeof counterpartyRoles;
 export interface CounterpartyContact {
+  id?: string;
   name: string;
   position: string | null;
   email: string | null;
@@ -30,6 +31,7 @@ export interface Counterparty {
   contacts: CounterpartyContact[];
 }
 export interface CounterpartyContactDraft {
+  id?: string;
   name: string;
   position: string;
   email: string;
@@ -61,6 +63,7 @@ export function counterpartyDetails(value?: Counterparty): CounterpartyDetails {
     legal_address: value?.legal_address ?? '',
     roles: [...(value?.roles ?? [])],
     contacts: (value?.contacts ?? []).map((contact) => ({
+      ...(contact.id ? { id: contact.id } : {}),
       name: contact.name.trim(),
       position: contact.position ?? '',
       email: contact.email ?? '',
@@ -86,6 +89,7 @@ export function counterpartyPayload(
     registration_id: nullableField(value.registration_id),
     legal_address: nullableField(value.legal_address),
     contacts: value.contacts.map((contact) => ({
+      ...(contact.id ? { id: contact.id } : {}),
       name: contact.name.trim(),
       position: nullableField(contact.position),
       email: nullableField(contact.email),

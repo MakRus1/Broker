@@ -334,7 +334,10 @@ async def test_absent_requisites_are_null(api, pgsql, empty):
     )['counterparty']
     assert created['legal_name'] is None
     assert created['tax_id'] is None
-    assert created['contacts'] == [{'name': 'Анна', 'email': None, 'phone': None, 'position': None}]
+    assert created['contacts'] == [{
+        'id': created['contacts'][0]['id'],
+        'name': 'Анна', 'email': None, 'phone': None, 'position': None,
+    }]
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
             'SELECT legal_name, tax_id, contacts FROM counterparties WHERE id=%s', (created['id'],)

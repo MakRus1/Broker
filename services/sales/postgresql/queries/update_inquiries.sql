@@ -2,7 +2,8 @@
 -- $2 — данные входящего запроса в JSON.
 -- $3 — ожидаемая редакция.
 UPDATE sales_inquiries AS target
-SET manager_subject = value.manager_subject,
+SET contact_id = value.contact_id,
+    manager_subject = value.manager_subject,
     status = value.status,
     cargo_description = value.cargo_description,
     incoterms = value.incoterms,
@@ -23,6 +24,7 @@ SET manager_subject = value.manager_subject,
 FROM jsonb_to_record($2::JSONB) AS value (
     id UUID,
     customer_id UUID,
+    contact_id UUID,
     manager_subject TEXT,
     status TEXT,
     cargo_description TEXT,

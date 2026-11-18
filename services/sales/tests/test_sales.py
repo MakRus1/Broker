@@ -425,3 +425,27 @@ async def test_create_shipment_requires_sales_write_and_shipment_creation(api):
         '/api/v1/sales/inquiries/create-shipment', command,
         roles=[*references, 'sales.write', 'shipments.create'], expected=404,
     )
+
+
+async def test_inquiry_contact_belongs_to_customer_and_can_be_cleared(api, mockserver):
+    contact_id = str(uuid.uuid4())
+
+    @mockserver.json_handler('/api/v1/counterparties/get')
+    def party(request):
+        contacts = [{'id': contact_id, 'name': 'Анна', 'email': 'anna@example.test'}] if request.json['id'] == CUSTOMER else []
+        return {'counterparty': {'id': request.json['id'], 'name': 'Клиент',
+            'revision': 1, 'archived': False, 'roles': [], 'own_company': False, 'contacts': contacts,
+            'legal_name': None, 'country_code': 'RU', 'tax_id': None, 'registration_id': None, 'legal_address': None}}
+
+    body = {**inquiry(), 'contact_id': contact_id}
+    saved = (await api.post('/api/v1/sales/inquiries/save', body))['item']
+    assert saved['contact_id'] == contact_id
+    loaded = (await api.post('/api/v1/sales/inquiries/get', {'id': body['id']}))['item']
+    assert loaded['contact_id'] == contact_id
+    result = await api.post('/api/v1/sales/inquiries/save', {**inquiry(), 'contact_id': str(uuid.uuid4())}, expected=400)
+    assert result['error'] == 'invalid_contact'
+    await api.post('/api/v1/sales/inquiries/save', {**inquiry(), 'customer_id': str(uuid.uuid4()), 'contact_id': contact_id}, expected=400)
+    cleared = (await api.post('/api/v1/sales/inquiries/save', {**inquiry(), 'id': body['id'], 'expected_revision': saved['revision']}))['item']
+    assert 'contact_id' not in cleared
+    history = await api.post('/api/v1/sales/inquiries/history', {'id': body['id']})
+    assert any(entry['snapshot'].get('contact_id') == contact_id for entry in history['items'])

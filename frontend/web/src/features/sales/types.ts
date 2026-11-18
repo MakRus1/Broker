@@ -15,6 +15,7 @@ export type SalesCard = {
 };
 export type InquiryStatus = 'draft' | 'in_progress' | 'agreed' | 'rejected';
 export type Inquiry = {
+  contact_id?: string;
   id: string;
   organization_id: string;
   customer_id: string;

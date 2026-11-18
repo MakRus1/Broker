@@ -27,6 +27,7 @@ import { Dialog } from '../../shared/ui/Dialog';
 import { CounterpartyHistory } from './CounterpartyHistory';
 import { counterpartyRoles, type Counterparty } from './counterparties';
 import { CounterpartyForm } from './CounterpartyForm';
+import { CounterpartyContacts } from './CounterpartyContacts';
 
 type Props = {
   route: string;
@@ -387,32 +388,7 @@ export function CounterpartiesPage({
                   </dl>
                   <section className="counterparty-contacts">
                     <h2>{translate('counterparty.contacts')}</h2>
-                    {!item.contacts.length ? (
-                      <p className="hint">{translate('counterparty.noContactsYet')}</p>
-                    ) : (
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>{translate('counterparty.name')}</th>
-                              <th>{translate('counterparty.position')}</th>
-                              <th>Email</th>
-                              <th>{translate('counterparty.phone')}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {item.contacts.map((contact, index) => (
-                              <tr key={index}>
-                                <td>{contact.name}</td>
-                                <td>{contact.position || '—'}</td>
-                                <td>{contact.email || '—'}</td>
-                                <td>{contact.phone || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    <CounterpartyContacts contacts={item.contacts} />
                   </section>
                 </>
               )}

@@ -67,3 +67,12 @@ it('убирает краевые пробелы, сохраняя содерж�
   expect(payload.country_code).toBe('RU');
   expect(payload.tax_id).toBe('ab-12 34');
 });
+
+it('сохраняет идентификатор контактного лица при редактировании реквизитов', () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const draft = counterpartyDetails();
+  draft.contacts = [
+    { id, name: 'Анна', position: 'Менеджер', email: 'anna@example.test', phone: '' },
+  ];
+  expect(counterpartyPayload(draft).contacts[0].id).toBe(id);
+});

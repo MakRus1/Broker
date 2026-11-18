@@ -51,8 +51,11 @@ inline models::counterparties::CounterpartyRole Convert(
 
 inline models::counterparties::CounterpartyContact Convert(
     const clients::counterparties::models::CounterpartyContact& value) {
-    return {
-        .email = value.email, .name = value.name, .phone = value.phone, .position = value.position};
+    return {.email = value.email,
+        .id = value.id,
+        .name = value.name,
+        .phone = value.phone,
+        .position = value.position};
 }
 
 inline clients::counterparties::models::CounterpartyRole Convert(
@@ -74,8 +77,11 @@ inline clients::counterparties::models::CounterpartyRole Convert(
 
 inline clients::counterparties::models::CounterpartyContact Convert(
     const models::counterparties::CounterpartyContact& value) {
-    return {
-        .email = value.email, .name = value.name, .phone = value.phone, .position = value.position};
+    return {.email = value.email,
+        .id = value.id,
+        .name = value.name,
+        .phone = value.phone,
+        .position = value.position};
 }
 
 inline models::counterparties::Counterparty Convert(

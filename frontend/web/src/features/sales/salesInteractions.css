@@ -1,74 +1,74 @@
-.sales-contacts {
+.sales-interactions {
   display: grid;
   gap: 1.25rem;
 }
-.sales-contacts-heading,
-.sales-contact-meta,
-.sales-contact-actions {
+.sales-interactions-heading,
+.sales-interaction-meta,
+.sales-interaction-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
-.sales-contacts-heading {
+.sales-interactions-heading {
   justify-content: space-between;
   flex-wrap: wrap;
 }
-.sales-contacts-heading h2 {
+.sales-interactions-heading h2 {
   margin: 0;
 }
-.sales-contact-fields {
+.sales-interaction-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem 1.5rem;
 }
-.sales-contact-fields label {
+.sales-interaction-fields label {
   display: grid;
   gap: 0.5rem;
 }
-.sales-contact-wide {
+.sales-interaction-wide {
   grid-column: 1 / -1;
 }
-.sales-contact-actions {
+.sales-interaction-actions {
   justify-content: flex-end;
   margin-top: 1rem;
 }
-.sales-contact-list {
+.sales-interaction-list {
   display: grid;
 }
-.sales-contact {
+.sales-interaction {
   padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
-.sales-contact:first-child {
+.sales-interaction:first-child {
   padding-top: 1rem;
 }
-.sales-contact-meta {
+.sales-interaction-meta {
   flex-wrap: wrap;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
-.sales-contact-meta strong {
+.sales-interaction-meta strong {
   color: var(--text);
 }
-.sales-contact-result {
+.sales-interaction-result {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 0.75rem 0;
 }
 @media (max-width: 640px) {
-  .sales-contact-fields {
+  .sales-interaction-fields {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.sales-contact-editable {
+.sales-interaction-editable {
   cursor: pointer;
 }
-.sales-contact-editable:hover {
+.sales-interaction-editable:hover {
   background: color-mix(in srgb, var(--surface-hover) 35%, transparent);
   box-shadow: inset 2px 0 var(--accent-border);
 }
-.sales-contact-editable:focus-visible {
+.sales-interaction-editable:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }

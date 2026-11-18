@@ -49,6 +49,21 @@ class AuthContractTest(unittest.TestCase):
         self.assertIn('::platform::auth::GetIdentity(context)', source)
         self.assertLess(source.index('GetIdentity(context)'), source.index('View::Handle'))
 
+    def test_permission_denial_uses_declared_error_response(self):
+        from render import handler
+        spec = self.spec()
+        spec['paths']['/admin/example']['get']['responses']['403'] = {
+            'description': 'Нет доступа',
+            'content': {'application/json': {'schema': {
+                'type': 'object', 'additionalProperties': False,
+                'properties': {'error': {'type': 'string'}, 'message': {'type': 'string'}},
+                'required': ['error', 'message'],
+            }}},
+        }
+        _, source = handler('example', parse_spec(spec)[0], False)
+        self.assertIn('catch (const ::platform::auth::Forbidden&)', source)
+        self.assertIn('return Response403{.error = "forbidden"', source)
+
     def test_every_admin_operation_has_policy_and_security(self):
         service = ROOT / 'services/configs'
         operations = load(service)

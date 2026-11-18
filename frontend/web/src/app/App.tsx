@@ -7,6 +7,7 @@ import { interfaceText } from '../shared/localization/interfaceText';
 import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
 import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
 import { WorkspaceHome } from './WorkspaceHome';
+import { workspaceSections, workspaceSection, canOpenWorkspace } from './workspaceSections';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
 import { PaymentsPage } from '../features/finance/payments/PaymentsPage';
@@ -62,21 +63,6 @@ function WorkspaceApp() {
   useEffect(() => {
     related.clear();
   }, [related, session?.subject, session?.organization_id]);
-  const [tab, setTab] = useState<
-    | 'home'
-    | 'shipments'
-    | 'transportations'
-    | 'counterparties'
-    | 'contracts'
-    | 'sales'
-    | 'inquiries'
-    | 'service-charges'
-    | 'financial-labels'
-    | 'incoming-invoices'
-    | 'outgoing-invoices'
-    | 'receipts'
-    | 'disbursements'
-  >('home');
   const [customers, setCustomers] = useState<Counterparty[]>([]);
   const [shipmentRegistryVersion, setShipmentRegistryVersion] = useState(0);
   const [transportationRegistryVersion, setTransportationRegistryVersion] = useState(0);
@@ -213,20 +199,6 @@ function WorkspaceApp() {
       }
       const next = location.hash.slice(1) || '/';
       setRoute(next);
-      if (next.startsWith('/transportations')) setTab('transportations');
-      else if (next.startsWith('/service-charges')) setTab('service-charges');
-      else if (next.startsWith('/financial-labels')) setTab('financial-labels');
-      else if (next.startsWith('/incoming-invoices')) setTab('incoming-invoices');
-      else if (next.startsWith('/disbursements')) setTab('disbursements');
-      else if (next.startsWith('/receipts')) setTab('receipts');
-      else if (next.startsWith('/outgoing-invoices')) setTab('outgoing-invoices');
-      else if (next.startsWith('/sales')) setTab('sales');
-      else if (next.startsWith('/inquiries') || next.startsWith('/rfqs/')) setTab('inquiries');
-      else if (next.startsWith('/contracts')) setTab('contracts');
-      else if (next.startsWith('/counterparties') || next.startsWith('/bank-accounts'))
-        setTab('counterparties');
-      else if (next.startsWith('/shipments')) setTab('shipments');
-      else setTab('home');
     }
     changed();
     window.addEventListener('hashchange', changed);
@@ -382,162 +354,24 @@ function WorkspaceApp() {
             </span>
             <span className="navigation-text">{translate('home.navigation')}</span>
           </button>
-          <button
-            aria-label={translate('nav.shipments')}
-            title={translate('nav.shipments')}
-            aria-current={route !== '/' && tab === 'shipments' ? 'page' : undefined}
-            onClick={() => {
-              location.hash = '/shipments';
-            }}
-          >
-            <span className="navigation-icon" aria-hidden="true">
-              ▣
-            </span>{' '}
-            <span className="navigation-text">{translate('nav.shipments')}</span>
-          </button>
-          <button
-            aria-label={translate('nav.transportations')}
-            title={translate('nav.transportations')}
-            aria-current={route !== '/' && tab === 'transportations' ? 'page' : undefined}
-            onClick={() => {
-              location.hash = '/transportations';
-            }}
-          >
-            <span className="navigation-icon" aria-hidden="true">
-              ⇄
-            </span>{' '}
-            <span className="navigation-text">{translate('nav.transportations')}</span>
-          </button>
-          <button
-            aria-label={translate('nav.counterparties')}
-            title={translate('nav.counterparties')}
-            aria-current={route !== '/' && tab === 'counterparties' ? 'page' : undefined}
-            onClick={() => {
-              location.hash = '/counterparties';
-            }}
-          >
-            <span className="navigation-icon" aria-hidden="true">
-              ▤
-            </span>{' '}
-            <span className="navigation-text">{translate('nav.counterparties')}</span>
-          </button>
-          {session.permissions.includes('sales.read') &&
-            (['sales', 'inquiries'] as const).map((section) => (
+          {workspaceSections
+            .filter((section) => session.permissions.includes(section.permission))
+            .map((section) => (
               <button
-                key={section}
-                aria-label={translate(section === 'sales' ? 'sales.funnel' : 'sales.inquiries')}
-                aria-current={tab === section ? 'page' : undefined}
+                key={section.route}
+                aria-label={translate(section.title)}
+                title={translate(section.title)}
+                aria-current={workspaceSection(route)?.route === section.route ? 'page' : undefined}
                 onClick={() => {
-                  location.hash = `/${section}`;
+                  location.hash = section.route;
                 }}
               >
                 <span className="navigation-icon" aria-hidden="true">
-                  ▤
+                  {section.icon}
                 </span>
-                <span className="navigation-text">
-                  {translate(section === 'sales' ? 'sales.funnel' : 'sales.inquiries')}
-                </span>
+                <span className="navigation-text">{translate(section.title)}</span>
               </button>
             ))}
-          <button
-            aria-label={translate('nav.contracts')}
-            title={translate('nav.contracts')}
-            aria-current={route !== '/' && tab === 'contracts' ? 'page' : undefined}
-            onClick={() => {
-              location.hash = '/contracts';
-            }}
-          >
-            <span className="navigation-icon" aria-hidden="true">
-              ▧
-            </span>{' '}
-            <span className="navigation-text">{translate('nav.contracts')}</span>
-          </button>
-          {session.permissions.includes('finance.read_payments') &&
-            (['receipts', 'disbursements'] as const).map((section) => (
-              <button
-                key={section}
-                aria-label={
-                  section === 'receipts'
-                    ? translate('nav.receipts')
-                    : translate('nav.disbursements')
-                }
-                title={
-                  section === 'receipts'
-                    ? translate('nav.receipts')
-                    : translate('nav.disbursements')
-                }
-                aria-current={route !== '/' && tab === section ? 'page' : undefined}
-                onClick={() => {
-                  location.hash = `/${section}`;
-                }}
-              >
-                <span className="navigation-icon" aria-hidden="true">
-                  {section === 'receipts' ? '↓' : '↑'}
-                </span>
-                <span className="navigation-text">
-                  {section === 'receipts'
-                    ? translate('nav.receipts')
-                    : translate('nav.disbursements')}
-                </span>
-              </button>
-            ))}
-          {session.permissions.includes('finance.read_invoices') &&
-            (['incoming', 'outgoing'] as const).map((direction) => (
-              <button
-                key={direction}
-                aria-label={
-                  direction === 'incoming'
-                    ? translate('nav.incomingInvoices')
-                    : translate('nav.outgoingInvoices')
-                }
-                title={
-                  direction === 'incoming'
-                    ? translate('nav.incomingInvoices')
-                    : translate('nav.outgoingInvoices')
-                }
-                aria-current={route !== '/' && tab === `${direction}-invoices` ? 'page' : undefined}
-                onClick={() => {
-                  location.hash = `/${direction}-invoices`;
-                }}
-              >
-                <span className="navigation-icon" aria-hidden="true">
-                  {direction === 'incoming' ? '↙' : '↗'}
-                </span>
-                <span className="navigation-text">
-                  {direction === 'incoming'
-                    ? translate('nav.incomingInvoices')
-                    : translate('nav.outgoingInvoices')}
-                </span>
-              </button>
-            ))}
-          {session.permissions.includes('finance.read_service_charges') && (
-            <button
-              aria-label={translate('nav.serviceCharges')}
-              title={translate('nav.serviceCharges')}
-              aria-current={route !== '/' && tab === 'service-charges' ? 'page' : undefined}
-              onClick={() => {
-                location.hash = '/service-charges';
-              }}
-            >
-              <span className="navigation-icon" aria-hidden="true">
-                ≡
-              </span>
-              <span className="navigation-text">{translate('nav.serviceCharges')}</span>
-            </button>
-          )}
-          <button
-            aria-label={translate('nav.financialLabels')}
-            title={translate('nav.financialLabels')}
-            aria-current={route !== '/' && tab === 'financial-labels' ? 'page' : undefined}
-            onClick={() => {
-              location.hash = '/financial-labels';
-            }}
-          >
-            <span className="navigation-icon" aria-hidden="true">
-              ₽
-            </span>{' '}
-            <span className="navigation-text">{translate('nav.financialLabels')}</span>
-          </button>
         </nav>
         <div className="profile">
           <span className="avatar">
@@ -581,22 +415,36 @@ function WorkspaceApp() {
           className={`workspace-content${workspaces.length ? '' : ' without-tabs'}${route === '/' ? ' home-screen' : ''}`}
         >
           {route === '/' && <WorkspaceHome session={session} />}
-          <ShipmentRegistry
-            session={session}
-            active={route === '/shipments'}
-            refreshVersion={shipmentRegistryVersion}
-            customers={customers}
-            onCustomersLoaded={rememberCustomers}
-            onError={error}
-          />
-          <TransportationRegistry
-            session={session}
-            active={route === '/transportations'}
-            refreshVersion={transportationRegistryVersion}
-            onError={error}
-          />
+          {!canOpenWorkspace(route, session.permissions) && (
+            <p className="error" role="alert">
+              {translate('workspace.accessDenied')}
+            </p>
+          )}
+          {session.permissions.includes('shipments.read') && (
+            <ShipmentRegistry
+              session={session}
+              active={route === '/shipments'}
+              refreshVersion={shipmentRegistryVersion}
+              customers={customers}
+              onCustomersLoaded={rememberCustomers}
+              onError={error}
+            />
+          )}
+          {session.permissions.includes('transportations.read') && (
+            <TransportationRegistry
+              session={session}
+              active={route === '/transportations'}
+              refreshVersion={transportationRegistryVersion}
+              onError={error}
+            />
+          )}
           {workspaces
-            .filter((entry) => entry.route !== '/shipments' && entry.route !== '/transportations')
+            .filter(
+              (entry) =>
+                entry.route !== '/shipments' &&
+                entry.route !== '/transportations' &&
+                canOpenWorkspace(entry.route, session.permissions),
+            )
             .map((entry) => (
               <div
                 key={entry.id}

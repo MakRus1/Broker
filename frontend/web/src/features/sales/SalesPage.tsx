@@ -18,6 +18,10 @@ import { SalesCustomerName } from './SalesCustomerName';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { useLocalization } from '../localization/Localization';
 import { ShipmentRoute } from '../shipments/ShipmentRoute';
+import {
+  ShipmentConditionsFields,
+  type ShipmentDictionaries,
+} from '../shipments/ShipmentConditionsFields';
 import { SalesRegistry } from './SalesRegistry';
 import { SalesHistory } from './SalesHistory';
 import { SalesContacts } from './SalesContacts';
@@ -56,6 +60,7 @@ export function SalesPage({
   const editing = creating || clean.endsWith('/edit');
   const customer = creating ? (clean.split('/')[3] ?? '') : '';
   const [settings, setSettings] = useState<SalesSettings>({ revision: 0, stages: [] });
+  const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   const [value, setValue] = useState<SalesEntity>();
   const [draft, setDraft] = useState<SalesEntity>();
   const [failure, setFailure] = useState('');
@@ -79,6 +84,18 @@ export function SalesPage({
       });
     return () => controller.abort();
   }, [session]);
+  useEffect(() => {
+    if (resource !== 'inquiries' || !editing) return;
+    const controller = new AbortController();
+    request<ShipmentDictionaries>('/api/v1/shipments/dictionaries', session, {}, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setDictionaries(result);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [resource, editing, session]);
   useEffect(() => {
     if (!id) return;
     setFailure('');
@@ -492,42 +509,21 @@ export function SalesPage({
                       </div>
                     </RecordSection>
                     <RecordSection title={translate('sales.conditions')}>
-                      <div className="record-fields record-fields-two">
-                        {(
-                          [
-                            'incoterms',
-                            'carriage_terms',
-                            'loading',
-                            'delivery_city',
-                            'delivery_country',
-                            'delivery_address',
-                          ] as const
-                        ).map((field) => (
-                          <label key={field}>
-                            {translate(`sales.${field}`)}
-                            <input
-                              maxLength={
-                                field === 'delivery_address'
-                                  ? 1000
-                                  : field === 'delivery_country'
-                                    ? 2
-                                    : field === 'delivery_city'
-                                      ? 200
-                                      : 16
-                              }
-                              value={draft[field] ?? ''}
-                              onChange={(e) =>
-                                set(
-                                  field,
-                                  field === 'delivery_country'
-                                    ? e.target.value.toUpperCase()
-                                    : e.target.value,
-                                )
-                              }
-                            />
-                          </label>
-                        ))}
-                      </div>
+                      <ShipmentConditionsFields
+                        section="terms"
+                        value={draft}
+                        dictionaries={dictionaries}
+                        session={session}
+                        onChange={(patch) => setDraft((old) => old && { ...old, ...patch })}
+                      />
+                    </RecordSection>
+                    <RecordSection title={translate('shipment.delivery')}>
+                      <ShipmentConditionsFields
+                        section="delivery"
+                        value={draft}
+                        session={session}
+                        onChange={(patch) => setDraft((old) => old && { ...old, ...patch })}
+                      />
                     </RecordSection>
                     <RecordSection title={translate('sales.route')}>
                       <ShipmentRoute
@@ -580,7 +576,8 @@ export function SalesPage({
                 !!recovery.candidate ||
                 !draft.customer_id ||
                 !draft.manager_subject ||
-                ('stage_id' in draft && !draft.stage_id)
+                ('stage_id' in draft && !draft.stage_id) ||
+                (resource === 'inquiries' && !dictionaries)
               }
             >
               {translate('sales.save')}

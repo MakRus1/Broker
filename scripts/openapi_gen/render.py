@@ -337,6 +337,8 @@ public:
                 and {field.name for field in response.body.fields} == {'error', 'message'}
                 and all(field.required and field.type.kind == 'string' and not field.optional for field in response.body.fields)):
             error_catches.append(f'catch (const ::platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
+            if op.authenticated and response.status == 403:
+                error_catches.append('catch (const ::platform::auth::Forbidden&) { return Response403{.error = "forbidden", .message = "Permission denied"}; }')
     invoke = "View::Handle(std::move(request), context" + (", deps_" if deps else "") + ")"
     response_call = ('[&]() -> Response { try { return ' + invoke + '; } '
                      + ' '.join(error_catches) + ' }()') if error_catches else invoke

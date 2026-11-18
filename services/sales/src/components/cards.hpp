@@ -10,7 +10,6 @@ class CardsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-cards";
     CardsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::SalesCard SaveCard(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,
         const models::SaveSalesCardRequest& request) const;

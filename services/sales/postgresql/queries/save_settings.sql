@@ -11,4 +11,4 @@ SET revision = sales_settings.revision + 1, stages = EXCLUDED.stages,
     reset_number_yearly = EXCLUDED.reset_number_yearly
 WHERE sales_settings.revision = $2
     AND sales_settings.revision < 9223372036854775807
-RETURNING revision;
+RETURNING ROW(revision, stages, inquiry_number_template, reset_number_yearly)::public.sales_settings_v1;

@@ -10,7 +10,6 @@ class SalesHistoryComponent final : public userver::components::ComponentBase {
 
     SalesHistoryComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     std::vector<models::SalesHistoryEntry> GetCardHistory(
         const boost::uuids::uuid& organization, const models::HistoryRequest& request) const;

@@ -7,7 +7,6 @@
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -38,10 +37,6 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
 
-userver::yaml_config::Schema SettingsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
-
 models::SalesSettings SettingsComponent::GetSettings(const boost::uuids::uuid& organization) const {
     return helpers::ReadSalesSettings(
         cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetSettings, organization));
@@ -63,8 +58,7 @@ models::SalesSettings SettingsComponent::UpdateSettings(
         value.inquiry_number_template, value.reset_number_yearly);
     if (rows.IsEmpty())
         throw ApiError<409>{"revision_conflict", "Настройки изменены"};
-    const auto result =
-        helpers::ReadSalesSettings(transaction.Execute(sql::kGetSettings, value.organization_id));
+    const auto result = helpers::ReadSalesSettings(rows);
     transaction.Commit();
     return result;
 }

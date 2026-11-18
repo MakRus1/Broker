@@ -10,7 +10,6 @@ class SettingsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-settings";
     SettingsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::SalesSettings GetSettings(const boost::uuids::uuid& organization) const;
     models::SalesSettings UpdateSettings(const models::UpdateSalesSettingsRequest& request) const;
 

@@ -3,7 +3,6 @@
 #include <registry/fields.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -70,10 +69,6 @@ SalesRegistry::SalesRegistry(const userver::components::ComponentConfig& config,
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
-
-userver::yaml_config::Schema SalesRegistry::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::RegistryPage<models::SalesCard> SalesRegistry::ListCards(
     const boost::uuids::uuid& organization, const models::ListSalesRequest& request) const {

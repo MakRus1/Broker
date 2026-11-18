@@ -16,7 +16,6 @@
 #include <userver/storages/postgres/io/date.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace sales {
 namespace pg = userver::storages::postgres;
@@ -30,10 +29,6 @@ InquiriesComponent::InquiriesComponent(const userver::components::ComponentConfi
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
       transport_locations_(
           context.FindComponent<clients::transport_locations::Component>().GetClient()) {}
-
-userver::yaml_config::Schema InquiriesComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::Inquiry InquiriesComponent::SaveInquiry(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const {

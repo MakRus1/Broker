@@ -15,7 +15,6 @@ class InquiriesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-inquiries";
     InquiriesComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::Inquiry SaveInquiry(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const;
     models::Inquiry FindInquiry(

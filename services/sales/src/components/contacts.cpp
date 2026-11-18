@@ -7,7 +7,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/date.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 void ValidateContact(const std::string& result, const std::optional<std::string>& next_action,
@@ -31,10 +30,6 @@ ContactsComponent::ContactsComponent(const userver::components::ComponentConfig&
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
-
-userver::yaml_config::Schema ContactsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ContactAddition ContactsComponent::AddContact(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::AddSalesContactRequest& request) const {

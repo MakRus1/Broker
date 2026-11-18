@@ -13,7 +13,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -47,10 +46,6 @@ ProposalsComponent::ProposalsComponent(const userver::components::ComponentConfi
       rfq_(context.FindComponent<RfqComponent>()),
       finance_(context.FindComponent<clients::finance::Component>().GetClient()),
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()) {}
-
-userver::yaml_config::Schema ProposalsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
     const boost::uuids::uuid& organization, std::string_view token, const models::Inquiry& inquiry,
@@ -158,8 +153,8 @@ models::Proposal ProposalsComponent::SaveProposal(const boost::uuids::uuid& orga
         if (previous.status != models::ProposalStatus::Draft)
             throw ApiError<409>{
                 "proposal_frozen", "Создайте новый вариант на основе согласованной версии"};
-    } else if (transaction.Execute(sql::kListProposals, organization, value.input.inquiry_id)
-                   .Size() >= 100)
+    } else if (transaction.Execute(sql::kCountProposals, organization, value.input.inquiry_id)
+                   .AsSingleRow<std::int64_t>() >= 100)
         throw ApiError<409>{"proposal_limit", "В запросе уже 100 вариантов предложения"};
     value.revision = expected_revision + 1;
     StoreProposal(transaction, organization, value, expected_revision, identity.ActorId());

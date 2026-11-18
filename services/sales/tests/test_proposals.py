@@ -60,7 +60,7 @@ async def test_proposal_rounding_history_and_frozen_snapshot(api,finance):
     assert history[0]['snapshot']['input']['title']=='Морем'
     assert (await api.post(BASE+'list',{'id':incoming['id']},user='other'))['items']==[]
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':4,'action':'accept'},user='other',expected=404)
-    await api.post(BASE+'save',value,roles=['sales.read'],expected=403)
+    await api.post(BASE+'save',value,roles=['sales.read', 'transport_locations.read'],expected=403)
 
 async def test_cargo_required_before_calculating_proposal(api):
     incoming, value = await draft(api, cargo_description='')

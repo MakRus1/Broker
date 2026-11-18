@@ -69,7 +69,7 @@ def api(service_client, auth_key):
             roles = (
                 roles
                 if roles is not None
-                else ['finance.read_calculation_settings', 'finance.read_financial_labels', 'finance.write_financial_labels', 'finance.read_service_charges', 'finance.write_service_charges', 'finance.read_invoices', 'finance.write_invoices', 'finance.read_payments', 'finance.write_payments', 'counterparties.read_bank_accounts', 'shipments.read', 'transportations.read', 'contracts.read', 'counterparties.read', 'organizations.read_employees']
+                else ['finance.read_calculation_settings', 'finance.read_financial_labels', 'finance.write_financial_labels', 'finance.read_service_charges', 'finance.write_service_charges', 'finance.read_invoices', 'finance.write_invoices', 'finance.read_payments', 'finance.write_payments', 'counterparties.read_bank_accounts', 'shipments.read', 'transportations.read', 'contracts.read', 'counterparties.read', 'organizations.read_employees', 'transport_locations.read']
             )
             token = auth_key.token(
                 user,

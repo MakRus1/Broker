@@ -75,6 +75,7 @@ def api(service_client, auth_key):
                     'shipments.read',
                     'shipments.write',
                     'transportations.create',
+                    'transport_locations.read',
                 ]
             )
             token = auth_key.token(

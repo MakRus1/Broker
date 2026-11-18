@@ -66,7 +66,7 @@ def api(service_client, auth_key):
             roles = (
                 roles
                 if roles is not None
-                else ['transportations.read', 'transportations.write', 'transportations.create']
+                else ['transportations.read', 'transportations.write', 'transportations.create', 'transport_locations.read']
             )
             token = auth_key.token(
                 user,

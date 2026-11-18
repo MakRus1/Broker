@@ -176,7 +176,7 @@ async def test_organization_permissions_and_pagination(api, charge, scope):
     assert len(first['summary']['own']) == 1 and first['summary']['own'][0]['income_minor'] == '36000'
     result = await api.post(BASE+'list', {'scope':scope,'after':None,'limit':50,'include_archived':False}, user='other')
     assert result['items'] == [] and result['summary']['combined'] == []
-    await api.post(BASE+'save', await charge(), roles=['finance.read_service_charges'], expected=403)
+    await api.post(BASE+'save', await charge(), roles=['finance.read_service_charges', 'finance.read_calculation_settings'], expected=403)
     await api.post(BASE+'list', {'scope':scope,'after':None,'limit':50,'include_archived':False}, roles=['finance.read_financial_labels'], expected=403)
 
 

@@ -16,7 +16,7 @@ async def test_contexts_are_scoped_and_terms_are_current(api):
     )['shipment']
     body = {'shipment_ids': [shipment['id'].upper()]}
     response = await api.post(
-        '/api/v1/shipments/route-contexts', body, roles=['transportations.read']
+        '/api/v1/shipments/route-contexts', body, roles=['transportations.read', 'transport_locations.read']
     )
     assert response['items'][0]['route_segments'] == [stage]
     assert response['items'][0]['incoterms'] == 'FOB'
@@ -25,7 +25,7 @@ async def test_contexts_are_scoped_and_terms_are_current(api):
             '/api/v1/shipments/route-contexts',
             body,
             user='other',
-            roles=['transportations.read'],
+            roles=['transportations.read', 'transport_locations.read'],
         )
     )['items'] == []
 
@@ -45,7 +45,7 @@ async def test_used_stage_cannot_be_removed_or_retyped(api, transportation_route
             'expected_revision': 1,
             'segment_ids': [sea['id'].upper()],
         },
-        roles=['transportations.read', 'transportations.write'],
+        roles=['transportations.read', 'transportations.write', 'transport_locations.read'],
     )
     transportation_route_usage.add(sea['id'])
     changed = (
@@ -88,7 +88,7 @@ async def test_stale_usage_registration_rejected(api):
             'expected_revision': 1,
             'segment_ids': [stage['id']],
         },
-        roles=['transportations.read', 'transportations.write'],
+        roles=['transportations.read', 'transportations.write', 'transport_locations.read'],
         expected=409,
     )
 
@@ -100,7 +100,7 @@ async def test_failed_transportation_save_does_not_permanently_protect_stage(api
     await api.post(
         '/api/v1/shipments/route-segments/register-usage',
         {'shipment_id': shipment['id'], 'expected_revision': 1, 'segment_ids': [stage['id']]},
-        roles=['transportations.read', 'transportations.write'],
+        roles=['transportations.read', 'transportations.write', 'transport_locations.read'],
     )
 
     # У перевозки после регистрации откатилась запись; фактических данных участка нет.
@@ -121,7 +121,7 @@ async def test_registration_during_usage_check_requires_retry(api, mockserver):
     await api.post(
         '/api/v1/shipments/route-segments/register-usage',
         {'shipment_id': shipment['id'], 'expected_revision': 1, 'segment_ids': [stage['id']]},
-        roles=['transportations.read', 'transportations.write'],
+        roles=['transportations.read', 'transportations.write', 'transport_locations.read'],
     )
 
     @mockserver.json_handler('/api/v1/transportation-routes/usage')
@@ -130,7 +130,7 @@ async def test_registration_during_usage_check_requires_retry(api, mockserver):
             '/api/v1/shipments/route-segments/register-usage',
             {'shipment_id': shipment['id'], 'expected_revision': 1,
              'segment_ids': [stage['id']]},
-            roles=['transportations.read', 'transportations.write'],
+            roles=['transportations.read', 'transportations.write', 'transport_locations.read'],
         )
         return {'segment_ids': []}
 

@@ -275,7 +275,7 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
         usage = asyncio.create_task(api.post(
             '/api/v1/transportation-routes/usage', {'shipment_id': body['shipment_id']},
             roles=['shipments.write', 'shipments.read', 'organizations.read_employees',
-                   'counterparties.read'],
+                   'counterparties.read', 'transport_locations.read'],
         ))
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(asyncio.shield(usage), 0.2)

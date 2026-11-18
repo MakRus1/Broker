@@ -50,7 +50,7 @@ async def test_card_unique_customer_and_revision(api):
 
 async def test_sales_permissions(api):
     await api.post('/api/v1/sales/cards/list', {}, roles=[], expected=403)
-    await api.post('/api/v1/sales/cards/save', card(), roles=['sales.read'], expected=403)
+    await api.post('/api/v1/sales/cards/save', card(), roles=['sales.read', 'transport_locations.read'], expected=403)
 
 async def test_inquiry_dates_and_agreement(api):
     value = inquiry()
@@ -234,7 +234,7 @@ async def test_contact_history_updates_next_action_once_and_checks_access(api, p
     assert records['items'] == [result['item']]
     assert 'request' not in records['items'][0]
     await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id']}, user='other', expected=404)
-    await api.post('/api/v1/sales/contacts/add', contact, roles=['sales.read'], expected=403)
+    await api.post('/api/v1/sales/contacts/add', contact, roles=['sales.read', 'transport_locations.read'], expected=403)
     await api.post('/api/v1/sales/contacts/list', {'card_id': saved['id']}, roles=[], expected=403)
     history = (await api.post('/api/v1/sales/cards/history', {'id': saved['id']}))['items']
     assert len(history) == 2
@@ -283,7 +283,7 @@ async def test_contact_corrections_follow_source_and_preserve_newer_action(api):
     assert history[0]['snapshot']['result'] == 'Опечатка'
     assert history[1]['snapshot']['result'] == correction['result']
     await api.post('/api/v1/sales/contacts/update', correction, expected=409)
-    await api.post('/api/v1/sales/contacts/update', correction, roles=['sales.read'], expected=403)
+    await api.post('/api/v1/sales/contacts/update', correction, roles=['sales.read', 'transport_locations.read'], expected=403)
     await api.post('/api/v1/sales/contacts/update', correction, user='other', expected=404)
     assert (await api.post('/api/v1/sales/contacts/history', {'id': created['id']}, user='other'))['items'] == []
     invalid = {**correction, 'expected_revision': 2, 'result': '   '}

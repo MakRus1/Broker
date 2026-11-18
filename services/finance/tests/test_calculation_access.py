@@ -20,4 +20,4 @@ async def test_calculation_settings_require_explicit_permission(api):
         body = {} if 'settings' in path else {
             'date': '2026-11-18', 'from_currency': 'RUB', 'to_currency': 'RUB',
         }
-        await api.post(path, body, roles=['sales.read'], expected=403)
+        await api.post(path, body, roles=['sales.read', 'transport_locations.read'], expected=403)

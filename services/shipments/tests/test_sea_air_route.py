@@ -100,7 +100,7 @@ async def test_shared_fields_roundtrip_and_patch(api, locations, pgsql):
     contexts = await api.post(
         '/api/v1/shipments/route-contexts',
         {'shipment_ids': [created['id']]},
-        roles=['transportations.read'],
+        roles=['transportations.read', 'transport_locations.read'],
     )
     assert contexts['items'][0]['route_segments'] == route
     patched = (

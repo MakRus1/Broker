@@ -280,7 +280,7 @@ export function SalesPage({
                 !value.converting &&
                 !value.conversion_error &&
                 write &&
-                session.permissions.includes('shipments.write') && (
+                session.permissions.includes('shipments.create') && (
                   <button className="primary" disabled={busy} onClick={() => void createShipment()}>
                     {translate('sales.createShipment')}
                   </button>

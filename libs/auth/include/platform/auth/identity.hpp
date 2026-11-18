@@ -9,9 +9,11 @@
 #include <userver/server/request/request_context.hpp>
 
 namespace platform::auth {
-class Forbidden final : public std::runtime_error {
+class Forbidden final : public userver::server::handlers::ExceptionWithCode<
+                            userver::server::handlers::HandlerErrorCode::kForbidden> {
   public:
-    Forbidden() : std::runtime_error("Permission denied") {}
+    Forbidden()
+        : ExceptionWithCode(userver::server::handlers::InternalMessage{"Permission denied"}) {}
 };
 
 struct Identity {

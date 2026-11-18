@@ -166,13 +166,13 @@ components_manager:
             permissions:
                 /api/admin/shipments/settings/get: authenticated
                 /api/admin/shipments/settings/update: authenticated
-                /api/internal/v1/shipments/ensure-created: shipments.create
+                /api/internal/v1/shipments/ensure-created: shipments.ensure_created
                 /api/v1/shipment-items/add: shipments.write
                 /api/v1/shipment-items/list: shipments.read
                 /api/v1/shipment-items/update: shipments.write
                 /api/v1/shipments/cargo-suggestions: shipments.read
                 /api/v1/shipments/cargo-suggestions/remove: shipments.write
-                /api/v1/shipments/create: shipments.write
+                /api/v1/shipments/create: shipments.create
                 /api/v1/shipments/dictionaries: shipments.read
                 /api/v1/shipments/filter-values: shipments.read
                 /api/v1/shipments/get: shipments.read
@@ -184,6 +184,8 @@ components_manager:
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read
             permission-dependencies:
+                shipments.create:
+                - shipments.read
                 shipments.read:
                 - organizations.read_employees
                 - counterparties.read
@@ -195,7 +197,7 @@ components_manager:
                 transportations.write:
                 - transportations.read
             service-clients:
-                shipments.create:
+                shipments.ensure_created:
                 - sales-dispatcher
             organization-url: $organization-access-url
         auth-http-client:

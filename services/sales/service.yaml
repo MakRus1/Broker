@@ -37,7 +37,7 @@ auth:
     /api/v1/sales/inquiries/get: sales.read
     /api/v1/sales/inquiries/list: sales.read
     /api/v1/sales/inquiries/history: sales.read
-    /api/v1/sales/inquiries/create-shipment: sales.write
+    /api/v1/sales/inquiries/create-shipment: shipments.create
     /api/v1/sales/settings: sales.read
     /api/admin/sales/settings/get: authenticated
     /api/admin/sales/settings/update: authenticated
@@ -61,7 +61,7 @@ service_accounts:
     client_id: sales-dispatcher
     audience: broker-logistics
     permissions:
-    - shipments.create
+    - shipments.ensure_created
     - notifications.publish
     - finance.import_service_charges
     config:

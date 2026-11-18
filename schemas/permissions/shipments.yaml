@@ -13,6 +13,12 @@ shipments.write:
   requires:
   - shipments.read
 shipments.create:
+  name: Создание поставок
+  group: Поставки
+  scope: organization
+  requires:
+  - shipments.read
+shipments.ensure_created:
   name: Создание поставок служебной командой
   group: Служебные операции
   scope: service

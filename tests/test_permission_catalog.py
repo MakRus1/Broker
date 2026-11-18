@@ -37,6 +37,13 @@ class PermissionCatalogTest(unittest.TestCase):
             'transportations.read',
         }))
 
+    def test_shipment_creation_and_editing_are_independent(self):
+        values = load(ROOT)
+        self.assertEqual(values['shipments.create']['scope'], 'organization')
+        self.assertEqual(values['shipments.create']['requires'], ['shipments.read'])
+        self.assertNotIn('shipments.create', values['shipments.write']['requires'])
+        self.assertEqual(values['shipments.ensure_created']['scope'], 'service')
+
     def test_registration_uses_service_token_and_owned_entries(self):
         values = load(ROOT)
         entries = release_entries('shipments', values)

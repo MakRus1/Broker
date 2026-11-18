@@ -33,6 +33,7 @@ USER_PERMISSIONS = [
     'transport_locations.read',
     'shipments.read',
     'shipments.write',
+    'shipments.create',
     'transportations.read',
     'transportations.write',
 ]
@@ -56,7 +57,7 @@ def post(port, path, body, token, expected=200):
         response = error
     with response:
         data = response.read()
-        assert response.status == expected, (response.status, data.decode())
+        assert response.status == expected, (request.full_url, response.status, data.decode())
         return json.loads(data)
 
 
@@ -155,15 +156,26 @@ def run(build):
                     cursor.execute(migration.read_text())
             db.commit()
 
+        reservations = {}
+
+        def reserve_port():
+            # Удерживаем порт до запуска реплики, чтобы его не занял другой listener smoke.
+            listener = stack.enter_context(socket.socket())
+            listener.bind(('127.0.0.1', 0))
+            port = listener.getsockname()[1]
+            reservations[port] = listener
+            return port
+
         ports = {
-            service: [free_port(), free_port()] for service in ['shipments', 'transportations']
+            service: [reserve_port(), reserve_port()]
+            for service in ['shipments', 'transportations']
         }
 
         def start(service, index, receiver=None):
             source = ROOT / 'services' / service
             config = yaml.safe_load((source / 'configs/static_config.yaml').read_text())
             variables = yaml.safe_load((source / 'configs/config_vars.yaml').read_text())
-            port, monitor = ports[service][index], free_port()
+            port, monitor = ports[service][index], reserve_port()
             variables.update(
                 {
                     'server-port': port,
@@ -195,6 +207,8 @@ def run(build):
             config_path.write_text(yaml.safe_dump(config))
             vars_path.write_text(yaml.safe_dump(variables))
             log = stack.enter_context((work / f'{service}-{index}.log').open('w+'))
+            reservations.pop(port).close()
+            reservations.pop(monitor).close()
             process = subprocess.Popen(
                 [
                     str(build / f'services/{service}/{service}'),

@@ -86,7 +86,7 @@ export function ShipmentRegistry({
   }, [session, page.items, customers, onCustomersLoaded, onError]);
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || translate('lookup.counterpartyUnavailable');
-  const canCreate = session.permissions.includes('shipments.write');
+  const canCreate = session.permissions.includes('shipments.create');
   const hasFilters = Boolean(query.filters?.length);
   const createShipment = () => {
     location.hash = '/shipments/new/' + crypto.randomUUID();

@@ -196,7 +196,9 @@ function ShipmentCard({
   const [manualNumber, setManualNumber] = useState(Boolean(initial));
   const commands = useRef(new Commands());
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
-  const write = props.session.permissions.includes('shipments.write');
+  const write = props.session.permissions.includes(
+    initial ? 'shipments.write' : 'shipments.create',
+  );
   const [revision, setRevision] = useState(initial?.revision);
   const set = <K extends keyof CardDraft>(key: K, value: CardDraft[K]) =>
     setDraft((old) => ({ ...old, [key]: value }));

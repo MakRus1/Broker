@@ -402,3 +402,24 @@ async def test_creation_checks_customer_logist_before_queuing(api, mockserver):
     current = (await api.post('/api/v1/sales/inquiries/get', {'id': value['id']}))['item']
     assert not current['converting']
     assert current['revision'] == 2
+
+
+async def test_create_shipment_requires_sales_write_and_shipment_creation(api):
+    references = [
+        'counterparties.read', 'organizations.read_employees', 'transport_locations.read',
+        'finance.read_financial_labels', 'finance.read_calculation_settings',
+        'shipments.read', 'sales.read',
+    ]
+    command = {'id': str(uuid.uuid4()), 'expected_revision': 1}
+    await api.post(
+        '/api/v1/sales/inquiries/create-shipment', command,
+        roles=[*references, 'sales.write', 'shipments.write'], expected=403,
+    )
+    await api.post(
+        '/api/v1/sales/inquiries/create-shipment', command,
+        roles=[*references, 'shipments.create'], expected=403,
+    )
+    await api.post(
+        '/api/v1/sales/inquiries/create-shipment', command,
+        roles=[*references, 'sales.write', 'shipments.create'], expected=404,
+    )

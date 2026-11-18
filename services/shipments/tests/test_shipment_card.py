@@ -421,3 +421,23 @@ async def test_settings_without_customer_have_no_assigned_logist(api):
     settings = await api.post('/api/v1/shipments/settings', {})
     assert settings['customer_logist'] is None
     assert 'default_logist' not in settings
+
+
+async def test_creation_and_editing_permissions_are_independent(api):
+    references = [
+        'shipments.read', 'counterparties.read',
+        'organizations.read_employees', 'transport_locations.read',
+    ]
+    creator = [*references, 'shipments.create']
+    editor = [*references, 'shipments.write']
+    await api.post('/api/v1/shipments/create', creation(), roles=editor, expected=403)
+    created = (await api.post(
+        '/api/v1/shipments/create', creation(), roles=creator, expected=201,
+    ))['shipment']
+    change = {
+        'shipment_id': created['id'], 'expected_revision': created['revision'],
+        'reference': 'Исправлено редактором',
+    }
+    await api.post('/api/v1/shipments/update', change, roles=creator, expected=403)
+    updated = (await api.post('/api/v1/shipments/update', change, roles=editor))['shipment']
+    assert updated['reference'] == change['reference']

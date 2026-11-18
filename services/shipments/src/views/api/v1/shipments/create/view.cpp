@@ -11,7 +11,7 @@ namespace shipments::views::api::v1::shipments::create {
 Response View::Handle(
     Request&& request, userver::server::request::RequestContext& context, Deps deps) try {
     const auto& actor = platform::auth::GetIdentity(context);
-    platform::auth::CheckPermission(context, permissions::SHIPMENTS_WRITE);
+    platform::auth::CheckPermission(context, permissions::SHIPMENTS_CREATE);
     const auto organization = platform::auth::GetOrganization(actor);
     const auto& access_token = platform::auth::GetAccessToken(context);
 

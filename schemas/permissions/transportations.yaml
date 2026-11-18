@@ -2,7 +2,8 @@ transportations.read:
   name: Просмотр перевозок
   group: Перевозки
   scope: organization
-  requires: []
+  requires:
+  - transport_locations.read
 transportations.write:
   name: Изменение перевозок
   group: Перевозки

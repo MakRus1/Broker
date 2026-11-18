@@ -71,6 +71,7 @@ def api(service_client, auth_key):
                 else [
                     'counterparties.read',
                     'organizations.read_employees',
+                    'transport_locations.read',
                     'shipments.read',
                     'transportations.read',
                     'shipments.write',

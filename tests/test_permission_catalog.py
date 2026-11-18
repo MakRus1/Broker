@@ -17,6 +17,26 @@ from openapi_gen.permissions import catalog
 
 
 class PermissionCatalogTest(unittest.TestCase):
+    def test_sales_write_requires_references_without_operational_finance_access(self):
+        values = load(ROOT)
+        selected = set()
+        pending = ['sales.write']
+        while pending:
+            code = pending.pop()
+            if code in selected:
+                continue
+            selected.add(code)
+            pending.extend(values[code]['requires'])
+        self.assertTrue({
+            'transport_locations.read', 'finance.read_calculation_settings',
+            'finance.read_financial_labels',
+        } <= selected)
+        self.assertTrue(selected.isdisjoint({
+            'finance.read_service_charges', 'finance.read_invoices',
+            'finance.read_payments', 'shipments.read', 'shipments.write',
+            'transportations.read',
+        }))
+
     def test_registration_uses_service_token_and_owned_entries(self):
         values = load(ROOT)
         entries = release_entries('shipments', values)

@@ -5,6 +5,7 @@ shipments.read:
   requires:
   - organizations.read_employees
   - counterparties.read
+  - transport_locations.read
 shipments.write:
   name: Изменение поставок
   group: Поставки

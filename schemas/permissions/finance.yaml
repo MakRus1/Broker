@@ -1,3 +1,8 @@
+finance.read_calculation_settings:
+  name: Просмотр валюты расчёта и курсов
+  group: Финансы
+  scope: organization
+  requires: []
 finance.read_financial_labels:
   name: Просмотр финансовых меток
   group: Финансовые метки
@@ -16,6 +21,7 @@ finance.read_service_charges:
   requires:
   - shipments.read
   - transportations.read
+  - finance.read_calculation_settings
 finance.write_service_charges:
   name: Изменение услуг
   group: Финансы

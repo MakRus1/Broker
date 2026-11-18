@@ -226,6 +226,7 @@ async def test_custom_role_updates_permissions_for_all_assigned_members(api, ide
         'permissions': [
             'organizations.read_employees',
             'shipments.read',
+            'transport_locations.read',
             'shipments.write',
             'counterparties.read',
         ],
@@ -260,6 +261,7 @@ async def test_custom_role_updates_permissions_for_all_assigned_members(api, ide
                 'counterparties.read',
                 'organizations.read_employees',
                 'shipments.read',
+                'transport_locations.read',
             ],
             'expected_revision': role['revision'],
         },
@@ -317,6 +319,7 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
                 'counterparties.read',
                 'organizations.read_employees',
                 'shipments.read',
+                'transport_locations.read',
             ],
         },
         user='org-admin',
@@ -333,6 +336,7 @@ async def test_roles_are_isolated_and_cannot_remove_last_administrator(api):
                 'counterparties.read',
                 'organizations.read_employees',
                 'shipments.read',
+                'transport_locations.read',
             ],
             'expected_revision': 1,
         },
@@ -630,3 +634,27 @@ async def test_employee_logs_mask_name_and_search(api, service_client, auth_key)
                for body in incoming if body.startswith('{'))
     assert any(json.loads(body) == {'items': [{'subject': 'viewer', 'display_name': '***'}]}
                for body in outgoing if body.startswith('{'))
+
+
+async def test_sales_role_can_read_references_without_operational_data(api, pgsql):
+    permissions = [
+        'sales.read', 'sales.write', 'counterparties.read', 'organizations.read_employees',
+        'transport_locations.read', 'finance.read_financial_labels',
+        'finance.read_calculation_settings',
+    ]
+    role = (await api.call(ADMIN + '/roles/create', {
+        'organization_id': ORGANIZATION, 'id': 'sales-reference-reader',
+        'name': 'Менеджер продаж', 'description': '', 'permissions': permissions,
+    }, user='org-admin', expected=201))['role']
+    with pgsql['db_1'].cursor() as cursor:
+        insert_member(cursor, ORGANIZATION, 'sales-manager', role['id'])
+    for permission in permissions:
+        await api.call('/api/organizations/access', {
+            'organization_id': ORGANIZATION, 'permission': permission,
+        }, user='sales-manager')
+    for permission in ('finance.read_service_charges', 'finance.read_invoices',
+                       'finance.read_payments', 'shipments.read', 'shipments.write',
+                       'transportations.read'):
+        await api.call('/api/organizations/access', {
+            'organization_id': ORGANIZATION, 'permission': permission,
+        }, user='sales-manager', expected=403)

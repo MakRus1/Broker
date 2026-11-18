@@ -11,7 +11,6 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/text_light.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -38,10 +37,6 @@ RfqComponent::RfqComponent(const userver::components::ComponentConfig& config,
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()),
       finance_(context.FindComponent<clients::finance::Component>().GetClient()) {}
-
-userver::yaml_config::Schema RfqComponent::GetStaticConfigSchema() {
-    return userver::components::ComponentBase::GetStaticConfigSchema();
-}
 
 models::Rfq RfqComponent::FindRfq(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
@@ -131,7 +126,8 @@ models::Rfq RfqComponent::SaveRfq(const boost::uuids::uuid& organization,
         (previous && previous->input.inquiry_id != input.inquiry_id))
         throw ApiError<409>{"revision_conflict", "Запрос ставок изменён. Откройте его заново"};
     if (!previous &&
-        transaction.Execute(sql::kListRfqs, organization, input.inquiry_id).Size() >= 100)
+        transaction.Execute(sql::kCountRfqs, organization, input.inquiry_id)
+                .AsSingleRow<std::int64_t>() >= 100)
         throw ApiError<409>{"rfq_limit", "Во входящем запросе уже 100 запросов ставок"};
     models::Rfq value{.input = std::move(input),
         .inquiry_number = inquiry.number,

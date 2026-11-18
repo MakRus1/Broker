@@ -171,3 +171,31 @@ async def test_rfq_requires_active_responsible_before_saving(api, mockserver):
     response = await api.post(BASE + 'save', value, expected=400)
     assert response['error'] == 'invalid_manager'
     assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []
+
+
+@pytest.mark.parametrize('kind', ['rfqs', 'proposals'])
+async def test_inquiry_variant_limit_allows_last_variant_and_existing_edits(api, pgsql, kind):
+    from test_proposals import draft
+
+    incoming, value = await (setup_rfq(api) if kind == 'rfqs' else draft(api))
+    path = '/api/v1/sales/' + kind + '/save'
+    await api.post(path, value)
+    table = 'sales_rfqs' if kind == 'rfqs' else 'sales_proposals'
+    columns = 'organization_id, inquiry_id, id, revision, document'
+    projection = "organization_id, inquiry_id, seed.id, 1, jsonb_set(document, '{input,id}', to_jsonb(seed.id::text))"
+    if kind == 'proposals':
+        columns += ', status'
+        projection += ', status'
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute(f"""
+            INSERT INTO {table} ({columns})
+            SELECT {projection}
+            FROM {table}
+            CROSS JOIN (SELECT gen_random_uuid() AS id FROM generate_series(1, 98)) AS seed
+            WHERE {table}.id = %s::uuid
+        """, (value['id'],))
+    await api.post(path, {**value, 'id': str(uuid4())})
+    result = await api.post(path, {**value, 'id': str(uuid4())}, expected=409)
+    assert result['error'] == ('rfq_limit' if kind == 'rfqs' else 'proposal_limit')
+    updated = await api.post(path, {**value, 'expected_revision': 1, 'title': 'Исправленный'})
+    assert updated['item']['revision'] == 2

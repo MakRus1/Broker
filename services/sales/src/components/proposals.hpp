@@ -16,7 +16,6 @@ class ProposalsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-proposals";
     ProposalsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     // Подставляет снимки исходных котировок в input и загружает данные для расчёта.
     models::ProposalCalculation PrepareProposalCalculation(const boost::uuids::uuid& organization,
         std::string_view access_token, const models::Inquiry& inquiry,

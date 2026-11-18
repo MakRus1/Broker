@@ -9,7 +9,6 @@ class SalesRegistry final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-registry";
     SalesRegistry(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
     models::RegistryPage<models::SalesCard> ListCards(
         const boost::uuids::uuid& organization, const models::ListSalesRequest&) const;
     models::RegistryPage<models::Inquiry> ListInquiries(

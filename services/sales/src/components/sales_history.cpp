@@ -4,7 +4,6 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -32,10 +31,6 @@ SalesHistoryComponent::SalesHistoryComponent(const userver::components::Componen
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
-
-userver::yaml_config::Schema SalesHistoryComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 std::vector<models::SalesHistoryEntry> SalesHistoryComponent::GetCardHistory(
     const boost::uuids::uuid& organization, const models::HistoryRequest& request) const {

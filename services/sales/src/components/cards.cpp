@@ -6,7 +6,6 @@
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
-#include <userver/yaml_config/merge_schemas.hpp>
 
 namespace {
 namespace models = sales::models;
@@ -30,10 +29,6 @@ CardsComponent::CardsComponent(const userver::components::ComponentConfig& confi
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-sales").GetCluster()) {}
-
-userver::yaml_config::Schema CardsComponent::GetStaticConfigSchema() {
-    return ComponentBase::GetStaticConfigSchema();
-}
 
 models::SalesCard CardsComponent::SaveCard(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveSalesCardRequest& request) const {

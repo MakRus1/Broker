@@ -10,7 +10,6 @@ class ContactsComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-contacts";
     ContactsComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
-    static userver::yaml_config::Schema GetStaticConfigSchema();
 
     models::ContactAddition AddContact(const boost::uuids::uuid& organization,
         const platform::auth::Identity& identity,

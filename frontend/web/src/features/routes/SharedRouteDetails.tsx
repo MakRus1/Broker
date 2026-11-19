@@ -4,7 +4,7 @@ import { IsoDateInput } from '../../shared/dates/DateInput';
 import { useEffect, useState, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
-import { type SeaDetails, type AirDetails, type TransportLocation } from './types';
+import { type SeaDetails, type AirDetails, type TransportLocation, type RoutePlan } from './types';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
 import { TransportLocationLookup } from '../directories/TransportLocationLookup';
 import { businessDate, calendarDate } from '../../shared/dates/calendar';
@@ -178,12 +178,12 @@ export function CompanyName({
   return <>{id ? known || name || translate('filter.loading') : '—'}</>;
 }
 export function sharedRouteDirection(
-  value: { sea?: SeaDetails; air?: AirDetails },
+  value: { sea?: SeaDetails; air?: AirDetails; plan?: RoutePlan },
   locale: Locale,
 ) {
   const from = value.sea?.pol ?? value.air?.origin_airport;
   const to = value.sea?.pod ?? value.air?.destination_airport;
-  return `${from?.name || translateMessage(locale, 'routeFilter.pointNotSet')} → ${to?.name || translateMessage(locale, 'routeFilter.pointNotSet')}`;
+  return `${from?.name || value.plan?.origin_name || translateMessage(locale, 'routeFilter.pointNotSet')} → ${to?.name || value.plan?.destination_name || translateMessage(locale, 'routeFilter.pointNotSet')}`;
 }
 export function SharedRouteDetailsView({
   planningOnly = false,

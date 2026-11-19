@@ -97,8 +97,10 @@ async def test_proposal_validation(api):
 async def test_accepted_proposal_transfer_retries_without_changing_import(api,mockserver):
     @mockserver.json_handler('/service-token')
     def token(request):return {'access_token':'sales-delivery-token'}
+    commands = []
     @mockserver.json_handler('/api/internal/v1/shipments/ensure-created')
     def shipment(request):
+        commands.append(copy.deepcopy(request.json))
         return {'shipment':{'id':SHIPMENT,'revision':1,'number':'S-1','customer_id':CUSTOMER,
                 'shipment_date':'2026-11-08','status':'Новая','route_segments':[]}}
     deliveries=[]
@@ -107,7 +109,10 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
         deliveries.append(copy.deepcopy(request.json))
         if len(deliveries)==1:return mockserver.make_response(status=503,json={'error':'unavailable','message':'Retry'})
         return mockserver.make_response(status=200,json={'imported':True})
-    incoming,value=await draft(api)
+    segments = [{'id': str(uuid4()), 'type': 'international_road', 'plan': {
+        'origin_name': 'Роттердам', 'destination_name': 'Москва',
+        'departure_date': '2030-01-10', 'arrival_date': '2030-01-15'}}]
+    incoming,value=await draft(api, route_segments=segments)
     await api.post(BASE+'save',value)
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':1,'action':'offer'})
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':2,'action':'accept'})
@@ -117,6 +122,7 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
         if item.get('shipment_id'):break
         await asyncio.sleep(.05)
     assert item['shipment_id']==SHIPMENT
+    assert commands[0]['shipment']['route_segments'] == segments
     assert len(deliveries)==2
     assert deliveries[0]==deliveries[1]
     lines=deliveries[0]['items']

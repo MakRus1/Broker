@@ -33,7 +33,7 @@ struct ShipmentData {
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::shipments::models::pg::ShipmentData> {
-    static constexpr DBTypeName postgres_name = "public.shipment_data_v3";
+    static constexpr DBTypeName postgres_name = "public.shipment_data_v4";
 };
 
 }  // namespace userver::storages::postgres::io

@@ -98,6 +98,7 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
             used.push_back(value.id);
 
         value.inherited = stored.inherited;
+        value.plan = stored.plan;
         value.sea = stored.sea;
         value.air = stored.air;
         value.actual_departure_at = stored.actual_departure_at;

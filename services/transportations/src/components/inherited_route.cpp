@@ -37,6 +37,9 @@ void InheritRoute(models::Transportation& transportation, const models::Shipment
         value.id = stage.id;
         value.inherited = true;
         value.mode = models::ParseEnumScalar(stage.type, models::TransportMode{});
+        value.plan.reset();
+        if (stage.plan)
+            value.plan = Convert(*stage.plan);
         value.sea.reset();
         value.air.reset();
         if (stage.sea.has_value())

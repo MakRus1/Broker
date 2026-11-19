@@ -36,20 +36,31 @@ export function routePoint(segment: RouteSegment, point: 'origin' | 'destination
 }
 
 export function routeDirection(segment: RouteSegment, locale: Locale = 'ru'): string {
+  const plannedDirection =
+    segment.plan && (segment.plan.origin_name || segment.plan.destination_name)
+      ? `${segment.plan.origin_name || translate(locale, 'transport.pointMissing')} → ${segment.plan.destination_name || translate(locale, 'transport.pointMissing')}`
+      : undefined;
   if (segment.mode === 'international_road')
     return segment.international_road?.loading_terminal_id
       ? translate(locale, 'transport.loadingSpecified')
-      : translate(locale, 'transport.loadingMissing');
+      : (plannedDirection ?? translate(locale, 'transport.loadingMissing'));
   if (segment.mode === 'road' || segment.mode === 'pickup')
     return (
       segment.pickup?.delivery_city ||
       segment.pickup?.delivery_address ||
+      plannedDirection ||
       translate(locale, 'transport.deliveryMissing')
     );
   const fallback =
     segment.mode === 'rail' || segment.mode === 'international_rail'
       ? translate(locale, 'transport.stationMissing')
       : translate(locale, 'transport.pointMissing');
+  if (
+    !routePoint(segment, 'origin').name &&
+    !routePoint(segment, 'destination').name &&
+    plannedDirection
+  )
+    return plannedDirection;
   return `${routePoint(segment, 'origin').name || fallback} → ${routePoint(segment, 'destination').name || fallback}`;
 }
 

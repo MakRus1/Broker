@@ -70,3 +70,28 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
     cursor = pgsql['db_1'].cursor()
     cursor.execute('SELECT document FROM route_segments WHERE transportation_id=%s', (ids[0],))
     assert date_field not in cursor.fetchone()[0]
+
+
+@pytest.mark.parametrize('mode', ['international_road', 'road', 'rail', 'pickup'])
+async def test_inherited_plan_is_live_and_not_overwritten_by_execution(api, shipment_routes, pgsql, mode):
+    shipment = str(uuid4())
+    stage = route_segment(mode)
+    stage['plan'] = {'origin_name': 'Роттердам', 'destination_name': 'Москва',
+                     'departure_date': '2030-01-10', 'arrival_date': '2030-01-15'}
+    shipment_routes.set(shipment, [stage])
+    created = (await api.post('/api/v1/transportations/create', {
+        'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container', 'hazardous': False,
+    }))['transportation']
+    assert created['route_segments'][0]['plan'] == stage['plan']
+    changed = (await api.post('/api/v1/transportation-routes/set', {
+        'transportation_id': created['id'], 'expected_revision': 1,
+        'route_segments': [{'id': stage['id'], 'mode': mode}],
+    }))['transportation']
+    assert changed['route_segments'][0]['plan'] == stage['plan']
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT document FROM route_segments WHERE transportation_id=%s', (created['id'],))
+        assert 'plan' not in cursor.fetchone()[0]
+    stage['plan']['destination_name'] = 'Казань'
+    shipment_routes.set(shipment, [stage], revision=2)
+    fetched = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
+    assert fetched['route_segments'][0]['plan'] == stage['plan']

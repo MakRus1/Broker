@@ -26,7 +26,18 @@ export interface AirDetails {
   arrival_date?: string;
   flight_number?: string;
 }
+export interface RoutePlan {
+  origin_name?: string;
+  origin_country?: string;
+  origin_address?: string;
+  destination_name?: string;
+  destination_country?: string;
+  destination_address?: string;
+  departure_date?: string;
+  arrival_date?: string;
+}
 export interface ShipmentRouteSegment {
+  plan?: RoutePlan;
   id: string;
   type: string;
   sea?: SeaDetails;

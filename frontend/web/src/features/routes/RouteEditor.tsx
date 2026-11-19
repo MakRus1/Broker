@@ -1,3 +1,4 @@
+import { RoutePlanView } from './RoutePlan';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordActions } from '../../shared/ui/record/RecordLayout';
@@ -223,6 +224,12 @@ export function RouteEditor({
                   </span>
                 </summary>
                 <div className="route-fields">
+                  {sharedStage(route_segment).plan && (
+                    <section className="route-plan-source">
+                      <h4>{translate('route.sourcePlan')}</h4>
+                      <RoutePlanView value={sharedStage(route_segment).plan} />
+                    </section>
+                  )}
                   <div className="route-contractor-field">
                     <CustomerSelect
                       label={translate('registryValue.roles.carrier')}

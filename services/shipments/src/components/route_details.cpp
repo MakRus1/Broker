@@ -3,6 +3,7 @@
 #include <components/route_details.hpp>
 #include <models/errors.hpp>
 #include <platform/date_validation.hpp>
+#include <platform/route_plan.hpp>
 #include <userver/utils/datetime.hpp>
 
 namespace shipments::route_details {
@@ -46,6 +47,7 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
 }
 
 void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segments) {
+    platform::ValidateRoutePlans(segments);
     for (const auto& segment : segments) {
         if (segment.sea.has_value()) {
             if (segment.type != "sea")

@@ -1414,5 +1414,13 @@
   "route.planDeparture": "Planned departure date",
   "route.planArrival": "Planned arrival date",
   "route.planEmpty": "The route plan is not filled in yet.",
-  "route.sourcePlan": "Route plan from shipment"
+  "route.sourcePlan": "Route plan from shipment",
+  "proposal.profitNeedsPurchase": "Add a purchase price to see profit and margin.",
+  "proposal.purchaseNet": "Purchase excluding VAT",
+  "proposal.saleNet": "Sale excluding VAT",
+  "proposal.markup": "Markup",
+  "proposal.profitDifferentCurrencies": "Purchase and sale currencies differ. Profit will be calculated after saving using exchange rates for the calculation date.",
+  "proposal.profitBasis": "Totals for the specified quantity excluding VAT. Markup is relative to purchase; margin is relative to sale.",
+  "proposal.lossHint": "Sale is below purchase — this service makes a loss. Check the customer price.",
+  "proposal.zeroProfitHint": "Profit is zero. Check the customer price before sending the proposal."
 }

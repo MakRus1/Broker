@@ -1,0 +1,68 @@
+.sidebar-navigation {
+  min-width: 0;
+}
+.sidebar-scroll-cue {
+  display: none;
+}
+@media (min-width: 651px) {
+  .sidebar-navigation {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: 12px;
+  }
+  .sidebar .sidebar-navigation nav {
+    height: 100%;
+    margin: 0;
+    padding-block: 30px;
+  }
+  .sidebar-scroll-cue {
+    position: absolute;
+    inset-inline: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .sidebar-scroll-cue.above {
+    top: 0;
+    padding-bottom: 10px;
+    background: linear-gradient(var(--navigation) 65%, transparent);
+  }
+  .sidebar-scroll-cue.below {
+    bottom: 0;
+    padding-top: 10px;
+    background: linear-gradient(transparent, var(--navigation) 35%);
+  }
+  .sidebar-scroll-cue button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 26px;
+    padding: 2px 7px;
+    border: 1px solid var(--navigation-border);
+    border-radius: 6px;
+    color: var(--navigation-text);
+    background: var(--navigation-hover);
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: auto;
+  }
+  .sidebar-scroll-cue button:hover {
+    border-color: var(--navigation-text);
+  }
+  .sidebar-scroll-cue span {
+    display: none;
+  }
+  .sidebar:is(:hover, :has(:focus-visible)) .sidebar-scroll-cue span,
+  .navigation-pinned .sidebar-scroll-cue span {
+    display: inline;
+  }
+}
+@media (max-width: 650px) {
+  .sidebar-navigation {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+}

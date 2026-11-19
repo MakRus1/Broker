@@ -31,7 +31,7 @@ export function SidebarNavigation({ children }: { children: ReactNode }) {
     if (element) element.scrollTop += direction * Math.max(100, element.clientHeight * 0.65);
   }
   return (
-    <div className="sidebar-navigation">
+    <div className="sidebar-navigation" data-above={edges.above}>
       <nav ref={navigation} aria-label={translate('workspace.sections')}>
         {children}
       </nav>
@@ -44,9 +44,6 @@ export function SidebarNavigation({ children }: { children: ReactNode }) {
             aria-label={translate(
               edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
             )}
-            title={translate(
-              edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-            )}
           >
             <svg
               width="16"
@@ -57,7 +54,9 @@ export function SidebarNavigation({ children }: { children: ReactNode }) {
               strokeWidth="2"
               aria-hidden="true"
             >
-              <path d={edge === 'above' ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+              <path
+                d={edge === 'above' ? 'm6 16 6-6 6 6 M6 10l6-6 6 6' : 'm6 8 6 6 6-6 M6 14l6 6 6-6'}
+              />
             </svg>
             <span>
               {translate(edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow')}

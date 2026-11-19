@@ -1,3 +1,4 @@
+import { ProposalProfit } from './ProposalProfit';
 import { CompanyName } from '../routes/SharedRouteDetails';
 import { NumberField, PriceFields } from './ProposalFields';
 import { RfqQuotePicker } from './rfq/RfqQuotePicker';
@@ -475,6 +476,7 @@ export function SalesProposals({
                         {translate('proposal.addPurchase')}
                       </button>
                     )}
+                    <ProposalProfit line={line} />
                     <label>
                       {translate('sales.note')}
                       <input

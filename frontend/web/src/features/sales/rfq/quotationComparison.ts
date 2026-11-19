@@ -1,15 +1,11 @@
+import { proposalAmounts } from '../proposalAmounts';
 import type { ProposalLine } from '../proposals';
 import type { Rfq, RfqQuote, RfqQuoteLine } from './types';
 
 export function quotationTotals(lines: RfqQuoteLine[]) {
   const totals = new Map<string, { currency: string; net: bigint; vat: bigint; total: bigint }>();
   for (const line of lines) {
-    const amount = (BigInt(line.quantity_milli) * BigInt(line.price.price_minor) + 500n) / 1000n;
-    const rate =
-      line.price.vat_mode === 'exempt' ? 0n : BigInt(line.price.vat_rate_basis_points ?? 0);
-    const divisor = line.price.price_mode === 'gross' ? 10000n + rate : 10000n;
-    const vat = (amount * rate + divisor / 2n) / divisor;
-    const net = line.price.price_mode === 'gross' ? amount - vat : amount;
+    const { net, vat } = proposalAmounts(line.quantity_milli, line.price);
     const previous = totals.get(line.price.currency) ?? {
       currency: line.price.currency,
       net: 0n,

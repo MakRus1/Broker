@@ -155,3 +155,31 @@
 .sales-proposals .proposal-add-service {
   margin-top: 16px;
 }
+
+.proposal-live-profit {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+.proposal-live-profit dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin: 0;
+}
+.proposal-live-profit dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.proposal-live-profit dd {
+  margin: 0;
+  font-weight: 600;
+}
+.proposal-live-profit p {
+  margin: 12px 0 0;
+}
+.proposal-zero-profit {
+  border-left: 3px solid var(--accent-text);
+  padding-left: 12px;
+}

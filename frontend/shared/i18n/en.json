@@ -133,6 +133,8 @@
   "nav.serviceCharges": "Service charges",
   "nav.financialLabels": "Financial labels",
   "workspace.accessDenied": "You do not have permission to open this section.",
+  "workspace.sectionsAbove": "Sections above",
+  "workspace.sectionsBelow": "More sections",
   "workspace.title": "Workspace",
   "workspace.sections": "Sections",
   "workspace.operations": "Operations",

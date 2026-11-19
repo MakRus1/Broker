@@ -7,6 +7,7 @@ import { interfaceText } from '../shared/localization/interfaceText';
 import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
 import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
 import { WorkspaceHome } from './WorkspaceHome';
+import { SidebarNavigation } from './SidebarNavigation';
 import { workspaceSections, workspaceSection, canOpenWorkspace } from './workspaceSections';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
@@ -328,7 +329,7 @@ function WorkspaceApp() {
           </button>
         </div>
         <span className="nav-label">{translate('workspace.title')}</span>
-        <nav aria-label={translate('workspace.sections')}>
+        <SidebarNavigation>
           <button
             aria-label={translate('home.navigation')}
             title={translate('home.navigation')}
@@ -372,7 +373,7 @@ function WorkspaceApp() {
                 <span className="navigation-text">{translate(section.title)}</span>
               </button>
             ))}
-        </nav>
+        </SidebarNavigation>
         <div className="profile">
           <span className="avatar">
             {(session.display_name || session.subject).slice(0, 1).toUpperCase()}

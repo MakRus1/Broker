@@ -35,40 +35,36 @@ export function SidebarNavigation({ children }: { children: ReactNode }) {
       <nav ref={navigation} aria-label={translate('workspace.sections')}>
         {children}
       </nav>
-      {(['above', 'below'] as const).map(
-        (edge) =>
-          edges[edge] && (
-            <div key={edge} className={`sidebar-scroll-cue ${edge}`}>
-              <button
-                type="button"
-                onClick={() => scroll(edge === 'above' ? -1 : 1)}
-                aria-label={translate(
-                  edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-                )}
-                title={translate(
-                  edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-                )}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path d={edge === 'above' ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
-                </svg>
-                <span>
-                  {translate(
-                    edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-                  )}
-                </span>
-              </button>
-            </div>
-          ),
-      )}
+      {(['above', 'below'] as const).map((edge) => (
+        <div key={edge} className={`sidebar-scroll-cue ${edge}`} data-visible={edges[edge]}>
+          <button
+            type="button"
+            disabled={!edges[edge]}
+            onClick={() => scroll(edge === 'above' ? -1 : 1)}
+            aria-label={translate(
+              edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
+            )}
+            title={translate(
+              edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
+            )}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d={edge === 'above' ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+            </svg>
+            <span>
+              {translate(edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow')}
+            </span>
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

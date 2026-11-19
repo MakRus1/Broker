@@ -26,45 +26,11 @@ export function SidebarNavigation({ children }: { children: ReactNode }) {
       element.removeEventListener('scroll', update);
     };
   }, [children]);
-  function scroll(direction: number) {
-    const element = navigation.current;
-    if (element) element.scrollTop += direction * Math.max(100, element.clientHeight * 0.65);
-  }
   return (
-    <div className="sidebar-navigation">
+    <div className="sidebar-navigation" data-above={edges.above} data-below={edges.below}>
       <nav ref={navigation} aria-label={translate('workspace.sections')}>
         {children}
       </nav>
-      {(['above', 'below'] as const).map((edge) => (
-        <div key={edge} className={`sidebar-scroll-cue ${edge}`} data-visible={edges[edge]}>
-          <button
-            type="button"
-            disabled={!edges[edge]}
-            onClick={() => scroll(edge === 'above' ? -1 : 1)}
-            aria-label={translate(
-              edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-            )}
-            title={translate(
-              edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow',
-            )}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path d={edge === 'above' ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
-            </svg>
-            <span>
-              {translate(edge === 'above' ? 'workspace.sectionsAbove' : 'workspace.sectionsBelow')}
-            </span>
-          </button>
-        </div>
-      ))}
     </div>
   );
 }

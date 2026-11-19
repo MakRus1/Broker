@@ -1409,5 +1409,13 @@
   "rfq.added": "Already in proposal",
   "rfq.expired": "This quotation is not valid on the calculation date. Choose another option or change the calculation date.",
   "rfq.noReadyQuotes": "No ready quotations yet. Complete a rate request to import services.",
-  "rfq.selectedCount": "Selected services: {count}"
+  "rfq.selectedCount": "Selected services: {count}",
+  "proposal.profitNeedsPurchase": "Add a purchase price to see profit and margin.",
+  "proposal.purchaseNet": "Purchase excluding VAT",
+  "proposal.saleNet": "Sale excluding VAT",
+  "proposal.markup": "Markup",
+  "proposal.profitDifferentCurrencies": "Purchase and sale currencies differ. Profit will be calculated after saving using exchange rates for the calculation date.",
+  "proposal.profitBasis": "Totals for the specified quantity excluding VAT. Markup is relative to purchase; margin is relative to sale.",
+  "proposal.lossHint": "Sale is below purchase — this service makes a loss. Check the customer price.",
+  "proposal.zeroProfitHint": "Profit is zero. Check the customer price before sending the proposal."
 }

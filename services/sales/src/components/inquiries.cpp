@@ -9,6 +9,7 @@
 #include <platform/document_number.hpp>
 #include <platform/http_client.hpp>
 #include <platform/outbox/component.hpp>
+#include <platform/route_plan.hpp>
 #include <sales/sql_queries.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
@@ -33,6 +34,7 @@ InquiriesComponent::InquiriesComponent(const userver::components::ComponentConfi
 models::Inquiry InquiriesComponent::SaveInquiry(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const {
     const auto& value = request;
+    platform::ValidateRoutePlans(value.route_segments);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto previous = transaction.Execute(sql::kLockInquiries, organization, value.id);

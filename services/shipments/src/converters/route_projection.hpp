@@ -44,10 +44,24 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
     return result;
 }
 
+inline clients::transportations::models::RoutePlan ToRouteProjection(
+    const models::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline clients::transportations::models::ProjectedRouteSegment ToRouteProjection(
     const models::ShipmentRouteSegment& value) {
     clients::transportations::models::ProjectedRouteSegment result{
         .id = value.id, .type = value.type};
+    if (value.plan)
+        result.plan = ToRouteProjection(*value.plan);
     if (value.sea.has_value())
         result.sea = ToRouteProjection(value.sea.value());
     if (value.air.has_value())

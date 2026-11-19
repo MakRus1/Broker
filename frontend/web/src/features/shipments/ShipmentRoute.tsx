@@ -1,3 +1,4 @@
+import { RoutePlanFields, RoutePlanView } from '../routes/RoutePlan';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { useRouteCollapse } from '../routes/routeCollapse';
@@ -72,11 +73,7 @@ export function ShipmentRoute({
               <h3>
                 {index + 1}. {title(segment.type)}
               </h3>
-              <span className="route-summary-meta">
-                {segment.type === 'sea' || segment.type === 'air'
-                  ? sharedRouteDirection(segment, locale)
-                  : translate('shipment.filledInTransportation')}
-              </span>
+              <span className="route-summary-meta">{sharedRouteDirection(segment, locale)}</span>
             </summary>
             {onChange ? (
               <>
@@ -145,7 +142,18 @@ export function ShipmentRoute({
                     }
                   />
                 ) : (
-                  <p className="muted">{translate('shipment.separateSegmentHint')}</p>
+                  <RoutePlanFields
+                    value={segment.plan ?? {}}
+                    session={session}
+                    onChange={(plan) =>
+                      update(index, {
+                        ...segment,
+                        plan: Object.values(plan).some((value) => value !== undefined)
+                          ? plan
+                          : undefined,
+                      })
+                    }
+                  />
                 )}
               </>
             ) : segment.type === 'sea' || segment.type === 'air' ? (
@@ -157,7 +165,7 @@ export function ShipmentRoute({
                 session={session}
               />
             ) : (
-              <p className="muted">{translate('shipment.segmentHint')}</p>
+              <RoutePlanView value={segment.plan} />
             )}
           </details>
         ))}

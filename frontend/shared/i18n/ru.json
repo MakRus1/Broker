@@ -484,10 +484,7 @@
   "shipment.sharedRouteHint": "Море и авиа — общие данные для всех перевозок.",
   "route.expandAll": "Развернуть все",
   "route.collapseAll": "Свернуть все",
-  "shipment.filledInTransportation": "Данные заполняются в перевозке",
   "shipment.remove": "Убрать",
-  "shipment.separateSegmentHint": "Поля этого участка заполняются отдельно в каждой перевозке.",
-  "shipment.segmentHint": "Данные этого участка заполняются в перевозках.",
   "shipment.addSegmentsHint": "Добавьте участки в порядке следования.",
   "shipment.addSegment": "＋ Добавить участок",
   "shipment.pol": "POL · порт отправления",
@@ -1409,5 +1406,13 @@
   "rfq.added": "Уже в предложении",
   "rfq.expired": "Котировка не действует на дату расчёта. Выберите другой вариант или измените дату расчёта.",
   "rfq.noReadyQuotes": "Готовых котировок пока нет. Завершите запрос ставок, чтобы перенести услуги.",
-  "rfq.selectedCount": "Выбрано услуг: {count}"
+  "rfq.selectedCount": "Выбрано услуг: {count}",
+  "route.planOrigin": "Отправление",
+  "route.planDestination": "Назначение",
+  "route.planPoint": "Город / населённый пункт",
+  "route.planAddress": "Адрес, терминал или станция",
+  "route.planDeparture": "Плановая дата отправления",
+  "route.planArrival": "Плановая дата прибытия",
+  "route.planEmpty": "План участка пока не заполнен.",
+  "route.sourcePlan": "План участка из поставки"
 }

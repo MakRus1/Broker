@@ -449,3 +449,19 @@ async def test_inquiry_contact_belongs_to_customer_and_can_be_cleared(api, mocks
     assert 'contact_id' not in cleared
     history = await api.post('/api/v1/sales/inquiries/history', {'id': body['id']})
     assert any(entry['snapshot'].get('contact_id') == contact_id for entry in history['items'])
+
+
+async def test_inquiry_route_plan_roundtrip_and_dates(api):
+    value = inquiry()
+    value['route_segments'] = [{'id': str(uuid.uuid4()), 'type': 'international_road', 'plan': {
+        'origin_name': 'Роттердам', 'origin_country': 'NL',
+        'destination_name': 'Москва', 'destination_country': 'RU',
+        'departure_date': '2030-01-10', 'arrival_date': '2030-01-15',
+    }}]
+    saved = (await api.post('/api/v1/sales/inquiries/save', value))['item']
+    assert saved['route_segments'] == value['route_segments']
+    fetched = (await api.post('/api/v1/sales/inquiries/get', {'id': saved['id']}))['item']
+    assert fetched['route_segments'] == value['route_segments']
+    value['expected_revision'] = 1
+    value['route_segments'][0]['plan']['arrival_date'] = '2030-01-01'
+    await api.post('/api/v1/sales/inquiries/save', value, expected=400)

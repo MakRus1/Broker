@@ -58,4 +58,16 @@ inline models::AirDetails Convert(const clients::shipments::models::AirDetails& 
         result.flight_number = value.flight_number.value();
     return result;
 }
+
+inline models::RoutePlan Convert(const clients::shipments::models::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 }  // namespace transportations::converters

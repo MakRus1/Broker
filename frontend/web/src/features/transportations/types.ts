@@ -1,5 +1,6 @@
 import { modes } from '../routes/logisticsLabels';
 import type {
+  RoutePlan,
   RailDetails,
   InternationalRoadDetails,
   PickupDetails,
@@ -24,6 +25,7 @@ export interface Transportation {
     id: string;
     mode: keyof typeof modes;
     inherited?: boolean;
+    plan?: RoutePlan;
     rail?: RailDetails;
     international_road?: InternationalRoadDetails;
     pickup?: PickupDetails;

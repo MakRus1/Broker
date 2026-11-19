@@ -1,3 +1,4 @@
+import { RoutePlanView } from '../routes/RoutePlan';
 import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { VisitedPanel } from '../../shared/ui/VisitedPanel';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
@@ -470,6 +471,12 @@ export function RouteView({
           )}
           {route_segment.inherited === false && (
             <p className="hint">{translate('transport.historicalLegHint')}</p>
+          )}
+          {route_segment.plan && (
+            <section className="route-plan-source">
+              <h4>{translate('route.sourcePlan')}</h4>
+              <RoutePlanView value={route_segment.plan} />
+            </section>
           )}
           {route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
             <SharedRouteDetailsView

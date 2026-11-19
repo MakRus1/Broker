@@ -199,3 +199,18 @@ async def test_inquiry_variant_limit_allows_last_variant_and_existing_edits(api,
     assert result['error'] == ('rfq_limit' if kind == 'rfqs' else 'proposal_limit')
     updated = await api.post(path, {**value, 'expected_revision': 1, 'title': 'Исправленный'})
     assert updated['item']['revision'] == 2
+
+
+async def test_rfq_contains_inquiry_route_plan(api):
+    incoming = inquiry()
+    segment = {'id': str(uuid4()), 'type': 'international_road',
+               'plan': {'origin_name': 'Роттердам', 'destination_name': 'Москва',
+                        'departure_date': '2030-01-10', 'arrival_date': '2030-01-15'}}
+    incoming['route_segments'] = [segment]
+    await api.post('/api/v1/sales/inquiries/save', incoming)
+    saved = (await api.post(BASE+'save', {
+        'id': str(uuid4()), 'inquiry_id': incoming['id'], 'route_segment_id': segment['id'],
+        'title': 'Авто', 'responsible_subject': 'author', 'status': 'in_progress',
+        'quotes': [], 'expected_revision': 0,
+    }))['item']
+    assert saved['route_segment'] == segment

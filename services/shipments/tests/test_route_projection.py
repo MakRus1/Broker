@@ -29,7 +29,7 @@ async def test_projection_retries_lost_response_and_preserves_new_revision(
             {
                 "customer_id": str(uuid4()),
                 "idempotency_key": str(uuid4()),
-                "route_segments": [{"id": str(uuid4()), "type": "sea"}],
+                "route_segments": [{"id": str(uuid4()), "type": "road", "plan": {"origin_name": "Роттердам", "destination_name": "Москва"}}],
             },
             expected=201,
         )

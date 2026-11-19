@@ -112,10 +112,38 @@ inline models::pg::AirDetails Convert(const models::AirDetails& value) {
     return result;
 }
 
+inline models::RoutePlan Convert(const models::pg::RoutePlan& value) {
+    models::RoutePlan result;
+    result.origin_name = value.OriginName;
+    result.origin_country = value.OriginCountry;
+    result.origin_address = value.OriginAddress;
+    result.destination_name = value.DestinationName;
+    result.destination_country = value.DestinationCountry;
+    result.destination_address = value.DestinationAddress;
+    result.departure_date = value.DepartureDate;
+    result.arrival_date = value.ArrivalDate;
+    return result;
+}
+
+inline models::pg::RoutePlan Convert(const models::RoutePlan& value) {
+    models::pg::RoutePlan result;
+    result.OriginName = value.origin_name;
+    result.OriginCountry = value.origin_country;
+    result.OriginAddress = value.origin_address;
+    result.DestinationName = value.destination_name;
+    result.DestinationCountry = value.destination_country;
+    result.DestinationAddress = value.destination_address;
+    result.DepartureDate = value.departure_date;
+    result.ArrivalDate = value.arrival_date;
+    return result;
+}
+
 inline models::ShipmentRouteSegment Convert(const models::pg::ShipmentRouteSegment& value) {
     models::ShipmentRouteSegment result;
     result.id = value.Id;
     result.type = value.Type;
+    if (value.Plan)
+        result.plan = Convert(*value.Plan);
     if (value.Sea.has_value())
         result.sea = Convert(value.Sea.value());
     if (value.Air.has_value())
@@ -127,6 +155,8 @@ inline models::pg::ShipmentRouteSegment Convert(const models::ShipmentRouteSegme
     models::pg::ShipmentRouteSegment result;
     result.Id = value.id;
     result.Type = value.type;
+    if (value.plan)
+        result.Plan = Convert(*value.plan);
     if (value.sea.has_value())
         result.Sea = Convert(value.sea.value());
     if (value.air.has_value())

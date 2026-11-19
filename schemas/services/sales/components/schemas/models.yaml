@@ -469,6 +469,8 @@ ShipmentRouteSegment:
   type: object
   additionalProperties: false
   properties:
+    plan:
+      $ref: '#/RoutePlan'
     id:
       type: string
       format: uuid
@@ -1431,3 +1433,35 @@ SaveRfqRequest:
   - status
   - quotes
   - expected_revision
+RoutePlan:
+  type: object
+  additionalProperties: false
+  description: План участка из запроса и поставки. Фактические данные заполняются
+    в перевозке.
+  properties:
+    origin_name:
+      type: string
+      maxLength: 256
+    origin_country:
+      type: string
+      maxLength: 2
+      pattern: ^[A-Z]{2}$
+    origin_address:
+      type: string
+      maxLength: 1024
+    destination_name:
+      type: string
+      maxLength: 256
+    destination_country:
+      type: string
+      maxLength: 2
+      pattern: ^[A-Z]{2}$
+    destination_address:
+      type: string
+      maxLength: 1024
+    departure_date:
+      type: string
+      format: date
+    arrival_date:
+      type: string
+      format: date

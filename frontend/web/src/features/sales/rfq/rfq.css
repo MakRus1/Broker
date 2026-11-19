@@ -11,16 +11,6 @@
   padding: 20px 0;
   border-bottom: 1px solid var(--border);
 }
-.rfq-import {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 12px;
-  padding-block: 20px;
-}
-.rfq-import > :first-child {
-  flex: 1 1 300px;
-}
 .rfq-comparison {
   width: 100%;
 }
@@ -203,14 +193,6 @@
   justify-self: start;
 }
 
-.rfq-import > .rfq-import-hint {
-  flex: 1 0 100%;
-  margin: 0;
-}
-.rfq-import > .app-select {
-  flex: 1 1 300px;
-}
-
 .sales-workbench:has(.rfq-editor) {
   overflow: visible;
 }
@@ -236,4 +218,71 @@
   color: var(--text-muted);
   margin: 0 0 0 auto;
   align-self: center;
+}
+
+.rfq-options caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 12px;
+}
+.rfq-options .rfq-amount {
+  white-space: nowrap;
+}
+.rfq-comparison-hint {
+  margin: 12px 0 0;
+}
+.rfq-import {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-block: 20px;
+  min-width: 0;
+}
+.rfq-import > summary {
+  cursor: pointer;
+  padding: 16px;
+  font-weight: 600;
+}
+.rfq-import-body {
+  padding: 0 16px 16px;
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.rfq-import-body > p {
+  margin: 0;
+}
+.rfq-import-request {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+.rfq-import-request > h3,
+.rfq-import-request > p {
+  margin: 0;
+}
+.rfq-import-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.rfq-select-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rfq-added {
+  color: var(--accent-text);
+  font-size: 12px;
+}
+.rfq-line-added {
+  background: var(--surface);
+}
+.rfq-import input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }

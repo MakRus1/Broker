@@ -1,7 +1,11 @@
 import type { ProposalLine } from '../proposals';
-import type { Rfq, RfqQuote } from './types';
-export function quotationLines(rfq: Rfq, quote: RfqQuote): ProposalLine[] {
-  return quote.lines.map((line) => ({
+import type { Rfq, RfqQuote, RfqQuoteLine } from './types';
+export function quotationLines(
+  rfq: Rfq,
+  quote: RfqQuote,
+  lines: RfqQuoteLine[] = quote.lines,
+): ProposalLine[] {
+  return lines.map((line) => ({
     id: crypto.randomUUID(),
     label_id: line.label_id,
     unit: line.unit,

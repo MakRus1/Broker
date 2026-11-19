@@ -1388,9 +1388,8 @@
   "rfq.removeLine": "Remove line",
   "rfq.removeQuote": "Remove quotation",
   "rfq.addQuote": "Add quotation",
-  "rfq.importHint": "Choose a ready quotation to import its services and purchase prices. Set selling prices separately.",
+  "rfq.importHint": "Compare ready quotations and choose services. Purchase prices come from the quotation. Selling prices initially match purchase prices — adjust them in the calculation.",
   "rfq.import": "Add services from a quotation",
-  "rfq.chooseQuote": "Select a supplier option",
   "rfq.addToProposal": "Add to proposal",
   "rfq.create": "Create RFQ",
   "rfq.open": "Open rate request",
@@ -1401,5 +1400,14 @@
   "rfq.unit": "Unit",
   "rfq.source": "From quotation",
   "rfq.snapshotHint": "Purchase uses the selected quotation snapshot.",
-  "rfq.detachSource": "Edit manually"
+  "rfq.detachSource": "Edit manually",
+  "rfq.compare": "Quotation comparison",
+  "rfq.compareHint": "Totals include quantities for all services. Currencies are shown separately; options may include different services.",
+  "rfq.selectServices": "Select all available services in this option",
+  "rfq.selection": "Selection",
+  "rfq.selectService": "Select “{service}” from “{quote}”",
+  "rfq.added": "Already in proposal",
+  "rfq.expired": "This quotation is not valid on the calculation date. Choose another option or change the calculation date.",
+  "rfq.noReadyQuotes": "No ready quotations yet. Complete a rate request to import services.",
+  "rfq.selectedCount": "Selected services: {count}"
 }

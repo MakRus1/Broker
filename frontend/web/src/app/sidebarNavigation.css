@@ -1,73 +1,77 @@
 .sidebar-navigation {
   min-width: 0;
 }
-.sidebar-scroll-cue {
-  display: none;
-}
 @media (min-width: 651px) {
   .sidebar-navigation {
-    display: grid;
-    grid-template-rows: 0 minmax(0, 1fr) 46px;
+    position: relative;
+    display: flex;
     flex: 1 1 auto;
     min-height: 0;
     margin-bottom: 12px;
-  }
-  .sidebar-navigation[data-above='true'] {
-    grid-template-rows: 46px minmax(0, 1fr) 46px;
+    margin-right: -8px;
   }
   .sidebar .sidebar-navigation nav {
+    flex: 1 1 auto;
     grid-template-columns: minmax(0, 1fr);
-    grid-row: 2;
     min-height: 0;
     margin: 0;
     padding: 0;
+    overflow-y: scroll;
+    scrollbar-width: auto;
+    scrollbar-gutter: stable;
   }
-  .sidebar-scroll-cue {
-    display: flex;
-    align-items: center;
-    visibility: hidden;
+  @supports not selector(::-webkit-scrollbar) {
+    .sidebar .sidebar-navigation nav {
+      scrollbar-color: transparent transparent;
+    }
   }
-  .sidebar-scroll-cue[data-visible='true'] {
-    visibility: visible;
+  .sidebar-navigation nav::-webkit-scrollbar {
+    width: 8px;
   }
-  .sidebar-scroll-cue.above {
-    grid-row: 1;
-    overflow: hidden;
+  .sidebar-navigation nav::-webkit-scrollbar-track {
+    background: transparent;
   }
-  .sidebar-scroll-cue.below {
-    grid-row: 3;
+  .sidebar-navigation nav::-webkit-scrollbar-thumb {
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 5px;
   }
-  .sidebar-scroll-cue button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    height: 38px;
-    min-height: 38px;
-    padding: 8px;
-    border: 1px solid var(--navigation-border);
-    border-radius: 6px;
-    color: var(--navigation-text);
-    background: var(--navigation-hover);
-    font-size: 12px;
-    white-space: nowrap;
+  .sidebar:is(:hover, :has(:focus-visible)) nav::-webkit-scrollbar-thumb,
+  .navigation-pinned .sidebar nav::-webkit-scrollbar-thumb {
+    background: var(--navigation-border);
+    border-color: var(--navigation);
   }
-  .sidebar-scroll-cue button:hover {
-    background: var(--navigation-hover);
-    border-color: var(--navigation-text);
+  .sidebar:is(:hover, :has(:focus-visible)) nav::-webkit-scrollbar-thumb:hover,
+  .navigation-pinned .sidebar nav::-webkit-scrollbar-thumb:hover {
+    background: var(--navigation-muted);
   }
-  .sidebar-scroll-cue svg {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+  @supports not selector(::-webkit-scrollbar) {
+    .sidebar:is(:hover, :has(:focus-visible)) .sidebar-navigation nav,
+    .navigation-pinned .sidebar .sidebar-navigation nav {
+      scrollbar-color: var(--navigation-border) var(--navigation);
+    }
   }
-  .sidebar-scroll-cue span {
-    display: none;
+  .sidebar-navigation::before,
+  .sidebar-navigation::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0 8px;
+    height: 12px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
   }
-  .sidebar:is(:hover, :has(:focus-visible)) .sidebar-scroll-cue span,
-  .navigation-pinned .sidebar-scroll-cue span {
-    display: inline;
+  .sidebar-navigation::before {
+    top: 0;
+    background: linear-gradient(var(--navigation), transparent);
+  }
+  .sidebar-navigation::after {
+    bottom: 0;
+    background: linear-gradient(transparent, var(--navigation));
+  }
+  .sidebar-navigation[data-above='true']::before,
+  .sidebar-navigation[data-below='true']::after {
+    opacity: 1;
   }
 }
 @media (max-width: 650px) {

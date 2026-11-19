@@ -284,6 +284,8 @@ export function SalesProposals({
               <RfqQuotePicker
                 inquiry={inquiry}
                 session={session}
+                lines={draft.lines}
+                calculationDate={draft.calculation_date}
                 onAdd={(lines, labels) => {
                   setDraft({ ...draft, lines: [...draft.lines, ...lines] });
                   setNames((previous) => ({ ...previous, ...labels }));

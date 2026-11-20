@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { restoreShipmentQuery } from '../registry/registryQueryPreferences';
 import { CalendarDate } from '../../shared/dates/CalendarDate';
 import { shipmentRegistryRequest, initialShipmentQuery } from './shipmentRegistry';
 describe('фильтр дат поставок', () => {
@@ -18,4 +19,11 @@ describe('фильтр дат поставок', () => {
     expect(shipmentRegistryRequest(initialShipmentQuery, cursor).cursor).toBe(cursor);
     expect(shipmentRegistryRequest(initialShipmentQuery)).not.toHaveProperty('cursor');
   });
+});
+
+it('сохраняет группы маршрута в настройках и запросе реестра', () => {
+  const route_filters = [{ filters: [{ field: 'mode', values: ['sea'] }] }];
+  const restored = restoreShipmentQuery({ ...initialShipmentQuery, route_filters });
+  expect(restored.route_filters).toEqual(route_filters);
+  expect(shipmentRegistryRequest(restored).route_filters).toEqual(route_filters);
 });

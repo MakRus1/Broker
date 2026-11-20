@@ -185,13 +185,24 @@ inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(
 
 inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
     const models::shipments::ListShipmentsRequest& value) {
-    return {.after = value.after,
+    clients::shipments::ApiV1ShipmentsList::RequestBody result{.after = value.after,
         .cursor = Convert(value.cursor),
         .descending = value.descending,
         .filters =
             ConvertRegistryFilters<clients::shipments::models::RegistryFilter>(value.filters),
         .limit = value.limit,
         .sort = value.sort};
+    if (value.route_filters.has_value()) {
+        result.route_filters.emplace();
+        for (const auto& group : value.route_filters.value()) {
+            clients::shipments::models::RouteFilterGroup converted;
+            converted.filters = ConvertRegistryFilters<clients::shipments::models::RegistryFilter>(
+                std::optional{group.filters})
+                                    .value();
+            result.route_filters.value().push_back(std::move(converted));
+        }
+    }
+    return result;
 }
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
@@ -245,6 +256,7 @@ inline clients::shipments::models::ListShipmentsRequest ConvertRegistry(
     result.cursor = body.cursor;
     result.descending = body.descending;
     result.filters = body.filters;
+    result.route_filters = body.route_filters;
     result.limit = body.limit;
     result.sort = body.sort;
     return result;

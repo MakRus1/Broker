@@ -20,6 +20,13 @@ ShipmentsFilterValuesRequest:
   required:
   - registry
   properties:
+    scope:
+      $ref: models.yaml#/FilterValuesScope
+    group:
+      type: integer
+      minimum: 0
+      maximum: 7
+      default: 0
     registry:
       $ref: models.yaml#/ListShipmentsRequest
     field:

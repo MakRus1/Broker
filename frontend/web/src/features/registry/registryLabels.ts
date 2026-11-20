@@ -20,6 +20,8 @@ const fieldKeys: Readonly<Partial<Record<string, MessageKey>>> = {
 
   route: 'registryField.route',
   mode: 'registryField.mode',
+  origin_name: 'registryField.origin_name',
+  destination_name: 'registryField.destination_name',
   origin_station: 'registryField.origin_station',
   destination_station: 'registryField.destination_station',
   pol: 'registryField.pol',

@@ -196,6 +196,21 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ('shipments/get', {'shipment_id': ID}, {'shipment': SHIPMENT}, 200),
         ('shipments/list', {'limit': 50}, {'items': [SHIPMENT]}, 200),
         (
+            'shipments/list',
+            {'route_filters': [{'filters': [{'field': 'mode', 'values': ['sea']}]}]},
+            {'items': [SHIPMENT]},
+            200,
+        ),
+        (
+            'shipments/filter-values',
+            {'scope': 'route', 'group': 0, 'field': 'mode', 'registry': {
+                'sort': 'id', 'descending': False, 'limit': 50,
+                'route_filters': [{'filters': [{'field': 'mode', 'values': ['sea']}]}],
+            }},
+            {'fields': [], 'values': [{'value': 'sea', 'label': 'sea'}]},
+            200,
+        ),
+        (
             'shipments/update',
             {'shipment_id': ID, 'expected_revision': 1, 'reference': 'Тест'},
             {'shipment': SHIPMENT},

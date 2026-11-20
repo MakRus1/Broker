@@ -346,6 +346,8 @@
   "routeFilter.pointNotSet": "Не указан",
   "registryField.route": "Маршрут",
   "registryField.mode": "Тип участка",
+  "registryField.origin_name": "Пункт отправления",
+  "registryField.destination_name": "Пункт назначения",
   "registryField.origin_station": "Станция отправления",
   "registryField.destination_station": "Станция назначения",
   "registryField.pol": "Порт отправления",

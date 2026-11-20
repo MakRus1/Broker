@@ -1,3 +1,4 @@
+import { useRouteRegistryFilters } from '../routes/RouteRegistryFilters';
 import { RegistryPage } from '../../shared/ui/RegistryPage';
 import { RegistryEmptyState } from '../../shared/ui/RegistryExperience';
 import { useCallback, useEffect } from 'react';
@@ -87,10 +88,16 @@ export function ShipmentRegistry({
       });
     return () => controller.abort();
   }, [session, page.items, customers, onCustomersLoaded, onError]);
+  const routeFilters = useRouteRegistryFilters(
+    session,
+    query,
+    (route_filters) => setQuery((old) => ({ ...old, route_filters })),
+    'shipments',
+  );
   const customerName = (id: string) =>
     customers.find((item) => item.id === id)?.name || translate('lookup.counterpartyUnavailable');
   const canCreate = session.permissions.includes('shipments.create');
-  const hasFilters = Boolean(query.filters?.length);
+  const hasFilters = Boolean(query.filters?.length || query.route_filters?.length);
   const createShipment = () => {
     location.hash = '/shipments/new/' + crypto.randomUUID();
   };
@@ -128,6 +135,7 @@ export function ShipmentRegistry({
     },
     {
       id: 'route',
+      filterFields: false,
       labelKey: 'shipment.routeTitle',
       width: 320,
       render: (item) => (
@@ -182,15 +190,20 @@ export function ShipmentRegistry({
       }
     >
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
+        {routeFilters.editor}
         <RegistryTable
+          customFilters={{ route: routeFilters.button }}
           items={page.items}
           pageSource={page.source}
           columns={columnState}
           definitions={columns}
           filterSummary={
-            <span className="registry-loaded-count" role="status">
-              {translate('common.loaded', { count: page.count })}
-            </span>
+            <>
+              {routeFilters.toolbar}
+              <span className="registry-loaded-count" role="status">
+                {translate('common.loaded', { count: page.count })}
+              </span>
+            </>
           }
           filters={filters}
           sort={query.sort}
@@ -231,7 +244,8 @@ export function ShipmentRegistry({
                 : hasFilters
                   ? {
                       label: translate('filter.reset'),
-                      onClick: () => setQuery((old) => ({ ...old, filters: [] })),
+                      onClick: () =>
+                        setQuery((old) => ({ ...old, filters: [], route_filters: [] })),
                     }
                   : canCreate
                     ? { label: translate('action.createShipment'), onClick: createShipment }

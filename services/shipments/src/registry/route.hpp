@@ -1,0 +1,96 @@
+#pragma once
+#include <openapi/models.hpp>
+#include <platform/registry_filters.hpp>
+#include <shipments/sql_queries.hpp>
+
+namespace shipments::registry_query::route_registry {
+namespace registry = platform::registry;
+namespace pg = userver::storages::postgres;
+
+// Фильтры участка используют те же операторы, что поля основного реестра.
+inline constexpr std::array<registry::RegistryField, 7> kFields{{
+    {.Field = registry::Field<std::string>{"mode", "lower(COALESCE(leg.type, '')) COLLATE \"C\"",
+         "TEXT"},
+        .ValueSql = "leg.type",
+        .Sortable = false,
+        .FoldValues = true},
+    {.Field = registry::Field<std::string>{"origin_name",
+         "lower(COALESCE((leg.plan).origin_name, '')) COLLATE \"C\"", "TEXT"},
+        .ValueSql = "(leg.plan).origin_name",
+        .Sortable = false,
+        .FoldValues = true},
+    {.Field = registry::Field<std::string>{"destination_name",
+         "lower(COALESCE((leg.plan).destination_name, '')) COLLATE \"C\"", "TEXT"},
+        .ValueSql = "(leg.plan).destination_name",
+        .Sortable = false,
+        .FoldValues = true},
+    {.Field = registry::Field<boost::uuids::uuid>{"pol", "((leg.sea).pol).id", "UUID"},
+        .ValueSql = "concat_ws(' · ', ((leg.sea).pol).name, ((leg.sea).pol).code)",
+        .Sortable = false,
+        .Lookup = "route_locations"},
+    {.Field = registry::Field<boost::uuids::uuid>{"pod", "((leg.sea).pod).id", "UUID"},
+        .ValueSql = "concat_ws(' · ', ((leg.sea).pod).name, ((leg.sea).pod).code)",
+        .Sortable = false,
+        .Lookup = "route_locations"},
+    {.Field = registry::Field<boost::uuids::uuid>{"origin_airport", "((leg.air).origin_airport).id",
+         "UUID"},
+        .ValueSql =
+            "concat_ws(' · ', ((leg.air).origin_airport).name, ((leg.air).origin_airport).code)",
+        .Sortable = false,
+        .Lookup = "route_locations"},
+    {.Field = registry::Field<boost::uuids::uuid>{"destination_airport",
+         "((leg.air).destination_airport).id", "UUID"},
+        .ValueSql = "concat_ws(' · ', ((leg.air).destination_airport).name, "
+                    "((leg.air).destination_airport).code)",
+        .Sortable = false,
+        .Lookup = "route_locations"},
+}};
+
+template <typename Groups>
+void ApplyGroups(registry::QueryBuilder& query, const Groups& groups,
+    const std::optional<int>& skip_group = std::nullopt) {
+    if (!groups.has_value())
+        return;
+    for (std::size_t index = 0; index < groups.value().size(); ++index) {
+        if (skip_group.has_value() && static_cast<int>(index) == skip_group.value())
+            continue;
+        query.WhereExists(sql::kRegistryRouteRows, [&](auto& nested) {
+            registry::ApplyFilters(nested, kFields, std::optional{groups.value()[index].filters});
+        });
+    }
+}
+
+template <typename ApplyMain>
+inline registry::BuiltQuery BuildValues(const models::ListShipmentsRequest& request,
+    const boost::uuids::uuid& organization, const std::string& field, int group,
+    const std::optional<std::string>& search, const std::optional<std::string>& after, int limit,
+    ApplyMain apply_main) {
+    const auto& definition = registry::FindField(kFields, field);
+    registry::QueryBuilder query{sql::kListShipments,
+        registry::Order{.Expression = "id", .ById = true, .PgType = "UUID"}, false};
+    query.WhereEqual(
+        registry::Field<boost::uuids::uuid>{"organization_id", "candidate.organization_id", "UUID"},
+        organization);
+    const pg::Query match{
+        fmt::format(fmt::runtime(sql::kRegistryRouteCandidateMatch.GetStatementView()),
+            fmt::arg("key", definition.Field.Expression), fmt::arg("where", "{where}"))};
+    query.WhereExists(match, [&](auto& nested) {
+        apply_main(nested);
+        ApplyGroups(nested, request.route_filters, group);
+        if (request.route_filters.has_value() &&
+            group < static_cast<int>(request.route_filters.value().size()))
+            registry::ApplyFilters(nested, kFields,
+                std::optional{request.route_filters.value()[group].filters}, field);
+    });
+    auto candidate = definition;
+    candidate.Field.Expression = "candidate.value";
+    candidate.Field.SortExpression = {};
+    candidate.ValueSql = "candidate.label";
+    if (candidate.Field.PgType == "UUID")
+        query.WhereEmpty(candidate.Field, false);
+    const auto source = fmt::format(fmt::runtime(sql::kRegistryRouteCandidates.GetStatementView()),
+        fmt::arg("key", definition.Field.Expression), fmt::arg("label", definition.ValueSql));
+    return registry::BuildValues(std::move(query), sql::kRegistryRouteFilterValues, candidate,
+        search, after, limit + 1, source);
+}
+}  // namespace shipments::registry_query::route_registry

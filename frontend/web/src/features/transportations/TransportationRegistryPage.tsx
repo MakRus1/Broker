@@ -11,7 +11,7 @@ import { useRegistryColumns } from '../registry/RegistryTable';
 import { preferenceKey, useRegistryPreference } from '../registry/registryPreferences';
 import { restoreTransportationQuery } from '../registry/registryQueryPreferences';
 import { useRegistryPage } from '../registry/useRegistryPage';
-import { useRouteRegistryFilters } from './RouteRegistryFilters';
+import { useRouteRegistryFilters } from '../routes/RouteRegistryFilters';
 import { TransportationTable, transportationColumns } from './TransportationTable';
 import {
   initialRegistryQuery,

@@ -15,12 +15,19 @@ import {
   type RegistryFieldMetadata,
   type RegistryValue,
 } from '../registry/registryFilters';
-import type { RegistryQuery, RouteFilterGroup } from './transportationRegistry';
+interface RouteFilterGroup {
+  filters: ColumnFilter[];
+}
+interface RegistryQuery {
+  filters?: ColumnFilter[];
+  route_filters?: RouteFilterGroup[];
+}
 
 export function useRouteRegistryFilters(
   session: Session | null | undefined,
   query: RegistryQuery,
   onChange: (groups: RouteFilterGroup[]) => void,
+  registry: 'transportations' | 'shipments' = 'transportations',
 ) {
   const { translate, locale } = useLocalization();
   const [rawFields, setFields] = useState<RegistryFieldMetadata[]>([]);
@@ -28,10 +35,11 @@ export function useRouteRegistryFilters(
   const [failure, setFailure] = useState('');
   const [anchor, setAnchor] = useState<HTMLElement>();
   useEffect(() => {
-    if (!session?.permissions.includes('transportations.read')) return;
+    if (!session?.permissions.includes(`${registry}.read`)) return;
     const abort = new AbortController();
+    setFailure('');
     request<{ fields: RegistryFieldMetadata[] }>(
-      '/api/v1/transportations/filter-values',
+      `/api/v1/${registry}/filter-values`,
       session,
       { registry: {}, scope: 'route' },
       abort.signal,
@@ -41,7 +49,7 @@ export function useRouteRegistryFilters(
         if (!abort.signal.aborted) setFailure(error.message);
       });
     return () => abort.abort();
-  }, [session]);
+  }, [session, registry]);
   const groups = query.route_filters ?? [];
   return {
     button: {
@@ -103,6 +111,7 @@ export function useRouteRegistryFilters(
       anchor && session && fields.length > 0 ? (
         <RouteEditor
           session={session}
+          registry={registry}
           query={query}
           fields={fields}
           anchor={anchor}
@@ -113,6 +122,7 @@ export function useRouteRegistryFilters(
   };
 }
 function RouteEditor({
+  registry,
   session,
   query,
   fields,
@@ -120,6 +130,7 @@ function RouteEditor({
   onClose,
   onChange,
 }: {
+  registry: 'transportations' | 'shipments';
   session: Session;
   query: RegistryQuery;
   fields: RegistryField[];
@@ -142,15 +153,16 @@ function RouteEditor({
     descending: false,
     failure: '',
     scope: (field) =>
-      JSON.stringify(
-        groups.map((group, index) => ({
+      JSON.stringify({
+        filters: filterRequest(query.filters),
+        route_filters: groups.map((group, index) => ({
           filters: filterRequest(
             index === selected
               ? group.filters.filter((filter) => filter.field !== field.id)
               : group.filters,
           ),
         })),
-      ),
+      }),
     order: () => {},
     change: (filters) => {
       const next = groups
@@ -160,7 +172,7 @@ function RouteEditor({
     },
     values: (field, search, after, signal) =>
       request<{ values: RegistryValue[]; next_after?: string }>(
-        '/api/v1/transportations/filter-values',
+        `/api/v1/${registry}/filter-values`,
         session,
         {
           registry: {

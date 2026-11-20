@@ -7,6 +7,7 @@ export interface ShipmentRegistryCursor {
   date_value?: string;
 }
 export interface ShipmentRegistryQuery {
+  route_filters?: { filters: ColumnFilter[] }[];
   filters?: ColumnFilter[];
   sort: ShipmentSort;
   descending: boolean;
@@ -22,6 +23,7 @@ export function shipmentRegistryRequest(
   return {
     ...query,
     filters: filterRequest(query.filters),
+    route_filters: query.route_filters?.map((group) => ({ filters: filterRequest(group.filters) })),
     limit: 50,
     ...(cursor ? { cursor } : {}),
   };

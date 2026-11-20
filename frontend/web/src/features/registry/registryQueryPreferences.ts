@@ -17,6 +17,7 @@ function text(raw: unknown, max = 256): string | undefined {
 export function restoreShipmentQuery(raw: unknown): ShipmentRegistryQuery {
   const value = object(raw);
   return {
+    route_filters: restoreRouteFilters(value.route_filters),
     filters: restoreColumnFilters(value.filters),
     sort: text(value.sort, 64) ?? initialShipmentQuery.sort,
     descending:

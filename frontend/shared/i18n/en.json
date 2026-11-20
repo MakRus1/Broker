@@ -346,6 +346,8 @@
   "routeFilter.pointNotSet": "Not specified",
   "registryField.route": "Route",
   "registryField.mode": "Segment type",
+  "registryField.origin_name": "Departure point",
+  "registryField.destination_name": "Destination point",
   "registryField.origin_station": "Departure station",
   "registryField.destination_station": "Destination station",
   "registryField.pol": "Port of loading",

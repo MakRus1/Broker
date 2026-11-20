@@ -5,7 +5,7 @@ from uuid import uuid4
 async def test_rfq_proxy_preserves_versions_and_session(browser, mockserver, action):
     await browser.sign_in()
     rfq_id,inquiry_id,segment_id=[str(uuid4()) for _ in range(3)]
-    item={'revision':2,'inquiry_number':'ENQ-1','route_segment':{'id':segment_id,'type':'sea'},
+    item={'revision':2,'inquiry_number':'ENQ-1','route_segment':{'id':segment_id,'type':'international_road','plan':{'origin_name':'Роттердам','destination_name':'Москва','arrival_date':'2030-01-15'}},
           'input':{'id':rfq_id,'inquiry_id':inquiry_id,'route_segment_id':segment_id,
                    'title':'Фрахт','responsible_subject':'author','status':'in_progress','quotes':[]}}
     body={**item['input'],'expected_revision':1} if action=='save' else {'id':inquiry_id if action=='list' else rfq_id}

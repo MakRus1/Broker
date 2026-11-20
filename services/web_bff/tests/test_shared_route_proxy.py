@@ -75,3 +75,37 @@ async def test_transportation_receives_shared_fields(browser, mockserver):
     )
     assert response.status == 200, response.text
     assert response.json()['transportation']['route_segments'] == [stage]
+
+
+async def test_shipment_plan_survives_save_and_response(browser, mockserver):
+    await browser.sign_in()
+    plan = {'origin_name': 'Роттердам', 'origin_country': 'NL', 'origin_address': 'Терминал',
+            'destination_name': 'Москва', 'destination_country': 'RU', 'destination_address': 'Склад',
+            'departure_date': '2030-01-10', 'arrival_date': '2030-01-15'}
+    stage = {'id': str(uuid4()), 'type': 'international_road', 'plan': plan}
+    body = {'shipment_id': SHIPMENT['id'], 'expected_revision': 1, 'route_segments': [stage]}
+
+    @mockserver.json_handler('/api/v1/shipments/update')
+    def save(request):
+        assert request.json == body
+        return {'shipment': {**SHIPMENT, 'route_segments': [stage]}}
+
+    response = await browser.post('/api/v1/shipments/update', body)
+    assert response.status == 200, response.text
+    assert response.json()['shipment']['route_segments'] == [stage]
+
+
+async def test_transportation_receives_source_plan(browser, mockserver):
+    from test_proxy import TRANSPORTATION
+    await browser.sign_in()
+    stage = {'id': str(uuid4()), 'mode': 'pickup', 'plan': {
+        'origin_name': 'Порт', 'destination_name': 'Склад', 'arrival_date': '2030-01-15'},
+        'pickup': {'driver': 'Тестовый водитель'}}
+
+    @mockserver.json_handler('/api/v1/transportations/get')
+    def load(request):
+        return {'transportation': {**TRANSPORTATION, 'route_segments': [stage]}}
+
+    response = await browser.post('/api/v1/transportations/get', {'transportation_id': TRANSPORTATION['id']})
+    assert response.status == 200, response.text
+    assert response.json()['transportation']['route_segments'] == [stage]

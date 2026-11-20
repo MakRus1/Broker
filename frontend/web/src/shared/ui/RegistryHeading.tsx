@@ -32,11 +32,11 @@ export function RegistryHeading({
     <div className="page-heading registry-heading">
       <div>
         {title && <h1>{title}</h1>}
-        <p className="hint" role="status">
-          {translate('common.loaded', { count })}
-          <span className="registry-refresh-status" aria-hidden={!showLoading}>
-            {showLoading ? translate('common.loading') : '\u00a0'}
+        <p className={title ? 'registry-heading-status' : 'hint'} role="status">
+          <span className={title ? 'sr-only' : undefined}>
+            {translate('common.loaded', { count })}
           </span>
+          {showLoading && <span>{translate('common.loading')}</span>}
         </p>
       </div>
       <div className="actions">

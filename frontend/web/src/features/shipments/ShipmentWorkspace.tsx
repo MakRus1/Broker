@@ -1,6 +1,6 @@
+import { RecordPage, RecordOverview } from '../../shared/ui/record/RecordPage';
 import { ShipmentInquiryLink } from '../sales/ShipmentInquiryLink';
 import { VisitedPanel } from '../../shared/ui/VisitedPanel';
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { RecordGuideNotice } from '../../shared/ui/record/RecordGuideNotice';
@@ -36,6 +36,7 @@ import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { ShipmentPanel } from './ShipmentPanel';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { ShipmentConditionsFields, type ShipmentDictionaries } from './ShipmentConditionsFields';
+import './shipmentCard.css';
 
 export interface ShipmentSettings {
   number_template: string;
@@ -120,6 +121,7 @@ type CardDraft = {
   reference: string;
   route_segments: ShipmentRouteSegment[];
 };
+
 function draftOf(initial?: Shipment): CardDraft {
   return {
     number: initial?.number ?? '',
@@ -146,6 +148,7 @@ function ShipmentCard({
 }: Props & { initial?: Shipment; onSaved: (value: Shipment) => void }) {
   const { translate } = useLocalization();
   const formId = useId();
+  const card = useRef<HTMLElement>(null);
   const validation = useFieldValidation((field) => {
     setTab(field.closest('[data-edit-tab]')?.getAttribute('data-edit-tab') ?? 'details');
   });
@@ -158,6 +161,19 @@ function ShipmentCard({
     if (props.route.endsWith('/route')) setTab('route');
   }, [props.route]);
   const [editing, setEditing] = useState(!initial);
+  useEffect(() => {
+    if (tab !== 'route' && tab !== 'items') return;
+    const frame = requestAnimationFrame(() => {
+      const root = card.current;
+      const selector =
+        tab === 'route' ? '.shipment-route-workspace' : '[data-workflow-panel="items"]';
+      const target = Array.from(root?.querySelectorAll<HTMLElement>(selector) ?? []).find(
+        (node) => node.getClientRects().length > 0,
+      );
+      target?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [tab, editing, formId]);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -403,364 +419,211 @@ function ShipmentCard({
     { value: '', label: translate('ui.notSelected') },
     ...values.map((value) => ({ value: value.code, label: value.name })),
   ];
+  const editorActions = write && editing && (
+    <RecordActions
+      error={failure}
+      issues={validation.issues}
+      onIssueClick={validation.focusIssue}
+      status={
+        dirty
+          ? translate(recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved')
+          : initial
+            ? ''
+            : translate('shipment.required')
+      }
+    >
+      {
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            confirmDiscard(dirty, () => {
+              recovery.discard();
+              validation.reset();
+              if (!initial) {
+                props.onCancel();
+                return;
+              }
+              setEditing(false);
+              manualLogist.current = false;
+              manualStatus.current = false;
+              setManualNumber(Boolean(initial));
+              setDraft(JSON.parse(baseline) as CardDraft);
+              setFailure('');
+            })
+          }
+        >
+          {translate('shipment.cancel')}
+        </button>
+      }
+      <button
+        form={formId}
+        type="submit"
+        className="primary"
+        disabled={busy || !settings || Boolean(initial && !dirty)}
+      >
+        {busy
+          ? translate('shipment.saving')
+          : initial
+            ? translate('shipment.saveChanges')
+            : translate('shipment.create')}
+      </button>
+    </RecordActions>
+  );
   const panels = [
     ['details', translate('shipment.details')],
-    ['route', translate('registryField.route')],
-    ...(initial && settings?.planned_containers
-      ? [['items', translate('shipment.plannedContainers')]]
-      : []),
     ...(initial ? [['transportations', translate('nav.transportations')]] : []),
     ...(initial && props.session.permissions.includes('finance.read_service_charges')
       ? [['finance', translate('home.finance')]]
       : []),
   ];
-  return (
-    <section className="shipment-editor surface record-workbench">
-      {write && <DraftRecovery recovery={recovery} />}
-      <RecordHeading
-        kind={translate('shipment.eyebrow')}
-        title={initial?.number ?? translate('entity.newShipment')}
-        status={
-          initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')
-        }
-        metadata={
-          initial ? (
-            <>
-              {`${translate('registryField.shipment_date')}: ${initial.shipment_date ? CalendarDate.fromISO(initial.shipment_date).toDisplayString() : '—'} · ${translate('shipment.revision', { revision: revision ?? 0 })}`}
-              <ShipmentInquiryLink shipment={initial.id} session={props.session} />
-            </>
-          ) : (
-            translate('shipment.createHint')
-          )
-        }
-        mode={
-          editing
-            ? translate(initial ? 'shipment.editingShipment' : 'shipment.createMode')
-            : undefined
-        }
-        actions={
-          initial && write ? (
-            <>
-              <span className="record-guide-control">
-                <RecordGuideMenu>
-                  {['overview', 'context'].map((scope) => (
-                    <GuidedWorkflow
-                      key={
-                        scope === 'overview'
-                          ? scope
-                          : `${scope}-${tab}-${editing ? 'edit' : 'view'}`
-                      }
-                      textButton
-                      title={
-                        scope === 'overview'
-                          ? 'guide.overview'
-                          : editing
-                            ? 'guide.filling'
-                            : 'guide.section'
-                      }
-                      preference={preferenceKey(
-                        props.session.subject,
-                        'shipments',
-                        scope === 'overview'
-                          ? 'overview'
-                          : `workflow-${tab}-${editing ? 'edit' : 'view'}`,
-                      )}
-                      steps={
-                        scope === 'overview'
-                          ? shipmentWorkflow(
-                              props.session.permissions.includes('finance.read_service_charges'),
-                              settings?.planned_containers === true,
-                            ).filter((step) => !shipmentStepEditing(step.id))
-                          : shipmentContextSteps(
-                              tab,
-                              editing,
-                              props.session.permissions.includes('finance.read_service_charges'),
-                              settings?.planned_containers === true,
-                            )
-                      }
-                      active={props.active !== false}
-                      getTarget={(key) => {
-                        const root = document.getElementById(formId)?.closest('section');
-                        if (!root) return null;
-                        if (scope === 'context' && !editing && shipmentFieldSteps.has(key)) {
-                          const labels: Record<string, string> = {
-                            customer: translate('field.customer'),
-                            recipient: translate('shipment.recipient'),
-                            logist: translate('shipment.logist'),
-                            cargo: translate('shipment.cargoDescription'),
-                            terms: 'Incoterms',
-                            delivery: translate('shipment.city'),
-                          };
-                          const field = Array.from(root.querySelectorAll<HTMLElement>('dt')).find(
-                            (node) =>
-                              node.getClientRects().length > 0 && node.textContent === labels[key],
-                          );
-                          return key === 'delivery' || key === 'terms'
-                            ? (field?.closest<HTMLElement>('.record-layout-section') ?? null)
-                            : (field?.parentElement ?? null);
-                        }
-
-                        const selector = shipmentFieldSteps.has(key)
-                          ? `[data-workflow-field="${key}"]`
-                          : key === 'route-edit'
-                            ? '.shipment-route-add'
-                            : key === 'route-details'
-                              ? '.shipment-route-workspace'
-                              : key === 'plan-quantities'
-                                ? '[data-workflow-panel="items"] .quantities'
-                                : key === 'plan-create'
-                                  ? '[data-workflow-plan-create]'
-                                  : key === 'transport-list'
-                                    ? '[data-workflow-panel="transportations"]'
-                                    : key === 'finance-summary'
-                                      ? '.finance-summary-disclosure'
-                                      : key === 'finance-invoice'
-                                        ? '.finance-services-table-wrap'
-                                        : `[data-workflow-tab="${key}"]`;
-                        return (
-                          root.querySelector<HTMLElement>(selector) ??
-                          root.querySelector<HTMLElement>(
-                            `[data-workflow-tab="${shipmentStepTab(key)}"]`,
-                          )
-                        );
-                      }}
-                      onOpen={(key, proceed) => {
-                        if (scope === 'context') {
-                          proceed();
-                          return;
-                        }
-                        const root = document.getElementById(formId)?.closest('section');
-                        if (root?.querySelector('form[data-busy="true"]')) return;
-                        if (shipmentStepEditing(key)) {
-                          // Field steps stay in the same editor and preserve the user's draft.
-                          if (!editing && dirty) return;
-                          setTab(shipmentStepTab(key));
-                          setEditing(true);
-                          proceed();
-                          return;
-                        }
-                        confirmDiscard(
-                          Boolean(root?.querySelector('form[data-dirty="true"]')),
-                          () => {
-                            if (editing) {
-                              setDraft(JSON.parse(baseline) as CardDraft);
-                              setEditing(false);
-                              validation.reset();
-                              setFailure('');
-                            }
-                            setTab(shipmentStepTab(key));
-                            proceed();
-                          },
-                        );
-                      }}
-                    />
-                  ))}
-                </RecordGuideMenu>
-                <RecordGuideNotice
-                  context={`${editing ? 'edit' : 'view'}:${tab}`}
-                  active={props.active !== false}
-                  editing={editing}
-                />
-              </span>
-              {!editing && (
-                <button
-                  className="primary"
-                  onClick={() => {
-                    if (tab !== 'details' && tab !== 'route') setTab('details');
-                    setEditing(true);
-                    setFailure('');
-                  }}
-                >
-                  {translate('shipment.editShipment')}
-                </button>
-              )}
-            </>
-          ) : undefined
-        }
-      />
-      {settingsFailure && (
-        <p className="error" role="alert">
-          {translate('shipment.settingsFailed', { message: settingsFailure })}
-        </p>
-      )}
-      <div className="tabs shipment-tabs record-layout-tabs">
-        {panels.map(([key, label]) => (
-          <button
-            key={key}
-            data-workflow-tab={key}
-            type="button"
-            aria-pressed={tab === key}
-            onClick={(event) => {
-              if (key === tab || busy) return;
-              if (editing && (key === 'details' || key === 'route')) {
-                setTab(key);
-                return;
-              }
-              const section = event.currentTarget.closest('section');
-              if (section?.querySelector('form[data-busy="true"]')) return;
-              const switchTab = () => {
-                if (initial && editing) {
-                  setDraft(JSON.parse(baseline) as CardDraft);
-                  setEditing(false);
-                  validation.reset();
-                  setFailure('');
-                }
-                setTab(key);
-                // Ссылка на маршрут должна работать и для уже открытой карточки.
-                if (initial)
-                  location.hash = `/shipments/${initial.id}${key === 'route' ? '/route' : ''}`;
-              };
-              confirmDiscard(
-                dirty || Boolean(section?.querySelector('form[data-dirty="true"]')),
-                switchTab,
-              );
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {initial && (
-        <div hidden={editing || (tab !== 'details' && tab !== 'route')}>
-          <ShipmentSummary
-            shipment={initial}
-            customers={props.customers}
-            session={props.session}
-            routeOnly={tab === 'route'}
-            dictionaries={dictionaries}
-          />
-        </div>
-      )}
-      <form
-        hidden={!editing}
-        id={formId}
-        onSubmit={save}
-        data-recovery-key={storageKey}
-        data-validation-attempted={validation.attempted}
-        onInputCapture={validation.onInput}
-        onInvalidCapture={validation.onInvalid}
-        data-dirty={editing && dirty}
-        data-busy={busy}
-      >
-        <fieldset disabled={busy || !write || !settings || !dictionaries || !!recovery.candidate}>
-          <fieldset
-            className="shipment-edit-section"
-            data-edit-tab="details"
-            hidden={tab !== 'details'}
-          >
-            <RecordEditorSections>
-              <RecordSection title={translate('shipment.identification')}>
-                <div className="shipment-fields">
-                  <label>
-                    {translate('registryField.shipmentNumber')}
-                    <div className="shipment-number">
-                      <input
-                        name="number"
-                        aria-invalid={Boolean(validation.errors.number) || undefined}
-                        aria-describedby={
-                          validation.errors.number ? `${formId}-number-error` : undefined
-                        }
-                        required={manualNumber}
-                        readOnly={!manualNumber}
-                        maxLength={128}
-                        value={draft.number}
-                        placeholder={translate('shipment.autoNumber')}
-                        onChange={(e) => set('number', e.target.value)}
-                      />
-                      {!initial && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setManualNumber((old) => !old);
-                            set('number', '');
-                          }}
-                        >
-                          {manualNumber
-                            ? translate('shipment.automatic')
-                            : translate('shipment.manual')}
-                        </button>
-                      )}
-                    </div>
-                    {!manualNumber && (
-                      <small>
-                        {translate('shipment.numberFormat', {
-                          format: settings?.number_template ?? '',
-                        })}
-                      </small>
-                    )}
-                    {validation.errors.number && (
-                      <small className="field-error" id={`${formId}-number-error`}>
-                        {validation.errors.number}
-                      </small>
-                    )}
-                  </label>
-                  <label>
-                    {translate('shipment.dateRequired')}
-                    <IsoDateInput
-                      name="shipment_date"
-                      aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
+  const overview = ['details', 'route', 'items'].includes(tab);
+  const renderEditor = () => (
+    <form
+      hidden={!editing}
+      id={formId}
+      onSubmit={save}
+      data-recovery-key={storageKey}
+      data-validation-attempted={validation.attempted}
+      onInputCapture={validation.onInput}
+      onInvalidCapture={validation.onInvalid}
+      data-dirty={editing && dirty}
+      data-busy={busy}
+    >
+      <fieldset disabled={busy || !write || !settings || !dictionaries || !!recovery.candidate}>
+        <fieldset
+          className="shipment-edit-section"
+          data-edit-tab="details"
+          hidden={!['details', 'route', 'items'].includes(tab)}
+        >
+          <div>
+            <RecordSection title={translate('shipment.identification')}>
+              <div className="shipment-fields">
+                <label>
+                  {translate('registryField.shipmentNumber')}
+                  <div className="shipment-number">
+                    <input
+                      name="number"
+                      aria-invalid={Boolean(validation.errors.number) || undefined}
                       aria-describedby={
-                        validation.errors.shipment_date ? `${formId}-date-error` : undefined
+                        validation.errors.number ? `${formId}-number-error` : undefined
                       }
-
-                      min="1900-01-01"
-                      required
-                      value={draft.shipment_date}
-                      onChange={(dateValue) => set('shipment_date', dateValue)}
+                      required={manualNumber}
+                      readOnly={!manualNumber}
+                      maxLength={128}
+                      value={draft.number}
+                      placeholder={translate('shipment.autoNumber')}
+                      onChange={(e) => set('number', e.target.value)}
                     />
-                    {validation.errors.shipment_date && (
-                      <small className="field-error" id={`${formId}-date-error`}>
-                        {validation.errors.shipment_date}
-                      </small>
+                    {!initial && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManualNumber((old) => !old);
+                          set('number', '');
+                        }}
+                      >
+                        {manualNumber
+                          ? translate('shipment.automatic')
+                          : translate('shipment.manual')}
+                      </button>
                     )}
-                  </label>
+                  </div>
+                  {!manualNumber && (
+                    <small>
+                      {translate('shipment.numberFormat', {
+                        format: settings?.number_template ?? '',
+                      })}
+                    </small>
+                  )}
+                  {validation.errors.number && (
+                    <small className="field-error" id={`${formId}-number-error`}>
+                      {validation.errors.number}
+                    </small>
+                  )}
+                </label>
+                <label>
+                  {translate('shipment.dateRequired')}
+                  <IsoDateInput
+                    name="shipment_date"
+                    aria-invalid={Boolean(validation.errors.shipment_date) || undefined}
+                    aria-describedby={
+                      validation.errors.shipment_date ? `${formId}-date-error` : undefined
+                    }
+                    min="1900-01-01"
+                    required
+                    value={draft.shipment_date}
+                    onChange={(dateValue) => set('shipment_date', dateValue)}
+                  />
+                  {validation.errors.shipment_date && (
+                    <small className="field-error" id={`${formId}-date-error`}>
+                      {validation.errors.shipment_date}
+                    </small>
+                  )}
+                </label>
+                <Select
+                  label={translate('registryField.status')}
+                  value={draft.status}
+                  onChange={(v) => {
+                    manualStatus.current = true;
+                    set('status', v);
+                  }}
+                  options={[...new Set([...(settings?.statuses ?? []), draft.status])]
+                    .filter(Boolean)
+                    .map((value) => ({ value, label: value }))}
+                />
+              </div>
+            </RecordSection>
+          </div>
+          <div>
+            <RecordSection title={translate('shipment.participants')}>
+              <div className="shipment-fields shipment-participants">
+                <div data-workflow-field="customer">
+                  <CustomerSelect
+                    label={translate('shipment.customerRequired')}
+                    required
+                    error={
+                      validation.attempted && !draft.customer_id
+                        ? translate('lookup.chooseCustomerDirectory')
+                        : ''
+                    }
+                    session={props.session}
+                    items={props.customers}
+                    value={draft.customer_id}
+                    disabled={busy || !write}
+                    onChange={(value) =>
+                      setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
+                    }
+                  />
                 </div>
-              </RecordSection>
-              <RecordSection title={translate('shipment.participants')}>
-                <div className="shipment-fields">
-                  <div data-workflow-field="customer">
-                    <CustomerSelect
-                      label={translate('shipment.customerRequired')}
-                      required
-                      error={
-                        validation.attempted && !draft.customer_id
-                          ? translate('lookup.chooseCustomerDirectory')
-                          : ''
-                      }
-                      session={props.session}
-                      items={props.customers}
-                      value={draft.customer_id}
-                      disabled={busy || !write}
-                      onChange={(value) =>
-                        setDraft((old) => ({ ...old, ...changeShipmentCustomer(old, value) }))
-                      }
-                    />
-                  </div>
-                  <div data-workflow-field="recipient">
-                    <CustomerSelect
-                      label={translate('shipment.recipient')}
-                      session={props.session}
-                      items={props.customers}
-                      value={draft.recipient_id}
-                      disabled={busy || !write}
-                      onChange={(value) => set('recipient_id', value)}
-                    />
-                  </div>
-                  <div data-workflow-field="logist">
-                    <DirectoryLookup
-                      session={props.session}
-                      kind="employees"
-                      label={translate('shipment.logist')}
-                      value={draft.logist}
-                      onChange={(value) => {
-                        manualLogist.current = true;
-                        set('logist', value);
-                      }}
-                    />
-                  </div>
+                <div data-workflow-field="recipient">
+                  <CustomerSelect
+                    label={translate('shipment.recipient')}
+                    session={props.session}
+                    items={props.customers}
+                    value={draft.recipient_id}
+                    disabled={busy || !write}
+                    onChange={(value) => set('recipient_id', value)}
+                  />
                 </div>
-              </RecordSection>
-              <RecordSection title={translate('shipment.cargoTerms')}>
+                <div data-workflow-field="logist">
+                  <DirectoryLookup
+                    session={props.session}
+                    kind="employees"
+                    label={translate('shipment.logist')}
+                    value={draft.logist}
+                    onChange={(value) => {
+                      manualLogist.current = true;
+                      set('logist', value);
+                    }}
+                  />
+                </div>
+              </div>
+            </RecordSection>
+          </div>
+          <div>
+            <RecordSection title={translate('shipment.cargoTerms')}>
+              <div className="shipment-cargo-conditions">
                 <div
                   data-workflow-field="cargo"
                   className="cargo-autocomplete"
@@ -773,7 +636,7 @@ function ShipmentCard({
                     <textarea
                       ref={cargoInput}
                       maxLength={2000}
-                      rows={2}
+                      rows={1}
                       value={draft.cargo_description}
                       onFocus={() => setCargoOpen(true)}
                       onChange={(event) => {
@@ -860,76 +723,70 @@ function ShipmentCard({
                   session={props.session}
                   onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
                 />
-              </RecordSection>
-              <RecordSection title={translate('shipment.delivery')}>
-                <ShipmentConditionsFields
-                  section="delivery"
-                  value={draft}
-                  session={props.session}
-                  onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
-                />
-              </RecordSection>
-              <RecordSection title={translate('shipment.additional')}>
-                <div className="shipment-fields">
-                  <Select
-                    label={translate('registryField.status')}
-                    value={draft.status}
-                    onChange={(v) => {
-                      manualStatus.current = true;
-                      set('status', v);
-                    }}
-                    options={[...new Set([...(settings?.statuses ?? []), draft.status])]
-                      .filter(Boolean)
-                      .map((value) => ({ value, label: value }))}
-                  />
-                  <label>
-                    {translate('shipment.note')}
-                    <input
-                      maxLength={256}
-                      value={draft.reference}
-                      onChange={(e) => set('reference', e.target.value)}
-                    />
-                  </label>
-                </div>
-              </RecordSection>
-            </RecordEditorSections>
-          </fieldset>
-          <fieldset
-            className="shipment-edit-section"
-            data-edit-tab="route"
-            hidden={tab !== 'route'}
-          >
-            <ShipmentRoute
-              segments={draft.route_segments}
-              onChange={(values) => set('route_segments', values)}
-              allowedTypes={settings?.route_types ?? []}
-              types={dictionaries?.route_types ?? []}
-              session={props.session}
-              customers={props.customers}
-            />
-          </fieldset>
+              </div>
+            </RecordSection>
+          </div>
+          <div>
+            <RecordSection title={translate('shipment.delivery')}>
+              <ShipmentConditionsFields
+                section="delivery"
+                value={draft}
+                session={props.session}
+                onChange={(patch) => setDraft((old) => ({ ...old, ...patch }))}
+              />
+            </RecordSection>
+          </div>
         </fieldset>
-      </form>
-      {initial && (
-        <VisitedPanel active={tab === 'finance'} className="panel-content">
-          <ServiceCharges
-            active={props.active !== false && tab === 'finance'}
-            scope={{ shipment_id: initial.id, transportation_id: null }}
+        <fieldset className="shipment-edit-section" data-edit-tab="route">
+          <ShipmentRoute
+            segments={draft.route_segments}
+            onChange={(values) => set('route_segments', values)}
+            allowedTypes={settings?.route_types ?? []}
+            types={dictionaries?.route_types ?? []}
             session={props.session}
             customers={props.customers}
           />
-        </VisitedPanel>
-      )}
+        </fieldset>
+        {overview && containerPanel}
+        <div>
+          <RecordSection title={translate('shipment.note')}>
+            <div className="shipment-fields">
+              <label>
+                {translate('shipment.note')}
+                <input
+                  maxLength={256}
+                  value={draft.reference}
+                  onChange={(e) => set('reference', e.target.value)}
+                />
+              </label>
+            </div>
+          </RecordSection>
+        </div>
+      </fieldset>
+    </form>
+  );
+  const containerPanel = (
+    <>
       {initial && (
         <div
-          data-workflow-panel={tab === 'items' ? 'items' : 'transportations'}
-          hidden={tab !== 'items' && tab !== 'transportations'}
+          className="shipment-container-plan"
+          data-workflow-panel={tab === 'transportations' ? 'transportations' : 'items'}
+          hidden={
+            tab !== 'transportations' &&
+            (!settings?.planned_containers || !['details', 'route', 'items'].includes(tab))
+          }
         >
           <ShipmentPanel
             embedded
-            active={props.active !== false && (tab === 'items' || tab === 'transportations')}
+            active={
+              props.active !== false &&
+              (tab === 'transportations' ||
+                (settings?.planned_containers === true &&
+                  ['details', 'route', 'items'].includes(tab)))
+            }
+            readOnly={editing}
             containerTypes={settings?.container_types}
-            section={tab === 'items' ? 'items' : 'transportations'}
+            section={tab === 'transportations' ? 'transportations' : 'items'}
             initial={initial}
             session={props.session}
             customerName={
@@ -942,66 +799,261 @@ function ShipmentCard({
           />
         </div>
       )}
+    </>
+  );
+  return (
+    <RecordPage ref={card} className="shipment-editor">
+      {write && <DraftRecovery recovery={recovery} />}
+      <RecordHeading
+        kind={translate('shipment.eyebrow')}
+        title={initial?.number ?? translate('entity.newShipment')}
+        status={
+          initial && !editing ? initial.status : draft.status || translate('shipment.newStatus')
+        }
+        metadata={
+          initial ? (
+            <>
+              {`${translate('registryField.shipment_date')}: ${initial.shipment_date ? CalendarDate.fromISO(initial.shipment_date).toDisplayString() : '—'} · ${translate('shipment.revision', { revision: revision ?? 0 })}`}
+              <ShipmentInquiryLink shipment={initial.id} session={props.session} />
+            </>
+          ) : (
+            translate('shipment.createHint')
+          )
+        }
+        actions={
+          editing ? (
+            editorActions
+          ) : initial && write ? (
+            <>
+              <span className="record-guide-control">
+                <RecordGuideMenu>
+                  {['overview', 'context'].map((scope) => (
+                    <GuidedWorkflow
+                      key={
+                        scope === 'overview'
+                          ? scope
+                          : `${scope}-${tab}-${editing ? 'edit' : 'view'}`
+                      }
+                      textButton
+                      title={
+                        scope === 'overview'
+                          ? 'guide.overview'
+                          : editing
+                            ? 'guide.filling'
+                            : 'guide.section'
+                      }
+                      preference={preferenceKey(
+                        props.session.subject,
+                        'shipments',
+                        scope === 'overview'
+                          ? 'overview'
+                          : `workflow-${tab}-${editing ? 'edit' : 'view'}`,
+                      )}
+                      steps={
+                        scope === 'overview'
+                          ? shipmentWorkflow(
+                              props.session.permissions.includes('finance.read_service_charges'),
+                              settings?.planned_containers === true,
+                            ).filter((step) => !shipmentStepEditing(step.id))
+                          : shipmentContextSteps(
+                              tab,
+                              editing,
+                              props.session.permissions.includes('finance.read_service_charges'),
+                              settings?.planned_containers === true,
+                            )
+                      }
+                      active={props.active !== false}
+                      getTarget={(key) => {
+                        const root = card.current;
+                        if (!root) return null;
+                        if (scope === 'context' && !editing && shipmentFieldSteps.has(key)) {
+                          const labels: Record<string, string> = {
+                            customer: translate('field.customer'),
+                            recipient: translate('shipment.recipient'),
+                            logist: translate('shipment.logist'),
+                            cargo: translate('shipment.cargoDescription'),
+                            terms: 'Incoterms',
+                            delivery: translate('shipment.city'),
+                          };
+                          const field = Array.from(root.querySelectorAll<HTMLElement>('dt')).find(
+                            (node) =>
+                              node.getClientRects().length > 0 && node.textContent === labels[key],
+                          );
+                          return key === 'delivery' || key === 'terms'
+                            ? (field?.closest<HTMLElement>('.record-layout-section') ?? null)
+                            : (field?.parentElement ?? null);
+                        }
+
+                        const selector = shipmentFieldSteps.has(key)
+                          ? `[data-workflow-field="${key}"]`
+                          : key === 'route'
+                            ? '.shipment-route-workspace'
+                            : key === 'items'
+                              ? '[data-workflow-panel="items"]'
+                              : key === 'route-edit'
+                                ? '.shipment-route-add'
+                                : key === 'route-details'
+                                  ? '.shipment-route-workspace'
+                                  : key === 'plan-quantities'
+                                    ? '[data-workflow-panel="items"] .container-plan-table'
+                                    : key === 'plan-create'
+                                      ? '[data-workflow-plan-create]'
+                                      : key === 'transport-list'
+                                        ? '[data-workflow-panel="transportations"]'
+                                        : key === 'finance-summary'
+                                          ? '.finance-summary-disclosure'
+                                          : key === 'finance-invoice'
+                                            ? '.finance-services-table-wrap'
+                                            : `[data-workflow-tab="${key}"]`;
+                        return (
+                          Array.from(root.querySelectorAll<HTMLElement>(selector)).find(
+                            (node) => node.getClientRects().length > 0,
+                          ) ??
+                          root.querySelector<HTMLElement>(
+                            `[data-workflow-tab="${shipmentStepTab(key)}"]`,
+                          )
+                        );
+                      }}
+                      onOpen={(key, proceed) => {
+                        if (scope === 'context') {
+                          proceed();
+                          return;
+                        }
+                        const root = card.current;
+                        if (root?.querySelector('form[data-busy="true"]')) return;
+                        if (shipmentStepEditing(key)) {
+                          // Field steps stay in the same editor and preserve the user's draft.
+                          if (!editing && dirty) return;
+                          setTab(shipmentStepTab(key));
+                          setEditing(true);
+                          proceed();
+                          return;
+                        }
+                        confirmDiscard(
+                          Boolean(root?.querySelector('form[data-dirty="true"]')),
+                          () => {
+                            if (editing) {
+                              setDraft(JSON.parse(baseline) as CardDraft);
+                              setEditing(false);
+                              validation.reset();
+                              setFailure('');
+                            }
+                            setTab(shipmentStepTab(key));
+                            proceed();
+                          },
+                        );
+                      }}
+                    />
+                  ))}
+                </RecordGuideMenu>
+                <RecordGuideNotice
+                  context={`${editing ? 'edit' : 'view'}:${tab}`}
+                  active={props.active !== false}
+                  editing={editing}
+                />
+              </span>
+              {!editing && (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    if (tab !== 'details' && tab !== 'route') setTab('details');
+                    setEditing(true);
+                    setFailure('');
+                  }}
+                >
+                  {translate('shipment.editShipment')}
+                </button>
+              )}
+            </>
+          ) : undefined
+        }
+      />
+      {settingsFailure && (
+        <p className="error" role="alert">
+          {translate('shipment.settingsFailed', { message: settingsFailure })}
+        </p>
+      )}
+      <div className="tabs shipment-tabs record-layout-tabs">
+        {panels.map(([key, label]) => (
+          <button
+            key={key}
+            data-workflow-tab={key}
+            type="button"
+            aria-pressed={
+              tab === key || (key === 'details' && (tab === 'route' || tab === 'items'))
+            }
+            onClick={(event) => {
+              if (key === tab || busy) return;
+              if (editing && (key === 'details' || key === 'route')) {
+                setTab(key);
+                return;
+              }
+              const section = event.currentTarget.closest('section');
+              if (section?.querySelector('form[data-busy="true"]')) return;
+              const switchTab = () => {
+                if (initial && editing) {
+                  setDraft(JSON.parse(baseline) as CardDraft);
+                  setEditing(false);
+                  validation.reset();
+                  setFailure('');
+                }
+                setTab(key);
+                // Ссылка на маршрут должна работать и для уже открытой карточки.
+                if (initial)
+                  location.hash = `/shipments/${initial.id}${key === 'route' ? '/route' : ''}`;
+              };
+              confirmDiscard(
+                dirty || Boolean(section?.querySelector('form[data-dirty="true"]')),
+                switchTab,
+              );
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <RecordOverview hidden={!overview}>
+        {editing
+          ? renderEditor()
+          : initial && (
+              <div className="shipment-overview-main">
+                <ShipmentSummary
+                  shipment={initial}
+                  customers={props.customers}
+                  session={props.session}
+                />
+                <ShipmentRoute
+                  segments={initial.route_segments ?? []}
+                  allowedTypes={[]}
+                  types={dictionaries?.route_types ?? []}
+                  session={props.session}
+                  customers={props.customers}
+                />
+                {overview && containerPanel}
+                <RecordSection title={translate('shipment.note')}>
+                  <p>{initial.reference || '—'}</p>
+                </RecordSection>
+              </div>
+            )}
+      </RecordOverview>
+      {tab === 'transportations' && containerPanel}
+      {initial && (
+        <VisitedPanel active={tab === 'finance'} className="panel-content">
+          <ServiceCharges
+            active={props.active !== false && tab === 'finance'}
+            scope={{ shipment_id: initial.id, transportation_id: null }}
+            session={props.session}
+            customers={props.customers}
+          />
+        </VisitedPanel>
+      )}
       {failure && (!editing || !write) && (
         <p role="alert" className="error">
           {failure}
         </p>
       )}
-      {write && editing && (
-        <RecordActions
-          error={failure}
-          issues={validation.issues}
-          onIssueClick={validation.focusIssue}
-          status={
-            dirty
-              ? translate(
-                  recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
-                )
-              : initial
-                ? translate('shipment.revision', { revision: revision ?? 0 })
-                : translate('shipment.required')
-          }
-        >
-          {
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                confirmDiscard(dirty, () => {
-                  recovery.discard();
-                  validation.reset();
-                  if (!initial) {
-                    props.onCancel();
-                    return;
-                  }
-                  setEditing(false);
-                  manualLogist.current = false;
-                  manualStatus.current = false;
-                  setManualNumber(Boolean(initial));
-                  setDraft(JSON.parse(baseline) as CardDraft);
-                  setFailure('');
-                })
-              }
-            >
-              {translate('shipment.cancel')}
-            </button>
-          }
-          <button
-            form={formId}
-            type="submit"
-            className="primary"
-            disabled={busy || !settings || Boolean(initial && !dirty)}
-          >
-            {busy
-              ? translate('shipment.saving')
-              : initial
-                ? translate('shipment.saveChanges')
-                : translate('shipment.create')}
-          </button>
-        </RecordActions>
-      )}
       {confirmation}
-    </section>
+    </RecordPage>
   );
 }
 
@@ -1009,14 +1061,10 @@ function ShipmentSummary({
   shipment,
   customers,
   session,
-  routeOnly,
-  dictionaries,
 }: {
   shipment: Shipment;
   customers: Counterparty[];
   session: Session;
-  routeOnly: boolean;
-  dictionaries?: ShipmentDictionaries;
 }) {
   const { translate, locale } = useLocalization();
   const [logist, setLogist] = useState('');
@@ -1051,38 +1099,36 @@ function ShipmentSummary({
       </dl>
     </RecordSection>
   );
-  if (routeOnly)
-    return (
-      <ShipmentRoute
-        segments={shipment.route_segments ?? []}
-        allowedTypes={[]}
-        types={dictionaries?.route_types ?? []}
-        session={session}
-        customers={customers}
-      />
-    );
-
   return (
-    <div className="record-layout-content">
-      {group(translate('shipment.participants'), [
-        [translate('field.customer'), company(shipment.customer_id)],
-        [translate('shipment.recipient'), company(shipment.recipient_id)],
-        [translate('shipment.logist'), logist],
-      ])}
-      {group(translate('shipment.cargoTerms'), [
-        [translate('shipment.cargoDescription'), shipment.cargo_description, true],
-        ['Incoterms', shipment.incoterms],
-        [translate('shipment.carriageTerms'), shipment.carriage_terms],
-        [translate('shipment.loading'), shipment.loading],
-      ])}
-      {group(translate('shipment.delivery'), [
-        [translate('shipment.city'), shipment.delivery_city],
-        [translate('registryField.country_code'), shipment.delivery_country],
-        [translate('shipment.address'), shipment.delivery_address, true],
-      ])}
-      {group(translate('shipment.additional'), [
-        [translate('shipment.note'), shipment.reference, true],
-      ])}
-    </div>
+    <>
+      <div className="shipment-summary-sections">
+        {group(translate('shipment.identification'), [
+          [translate('registryField.shipmentNumber'), shipment.number],
+          [
+            translate('registryField.shipment_date'),
+            shipment.shipment_date
+              ? CalendarDate.fromISO(shipment.shipment_date).toDisplayString()
+              : '—',
+          ],
+          [translate('registryField.status'), shipment.status],
+        ])}
+        {group(translate('shipment.participants'), [
+          [translate('field.customer'), company(shipment.customer_id)],
+          [translate('shipment.recipient'), company(shipment.recipient_id)],
+          [translate('shipment.logist'), logist],
+        ])}
+        {group(translate('shipment.cargoTerms'), [
+          [translate('shipment.cargoDescription'), shipment.cargo_description, true],
+          ['Incoterms', shipment.incoterms],
+          [translate('shipment.carriageTerms'), shipment.carriage_terms],
+          [translate('shipment.loading'), shipment.loading],
+        ])}
+        {group(translate('shipment.delivery'), [
+          [translate('shipment.city'), shipment.delivery_city],
+          [translate('registryField.country_code'), shipment.delivery_country],
+          [translate('shipment.address'), shipment.delivery_address, true],
+        ])}
+      </div>
+    </>
   );
 }

@@ -16,8 +16,8 @@ export function CardNavigation({
   const { translate } = useLocalization();
   const [refreshing, setRefreshing] = useState(false);
   return (
-    <div className={`card-navigation ${className}`}>
-      <div className={`tabs ${tabsClassName}`}>{children}</div>
+    <div className={`card-navigation record-layout-navigation ${className}`}>
+      <div className={`tabs record-layout-tabs ${tabsClassName}`}>{children}</div>
       {onRefresh && (
         <button
           type="button"

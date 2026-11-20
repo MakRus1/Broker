@@ -1,8 +1,10 @@
+import { RecordFields, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
-import { RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+
 import './bankAccounts.css';
 import { useLocalization } from '../localization/Localization';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -230,7 +232,7 @@ export function BankAccounts({
           </h2>
           {!draft && (
             <div className="bank-accounts-actions">
-              <label className="bank-archive-toggle">
+              <label className="inline-check">
                 <input
                   type="checkbox"
                   checked={showArchived}
@@ -280,7 +282,7 @@ export function BankAccounts({
                 ] as const
               ).map(([group, title]) => (
                 <RecordSection key={group} title={translate(title)}>
-                  <div className="record-fields">
+                  <RecordFields>
                     {accountFields
                       .filter((field) => field[3] === group)
                       .map(([field, label, maxLength]) =>
@@ -322,7 +324,7 @@ export function BankAccounts({
                           </label>
                         ),
                       )}
-                  </div>
+                  </RecordFields>
                 </RecordSection>
               ))}
               <RecordSection title={translate('record.additional')}>
@@ -365,7 +367,7 @@ export function BankAccounts({
                     recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                   )
                 : draft.revision
-                  ? translate('shipment.revision', { revision: draft.revision })
+                  ? ''
                   : translate('record.creating')
             }
           >

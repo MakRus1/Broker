@@ -1,3 +1,4 @@
+import { RecordFields } from '../../shared/ui/record/RecordLayout';
 import { RecordHistoryEntry, RecordHistoryDiff } from '../../shared/ui/record/RecordHistory';
 import { useEffect, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
@@ -221,9 +222,9 @@ export function SalesInteractions({
       {confirmation}
       <DraftRecovery recovery={recovery} />
       {form && (
-        <form className="document-editor" onSubmit={save}>
+        <form className="sales-interaction-editor" onSubmit={save}>
           <h3>{translate(form.revision ? 'sales.interaction.edit' : 'sales.interaction.add')}</h3>
-          <div className="sales-interaction-fields">
+          <RecordFields>
             <div>
               <Select
                 label={translate('sales.interaction.kind')}
@@ -243,7 +244,7 @@ export function SalesInteractions({
                 onChange={(contact_date) => setForm({ ...form, contact_date })}
               />
             </label>
-            <label className="sales-interaction-wide">
+            <label className="record-field-wide">
               {translate('sales.interaction.result')}
               <textarea
                 required
@@ -268,7 +269,7 @@ export function SalesInteractions({
                 onChange={(next_action_date) => setForm({ ...form, next_action_date })}
               />
             </label>
-          </div>
+          </RecordFields>
           <p className="muted">
             {translate(form.revision ? 'sales.interaction.editHint' : 'sales.interaction.nextHint')}
           </p>
@@ -298,8 +299,8 @@ export function SalesInteractions({
         </form>
       )}
       {form?.revision && (
-        <section className="record-history" aria-label={translate('forms.changeHistory')}>
-          <h3>{translate('forms.changeHistory')}</h3>
+        <details className="record-history sales-interaction-history">
+          <summary>{translate('forms.changeHistory')}</summary>
           {historyError && (
             <p className="error" role="alert">
               {historyError}
@@ -354,7 +355,7 @@ export function SalesInteractions({
               />
             </RecordHistoryEntry>
           ))}
-        </section>
+        </details>
       )}
       {!form && failure && (
         <p className="error" role="alert">
@@ -365,44 +366,70 @@ export function SalesInteractions({
       {loaded && items.length === 0 && (
         <p className="muted">{translate('sales.interaction.empty')}</p>
       )}
-      <div className="sales-interaction-list">
+      <div className="sales-interaction-list" hidden={Boolean(form)}>
         {items.map((item) => (
-          <article
-            className={`sales-interaction${session.permissions.includes('sales.write') && !form ? ' sales-interaction-editable' : ''}`}
-            key={item.id}
-            role={session.permissions.includes('sales.write') && !form ? 'button' : undefined}
-            tabIndex={session.permissions.includes('sales.write') && !form ? 0 : undefined}
-            aria-label={
-              session.permissions.includes('sales.write') && !form
-                ? `${translate('sales.interaction.edit')}: ${item.result}`
-                : undefined
-            }
-            onClick={() => void edit(item)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                void edit(item);
-              }
-            }}
-          >
+          <article className="sales-interaction" key={item.id}>
             <div className="sales-interaction-meta">
-              <strong>{translate(`sales.interaction.${item.kind}`)}</strong>
+              <span className="sales-interaction-kind">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  {item.kind === 'call' ? (
+                    <path d="M5 3h4l2 5-3 2a15 15 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 5a2 2 0 0 1 2-2z" />
+                  ) : item.kind === 'email' ? (
+                    <>
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="m3 6 9 7 9-7" />
+                    </>
+                  ) : (
+                    <>
+                      <rect x="4" y="5" width="16" height="16" rx="2" />
+                      <path d="M8 3v4m8-4v4M4 11h16" />
+                    </>
+                  )}
+                </svg>
+                <strong>{translate(`sales.interaction.${item.kind}`)}</strong>
+              </span>
               <time dateTime={item.contact_date}>
                 {item.contact_date.split('-').reverse().join('.')}
               </time>
               <EmployeeName subject={item.author_subject} session={session} />
+              {session.permissions.includes('sales.write') && (
+                <button
+                  type="button"
+                  className="sales-interaction-edit"
+                  onClick={() => void edit(item)}
+                >
+                  {translate('sales.edit')}
+                </button>
+              )}
             </div>
             <p className="sales-interaction-result">{item.result}</p>
             {item.next_action && (
-              <p className="muted">
-                {translate('sales.interaction.nextAction')}: {item.next_action} ·{' '}
-                {item.next_action_date?.split('-').reverse().join('.')}
-              </p>
+              <div className="sales-interaction-next">
+                <div>
+                  <small>{translate('sales.interaction.nextAction')}</small>
+                  <span>{item.next_action}</span>
+                </div>
+                {item.next_action_date && (
+                  <time dateTime={item.next_action_date}>
+                    {item.next_action_date.split('-').reverse().join('.')}
+                  </time>
+                )}
+              </div>
             )}
           </article>
         ))}
       </div>
-      {before && (
+      {before && !form && (
         <button disabled={busy} onClick={() => void loadMore()}>
           {translate('sales.interaction.more')}
         </button>

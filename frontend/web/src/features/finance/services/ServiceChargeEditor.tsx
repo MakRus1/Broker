@@ -1,3 +1,5 @@
+import { RecordFields, RecordSection, RecordActions } from '../../../shared/ui/record/RecordLayout';
+
 import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
@@ -6,7 +8,7 @@ import { RecordGuide } from '../../../shared/ui/record/RecordGuide';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
 import { DateInput } from '../../../shared/dates/DateInput';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
-import { RecordSection, RecordActions } from '../../../shared/ui/record/RecordLayout';
+
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useLocalization } from '../../localization/Localization';
 import { FinancialHistory } from '../history/FinancialHistory';
@@ -322,7 +324,7 @@ export function ServiceChargeEditor({
         <RecordEditorSections>
           <fieldset disabled={busy || readOnly || !!recovery.candidate}>
             <RecordSection title={translate('record.identification')}>
-              <div className="record-fields">
+              <RecordFields>
                 <ServiceChargeLookup<FinancialLabel>
                   session={session}
                   kind="labels"
@@ -363,10 +365,10 @@ export function ServiceChargeEditor({
                   ]}
                   onChange={(value) => set('direction', value as ServiceCharge['direction'])}
                 />
-              </div>
+              </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.parties')}>
-              <div className="record-fields">
+              <RecordFields>
                 <CustomerSelect
                   session={session}
                   items={customers}
@@ -443,10 +445,10 @@ export function ServiceChargeEditor({
                       }}
                     />
                   )}
-              </div>
+              </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.calculation')}>
-              <div className="record-fields">
+              <RecordFields>
                 <label>
                   {translate('finance.serviceDateRequired')}
                   <DateInput
@@ -503,10 +505,10 @@ export function ServiceChargeEditor({
                     }
                   />
                 </label>
-              </div>
+              </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.currencyAndTax')}>
-              <div className="record-fields">
+              <RecordFields>
                 <ServiceExchangeFields
                   session={session}
                   disabled={busy}
@@ -548,10 +550,10 @@ export function ServiceChargeEditor({
                   onMode={(value) => set('vat_mode', value)}
                   onChange={(value) => set('rate', value)}
                 />
-              </div>
+              </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.additional')}>
-              <div className="record-fields">
+              <RecordFields>
                 <label className="record-wide">
                   {translate('shipment.note')}
                   <textarea
@@ -560,7 +562,7 @@ export function ServiceChargeEditor({
                     maxLength={4000}
                   />
                 </label>
-                <label className="bank-archive-toggle">
+                <label className="inline-check record-field-wide">
                   <input
                     type="checkbox"
                     checked={draft.archived}
@@ -568,7 +570,7 @@ export function ServiceChargeEditor({
                   />
                   {translate('filter.archived')}
                 </label>
-              </div>
+              </RecordFields>
             </RecordSection>
           </fieldset>
         </RecordEditorSections>
@@ -584,7 +586,7 @@ export function ServiceChargeEditor({
                     recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                   )
                 : initial.revision > 0
-                  ? translate('shipment.revision', { revision: initial.revision })
+                  ? ''
                   : translate('record.creating')
           }
         >

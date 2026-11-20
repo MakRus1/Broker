@@ -1437,11 +1437,6 @@ nav,
   margin-top: 5px;
 }
 
-.registry-tax-field input,
-.registry-tax-field .registry-search-button {
-  height: 42px;
-  box-sizing: border-box;
-}
 .registry-tax-field .registry-search-button {
   display: inline-flex;
   align-items: center;
@@ -1583,19 +1578,7 @@ main > header {
 .workspace-content > div > .page-heading {
   padding-inline: 28px;
 }
-.shipment-editor {
-  padding: 28px;
-  overflow: visible;
-}
-.shipment-editor > .page-heading {
-  padding: 0 0 20px;
-}
-.shipment-editor fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
+
 .shipment-tabs {
   display: inline-flex;
   max-width: 100%;
@@ -1783,9 +1766,7 @@ main > header {
   .shipment-fields.three {
     grid-template-columns: 1fr;
   }
-  .shipment-editor {
-    padding: 18px;
-  }
+
   .shipment-save {
     flex-wrap: wrap;
     gap: 10px;
@@ -1795,33 +1776,11 @@ main > header {
   }
 }
 
-.shipment-editor label {
-  align-content: start;
-}
-.shipment-editor input:not([type='checkbox']),
-.shipment-editor .select-trigger {
-  height: 44px;
-  min-height: 44px;
-  font-size: 14px;
-}
-.shipment-editor textarea {
-  font-size: 14px;
-}
-.shipment-editor .counterparty-picker {
-  min-width: 0;
-}
 .shipment-number {
   align-items: stretch;
 }
 .shipment-number button {
   height: 44px;
-}
-
-.shipment-editor > div > .shipment-page {
-  padding: 0;
-}
-.shipment-editor .shipment-card > .panel-content {
-  padding-inline: 0;
 }
 
 @media (max-width: 600px) {

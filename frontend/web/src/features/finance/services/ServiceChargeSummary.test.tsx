@@ -11,6 +11,14 @@ vi.mock('../../localization/Localization', () => ({
       translate('en', key, values),
   }),
 }));
+const session = {
+  actor: 'author',
+  subject: 'author',
+  organization_id: 'org',
+  display_name: 'author',
+  csrf_token: '',
+  permissions: [],
+};
 const charge: ServiceCharge = {
   id: 'charge',
   shipment_id: 'shipment',
@@ -43,7 +51,7 @@ const charge: ServiceCharge = {
   revision: 1,
 };
 it('shows stored service and invoice amounts separately without recalculation', () => {
-  const html = renderToStaticMarkup(<ServiceChargeSummary charge={charge} />);
+  const html = renderToStaticMarkup(<ServiceChargeSummary charge={charge} session={session} />);
   expect(html).toContain('120,00');
   expect(html).toMatch(/10\s800,00/);
   expect(html).toContain('USD');
@@ -55,6 +63,7 @@ it('shows stored service and invoice amounts separately without recalculation', 
 it('links the exact invoice and distinguishes exempt VAT from a zero rate', () => {
   const html = renderToStaticMarkup(
     <ServiceChargeSummary
+      session={session}
       charge={{ ...charge, vat_mode: 'exempt', vat_rate_basis_points: null }}
       invoice={{
         invoice_id: 'invoice',

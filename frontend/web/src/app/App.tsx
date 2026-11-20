@@ -1,3 +1,7 @@
+import { SidebarHints } from './SidebarHints';
+import { NavigationAppearance } from './NavigationAppearance';
+import { NavigationIcon } from './NavigationIcon';
+import { readNavigationMode, type NavigationMode } from './navigationPreference';
 import { RfqPage } from '../features/sales/rfq/RfqPage';
 import { NotificationCenter, useNotifications } from '../features/notifications/Notifications';
 import { GlobalSearch } from '../features/search/GlobalSearch';
@@ -8,7 +12,7 @@ import { ShipmentRegistry } from '../features/shipments/ShipmentRegistryPage';
 import { TransportationRegistry } from '../features/transportations/TransportationRegistryPage';
 import { WorkspaceHome } from './WorkspaceHome';
 import { SidebarNavigation } from './SidebarNavigation';
-import { workspaceSections, workspaceSection, canOpenWorkspace } from './workspaceSections';
+import { workspaceGroups, workspaceSection, canOpenWorkspace } from './workspaceSections';
 import { ServiceChargePage } from '../features/finance/services/ServiceChargePage';
 import { ServiceCharges } from '../features/finance/FinancePanel';
 import { PaymentsPage } from '../features/finance/payments/PaymentsPage';
@@ -209,13 +213,15 @@ function WorkspaceApp() {
     const current = workspaces.find((entry) => entry.id === activeWorkspace);
     document.title = `${current ? localizedWorkspaceTitle(current, locale) : translate('workspace.title')} · Broker`;
   }, [activeWorkspace, workspaces, locale, catalogVersion]);
-  const [navigationPinned, setNavigationPinned] = useState(() => {
+  const [navigationMode, setNavigationMode] = useState<NavigationMode>(() => readNavigationMode());
+  function changeNavigationMode(mode: NavigationMode) {
+    setNavigationMode(mode);
     try {
-      return localStorage.getItem('broker:navigation-pinned') === 'true';
+      localStorage.setItem('broker:navigation-mode', mode);
     } catch {
-      return false;
+      /* Настройка работает до закрытия вкладки. */
     }
-  });
+  }
   const [notice, setNotice] = useState('');
   const error = useCallback(
     (value: unknown) => {
@@ -291,48 +297,18 @@ function WorkspaceApp() {
       </div>
     );
   return (
-    <div className={`app${navigationPinned ? ' navigation-pinned' : ''}`}>
+    <div
+      className={`app navigation-${navigationMode}${navigationMode === 'expanded' ? ' navigation-pinned' : ''}`}
+    >
       <aside className="sidebar" id="workspace-navigation">
+        <SidebarHints />
         <div className="sidebar-heading">
           <Brand />
-          <button
-            className="navigation-pin"
-            aria-label={
-              navigationPinned ? translate('workspace.unpin') : translate('workspace.pin')
-            }
-            aria-pressed={navigationPinned}
-            title={navigationPinned ? translate('workspace.unpin') : translate('workspace.pin')}
-            onClick={() => {
-              const next = !navigationPinned;
-              setNavigationPinned(next);
-              try {
-                localStorage.setItem('broker:navigation-pinned', String(next));
-              } catch {
-                /* Настройка доступна и без хранилища. */
-              }
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m16 3 5 5-4 1-3 5-4-4 5-3 1-4Z" />
-              <path d="m10 10-3 3 4 4 3-3M9 15l-6 6" />
-            </svg>
-          </button>
         </div>
-        <span className="nav-label">{translate('workspace.title')}</span>
+
         <SidebarNavigation>
           <button
             aria-label={translate('home.navigation')}
-            title={translate('home.navigation')}
             aria-current={route === '/' ? 'page' : undefined}
             onClick={() => {
               location.hash = '/';
@@ -355,25 +331,37 @@ function WorkspaceApp() {
             </span>
             <span className="navigation-text">{translate('home.navigation')}</span>
           </button>
-          {workspaceSections
-            .filter((section) => session.permissions.includes(section.permission))
-            .map((section) => (
-              <button
-                key={section.route}
-                aria-label={translate(section.title)}
-                title={translate(section.title)}
-                aria-current={workspaceSection(route)?.route === section.route ? 'page' : undefined}
-                onClick={() => {
-                  location.hash = section.route;
-                }}
-              >
-                <span className="navigation-icon" aria-hidden="true">
-                  {section.icon}
-                </span>
-                <span className="navigation-text">{translate(section.title)}</span>
-              </button>
-            ))}
+          {workspaceGroups.map((group) => {
+            const sections = group.items.filter((section) =>
+              session.permissions.includes(section.permission),
+            );
+            return (
+              sections.length > 0 && (
+                <div className="navigation-group" key={group.title}>
+                  <span className="navigation-group-label">{translate(group.title)}</span>
+                  {sections.map((section) => (
+                    <button
+                      key={section.route}
+                      aria-label={translate(section.title)}
+                      aria-current={
+                        workspaceSection(route)?.route === section.route ? 'page' : undefined
+                      }
+                      onClick={() => {
+                        location.hash = section.route;
+                      }}
+                    >
+                      <span className="navigation-icon" aria-hidden="true">
+                        <NavigationIcon route={section.route} />
+                      </span>
+                      <span className="navigation-text">{translate(section.title)}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            );
+          })}
         </SidebarNavigation>
+        <NavigationAppearance mode={navigationMode} onChange={changeNavigationMode} />
         <div className="profile">
           <span className="avatar">
             {(session.display_name || session.subject).slice(0, 1).toUpperCase()}

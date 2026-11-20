@@ -64,7 +64,7 @@ export function ShipmentConditionsFields({
       </div>
     );
   return (
-    <div className="shipment-fields" data-workflow-field="delivery">
+    <div className="shipment-fields shipment-delivery-fields" data-workflow-field="delivery">
       <DirectoryLookup
         session={session}
         kind="cities"
@@ -88,7 +88,7 @@ export function ShipmentConditionsFields({
         {translate('shipment.deliveryAddress')}
         <textarea
           maxLength={1000}
-          rows={2}
+          rows={1}
           value={value.delivery_address ?? ''}
           onChange={(event) => onChange({ delivery_address: event.target.value })}
         />

@@ -1,0 +1,464 @@
+/* Общая оболочка и базовые элементы рабочего пространства. */
+:root {
+  --canvas: #f1f4f7;
+  --surface: #ffffff;
+  --surface-muted: #f5f7fa;
+  --surface-hover: #edf1f6;
+  --text: #243143;
+  --text-secondary: #5e6d80;
+  --text-muted: #65758a;
+  --divider: #e0e6ed;
+  --border: #cbd5e1;
+  --accent: #3066d3;
+  --accent-hover: #2357c0;
+  --accent-text: #285fc7;
+  --accent-soft: #eaf0fc;
+  --navigation: #f8fafc;
+  --navigation-text: #405169;
+  --navigation-muted: #607188;
+  --navigation-hover: #e9eff9;
+  --navigation-border: #d9e2ef;
+  --navigation-avatar: #dce6f5;
+  --navigation-accent: #285fc7;
+}
+:root[data-theme='dark'] {
+  --canvas: #101922;
+  --surface: #192632;
+  --surface-muted: #1e2e3b;
+  --surface-hover: #243545;
+  --text: #e2e9f1;
+  --text-secondary: #aebccc;
+  --text-muted: #9cabbc;
+  --divider: #324354;
+  --border: #45596e;
+  --accent: #3066d3;
+  --accent-hover: #3d73e0;
+  --accent-text: #aac6fa;
+  --accent-soft: #243c5c;
+  --navigation: #14212c;
+  --navigation-text: #c0cddd;
+  --navigation-muted: #a3b3c5;
+  --navigation-hover: #203449;
+  --navigation-border: #324557;
+  --navigation-avatar: #2b4360;
+  --navigation-accent: #aac6fa;
+}
+:root {
+  font-size: 14px;
+}
+.app > main {
+  padding-inline: 24px;
+  padding-bottom: 24px;
+}
+.app > main > header {
+  height: 56px;
+  border: 0;
+  font-size: 12px;
+  gap: 12px;
+}
+.app > main > header .environment {
+  display: none;
+}
+.app .surface {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.app h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.app h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+.app h3 {
+  font-weight: 600;
+}
+.app button,
+.app a.primary {
+  font-size: 13px;
+  border-radius: 5px;
+}
+.app button.primary,
+.app a.primary {
+  font-weight: 500;
+}
+.app input:not([type='checkbox']):not([type='radio']),
+.app textarea,
+.app .select-trigger {
+  border-radius: 5px;
+  font-weight: 400;
+}
+.app .page-heading {
+  padding-block: 24px 20px;
+}
+.app table th {
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.app table td {
+  font-size: 13px;
+}
+.app .workspace-tab {
+  background: transparent;
+  border-color: transparent;
+  height: 34px;
+  border-radius: 7px 7px 0 0;
+}
+.app .workspace-tab.selected {
+  background: var(--surface);
+  border-color: var(--divider);
+  border-bottom-color: var(--surface);
+  color: var(--text);
+}
+.app .workspace-tab > button[role='tab'] {
+  font-size: 12px;
+}
+.app .sidebar {
+  border-right: 1px solid var(--navigation-border);
+}
+.app .sidebar .brand {
+  font-size: 23px;
+  letter-spacing: -0.8px;
+}
+.app .sidebar .brand > span:first-child {
+  width: 30px;
+  height: 30px;
+  font-size: 21px;
+  border-radius: 8px;
+}
+.app .sidebar nav button {
+  color: var(--navigation-text);
+  min-height: 38px;
+  padding: 9px 11px;
+  gap: 12px;
+  border-radius: 5px;
+  font-weight: 400;
+}
+.app .sidebar nav button[aria-current='page'] {
+  background: var(--navigation-hover);
+  color: var(--navigation-accent);
+  border-color: transparent;
+  font-weight: 600;
+}
+.navigation-group {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.navigation-group-label {
+  margin: 14px 11px 7px;
+  color: var(--navigation-muted);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.app .profile .avatar {
+  color: var(--navigation-text);
+}
+@media (min-width: 651px) {
+  .app .sidebar {
+    width: 64px;
+    padding: 20px 9px 16px;
+  }
+  .app .sidebar-heading {
+    width: 206px;
+  }
+  .app .sidebar .brand {
+    padding-left: 7px;
+  }
+  .app .sidebar-navigation {
+    margin-top: 24px;
+    margin-right: -6px;
+    margin-bottom: 0;
+  }
+  .app .sidebar .sidebar-navigation nav {
+    gap: 4px;
+  }
+  .app .sidebar .navigation-group-label {
+    height: 1px;
+    margin: 10px 11px;
+    overflow: hidden;
+    visibility: hidden;
+  }
+  .app > main {
+    margin-left: 64px;
+    width: calc(100% - 64px);
+  }
+  .app.navigation-auto .sidebar:is(:hover, :has(:focus-visible)),
+  .app.navigation-expanded .sidebar {
+    width: 240px;
+  }
+  .app.navigation-expanded > main {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+  }
+  .app.navigation-auto .sidebar:is(:hover, :has(:focus-visible)) .navigation-group-label,
+  .app.navigation-expanded .sidebar .navigation-group-label {
+    height: auto;
+    margin: 14px 11px 7px;
+    visibility: visible;
+  }
+  .app.navigation-compact .sidebar {
+    width: 64px;
+    box-shadow: none;
+  }
+  .app.navigation-compact .sidebar :is(.brand-name, .navigation-text, .profile > div) {
+    visibility: hidden;
+    opacity: 0;
+  }
+  .app.navigation-compact .sidebar nav::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-color: transparent;
+  }
+  .app.navigation-compact .sidebar .sidebar-navigation nav {
+    scrollbar-color: transparent transparent;
+  }
+  .app .sidebar .profile {
+    padding-top: 12px;
+    padding-left: 5px;
+    min-height: 50px;
+  }
+}
+@media (max-width: 900px) {
+  .app > main {
+    padding-inline: 16px;
+  }
+}
+@media (max-width: 650px) {
+  .app > main {
+    padding: 0 12px 16px;
+  }
+  .app > main > header {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+  .app .sidebar {
+    padding: 10px 12px;
+  }
+  .app .sidebar-navigation {
+    margin: 0;
+  }
+  .app .sidebar .sidebar-navigation nav {
+    display: flex;
+  }
+  .navigation-group {
+    display: contents;
+  }
+}
+@media (pointer: coarse) {
+  .app button,
+  .app a.primary,
+  .app .sidebar nav button {
+    min-height: 44px;
+  }
+  .app input:not([type='checkbox']):not([type='radio']),
+  .app textarea,
+  .app .select-trigger {
+    font-size: 16px;
+  }
+  .app .workspace-close {
+    min-height: 32px;
+  }
+}
+@media (min-width: 651px) {
+  .app .sidebar .sidebar-navigation nav {
+    scrollbar-gutter: auto;
+  }
+  .app .sidebar .navigation-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app .sidebar nav button {
+    min-width: 0;
+  }
+  .app.navigation-auto .sidebar:is(:hover, :has(:focus-visible)) .sidebar-navigation nav,
+  .app.navigation-expanded .sidebar .sidebar-navigation nav {
+    scrollbar-gutter: stable;
+  }
+}
+.app .registry-long-text > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+.app .registry-long-text[data-expanded='true'] > span {
+  display: block;
+  white-space: pre-wrap;
+}
+.app .registry-long-text > button {
+  display: block;
+  padding: 3px 0 0;
+  margin: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font-size: 11px;
+}
+.app .registry-workbench .registry-heading-tools .select-trigger {
+  min-height: 34px;
+  font-size: 12px;
+}
+@media (pointer: coarse) {
+  .app .registry-long-text > button {
+    min-height: 44px;
+  }
+}
+.navigation-appearance {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-block: 10px;
+}
+.app .navigation-appearance-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  min-height: 44px;
+  width: 44px;
+  padding: 10px;
+  border: 0;
+  color: var(--navigation-text);
+  background: transparent;
+}
+.navigation-appearance-trigger svg {
+  flex: 0 0 21px;
+}
+.navigation-appearance-trigger .navigation-text {
+  display: none;
+}
+.navigation-appearance-options {
+  display: grid;
+  gap: 8px;
+}
+.navigation-appearance-options > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  text-align: left;
+  padding: 14px 16px;
+}
+.navigation-appearance-options > button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+.navigation-appearance-options strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.navigation-appearance-options small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.navigation-appearance-options > button > span:last-child {
+  color: var(--accent-text);
+}
+@media (min-width: 651px) {
+  .navigation-expanded .navigation-appearance-trigger,
+  .navigation-auto .sidebar:is(:hover, :has(:focus-visible)) .navigation-appearance-trigger {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .navigation-expanded .navigation-appearance-trigger .navigation-text,
+  .navigation-auto
+    .sidebar:is(:hover, :has(:focus-visible))
+    .navigation-appearance-trigger
+    .navigation-text {
+    display: inline;
+  }
+}
+@media (max-width: 650px) {
+  .navigation-appearance {
+    display: none;
+  }
+}
+.sidebar-hint {
+  position: fixed;
+  z-index: 1000;
+  transform: translateY(-50%);
+  max-width: min(280px, calc(100vw - 96px));
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 4px 16px var(--shadow);
+  font-size: 13px;
+  line-height: 18px;
+  pointer-events: none;
+  overflow-wrap: anywhere;
+}
+.app .navigation-appearance-trigger {
+  min-height: 38px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 5px;
+}
+.app .navigation-appearance-trigger svg {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+.app .navigation-appearance-trigger:focus-visible {
+  outline-width: 2px;
+  outline-offset: -2px;
+}
+.navigation-appearance-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 20px var(--shadow);
+}
+.navigation-appearance-title {
+  display: block;
+  padding: 7px 9px 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.navigation-appearance-popover .navigation-appearance-options {
+  gap: 3px;
+}
+.navigation-appearance-popover .navigation-appearance-options > button {
+  padding: 9px;
+  gap: 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+}
+.navigation-appearance-popover .navigation-appearance-options > button:hover,
+.navigation-appearance-popover .navigation-appearance-options > button[aria-pressed='true'] {
+  background: var(--surface-hover);
+}
+.navigation-appearance-popover .navigation-appearance-options strong {
+  font-size: 13px;
+}
+.navigation-appearance-popover .navigation-appearance-options small {
+  font-size: 11px;
+  line-height: 16px;
+}
+@media (pointer: coarse) {
+  .app .navigation-appearance-trigger {
+    min-height: 44px;
+  }
+}

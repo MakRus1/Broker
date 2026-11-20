@@ -28,6 +28,7 @@ type Props = {
   initial: Shipment;
   containerTypes?: string[];
   embedded?: boolean;
+  readOnly?: boolean;
   section?: 'items' | 'transportations';
   customerName: string;
   session: Session;
@@ -40,6 +41,7 @@ export function ShipmentPanel({
   customerName,
   containerTypes = ['20DC', '40DC', '40HC'],
   embedded = false,
+  readOnly = false,
   section,
   initial,
   session,
@@ -73,7 +75,7 @@ export function ShipmentPanel({
   const commands = useRef(new Commands());
   const storageKey = operationStorageKey(session.actor, initial.id);
   const [ids, setIds] = useState(() => readOperationIds(storageKey));
-  const write = session.permissions.includes('shipments.write');
+  const write = session.permissions.includes('shipments.write') && !readOnly;
   const canReadTransportations = session.permissions.includes('transportations.read');
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
@@ -301,7 +303,11 @@ export function ShipmentPanel({
               <div className="section-heading">
                 <div>
                   <h3>{translate('shipment.plannedContainers')}</h3>
-                  <p>{translate('shipment.planMatchingHint')}</p>
+                  <p>
+                    {translate(
+                      readOnly ? 'shipment.planReadOnlyWhileEditing' : 'shipment.planMatchingHint',
+                    )}
+                  </p>
                 </div>
                 {write && (
                   <button
@@ -313,53 +319,65 @@ export function ShipmentPanel({
                   </button>
                 )}
               </div>
-              {items.map((item) => (
-                <article className="item-card" key={item.id}>
-                  <div className="item-title">
-                    <strong>{item.container_type_code}</strong>
-                    <span className="badge">{ownership[item.container_ownership]}</span>
-                  </div>
-                  <div className="quantities">
-                    <div>
-                      <span>{translate('shipment.planned')}</span>
-                      <strong>{item.planned_quantity}</strong>
-                    </div>
-                    <div>
-                      <span>{translate('shipment.created')}</span>
-                      <strong>{item.created_quantity}</strong>
-                    </div>
-                    {item.pending_quantity > 0 && (
-                      <div>
-                        <span>{translate('shipment.creating')}</span>
-                        <strong>{item.pending_quantity}</strong>
-                      </div>
-                    )}
-                    <div>
-                      <span>{translate('shipment.remaining')}</span>
-                      <strong>{item.available_quantity}</strong>
-                    </div>
-                  </div>
-                  {item.excess_quantity > 0 && (
-                    <p className="plan-excess" role="status">
-                      {translate('shipment.planExcess', { count: item.excess_quantity })}
-                    </p>
-                  )}
-                  {write && (
-                    <button disabled={loading} onClick={() => setEditPlan(item)}>
-                      {translate('shipment.editPlan')}
-                    </button>
-                  )}
-                  {write && (
-                    <button
-                      data-workflow-plan-create
-                      disabled={loading}
-                      onClick={() => setForm(item)}
-                    >
-                      {translate('shipment.createTransportationsArrow')}
-                    </button>
-                  )}
-                </article>
-              ))}
+              {!!items.length && (
+                <div className="container-plan-table-scroll">
+                  <table className="container-plan-table">
+                    <thead>
+                      <tr>
+                        <th>{translate('registryField.container_type')}</th>
+                        <th>{translate('registryField.container_ownership')}</th>
+                        <th className="numeric">{translate('shipment.planned')}</th>
+                        <th className="numeric">{translate('shipment.created')}</th>
+                        <th className="numeric">{translate('shipment.creating')}</th>
+                        <th className="numeric">{translate('shipment.remaining')}</th>
+                        {write && (
+                          <th>
+                            <span className="visually-hidden">
+                              {translate('shipment.planActions')}
+                            </span>
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <strong>{item.container_type_code}</strong>
+                          </td>
+                          <td>{ownership[item.container_ownership]}</td>
+                          <td className="numeric">{item.planned_quantity}</td>
+                          <td className="numeric">{item.created_quantity}</td>
+                          <td className="numeric">{item.pending_quantity || '—'}</td>
+                          <td className="numeric">
+                            <span className={item.excess_quantity > 0 ? 'plan-excess' : undefined}>
+                              {item.excess_quantity > 0
+                                ? translate('shipment.planExcess', { count: item.excess_quantity })
+                                : item.available_quantity}
+                            </span>
+                          </td>
+                          {write && (
+                            <td>
+                              <div className="container-plan-actions">
+                                <button disabled={loading} onClick={() => setEditPlan(item)}>
+                                  {translate('shipment.editPlan')}
+                                </button>
+                                <button
+                                  data-workflow-plan-create
+                                  disabled={loading || item.available_quantity <= 0}
+                                  onClick={() => setForm(item)}
+                                >
+                                  {translate('shipment.createTransportations')}
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {!items.length && !loading && !failure && (
                 <div className="empty">
                   <h3>{translate('shipment.firstItem')}</h3>

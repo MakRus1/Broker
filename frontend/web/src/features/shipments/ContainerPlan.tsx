@@ -147,8 +147,9 @@ export function IncompleteContainers({
     }
   }
   return (
-    <div>
+    <div className="incomplete-container-list">
       <button
+        type="button"
         aria-expanded={open}
         onClick={() => {
           setOpen(!open);

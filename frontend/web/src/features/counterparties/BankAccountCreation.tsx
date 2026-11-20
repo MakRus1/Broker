@@ -1,3 +1,4 @@
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { useLocalization } from '../localization/Localization';
 import { RecordHeading } from '../../shared/ui/record/RecordLayout';
@@ -40,7 +41,7 @@ export function BankAccountCreation({
     return () => controller.abort();
   }, [owner, session]);
   return (
-    <section className="surface record-workbench">
+    <RecordPage>
       <RecordHeading
         kind={translate('counterparty.bankAccounts')}
         title={translate('counterparty.newBankAccount')}
@@ -68,6 +69,6 @@ export function BankAccountCreation({
           <button onClick={onCancel}>{translate('action.cancel')}</button>
         </>
       )}
-    </section>
+    </RecordPage>
   );
 }

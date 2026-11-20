@@ -1,14 +1,19 @@
+import {
+  RecordFields,
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../../shared/ui/record/RecordLayout';
+
+import { RecordPage } from '../../../shared/ui/record/RecordPage';
+import { RegistryPage } from '../../../shared/ui/RegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
-import {
-  RecordHeading,
-  RecordSection,
-  RecordActions,
-} from '../../../shared/ui/record/RecordLayout';
+
 import { useLocalization } from '../../localization/Localization';
 import { openServiceCharge } from '../services/ServiceChargePage';
 import { FinancialHistory } from '../history/FinancialHistory';
@@ -410,9 +415,10 @@ export function InvoicesPage({
     session.permissions.includes('finance.write_service_charges');
   const canOpenServiceEditor =
     session.permissions.includes('finance.read_service_charges') && !newService;
+  const Page = registry ? RegistryPage : RecordPage;
   return (
-    <section
-      className={`invoices-page${registry ? ' registry-page' : ' surface record-workbench financial-record-workbench'}`}
+    <Page
+      className={`invoices-page${registry ? '' : ' financial-record-workbench'}`}
       data-dirty={dirty}
       data-busy={busy}
     >
@@ -510,7 +516,7 @@ export function InvoicesPage({
               <RecordEditorSections>
                 <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
                   <RecordSection title={translate('record.identification')}>
-                    <div className="record-fields">
+                    <RecordFields>
                       <label>
                         {translate('registryField.invoiceNumber')}
                         <input
@@ -538,10 +544,10 @@ export function InvoicesPage({
                           }
                         />
                       </label>
-                    </div>
+                    </RecordFields>
                   </RecordSection>
                   <RecordSection title={translate('record.parties')}>
-                    <div className="record-fields">
+                    <RecordFields>
                       <CustomerSelect
                         required
                         label={translate('finance.ownCompany')}
@@ -573,10 +579,10 @@ export function InvoicesPage({
                           })
                         }
                       />
-                    </div>
+                    </RecordFields>
                   </RecordSection>
                   <RecordSection title={translate('record.paymentTerms')}>
-                    <div className="record-fields">
+                    <RecordFields>
                       <Select
                         label={translate('registryField.currency')}
                         disabled={busy || !!relatedInvoice}
@@ -657,7 +663,7 @@ export function InvoicesPage({
                           }}
                         />
                       </label>
-                    </div>
+                    </RecordFields>
                   </RecordSection>
                   <section className="invoice-lines">
                     <div className="section-heading">
@@ -703,55 +709,58 @@ export function InvoicesPage({
                         </button>
                       </div>
                     ))}
-                    <details className="invoice-service-picker" open={!selected.length}>
-                      <summary>{translate('forms.addServiceCharges')}</summary>
-                      {candidates
-                        .filter((x) => !selected.some((y) => y.id === x.id))
-                        .map((charge) => (
-                          <label className="invoice-candidate" key={charge.id}>
-                            <input
-                              type="checkbox"
-                              checked={false}
-                              onChange={() => setSelected([...selected, charge])}
-                            />
-                            <span>
-                              <strong>{charge.label_name}</strong>
-                              <small>
-                                {charge.transportation_id
-                                  ? translate('registryValue.unit.transportation')
-                                  : translate('registryField.shipment_id')}{' '}
-                                · {charge.note ?? charge.counterparty_name}
-                              </small>
-                            </span>
-                            <span>
-                              {formatFixed(charge.invoice_total_minor, 2)} {charge.invoice_currency}
-                            </span>
-                          </label>
-                        ))}
-                      {candidateFailure && (
-                        <p className="error" role="alert">
-                          {candidateFailure}
-                        </p>
-                      )}
-                      {!candidateLoading && !candidates.length && (
-                        <p className="hint">{translate('forms.noServiceChargesAvailable')}</p>
-                      )}
-                      <AutoLoadMore
-                        enabled={!!candidateAfter}
-                        loading={candidateLoading}
-                        onLoad={moreCandidates}
-                      />
-                    </details>
-                    <p className="invoice-total">
-                      {translate('forms.totalInclVAT')}{' '}
-                      <strong>
-                        {formatFixed(
-                          selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
-                          2,
-                        )}{' '}
-                        {draft.currency}
-                      </strong>
-                    </p>
+                    <div className="invoice-services-footer">
+                      <details className="invoice-service-picker" open={!selected.length}>
+                        <summary>{translate('forms.addServiceCharges')}</summary>
+                        {candidates
+                          .filter((x) => !selected.some((y) => y.id === x.id))
+                          .map((charge) => (
+                            <label className="invoice-candidate" key={charge.id}>
+                              <input
+                                type="checkbox"
+                                checked={false}
+                                onChange={() => setSelected([...selected, charge])}
+                              />
+                              <span>
+                                <strong>{charge.label_name}</strong>
+                                <small>
+                                  {charge.transportation_id
+                                    ? translate('registryValue.unit.transportation')
+                                    : translate('registryField.shipment_id')}{' '}
+                                  · {charge.note ?? charge.counterparty_name}
+                                </small>
+                              </span>
+                              <span>
+                                {formatFixed(charge.invoice_total_minor, 2)}{' '}
+                                {charge.invoice_currency}
+                              </span>
+                            </label>
+                          ))}
+                        {candidateFailure && (
+                          <p className="error" role="alert">
+                            {candidateFailure}
+                          </p>
+                        )}
+                        {!candidateLoading && !candidates.length && (
+                          <p className="hint">{translate('forms.noServiceChargesAvailable')}</p>
+                        )}
+                        <AutoLoadMore
+                          enabled={!!candidateAfter}
+                          loading={candidateLoading}
+                          onLoad={moreCandidates}
+                        />
+                      </details>
+                      <p className="invoice-total">
+                        {translate('forms.totalInclVAT')}{' '}
+                        <strong>
+                          {formatFixed(
+                            selected.reduce((n, x) => n + BigInt(x.invoice_total_minor), 0n),
+                            2,
+                          )}{' '}
+                          {draft.currency}
+                        </strong>
+                      </p>
+                    </div>
                   </section>
                   <RecordSection title={translate('record.additional')}>
                     <label>
@@ -971,6 +980,6 @@ export function InvoicesPage({
         </Dialog>
       )}
       {loading && <p className="hint">{translate('finance.loading')}</p>}
-    </section>
+    </Page>
   );
 }

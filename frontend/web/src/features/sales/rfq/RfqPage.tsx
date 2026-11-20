@@ -1,3 +1,4 @@
+import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { useEffect, useRef, useState } from 'react';
@@ -63,7 +64,7 @@ export function RfqPage({
     }
   }
   return (
-    <section className="surface record-workbench sales-workbench">
+    <RecordPage className="sales-workbench">
       <RecordHeading
         kind={translate('rfq.title')}
         title={value?.input.title ?? translate('common.loading')}
@@ -195,6 +196,6 @@ export function RfqPage({
             )}
           </>
         ))}
-    </section>
+    </RecordPage>
   );
 }

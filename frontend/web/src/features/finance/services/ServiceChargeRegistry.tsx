@@ -1,3 +1,4 @@
+import { RegistryPage } from '../../../shared/ui/RegistryPage';
 import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
@@ -323,25 +324,29 @@ export function ServiceChargeRegistry({
     apply: (raw) => setQuery(restore(raw)),
   });
   return (
-    <section className="service-charge-registry registry-page registry-workbench">
-      <RegistryHeading
-        columns={state}
-        title={translate('nav.serviceCharges')}
-        count={page.count}
-        loading={loading}
-        onRefresh={() => setRefresh((v) => v + 1)}
-      >
-        {write && (
-          <>
-            <button className="primary" onClick={() => onCreate('income')}>
-              {translate('registryPage.addIncome')}
-            </button>
-            <button onClick={() => onCreate('expense')}>
-              {translate('registryPage.addExpense')}
-            </button>
-          </>
-        )}
-      </RegistryHeading>
+    <RegistryPage
+      className="service-charge-registry"
+      heading={
+        <RegistryHeading
+          columns={state}
+          title={translate('nav.serviceCharges')}
+          count={page.count}
+          loading={loading}
+          onRefresh={() => setRefresh((v) => v + 1)}
+        >
+          {write && (
+            <>
+              <button className="primary" onClick={() => onCreate('income')}>
+                {translate('registryPage.addIncome')}
+              </button>
+              <button onClick={() => onCreate('expense')}>
+                {translate('registryPage.addExpense')}
+              </button>
+            </>
+          )}
+        </RegistryHeading>
+      }
+    >
       {canInvoice && (
         <RegistrySelectionActions
           count={selection.selected.size}
@@ -468,6 +473,6 @@ export function ServiceChargeRegistry({
         }
       />
       <AutoLoadMore enabled={!!cursor} loading={loading} failed={!!failure} onLoad={more} />
-    </section>
+    </RegistryPage>
   );
 }

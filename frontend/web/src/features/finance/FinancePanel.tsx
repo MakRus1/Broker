@@ -358,7 +358,7 @@ export function ServiceCharges({
                 {translate('common.loaded', { count: items.length })}
               </span>
             )}
-            <label className="bank-archive-toggle">
+            <label className="inline-check">
               <input
                 type="checkbox"
                 checked={archived}

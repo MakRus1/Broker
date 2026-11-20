@@ -23,3 +23,5 @@ createRoot(document.getElementById('root')!).render(
     </UserPreferences>
   </React.StrictMode>,
 );
+
+import './workspaceDesign.css';

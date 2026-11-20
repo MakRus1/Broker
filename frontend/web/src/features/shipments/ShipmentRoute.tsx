@@ -1,3 +1,6 @@
+import '../routes/shipmentRoute.css';
+import { RouteStageTitle } from '../routes/RouteStageTitle';
+import { calendarDate } from '../../shared/dates/calendar';
 import { RoutePlanFields, RoutePlanView } from '../routes/RoutePlan';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -17,6 +20,7 @@ export function ShipmentRoute({
   segments,
   planningOnly = false,
   onChange,
+  onEdit,
   allowedTypes,
   types,
   session,
@@ -24,6 +28,7 @@ export function ShipmentRoute({
 }: {
   planningOnly?: boolean;
   segments: ShipmentRouteSegment[];
+  onEdit?: () => void;
   onChange?: (segments: ShipmentRouteSegment[]) => void;
   allowedTypes: string[];
   types: RouteType[];
@@ -50,6 +55,22 @@ export function ShipmentRoute({
           <h2>{translate('shipment.routeTitle')}</h2>
           <p>{translate('shipment.sharedRouteHint')}</p>
         </div>
+        {onEdit && (
+          <button className="shipment-route-edit" type="button" onClick={onEdit}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              aria-hidden="true"
+            >
+              <path d="m16 3 5 5-13 13H3v-5z M13 6l5 5" />
+            </svg>
+            {translate('shipment.editRoute')}
+          </button>
+        )}
       </div>
       {!!segments.length && (
         <div className="route-collapse-actions">
@@ -68,12 +89,28 @@ export function ShipmentRoute({
             key={segment.id}
             open={!collapse.collapsed.has(segment.id)}
             onToggle={(event) => collapse.toggle(segment.id, !event.currentTarget.open)}
+            onInvalidCapture={(event) => {
+              event.currentTarget.open = true;
+              collapse.toggle(segment.id, false);
+            }}
           >
             <summary className="route-stage-summary">
-              <h3>
-                {index + 1}. {title(segment.type)}
-              </h3>
-              <span className="route-summary-meta">{sharedRouteDirection(segment, locale)}</span>
+              <RouteStageTitle type={segment.type} title={title(segment.type)} index={index} />
+              <span className="route-summary-meta route-summary-direction">
+                {sharedRouteDirection(segment, locale)}
+              </span>
+              <span className="route-summary-dates">
+                {segment.plan?.departure_date || segment.plan?.arrival_date
+                  ? [
+                      calendarDate(segment.plan?.departure_date),
+                      calendarDate(segment.plan?.arrival_date),
+                    ].join(' — ')
+                  : segment.air?.etd || segment.air?.eta
+                    ? [calendarDate(segment.air?.etd), calendarDate(segment.air?.eta)].join(' — ')
+                    : segment.sea?.eta
+                      ? `ETA ${calendarDate(segment.sea.eta)}`
+                      : ''}
+              </span>
             </summary>
             {onChange ? (
               <>

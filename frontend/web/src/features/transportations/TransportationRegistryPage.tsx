@@ -1,3 +1,4 @@
+import { RegistryPage } from '../../shared/ui/RegistryPage';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { useCallback } from 'react';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
@@ -68,14 +69,19 @@ export function TransportationRegistry({
     apply: (raw) => setQuery(restoreTransportationQuery(raw)),
   });
   return (
-    <div className="registry-page transportation-registry registry-workbench" hidden={!active}>
-      <RegistryHeading
-        columns={columns}
-        title={translate('nav.transportations')}
-        count={page.count}
-        loading={page.loading}
-        onRefresh={() => void page.refresh()}
-      />
+    <RegistryPage
+      className="transportation-registry"
+      hidden={!active}
+      heading={
+        <RegistryHeading
+          columns={columns}
+          title={translate('nav.transportations')}
+          count={page.count}
+          loading={page.loading}
+          onRefresh={() => void page.refresh()}
+        />
+      }
+    >
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         {routeFilters.editor}
         <TransportationTable
@@ -112,6 +118,6 @@ export function TransportationRegistry({
           onLoad={page.loadMore}
         />
       </section>
-    </div>
+    </RegistryPage>
   );
 }

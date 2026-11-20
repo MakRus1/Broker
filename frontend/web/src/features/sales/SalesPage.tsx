@@ -1,3 +1,5 @@
+import { RegistryPage } from '../../shared/ui/RegistryPage';
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { SalesRfqs } from './rfq/SalesRfqs';
 import { SalesProposals } from './SalesProposals';
 import { NextActionDate } from './NextActionDate';
@@ -250,15 +252,15 @@ export function SalesPage({
     );
   if (!id)
     return (
-      <section className="card record-page registry-page registry-workbench">
+      <RegistryPage>
         <SalesRegistry resource={resource} settings={settings} session={session} active={active} />
-      </section>
+      </RegistryPage>
     );
   const inquiry = draft && 'status' in draft ? draft : undefined;
   const frozen =
     !!inquiry && (inquiry.converting || !!inquiry.shipment_id || inquiry.status === 'agreed');
   return (
-    <section className="surface record-workbench sales-workbench">
+    <RecordPage className="sales-workbench">
       {confirmation}
       <RecordHeading
         kind={translate(resource === 'cards' ? 'sales.card' : 'sales.inquiry')}
@@ -730,6 +732,6 @@ export function SalesPage({
           </RecordSection>
         </div>
       )}
-    </section>
+    </RecordPage>
   );
 }

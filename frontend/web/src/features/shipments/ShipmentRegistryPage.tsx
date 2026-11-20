@@ -1,3 +1,4 @@
+import { RegistryPage } from '../../shared/ui/RegistryPage';
 import { RegistryEmptyState } from '../../shared/ui/RegistryExperience';
 import { useCallback, useEffect } from 'react';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
@@ -18,6 +19,8 @@ import {
   type ShipmentRegistryCursor,
 } from './shipmentRegistry';
 import type { Shipment } from './types';
+import { RegistryRoute } from '../routes/RegistryRoute';
+import { sharedRouteDirection } from '../routes/SharedRouteDetails';
 
 export function ShipmentRegistry({
   session,
@@ -34,7 +37,7 @@ export function ShipmentRegistry({
   onCustomersLoaded: (items: Counterparty[]) => void;
   onError: (error: unknown) => void;
 }) {
-  const { translate } = useLocalization();
+  const { translate, locale } = useLocalization();
   const [query, setQuery] = useRegistryPreference(
     preferenceKey(session.subject, 'shipments', 'query'),
     initialShipmentQuery,
@@ -124,6 +127,20 @@ export function ShipmentRegistry({
       render: (item) => customerName(item.customer_id),
     },
     {
+      id: 'route',
+      labelKey: 'shipment.routeTitle',
+      width: 320,
+      render: (item) => (
+        <RegistryRoute
+          segments={item.route_segments?.map((segment) => ({
+            id: segment.id,
+            type: segment.type,
+            direction: sharedRouteDirection(segment, locale),
+          }))}
+        />
+      ),
+    },
+    {
       id: 'cargo_description',
       labelKey: 'field.cargo',
       width: 340,
@@ -145,26 +162,36 @@ export function ShipmentRegistry({
     apply: (raw) => setQuery(restoreShipmentQuery(raw)),
   });
   return (
-    <div className="registry-page shipment-registry registry-workbench" hidden={!active}>
-      <RegistryHeading
-        columns={columnState}
-        title={translate('nav.shipments')}
-        count={page.count}
-        loading={page.loading}
-        onRefresh={() => void page.refresh()}
-      >
-        {canCreate && (
-          <button className="primary" onClick={createShipment}>
-            {translate('action.createShipment')}
-          </button>
-        )}
-      </RegistryHeading>
+    <RegistryPage
+      className="shipment-registry"
+      hidden={!active}
+      heading={
+        <RegistryHeading
+          columns={columnState}
+          title={translate('nav.shipments')}
+          count={page.count}
+          loading={page.loading}
+          onRefresh={() => void page.refresh()}
+        >
+          {canCreate && (
+            <button className="primary" onClick={createShipment}>
+              {translate('action.createShipment')}
+            </button>
+          )}
+        </RegistryHeading>
+      }
+    >
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         <RegistryTable
           items={page.items}
           pageSource={page.source}
           columns={columnState}
           definitions={columns}
+          filterSummary={
+            <span className="registry-loaded-count" role="status">
+              {translate('common.loaded', { count: page.count })}
+            </span>
+          }
           filters={filters}
           sort={query.sort}
           descending={query.descending}
@@ -219,6 +246,6 @@ export function ShipmentRegistry({
           onLoad={page.loadMore}
         />
       </section>
-    </div>
+    </RegistryPage>
   );
 }

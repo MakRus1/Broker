@@ -383,6 +383,7 @@
   "ui.discard": "Не сохранять",
   "ui.loadingRecords": "Загружаем записи…",
   "ui.retryLoad": "Повторить загрузку",
+  "ui.loginUnavailable": "Логин недоступен",
   "ui.employeeUnavailable": "Сотрудник недоступен",
   "ui.employeeLoadError": "Не удалось загрузить сотрудника",
   "ui.notAssigned": "Не назначен",

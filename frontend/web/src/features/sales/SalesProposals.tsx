@@ -695,7 +695,11 @@ export function SalesProposals({
                         key={entry.snapshot.revision}
                         title={translate(`proposal.status.${entry.snapshot.status}`)}
                         actor={
-                          <EmployeeName subject={entry.actor.split('#').at(-1)} session={session} />
+                          <EmployeeName
+                            format="login"
+                            subject={entry.actor.split('#').at(-1)}
+                            session={session}
+                          />
                         }
                         occurredAt={entry.created_at}
                         revision={translate('sales.revision', {

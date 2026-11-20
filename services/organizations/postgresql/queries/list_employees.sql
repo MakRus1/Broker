@@ -2,7 +2,7 @@
 -- $2 — subject пользователя (NULL отключает фильтр).
 -- $3 — часть отображаемого имени (NULL отключает фильтр).
 -- $4 — максимальное число сотрудников.
-SELECT ROW(m.subject, p.display_name)::public.organization_employee_v1
+SELECT ROW(m.subject, p.display_name, m.username)::public.organization_employee_v2
 FROM memberships AS m
 JOIN user_identities AS i ON i.issuer = m.issuer AND i.subject = m.subject
 JOIN user_profiles AS p ON p.id = i.profile_id

@@ -82,7 +82,7 @@ export function SalesHistory({
           <RecordHistoryEntry
             key={item.revision}
             title={`${translate(resource === 'cards' ? 'sales.card' : 'sales.inquiry')} · ${translate(item.revision === 1 ? 'history.created' : 'history.updated')}`}
-            actor={<EmployeeName subject={actor} session={session} />}
+            actor={<EmployeeName format="login" subject={actor} session={session} />}
             occurredAt={item.created_at}
             revision={translate('sales.revision', { revision: item.revision })}
             initiallyOpen={index === 0}

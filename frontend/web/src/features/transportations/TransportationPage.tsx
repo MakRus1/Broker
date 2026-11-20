@@ -1,3 +1,4 @@
+import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { RoutePlanView } from '../routes/RoutePlan';
 import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { VisitedPanel } from '../../shared/ui/VisitedPanel';
@@ -759,8 +760,12 @@ function History({
                 : item.action}
             </strong>
             <span>
-              {item.actor_name || translate('forms.nameNotRecorded')} ·{' '}
-              {formatDate(item.occurred_at, locale)}
+              <EmployeeName
+                format="login"
+                subject={item.actor.split('#').at(-1)}
+                session={session}
+              />{' '}
+              · {formatDate(item.occurred_at, locale)}
             </span>
             <span>{translate('forms.revisionValue', { revision: item.revision })}</span>
           </button>

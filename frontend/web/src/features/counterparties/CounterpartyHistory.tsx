@@ -105,9 +105,13 @@ export function CounterpartyHistory({
             {translate('counterparty.backToHistory')}
           </button>
         </div>
-        <p>
-          {selected.actor_name || translate('forms.nameNotRecorded')} ·{' '}
-          {formatDate(selected.occurred_at, locale)}
+        <p className="history-metadata">
+          <EmployeeName
+            format="login"
+            subject={selected.actor.split('#').at(-1)}
+            session={session}
+          />{' '}
+          · {formatDate(selected.occurred_at, locale)}
           {selected.revision !== undefined &&
             ` · ${translate('forms.revisionValue', { revision: selected.revision })}`}
         </p>
@@ -186,8 +190,12 @@ export function CounterpartyHistory({
           >
             <strong>{counterpartyActions(locale)[event.action] || event.action}</strong>
             <span title={event.actor}>
-              {event.actor_name || translate('forms.nameNotRecorded')} ·{' '}
-              {formatDate(event.occurred_at, locale)}
+              <EmployeeName
+                format="login"
+                subject={event.actor.split('#').at(-1)}
+                session={session}
+              />{' '}
+              · {formatDate(event.occurred_at, locale)}
             </span>
             <span>
               {event.revision === undefined

@@ -128,15 +128,8 @@ function HistoryRecord({
       title={historyTitle(event, locale)}
       initiallyOpen={initiallyOpen}
       actor={
-        event.actor_name || (
-          <EmployeeName
-            subject={event.actor.split('#').at(-1)}
-            session={session}
-            fallback={event.actor.split('#').at(-1) || translate('forms.nameNotRecorded')}
-          />
-        )
+        <EmployeeName format="login" subject={event.actor.split('#').at(-1)} session={session} />
       }
-      actorTitle={event.actor_name ? undefined : translate('history.actorFallback')}
       occurredAt={event.cursor.occurred_at}
       revision={translate(
         event.cursor.source === 'service_charge'

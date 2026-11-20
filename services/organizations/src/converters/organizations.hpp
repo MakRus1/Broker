@@ -13,7 +13,7 @@ inline models::Organization Convert(const models::pg::OrganizationRaw& row) {
 }
 
 inline models::OrganizationEmployee Convert(const models::pg::OrganizationEmployeeRaw& row) {
-    return {.display_name = row.DisplayName, .subject = row.Subject};
+    return {.display_name = row.DisplayName, .subject = row.Subject, .username = row.Username};
 }
 
 inline models::Member Convert(const models::pg::MemberRaw& row) {

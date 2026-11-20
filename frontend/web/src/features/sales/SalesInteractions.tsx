@@ -310,7 +310,13 @@ export function SalesInteractions({
               key={entry.revision}
               initiallyOpen={index === history.length - 1}
               title={translate(entry.revision === 1 ? 'history.created' : 'history.updated')}
-              actor={<EmployeeName subject={entry.actor.split('#').at(-1)} session={session} />}
+              actor={
+                <EmployeeName
+                  format="login"
+                  subject={entry.actor.split('#').at(-1)}
+                  session={session}
+                />
+              }
               occurredAt={entry.created_at}
               revision={translate('sales.revision', { revision: entry.revision })}
             >

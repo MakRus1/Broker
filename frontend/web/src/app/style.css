@@ -109,7 +109,7 @@ nav {
   display: grid;
   gap: 6px;
 }
-nav button {
+.sidebar nav button {
   text-align: left;
   color: var(--navigation-text);
   background: transparent;
@@ -118,12 +118,12 @@ nav button {
   gap: 13px;
   padding: 13px;
 }
-nav button[aria-current='page'] {
+.sidebar nav button[aria-current='page'] {
   color: var(--on-accent);
   background: var(--navigation-hover);
   border-color: var(--navigation-border);
 }
-nav button:hover:not(:disabled) {
+.sidebar nav button:hover:not(:disabled) {
   background: var(--navigation-hover);
 }
 .profile {
@@ -665,7 +665,7 @@ textarea {
     align-items: center;
     padding: 8px;
   }
-  nav button span {
+  .sidebar nav button span {
     font-size: 11px;
   }
   .app {
@@ -846,7 +846,10 @@ textarea {
   border: 0;
   border-radius: 0;
 }
-.history-row span {
+.history-row span,
+.history-metadata {
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }

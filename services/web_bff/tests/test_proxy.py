@@ -242,7 +242,7 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         (
             'organizations/employees/list',
             {'query': 'Иван'},
-            {'items': [{'subject': 'employee-1', 'display_name': 'Иванов Иван'}]},
+            {'items': [{'subject': 'employee-1', 'display_name': 'Иванов Иван', 'username': 'ivanov'}]},
             200,
         ),
         (

@@ -14,7 +14,9 @@ Response View::Handle(
         session.Access);
     Response200 result;
     for (const auto& item : response.items)
-        result.items.push_back({.display_name = item.display_name, .subject = item.subject});
+        result.items.push_back({.display_name = item.display_name,
+            .subject = item.subject,
+            .username = item.username});
     return result;
 }
 }  // namespace web_bff::views::api::organizations::employees::list

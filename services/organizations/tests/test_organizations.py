@@ -419,7 +419,7 @@ async def test_manual_profile_update_changes_all_memberships(api, mockserver, pg
         insert_member(cursor, OTHER_ORGANIZATION, 'viewer', 'viewer', name='Устаревшее ФИО')
     employees = await api.call('/api/organizations/employees/list',
                                {'organization_id': OTHER_ORGANIZATION, 'subject': 'viewer'}, user='other-admin')
-    assert employees['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+    assert employees['items'] == [{'subject': 'viewer', 'display_name': 'viewer', 'username': 'viewer'}]
 
     body = {
         'organization_id': ORGANIZATION,
@@ -440,7 +440,7 @@ async def test_manual_profile_update_changes_all_memberships(api, mockserver, pg
     for organization, admin in [(ORGANIZATION, 'org-admin'), (OTHER_ORGANIZATION, 'other-admin')]:
         employees = await api.call('/api/organizations/employees/list',
                                    {'organization_id': organization, 'subject': 'viewer'}, user=admin)
-        assert employees['items'] == [{'subject': 'viewer', 'display_name': 'Иванов Иван Иванович'}]
+        assert employees['items'] == [{'subject': 'viewer', 'display_name': 'Иванов Иван Иванович', 'username': 'viewer'}]
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute(
             """SELECT p.display_name, p.last_name, p.first_name, p.middle_name
@@ -475,7 +475,7 @@ async def test_employee_lookup_is_scoped_and_excludes_private_fields(
     )
     if expected == 200:
         assert {item['subject'] for item in response['items']} == {'org-admin', 'viewer'}
-        assert all(set(item) == {'subject', 'display_name'} for item in response['items'])
+        assert all(set(item) == {'subject', 'display_name', 'username'} for item in response['items'])
 
 
 async def test_disabled_employee_is_not_available_for_assignment(api, pgsql):
@@ -489,13 +489,31 @@ async def test_disabled_employee_is_not_available_for_assignment(api, pgsql):
     assert result['items'] == []
 
 
+async def test_employee_lookup_returns_login_separately_from_name(api, pgsql):
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute("UPDATE memberships SET username = 'ivanov' WHERE subject = 'viewer'")
+        cursor.execute("""UPDATE user_profiles SET display_name = 'Иванов Иван Иванович'
+                          WHERE id IN (SELECT profile_id FROM user_identities WHERE subject = 'viewer')""")
+
+    result = await api.call(
+        '/api/organizations/employees/list',
+        {'organization_id': ORGANIZATION, 'subject': 'viewer'},
+        user='viewer',
+    )
+    assert result['items'] == [{
+        'subject': 'viewer',
+        'display_name': 'Иванов Иван Иванович',
+        'username': 'ivanov',
+    }]
+
+
 async def test_employee_search_filters_name_subject_and_limit(api):
     result = await api.call(
         '/api/organizations/employees/list',
         {'organization_id': ORGANIZATION, 'query': 'view', 'limit': 1},
         user='viewer',
     )
-    assert result['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+    assert result['items'] == [{'subject': 'viewer', 'display_name': 'viewer', 'username': 'viewer'}]
     missing = await api.call(
         '/api/organizations/employees/list',
         {'organization_id': ORGANIZATION, 'subject': 'other-admin'},
@@ -624,7 +642,7 @@ async def test_employee_logs_mask_name_and_search(api, service_client, auth_key)
             data='{"query":"unparsed-name"',
             headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
         )
-    assert response['items'] == [{'subject': 'viewer', 'display_name': 'viewer'}]
+    assert response['items'] == [{'subject': 'viewer', 'display_name': 'viewer', 'username': 'viewer'}]
     assert invalid.status == 400
     records = capture.select(meta_type=path)
     incoming = [record['body'] for record in records if record.get('_type') == 'request']
@@ -632,7 +650,7 @@ async def test_employee_logs_mask_name_and_search(api, service_client, auth_key)
     assert '<body omitted>' in incoming
     assert any(json.loads(body) == {**request, 'query': '***'}
                for body in incoming if body.startswith('{'))
-    assert any(json.loads(body) == {'items': [{'subject': 'viewer', 'display_name': '***'}]}
+    assert any(json.loads(body) == {'items': [{'subject': 'viewer', 'display_name': '***', 'username': 'viewer'}]}
                for body in outgoing if body.startswith('{'))
 
 

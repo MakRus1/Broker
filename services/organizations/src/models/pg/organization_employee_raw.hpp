@@ -6,13 +6,14 @@ namespace organizations::models::pg {
 struct OrganizationEmployeeRaw {
     std::string Subject{};
     std::string DisplayName{};
+    std::string Username{};
 };
 }  // namespace organizations::models::pg
 
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::organizations::models::pg::OrganizationEmployeeRaw> {
-    static constexpr DBTypeName postgres_name = "public.organization_employee_v1";
+    static constexpr DBTypeName postgres_name = "public.organization_employee_v2";
 };
 
 }  // namespace userver::storages::postgres::io

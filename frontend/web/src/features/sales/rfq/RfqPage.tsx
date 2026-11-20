@@ -154,7 +154,13 @@ export function RfqPage({
                 <RecordHistoryEntry
                   key={entry.snapshot.revision}
                   title={translate('rfq.title')}
-                  actor={entry.actor.split('#').at(-1)}
+                  actor={
+                    <EmployeeName
+                      format="login"
+                      subject={entry.actor.split('#').at(-1)}
+                      session={session}
+                    />
+                  }
                   occurredAt={entry.created_at}
                   revision={translate('sales.revision', { revision: entry.snapshot.revision })}
                   initiallyOpen={i === history.length - 1}

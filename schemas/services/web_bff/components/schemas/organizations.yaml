@@ -6,6 +6,8 @@ OrganizationEmployee:
       type: string
     display_name:
       type: string
+    username:
+      type: string
   required:
   - subject
   - display_name

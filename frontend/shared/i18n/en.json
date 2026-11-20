@@ -383,6 +383,7 @@
   "ui.discard": "Discard",
   "ui.loadingRecords": "Loading records…",
   "ui.retryLoad": "Retry loading",
+  "ui.loginUnavailable": "Login unavailable",
   "ui.employeeUnavailable": "Employee unavailable",
   "ui.employeeLoadError": "Could not load employee",
   "ui.notAssigned": "Not assigned",

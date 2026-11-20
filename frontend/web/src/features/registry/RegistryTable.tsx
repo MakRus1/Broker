@@ -1,3 +1,4 @@
+import { RegistryText } from './RegistryText';
 import { usePreferences } from '../preferences/UserPreferences';
 import type { RegistryPageSource } from './registryPageCache';
 import { Fragment } from 'react';
@@ -780,7 +781,7 @@ export function RegistryTable<T extends { id: string }>({
                               }
                               className={definitionsById.get(column.id)!.cellClassName}
                             >
-                              {definitionsById.get(column.id)!.render(item)}
+                              <RegistryText value={definitionsById.get(column.id)!.render(item)} />
                             </td>
                           );
                         })}

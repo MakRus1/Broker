@@ -5,7 +5,12 @@ import { saveErrorMessage } from '../../shared/forms/saveError';
 import { MultiSelect } from '../../shared/ui/MultiSelect';
 import './counterpartyEditor.css';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
-import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+import {
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+  RecordFields,
+} from '../../shared/ui/record/RecordLayout';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
@@ -178,7 +183,7 @@ export function CounterpartyForm({
                 onApply={(value) => setDraft((old) => ({ ...old, ...value }))}
               >
                 {(lookupButton) => (
-                  <div className="counterparty-requisites">
+                  <RecordFields>
                     {(
                       [
                         ['name', translate('counterparty.shortNameRequired'), 256],
@@ -192,7 +197,13 @@ export function CounterpartyForm({
                     ).map(([key, label, limit]) => (
                       <div
                         key={key}
-                        className={`counterparty-field-${key}${key === 'tax_id' ? ' registry-tax-field' : ''}`}
+                        className={
+                          key === 'tax_id'
+                            ? 'registry-tax-field'
+                            : key === 'legal_address'
+                              ? 'record-field-wide'
+                              : undefined
+                        }
                       >
                         <label>
                           {label}
@@ -227,7 +238,7 @@ export function CounterpartyForm({
                         {key === 'tax_id' && lookupButton}
                       </div>
                     ))}
-                  </div>
+                  </RecordFields>
                 )}
               </RegistryLookup>
             </RecordSection>

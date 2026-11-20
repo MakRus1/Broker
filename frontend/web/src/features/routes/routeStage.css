@@ -1,0 +1,76 @@
+.record-workbench .route-stage-summary {
+  grid-template-columns: 170px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  min-height: 64px;
+  padding: 12px 24px 12px 0;
+}
+.record-workbench .route-stage-summary .route-stage-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.route-stage-title > svg {
+  flex: 0 0 20px;
+  color: var(--text-secondary);
+}
+.route-stage-title small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.record-workbench .route-stage-summary > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.record-workbench .route-list > .route-segment,
+.record-workbench .route-editor .route-segment {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  border-radius: 0;
+}
+@container record-page (max-width: 600px) {
+  .record-workbench .route-stage-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.record-workbench .route-view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 8px;
+}
+.record-workbench .route-view-heading > .section-heading {
+  margin: 0;
+  padding: 0;
+}
+.route-view-heading .section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.route-view-heading .section-heading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.record-workbench .route-view-heading .route-collapse-actions {
+  margin: 0;
+  gap: 8px;
+}
+.route-view-heading .route-collapse-actions button {
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 4px 8px;
+  min-height: 30px;
+  color: var(--text-secondary);
+}

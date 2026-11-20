@@ -1,3 +1,4 @@
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -220,7 +221,7 @@ export function TransportationDetailsForm({
                   recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                 )
               : initial
-                ? translate('shipment.revision', { revision: initial.revision })
+                ? ''
                 : translate('transport.createHint')
           }
         >
@@ -256,7 +257,7 @@ export function TransportationDetailsForm({
 export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
   const { translate } = useLocalization();
   return (
-    <section className="creation-page surface record-workbench transportation-workbench">
+    <RecordPage className="creation-page transportation-workbench">
       <RecordHeading
         guide="transportation"
         kind={translate('forms.transportation')}
@@ -273,6 +274,6 @@ export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
           location.hash = `/shipments/${props.shipmentId}`;
         }}
       />
-    </section>
+    </RecordPage>
   );
 }

@@ -1,3 +1,5 @@
+import { RegistryPage } from '../../shared/ui/RegistryPage';
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { useRegistryPage } from '../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordHeading } from '../../shared/ui/record/RecordLayout';
@@ -235,7 +237,7 @@ export function CounterpartiesPage({
     );
   if (creating || id)
     return (
-      <section className="surface counterparty-page record-workbench">
+      <RecordPage className="counterparty-page">
         {failure && (
           <p role="alert" className="error">
             {failure}
@@ -438,23 +440,27 @@ export function CounterpartiesPage({
             </>
           )
         )}
-      </section>
+      </RecordPage>
     );
   return (
-    <div className="counterparty-registry registry-page registry-workbench">
-      <RegistryHeading
-        columns={columnState}
-        title={translate('nav.counterparties')}
-        count={page.count}
-        loading={loading}
-        onRefresh={() => void page.refresh()}
-      >
-        {write && (
-          <a className="button primary" href="#/counterparties/new">
-            {translate('registryPage.newCounterparty')}
-          </a>
-        )}
-      </RegistryHeading>
+    <RegistryPage
+      className="counterparty-registry"
+      heading={
+        <RegistryHeading
+          columns={columnState}
+          title={translate('nav.counterparties')}
+          count={page.count}
+          loading={loading}
+          onRefresh={() => void page.refresh()}
+        >
+          {write && (
+            <a className="button primary" href="#/counterparties/new">
+              {translate('registryPage.newCounterparty')}
+            </a>
+          )}
+        </RegistryHeading>
+      }
+    >
       <section className="surface counterparty-list registry-workbench-surface" aria-busy={loading}>
         {failure && items.length > 0 && (
           <p className="error" role="alert">
@@ -513,6 +519,6 @@ export function CounterpartiesPage({
           onLoad={page.loadMore}
         />
       </section>
-    </div>
+    </RegistryPage>
   );
 }

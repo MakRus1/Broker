@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import { request } from '../../../shared/api/http';
+import type { Session } from '../../../shared/api/session';
 import { RecordSection } from '../../../shared/ui/record/RecordLayout';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { useLocalization } from '../../localization/Localization';
@@ -9,11 +12,29 @@ import type { ServiceChargeInvoice } from '../invoices/invoices';
 export function ServiceChargeSummary({
   charge,
   invoice,
+  session,
 }: {
   charge: ServiceCharge;
+  session: Session;
   invoice?: ServiceChargeInvoice;
 }) {
   const { translate, locale } = useLocalization();
+  const [shipment, setShipment] = useState<{ id: string; number: string }>();
+  useEffect(() => {
+    if (!charge.shipment_id || !session.permissions.includes('shipments.read')) return;
+    const controller = new AbortController();
+    void request<{ shipment: { id: string; number: string } }>(
+      '/api/v1/shipments/get',
+      session,
+      { shipment_id: charge.shipment_id },
+      controller.signal,
+    )
+      .then((value) => {
+        if (!controller.signal.aborted) setShipment(value.shipment);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [charge.shipment_id, session]);
   const amounts = (net: number, vat: number, total: number, currency: string) => (
     <dl className="record-layout-details record-amounts">
       <div>
@@ -42,6 +63,18 @@ export function ServiceChargeSummary({
     <div className="record-layout-content service-charge-summary">
       <RecordSection title={translate('record.parties')}>
         <dl className="record-layout-details">
+          {charge.shipment_id && (
+            <div>
+              <dt>{translate('field.shipment')}</dt>
+              <dd>
+                <a className="link" href={`#/shipments/${charge.shipment_id}`}>
+                  {shipment?.id === charge.shipment_id
+                    ? shipment.number
+                    : translate('field.shipment')}
+                </a>
+              </dd>
+            </div>
+          )}
           <div>
             <dt>{translate('registryField.counterparty_id')}</dt>
             <dd>
@@ -147,11 +180,6 @@ export function ServiceChargeSummary({
           </dl>
           {(charge.shipment_id || charge.transportation_id) && (
             <div className="record-related-links">
-              {charge.shipment_id && (
-                <a className="link" href={`#/shipments/${charge.shipment_id}`}>
-                  {translate('forms.openShipment')}
-                </a>
-              )}
               {charge.transportation_id && (
                 <a className="link" href={`#/transportations/${charge.transportation_id}`}>
                   {translate('finance.openTransportation')}

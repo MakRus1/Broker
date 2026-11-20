@@ -1,8 +1,7 @@
 /* Shared registry layout, controls and feedback. */
 .registry-workbench .registry-heading {
-  align-items: flex-start;
-  gap: 16px;
-  padding-bottom: 20px;
+  align-items: center;
+  gap: 12px;
 }
 .registry-workbench .registry-heading h1 {
   font-size: 24px;

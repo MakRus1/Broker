@@ -1,3 +1,4 @@
+import { RouteStageTitle } from './RouteStageTitle';
 import { RoutePlanView } from './RoutePlan';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
@@ -174,11 +175,14 @@ export function RouteEditor({
                 onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
               >
                 <summary className="route-stage-summary">
-                  <h3>
-                    {index + 1}.{' '}
-                    {registryValueLabel('mode', route_segment.mode, locale) ??
-                      modes[route_segment.mode]}
-                  </h3>
+                  <RouteStageTitle
+                    type={route_segment.mode}
+                    title={
+                      registryValueLabel('mode', route_segment.mode, locale) ??
+                      modes[route_segment.mode]
+                    }
+                    index={index}
+                  />
                   <span className="route-summary-meta">
                     {sharedRouteDirection(sharedStage(route_segment), locale)}
                   </span>
@@ -203,11 +207,14 @@ export function RouteEditor({
                 onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
               >
                 <summary className="route-stage-summary">
-                  <h3>
-                    {index + 1}.{' '}
-                    {registryValueLabel('mode', route_segment.mode, locale) ??
-                      modes[route_segment.mode]}
-                  </h3>
+                  <RouteStageTitle
+                    type={route_segment.mode}
+                    title={
+                      registryValueLabel('mode', route_segment.mode, locale) ??
+                      modes[route_segment.mode]
+                    }
+                    index={index}
+                  />
                   <span className="route-summary-meta">
                     <span>{routeDirection(route_segment, locale)}</span>
                     <span>
@@ -364,7 +371,7 @@ export function RouteEditor({
               ? translate(
                   recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                 )
-              : translate('shipment.revision', { revision: initial.revision })
+              : ''
           }
         >
           <button type="button" disabled={busy} onClick={discard}>

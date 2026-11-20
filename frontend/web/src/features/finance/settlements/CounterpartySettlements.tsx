@@ -132,7 +132,11 @@ export function CounterpartySettlements({
   }
   return (
     <section className="counterparty-settlements" aria-label={translate('forms.settlements')}>
-      <div className="tabs" role="group" aria-label={translate('forms.settlementView')}>
+      <div
+        className="tabs record-layout-tabs"
+        role="group"
+        aria-label={translate('forms.settlementView')}
+      >
         <button aria-pressed={mode === 'balances'} onClick={() => setMode('balances')}>
           {translate('forms.outstandingBalances')}
         </button>
@@ -311,7 +315,7 @@ export function CounterpartySettlements({
           <div ref={documents} style={{ minHeight: documentsMinHeight }}>
             <div className="settlement-detail-heading">
               <div
-                className="tabs"
+                className="tabs record-layout-tabs"
                 role="group"
                 aria-label={translate('forms.settlementDocuments')}
               >

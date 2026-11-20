@@ -1,0 +1,174 @@
+/* Только особенности маршрута и контейнерного плана; общая карточка — RecordPage. */
+.shipment-editor .shipment-fields > *,
+.shipment-editor .shared-route-grid > * {
+  min-width: 0;
+}
+.shipment-editor .shipment-participants {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.shipment-editor .shipment-cargo-conditions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+.shipment-editor .shipment-fields.three {
+  margin-top: 0;
+}
+.shipment-editor .shipment-delivery-fields {
+  grid-template-columns: minmax(150px, 1fr) 100px minmax(0, 1.5fr);
+}
+.shipment-editor .shipment-delivery-fields .full {
+  grid-column: auto;
+}
+.shipment-editor .shipment-number button {
+  height: var(--record-control-height);
+  font-size: 12px;
+}
+.shipment-editor .shipment-container-plan {
+  margin-top: 26px;
+  scroll-margin-top: 150px;
+}
+.shipment-editor .shipment-container-plan .shipment-page,
+.shipment-editor .shipment-container-plan .shipment-card > .panel-content {
+  padding: 0;
+}
+.shipment-editor .shipment-container-plan .section-heading {
+  padding-top: 0;
+  margin-bottom: 12px;
+  align-items: start;
+  gap: 12px;
+}
+.shipment-editor .shipment-container-plan .section-heading h3 {
+  font-size: 14px;
+}
+.shipment-editor .shipment-container-plan .section-heading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.shipment-editor .shipment-container-plan .section-heading .primary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-text);
+}
+.container-plan-table-scroll {
+  overflow-x: auto;
+}
+.container-plan-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.container-plan-table th,
+.container-plan-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--divider);
+}
+.container-plan-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.container-plan-table strong {
+  font-weight: 600;
+}
+.container-plan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.container-plan-actions button {
+  padding: 5px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+@container record-page (max-width: 900px) {
+  .shipment-editor .shipment-cargo-conditions {
+    grid-template-columns: 1fr;
+  }
+}
+@container record-page (max-width: 760px) {
+  .container-plan-table {
+    min-width: 600px;
+  }
+  .shipment-editor .shipment-participants,
+  .shipment-editor .shipment-delivery-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .shipment-editor .shipment-participants > :last-child,
+  .shipment-editor .shipment-delivery-fields .full {
+    grid-column: 1/-1;
+  }
+}
+@container record-page (max-width: 480px) {
+  .shipment-editor .shipment-fields,
+  .shipment-editor .shipment-fields.three,
+  .shipment-editor .shipment-fields > * {
+    grid-column: auto;
+  }
+}
+@media (pointer: coarse) {
+  .shipment-editor .shipment-route-heading > .shipment-route-edit,
+  .shipment-editor .route-collapse-actions button {
+    min-height: 44px;
+  }
+}
+
+.incomplete-container-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.incomplete-container-list > button {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.shipment-editor form > fieldset,
+.shipment-editor .shipment-edit-section {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.shipment-editor .shipment-edit-section[hidden] {
+  display: none;
+}
+.shipment-editor .shipment-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  align-items: start;
+}
+.shipment-editor .shipment-fields.three,
+.shipment-editor .shipment-participants {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.shipment-editor .shipment-delivery-fields {
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 0.35fr);
+}
+.shipment-editor .shipment-delivery-fields .full {
+  grid-column: 1 / -1;
+}
+@container record-page (max-width: 600px) {
+  .shipment-editor .shipment-fields,
+  .shipment-editor .shipment-fields.three,
+  .shipment-editor .shipment-participants,
+  .shipment-editor .shipment-delivery-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.shipment-summary-sections {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.shipment-summary-sections .record-layout-details {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@container record-page (max-width: 600px) {
+  .shipment-summary-sections .record-layout-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

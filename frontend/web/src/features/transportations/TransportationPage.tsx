@@ -1,3 +1,5 @@
+import { RouteStageTitle } from '../routes/RouteStageTitle';
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { RoutePlanView } from '../routes/RoutePlan';
 import { useActivationLoad } from '../../shared/api/useActivationLoad';
@@ -16,7 +18,7 @@ import { RailDetailsView } from '../routes/RailFields';
 import { calendarDate } from '../../shared/dates/calendar';
 import { useRouteCollapse } from '../routes/routeCollapse';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
 import { modes, transportationTypes } from '../routes/logisticsLabels';
 import { type Session } from '../../shared/api/session';
@@ -158,7 +160,7 @@ export function TransportationPage({
   const customerName = customers.find((item) => item.id === shipment?.customer_id)?.name;
   return (
     <div className="transportation-page">
-      <section className="surface record-workbench transportation-workbench">
+      <RecordPage className="transportation-workbench">
         <RecordHeading
           guide="transportation"
           kind={translate('forms.transportation')}
@@ -275,7 +277,10 @@ export function TransportationPage({
               </button>
             </CardNavigation>
             <div className="panel-content">
-              <VisitedPanel active={tab === 'details'} className="record-layout-content">
+              <VisitedPanel
+                active={tab === 'details'}
+                className="record-layout-content transportation-overview"
+              >
                 <RecordSection title={translate('transport.details')}>
                   <dl className="record-layout-details">
                     <div>
@@ -355,16 +360,18 @@ export function TransportationPage({
                 />
               </VisitedPanel>
               <VisitedPanel active={tab === 'route'}>
-                <div className="section-heading">
-                  <div>
-                    <h2>{translate('forms.transportationRoute')}</h2>
-                    <p className="hint">
-                      {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
-                      {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-                    </p>
-                  </div>
-                </div>
                 <RouteView
+                  heading={
+                    <div className="section-heading">
+                      <div>
+                        <h2>{translate('forms.transportationRoute')}</h2>
+                        <p className="hint">
+                          {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
+                          {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+                        </p>
+                      </div>
+                    </div>
+                  }
                   route_segments={transportation.route_segments}
                   customers={customers}
                   session={session}
@@ -376,7 +383,7 @@ export function TransportationPage({
             </div>
           </>
         )}
-      </section>
+      </RecordPage>
       {confirmation}
       {actual && (
         <Dialog
@@ -402,11 +409,13 @@ export function TransportationPage({
 }
 
 export function RouteView({
+  heading,
   route_segments,
   customers,
   onActual,
   session,
 }: {
+  heading?: ReactNode;
   route_segments: RouteSegment[];
   session?: Session;
   customers: Counterparty[];
@@ -423,13 +432,16 @@ export function RouteView({
     );
   return (
     <div className="route-list">
-      <div className="route-collapse-actions">
-        <button type="button" onClick={collapse.expandAll}>
-          {translate('route.expandAll')}
-        </button>
-        <button type="button" onClick={collapse.collapseAll}>
-          {translate('route.collapseAll')}
-        </button>
+      <div className="route-view-heading">
+        {heading}
+        <div className="route-collapse-actions">
+          <button type="button" onClick={collapse.expandAll}>
+            {translate('route.expandAll')}
+          </button>
+          <button type="button" onClick={collapse.collapseAll}>
+            {translate('route.collapseAll')}
+          </button>
+        </div>
       </div>
       {route_segments.map((route_segment, index) => (
         <details
@@ -439,11 +451,13 @@ export function RouteView({
           onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
         >
           <summary className="route-stage-summary">
-            <h3>
-              {index + 1}.{' '}
-              {registryValueLabel('mode', route_segment.mode, locale) ??
-                modes[route_segment.mode]}{' '}
-            </h3>
+            <RouteStageTitle
+              type={route_segment.mode}
+              title={
+                registryValueLabel('mode', route_segment.mode, locale) ?? modes[route_segment.mode]
+              }
+              index={index}
+            />
             <span className="route-summary-meta">
               <span>{routeDirection(route_segment, locale)}</span>
               <span>

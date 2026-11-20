@@ -1,13 +1,18 @@
+import {
+  RecordFields,
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../../shared/ui/record/RecordLayout';
+
+import { RegistryPage } from '../../../shared/ui/RegistryPage';
+import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { useRegistryPage } from '../../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
-import {
-  RecordHeading,
-  RecordSection,
-  RecordActions,
-} from '../../../shared/ui/record/RecordLayout';
+
 import { RegistryResultState } from '../../../shared/ui/RegistryExperience';
 import { registryValueLabel } from '../../registry/registryLabels';
 import { RegistryHeading } from '../../../shared/ui/RegistryHeading';
@@ -314,20 +319,24 @@ export function FinancialLabelsPage({
     );
   if (!id && !creating)
     return (
-      <section className="record-page registry-page financial-label-page registry-workbench">
-        <RegistryHeading
-          columns={columnState}
-          title={translate('nav.financialLabels')}
-          count={page.count}
-          loading={page.loading}
-          onRefresh={() => setVersion((value) => value + 1)}
-        >
-          {write && (
-            <a className="button primary" href="#/financial-labels/new">
-              {translate('registryPage.newLabel')}
-            </a>
-          )}
-        </RegistryHeading>
+      <RegistryPage
+        className="financial-label-page"
+        heading={
+          <RegistryHeading
+            columns={columnState}
+            title={translate('nav.financialLabels')}
+            count={page.count}
+            loading={page.loading}
+            onRefresh={() => setVersion((value) => value + 1)}
+          >
+            {write && (
+              <a className="button primary" href="#/financial-labels/new">
+                {translate('registryPage.newLabel')}
+              </a>
+            )}
+          </RegistryHeading>
+        }
+      >
         {failure && items.length > 0 && (
           <p className="error" role="alert">
             {failure}
@@ -381,10 +390,10 @@ export function FinancialLabelsPage({
           failed={!!failure}
           onLoad={page.loadMore}
         />
-      </section>
+      </RegistryPage>
     );
   return (
-    <section className="surface record-workbench financial-record-workbench financial-label-page">
+    <RecordPage className="financial-record-workbench financial-label-page">
       {confirmation}
       {write && !loading && (editing || recovery.saved) && <DraftRecovery recovery={recovery} />}
       <RecordHeading
@@ -431,7 +440,7 @@ export function FinancialLabelsPage({
           <RelatedCreationHint route={route} />
           <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
             <RecordSection title={translate('record.calculation')}>
-              <div className="record-fields">
+              <RecordFields>
                 <label className="record-wide">
                   {translate('forms.nameRequired')}
                   <input
@@ -480,10 +489,10 @@ export function FinancialLabelsPage({
                   onMode={(vat_mode) => setDraft((old) => (old ? { ...old, vat_mode } : old))}
                   onChange={(vatRate) => setDraft((old) => (old ? { ...old, vatRate } : old))}
                 />
-              </div>
+              </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.additional')}>
-              <div className="record-fields">
+              <RecordFields>
                 <label className="record-wide">
                   {translate('shipment.note')}
                   <textarea
@@ -494,16 +503,16 @@ export function FinancialLabelsPage({
                     onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
                   />
                 </label>
-              </div>
-              <label className="bank-archive-toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.archived}
-                  disabled={busy || relatedCreation}
-                  onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
-                />
-                {translate('filter.archived')}
-              </label>
+                <label className="inline-check record-field-wide">
+                  <input
+                    type="checkbox"
+                    checked={draft.archived}
+                    disabled={busy || relatedCreation}
+                    onChange={(event) => setDraft({ ...draft, archived: event.target.checked })}
+                  />
+                  {translate('filter.archived')}
+                </label>
+              </RecordFields>
             </RecordSection>
           </fieldset>
           <RecordActions
@@ -515,7 +524,9 @@ export function FinancialLabelsPage({
                 ? translate(
                     recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                   )
-                : translate(creating ? 'record.creating' : 'record.editing')
+                : creating
+                  ? translate('record.creating')
+                  : ''
             }
           >
             <button type="button" disabled={busy} onClick={cancel}>
@@ -563,6 +574,6 @@ export function FinancialLabelsPage({
           </RecordSection>
         )
       )}
-    </section>
+    </RecordPage>
   );
 }

@@ -1,3 +1,4 @@
+import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { RecordHeading } from '../../../shared/ui/record/RecordLayout';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { FinancialHistory } from '../history/FinancialHistory';
@@ -65,7 +66,7 @@ export function ServiceChargePage({
     !session.permissions.includes('finance.write_service_charges') ||
     value?.invoice?.read_only === true;
   return (
-    <section className="finance-section surface record-workbench financial-record-workbench">
+    <RecordPage className="finance-section financial-record-workbench">
       {failure ? (
         <div className="error" role="alert">
           {failure}{' '}
@@ -130,10 +131,10 @@ export function ServiceChargePage({
               session={session}
             />
           ) : (
-            <ServiceChargeSummary charge={value.charge} invoice={value.invoice} />
+            <ServiceChargeSummary charge={value.charge} invoice={value.invoice} session={session} />
           )}
         </>
       )}
-    </section>
+    </RecordPage>
   );
 }

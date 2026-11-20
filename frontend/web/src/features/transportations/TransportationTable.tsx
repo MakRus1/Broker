@@ -10,6 +10,7 @@ import {
 } from '../registry/RegistryTable';
 import type { RegistrySort } from './transportationRegistry';
 import { routePoint } from './transportation';
+import { RegistryRoute } from '../routes/RegistryRoute';
 import type { ReactNode } from 'react';
 import { ownership } from '../routes/logisticsLabels';
 import { type Transportation } from './types';
@@ -54,34 +55,15 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
 ];
 
 function RouteRegistrySummary({ item }: { item: Transportation }) {
-  const { translate, locale } = useLocalization();
+  const { translate } = useLocalization();
   return (
-    <>
-      {item.route_segments.length ? (
-        <div className="registry-route">
-          {item.route_segments.slice(0, 2).map((stage) => (
-            <div className="registry-route-stage" key={stage.id}>
-              <span className="registry-route-mode">
-                {registryValueLabel('mode', stage.mode, locale)}
-              </span>
-              {(routePoint(stage, 'origin').name || routePoint(stage, 'destination').name) && (
-                <span>
-                  {routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} →{' '}
-                  {routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}
-                </span>
-              )}
-            </div>
-          ))}
-          {item.route_segments.length > 2 && (
-            <span className="registry-secondary">
-              {translate('routeFilter.more', { count: item.route_segments.length - 2 })}
-            </span>
-          )}
-        </div>
-      ) : (
-        <span className="registry-muted">{translate('routeFilter.notSet')}</span>
-      )}
-    </>
+    <RegistryRoute
+      segments={item.route_segments.map((stage) => ({
+        id: stage.id,
+        type: stage.mode,
+        direction: `${routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} → ${routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}`,
+      }))}
+    />
   );
 }
 

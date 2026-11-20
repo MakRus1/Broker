@@ -1,13 +1,18 @@
+import {
+  RecordFields,
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../../shared/ui/record/RecordLayout';
+
+import { RegistryPage } from '../../../shared/ui/RegistryPage';
+import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../../shared/forms/saveError';
-import {
-  RecordHeading,
-  RecordSection,
-  RecordActions,
-} from '../../../shared/ui/record/RecordLayout';
+
 import { useLocalization } from '../../localization/Localization';
 import { FinancialHistory } from '../history/FinancialHistory';
 import { CardNavigation } from '../../../shared/ui/CardNavigation';
@@ -358,9 +363,9 @@ export function PaymentsPage({
   }
   if (registry)
     return (
-      <section className="payment-page registry-page">
+      <RegistryPage className="payment-page">
         <PaymentRegistry kind={kind} active={active} session={session} />
-      </section>
+      </RegistryPage>
     );
   const write = session.permissions.includes('finance.write_payments');
   const amount = draft
@@ -373,7 +378,7 @@ export function PaymentsPage({
     ? Object.keys(allocations)
     : (value?.allocations.map((a) => a.invoice_id) ?? []);
   return (
-    <section className="payment-page surface record-workbench financial-record-workbench">
+    <RecordPage className="payment-page financial-record-workbench">
       {confirmation}
       {write && !loading && <DraftRecovery recovery={recovery} />}
       <RecordHeading
@@ -435,7 +440,7 @@ export function PaymentsPage({
           <RecordEditorSections>
             <fieldset disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('record.identification')}>
-                <div className="record-fields">
+                <RecordFields>
                   <label>
                     {translate('forms.paymentNumberRequired')}
                     <input
@@ -453,10 +458,10 @@ export function PaymentsPage({
                       onChange={(payment_date) => setDraft({ ...draft, payment_date })}
                     />
                   </label>
-                </div>
+                </RecordFields>
               </RecordSection>
               <RecordSection title={translate('record.parties')}>
-                <div className="record-fields">
+                <RecordFields>
                   <CustomerSelect
                     required
                     ownCompany
@@ -480,10 +485,10 @@ export function PaymentsPage({
                       void changeParties({ counterparty_id, counterparty_bank_account_id: null })
                     }
                   />
-                </div>
+                </RecordFields>
               </RecordSection>
               <RecordSection title={translate('record.paymentTerms')}>
-                <div className="record-fields">
+                <RecordFields>
                   <label>
                     {translate('forms.amountRequired')}
                     <DecimalInput
@@ -528,10 +533,10 @@ export function PaymentsPage({
                       setDraft({ ...draft, counterparty_bank_account_id })
                     }
                   />
-                </div>
+                </RecordFields>
               </RecordSection>
               <RecordSection title={translate('record.additional')}>
-                <div className="record-fields">
+                <RecordFields>
                   <label className="record-wide">
                     {translate('forms.paymentPurpose')}
                     <textarea
@@ -548,7 +553,7 @@ export function PaymentsPage({
                       onChange={(e) => setDraft({ ...draft, note: e.target.value || null })}
                     />
                   </label>
-                  <label className="bank-archive-toggle">
+                  <label className="inline-check record-field-wide">
                     <input
                       type="checkbox"
                       checked={draft.archived}
@@ -556,7 +561,7 @@ export function PaymentsPage({
                     />
                     {translate('filter.archived')}
                   </label>
-                </div>
+                </RecordFields>
               </RecordSection>
             </fieldset>
             <section className="payment-allocation">
@@ -809,6 +814,6 @@ export function PaymentsPage({
       ) : loading ? (
         <p>{translate('filter.loading')}</p>
       ) : null}
-    </section>
+    </RecordPage>
   );
 }

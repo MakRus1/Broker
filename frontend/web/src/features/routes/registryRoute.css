@@ -1,0 +1,32 @@
+.registry-route-leg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.registry-route-leg > svg {
+  flex: 0 0 20px;
+}
+.registry-route-leg > div {
+  min-width: 0;
+}
+.registry-route-leg small {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.registry-route summary {
+  width: fit-content;
+  margin: 6px 0 0 28px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+}
+.registry-route ol {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  gap: 12px;
+}

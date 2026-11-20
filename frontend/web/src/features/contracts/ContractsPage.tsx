@@ -1,10 +1,19 @@
+import {
+  RecordFields,
+  RecordHeading,
+  RecordSection,
+  RecordActions,
+} from '../../shared/ui/record/RecordLayout';
+
+import { RegistryPage } from '../../shared/ui/RegistryPage';
+import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { useRegistryPage } from '../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
 import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
-import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
+
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { RegistryHeading } from '../../shared/ui/RegistryHeading';
 import { useLocalization } from '../localization/Localization';
@@ -463,20 +472,24 @@ export function ContractsPage({
   }
   if (!id && !creating)
     return (
-      <section className="card record-page registry-page contracts-page registry-workbench">
-        <RegistryHeading
-          columns={columnState}
-          title={translate('nav.contracts')}
-          count={page.count}
-          loading={page.loading}
-          onRefresh={() => setVersion((value) => value + 1)}
-        >
-          {write && (
-            <a className="button primary" href="#/contracts/new">
-              {translate('entity.newContract')}
-            </a>
-          )}
-        </RegistryHeading>
+      <RegistryPage
+        className="contracts-page"
+        heading={
+          <RegistryHeading
+            columns={columnState}
+            title={translate('nav.contracts')}
+            count={page.count}
+            loading={page.loading}
+            onRefresh={() => setVersion((value) => value + 1)}
+          >
+            {write && (
+              <a className="button primary" href="#/contracts/new">
+                {translate('entity.newContract')}
+              </a>
+            )}
+          </RegistryHeading>
+        }
+      >
         {failure && items.length > 0 && (
           <p className="error" role="alert">
             {failure}
@@ -530,10 +543,10 @@ export function ContractsPage({
           failed={!!failure}
           onLoad={page.loadMore}
         />
-      </section>
+      </RegistryPage>
     );
   return (
-    <section className="surface record-workbench financial-record-workbench">
+    <RecordPage className="financial-record-workbench">
       {write && (editing || recovery.saved) && <DraftRecovery recovery={recovery} />}
       {confirmation}
       <RecordHeading
@@ -611,7 +624,7 @@ export function ContractsPage({
                 </div>
               </RecordSection>
               <RecordSection title={translate('record.parties')}>
-                <div className="record-fields">
+                <RecordFields>
                   <CustomerSelect
                     items={emptyParties}
                     label={translate('forms.ownLegalEntityRequired')}
@@ -639,10 +652,10 @@ export function ContractsPage({
                       setDraft({ ...draft, counterparty_id, counterparty_bank_account_id: null })
                     }
                   />
-                </div>
+                </RecordFields>
               </RecordSection>
               <RecordSection title={translate('record.paymentTerms')}>
-                <div className="record-fields">
+                <RecordFields>
                   <div>
                     <Select
                       label={translate('registryField.currency')}
@@ -700,11 +713,11 @@ export function ContractsPage({
                       }
                     />
                   </label>
-                </div>
+                </RecordFields>
               </RecordSection>
               <RecordSection title={translate('record.additional')}>
-                <div className="record-fields">
-                  <label className="bank-archive-toggle">
+                <RecordFields>
+                  <label className="inline-check">
                     <input
                       type="checkbox"
                       checked={draft.archived}
@@ -722,7 +735,7 @@ export function ContractsPage({
                       onChange={(event) => setDraft({ ...draft, note: event.target.value || null })}
                     />
                   </label>
-                </div>
+                </RecordFields>
               </RecordSection>
             </fieldset>
           </RecordEditorSections>
@@ -736,7 +749,7 @@ export function ContractsPage({
                     recovery.persisted && !recovery.failed ? 'draft.local' : 'shipment.unsaved',
                   )
                 : value
-                  ? translate('shipment.revision', { revision: value.revision })
+                  ? ''
                   : translate('record.creating')
             }
           >
@@ -809,6 +822,6 @@ export function ContractsPage({
           </div>
         )
       )}
-    </section>
+    </RecordPage>
   );
 }

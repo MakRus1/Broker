@@ -1,6 +1,6 @@
 import { useLocalization } from '../../features/localization/Localization';
 import { useEffect, useState } from 'react';
-import { request } from '../api/http';
+import { cachedEmployee, loadEmployee } from './employeeDirectory';
 import { type Session } from '../api/session';
 
 export function EmployeeName({
@@ -15,23 +15,27 @@ export function EmployeeName({
   format?: 'name' | 'login';
 }) {
   const { translate } = useLocalization();
-  const [name, setName] = useState('');
+  const caption = (employee: ReturnType<typeof cachedEmployee>) =>
+    employee
+      ? format === 'login'
+        ? employee.username || translate('ui.loginUnavailable')
+        : employee.display_name
+      : '';
+  const [name, setName] = useState(() =>
+    caption(subject ? cachedEmployee(session, subject) : undefined),
+  );
   useEffect(() => {
-    setName('');
+    setName(caption(subject ? cachedEmployee(session, subject) : undefined));
     if (!subject) return;
     const controller = new AbortController();
-    request<{ items: { subject: string; display_name: string; username?: string }[] }>(
-      '/api/organizations/employees/list',
-      session,
-      { subject, limit: 1 },
-      controller.signal,
-    )
-      .then(({ items }) => {
+    loadEmployee(session, subject, controller.signal)
+      .then((employee) => {
         if (!controller.signal.aborted)
           setName(
-            format === 'login'
-              ? items[0]?.username || translate('ui.loginUnavailable')
-              : (items[0]?.display_name ?? fallback ?? translate('ui.employeeUnavailable')),
+            caption(employee) ||
+              (format === 'login'
+                ? translate('ui.loginUnavailable')
+                : (fallback ?? translate('ui.employeeUnavailable'))),
           );
       })
       .catch(() => {

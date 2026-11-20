@@ -45,7 +45,9 @@ export function RecordHeading({
         </div>
         <h1>{title}</h1>
         {metadata && <p className="record-layout-metadata">{metadata}</p>}
-        {mode && <p className="record-layout-mode">{mode}</p>}
+        <p className="record-layout-mode" aria-hidden={!mode}>
+          {mode || '\u00a0'}
+        </p>
       </div>
       {(actions || guide || host) && (
         <div className="record-layout-actions">

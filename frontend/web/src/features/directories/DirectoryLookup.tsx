@@ -1,3 +1,8 @@
+import {
+  cachedEmployee,
+  loadEmployee,
+  rememberEmployees,
+} from '../../shared/profile/employeeDirectory';
 import { useLocalization } from '../localization/Localization';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -19,7 +24,10 @@ export function DirectoryLookup({
   onChange: (value: string, country?: string) => void;
 }) {
   const { translate } = useLocalization();
-  const [selected, setSelected] = useState<Choice>();
+  const [selected, setSelected] = useState<Choice | undefined>(() => {
+    const employee = kind === 'employees' ? cachedEmployee(session, value) : undefined;
+    return employee ? { id: value, value, label: employee.display_name } : undefined;
+  });
   const employees = kind === 'employees';
   useEffect(() => {
     if (!employees || !value) {
@@ -27,18 +35,13 @@ export function DirectoryLookup({
       return;
     }
     const controller = new AbortController();
-    request<{ items: { subject: string; display_name: string }[] }>(
-      '/api/organizations/employees/list',
-      session,
-      { subject: value, limit: 1 },
-      controller.signal,
-    )
-      .then(({ items }) => {
+    loadEmployee(session, value, controller.signal)
+      .then((employee) => {
         if (!controller.signal.aborted)
           setSelected({
             id: value,
             value,
-            label: items[0]?.display_name ?? translate('ui.employeeUnavailable'),
+            label: employee?.display_name ?? translate('ui.employeeUnavailable'),
           });
       })
       .catch(() => {
@@ -56,6 +59,7 @@ export function DirectoryLookup({
           { query },
           signal,
         );
+        rememberEmployees(session, result.items);
         return {
           items: result.items.map((item) => ({
             id: item.subject,
@@ -82,12 +86,15 @@ export function DirectoryLookup({
     <LookupField<Choice>
       label={label}
       value={value}
+      selectedLoading={
+        employees && !!value && selected?.id !== value && !cachedEmployee(session, value)
+      }
       selectedLabel={
         employees
           ? selected?.id === value
             ? selected.label
             : value
-              ? translate('ui.employeeUnavailable')
+              ? (cachedEmployee(session, value)?.display_name ?? '')
               : ''
           : value
       }

@@ -1,3 +1,4 @@
+import { rememberEmployees } from '../../shared/profile/employeeDirectory';
 import { RecordPage, RecordOverview } from '../../shared/ui/record/RecordPage';
 import { ShipmentInquiryLink } from '../sales/ShipmentInquiryLink';
 import { VisitedPanel } from '../../shared/ui/VisitedPanel';
@@ -1074,13 +1075,17 @@ function ShipmentSummary({
       return;
     }
     const controller = new AbortController();
-    request<{ items: { display_name: string }[] }>(
+    request<{ items: { subject: string; display_name: string }[] }>(
       '/api/organizations/employees/list',
       session,
       { subject: shipment.logist, limit: 1 },
       controller.signal,
     )
-      .then(({ items }) => setLogist(items[0]?.display_name ?? translate('ui.employeeUnavailable')))
+      .then(({ items }) => {
+        if (controller.signal.aborted) return;
+        rememberEmployees(session, items);
+        setLogist(items[0]?.display_name ?? translate('ui.employeeUnavailable'));
+      })
       .catch(() => {
         if (!controller.signal.aborted) setLogist(translate('ui.employeeUnavailable'));
       });

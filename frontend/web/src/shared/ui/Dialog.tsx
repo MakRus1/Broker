@@ -26,7 +26,8 @@ export function Dialog({
     node.querySelector<HTMLElement>('[data-autofocus],input,textarea,select')?.focus();
     return () => {
       node.close();
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus({ preventScroll: true });
     };
   }, []);
   function close() {

@@ -13,6 +13,7 @@ export function LookupField<T extends { id: string }>({
   name,
   value,
   selectedLabel,
+  selectedLoading = false,
   placeholder,
   load,
   itemLabel,
@@ -36,6 +37,7 @@ export function LookupField<T extends { id: string }>({
   name?: string;
   value: string;
   selectedLabel: string;
+  selectedLoading?: boolean;
   placeholder: string;
   load: (query: string, signal: AbortSignal) => Promise<LookupPage<T>>;
   itemLabel: (item: T) => string;
@@ -179,7 +181,14 @@ export function LookupField<T extends { id: string }>({
       }}
     >
       <label htmlFor={id}>{label}</label>
-      <div className="lookup-field-control" data-clearable={!!value && clearable}>
+      <div
+        className="lookup-field-control"
+        data-clearable={!!value && clearable}
+        data-loading-selection={(selectedLoading && !visible) || undefined}
+      >
+        {selectedLoading && !visible && (
+          <span className="lookup-selection-skeleton" aria-hidden="true" />
+        )}
         <input
           ref={input}
           id={id}
@@ -189,6 +198,7 @@ export function LookupField<T extends { id: string }>({
           autoComplete="off"
           disabled={disabled}
           required={required && !value}
+          aria-busy={selectedLoading || undefined}
           aria-invalid={!!error || undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           aria-expanded={visible}
@@ -198,7 +208,7 @@ export function LookupField<T extends { id: string }>({
             visible && !loading && page.items[active] ? `${id}-option-${active}` : undefined
           }
           value={visible ? query : selectedLabel}
-          placeholder={placeholder}
+          placeholder={selectedLoading && !visible ? '' : placeholder}
           onFocus={() => {
             setQuery(onTextChange ? selectedLabel : '');
             setOpen(true);

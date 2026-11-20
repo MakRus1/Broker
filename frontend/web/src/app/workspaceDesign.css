@@ -268,7 +268,7 @@
 }
 @media (min-width: 651px) {
   .app .sidebar .sidebar-navigation nav {
-    scrollbar-gutter: auto;
+    scrollbar-gutter: stable;
   }
   .app .sidebar .navigation-group {
     grid-template-columns: minmax(0, 1fr);

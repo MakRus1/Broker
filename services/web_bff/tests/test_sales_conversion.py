@@ -125,6 +125,11 @@ async def test_inquiry_preserves_multimodal_route_and_conversion_state(browser, 
         'delivery_city': 'Москва', 'delivery_country': 'RU',
         'ready_date': '2026-11-11', 'desired_delivery_date': '2026-12-01',
         'route_segments': [
+            {'id': uid(), 'type': 'international_road', 'plan': {
+                'origin_name': 'Роттердам', 'origin_country': 'NL', 'origin_address': 'Терминал',
+                'destination_name': 'Москва', 'destination_country': 'RU', 'destination_address': 'Склад',
+                'departure_date': '2030-01-10', 'arrival_date': '2030-01-15',
+            }},
             {'id': uid(), 'type': 'sea', 'sea': {
                 'pol': {'id': uid(), 'kind': 'sea_port', 'name': 'Shanghai',
                         'country_code': 'CN', 'code': 'CNSHA'},

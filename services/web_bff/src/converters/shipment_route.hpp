@@ -115,9 +115,22 @@ inline clients::shipments::models::AirDetails Convert(const models::shipments::A
     return result;
 }
 
+inline models::shipments::RoutePlan Convert(const clients::shipments::models::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline models::shipments::ShipmentRouteSegment Convert(
     const clients::shipments::models::ShipmentRouteSegment& value) {
     models::shipments::ShipmentRouteSegment result{.id = value.id, .type = value.type};
+    if (value.plan)
+        result.plan = Convert(*value.plan);
     if (value.sea.has_value())
         result.sea = Convert(value.sea.value());
     if (value.air.has_value())
@@ -125,9 +138,22 @@ inline models::shipments::ShipmentRouteSegment Convert(
     return result;
 }
 
+inline clients::shipments::models::RoutePlan Convert(const models::shipments::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline clients::shipments::models::ShipmentRouteSegment Convert(
     const models::shipments::ShipmentRouteSegment& value) {
     clients::shipments::models::ShipmentRouteSegment result{.id = value.id, .type = value.type};
+    if (value.plan)
+        result.plan = Convert(*value.plan);
     if (value.sea.has_value())
         result.sea = Convert(value.sea.value());
     if (value.air.has_value())

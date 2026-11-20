@@ -206,10 +206,24 @@ inline models::transportations::RouteSegmentDestination Convert(
     return result;
 }
 
+inline models::transportations::RoutePlan Convert(
+    const clients::transportations::models::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline models::transportations::RouteSegment Convert(
     const clients::transportations::models::RouteSegment& value) {
     models::transportations::RouteSegment result;
     result.inherited = value.inherited;
+    if (value.plan)
+        result.plan = Convert(*value.plan);
     if (value.sea.has_value())
         result.sea = Convert(value.sea.value());
     if (value.air.has_value())

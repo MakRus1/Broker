@@ -159,9 +159,22 @@ inline clients::sales::models::SeaDetails Convert(const models::sales::SeaDetail
     return result;
 }
 
+inline clients::sales::models::RoutePlan Convert(const models::sales::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline clients::sales::models::ShipmentRouteSegment Convert(
     const models::sales::ShipmentRouteSegment& value) {
     clients::sales::models::ShipmentRouteSegment result;
+    if (value.plan)
+        result.plan = Convert(*value.plan);
     if (value.air.has_value()) {
         result.air.emplace();
         result.air.value() = Convert(value.air.value());
@@ -518,9 +531,22 @@ inline models::sales::SeaDetails Convert(const clients::sales::models::SeaDetail
     return result;
 }
 
+inline models::sales::RoutePlan Convert(const clients::sales::models::RoutePlan& value) {
+    return {.arrival_date = value.arrival_date,
+        .departure_date = value.departure_date,
+        .destination_address = value.destination_address,
+        .destination_country = value.destination_country,
+        .destination_name = value.destination_name,
+        .origin_address = value.origin_address,
+        .origin_country = value.origin_country,
+        .origin_name = value.origin_name};
+}
+
 inline models::sales::ShipmentRouteSegment Convert(
     const clients::sales::models::ShipmentRouteSegment& value) {
     models::sales::ShipmentRouteSegment result;
+    if (value.plan)
+        result.plan = Convert(*value.plan);
     if (value.air.has_value()) {
         result.air.emplace();
         result.air.value() = Convert(value.air.value());

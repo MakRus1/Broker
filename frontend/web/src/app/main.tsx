@@ -25,3 +25,5 @@ createRoot(document.getElementById('root')!).render(
 );
 
 import './workspaceDesign.css';
+
+import './workspaceMotion.css';

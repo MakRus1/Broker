@@ -13,7 +13,7 @@ export function VisitedPanel({
   const [visited, setVisited] = useState(active);
   if (active && !visited) setVisited(true);
   return active || visited ? (
-    <div hidden={!active} className={className}>
+    <div hidden={!active} className={`visited-panel ${className ?? ''}`}>
       {children}
     </div>
   ) : null;

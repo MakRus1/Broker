@@ -124,3 +124,15 @@
 .lookup-field-option-row > [role='option'] > span {
   overflow-wrap: anywhere;
 }
+
+.lookup-selection-skeleton {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  height: 12px;
+  width: min(140px, 45%);
+  border-radius: 3px;
+  background: var(--surface-hover);
+  pointer-events: none;
+}

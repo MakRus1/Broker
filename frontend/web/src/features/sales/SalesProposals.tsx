@@ -1,6 +1,7 @@
 import { ProposalProfit } from './ProposalProfit';
 import { CompanyName } from '../routes/SharedRouteDetails';
 import { NumberField, PriceFields } from './ProposalFields';
+import { replaceQuotedServices } from './rfq/quotationImport';
 import { RfqQuotePicker } from './rfq/RfqQuotePicker';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -288,7 +289,7 @@ export function SalesProposals({
                 lines={draft.lines}
                 calculationDate={draft.calculation_date}
                 onAdd={(lines, labels) => {
-                  setDraft({ ...draft, lines: [...draft.lines, ...lines] });
+                  setDraft({ ...draft, lines: replaceQuotedServices(draft.lines, lines) });
                   setNames((previous) => ({ ...previous, ...labels }));
                 }}
               />

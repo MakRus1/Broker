@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest';
-import { importedQuotationKeys, quotationLineKey, quotationTotals } from './quotationComparison';
+import {
+  comparableQuotationServices,
+  importedQuotationKeys,
+  quotationLineKey,
+  quotationTotals,
+} from './quotationComparison';
 import { quotationLines } from './quotationImport';
 import type { Rfq, RfqQuoteLine } from './types';
 const line: RfqQuoteLine = {
@@ -68,4 +73,32 @@ it('imports only selected services and recognizes their source across RFQ revisi
   expect(added.has(quotationLineKey(rfq, quote, line))).toBe(false);
   expect(added.has(quotationLineKey(rfq, { ...quote, id: 'quote-b' }, quote.lines[1]))).toBe(false);
   expect(importedQuotationKeys([{ ...imported[0], quote_source: undefined }]).size).toBe(0);
+});
+
+it('compares only matching label, unit and quantity, retaining missing and repeated supplier lines', () => {
+  const quotes = [
+    {
+      id: 'a',
+      title: 'A',
+      supplier_id: 'a',
+      lines: [line, { ...line, id: 'repeat' }, { ...line, id: 'quantity', quantity_milli: 1000 }],
+    },
+    {
+      id: 'b',
+      title: 'B',
+      supplier_id: 'b',
+      lines: [
+        { ...line, id: 'other', price: { ...line.price, currency: 'USD' } },
+        { ...line, id: 'unit', unit: 'transportation' as const },
+        { ...line, id: 'label', label_id: 'handling' },
+      ],
+    },
+  ];
+  const services = comparableQuotationServices(quotes);
+  expect(services).toHaveLength(4);
+  expect(services[0].lines.get('a')?.map((value) => value.id)).toEqual(['freight', 'repeat']);
+  expect(services[0].lines.get('b')?.[0].price.currency).toBe('USD');
+  expect(services[1].lines.has('b')).toBe(false);
+  expect(services[2].unit).toBe('transportation');
+  expect(quotes[0].lines).toHaveLength(3);
 });

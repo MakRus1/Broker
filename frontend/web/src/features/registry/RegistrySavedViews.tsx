@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocalization } from '../localization/Localization';
 import { Dialog } from '../../shared/ui/Dialog';
 import { LookupField } from '../../shared/ui/LookupField';
@@ -6,6 +6,7 @@ import { RegistryRoleDefaults } from './RegistryRoleDefaults';
 import { restoreColumns, useRegistryPreference } from './registryPreferences';
 import type { RegistryColumns } from './RegistryTable';
 import { maxSavedViews, restoreSavedViews, sameViewState, snapshotView } from './savedViews';
+import { usePreferences } from '../preferences/UserPreferences';
 import './savedViews.css';
 
 export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
@@ -24,7 +25,7 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
-  const [saveCopy, setSaveCopy] = useState(false);
+  const [action, setAction] = useState<'create' | 'copy' | 'rename'>('create');
   const [removed, setRemoved] = useState<{ view: (typeof views)[number]; active: boolean }>();
   const sourceLabel = translate(
     state.inheritance?.source() === 'role'
@@ -44,6 +45,59 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
   );
   const selected = views.find((view) => view.id === selectedId);
   const binding = state.view;
+  const store = usePreferences();
+  useSyncExternalStore(store?.subscribe ?? (() => () => {}), store?.snapshot ?? (() => 0), () => 0);
+  const saved = selected ?? personal[0];
+  const dirty = Boolean(
+    binding &&
+    (!saved ||
+      !sameViewState(
+        { query: saved.query, columns: restoreColumns(saved.columns, state.definitions) },
+        { query: binding.query, columns: state.columns },
+      )),
+  );
+  const saveState = store?.error
+    ? 'views.saveFailed'
+    : dirty ||
+        store?.hasPending(selected ? (state.viewsKey ?? '') : (state.viewsKey ?? '') + ':personal')
+      ? 'views.saving'
+      : 'views.saved';
+  const previousSaveState = useRef(saveState);
+  const [showSaved, setShowSaved] = useState(false);
+  useEffect(() => {
+    const previous = previousSaveState.current;
+    previousSaveState.current = saveState;
+    if (saveState !== 'views.saved') {
+      setShowSaved(false);
+      return;
+    }
+    if (previous === 'views.saved') return;
+    setShowSaved(true);
+    const timer = setTimeout(() => setShowSaved(false), 2500);
+    return () => clearTimeout(timer);
+  }, [saveState]);
+  function openAction(next: 'create' | 'copy' | 'rename') {
+    setAction(next);
+    setName(next === 'rename' ? (selected?.name ?? '') : '');
+    setError('');
+    setEditing(true);
+  }
+  function removeSelected() {
+    if (!selected) return;
+    setRemoved({
+      view: snapshotView(selected.id, selected.name, binding?.query, state.columns),
+      active: true,
+    });
+    setViews((old) => old.filter((view) => view.id !== selected.id));
+    setSelectedId('');
+    if (personal[0]) {
+      binding?.apply(personal[0].query);
+      state.setColumns(restoreColumns(personal[0].columns, state.definitions));
+    } else {
+      state.inheritance?.reset();
+    }
+  }
+
   const currentSignature = JSON.stringify({ query: binding?.query, columns: state.columns });
   useEffect(() => {
     if (!binding || binding.active === false || !state.viewsKey) return;
@@ -85,7 +139,8 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
   ]);
   if (!binding || !state.viewsKey) return null;
   const validName = name.trim();
-  function save(replace: boolean) {
+  function save() {
+    const replace = action === 'rename';
     const duplicate = views.some(
       (view) =>
         (!replace || view.id !== selected?.id) &&
@@ -112,13 +167,22 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
       setError(translate('views.tooLarge'));
       return;
     }
+    const current = selected
+      ? views.map((item) =>
+          item.id === selected.id
+            ? snapshotView(selected.id, selected.name, binding?.query, state.columns)
+            : item,
+        )
+      : views;
     const next = replace
-      ? views.map((item) => (item.id === view.id ? view : item))
-      : [...views, view];
+      ? current.map((item) => (item.id === view.id ? view : item))
+      : [...current, view];
     if (new TextEncoder().encode(JSON.stringify(next)).length > 60000) {
       setError(translate('views.tooLarge'));
       return;
     }
+    if (!selected)
+      setPersonal([snapshotView('personal', 'personal', binding?.query, state.columns)]);
     setViews(next);
     setSelectedId(view.id);
     setEditing(false);
@@ -137,6 +201,9 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
             load={loadChoices}
             itemLabel={(item) => item.name}
             clearable={false}
+            createInControl
+            onCreate={() => openAction('create')}
+            createLabel={translate('views.create')}
             onChange={(item) => {
               if (!item) return;
               const id = item.id === '__current' ? '' : item.id;
@@ -158,49 +225,21 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
               binding.apply(view.query);
               state.setColumns(restoreColumns(view.columns, state.definitions));
             }}
-            itemActions={(item) =>
-              item.id !== '__current' && (
-                <button
-                  type="button"
-                  className="registry-view-remove"
-                  aria-label={translate('views.deleteNamed', { name: item.name })}
-                  title={translate('views.deleteNamed', { name: item.name })}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    const view = views.find((entry) => entry.id === item.id);
-                    if (!view) return;
-                    setRemoved({ view, active: selectedId === view.id });
-                    setViews((old) => old.filter((entry) => entry.id !== view.id));
-                    if (selectedId === view.id) setSelectedId('');
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
-                  </svg>
-                </button>
-              )
-            }
             footer={
               <div className="registry-view-menu-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setName(selected?.name ?? '');
-                    setSaveCopy(true);
-                    setError('');
-                    setEditing(true);
-                  }}
-                >
-                  {translate('views.save')}
-                </button>
+                {selected && (
+                  <>
+                    <button type="button" onClick={() => openAction('rename')}>
+                      {translate('views.rename')}
+                    </button>
+                    <button type="button" onClick={() => openAction('copy')}>
+                      {translate('views.copy')}
+                    </button>
+                    <button type="button" onClick={removeSelected}>
+                      {translate('views.delete')}
+                    </button>
+                  </>
+                )}
                 {state.inheritance && (selected || state.inheritance.source() === 'personal') && (
                   <button
                     type="button"
@@ -226,8 +265,26 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
                   <button
                     type="button"
                     onClick={() => {
-                      setViews((old) => [...old, removed.view]);
-                      if (removed.active) setSelectedId(removed.view.id);
+                      if (removed.active) {
+                        const previous = snapshotView(
+                          selected?.id ?? 'personal',
+                          selected?.name ?? 'personal',
+                          binding.query,
+                          state.columns,
+                        );
+                        if (!selected) setPersonal([previous]);
+                        setViews((old) => [
+                          ...old.map((view) =>
+                            selected && view.id === selected.id ? previous : view,
+                          ),
+                          removed.view,
+                        ]);
+                        setSelectedId(removed.view.id);
+                        binding.apply(removed.view.query);
+                        state.setColumns(restoreColumns(removed.view.columns, state.definitions));
+                      } else {
+                        setViews((old) => [...old, removed.view]);
+                      }
                       setRemoved(undefined);
                     }}
                   >
@@ -239,6 +296,19 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
           />
         )}
       />
+      <div className="registry-view-save-status" role="status" data-state={saveState}>
+        {saveState === 'views.saving' && translate('views.saving')}
+        {saveState === 'views.saved' && showSaved && <>✓ {translate('views.saved')}</>}
+        {saveState === 'views.saveFailed' && (
+          <>
+            <span>{translate('views.saveFailed')}</span>
+            <span aria-hidden="true"> · </span>
+            <button type="button" onClick={() => void store?.retry()}>
+              {translate('filter.retry')}
+            </button>
+          </>
+        )}
+      </div>
       {error && !editing && (
         <span role="alert" className="error">
           {error}
@@ -247,17 +317,23 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
       {editing && (
         <Dialog
           className="registry-view-dialog"
-          title={translate('views.manage')}
+          title={translate(
+            action === 'rename'
+              ? 'views.rename'
+              : action === 'copy'
+                ? 'views.copy'
+                : 'views.create',
+          )}
           onClose={() => setEditing(false)}
         >
           <form
             className="registry-view-form"
             onSubmit={(event) => {
               event.preventDefault();
-              save(!!selected && !saveCopy);
+              save();
             }}
           >
-            <p className="hint">{translate('views.hint')}</p>
+            {action !== 'rename' && <p className="hint">{translate('views.hint')}</p>}
             <label>
               {translate('views.name')}
               <input
@@ -270,40 +346,17 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
                 }}
               />
             </label>
-            {selected && (
-              <label className="registry-view-copy">
-                <input
-                  type="checkbox"
-                  checked={saveCopy}
-                  onChange={(event) => setSaveCopy(event.target.checked)}
-                />
-                {translate('views.saveCopy')}
-              </label>
-            )}
             {error && (
               <p role="alert" className="error">
                 {error}
               </p>
             )}
             <div className="registry-view-footer">
-              {selected && (
-                <button
-                  type="button"
-                  className="registry-view-delete"
-                  onClick={() => {
-                    setViews((old) => old.filter((view) => view.id !== selected.id));
-                    setSelectedId('');
-                    setEditing(false);
-                  }}
-                >
-                  {translate('views.delete')}
-                </button>
-              )}
               <button type="button" onClick={() => setEditing(false)}>
                 {translate('action.cancel')}
               </button>
               <button type="submit" className="primary">
-                {translate('action.save')}
+                {translate(action === 'rename' ? 'action.save' : 'views.create')}
               </button>
             </div>
           </form>

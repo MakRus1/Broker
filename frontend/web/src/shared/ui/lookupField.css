@@ -136,3 +136,33 @@
   background: var(--surface-hover);
   pointer-events: none;
 }
+
+.lookup-field-add {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 38px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.lookup-field-add:hover {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+.lookup-field-control[data-create='true'] input {
+  padding-right: 76px;
+}
+.lookup-field-control[data-create='true'][data-clearable='true'] input {
+  padding-right: 110px;
+}
+.lookup-field-control[data-create='true'] .lookup-field-clear {
+  right: 72px;
+}

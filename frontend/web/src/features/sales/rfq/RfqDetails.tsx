@@ -5,23 +5,8 @@ import { formatFixed } from '../../finance/services/serviceCharges';
 import { registryValueLabel } from '../../registry/registryLabels';
 import type { Rfq } from './types';
 import { RfqComparison } from './RfqComparison';
-import { quotationLineKey } from './quotationComparison';
 
-export type QuoteSelection = {
-  selected: ReadonlySet<string>;
-  added: ReadonlySet<string>;
-  calculationDate: string;
-  onToggle: (keys: string[], checked: boolean) => void;
-};
-export function RfqDetails({
-  value,
-  showRoute = true,
-  selection,
-}: {
-  value: Rfq;
-  showRoute?: boolean;
-  selection?: QuoteSelection;
-}) {
+export function RfqDetails({ value, showRoute = true }: { value: Rfq; showRoute?: boolean }) {
   const { translate, locale } = useLocalization();
   return (
     <>
@@ -38,11 +23,6 @@ export function RfqDetails({
         <div className="rfq-quotations">
           <RfqComparison value={value} />
           {value.input.quotes.map((quote) => {
-            const expired =
-              !!selection && !!quote.valid_until && quote.valid_until < selection.calculationDate;
-            const available = quote.lines
-              .map((line) => quotationLineKey(value, quote, line))
-              .filter((key) => !selection?.added.has(key));
             return (
               <details
                 key={quote.id}
@@ -58,23 +38,6 @@ export function RfqDetails({
                   </span>
                 </summary>
                 <div className="rfq-quotation-body">
-                  {selection &&
-                    (expired ? (
-                      <p className="error">{translate('rfq.expired')}</p>
-                    ) : (
-                      <label className="rfq-select-all">
-                        <input
-                          type="checkbox"
-                          disabled={!available.length}
-                          checked={
-                            available.length > 0 &&
-                            available.every((key) => selection.selected.has(key))
-                          }
-                          onChange={(event) => selection.onToggle(available, event.target.checked)}
-                        />
-                        {translate('rfq.selectServices')}
-                      </label>
-                    ))}
                   <dl className="rfq-card-meta">
                     <div>
                       <dt>{translate('proposal.validUntil')}</dt>
@@ -94,7 +57,6 @@ export function RfqDetails({
                     <table className="rfq-comparison">
                       <thead>
                         <tr>
-                          {selection && <th>{translate('rfq.selection')}</th>}
                           {(
                             ['proposal.service', 'proposal.quantity', 'proposal.price'] as const
                           ).map((key) => (
@@ -104,40 +66,7 @@ export function RfqDetails({
                       </thead>
                       <tbody>
                         {quote.lines.map((line) => (
-                          <tr
-                            key={line.id}
-                            className={
-                              selection?.added.has(quotationLineKey(value, quote, line))
-                                ? 'rfq-line-added'
-                                : undefined
-                            }
-                          >
-                            {selection && (
-                              <td>
-                                {selection.added.has(quotationLineKey(value, quote, line)) ? (
-                                  <span className="rfq-added">✓ {translate('rfq.added')}</span>
-                                ) : (
-                                  <input
-                                    type="checkbox"
-                                    aria-label={translate('rfq.selectService', {
-                                      service: line.label_name ?? line.label_id,
-                                      quote: quote.title,
-                                    })}
-                                    disabled={expired}
-                                    checked={
-                                      !expired &&
-                                      selection.selected.has(quotationLineKey(value, quote, line))
-                                    }
-                                    onChange={(event) =>
-                                      selection.onToggle(
-                                        [quotationLineKey(value, quote, line)],
-                                        event.target.checked,
-                                      )
-                                    }
-                                  />
-                                )}
-                              </td>
-                            )}
+                          <tr key={line.id}>
                             <td>{line.label_name}</td>
                             <td>
                               {formatFixed(line.quantity_milli, 3)}{' '}

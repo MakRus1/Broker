@@ -214,3 +214,34 @@ async def test_rfq_contains_inquiry_route_plan(api):
         'quotes': [], 'expected_revision': 0,
     }))['item']
     assert saved['route_segment'] == segment
+
+
+@pytest.mark.parametrize('another_rfq', [False, True])
+async def test_proposal_rejects_competing_service_quotes(api, another_rfq):
+    incoming, value = await setup_rfq(api)
+    value.update(quotes=[quote(), quote(15000)], status='ready')
+    await api.post(BASE + 'save', value)
+    second = copy.deepcopy(value)
+    if another_rfq:
+        second['id'] = str(uuid4())
+        await api.post(BASE + 'save', second)
+    lines = []
+    for rfq, option in [(value, value['quotes'][0]), (second, second['quotes'][1])]:
+        lines.append({
+            'id': str(uuid4()), 'label_id': LABEL, 'unit': 'transportation',
+            'quantity_milli': 1000, 'sale': option['lines'][0]['price'],
+            'quote_source': {
+                'rfq_id': rfq['id'], 'revision': 1, 'quote_id': option['id'],
+                'line_id': option['lines'][0]['id'],
+            },
+        })
+    proposal = {
+        'id': str(uuid4()), 'inquiry_id': incoming['id'], 'expected_revision': 0,
+        'title': 'Проверка альтернатив', 'calculation_date': '2026-11-08', 'lines': lines,
+    }
+    result = await api.post('/api/v1/sales/proposals/save', proposal, expected=400)
+    assert result['error'] == 'duplicate_quote_service'
+    proposal['lines'] = [lines[1]]
+    saved = (await api.post('/api/v1/sales/proposals/save', proposal))['item']
+    assert len(saved['lines']) == 1
+    assert saved['lines'][0]['purchase']['net_minor'] == 15000

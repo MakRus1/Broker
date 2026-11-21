@@ -59,6 +59,7 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
         .ReportingCurrency = settings.reporting_currency};
     std::map<std::pair<boost::uuids::uuid, std::int64_t>, models::Rfq> rfq_revisions;
     std::map<boost::uuids::uuid, clients::finance::models::FinancialLabel> labels;
+    std::set<std::pair<boost::uuids::uuid, boost::uuids::uuid>> quoted_services;
     for (auto& line : input.lines) {
         if (line.quote_source) {
             const auto& source = *line.quote_source;
@@ -72,6 +73,9 @@ models::ProposalCalculation ProposalsComponent::PrepareProposalCalculation(
                         .first;
 
             rfq_rules::ApplyQuote(input, inquiry, revision->second, line);
+            if (!quoted_services.emplace(*line.route_segment_id, line.label_id).second)
+                throw ApiError<400>{
+                    "duplicate_quote_service", "Выберите один вариант услуги на участке маршрута"};
         }
         auto label_position = labels.find(line.label_id);
         if (label_position == labels.end())

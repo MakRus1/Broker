@@ -828,11 +828,17 @@ inline models::sales::SalesStage Convert(const clients::sales::models::SalesStag
     return result;
 }
 
-inline models::sales::MinimumPurchaseGap Convert(
-    const clients::sales::models::MinimumPurchaseGap& value) {
+inline clients::sales::models::ProposalSuggestionStrategy Convert(
+    const models::sales::ProposalSuggestionStrategy& value) {
+    return clients::sales::models::ParseEnumScalar(
+        models::sales::EnumValue(value), clients::sales::models::ProposalSuggestionStrategy{});
+}
+
+inline models::sales::ProposalSuggestionGap Convert(
+    const clients::sales::models::ProposalSuggestionGap& value) {
     return {.name = value.name,
         .reason = models::sales::ParseEnumScalar(clients::sales::models::EnumValue(value.reason),
-            models::sales::MinimumPurchaseGapReason{}),
+            models::sales::ProposalSuggestionGapReason{}),
         .segment = value.segment};
 }
 

@@ -127,14 +127,14 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-v1-sales-proposals-minimum_purchase:
-            path: /api/v1/sales/proposals/minimum-purchase
+        handler-api-v1-sales-proposals-save:
+            path: /api/v1/sales/proposals/save
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-v1-sales-proposals-save:
-            path: /api/v1/sales/proposals/save
+        handler-api-v1-sales-proposals-suggest:
+            path: /api/v1/sales/proposals/suggest
             method: POST
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
@@ -227,8 +227,8 @@ components_manager:
                 /api/v1/sales/proposals/action: sales.write
                 /api/v1/sales/proposals/history: sales.read
                 /api/v1/sales/proposals/list: sales.read
-                /api/v1/sales/proposals/minimum-purchase: sales.read
                 /api/v1/sales/proposals/save: sales.write
+                /api/v1/sales/proposals/suggest: sales.read
                 /api/v1/sales/rfqs/get: sales.read
                 /api/v1/sales/rfqs/history: sales.read
                 /api/v1/sales/rfqs/list: sales.read

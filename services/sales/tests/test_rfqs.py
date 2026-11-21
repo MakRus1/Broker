@@ -289,7 +289,8 @@ async def test_minimum_purchase_uses_net_cost_and_current_snapshot(api):
     expired['valid_until'] = '2026-11-07'
     value.update(status='ready', quotes=[net, gross, expired])
     await api.post(BASE + 'save', value)
-    result = await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     })
     assert result['selected'] == [{
@@ -299,10 +300,12 @@ async def test_minimum_purchase_uses_net_cost_and_current_snapshot(api):
     assert result['gaps'] == []
     assert result['items'][0]['revision'] == 1
     assert result['items'][0]['input']['quotes'][1]['lines'][0]['price'] == gross['lines'][0]['price']
-    await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     }, user='other', expected=404)
-    await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     }, roles=['sales.write'], expected=403)
 
@@ -319,7 +322,8 @@ async def test_minimum_purchase_reports_incomparable_or_expired_services(api, re
         first['valid_until'] = second['valid_until'] = '2026-11-07'
     value.update(status='ready', quotes=[first, second])
     await api.post(BASE + 'save', value)
-    result = await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     })
     assert result['selected'] == []
@@ -330,7 +334,8 @@ async def test_minimum_purchase_reports_incomparable_or_expired_services(api, re
 async def test_minimum_purchase_reports_segments_without_ready_quotes(api):
     incoming, value = await setup_rfq(api)
     await api.post(BASE + 'save', value)
-    result = await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     })
     assert result['items'] == []
@@ -344,7 +349,8 @@ async def test_minimum_purchase_compares_separate_rfqs_without_saving_proposal(a
     await api.post(BASE + 'save', first)
     second = {**first, 'id': str(uuid4()), 'quotes': [quote(10000)]}
     await api.post(BASE + 'save', second)
-    result = await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     })
     assert len(result['selected']) == 1
@@ -360,9 +366,19 @@ async def test_minimum_purchase_does_not_select_quotes_for_removed_route_segment
     segment = {'id': str(uuid4()), 'type': 'sea'}
     incoming.update(expected_revision=1, route_segments=[segment])
     await api.post('/api/v1/sales/inquiries/save', incoming)
-    result = await api.post('/api/v1/sales/proposals/minimum-purchase', {
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
         'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
     })
     assert result['items'] == []
     assert result['selected'] == []
     assert result['gaps'] == [{'segment': segment['id'], 'name': '', 'reason': 'missing'}]
+
+
+@pytest.mark.parametrize('strategy', [None, 'fastest'])
+async def test_proposal_suggestion_requires_supported_strategy(api, strategy):
+    incoming, _ = await setup_rfq(api)
+    body = {'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08'}
+    if strategy is not None:
+        body['strategy'] = strategy
+    await api.post('/api/v1/sales/proposals/suggest', body, expected=400)

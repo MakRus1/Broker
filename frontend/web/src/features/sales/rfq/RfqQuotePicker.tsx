@@ -15,7 +15,7 @@ import { request } from '../../../shared/api/http';
 import { useLocalization } from '../../localization/Localization';
 import type { Inquiry } from '../types';
 import type { ProposalLine } from '../proposals';
-import type { Rfq, MinimumPurchaseResult } from './types';
+import type { Rfq, ProposalSuggestionResult } from './types';
 import './rfq.css';
 
 export function RfqQuotePicker({
@@ -53,7 +53,7 @@ export function RfqQuotePicker({
   const [error, setError] = useState('');
   const [automatic, setAutomatic] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
-  const [suggestion, setSuggestion] = useState<MinimumPurchaseResult>();
+  const [suggestion, setSuggestion] = useState<ProposalSuggestionResult>();
   const suggestionAbort = useRef<AbortController | undefined>(undefined);
   useEffect(() => {
     setAutomatic(false);
@@ -69,10 +69,10 @@ export function RfqQuotePicker({
     setAutomatic(false);
     setError('');
     try {
-      const result = await request<MinimumPurchaseResult>(
-        '/api/v1/sales/proposals/minimum-purchase',
+      const result = await request<ProposalSuggestionResult>(
+        '/api/v1/sales/proposals/suggest',
         session,
-        { inquiry_id: inquiry.id, calculation_date: calculationDate },
+        { inquiry_id: inquiry.id, calculation_date: calculationDate, strategy: 'minimum_purchase' },
         controller.signal,
       );
       if (controller.signal.aborted) return;

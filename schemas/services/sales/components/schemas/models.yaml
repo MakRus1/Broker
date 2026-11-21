@@ -1465,10 +1465,12 @@ RoutePlan:
     arrival_date:
       type: string
       format: date
-MinimumPurchaseRequest:
+ProposalSuggestionRequest:
   type: object
   additionalProperties: false
   properties:
+    strategy:
+      $ref: '#/ProposalSuggestionStrategy'
     inquiry_id:
       type: string
       format: uuid
@@ -1477,16 +1479,17 @@ MinimumPurchaseRequest:
       type: string
       format: date
   required:
+  - strategy
   - inquiry_id
   - calculation_date
-MinimumPurchaseGapReason:
+ProposalSuggestionGapReason:
   type: string
   enum:
   - expired
   - volume
   - currency
   - missing
-MinimumPurchaseGap:
+ProposalSuggestionGap:
   type: object
   additionalProperties: false
   properties:
@@ -1497,12 +1500,12 @@ MinimumPurchaseGap:
     name:
       type: string
     reason:
-      $ref: '#/MinimumPurchaseGapReason'
+      $ref: '#/ProposalSuggestionGapReason'
   required:
   - segment
   - name
   - reason
-MinimumPurchaseResult:
+ProposalSuggestionResult:
   type: object
   additionalProperties: false
   properties:
@@ -1517,8 +1520,12 @@ MinimumPurchaseResult:
     gaps:
       type: array
       items:
-        $ref: '#/MinimumPurchaseGap'
+        $ref: '#/ProposalSuggestionGap'
   required:
   - items
   - selected
   - gaps
+ProposalSuggestionStrategy:
+  type: string
+  enum:
+  - minimum_purchase

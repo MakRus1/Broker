@@ -68,7 +68,7 @@ void ApplyQuote(const models::ProposalInput& proposal, const models::Inquiry& in
     throw ApiError<400>{"quote_not_found", "Строка котировки не найдена"};
 }
 
-models::MinimumPurchaseResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
+models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
     const std::vector<models::Rfq>& items, userver::utils::datetime::Date calculation_date) {
     struct Candidate {
         const models::Rfq* Rfq;
@@ -79,7 +79,7 @@ models::MinimumPurchaseResult SuggestMinimumPurchase(const models::Inquiry& inqu
 
     using Key = std::pair<boost::uuids::uuid, boost::uuids::uuid>;
     std::map<Key, std::vector<Candidate>> services;
-    models::MinimumPurchaseResult result;
+    models::ProposalSuggestionResult result;
     for (const auto& rfq : items) {
         if (rfq.input.status != models::RfqStatus::Ready)
             continue;
@@ -107,20 +107,20 @@ models::MinimumPurchaseResult SuggestMinimumPurchase(const models::Inquiry& inqu
         for (const auto& candidate : candidates)
             if (!candidate.Quote->valid_until || *candidate.Quote->valid_until >= calculation_date)
                 available.push_back(&candidate);
-        std::optional<models::MinimumPurchaseGapReason> reason;
+        std::optional<models::ProposalSuggestionGapReason> reason;
         if (available.empty())
-            reason = models::MinimumPurchaseGapReason::Expired;
+            reason = models::ProposalSuggestionGapReason::Expired;
         else {
             const auto& first = *available.front()->Line;
             if (std::any_of(available.begin(), available.end(), [&](const auto* candidate) {
                     return candidate->Line->unit != first.unit ||
                         candidate->Line->quantity_milli != first.quantity_milli;
                 }))
-                reason = models::MinimumPurchaseGapReason::Volume;
+                reason = models::ProposalSuggestionGapReason::Volume;
             else if (std::any_of(available.begin(), available.end(), [&](const auto* candidate) {
                          return candidate->Line->price.currency != first.price.currency;
                      }))
-                reason = models::MinimumPurchaseGapReason::Currency;
+                reason = models::ProposalSuggestionGapReason::Currency;
         }
         if (reason) {
             const auto& line = *candidates.front().Line;
@@ -139,7 +139,7 @@ models::MinimumPurchaseResult SuggestMinimumPurchase(const models::Inquiry& inqu
         if (std::none_of(services.begin(), services.end(),
                 [&](const auto& service) { return service.first.first == segment.id; }))
             result.gaps.push_back({.name = "",
-                .reason = models::MinimumPurchaseGapReason::Missing,
+                .reason = models::ProposalSuggestionGapReason::Missing,
                 .segment = segment.id});
     return result;
 }

@@ -33,9 +33,13 @@ export function RfqServiceComparison({
             <th scope="col">{translate('proposal.service')}</th>
             {value.input.quotes.map((quote) => {
               const expired = !!quote.valid_until && quote.valid_until < selection.calculationDate;
-              const available = quote.lines
-                .map((line) => quotationLineKey(value, quote, line))
-                .filter((key) => !selection.added.has(key));
+              const keys = quote.lines.map((line) => quotationLineKey(value, quote, line));
+              const available = keys.filter((key) => !selection.added.has(key));
+              const selectedCount = keys.filter(
+                (key) => selection.added.has(key) || selection.selected.has(key),
+              ).length;
+              const allSelected = keys.length > 0 && selectedCount === keys.length;
+              const partiallySelected = selectedCount > 0 && !allSelected;
               return (
                 <th scope="col" key={quote.id}>
                   <strong>{quote.supplier_name}</strong>
@@ -56,10 +60,11 @@ export function RfqServiceComparison({
                       <input
                         type="checkbox"
                         disabled={!available.length}
-                        checked={
-                          available.length > 0 &&
-                          available.every((key) => selection.selected.has(key))
-                        }
+                        checked={allSelected}
+                        aria-checked={partiallySelected ? 'mixed' : allSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = partiallySelected;
+                        }}
                         onChange={(event) => selection.onToggle(available, event.target.checked)}
                       />
                       {translate('rfq.selectServices')}

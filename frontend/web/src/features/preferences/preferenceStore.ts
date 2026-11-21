@@ -146,6 +146,9 @@ export class PreferenceStore {
     );
     this.emit(key);
   }
+  hasPending(legacyKey: string): boolean {
+    return this.pending.has(this.key(legacyKey));
+  }
   private async flush(key: string) {
     if (!this.ready || this.running.has(key) || !this.pending.has(key) || this.disposed) return;
     this.running.add(key);

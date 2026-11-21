@@ -28,6 +28,7 @@ export function LookupField<T extends { id: string }>({
   footer,
   onCreate,
   createLabel,
+  createInControl = false,
   clearLabel,
   itemActions,
   popupClassName,
@@ -52,6 +53,7 @@ export function LookupField<T extends { id: string }>({
   footer?: ReactNode;
   onCreate?: () => void;
   createLabel?: string;
+  createInControl?: boolean;
   clearLabel?: string;
   itemActions?: (item: T) => ReactNode;
   popupClassName?: string;
@@ -184,6 +186,7 @@ export function LookupField<T extends { id: string }>({
       <div
         className="lookup-field-control"
         data-clearable={!!value && clearable}
+        data-create={createInControl && !!onCreate}
         data-loading-selection={(selectedLoading && !visible) || undefined}
       >
         {selectedLoading && !visible && (
@@ -244,6 +247,22 @@ export function LookupField<T extends { id: string }>({
             }
           }}
         />
+        {createInControl && onCreate && (
+          <button
+            type="button"
+            className="lookup-field-add"
+            disabled={disabled}
+            aria-label={createLabel}
+            title={createLabel}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              close();
+              onCreate();
+            }}
+          >
+            <span aria-hidden="true">＋</span>
+          </button>
+        )}
         {value && clearable && (
           <ClearSelectionButton
             label={label}
@@ -294,7 +313,7 @@ export function LookupField<T extends { id: string }>({
             }}
             style={{ position: 'fixed', ...position, zIndex: 1000 }}
           >
-            {onCreate && (
+            {onCreate && !createInControl && (
               <div className="lookup-field-create-row">
                 <button
                   type="button"

@@ -242,3 +242,24 @@ it('persists inheritance and does not restore a personal value after reload', as
   reloaded.dispose();
   vi.useRealTimers();
 });
+
+it('показывает ожидающую запись до подтверждения сервера', async () => {
+  vi.useFakeTimers();
+  const { store, transport } = setup();
+  let finish!: (value: Preference) => void;
+  vi.mocked(transport.save).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  expect(store.hasPending(key)).toBe(false);
+  store.set(key, ['new']);
+  expect(store.hasPending(key)).toBe(true);
+  await vi.advanceTimersByTimeAsync(350);
+  expect(store.hasPending(key)).toBe(true);
+  finish(entry(['new']));
+  await vi.runAllTimersAsync();
+  expect(store.hasPending(key)).toBe(false);
+  store.dispose();
+});

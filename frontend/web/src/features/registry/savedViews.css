@@ -1,6 +1,7 @@
 .registry-saved-views {
-  width: 220px;
-  flex: 0 0 220px;
+  position: relative;
+  width: 240px;
+  flex: 0 1 240px;
   min-width: 0;
   max-width: 100%;
 }
@@ -36,22 +37,6 @@
 .registry-view-menu-actions > button:hover {
   background: var(--accent-soft);
 }
-.registry-view-remove {
-  flex: 0 0 30px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-}
-.registry-view-remove:hover {
-  color: var(--text-primary);
-  background: var(--accent-soft);
-}
 .registry-view-form {
   display: grid;
   gap: 18px;
@@ -77,18 +62,6 @@
   min-width: 0;
   box-sizing: border-box;
 }
-.registry-view-dialog .registry-view-copy {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: normal;
-}
-.registry-view-dialog .registry-view-copy input {
-  margin: 0;
-  width: 16px;
-  height: 16px;
-}
 .registry-view-footer {
   display: flex;
   justify-content: flex-end;
@@ -107,15 +80,6 @@
   margin: 0;
   white-space: nowrap;
 }
-.registry-view-dialog .registry-view-footer > .registry-view-delete {
-  margin-right: auto;
-  padding-left: 0;
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
 /* Компактное меню представлений: выбор и команды имеют разную иерархию. */
 .lookup-field-popup.registry-view-popup {
   padding: 6px;
@@ -156,12 +120,6 @@
   outline: 1px solid var(--divider);
   outline-offset: -2px;
 }
-.registry-view-popup .registry-view-remove {
-  margin-right: 3px;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-}
 .registry-view-popup .lookup-field-footer {
   margin-top: 5px;
   padding: 6px 0 0;
@@ -180,4 +138,41 @@
 }
 .registry-view-popup .registry-view-menu-actions > button:hover {
   color: var(--text-primary);
+}
+
+.registry-saved-views .lookup-field-control input {
+  padding-right: 72px;
+}
+.registry-view-save-status {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 3px);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+.registry-view-save-status > button {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  text-decoration: underline;
+}
+.registry-view-save-status[data-state='views.saveFailed'] {
+  color: var(--status-danger-text, var(--text-primary));
+}
+.registry-saved-views > .error {
+  grid-column: 1 / -1;
+}
+@media (max-width: 520px) {
+  .registry-saved-views {
+    width: 100%;
+  }
 }

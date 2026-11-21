@@ -1475,5 +1475,13 @@
   "workspace.navigationExpandedHint": "Always show section icons and labels.",
   "shipment.moreRouteSegmentOne": "{count} more leg",
   "shipment.moreRouteSegmentFew": "{count} more legs",
-  "shipment.moreRouteSegmentMany": "{count} more legs"
+  "shipment.moreRouteSegmentMany": "{count} more legs",
+  "proposal.compare": "Compare proposals",
+  "proposal.closeComparison": "Close comparison",
+  "proposal.compareMetric": "Metric / service",
+  "proposal.compareHint": "Saved calculations excluding VAT for the full quantity. Totals use each proposal’s reporting currency and exchange rates on its calculation date. Service rows highlight differences in scope, prices and suppliers.",
+  "proposal.incompletePurchase": "Some services have no purchase cost",
+  "proposal.compareSegment": "Segment {number}",
+  "proposal.differs": "Differences",
+  "proposal.notIncluded": "Not included"
 }

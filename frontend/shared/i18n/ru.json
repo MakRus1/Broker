@@ -1475,5 +1475,13 @@
   "workspace.navigationExpandedHint": "Всегда показывать иконки и названия разделов.",
   "shipment.moreRouteSegmentOne": "Ещё {count} участок",
   "shipment.moreRouteSegmentFew": "Ещё {count} участка",
-  "shipment.moreRouteSegmentMany": "Ещё {count} участков"
+  "shipment.moreRouteSegmentMany": "Ещё {count} участков",
+  "proposal.compare": "Сравнить предложения",
+  "proposal.closeComparison": "Закрыть сравнение",
+  "proposal.compareMetric": "Показатель / услуга",
+  "proposal.compareHint": "Сохранённые расчёты без НДС за весь объём. Итоги в расчётной валюте каждого предложения, по курсам на его дату расчёта. Различия в составе, ценах и поставщиках отмечены в строках услуг.",
+  "proposal.incompletePurchase": "Закупка указана не для всех услуг",
+  "proposal.compareSegment": "Участок {number}",
+  "proposal.differs": "Есть различия",
+  "proposal.notIncluded": "Не включено"
 }

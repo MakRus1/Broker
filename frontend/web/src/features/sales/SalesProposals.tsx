@@ -1,3 +1,4 @@
+import { ProposalComparison } from './ProposalComparison';
 import { ProposalSalesTable } from './ProposalSalesTable';
 import { scrollIntent } from '../../shared/ui/scrollIntent';
 import { ProposalProfit } from './ProposalProfit';
@@ -39,6 +40,7 @@ export function SalesProposals({
 }) {
   const { translate, locale } = useLocalization();
   const [items, setItems] = useState<Proposal[]>([]);
+  const [comparing, setComparing] = useState(false);
   const [selected, setSelected] = useState<Proposal>();
   const [draft, setDraft] = useState<ProposalInput>();
   const [revision, setRevision] = useState(0);
@@ -198,11 +200,18 @@ export function SalesProposals({
       {!draft && (
         <div className="proposal-toolbar">
           <h2>{translate('proposal.title')}</h2>
-          {write && (
-            <button className="primary" onClick={start}>
-              {translate('proposal.new')}
-            </button>
-          )}
+          <div className="proposal-actions">
+            {items.length > 1 && (
+              <button aria-pressed={comparing} onClick={() => setComparing(!comparing)}>
+                {translate(comparing ? 'proposal.closeComparison' : 'proposal.compare')}
+              </button>
+            )}
+            {write && (
+              <button className="primary" onClick={start}>
+                {translate('proposal.new')}
+              </button>
+            )}
+          </div>
         </div>
       )}
       {failure && !draft && (
@@ -576,28 +585,41 @@ export function SalesProposals({
       ) : (
         <>
           {!items.length && <p className="hint">{translate('proposal.empty')}</p>}
-          <div className="proposal-options">
-            {items.map((value) => (
-              <button
-                key={value.input.id}
-                aria-pressed={selected?.input.id === value.input.id}
-                onClick={() => {
-                  setSelected(value);
-                  setHistory(undefined);
-                }}
-              >
-                <strong>{value.input.title}</strong>
-                <span>
-                  {translate(`proposal.status.${value.status}`)} ·{' '}
-                  {translate('sales.revision', { revision: value.revision })}
-                  {inquiry.accepted_proposal_id === value.input.id
-                    ? ' · ' + translate('proposal.selected')
-                    : ''}
-                </span>
-              </button>
-            ))}
-          </div>
-          {show && (
+          {comparing && items.length > 1 && (
+            <ProposalComparison
+              inquiry={inquiry}
+              items={items}
+              onOpen={(item) => {
+                setSelected(item);
+                setHistory(undefined);
+                setComparing(false);
+              }}
+            />
+          )}
+          {!comparing && (
+            <div className="proposal-options">
+              {items.map((value) => (
+                <button
+                  key={value.input.id}
+                  aria-pressed={selected?.input.id === value.input.id}
+                  onClick={() => {
+                    setSelected(value);
+                    setHistory(undefined);
+                  }}
+                >
+                  <strong>{value.input.title}</strong>
+                  <span>
+                    {translate(`proposal.status.${value.status}`)} ·{' '}
+                    {translate('sales.revision', { revision: value.revision })}
+                    {inquiry.accepted_proposal_id === value.input.id
+                      ? ' · ' + translate('proposal.selected')
+                      : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!comparing && show && (
             <>
               <div className="proposal-toolbar">
                 <h3>{show.input.title}</h3>

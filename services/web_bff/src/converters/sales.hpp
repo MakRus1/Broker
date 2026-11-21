@@ -828,6 +828,14 @@ inline models::sales::SalesStage Convert(const clients::sales::models::SalesStag
     return result;
 }
 
+inline models::sales::MinimumPurchaseGap Convert(
+    const clients::sales::models::MinimumPurchaseGap& value) {
+    return {.name = value.name,
+        .reason = models::sales::ParseEnumScalar(clients::sales::models::EnumValue(value.reason),
+            models::sales::MinimumPurchaseGapReason{}),
+        .segment = value.segment};
+}
+
 template <typename T>
 auto Convert(
     const std::vector<T>& values) -> std::vector<decltype(Convert(std::declval<const T&>()))> {

@@ -54,8 +54,8 @@ it('disables expired and imported services and distinguishes missing services', 
       value={rfq}
       selection={{
         calculationDate: '2026-11-21',
-        selected: new Set(['rfq:expired:line']),
-        added: new Set(['rfq:current:line']),
+        selected: new Set(['rfq:1:expired:line']),
+        added: new Set(['rfq:1:current:line']),
         onToggle() {},
       }}
     />,
@@ -112,8 +112,8 @@ it.each([
         value={rfq}
         selection={{
           calculationDate: '2026-11-21',
-          added: new Set(added.map((id) => `rfq:quote:${id}`)),
-          selected: new Set(selected.map((id) => `rfq:quote:${id}`)),
+          added: new Set(added.map((id) => `rfq:1:quote:${id}`)),
+          selected: new Set(selected.map((id) => `rfq:1:quote:${id}`)),
           onToggle() {},
         }}
       />,

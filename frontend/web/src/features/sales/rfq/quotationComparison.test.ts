@@ -44,7 +44,7 @@ it('rounds each line before adding VAT and keeps currencies separate', () => {
     ])[0].total,
   ).toBe(1220000000000n);
 });
-it('imports only selected services and recognizes their source across RFQ revisions', () => {
+it('imports only selected services and distinguishes an imported snapshot from a newer RFQ revision', () => {
   const rfq: Rfq = {
     revision: 3,
     inquiry_number: 'ENQ-1',
@@ -69,7 +69,8 @@ it('imports only selected services and recognizes their source across RFQ revisi
   expect(imported).toHaveLength(1);
   expect(imported[0].quote_source?.line_id).toBe('handling');
   const added = importedQuotationKeys(imported);
-  expect(added.has(quotationLineKey({ ...rfq, revision: 4 }, quote, quote.lines[1]))).toBe(true);
+  expect(added.has(quotationLineKey(rfq, quote, quote.lines[1]))).toBe(true);
+  expect(added.has(quotationLineKey({ ...rfq, revision: 4 }, quote, quote.lines[1]))).toBe(false);
   expect(added.has(quotationLineKey(rfq, quote, line))).toBe(false);
   expect(added.has(quotationLineKey(rfq, { ...quote, id: 'quote-b' }, quote.lines[1]))).toBe(false);
   expect(importedQuotationKeys([{ ...imported[0], quote_source: undefined }]).size).toBe(0);

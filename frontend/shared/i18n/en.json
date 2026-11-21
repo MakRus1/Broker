@@ -1483,5 +1483,15 @@
   "proposal.incompletePurchase": "Some services have no purchase cost",
   "proposal.compareSegment": "Segment {number}",
   "proposal.differs": "Differences",
-  "proposal.notIncluded": "Not included"
+  "proposal.notIncluded": "Not included",
+  "rfq.minimumPurchase": "Find minimum purchase cost",
+  "rfq.minimumPurchaseHint": "Picks the lowest net purchase per service from valid quotes with matching units, quantity and currency. Package terms and discounts are not considered. Replaces the current selection; proposal services change only after applying.",
+  "rfq.minimumPurchaseResult": "Services selected: {count}. Review the composition before applying.",
+  "rfq.purchaseGaps": "Manual selection required",
+  "rfq.purchaseGap.expired": "no valid quote on the calculation date",
+  "rfq.purchaseGap.volume": "different units or quantities",
+  "rfq.purchaseGap.currency": "different currencies require exchange-rate comparison",
+  "rfq.purchaseGap.missing": "no services in ready quotes",
+  "rfq.purchaseCoverageHint": "All services found in ready quotes were selected. Check completeness: services missing from every quote cannot be identified automatically.",
+  "rfq.minimumPurchaseHow": "How selection works"
 }

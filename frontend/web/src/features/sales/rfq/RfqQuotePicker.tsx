@@ -1,3 +1,4 @@
+import { minimumPurchase } from './minimumPurchase';
 import { quotationLines } from './quotationImport';
 import {
   importedQuotationKeys,
@@ -51,6 +52,7 @@ export function RfqQuotePicker({
   const [items, setItems] = useState<Rfq[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  const [automatic, setAutomatic] = useState(false);
   const [loading, setLoading] = useState(true);
   const alreadyImported = importedQuotationKeys(lines);
   useEffect(() => {
@@ -118,11 +120,54 @@ export function RfqQuotePicker({
       (routePosition.get(a.input.route_segment_id) ?? Infinity) -
       (routePosition.get(b.input.route_segment_id) ?? Infinity),
   );
+  const suggestion = minimumPurchase(
+    items,
+    calculationDate,
+    inquiry.route_segments.map((segment) => segment.id),
+  );
   return (
     <section ref={root} className="rfq-workbench">
-      <header>
+      <div className="rfq-workbench-intro">
         <p className="hint">{translate('rfq.importHint')}</p>
-      </header>
+        <div className="rfq-purchase-toolbar">
+          <button
+            type="button"
+            disabled={loading || !!error}
+            onClick={() => {
+              setSelected(suggestion.keys);
+              setAutomatic(true);
+            }}
+          >
+            {translate('rfq.minimumPurchase')}
+          </button>
+          <details className="rfq-purchase-help">
+            <summary>{translate('rfq.minimumPurchaseHow')}</summary>
+            <p className="hint">{translate('rfq.minimumPurchaseHint')}</p>
+          </details>
+        </div>
+      </div>
+      {automatic && (
+        <div className="rfq-automatic-result" role="status">
+          <p>{translate('rfq.minimumPurchaseResult', { count: suggestion.keys.size })}</p>
+          {!!suggestion.gaps.length && (
+            <>
+              <strong>{translate('rfq.purchaseGaps')}</strong>
+              <ul>
+                {suggestion.gaps.map((gap) => (
+                  <li key={`${gap.segment}:${gap.name}`}>
+                    {translate('proposal.compareSegment', {
+                      number: (routePosition.get(gap.segment) ?? -1) + 1,
+                    })}
+                    {gap.name && ` · ${gap.name}`}: {translate(`rfq.purchaseGap.${gap.reason}`)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {!suggestion.gaps.length && <p>{translate('rfq.purchaseCoverageHint')}</p>}
+        </div>
+      )}
+
       <div className="rfq-workbench-layout">
         <div className="rfq-workbench-options">
           {loading && <p role="status">{translate('common.loading')}</p>}
@@ -144,10 +189,12 @@ export function RfqQuotePicker({
                   selected,
                   added,
                   calculationDate,
-                  onToggle: (keys, checked) =>
+                  onToggle: (keys, checked) => {
+                    setAutomatic(false);
                     setSelected((previous) =>
                       selectQuotationAlternatives(previous, items, keys, checked),
-                    ),
+                    );
+                  },
                 }}
               />
             </section>
@@ -185,13 +232,14 @@ export function RfqQuotePicker({
                         aria-label={translate('rfq.removeSelection', {
                           service: line.label_name ?? line.label_id,
                         })}
-                        onClick={() =>
+                        onClick={() => {
+                          setAutomatic(false);
                           setSelected((old) => {
                             const next = new Set(old);
                             next.delete(quotationLineKey(rfq, quote, line));
                             return next;
-                          })
-                        }
+                          });
+                        }}
                       >
                         ×
                       </button>
@@ -230,6 +278,7 @@ export function RfqQuotePicker({
                 ),
               );
               setSelected(new Set());
+              setAutomatic(false);
             }}
           >
             {translate(replaced.length ? 'rfq.applySelection' : 'rfq.addToProposal')}

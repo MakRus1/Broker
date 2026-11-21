@@ -250,12 +250,11 @@
   gap: 16px;
   margin-block: 20px;
 }
-.rfq-workbench > header {
+.rfq-workbench-intro {
   display: grid;
   gap: 6px;
 }
-.rfq-workbench > header h2,
-.rfq-workbench > header p {
+.rfq-workbench-intro p {
   margin: 0;
 }
 .rfq-workbench-layout {
@@ -432,4 +431,41 @@
 }
 .rfq-existing-lines li[data-replaced='true'] > span {
   text-decoration: line-through;
+}
+
+.rfq-purchase-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 8px;
+}
+.rfq-purchase-help {
+  min-width: 0;
+}
+.rfq-purchase-help summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.rfq-purchase-help[open] {
+  flex-basis: 100%;
+}
+.rfq-purchase-help p {
+  margin-top: 12px;
+  max-width: 80ch;
+}
+.rfq-automatic-result {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+.rfq-automatic-result p,
+.rfq-automatic-result ul {
+  margin: 0;
+}
+.rfq-automatic-result li + li {
+  margin-top: 8px;
 }

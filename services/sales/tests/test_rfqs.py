@@ -1,3 +1,4 @@
+from datetime import datetime
 import copy
 from uuid import uuid4
 import pytest
@@ -245,3 +246,34 @@ async def test_proposal_rejects_competing_service_quotes(api, another_rfq):
     saved = (await api.post('/api/v1/sales/proposals/save', proposal))['item']
     assert len(saved['lines']) == 1
     assert saved['lines'][0]['purchase']['net_minor'] == 15000
+
+
+@pytest.mark.parametrize('action', ['offer', 'accept'])
+async def test_quote_expiration_checked_on_proposal_action(api, mocked_time, action):
+    incoming, value = await setup_rfq(api)
+    value.update(quotes=[quote()], status='ready')
+    value['quotes'][0]['valid_until'] = '2026-11-09'
+    await api.post(BASE + 'save', value)
+    q = value['quotes'][0]
+    proposal = {
+        'id': str(uuid4()), 'inquiry_id': incoming['id'], 'expected_revision': 0,
+        'title': 'Море', 'calculation_date': '2026-11-08',
+        'lines': [{'id': str(uuid4()), 'label_id': LABEL, 'unit': 'transportation',
+                   'quantity_milli': 1000, 'sale': q['lines'][0]['price'],
+                   'quote_source': {'rfq_id': value['id'], 'revision': 1,
+                                    'quote_id': q['id'], 'line_id': q['lines'][0]['id']}}],
+    }
+    saved = (await api.post('/api/v1/sales/proposals/save', proposal))['item']
+    mocked_time.set(datetime.fromisoformat('2026-11-09T23:59:59Z'))
+    if action == 'accept':
+        saved = (await api.post('/api/v1/sales/proposals/action', {
+            'id': proposal['id'], 'expected_revision': saved['revision'], 'action': 'offer',
+        }))['item']
+    mocked_time.set(datetime.fromisoformat('2026-11-10T00:00:00Z'))
+    error = await api.post('/api/v1/sales/proposals/action', {
+        'id': proposal['id'], 'expected_revision': saved['revision'], 'action': action,
+    }, expected=400)
+    assert error['error'] == 'quote_expired'
+    current = (await api.post('/api/v1/sales/proposals/list', {'id': incoming['id']}))['items'][0]
+    assert current['revision'] == saved['revision']
+    assert current['status'] == saved['status']

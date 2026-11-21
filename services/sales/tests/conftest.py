@@ -1,3 +1,4 @@
+from datetime import datetime
 # SERVICE_TESTS_BEGIN
 import pytest
 from testsuite.databases.pgsql import discover
@@ -109,3 +110,8 @@ def configure_dispatcher(mockserver_info):
             'load-enabled': True, 'endpoint': mockserver_info.url('/service-token'),
             'client-id': 'testsuite-dispatcher', 'client-secret': 'testsuite-secret', 'allow-http': True})
     return patch
+
+
+@pytest.fixture(autouse=True)
+def sales_clock(mocked_time):
+    mocked_time.set(datetime.fromisoformat('2026-11-08T12:00:00Z'))

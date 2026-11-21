@@ -1,3 +1,4 @@
+from datetime import datetime
 import asyncio
 import copy
 from uuid import uuid4
@@ -94,7 +95,7 @@ async def test_proposal_validation(api):
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':2,'action':'accept'},expected=400)
 
 @pytest.mark.uservice_oneshot(config_hooks=['configure_dispatcher'])
-async def test_accepted_proposal_transfer_retries_without_changing_import(api,mockserver):
+async def test_accepted_proposal_transfer_retries_without_changing_import(api,mockserver,mocked_time):
     @mockserver.json_handler('/service-token')
     def token(request):return {'access_token':'sales-delivery-token'}
     commands = []
@@ -116,6 +117,7 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
     await api.post(BASE+'save',value)
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':1,'action':'offer'})
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':2,'action':'accept'})
+    mocked_time.set(datetime.fromisoformat('2026-12-01T12:00:00Z'))
     await api.post('/api/v1/sales/inquiries/create-shipment',{'id':incoming['id'],'expected_revision':2})
     for _ in range(200):
         item=(await api.post('/api/v1/sales/inquiries/get',{'id':incoming['id']}))['item']
@@ -229,3 +231,32 @@ async def test_cached_label_is_validated_for_each_line(api, finance, mockserver)
     response = await api.post(BASE + 'save', value, expected=400)
     assert response['error'] == 'invalid_label'
     assert calls == [LABEL]
+
+
+@pytest.mark.parametrize('action', ['offer', 'accept'])
+async def test_expired_proposal_cannot_be_fixed_or_accepted(api, mocked_time, action):
+    incoming, value = await draft(api)
+    saved = (await api.post(BASE + 'save', value))['item']
+    if action == 'accept':
+        saved = (await api.post(BASE + 'action', {
+            'id': value['id'], 'expected_revision': saved['revision'], 'action': 'offer',
+        }))['item']
+    mocked_time.set(datetime.fromisoformat('2026-12-01T00:00:00Z'))
+    error = await api.post(BASE + 'action', {
+        'id': value['id'], 'expected_revision': saved['revision'], 'action': action,
+    }, expected=400)
+    assert error['error'] == 'proposal_expired'
+    current = (await api.post(BASE + 'list', {'id': incoming['id']}))['items'][0]
+    assert current['revision'] == saved['revision']
+    assert current['status'] == saved['status']
+
+
+async def test_proposal_valid_until_is_inclusive(api, mocked_time):
+    _, value = await draft(api)
+    await api.post(BASE + 'save', value)
+    mocked_time.set(datetime.fromisoformat('2026-11-30T23:59:59Z'))
+    await api.post(BASE + 'action', {'id': value['id'], 'expected_revision': 1, 'action': 'offer'})
+    accepted = (await api.post(BASE + 'action', {
+        'id': value['id'], 'expected_revision': 2, 'action': 'accept',
+    }))['item']
+    assert accepted['status'] == 'accepted'

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <components/proposals.hpp>
 #include <components/rfq.hpp>
 #include <components/rfq_rules.hpp>
@@ -5,6 +6,7 @@
 #include <helpers/proposal_storage.hpp>
 #include <map>
 #include <models/errors.hpp>
+#include <platform/calendar_date.hpp>
 #include <platform/http_client.hpp>
 #include <sales/sql_queries.hpp>
 #include <set>
@@ -196,6 +198,31 @@ models::Proposal ProposalsComponent::ApplyProposalAction(const boost::uuids::uui
     if (inquiry.revision != value.inquiry_revision)
         throw ApiError<409>{
             "inquiry_changed", "Запрос изменился после расчёта. Создайте копию предложения"};
+    const auto today = platform::CurrentUtcDate();
+    if (value.input.valid_until && *value.input.valid_until < today)
+        throw ApiError<400>{"proposal_expired", "Срок действия предложения истёк. Обновите расчёт"};
+
+    std::map<std::pair<boost::uuids::uuid, std::int64_t>, models::Rfq> quotations;
+    for (const auto& line : value.input.lines) {
+        if (!line.quote_source)
+            continue;
+        const auto& source = *line.quote_source;
+        const auto key = std::pair{source.rfq_id, source.revision};
+        auto position = quotations.find(key);
+        if (position == quotations.end())
+            position = quotations
+                           .emplace(key,
+                               rfq_.FindRfqRevision(organization, source.rfq_id, source.revision))
+                           .first;
+        const auto& quotes = position->second.input.quotes;
+        const auto quote = std::find_if(quotes.begin(), quotes.end(),
+            [&](const auto& candidate) { return candidate.id == source.quote_id; });
+        if (quote == quotes.end())
+            throw ApiError<400>{"quote_not_found", "Котировка не найдена"};
+        if (quote->valid_until && *quote->valid_until < today)
+            throw ApiError<400>{"quote_expired", "Срок действия котировки истёк. Обновите расчёт"};
+    }
+
     if (!has_cargo_description)
         throw ApiError<400>{
             "cargo_required", "Перед предложением клиенту опишите груз во входящем запросе"};

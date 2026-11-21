@@ -1061,6 +1061,11 @@
   padding: 0;
   margin: 0;
 }
+.sales-workbench
+  .record-layout-collapsible
+  + .record-layout-section:not(.record-layout-collapsible) {
+  margin-top: 20px;
+}
 .record-layout-collapsible > details > summary {
   min-height: 44px;
   padding: 10px 0;

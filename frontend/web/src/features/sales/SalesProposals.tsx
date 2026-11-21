@@ -1,3 +1,5 @@
+import { ProposalSalesTable } from './ProposalSalesTable';
+import { scrollIntent } from '../../shared/ui/scrollIntent';
 import { ProposalProfit } from './ProposalProfit';
 import { CompanyName } from '../routes/SharedRouteDetails';
 import { NumberField, PriceFields } from './ProposalFields';
@@ -17,20 +19,13 @@ import { Select } from '../../shared/ui/Select';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { CustomerSelect } from '../counterparties/CustomerSelect';
 import { ServiceChargeLookup } from '../finance/invoices/ServiceChargeLookup';
-import { formatFixed, inputFixed } from '../finance/services/serviceCharges';
+import { formatFixed } from '../finance/services/serviceCharges';
 import { type FinancialLabel, financialLabelUnits } from '../finance/labels/financialLabels';
-import { currenciesWithCurrent } from '../finance/currencies';
 import { useLocalization } from '../localization/Localization';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import type { Inquiry } from './types';
-import {
-  copyProposal,
-  proposalMargin,
-  type Proposal,
-  type ProposalInput,
-  type ProposalPrice,
-} from './proposals';
+import { copyProposal, proposalMargin, type Proposal, type ProposalInput } from './proposals';
 import './salesProposals.css';
 const noParties: never[] = [];
 export function SalesProposals({
@@ -283,16 +278,52 @@ export function SalesProposals({
                   />
                 </label>
               </RecordSection>
-              <RfqQuotePicker
-                inquiry={inquiry}
-                session={session}
-                lines={draft.lines}
-                calculationDate={draft.calculation_date}
-                onAdd={(lines, labels) => {
-                  setDraft({ ...draft, lines: replaceQuotedServices(draft.lines, lines) });
-                  setNames((previous) => ({ ...previous, ...labels }));
-                }}
-              />
+              <RecordSection
+                title={translate('rfq.assemble')}
+                collapsible
+                initiallyOpen={!draft.lines.length}
+              >
+                <RfqQuotePicker
+                  inquiry={inquiry}
+                  session={session}
+                  lines={draft.lines}
+                  calculationDate={draft.calculation_date}
+                  onAdd={(lines, labels) => {
+                    setDraft({ ...draft, lines: replaceQuotedServices(draft.lines, lines) });
+                    setNames((previous) => ({ ...previous, ...labels }));
+                  }}
+                />
+              </RecordSection>
+              {!!draft.lines.length && (
+                <RecordSection title={translate('proposal.salesCalculation')}>
+                  <ProposalSalesTable
+                    lines={draft.lines}
+                    name={(line) =>
+                      names[line.label_id] ??
+                      items
+                        .flatMap((value) => value.lines)
+                        .find((value) => value.input.label_id === line.label_id)?.label_name ??
+                      translate('proposal.newService')
+                    }
+                    onChange={(line) =>
+                      setDraft({
+                        ...draft,
+                        lines: draft.lines.map((value) => (value.id === line.id ? line : value)),
+                      })
+                    }
+                    onRemove={(id) =>
+                      setDraft({ ...draft, lines: draft.lines.filter((value) => value.id !== id) })
+                    }
+                    onDetails={(id) => {
+                      const section = document.getElementById(`proposal-line-${id}`);
+                      const details = section?.querySelector('details');
+                      if (details) details.open = true;
+                      scrollIntent();
+                      requestAnimationFrame(() => section?.scrollIntoView({ block: 'start' }));
+                    }}
+                  />
+                </RecordSection>
+              )}
               {draft.lines.map((line, index) => {
                 const update = (next: typeof line) =>
                   setDraft({
@@ -302,6 +333,7 @@ export function SalesProposals({
                 return (
                   <RecordSection
                     key={line.id}
+                    id={`proposal-line-${line.id}`}
                     collapsible
                     initiallyOpen={!line.label_id}
                     title={
@@ -380,8 +412,9 @@ export function SalesProposals({
                       </div>
                     </fieldset>
                     <div className="proposal-price-section">
-                      <h3>{translate('proposal.sale')}</h3>
+                      <h3>{translate('proposal.saleSettings')}</h3>
                       <PriceFields
+                        showPrice={false}
                         value={line.sale}
                         onChange={(sale) => update({ ...line, sale })}
                       />

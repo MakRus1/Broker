@@ -382,3 +382,18 @@ async def test_proposal_suggestion_requires_supported_strategy(api, strategy):
     if strategy is not None:
         body['strategy'] = strategy
     await api.post('/api/v1/sales/proposals/suggest', body, expected=400)
+
+
+async def test_minimum_purchase_keeps_volume_gap_priority_when_cheaper_currency_differs(api):
+    incoming, value = await setup_rfq(api)
+    baseline, other_currency, other_volume = quote(10000), quote(8000), quote(5000)
+    other_currency['lines'][0]['price']['currency'] = 'RUB'
+    other_volume['lines'][0]['quantity_milli'] = 2000
+    value.update(status='ready', quotes=[baseline, other_currency, other_volume])
+    await api.post(BASE + 'save', value)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'],
+        'calculation_date': '2026-11-08',
+    })
+    assert result['selected'] == []
+    assert result['gaps'][0]['reason'] == 'volume'

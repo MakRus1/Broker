@@ -7,6 +7,21 @@
 #include <userver/formats/json.hpp>
 #include <userver/utils/text_light.hpp>
 
+namespace {
+struct PurchaseOption {
+    sales::models::ProposalQuoteSource Source;
+    const sales::models::RfqQuoteLine* Line;
+    std::int64_t Net;
+};
+
+struct ServicePurchase {
+    std::string Name;
+    std::optional<PurchaseOption> Cheapest;
+    bool DifferentVolume = false;
+    bool DifferentCurrency = false;
+};
+}  // namespace
+
 namespace sales::rfq_rules {
 namespace json = userver::formats::json;
 
@@ -70,77 +85,84 @@ void ApplyQuote(const models::ProposalInput& proposal, const models::Inquiry& in
 
 models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
     const std::vector<models::Rfq>& items, userver::utils::datetime::Date calculation_date) {
-    struct Candidate {
-        const models::Rfq* Rfq;
-        const models::RfqQuote* Quote;
-        const models::RfqQuoteLine* Line;
-        std::int64_t Net;
-    };
-
-    using Key = std::pair<boost::uuids::uuid, boost::uuids::uuid>;
-    std::map<Key, std::vector<Candidate>> services;
+    std::map<boost::uuids::uuid, std::map<boost::uuids::uuid, ServicePurchase>>
+        purchases_by_segment;
     models::ProposalSuggestionResult result;
+
     for (const auto& rfq : items) {
         if (rfq.input.status != models::RfqStatus::Ready)
             continue;
-        if (std::none_of(inquiry.route_segments.begin(), inquiry.route_segments.end(),
-                [&](const auto& segment) {
-                    return segment.id == rfq.input.route_segment_id &&
-                        json::ValueBuilder(segment).ExtractValue() ==
-                        json::ValueBuilder(rfq.route_segment).ExtractValue();
-                }))
+        const auto segment =
+            std::find_if(inquiry.route_segments.begin(), inquiry.route_segments.end(),
+                [&](const auto& value) { return value.id == rfq.input.route_segment_id; });
+        if (segment == inquiry.route_segments.end() ||
+            json::ValueBuilder(*segment).ExtractValue() !=
+                json::ValueBuilder(rfq.route_segment).ExtractValue())
             continue;
         result.items.push_back(rfq);
-        for (const auto& quote : rfq.input.quotes)
+
+        for (const auto& quote : rfq.input.quotes) {
+            const bool expired = quote.valid_until && *quote.valid_until < calculation_date;
             for (const auto& line : quote.lines) {
+                auto& services = purchases_by_segment[rfq.input.route_segment_id];
+                auto [position, inserted] = services.try_emplace(line.label_id);
+                auto& purchase = position->second;
+                if (inserted)
+                    purchase.Name = line.label_name.value_or("");
+                if (expired)
+                    continue;
+
+                if (purchase.Cheapest) {
+                    const auto& previous = *purchase.Cheapest->Line;
+                    if (previous.unit != line.unit ||
+                        previous.quantity_milli != line.quantity_milli) {
+                        purchase.DifferentVolume = true;
+                        continue;
+                    }
+                    if (previous.price.currency != line.price.currency) {
+                        purchase.DifferentCurrency = true;
+                        continue;
+                    }
+                }
                 const auto amounts = platform::CalculateChargeAmounts(line.quantity_milli,
                     line.price.price_minor, line.price.price_mode == models::PriceMode::Gross,
                     line.price.vat_mode == models::VatMode::Exempt,
                     line.price.vat_rate_basis_points);
-                services[{rfq.input.route_segment_id, line.label_id}].push_back(
-                    {&rfq, &quote, &line, amounts.Net});
+                if (!purchase.Cheapest || amounts.Net < purchase.Cheapest->Net)
+                    purchase.Cheapest = PurchaseOption{.Source = {.line_id = line.id,
+                                                           .quote_id = quote.id,
+                                                           .revision = rfq.revision,
+                                                           .rfq_id = rfq.input.id},
+                        .Line = &line,
+                        .Net = amounts.Net};
             }
+        }
     }
 
-    for (const auto& [key, candidates] : services) {
-        std::vector<const Candidate*> available;
-        for (const auto& candidate : candidates)
-            if (!candidate.Quote->valid_until || *candidate.Quote->valid_until >= calculation_date)
-                available.push_back(&candidate);
-        std::optional<models::ProposalSuggestionGapReason> reason;
-        if (available.empty())
-            reason = models::ProposalSuggestionGapReason::Expired;
-        else {
-            const auto& first = *available.front()->Line;
-            if (std::any_of(available.begin(), available.end(), [&](const auto* candidate) {
-                    return candidate->Line->unit != first.unit ||
-                        candidate->Line->quantity_milli != first.quantity_milli;
-                }))
-                reason = models::ProposalSuggestionGapReason::Volume;
-            else if (std::any_of(available.begin(), available.end(), [&](const auto* candidate) {
-                         return candidate->Line->price.currency != first.price.currency;
-                     }))
-                reason = models::ProposalSuggestionGapReason::Currency;
-        }
-        if (reason) {
-            const auto& line = *candidates.front().Line;
-            result.gaps.push_back(
-                {.name = line.label_name.value_or(""), .reason = *reason, .segment = key.first});
-            continue;
-        }
-        const auto* best = *std::min_element(available.begin(), available.end(),
-            [](const auto* a, const auto* b) { return a->Net < b->Net; });
-        result.selected.push_back({.line_id = best->Line->id,
-            .quote_id = best->Quote->id,
-            .revision = best->Rfq->revision,
-            .rfq_id = best->Rfq->input.id});
-    }
-    for (const auto& segment : inquiry.route_segments)
-        if (std::none_of(services.begin(), services.end(),
-                [&](const auto& service) { return service.first.first == segment.id; }))
+    for (const auto& segment : inquiry.route_segments) {
+        const auto services = purchases_by_segment.find(segment.id);
+        if (services == purchases_by_segment.end()) {
             result.gaps.push_back({.name = "",
                 .reason = models::ProposalSuggestionGapReason::Missing,
                 .segment = segment.id});
+            continue;
+        }
+        for (const auto& [label, purchase] : services->second) {
+            std::optional<models::ProposalSuggestionGapReason> reason;
+            if (!purchase.Cheapest)
+                reason = models::ProposalSuggestionGapReason::Expired;
+            else if (purchase.DifferentVolume)
+                reason = models::ProposalSuggestionGapReason::Volume;
+            else if (purchase.DifferentCurrency)
+                reason = models::ProposalSuggestionGapReason::Currency;
+
+            if (reason)
+                result.gaps.push_back(
+                    {.name = purchase.Name, .reason = *reason, .segment = segment.id});
+            else
+                result.selected.push_back(purchase.Cheapest->Source);
+        }
+    }
     return result;
 }
 

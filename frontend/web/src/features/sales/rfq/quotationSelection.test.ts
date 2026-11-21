@@ -95,3 +95,23 @@ it('repairs an already duplicated imported service when replacing it, and append
   expect(result).toHaveLength(2);
   expect(result.map((line) => line.route_segment_id)).toEqual(['sea', 'road']);
 });
+
+it('applies an explicitly selected newer quotation revision while retaining client price', () => {
+  const old = request('one', 'sea');
+  const existing = quotationLines(old, old.input.quotes[0]);
+  existing[0].sale.price_minor = 25000;
+  const current = structuredClone(old);
+  current.revision += 1;
+  current.input.quotes[0].lines[0].price.price_minor = 18000;
+  const incoming = quotationLines(current, current.input.quotes[0], [
+    current.input.quotes[0].lines[0],
+  ]);
+  const updated = replaceQuotedServices(existing, incoming);
+  expect(updated[0]).toMatchObject({
+    id: existing[0].id,
+    purchase: { price_minor: 18000 },
+    sale: { price_minor: 25000 },
+    quote_source: { revision: current.revision },
+  });
+  expect(existing[0].quote_source?.revision).toBe(old.revision);
+});

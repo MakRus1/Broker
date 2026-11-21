@@ -1466,3 +1466,67 @@ RoutePlan:
     arrival_date:
       type: string
       format: date
+ProposalSuggestionRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    strategy:
+      $ref: "#/ProposalSuggestionStrategy"
+    inquiry_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    calculation_date:
+      type: string
+      format: date
+  required:
+  - strategy
+  - inquiry_id
+  - calculation_date
+ProposalSuggestionGapReason:
+  type: string
+  enum:
+  - expired
+  - volume
+  - currency
+  - missing
+ProposalSuggestionGap:
+  type: object
+  additionalProperties: false
+  properties:
+    segment:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    name:
+      type: string
+    reason:
+      $ref: '#/ProposalSuggestionGapReason'
+  required:
+  - segment
+  - name
+  - reason
+ProposalSuggestionResult:
+  type: object
+  additionalProperties: false
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/Rfq'
+    selected:
+      type: array
+      items:
+        $ref: '#/ProposalQuoteSource'
+    gaps:
+      type: array
+      items:
+        $ref: '#/ProposalSuggestionGap'
+  required:
+  - items
+  - selected
+  - gaps
+ProposalSuggestionStrategy:
+  type: string
+  enum:
+  - minimum_purchase

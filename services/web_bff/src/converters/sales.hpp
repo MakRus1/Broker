@@ -828,6 +828,20 @@ inline models::sales::SalesStage Convert(const clients::sales::models::SalesStag
     return result;
 }
 
+inline clients::sales::models::ProposalSuggestionStrategy Convert(
+    const models::sales::ProposalSuggestionStrategy& value) {
+    return clients::sales::models::ParseEnumScalar(
+        models::sales::EnumValue(value), clients::sales::models::ProposalSuggestionStrategy{});
+}
+
+inline models::sales::ProposalSuggestionGap Convert(
+    const clients::sales::models::ProposalSuggestionGap& value) {
+    return {.name = value.name,
+        .reason = models::sales::ParseEnumScalar(clients::sales::models::EnumValue(value.reason),
+            models::sales::ProposalSuggestionGapReason{}),
+        .segment = value.segment};
+}
+
 template <typename T>
 auto Convert(
     const std::vector<T>& values) -> std::vector<decltype(Convert(std::declval<const T&>()))> {

@@ -36,3 +36,9 @@ export type Rfq = {
   route_segment: ShipmentRouteSegment;
   inquiry_number: string;
 };
+
+export type ProposalSuggestionResult = {
+  items: Rfq[];
+  selected: { rfq_id: string; revision: number; quote_id: string; line_id: string }[];
+  gaps: { segment: string; name: string; reason: 'expired' | 'volume' | 'currency' | 'missing' }[];
+};

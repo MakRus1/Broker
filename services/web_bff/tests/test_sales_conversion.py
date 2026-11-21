@@ -157,3 +157,23 @@ async def test_inquiry_preserves_multimodal_route_and_conversion_state(browser, 
     response = await browser.post('/api/v1/sales/inquiries/save', body)
     assert response.status == 200
     assert response.json() == {'item': item}
+
+
+async def test_minimum_purchase_forwards_request_and_selection(browser, mockserver):
+    await browser.sign_in()
+    body = {'inquiry_id': uid(), 'calculation_date': '2026-11-21', 'strategy': 'minimum_purchase'}
+    selected = {'rfq_id': uid(), 'revision': 4, 'quote_id': uid(), 'line_id': uid()}
+    result = {'items': [], 'selected': [selected], 'gaps': [
+        {'segment': uid(), 'name': 'Фрахт', 'reason': 'currency'},
+        {'segment': uid(), 'name': '', 'reason': 'missing'},
+    ]}
+
+    @mockserver.json_handler('/api/v1/sales/proposals/suggest')
+    def suggest(request):
+        assert request.json == body
+        assert request.headers['Authorization'].startswith('Bearer ')
+        return result
+
+    response = await browser.post('/api/v1/sales/proposals/suggest', body)
+    assert response.status == 200
+    assert response.json() == result

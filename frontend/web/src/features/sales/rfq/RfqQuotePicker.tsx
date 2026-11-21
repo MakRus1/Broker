@@ -1,4 +1,3 @@
-import { minimumPurchase } from './minimumPurchase';
 import { quotationLines } from './quotationImport';
 import {
   importedQuotationKeys,
@@ -16,7 +15,7 @@ import { request } from '../../../shared/api/http';
 import { useLocalization } from '../../localization/Localization';
 import type { Inquiry } from '../types';
 import type { ProposalLine } from '../proposals';
-import type { Rfq } from './types';
+import type { Rfq, ProposalSuggestionResult } from './types';
 import './rfq.css';
 
 export function RfqQuotePicker({
@@ -53,6 +52,46 @@ export function RfqQuotePicker({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [automatic, setAutomatic] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<ProposalSuggestionResult>();
+  const suggestionAbort = useRef<AbortController | undefined>(undefined);
+  useEffect(() => {
+    setAutomatic(false);
+    setSuggesting(false);
+    suggestionAbort.current?.abort();
+    return () => suggestionAbort.current?.abort();
+  }, [inquiry.id, calculationDate, session]);
+  async function suggest() {
+    suggestionAbort.current?.abort();
+    const controller = new AbortController();
+    suggestionAbort.current = controller;
+    setSuggesting(true);
+    setAutomatic(false);
+    setError('');
+    try {
+      const result = await request<ProposalSuggestionResult>(
+        '/api/v1/sales/proposals/suggest',
+        session,
+        { inquiry_id: inquiry.id, calculation_date: calculationDate, strategy: 'minimum_purchase' },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setItems(result.items);
+      setSelected(
+        new Set(
+          result.selected.map(
+            (source) => `${source.rfq_id}:${source.revision}:${source.quote_id}:${source.line_id}`,
+          ),
+        ),
+      );
+      setSuggestion(result);
+      setAutomatic(true);
+    } catch (e) {
+      if (!controller.signal.aborted) setError((e as Error).message);
+    } finally {
+      if (!controller.signal.aborted) setSuggesting(false);
+    }
+  }
   const [loading, setLoading] = useState(true);
   const alreadyImported = importedQuotationKeys(lines);
   useEffect(() => {
@@ -120,25 +159,13 @@ export function RfqQuotePicker({
       (routePosition.get(a.input.route_segment_id) ?? Infinity) -
       (routePosition.get(b.input.route_segment_id) ?? Infinity),
   );
-  const suggestion = minimumPurchase(
-    items,
-    calculationDate,
-    inquiry.route_segments.map((segment) => segment.id),
-  );
   return (
     <section ref={root} className="rfq-workbench">
       <div className="rfq-workbench-intro">
         <p className="hint">{translate('rfq.importHint')}</p>
         <div className="rfq-purchase-toolbar">
-          <button
-            type="button"
-            disabled={loading || !!error}
-            onClick={() => {
-              setSelected(suggestion.keys);
-              setAutomatic(true);
-            }}
-          >
-            {translate('rfq.minimumPurchase')}
+          <button type="button" disabled={loading || suggesting} onClick={() => void suggest()}>
+            {translate(suggesting ? 'common.loading' : 'rfq.minimumPurchase')}
           </button>
           <details className="rfq-purchase-help">
             <summary>{translate('rfq.minimumPurchaseHow')}</summary>
@@ -146,9 +173,9 @@ export function RfqQuotePicker({
           </details>
         </div>
       </div>
-      {automatic && (
+      {automatic && suggestion && (
         <div className="rfq-automatic-result" role="status">
-          <p>{translate('rfq.minimumPurchaseResult', { count: suggestion.keys.size })}</p>
+          <p>{translate('rfq.minimumPurchaseResult', { count: suggestion.selected.length })}</p>
           {!!suggestion.gaps.length && (
             <>
               <strong>{translate('rfq.purchaseGaps')}</strong>
@@ -169,7 +196,7 @@ export function RfqQuotePicker({
       )}
 
       <div className="rfq-workbench-layout">
-        <div className="rfq-workbench-options">
+        <fieldset className="rfq-workbench-options" disabled={suggesting}>
           {loading && <p role="status">{translate('common.loading')}</p>}
           {error && (
             <p className="error" role="alert">
@@ -199,7 +226,7 @@ export function RfqQuotePicker({
               />
             </section>
           ))}
-        </div>
+        </fieldset>
         <aside className="rfq-selection-summary" aria-label={translate('rfq.composition')}>
           <h3>{translate('rfq.composition')}</h3>
           <p>{translate('rfq.alreadyCount', { count: lines.length })}</p>
@@ -229,6 +256,7 @@ export function RfqQuotePicker({
                       <span>{line.label_name ?? line.label_id}</span>
                       <button
                         type="button"
+                        disabled={suggesting}
                         aria-label={translate('rfq.removeSelection', {
                           service: line.label_name ?? line.label_id,
                         })}
@@ -267,7 +295,7 @@ export function RfqQuotePicker({
           <button
             type="button"
             className="primary"
-            disabled={!count || loading || !!error}
+            disabled={!count || loading || suggesting || !!error}
             onClick={() => {
               onAdd(
                 chosen.flatMap((value) => quotationLines(value.rfq, value.quote, value.lines)),

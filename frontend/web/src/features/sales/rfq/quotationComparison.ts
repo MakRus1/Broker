@@ -23,13 +23,13 @@ export function quotationTotals(lines: RfqQuoteLine[]) {
 }
 
 export function quotationLineKey(rfq: Rfq, quote: RfqQuote, line: RfqQuoteLine): string {
-  return `${rfq.input.id}:${quote.id}:${line.id}`;
+  return `${rfq.input.id}:${rfq.revision}:${quote.id}:${line.id}`;
 }
 
 export function importedQuotationKeys(lines: ProposalLine[]): Set<string> {
   return new Set(
     lines.flatMap(({ quote_source: source }) =>
-      source ? [`${source.rfq_id}:${source.quote_id}:${source.line_id}`] : [],
+      source ? [`${source.rfq_id}:${source.revision}:${source.quote_id}:${source.line_id}`] : [],
     ),
   );
 }

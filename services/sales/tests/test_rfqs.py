@@ -277,3 +277,123 @@ async def test_quote_expiration_checked_on_proposal_action(api, mocked_time, act
     current = (await api.post('/api/v1/sales/proposals/list', {'id': incoming['id']}))['items'][0]
     assert current['revision'] == saved['revision']
     assert current['status'] == saved['status']
+
+
+async def test_minimum_purchase_uses_net_cost_and_current_snapshot(api):
+    incoming, value = await setup_rfq(api)
+    net = quote(10000)
+    gross = quote(11000)
+    gross['lines'][0]['price'].update(price_mode='gross', vat_mode='rate', vat_rate_basis_points=2200)
+    net['valid_until'] = gross['valid_until'] = '2026-11-08'
+    expired = quote(1)
+    expired['valid_until'] = '2026-11-07'
+    value.update(status='ready', quotes=[net, gross, expired])
+    await api.post(BASE + 'save', value)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert result['selected'] == [{
+        'rfq_id': value['id'], 'revision': 1, 'quote_id': gross['id'],
+        'line_id': gross['lines'][0]['id'],
+    }]
+    assert result['gaps'] == []
+    assert result['items'][0]['revision'] == 1
+    assert result['items'][0]['input']['quotes'][1]['lines'][0]['price'] == gross['lines'][0]['price']
+    await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    }, user='other', expected=404)
+    await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    }, roles=['sales.write'], expected=403)
+
+
+@pytest.mark.parametrize('reason', ['currency', 'volume', 'expired'])
+async def test_minimum_purchase_reports_incomparable_or_expired_services(api, reason):
+    incoming, value = await setup_rfq(api)
+    first, second = quote(10000), quote(11000)
+    if reason == 'currency':
+        second['lines'][0]['price']['currency'] = 'RUB'
+    elif reason == 'volume':
+        second['lines'][0]['quantity_milli'] = 2000
+    else:
+        first['valid_until'] = second['valid_until'] = '2026-11-07'
+    value.update(status='ready', quotes=[first, second])
+    await api.post(BASE + 'save', value)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert result['selected'] == []
+    assert result['gaps'][0]['segment'] == value['route_segment_id']
+    assert result['gaps'][0]['reason'] == reason
+
+
+async def test_minimum_purchase_reports_segments_without_ready_quotes(api):
+    incoming, value = await setup_rfq(api)
+    await api.post(BASE + 'save', value)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert result['items'] == []
+    assert result['selected'] == []
+    assert result['gaps'] == [{'segment': value['route_segment_id'], 'name': '', 'reason': 'missing'}]
+
+
+async def test_minimum_purchase_compares_separate_rfqs_without_saving_proposal(api):
+    incoming, first = await setup_rfq(api)
+    first.update(status='ready', quotes=[quote(15000)])
+    await api.post(BASE + 'save', first)
+    second = {**first, 'id': str(uuid4()), 'quotes': [quote(10000)]}
+    await api.post(BASE + 'save', second)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert len(result['selected']) == 1
+    assert result['selected'][0]['rfq_id'] == second['id']
+    assert len(result['items']) == 2
+    assert (await api.post('/api/v1/sales/proposals/list', {'id': incoming['id']}))['items'] == []
+
+
+async def test_minimum_purchase_does_not_select_quotes_for_removed_route_segment(api):
+    incoming, value = await setup_rfq(api)
+    value.update(status='ready', quotes=[quote()])
+    await api.post(BASE + 'save', value)
+    segment = {'id': str(uuid4()), 'type': 'sea'}
+    incoming.update(expected_revision=1, route_segments=[segment])
+    await api.post('/api/v1/sales/inquiries/save', incoming)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase',
+        'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert result['items'] == []
+    assert result['selected'] == []
+    assert result['gaps'] == [{'segment': segment['id'], 'name': '', 'reason': 'missing'}]
+
+
+@pytest.mark.parametrize('strategy', [None, 'fastest'])
+async def test_proposal_suggestion_requires_supported_strategy(api, strategy):
+    incoming, _ = await setup_rfq(api)
+    body = {'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08'}
+    if strategy is not None:
+        body['strategy'] = strategy
+    await api.post('/api/v1/sales/proposals/suggest', body, expected=400)
+
+
+async def test_minimum_purchase_keeps_volume_gap_priority_when_cheaper_currency_differs(api):
+    incoming, value = await setup_rfq(api)
+    baseline, other_currency, other_volume = quote(10000), quote(8000), quote(5000)
+    other_currency['lines'][0]['price']['currency'] = 'RUB'
+    other_volume['lines'][0]['quantity_milli'] = 2000
+    value.update(status='ready', quotes=[baseline, other_currency, other_volume])
+    await api.post(BASE + 'save', value)
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'],
+        'calculation_date': '2026-11-08',
+    })
+    assert result['selected'] == []
+    assert result['gaps'][0]['reason'] == 'volume'

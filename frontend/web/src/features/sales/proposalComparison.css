@@ -1,0 +1,35 @@
+.proposal-comparison {
+  min-width: 0;
+}
+.proposal-comparison-table {
+  width: max-content;
+  min-width: 100%;
+}
+.proposal-comparison-table th,
+.proposal-comparison-table td {
+  min-width: 220px;
+  max-width: 320px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.proposal-comparison-table th:first-child {
+  min-width: 200px;
+  max-width: 260px;
+}
+.proposal-comparison-open {
+  color: var(--accent-text);
+  text-align: left;
+}
+.proposal-comparison-table small {
+  margin-top: 6px;
+  font-weight: normal;
+}
+.proposal-comparison-service + .proposal-comparison-service {
+  margin-top: 12px;
+}
+.proposal-comparison-difference {
+  background: var(--surface-raised, var(--surface));
+}
+.proposal-comparison-table .proposal-comparison-difference-label {
+  color: var(--accent-text);
+}

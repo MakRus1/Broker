@@ -1,0 +1,81 @@
+.proposal-sales-calculation {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.proposal-sales-calculation > p {
+  margin: 0;
+}
+.proposal-sales-table {
+  min-width: 1080px;
+  font-variant-numeric: tabular-nums;
+}
+.proposal-sales-table th,
+.proposal-sales-table td {
+  vertical-align: top;
+}
+.proposal-sales-table th:first-child {
+  min-width: 180px;
+  max-width: 260px;
+}
+.proposal-sales-table .proposal-money {
+  white-space: nowrap;
+}
+.proposal-sales-table .proposal-unit-price {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.proposal-sales-table .proposal-unit-price > label {
+  flex: 1;
+}
+.proposal-sales-table input {
+  width: 100%;
+  min-width: 90px;
+  max-width: 140px;
+  margin: 0;
+}
+.proposal-sales-table .proposal-compact-field {
+  position: relative;
+  display: block;
+  margin: 0;
+}
+.proposal-compact-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.proposal-sales-table .proposal-line-name {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  text-align: left;
+  min-height: 0;
+}
+.proposal-sales-table .proposal-line-remove {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+}
+.proposal-sales-table tr[data-loss='true'] .proposal-profit-amount {
+  color: var(--status-danger-text, var(--text-primary));
+}
+.proposal-sales-table tfoot {
+  background: var(--surface);
+  font-weight: 600;
+}
+.proposal-price-fields.proposal-price-settings {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .proposal-price-fields.proposal-price-settings {
+    grid-template-columns: 1fr;
+  }
+}

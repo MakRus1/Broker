@@ -13,8 +13,10 @@ export function NumberField({
   digits = 2,
   max = 100000000,
   onChange,
+  hideLabel = false,
 }: {
   label: string;
+  hideLabel?: boolean;
   value: number;
   digits?: number;
   max?: number;
@@ -23,13 +25,18 @@ export function NumberField({
   const { translate } = useLocalization();
   const [text, setText] = useState(inputFixed(value, digits));
   const focused = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!focused.current) setText(inputFixed(value, digits));
+    if (!focused.current) {
+      setText(inputFixed(value, digits));
+      input.current?.setCustomValidity('');
+    }
   }, [value, digits]);
   return (
-    <label>
-      {label}
+    <label className={hideLabel ? 'proposal-compact-field' : undefined}>
+      <span>{label}</span>
       <DecimalInput
+        ref={input}
         required
         precision={digits}
         value={text}
@@ -53,18 +60,22 @@ export function NumberField({
 export function PriceFields({
   value,
   onChange,
+  showPrice = true,
 }: {
   value: ProposalPrice;
   onChange: (v: ProposalPrice) => void;
+  showPrice?: boolean;
 }) {
   const { translate, locale } = useLocalization();
   return (
-    <div className="proposal-price-fields">
-      <NumberField
-        label={translate('proposal.price')}
-        value={value.price_minor}
-        onChange={(price_minor) => onChange({ ...value, price_minor })}
-      />
+    <div className={`proposal-price-fields${showPrice ? '' : ' proposal-price-settings'}`}>
+      {showPrice && (
+        <NumberField
+          label={translate('proposal.price')}
+          value={value.price_minor}
+          onChange={(price_minor) => onChange({ ...value, price_minor })}
+        />
+      )}
       <Select
         label={translate('registryField.currency')}
         searchable

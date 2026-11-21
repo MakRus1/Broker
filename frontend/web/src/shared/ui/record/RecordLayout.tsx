@@ -61,6 +61,7 @@ export function RecordHeading({
 }
 export function RecordSection({
   title,
+  id: sectionId,
   collapsible = false,
   initiallyOpen = false,
   description,
@@ -68,13 +69,15 @@ export function RecordSection({
   children,
 }: {
   title: string;
+  id?: string;
   collapsible?: boolean;
   initiallyOpen?: boolean;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = sectionId ?? generatedId;
   const [expanded, setExpanded] = useState(initiallyOpen);
   useEditorSection(id, title);
   if (collapsible)

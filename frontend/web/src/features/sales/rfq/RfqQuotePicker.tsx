@@ -121,7 +121,6 @@ export function RfqQuotePicker({
   return (
     <section ref={root} className="rfq-workbench">
       <header>
-        <h2>{translate('rfq.assemble')}</h2>
         <p className="hint">{translate('rfq.importHint')}</p>
       </header>
       <div className="rfq-workbench-layout">

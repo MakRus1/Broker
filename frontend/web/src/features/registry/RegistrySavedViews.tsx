@@ -89,8 +89,13 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
       active: true,
     });
     setViews((old) => old.filter((view) => view.id !== selected.id));
-    setPersonal([snapshotView('personal', 'personal', binding?.query, state.columns)]);
     setSelectedId('');
+    if (personal[0]) {
+      binding?.apply(personal[0].query);
+      state.setColumns(restoreColumns(personal[0].columns, state.definitions));
+    } else {
+      state.inheritance?.reset();
+    }
   }
 
   const currentSignature = JSON.stringify({ query: binding?.query, columns: state.columns });
@@ -260,8 +265,26 @@ export function RegistrySavedViews({ state }: { state: RegistryColumns }) {
                   <button
                     type="button"
                     onClick={() => {
-                      setViews((old) => [...old, removed.view]);
-                      if (removed.active) setSelectedId(removed.view.id);
+                      if (removed.active) {
+                        const previous = snapshotView(
+                          selected?.id ?? 'personal',
+                          selected?.name ?? 'personal',
+                          binding.query,
+                          state.columns,
+                        );
+                        if (!selected) setPersonal([previous]);
+                        setViews((old) => [
+                          ...old.map((view) =>
+                            selected && view.id === selected.id ? previous : view,
+                          ),
+                          removed.view,
+                        ]);
+                        setSelectedId(removed.view.id);
+                        binding.apply(removed.view.query);
+                        state.setColumns(restoreColumns(removed.view.columns, state.definitions));
+                      } else {
+                        setViews((old) => [...old, removed.view]);
+                      }
                       setRemoved(undefined);
                     }}
                   >

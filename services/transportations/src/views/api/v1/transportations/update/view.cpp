@@ -23,20 +23,21 @@ Response View::Handle(
     const auto source =
         deps.route_integrations->GetShipmentContext(access_token, transportation.shipment_id);
 
-    auto result = [&] {
-        if (!request.body.route_segments)
-            return deps.transportations->UpdateTransportation(
-                organization, actor, request.body, source);
-        models::SetRouteRequest route;
-        route.transportation_id = request.body.transportation_id;
-        route.expected_revision = request.body.expected_revision;
-        route.route_segments = *request.body.route_segments;
-        route_rules::InheritRoute(transportation, source);
-        route_rules::ValidateRoute(route);
-        deps.route_integrations->PrepareRoute(access_token, route, transportation);
-        return deps.routes->SaveRoute(
-            organization, actor, access_token, route, source, &request.body);
-    }();
+    if (!request.body.route_segments) {
+        auto result =
+            deps.transportations->UpdateTransportation(organization, actor, request.body, source);
+        return Response200{.transportation = std::move(result)};
+    }
+
+    models::SetRouteRequest route;
+    route.transportation_id = request.body.transportation_id;
+    route.expected_revision = request.body.expected_revision;
+    route.route_segments = *request.body.route_segments;
+    route_rules::InheritRoute(transportation, source);
+    route_rules::ValidateRoute(route);
+    deps.route_integrations->PrepareRoute(access_token, route, transportation);
+    auto result = deps.routes->UpdateTransportationWithRoute(
+        organization, actor, access_token, route, source, request.body);
 
     return Response200{.transportation = std::move(result)};
 }

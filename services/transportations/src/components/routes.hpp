@@ -20,10 +20,17 @@ class RoutesComponent final : public userver::components::ComponentBase {
         const models::ShipmentRouteProjection&) const;
     models::Transportation SaveRoute(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
+        const models::SetRouteRequest&, const models::ShipmentContext&) const;
+    models::Transportation UpdateTransportationWithRoute(const boost::uuids::uuid& organization,
+        const platform::auth::Identity&, std::string_view access_token,
         const models::SetRouteRequest&, const models::ShipmentContext&,
-        const models::UpdateTransportationRequest* details = nullptr) const;
+        const models::UpdateTransportationRequest&) const;
 
   private:
+    models::Transportation SaveRouteImpl(const boost::uuids::uuid& organization,
+        const platform::auth::Identity&, std::string_view access_token,
+        const models::SetRouteRequest&, const models::ShipmentContext&,
+        const models::UpdateTransportationRequest* details) const;
     userver::storages::postgres::ClusterPtr cluster_;
     RouteIntegrations& integrations_;
 };

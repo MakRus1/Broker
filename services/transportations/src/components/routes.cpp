@@ -70,6 +70,20 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
 
 models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::string_view access_token,
+    const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
+    return SaveRouteImpl(organization, identity, access_token, request, source, nullptr);
+}
+
+models::Transportation RoutesComponent::UpdateTransportationWithRoute(
+    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
+    std::string_view access_token, const models::SetRouteRequest& route,
+    const models::ShipmentContext& source,
+    const models::UpdateTransportationRequest& details) const {
+    return SaveRouteImpl(organization, identity, access_token, route, source, &details);
+}
+
+models::Transportation RoutesComponent::SaveRouteImpl(const boost::uuids::uuid& organization,
+    const platform::auth::Identity& identity, std::string_view access_token,
     const models::SetRouteRequest& request, const models::ShipmentContext& source,
     const models::UpdateTransportationRequest* details) const {
     if (details)

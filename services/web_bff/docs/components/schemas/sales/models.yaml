@@ -1488,7 +1488,6 @@ ProposalSuggestionGapReason:
   enum:
   - expired
   - volume
-  - currency
   - missing
 ProposalSuggestionGap:
   type: object
@@ -1510,6 +1509,16 @@ ProposalSuggestionResult:
   type: object
   additionalProperties: false
   properties:
+    reporting_currency:
+      type: string
+    rates:
+      type: array
+      items:
+        $ref: '#/ProposalRate'
+    prices:
+      type: array
+      items:
+        $ref: '#/ProposalSuggestionPrice'
     items:
       type: array
       items:
@@ -1523,6 +1532,9 @@ ProposalSuggestionResult:
       items:
         $ref: '#/ProposalSuggestionGap'
   required:
+  - reporting_currency
+  - rates
+  - prices
   - items
   - selected
   - gaps
@@ -1530,3 +1542,22 @@ ProposalSuggestionStrategy:
   type: string
   enum:
   - minimum_purchase
+ProposalSuggestionPrice:
+  type: object
+  additionalProperties: false
+  properties:
+    source:
+      $ref: '#/ProposalQuoteSource'
+    currency:
+      type: string
+    net_minor:
+      type: integer
+      format: int64
+    reporting_net_minor:
+      type: integer
+      format: int64
+  required:
+  - source
+  - currency
+  - net_minor
+  - reporting_net_minor

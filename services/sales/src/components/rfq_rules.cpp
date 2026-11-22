@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <components/proposal_calculation.hpp>
 #include <components/rfq_rules.hpp>
 #include <map>
 #include <models/errors.hpp>
@@ -18,7 +19,6 @@ struct ServicePurchase {
     std::string Name;
     std::optional<PurchaseOption> Cheapest;
     bool DifferentVolume = false;
-    bool DifferentCurrency = false;
 };
 }  // namespace
 
@@ -83,12 +83,9 @@ void ApplyQuote(const models::ProposalInput& proposal, const models::Inquiry& in
     throw ApiError<400>{"quote_not_found", "Строка котировки не найдена"};
 }
 
-models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
-    const std::vector<models::Rfq>& items, userver::utils::datetime::Date calculation_date) {
-    std::map<boost::uuids::uuid, std::map<boost::uuids::uuid, ServicePurchase>>
-        purchases_by_segment;
-    models::ProposalSuggestionResult result;
-
+std::vector<models::Rfq> CurrentRfqs(
+    const models::Inquiry& inquiry, const std::vector<models::Rfq>& items) {
+    std::vector<models::Rfq> result;
     for (const auto& rfq : items) {
         if (rfq.input.status != models::RfqStatus::Ready)
             continue;
@@ -99,8 +96,23 @@ models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& i
             json::ValueBuilder(*segment).ExtractValue() !=
                 json::ValueBuilder(rfq.route_segment).ExtractValue())
             continue;
-        result.items.push_back(rfq);
+        result.push_back(rfq);
+    }
+    return result;
+}
 
+models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
+    const std::vector<models::Rfq>& items, userver::utils::datetime::Date calculation_date,
+    const std::string& reporting_currency, const std::map<std::string, std::int64_t>& rates) {
+    std::map<boost::uuids::uuid, std::map<boost::uuids::uuid, ServicePurchase>>
+        purchases_by_segment;
+    models::ProposalSuggestionResult result;
+    result.items = items;
+    result.reporting_currency = reporting_currency;
+    for (const auto& [currency, rate] : rates)
+        result.rates.push_back({.currency = currency, .rate_millionths = rate});
+
+    for (const auto& rfq : items) {
         for (const auto& quote : rfq.input.quotes) {
             const bool expired = quote.valid_until && *quote.valid_until < calculation_date;
             for (const auto& line : quote.lines) {
@@ -119,22 +131,23 @@ models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& i
                         purchase.DifferentVolume = true;
                         continue;
                     }
-                    if (previous.price.currency != line.price.currency) {
-                        purchase.DifferentCurrency = true;
-                        continue;
-                    }
                 }
                 const auto amounts = platform::CalculateChargeAmounts(line.quantity_milli,
                     line.price.price_minor, line.price.price_mode == models::PriceMode::Gross,
                     line.price.vat_mode == models::VatMode::Exempt,
                     line.price.vat_rate_basis_points);
-                if (!purchase.Cheapest || amounts.Net < purchase.Cheapest->Net)
-                    purchase.Cheapest = PurchaseOption{.Source = {.line_id = line.id,
-                                                           .quote_id = quote.id,
-                                                           .revision = rfq.revision,
-                                                           .rfq_id = rfq.input.id},
-                        .Line = &line,
-                        .Net = amounts.Net};
+                const auto net = proposal_rules::ConvertProposalAmount(
+                    amounts.Net, rates.at(line.price.currency));
+                const models::ProposalQuoteSource source{.line_id = line.id,
+                    .quote_id = quote.id,
+                    .revision = rfq.revision,
+                    .rfq_id = rfq.input.id};
+                result.prices.push_back({.currency = line.price.currency,
+                    .net_minor = amounts.Net,
+                    .reporting_net_minor = net,
+                    .source = source});
+                if (!purchase.Cheapest || net < purchase.Cheapest->Net)
+                    purchase.Cheapest = PurchaseOption{.Source = source, .Line = &line, .Net = net};
             }
         }
     }
@@ -153,8 +166,6 @@ models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& i
                 reason = models::ProposalSuggestionGapReason::Expired;
             else if (purchase.DifferentVolume)
                 reason = models::ProposalSuggestionGapReason::Volume;
-            else if (purchase.DifferentCurrency)
-                reason = models::ProposalSuggestionGapReason::Currency;
 
             if (reason)
                 result.gaps.push_back(

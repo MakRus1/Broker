@@ -310,13 +310,11 @@ async def test_minimum_purchase_uses_net_cost_and_current_snapshot(api):
     }, roles=['sales.write'], expected=403)
 
 
-@pytest.mark.parametrize('reason', ['currency', 'volume', 'expired'])
+@pytest.mark.parametrize('reason', ['volume', 'expired'])
 async def test_minimum_purchase_reports_incomparable_or_expired_services(api, reason):
     incoming, value = await setup_rfq(api)
     first, second = quote(10000), quote(11000)
-    if reason == 'currency':
-        second['lines'][0]['price']['currency'] = 'RUB'
-    elif reason == 'volume':
+    if reason == 'volume':
         second['lines'][0]['quantity_milli'] = 2000
     else:
         first['valid_until'] = second['valid_until'] = '2026-11-07'
@@ -397,3 +395,56 @@ async def test_minimum_purchase_keeps_volume_gap_priority_when_cheaper_currency_
     })
     assert result['selected'] == []
     assert result['gaps'][0]['reason'] == 'volume'
+
+
+async def test_suggestion_compares_currencies_and_returns_audit_prices(api, mockserver):
+    incoming, value = await setup_rfq(api)
+    usd, rub = quote(10000), quote(800000)
+    rub['lines'][0]['price']['currency'] = 'RUB'
+    value.update(status='ready', quotes=[usd, rub])
+    await api.post(BASE + 'save', value)
+    calls = []
+    @mockserver.json_handler('/api/v1/exchange-rates/get')
+    def rates(request):
+        calls.append(request.json)
+        return {'date': request.json['date'], 'source': 'cbr', 'rate_millionths': 90000000}
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert result['selected'][0]['quote_id'] == rub['id']
+    assert result['reporting_currency'] == 'RUB'
+    assert {p['currency']: p['reporting_net_minor'] for p in result['prices']} == {'USD': 900000, 'RUB': 800000}
+    assert calls == [{'date': '2026-11-08', 'from_currency': 'USD', 'to_currency': 'RUB'}]
+
+
+async def test_suggestion_does_not_choose_partial_result_when_rates_fail(api, mockserver):
+    incoming, value = await setup_rfq(api)
+    value.update(status='ready', quotes=[quote()])
+    await api.post(BASE + 'save', value)
+    @mockserver.handler('/api/v1/exchange-rates/get')
+    def rates(request):
+        return mockserver.make_response(status=503)
+    error = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    }, expected=502)
+    assert error['error'] == 'rates_unavailable'
+
+
+async def test_suggestion_loads_each_currency_once_and_skips_expired_currency(api, mockserver):
+    incoming, value = await setup_rfq(api)
+    first, second, expired = quote(10000), quote(9000), quote(1)
+    expired['valid_until'] = '2026-11-07'
+    expired['lines'][0]['price']['currency'] = 'EUR'
+    value.update(status='ready', quotes=[first, second, expired])
+    await api.post(BASE + 'save', value)
+    calls = []
+    @mockserver.json_handler('/api/v1/exchange-rates/get')
+    def rates(request):
+        calls.append(request.json['from_currency'])
+        return {'date': request.json['date'], 'source': 'cbr', 'rate_millionths': 90000000}
+    result = await api.post('/api/v1/sales/proposals/suggest', {
+        'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
+    })
+    assert calls == ['USD']
+    assert result['selected'][0]['quote_id'] == second['id']
+    assert len(result['prices']) == 2

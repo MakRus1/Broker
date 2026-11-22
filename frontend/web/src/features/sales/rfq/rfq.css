@@ -456,11 +456,10 @@
 }
 .rfq-automatic-result {
   display: grid;
-  gap: 8px;
-  padding: 16px;
+  gap: 20px;
+  padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--accent-soft);
 }
 .rfq-automatic-result p,
 .rfq-automatic-result ul {
@@ -468,4 +467,49 @@
 }
 .rfq-automatic-result li + li {
   margin-top: 8px;
+}
+
+.rfq-result-heading {
+  font-weight: 600;
+}
+.rfq-purchase-gaps {
+  display: grid;
+  gap: 8px;
+}
+.rfq-purchase-gaps ul {
+  padding-left: 20px;
+  color: var(--text-secondary);
+}
+.rfq-currency-comparison {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.rfq-currency-comparison > summary {
+  cursor: pointer;
+  color: var(--accent-text);
+}
+.rfq-currency-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-block: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.rfq-currency-comparison table {
+  min-width: 700px;
+}
+.rfq-currency-comparison th:nth-last-child(-n + 2),
+.rfq-currency-comparison td:nth-last-child(-n + 2) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rfq-currency-comparison tr[data-chosen='true'] {
+  background: var(--accent-soft);
+}
+.rfq-currency-comparison .rfq-chosen-label {
+  color: var(--accent-text);
+  margin-top: 6px;
 }

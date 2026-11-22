@@ -163,8 +163,8 @@ async def test_minimum_purchase_forwards_request_and_selection(browser, mockserv
     await browser.sign_in()
     body = {'inquiry_id': uid(), 'calculation_date': '2026-11-21', 'strategy': 'minimum_purchase'}
     selected = {'rfq_id': uid(), 'revision': 4, 'quote_id': uid(), 'line_id': uid()}
-    result = {'items': [], 'selected': [selected], 'gaps': [
-        {'segment': uid(), 'name': 'Фрахт', 'reason': 'currency'},
+    result = {'reporting_currency': 'RUB', 'rates': [{'currency': 'USD', 'rate_millionths': 90000000}], 'prices': [{'source': selected, 'currency': 'USD', 'net_minor': 100, 'reporting_net_minor': 9000}], 'items': [], 'selected': [selected], 'gaps': [
+        {'segment': uid(), 'name': 'Фрахт', 'reason': 'volume'},
         {'segment': uid(), 'name': '', 'reason': 'missing'},
     ]}
 

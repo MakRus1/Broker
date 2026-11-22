@@ -14,6 +14,8 @@ class RfqComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "sales-rfq";
     RfqComponent(
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
+    models::ProposalSuggestionResult SuggestMinimumPurchase(const models::Inquiry& inquiry,
+        userver::utils::datetime::Date date, std::string_view token) const;
     models::Rfq FindRfq(const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const;
     std::vector<models::Rfq> ListRfqs(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& inquiry_id) const;

@@ -174,10 +174,12 @@ export function RfqQuotePicker({
         </div>
       </div>
       {automatic && suggestion && (
-        <div className="rfq-automatic-result" role="status">
-          <p>{translate('rfq.minimumPurchaseResult', { count: suggestion.selected.length })}</p>
+        <div className="rfq-automatic-result">
+          <p role="status" className="rfq-result-heading">
+            {translate('rfq.minimumPurchaseResult', { count: suggestion.selected.length })}
+          </p>
           {!!suggestion.gaps.length && (
-            <>
+            <div className="rfq-purchase-gaps">
               <strong>{translate('rfq.purchaseGaps')}</strong>
               <ul>
                 {suggestion.gaps.map((gap) => (
@@ -189,9 +191,84 @@ export function RfqQuotePicker({
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
           {!suggestion.gaps.length && <p>{translate('rfq.purchaseCoverageHint')}</p>}
+          <details className="rfq-currency-comparison">
+            <summary>
+              {translate('rfq.currencyBasis', {
+                currency: suggestion.reporting_currency,
+                date: calculationDate,
+              })}
+            </summary>
+            <div className="rfq-currency-rates">
+              {suggestion.rates
+                .filter((rate) => rate.currency !== suggestion.reporting_currency)
+                .map((rate) => (
+                  <span key={rate.currency}>
+                    1 {rate.currency} = {formatFixed(rate.rate_millionths, 6)}{' '}
+                    {suggestion.reporting_currency}
+                  </span>
+                ))}
+            </div>
+            <div className="proposal-table-scroll">
+              <table className="proposal-table">
+                <thead>
+                  <tr>
+                    <th>{translate('proposal.service')}</th>
+                    <th>{translate('proposal.supplier')}</th>
+                    <th>{translate('proposal.purchaseNet')}</th>
+                    <th>
+                      {translate('rfq.comparisonAmount', {
+                        currency: suggestion.reporting_currency,
+                      })}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {suggestion.prices.map((price) => {
+                    const rfq = suggestion.items.find(
+                      (item) => item.input.id === price.source.rfq_id,
+                    );
+                    const quote = rfq?.input.quotes.find(
+                      (item) => item.id === price.source.quote_id,
+                    );
+                    const line = quote?.lines.find((item) => item.id === price.source.line_id);
+                    const chosen = suggestion.selected.some(
+                      (source) =>
+                        source.rfq_id === price.source.rfq_id &&
+                        source.revision === price.source.revision &&
+                        source.quote_id === price.source.quote_id &&
+                        source.line_id === price.source.line_id,
+                    );
+                    return (
+                      <tr
+                        data-chosen={chosen}
+                        key={`${price.source.rfq_id}:${price.source.quote_id}:${price.source.line_id}`}
+                      >
+                        <td>
+                          <span>{line?.label_name}</span>
+                          {chosen && (
+                            <small className="rfq-chosen-label">
+                              {translate('rfq.minimumCost')}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {quote?.supplier_name}
+                          <small>{quote?.title}</small>
+                        </td>
+                        <td>
+                          {formatFixed(price.net_minor, 2)} {price.currency}
+                        </td>
+                        <td>{formatFixed(price.reporting_net_minor, 2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </div>
       )}
 

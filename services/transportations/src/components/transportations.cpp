@@ -1,5 +1,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <components/inherited_route.hpp>
+#include <components/routes.hpp>
 #include <components/transportations.hpp>
 #include <converters/container_facts.hpp>
 #include <converters/saved_transportation.hpp>
@@ -20,9 +21,11 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text.hpp>
 
-namespace transportations {
+namespace {
+namespace models = transportations::models;
+using transportations::ApiError;
 
-void ValidateTransportationDetails(models::TransportationType type,
+void ValidateDetails(models::TransportationType type,
     const std::optional<std::string>& container_type,
     const std::optional<models::ContainerOwnership>& ownership,
     const std::optional<std::string>& container_number) {
@@ -32,6 +35,9 @@ void ValidateTransportationDetails(models::TransportationType type,
             "unexpected_container", "Контейнерные поля доступны только для контейнерной перевозки"};
 }
 
+}  // namespace
+
+namespace transportations {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 
@@ -40,7 +46,8 @@ TransportationsComponent::TransportationsComponent(
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
-                   .GetCluster()) {}
+                   .GetCluster()),
+      routes_(context.FindComponent<RoutesComponent>()) {}
 
 models::Transportation TransportationsComponent::FindTransportation(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
@@ -75,8 +82,8 @@ models::Transportation TransportationsComponent::CreateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::CreateTransportationRequest& request,
     const models::ShipmentContext& source) const {
-    ValidateTransportationDetails(request.type, request.container_type_code,
-        request.container_ownership, request.container_number);
+    ValidateDetails(request.type, request.container_type_code, request.container_ownership,
+        request.container_number);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockCommand, organization, request.id);
@@ -114,10 +121,10 @@ models::Transportation TransportationsComponent::CreateTransportation(
 
 models::Transportation TransportationsComponent::UpdateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    const models::UpdateTransportationRequest& request,
-    const models::ShipmentContext& source) const {
-    ValidateTransportationDetails(request.type, request.container_type_code,
-        request.container_ownership, request.container_number);
+    const models::UpdateTransportationRequest& request, const models::ShipmentContext& source,
+    std::string_view access_token) const {
+    ValidateDetails(request.type, request.container_type_code, request.container_ownership,
+        request.container_number);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     auto current = helpers::ReadTransportation(
@@ -132,7 +139,11 @@ models::Transportation TransportationsComponent::UpdateTransportation(
                 platform::TrimToOptional(request.container_number))
             .AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(current.route_segments);
-    route_rules::InheritRoute(result, source);
+    if (request.route_segments)
+        routes_.WriteRoute(
+            transaction, organization, access_token, *request.route_segments, source, result);
+    else
+        route_rules::InheritRoute(result, source);
 
     helpers::WriteAudit(
         transaction, organization, identity, "update_transportation", result.id, request, result);

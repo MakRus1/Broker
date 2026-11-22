@@ -1,6 +1,5 @@
 #include <components/inherited_route.hpp>
 #include <components/route_validation.hpp>
-#include <components/routes.hpp>
 #include <components/transportations.hpp>
 #include <helpers/revision.hpp>
 #include <permissions/permissions.hpp>
@@ -23,21 +22,20 @@ Response View::Handle(
     const auto source =
         deps.route_integrations->GetShipmentContext(access_token, transportation.shipment_id);
 
-    if (!request.body.route_segments) {
-        auto result =
-            deps.transportations->UpdateTransportation(organization, actor, request.body, source);
-        return Response200{.transportation = std::move(result)};
+    auto& body = request.body;
+    if (body.route_segments) {
+        models::SetRouteRequest route;
+        route.transportation_id = body.transportation_id;
+        route.expected_revision = body.expected_revision;
+        route.route_segments = *body.route_segments;
+        route_rules::InheritRoute(transportation, source);
+        route_rules::ValidateRoute(route);
+        deps.route_integrations->PrepareRoute(access_token, route, transportation);
+        body.route_segments = std::move(route.route_segments);
     }
 
-    models::SetRouteRequest route;
-    route.transportation_id = request.body.transportation_id;
-    route.expected_revision = request.body.expected_revision;
-    route.route_segments = *request.body.route_segments;
-    route_rules::InheritRoute(transportation, source);
-    route_rules::ValidateRoute(route);
-    deps.route_integrations->PrepareRoute(access_token, route, transportation);
-    auto result = deps.routes->UpdateTransportationWithRoute(
-        organization, actor, access_token, route, source, request.body);
+    auto result =
+        deps.transportations->UpdateTransportation(organization, actor, body, source, access_token);
 
     return Response200{.transportation = std::move(result)};
 }

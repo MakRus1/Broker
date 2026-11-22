@@ -3,14 +3,12 @@
 #include <components/route_integrations.hpp>
 #include <components/route_validation.hpp>
 #include <components/routes.hpp>
-#include <components/transportations.hpp>
 #include <converters/route.hpp>
 #include <converters/transportations.hpp>
 #include <helpers/database.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
 #include <platform/auth/identity.hpp>
-#include <platform/text.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
@@ -71,61 +69,43 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
 models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::string_view access_token,
     const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
-    return SaveRouteImpl(organization, identity, access_token, request, source, nullptr);
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto result = helpers::ReadTransportation(
+        transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
+    helpers::CheckRevision(result.revision, request.expected_revision);
+    WriteRoute(transaction, organization, access_token, request.route_segments, source, result);
+    transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
+    ++result.revision;
+    helpers::WriteAudit(
+        transaction, organization, identity, "set_route", result.id, request, result);
+    transaction.Commit();
+    return result;
 }
 
-models::Transportation RoutesComponent::UpdateTransportationWithRoute(
-    const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    std::string_view access_token, const models::SetRouteRequest& route,
-    const models::ShipmentContext& source,
-    const models::UpdateTransportationRequest& details) const {
-    return SaveRouteImpl(organization, identity, access_token, route, source, &details);
-}
-
-models::Transportation RoutesComponent::SaveRouteImpl(const boost::uuids::uuid& organization,
-    const platform::auth::Identity& identity, std::string_view access_token,
-    const models::SetRouteRequest& request, const models::ShipmentContext& source,
-    const models::UpdateTransportationRequest* details) const {
-    if (details)
-        ValidateTransportationDetails(details->type, details->container_type_code,
-            details->container_ownership, details->container_number);
-    if (request.route_segments.size() != source.route_segments.size())
+void RoutesComponent::WriteRoute(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, std::string_view access_token,
+    const std::vector<models::SetRouteSegmentsItem>& segments,
+    const models::ShipmentContext& source, models::Transportation& result) const {
+    if (segments.size() != source.route_segments.size())
         throw ApiError<409>{"inherited_route", "Состав маршрута изменяется только в поставке"};
     for (std::size_t i = 0; i < source.route_segments.size(); ++i) {
-        const auto& input = request.route_segments[i];
+        const auto& input = segments[i];
         const auto& stage = source.route_segments[i];
         if (input.id != stage.id || models::EnumValue(input.mode) != stage.type)
             throw ApiError<409>{
                 "inherited_route", "Порядок и типы участков изменяются только в поставке"};
     }
 
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-
-    auto result = helpers::ReadTransportation(
-        transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
-    helpers::CheckRevision(result.revision, request.expected_revision);
-    if (details) {
-        auto updated =
-            converters::Convert(transaction
-                                    .Execute(sql::kUpdateTransportation, organization, result.id,
-                                        models::EnumValue(details->type), details->hazardous,
-                                        details->container_type_code,
-                                        converters::ConvertOwnership(details->container_ownership),
-                                        platform::TrimToOptional(details->container_number))
-                                    .AsSingleRow<models::pg::TransportationRaw>());
-        updated.route_segments = std::move(result.route_segments);
-        result = std::move(updated);
-    }
     route_rules::InheritRoute(result, source);
 
     std::vector<boost::uuids::uuid> used;
     std::vector<boost::uuids::uuid> segment_ids;
     std::vector<json::Value> documents;
-    segment_ids.reserve(request.route_segments.size());
-    documents.reserve(request.route_segments.size());
-    for (std::size_t i = 0; i < request.route_segments.size(); ++i) {
+    segment_ids.reserve(segments.size());
+    documents.reserve(segments.size());
+    for (std::size_t i = 0; i < segments.size(); ++i) {
         auto& stored = result.route_segments[i];
-        auto value = converters::Convert(request.route_segments[i]);
+        auto value = converters::Convert(segments[i]);
         if (route_rules::HasRouteData(value))
             used.push_back(value.id);
 
@@ -145,17 +125,5 @@ models::Transportation RoutesComponent::SaveRouteImpl(const boost::uuids::uuid& 
     if (!segment_ids.empty())
         transaction.Execute(
             sql::kSaveRouteSegments, organization, result.id, segment_ids, documents);
-
-    if (details) {
-        helpers::WriteAudit(transaction, organization, identity, "update_transportation", result.id,
-            *details, result);
-    } else {
-        transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
-        ++result.revision;
-        helpers::WriteAudit(
-            transaction, organization, identity, "set_route", result.id, request, result);
-    }
-    transaction.Commit();
-    return result;
 }
 }  // namespace transportations

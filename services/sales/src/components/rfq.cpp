@@ -179,9 +179,6 @@ models::Rfq RfqComponent::FindRfqRevision(const boost::uuids::uuid& organization
         pg::ClusterHostType::kMaster, sql::kGetRfqRevision, organization, id, revision));
 }
 
-}  // namespace sales
-
-namespace sales {
 models::ProposalSuggestionResult RfqComponent::SuggestMinimumPurchase(
     const models::Inquiry& inquiry, userver::utils::datetime::Date date,
     std::string_view token) const try {

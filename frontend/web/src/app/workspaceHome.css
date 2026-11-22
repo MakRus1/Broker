@@ -159,3 +159,16 @@
   border-radius: 4px;
   padding: 1px 5px;
 }
+
+.home-dashboard .home-row {
+  justify-content: flex-start;
+}
+.home-dashboard .home-row .home-record {
+  flex: 0 1 auto;
+}
+.home-dashboard .home-pin {
+  flex-shrink: 0;
+  order: -1;
+  align-self: flex-start;
+  margin: 10px 0 0;
+}

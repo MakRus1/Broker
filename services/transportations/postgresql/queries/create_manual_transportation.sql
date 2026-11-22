@@ -11,4 +11,4 @@ INSERT INTO transportations (
 )
 VALUES ($1::UUID, $2::UUID, $3::UUID, 1, $4, $5, $6, $7, $8)
 RETURNING ROW(id, revision, shipment_id, item_id, operation_id, container_type_code,
-    container_ownership, container_number, type, hazardous)::public.transportation_v4;
+    container_ownership, container_number, type, hazardous, route_segments)::public.transportation_v5;

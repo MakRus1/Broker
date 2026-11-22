@@ -126,6 +126,34 @@ async def test_update_details_keeps_facts_and_rejects_old_revision(api, shipment
     )
 
 
+async def test_update_details_and_route_in_one_revision(api, shipment_routes):
+    shipment = str(uuid4())
+    stage = route_segment('road')
+    shipment_routes.set(shipment, [stage])
+    created = (await api.post('/api/v1/transportations/create', {
+        'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container', 'hazardous': False,
+    }))['transportation']
+    actual = (await api.post('/api/v1/transportation-actuals/record', {
+        'transportation_id': created['id'], 'expected_revision': 1,
+        'route_segment_id': stage['id'], 'event_kind': 'departure',
+        'occurred_at': '2026-10-20T09:00:00+00:00',
+    }))['transportation']
+    update = {
+        'transportation_id': created['id'], 'expected_revision': actual['revision'],
+        'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383',
+        'route_segments': [stage],
+    }
+    saved = (await api.post('/api/v1/transportations/update', update))['transportation']
+    assert saved['revision'] == actual['revision'] + 1
+    assert saved['container_number'] == 'CSQU3054383'
+    assert saved['hazardous'] is True
+    assert saved['route_segments'][0]['origin'] == stage['origin']
+    assert saved['route_segments'][0]['actual_departure_at'] == '2026-10-20T09:00:00+00:00'
+    await api.post('/api/v1/transportations/update', update, expected=409)
+    loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
+    assert loaded == saved
+
+
 @pytest.mark.parametrize(
     'code,message',
     [
@@ -134,8 +162,9 @@ async def test_update_details_keeps_facts_and_rejects_old_revision(api, shipment
         ('another_conflict', 'Другая причина конфликта'),
     ],
 )
+@pytest.mark.parametrize('combined', [False, True])
 async def test_route_change_rejected_before_local_write(
-    api, shipment_routes, mockserver, code, message
+    api, shipment_routes, mockserver, code, message, combined
 ):
     body = command()
     operation = await api.post(PATH, body)
@@ -148,8 +177,9 @@ async def test_route_change_rejected_before_local_write(
         return mockserver.make_response(status=409, json={'error': code, 'message': message})
 
     conflict = await api.post(
-        '/api/v1/transportation-routes/set',
+        '/api/v1/transportations/update' if combined else '/api/v1/transportation-routes/set',
         {
+            **({'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383'} if combined else {}),
             'transportation_id': identifier,
             'expected_revision': 1,
             'route_segments': [stage],
@@ -162,6 +192,8 @@ async def test_route_change_rejected_before_local_write(
         'transportation'
     ]
     assert loaded['revision'] == 1
+    assert loaded['hazardous'] is False
+    assert 'container_number' not in loaded
     assert 'origin' not in loaded['route_segments'][0]
 
 
@@ -251,7 +283,7 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
                     RAISE EXCEPTION 'test rollback';
                 END;
                 $$;
-                CREATE TRIGGER reject_route_write BEFORE INSERT ON route_segments
+                CREATE TRIGGER reject_route_write BEFORE UPDATE OF route_segments ON transportations
                 FOR EACH ROW EXECUTE FUNCTION reject_route_write();
             ''')
 
@@ -286,7 +318,37 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
         finally:
             if rollback:
                 with pgsql['db_1'].cursor() as cursor:
-                    cursor.execute('DROP TRIGGER reject_route_write ON route_segments')
+                    cursor.execute('DROP TRIGGER reject_route_write ON transportations')
                     cursor.execute('DROP FUNCTION reject_route_write()')
 
     assert results[1]['segment_ids'] == ([] if rollback else [stage['id']])
+
+
+async def test_full_route_write_keeps_historical_documents(api, shipment_routes, pgsql):
+    import json
+    shipment = str(uuid4())
+    stage = route_segment('road')
+    shipment_routes.set(shipment, [stage])
+    created = (await api.post('/api/v1/transportations/create', {
+        'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container', 'hazardous': False,
+    }))['transportation']
+    historical = {
+        'id': str(uuid4()), 'mode': 'sea', 'inherited': False,
+        'contractor_id': str(uuid4()), 'sea': {'vessel': 'Историческое судно'},
+        'plan': {'origin_name': 'Исторический порт'},
+    }
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('UPDATE transportations SET route_segments=%s::jsonb WHERE id=%s',
+                       (json.dumps([historical]), created['id']))
+    saved = (await api.post('/api/v1/transportations/update', {
+        'transportation_id': created['id'], 'expected_revision': 1,
+        'type': 'container', 'hazardous': True, 'route_segments': [stage],
+    }))['transportation']
+    assert saved['route_segments'][-1] == historical
+    await api.post('/api/v1/transportation-actuals/record', {
+        'transportation_id': created['id'], 'expected_revision': 2,
+        'route_segment_id': stage['id'], 'event_kind': 'departure',
+        'occurred_at': '2026-10-20T09:00:00+00:00',
+    })
+    loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
+    assert loaded['route_segments'][-1] == historical

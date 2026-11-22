@@ -1,4 +1,3 @@
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -164,7 +163,7 @@ export function CounterpartyForm({
           </p>
         )}
         {creationHint}
-        <RecordEditorSections>
+        <>
           <fieldset disabled={busy || !!recovery.candidate}>
             <RecordSection title={translate('counterparty.legalEntity')}>
               <label className="record-toggle">
@@ -336,7 +335,7 @@ export function CounterpartyForm({
               </button>
             </RecordSection>
           </fieldset>
-        </RecordEditorSections>
+        </>
         <RecordActions
           error={failure}
           issues={validation.issues}

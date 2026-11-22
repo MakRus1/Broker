@@ -8,7 +8,7 @@ export const modes = {
   international_rail: 'Международное ЖД',
   international_road: 'Международное авто',
   rail: 'ЖД РФ',
-  road: 'Вывоз',
+  road: 'Авто РФ',
   pickup: 'Вывоз',
   air: 'Авиа',
 } as const;

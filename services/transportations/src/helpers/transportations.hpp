@@ -15,9 +15,6 @@ inline models::Transportation ReadTransportation(pg::Transaction& transaction,
         organization, id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Перевозка не найдена"};
-    auto result = converters::Convert(rows.AsSingleRow<models::pg::TransportationRaw>());
-    const auto route_segments = transaction.Execute(sql::kGetRouteSegments, organization, id);
-    result.route_segments = converters::Convert(route_segments.AsContainer<std::vector<Json>>());
-    return result;
+    return converters::Convert(rows.AsSingleRow<models::pg::TransportationRaw>());
 }
 }  // namespace transportations::helpers

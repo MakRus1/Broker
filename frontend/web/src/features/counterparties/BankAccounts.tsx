@@ -1,6 +1,5 @@
 import { RecordFields, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
 
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -269,7 +268,7 @@ export function BankAccounts({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <RecordEditorSections>
+          <>
             <fieldset
               className="record-layout-content"
               disabled={busy || !!recovery.candidate}
@@ -356,7 +355,7 @@ export function BankAccounts({
                 </div>
               </RecordSection>
             </fieldset>
-          </RecordEditorSections>
+          </>
           <RecordActions
             error={failure}
             issues={validation.issues}

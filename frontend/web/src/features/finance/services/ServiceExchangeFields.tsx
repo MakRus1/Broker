@@ -1,6 +1,6 @@
 import { useLocalization } from '../../localization/Localization';
 import { DecimalInput } from '../../../shared/ui/DecimalInput';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { request } from '../../../shared/api/http';
 import { type Session } from '../../../shared/api/session';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
@@ -17,7 +17,7 @@ export function ServiceExchangeFields({
   invoiceCurrencyLocked = false,
   manual,
   rate,
-  onCurrency,
+  children,
   onInvoiceCurrency,
   onManual,
   onRate,
@@ -30,7 +30,7 @@ export function ServiceExchangeFields({
   invoiceCurrencyLocked?: boolean;
   manual: boolean;
   rate: string;
-  onCurrency: (value: string) => void;
+  children: ReactNode;
   onInvoiceCurrency: (value: string) => void;
   onManual: (value: boolean) => void;
   onRate: (value: string) => void;
@@ -71,21 +71,8 @@ export function ServiceExchangeFields({
   }, [session, date, currency, invoiceCurrency, manual, same, version]);
   return (
     <>
-      <div className="service-exchange-fields">
-        <Select
-          label={translate('finance.serviceCurrency')}
-          searchable
-          value={currency}
-          options={currenciesWithCurrent(currency, locale)}
-          onChange={(value) => {
-            onCurrency(value);
-            if (value === invoiceCurrency) {
-              onManual(false);
-              onRate('1');
-            }
-          }}
-          disabled={disabled}
-        />
+      <div className="record-fields service-exchange-fields">
+        {children}
         <Select
           label={translate('finance.invoiceCurrency')}
           searchable

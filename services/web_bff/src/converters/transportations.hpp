@@ -454,6 +454,12 @@ inline clients::transportations::ApiV1TransportationsUpdate::RequestBody Convert
     result.type = Convert(value.type);
     if (value.container_ownership.has_value())
         result.container_ownership = Convert(value.container_ownership.value());
+    if (value.route_segments) {
+        result.route_segments.emplace();
+        result.route_segments->reserve(value.route_segments->size());
+        for (const auto& stage : *value.route_segments)
+            result.route_segments->push_back(Convert(stage));
+    }
     return result;
 }
 

@@ -27,6 +27,7 @@ interface Interaction {
   next_action?: string;
   next_action_date?: string;
 }
+const interactionPageSize = 3;
 const kinds: InteractionKind[] = ['call', 'email', 'meeting', 'other'];
 export function SalesInteractions({
   card,
@@ -39,6 +40,7 @@ export function SalesInteractions({
 }) {
   const { translate } = useLocalization();
   const [items, setItems] = useState<Interaction[]>([]);
+  const [visibleCount, setVisibleCount] = useState(interactionPageSize);
   const [before, setBefore] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [failure, setFailure] = useState('');
@@ -85,10 +87,11 @@ export function SalesInteractions({
   });
   useEffect(() => {
     const controller = new AbortController();
+    setVisibleCount(interactionPageSize);
     request<{ items: Interaction[]; next_before?: string }>(
       '/api/v1/sales/contacts/list',
       session,
-      { card_id: card.id },
+      { card_id: card.id, limit: interactionPageSize },
       controller.signal,
     )
       .then((result) => {
@@ -175,19 +178,25 @@ export function SalesInteractions({
     }
   }
   async function loadMore() {
-    if (!before || busy) return;
+    if (busy) return;
+    if (visibleCount < items.length) {
+      setVisibleCount((count) => count + interactionPageSize);
+      return;
+    }
+    if (!before) return;
     setBusy(true);
     setFailure('');
     try {
       const result = await request<{ items: Interaction[]; next_before?: string }>(
         '/api/v1/sales/contacts/list',
         session,
-        { card_id: card.id, before },
+        { card_id: card.id, before, limit: interactionPageSize },
       );
       setItems((current) => [
         ...current,
         ...result.items.filter((item) => !current.some((saved) => saved.id === item.id)),
       ]);
+      setVisibleCount((count) => count + interactionPageSize);
       setBefore(result.next_before);
     } catch (error) {
       setFailure((error as Error).message);
@@ -367,7 +376,7 @@ export function SalesInteractions({
         <p className="muted">{translate('sales.interaction.empty')}</p>
       )}
       <div className="sales-interaction-list" hidden={Boolean(form)}>
-        {items.map((item) => (
+        {items.slice(0, visibleCount).map((item) => (
           <article className="sales-interaction" key={item.id}>
             <div className="sales-interaction-meta">
               <span className="sales-interaction-kind">
@@ -429,10 +438,23 @@ export function SalesInteractions({
           </article>
         ))}
       </div>
-      {before && !form && (
-        <button disabled={busy} onClick={() => void loadMore()}>
-          {translate('sales.interaction.more')}
-        </button>
+      {!form && (before || visibleCount > interactionPageSize || visibleCount < items.length) && (
+        <div className="sales-interaction-actions">
+          {(before || visibleCount < items.length) && (
+            <button type="button" disabled={busy} onClick={() => void loadMore()}>
+              {translate('sales.interaction.more')}
+            </button>
+          )}
+          {visibleCount > interactionPageSize && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setVisibleCount(interactionPageSize)}
+            >
+              {translate('registry.collapseText')}
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

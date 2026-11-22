@@ -297,6 +297,11 @@ def column_request(service, request):
             for key in ["date_from", "date_to"]:
                 if key in condition:
                     values.append(condition[key])
+        if service == "transportations":
+            for condition in group["filters"]:
+                selected = condition.get("values", [])
+                if condition["field"] in ("origin_station", "destination_station") and selected and "" not in selected:
+                    values.append(selected)
     if "facet" in request:
         for key in ["query", "after"]:
             if key in request:

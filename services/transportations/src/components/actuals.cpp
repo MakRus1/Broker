@@ -31,14 +31,13 @@ models::Transportation ActualsComponent::ApplyActualChange(const boost::uuids::u
         transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
     helpers::CheckRevision(result.revision, request.expected_revision);
     route_rules::InheritRoute(result, source);
-    const auto position = route_rules::ApplyActual(
+    route_rules::ApplyActual(
         result, request.route_segment_id, request.event_kind, request.occurred_at, change);
 
     integrations_.RegisterRouteUsage(access_token, source, {request.route_segment_id});
 
-    transaction.Execute(sql::kInsertRouteSegment, organization, result.id, request.route_segment_id,
-        static_cast<std::int64_t>(position),
-        converters::ToStoredRouteSegment(result.route_segments.at(position)));
+    transaction.Execute(sql::kSaveRouteSegments, organization, result.id,
+        converters::ToStoredRoute(result.route_segments));
 
     transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
     ++result.revision;

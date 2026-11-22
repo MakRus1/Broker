@@ -14,4 +14,4 @@ SET type = $3,
     revision = revision + 1
 WHERE organization_id = $1::UUID AND id = $2::UUID
 RETURNING ROW(id, revision, shipment_id, item_id, operation_id, container_type_code,
-    container_ownership, container_number, type, hazardous)::public.transportation_v4;
+    container_ownership, container_number, type, hazardous, route_segments)::public.transportation_v5;

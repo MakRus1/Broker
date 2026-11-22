@@ -19,6 +19,7 @@ type RouteType = { code: string; name: string };
 export function ShipmentRoute({
   segments,
   planningOnly = false,
+  showHeading = true,
   onChange,
   onEdit,
   allowedTypes,
@@ -27,6 +28,7 @@ export function ShipmentRoute({
   customers,
 }: {
   planningOnly?: boolean;
+  showHeading?: boolean;
   segments: ShipmentRouteSegment[];
   onEdit?: () => void;
   onChange?: (segments: ShipmentRouteSegment[]) => void;
@@ -51,37 +53,41 @@ export function ShipmentRoute({
   return (
     <section className="shipment-route-workspace">
       <div className="shipment-route-heading">
-        <div>
-          <h2>{translate('shipment.routeTitle')}</h2>
-          <p>{translate('shipment.sharedRouteHint')}</p>
-        </div>
-        {onEdit && (
-          <button className="shipment-route-edit" type="button" onClick={onEdit}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              aria-hidden="true"
-            >
-              <path d="m16 3 5 5-13 13H3v-5z M13 6l5 5" />
-            </svg>
-            {translate('shipment.editRoute')}
-          </button>
+        {showHeading && (
+          <div>
+            <h2>{translate('shipment.routeTitle')}</h2>
+            <p>{translate('shipment.sharedRouteHint')}</p>
+          </div>
         )}
-      </div>
-      {!!segments.length && (
-        <div className="route-collapse-actions">
-          <button type="button" onClick={collapse.expandAll}>
-            {translate('route.expandAll')}
-          </button>
-          <button type="button" onClick={collapse.collapseAll}>
-            {translate('route.collapseAll')}
-          </button>
+        <div className="route-heading-actions">
+          {onEdit && (
+            <button className="shipment-route-edit" type="button" onClick={onEdit}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <path d="m16 3 5 5-13 13H3v-5z M13 6l5 5" />
+              </svg>
+              {translate('shipment.editRoute')}
+            </button>
+          )}
+          {!!segments.length && (
+            <div className="route-collapse-actions">
+              <button type="button" onClick={collapse.expandAll}>
+                {translate('route.expandAll')}
+              </button>
+              <button type="button" onClick={collapse.collapseAll}>
+                {translate('route.collapseAll')}
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
       <div className="shipment-route-stages">
         {segments.map((segment, index) => (
           <details

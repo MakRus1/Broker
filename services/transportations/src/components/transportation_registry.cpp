@@ -2,7 +2,6 @@
 #include <converters/registry.hpp>
 #include <converters/transportations.hpp>
 #include <helpers/database.hpp>
-#include <models/pg/route_segment.hpp>
 #include <models/transportation_registry_row.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/query.hpp>
@@ -36,7 +35,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
         const auto query =
             platform::registry::BuildPage(registry_query::kRegistry, request, organization);
 
-        // Перевозки и плечи страницы должны относиться к одному снимку.
+        // Все данные карточек страницы читаются одним запросом.
         auto transaction =
             cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
         auto page = platform::registry::ExecuteWithCustomPlan(transaction, query)
@@ -44,18 +43,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
         const auto next_cursor = platform::registry::FinishListPage<models::RegistryCursor>(
             page, request.limit, scope, [](const auto& row) { return row.Transportation.Id; });
 
-        const auto rows = converters::Convert(page);
-        std::vector<boost::uuids::uuid> ids;
-        ids.reserve(rows.size());
-        for (const auto& row : rows)
-            ids.push_back(row.Id);
-
-        // Все плечи страницы читаются одним запросом, без N+1.
-        const auto route_segments = ids.empty()
-            ? std::vector<models::pg::RouteSegment>{}
-            : transaction.Execute(sql::kListRouteSegments, organization, ids)
-                  .AsContainer<std::vector<models::pg::RouteSegment>>();
-        auto result = converters::Convert(rows, route_segments);
+        auto result = converters::Convert(converters::Convert(page));
         transaction.Commit();
         return models::TransportationListResult{
             .items = std::move(result), .next_cursor = std::move(next_cursor)};

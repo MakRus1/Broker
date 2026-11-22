@@ -1,7 +1,6 @@
 import { createPortal } from 'react-dom';
 import { RecordActionHost } from './recordActionHost';
 import { useLocalization } from '../../../features/localization/Localization';
-import { useEditorSection } from './RecordEditorSections';
 import { RecordGuide } from './RecordGuide';
 import type { RecordGuideKind } from './recordGuides';
 import {
@@ -79,7 +78,6 @@ export function RecordSection({
   const generatedId = useId();
   const id = sectionId ?? generatedId;
   const [expanded, setExpanded] = useState(initiallyOpen);
-  useEditorSection(id, title);
   if (collapsible)
     return (
       <section

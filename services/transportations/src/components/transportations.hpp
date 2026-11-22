@@ -6,6 +6,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
+class RoutesComponent;
+
 class TransportationsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "transportations-transportations";
@@ -20,7 +22,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
         const models::ShipmentContext&) const;
     models::Transportation UpdateTransportation(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::UpdateTransportationRequest&,
-        const models::ShipmentContext&) const;
+        const models::ShipmentContext&, std::string_view access_token) const;
     models::ContainerFactsResult GetContainerFacts(
         const boost::uuids::uuid& organization, const models::ContainerFactsRequest&) const;
     models::EnsureTransportationsResult CreateTransportationsFromCommand(
@@ -28,6 +30,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
+    RoutesComponent& routes_;
 };
 }  // namespace transportations
 

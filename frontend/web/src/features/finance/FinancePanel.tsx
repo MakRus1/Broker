@@ -1,3 +1,5 @@
+import { RecordPage } from '../../shared/ui/record/RecordPage';
+import { RecordHeading } from '../../shared/ui/record/RecordLayout';
 import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -221,13 +223,24 @@ export function ServiceCharges({
         onEdit={openServiceCharge}
       />
     );
+  const Surface = scope.shipment_id ? 'section' : RecordPage;
   return (
-    <section
-      className={`finance-section${scope.shipment_id ? '' : ' service-charges-page'}`}
+    <Surface
+      className={`finance-section${scope.shipment_id ? '' : ' service-charges-page financial-record-workbench'}`}
       aria-label={translate('home.finance')}
     >
+      {editing && !scope.shipment_id && (
+        <RecordHeading
+          guide="service"
+          kind={translate('entity.serviceCharge')}
+          title={translate(
+            editing.direction === 'income' ? 'finance.newIncome' : 'finance.newExpense',
+          )}
+        />
+      )}
       {editing ? (
         <ServiceChargeEditor
+          showHeading={Boolean(scope.shipment_id)}
           initial={editing}
           readOnly={
             !write ||
@@ -588,6 +601,6 @@ export function ServiceCharges({
           <AutoLoadMore enabled={!!after} loading={loading} failed={!!failure} onLoad={more} />
         </>
       )}
-    </section>
+    </Surface>
   );
 }

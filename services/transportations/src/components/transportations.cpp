@@ -1,5 +1,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <components/inherited_route.hpp>
+#include <components/routes.hpp>
 #include <components/transportations.hpp>
 #include <converters/container_facts.hpp>
 #include <converters/saved_transportation.hpp>
@@ -9,7 +10,6 @@
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
 #include <models/pg/container_fact.hpp>
-#include <models/pg/route_segment.hpp>
 #include <models/pg/saved_command.hpp>
 #include <models/pg/transportation_event.hpp>
 #include <models/pg/transportation_raw.hpp>
@@ -45,7 +45,8 @@ TransportationsComponent::TransportationsComponent(
     const userver::components::ComponentContext& context)
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
-                   .GetCluster()) {}
+                   .GetCluster()),
+      routes_(context.FindComponent<RoutesComponent>()) {}
 
 models::Transportation TransportationsComponent::FindTransportation(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
@@ -119,8 +120,8 @@ models::Transportation TransportationsComponent::CreateTransportation(
 
 models::Transportation TransportationsComponent::UpdateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    const models::UpdateTransportationRequest& request,
-    const models::ShipmentContext& source) const {
+    const models::UpdateTransportationRequest& request, const models::ShipmentContext& source,
+    std::string_view access_token) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
         request.container_number);
 
@@ -137,7 +138,11 @@ models::Transportation TransportationsComponent::UpdateTransportation(
                 platform::TrimToOptional(request.container_number))
             .AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(current.route_segments);
-    route_rules::InheritRoute(result, source);
+    if (request.route_segments)
+        routes_.WriteRoute(
+            transaction, organization, access_token, *request.route_segments, source, result);
+    else
+        route_rules::InheritRoute(result, source);
 
     helpers::WriteAudit(
         transaction, organization, identity, "update_transportation", result.id, request, result);

@@ -8,7 +8,6 @@ import {
 import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { RegistryPage } from '../../../shared/ui/RegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../../shared/forms/RelatedCreation';
-import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -513,7 +512,7 @@ export function InvoicesPage({
               onInput={validation.onInput}
             >
               <RelatedCreationHint route={route} />
-              <RecordEditorSections>
+              <>
                 <fieldset disabled={busy || !!recovery.candidate} className="draft-recovery-fields">
                   <RecordSection title={translate('record.identification')}>
                     <RecordFields>
@@ -781,7 +780,7 @@ export function InvoicesPage({
                     </label>
                   </RecordSection>
                 </fieldset>
-              </RecordEditorSections>
+              </>
               <RecordActions
                 error={failure}
                 issues={validation.issues}

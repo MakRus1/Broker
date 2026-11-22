@@ -68,7 +68,7 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
     )['transportation']
     assert result['route_segments'][0][date_field] == stage[date_field]
     cursor = pgsql['db_1'].cursor()
-    cursor.execute('SELECT document FROM route_segments WHERE transportation_id=%s', (ids[0],))
+    cursor.execute('SELECT jsonb_array_elements(route_segments) FROM transportations WHERE id=%s', (ids[0],))
     assert date_field not in cursor.fetchone()[0]
 
 
@@ -89,7 +89,7 @@ async def test_inherited_plan_is_live_and_not_overwritten_by_execution(api, ship
     }))['transportation']
     assert changed['route_segments'][0]['plan'] == stage['plan']
     with pgsql['db_1'].cursor() as cursor:
-        cursor.execute('SELECT document FROM route_segments WHERE transportation_id=%s', (created['id'],))
+        cursor.execute('SELECT jsonb_array_elements(route_segments) FROM transportations WHERE id=%s', (created['id'],))
         assert 'plan' not in cursor.fetchone()[0]
     stage['plan']['destination_name'] = 'Казань'
     shipment_routes.set(shipment, [stage], revision=2)

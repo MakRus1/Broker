@@ -1,6 +1,5 @@
 import { RecordFields, RecordSection, RecordActions } from '../../../shared/ui/record/RecordLayout';
 
-import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -20,6 +19,7 @@ import {
   attachServiceInvoice,
   type ServiceInvoiceSelection,
 } from '../invoices/ServiceInvoiceActions';
+import { currenciesWithCurrent } from '../currencies';
 import { ServiceExchangeFields } from './ServiceExchangeFields';
 import { CalendarDate } from '../../../shared/dates/CalendarDate';
 import { VatRateSelect } from './VatRateSelect';
@@ -305,7 +305,7 @@ export function ServiceChargeEditor({
         onInput={validation.onInput}
         data-dirty={dirty}
         data-busy={busy}
-        className="finance-charge-form document-editor"
+        className="finance-charge-form document-editor service-charge-editor"
       >
         {showHeading && (
           <div className="service-editor-guide-heading">
@@ -321,8 +321,11 @@ export function ServiceChargeEditor({
             <RecordGuide kind="service" />
           </div>
         )}
-        <RecordEditorSections>
-          <fieldset disabled={busy || readOnly || !!recovery.candidate}>
+        <>
+          <fieldset
+            className="service-charge-layout"
+            disabled={busy || readOnly || !!recovery.candidate}
+          >
             <RecordSection title={translate('record.identification')}>
               <RecordFields>
                 <ServiceChargeLookup<FinancialLabel>
@@ -379,7 +382,12 @@ export function ServiceChargeEditor({
                   onChange={(id) =>
                     setDraft((old) =>
                       old
-                        ? { ...old, counterparty_id: id, contract_id: null, contract_number: null }
+                        ? {
+                            ...old,
+                            counterparty_id: id,
+                            contract_id: null,
+                            contract_number: null,
+                          }
                         : old,
                     )
                   }
@@ -448,18 +456,48 @@ export function ServiceChargeEditor({
               </RecordFields>
             </RecordSection>
             <RecordSection title={translate('record.calculation')}>
-              <RecordFields>
+              <div className="record-fields service-calculation-fields">
                 <label>
-                  {translate('finance.serviceDateRequired')}
-                  <DateInput
+                  <span>{translate('finance.priceRequired')}</span>
+                  <DecimalInput
                     required
-                    disabled={busy}
-                    value={draft.service_date}
-                    onChange={(value) => set('service_date', value)}
+                    precision={2}
+                    value={draft.price}
+                    onChange={(e) => {
+                      e.target.setCustomValidity('');
+                      set('price', e.target.value);
+                    }}
+                    onBlur={(e) =>
+                      e.target.setCustomValidity(
+                        parseFixed(e.target.value, 2, 100000000) !== undefined
+                          ? ''
+                          : translate('finance.priceInvalid'),
+                      )
+                    }
                   />
                 </label>
+
+                <Select
+                  label={translate('finance.serviceCurrency')}
+                  searchable
+                  value={draft.currency}
+                  options={currenciesWithCurrent(draft.currency, locale)}
+                  onChange={(currency) =>
+                    setDraft((old) =>
+                      old
+                        ? {
+                            ...old,
+                            currency,
+                            ...(currency === old.invoice_currency
+                              ? { manualExchange: false, exchangeValue: '1' }
+                              : {}),
+                          }
+                        : old,
+                    )
+                  }
+                />
                 <label>
-                  {translate('finance.quantityRequired')}
+                  <span>{translate('finance.quantityRequired')}</span>
                   <DecimalInput
                     required
                     precision={3}
@@ -486,54 +524,6 @@ export function ServiceChargeEditor({
                   }))}
                   onChange={(value) => set('unit', value as ServiceCharge['unit'])}
                 />
-                <label>
-                  {translate('finance.priceRequired')}
-                  <DecimalInput
-                    required
-                    precision={2}
-                    value={draft.price}
-                    onChange={(e) => {
-                      e.target.setCustomValidity('');
-                      set('price', e.target.value);
-                    }}
-                    onBlur={(e) =>
-                      e.target.setCustomValidity(
-                        parseFixed(e.target.value, 2, 100000000) !== undefined
-                          ? ''
-                          : translate('finance.priceInvalid'),
-                      )
-                    }
-                  />
-                </label>
-              </RecordFields>
-            </RecordSection>
-            <RecordSection title={translate('record.currencyAndTax')}>
-              <RecordFields>
-                <ServiceExchangeFields
-                  session={session}
-                  disabled={busy}
-                  date={draft.service_date}
-                  currency={draft.currency}
-                  invoiceCurrency={draft.invoice_currency}
-                  invoiceCurrencyLocked={!!invoice}
-                  manual={draft.manualExchange}
-                  rate={draft.exchangeValue}
-                  onCurrency={(value) => set('currency', value)}
-                  onInvoiceCurrency={(value) =>
-                    setDraft((old) =>
-                      old
-                        ? {
-                            ...old,
-                            invoice_currency: value,
-                            contract_id: null,
-                            contract_number: null,
-                          }
-                        : old,
-                    )
-                  }
-                  onManual={(value) => set('manualExchange', value)}
-                  onRate={(value) => set('exchangeValue', value)}
-                />
                 <Select
                   label={translate('finance.priceMode')}
                   value={draft.price_mode}
@@ -550,7 +540,41 @@ export function ServiceChargeEditor({
                   onMode={(value) => set('vat_mode', value)}
                   onChange={(value) => set('rate', value)}
                 />
-              </RecordFields>
+              </div>
+              <ServiceExchangeFields
+                session={session}
+                disabled={busy}
+                date={draft.service_date}
+                currency={draft.currency}
+                invoiceCurrency={draft.invoice_currency}
+                invoiceCurrencyLocked={!!invoice}
+                manual={draft.manualExchange}
+                rate={draft.exchangeValue}
+                onInvoiceCurrency={(value) =>
+                  setDraft((old) =>
+                    old
+                      ? {
+                          ...old,
+                          invoice_currency: value,
+                          contract_id: null,
+                          contract_number: null,
+                        }
+                      : old,
+                  )
+                }
+                onManual={(value) => set('manualExchange', value)}
+                onRate={(value) => set('exchangeValue', value)}
+              >
+                <label>
+                  {translate('finance.serviceDateRequired')}
+                  <DateInput
+                    required
+                    disabled={busy}
+                    value={draft.service_date}
+                    onChange={(value) => set('service_date', value)}
+                  />
+                </label>
+              </ServiceExchangeFields>
             </RecordSection>
             <RecordSection title={translate('record.additional')}>
               <RecordFields>
@@ -573,7 +597,7 @@ export function ServiceChargeEditor({
               </RecordFields>
             </RecordSection>
           </fieldset>
-        </RecordEditorSections>
+        </>
         <RecordActions
           error={failure}
           issues={validation.issues}

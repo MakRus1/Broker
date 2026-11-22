@@ -70,7 +70,7 @@ async def test_rail_roundtrip_and_directory(api, shipment_routes, stations, pgsq
     assert 'destination' not in saved['route_segments'][0]
     cursor = pgsql['db_1'].cursor()
     cursor.execute(
-        'SELECT document FROM route_segments WHERE transportation_id = %s', (transportation['id'],)
+        'SELECT jsonb_array_elements(route_segments) FROM transportations WHERE id = %s', (transportation['id'],)
     )
     stored = cursor.fetchone()[0]
     assert 'origin' not in stored and 'destination' not in stored

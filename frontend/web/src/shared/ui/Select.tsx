@@ -70,7 +70,7 @@ export function Select({
       setPosition({
         left: rect.left,
         width: rect.width,
-        top: upwards ? rect.top - 5 : rect.bottom + 5,
+        top: upwards ? rect.top - 8 : rect.bottom + 8,
         transform: upwards ? 'translateY(-100%)' : '',
         maxHeight: height,
       });

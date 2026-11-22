@@ -133,7 +133,7 @@ export function LookupField<T extends { id: string }>({
       const upwards = below < 180 && above > below;
       setPosition({
         left: rect.left,
-        top: upwards ? rect.top - 5 : rect.bottom + 5,
+        top: upwards ? rect.top - 8 : rect.bottom + 8,
         width: rect.width,
         maxHeight: Math.max(80, Math.min(300, upwards ? above : below)),
         transform: upwards ? 'translateY(-100%)' : '',

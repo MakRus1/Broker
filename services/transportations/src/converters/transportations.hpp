@@ -1,7 +1,5 @@
 #pragma once
 #include <components/rail_route.hpp>
-#include <map>
-#include <models/pg/route_segment.hpp>
 #include <models/pg/transportation_raw.hpp>
 #include <openapi/models.hpp>
 #include <userver/storages/postgres/result_set.hpp>
@@ -37,6 +35,8 @@ inline models::Transportation Convert(const models::pg::TransportationRaw& row) 
             models::ParseEnumScalar(row.Ownership.value(), models::ContainerOwnership{});
     result.type = models::ParseEnumScalar(row.Type, models::TransportationType{});
     result.hazardous = row.Hazardous;
+    for (const auto& document : row.RouteSegments)
+        result.route_segments.push_back(Convert(document));
     return result;
 }
 
@@ -50,18 +50,11 @@ inline std::vector<models::RouteSegment> Convert(
 }
 
 inline std::vector<models::Transportation> Convert(
-    const std::vector<models::pg::TransportationRaw>& rows,
-    const std::vector<models::pg::RouteSegment>& route_segments) {
+    const std::vector<models::pg::TransportationRaw>& rows) {
     std::vector<models::Transportation> result;
     result.reserve(rows.size());
-    std::map<boost::uuids::uuid, std::size_t> indexes;
-    for (const auto& row : rows) {
-        indexes.emplace(row.Id, result.size());
+    for (const auto& row : rows)
         result.push_back(Convert(row));
-    }
-    for (const auto& route_segment : route_segments)
-        result.at(indexes.at(route_segment.TransportationId))
-            .route_segments.push_back(Convert(route_segment.Document));
     return result;
 }
 

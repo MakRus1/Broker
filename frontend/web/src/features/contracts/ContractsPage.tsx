@@ -9,7 +9,6 @@ import { RegistryPage } from '../../shared/ui/RegistryPage';
 import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { useRegistryPage } from '../registry/useRegistryPage';
 import { RelatedCreationHint, useRelatedRequests } from '../../shared/forms/RelatedCreation';
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
 import { saveErrorMessage } from '../../shared/forms/saveError';
@@ -588,7 +587,7 @@ export function ContractsPage({
           onInput={validation.onInput}
         >
           <RelatedCreationHint route={route} />
-          <RecordEditorSections>
+          <>
             <fieldset disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('record.identification')}>
                 <div className="record-fields record-fields-three">
@@ -738,7 +737,7 @@ export function ContractsPage({
                 </RecordFields>
               </RecordSection>
             </fieldset>
-          </RecordEditorSections>
+          </>
           <RecordActions
             error={failure}
             issues={validation.issues}

@@ -19,17 +19,16 @@ def seed(rows):
                    jsonb_build_object('id', '{PORT}', 'name', 'Владивосток', 'country_code', 'RU', 'kind', 'sea_port')) ELSE NULL END)
     FROM shipment_route_projections CROSS JOIN unnest(ARRAY['sea', 'rail', 'air']) AS mode;
 
-    INSERT INTO route_segments (organization_id, transportation_id, id, position, document)
-    SELECT t.organization_id, t.id, shared.id, 1,
-           jsonb_build_object('id',shared.id,'mode','rail','rail',jsonb_build_object('destination_station',
+    UPDATE transportations AS t
+    SET route_segments = jsonb_build_array(jsonb_build_object('id',shared.id,'mode','rail','rail',jsonb_build_object('destination_station',
                jsonb_build_object('id', CASE WHEN t.hazardous THEN '{STATION}' ELSE md5(t.id::text)::text END,
                    'name',CASE WHEN t.hazardous THEN 'Редкая станция' ELSE 'Обычная станция' END,
-                   'country_code','RU','esr_code','123456')))
-    FROM transportations AS t JOIN shipment_route_segments AS shared
-      ON shared.organization_id=t.organization_id AND shared.shipment_id=t.shipment_id AND shared.mode='rail';
+                   'country_code','RU','esr_code','123456'))))
+    FROM shipment_route_segments AS shared
+    WHERE shared.organization_id=t.organization_id AND shared.shipment_id=t.shipment_id AND shared.mode='rail';
 
     VACUUM ANALYZE shipment_route_segments;
-    VACUUM ANALYZE route_segments;
+    VACUUM ANALYZE transportations;
     """
 
 
@@ -53,7 +52,7 @@ def cases():
                     }
                 ]
             },
-            [["rail"], [STATION]],
+            [["rail"], [STATION], [STATION]],
             False,
         ),
         (
@@ -74,7 +73,7 @@ def cases():
                     },
                 ]
             },
-            [["sea"], [PORT], ["rail"], [STATION]],
+            [["sea"], [PORT], ["rail"], [STATION], [STATION]],
             False,
         ),
         (
@@ -91,7 +90,7 @@ def cases():
                     }
                 ]
             },
-            [[str(UUID(int=999))]],
+            [[str(UUID(int=999))], [str(UUID(int=999))]],
             False,
         ),
         (

@@ -18,9 +18,7 @@ const visible = (element: HTMLElement) => element.getClientRects().length > 0;
 function anchors(root: HTMLElement) {
   return Array.from(root.querySelectorAll<HTMLElement>('label,dt,.field-label,h2,h3,a[href]'))
     .filter(
-      (node) =>
-        visible(node) &&
-        !node.closest('.tabs,.record-editor-sections,.record-layout-save,.lookup-field-popup'),
+      (node) => visible(node) && !node.closest('.tabs,.record-layout-save,.lookup-field-popup'),
     )
     .map((node) => ({
       node,

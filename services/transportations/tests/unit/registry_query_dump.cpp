@@ -1,3 +1,4 @@
+#include <userver/formats/parse/common_containers.hpp>
 #include <userver/utils/boost_uuid4.hpp>
 // Печать реального SQL API для изолированных бенчмарков; не часть обычной сборки.
 #include <iostream>

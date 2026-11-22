@@ -47,6 +47,7 @@ export function SalesProposals({
   const [failure, setFailure] = useState('');
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
+  const [quoteUpdateCount, setQuoteUpdateCount] = useState(0);
   const [names, setNames] = useState<Record<string, string>>({});
   const initial = useRef('');
   const [history, setHistory] =
@@ -288,11 +289,16 @@ export function SalesProposals({
                 </label>
               </RecordSection>
               <RecordSection
-                title={translate('rfq.assemble')}
+                title={
+                  quoteUpdateCount
+                    ? translate('rfq.assembleUpdates', { count: quoteUpdateCount })
+                    : translate('rfq.assemble')
+                }
                 collapsible
                 initiallyOpen={!draft.lines.length}
               >
                 <RfqQuotePicker
+                  onUpdates={setQuoteUpdateCount}
                   inquiry={inquiry}
                   session={session}
                   lines={draft.lines}

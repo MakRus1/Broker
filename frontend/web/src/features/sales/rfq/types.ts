@@ -38,7 +38,15 @@ export type Rfq = {
 };
 
 export type ProposalSuggestionResult = {
+  reporting_currency: string;
+  rates: { currency: string; rate_millionths: number }[];
+  prices: {
+    source: { rfq_id: string; revision: number; quote_id: string; line_id: string };
+    currency: string;
+    net_minor: number;
+    reporting_net_minor: number;
+  }[];
   items: Rfq[];
   selected: { rfq_id: string; revision: number; quote_id: string; line_id: string }[];
-  gaps: { segment: string; name: string; reason: 'expired' | 'volume' | 'currency' | 'missing' }[];
+  gaps: { segment: string; name: string; reason: 'expired' | 'volume' | 'missing' }[];
 };

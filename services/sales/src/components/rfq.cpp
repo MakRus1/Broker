@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <components/rfq.hpp>
+#include <components/rfq_rules.hpp>
 #include <events/shipment_command.hpp>
 #include <helpers/editable_inquiry.hpp>
 #include <map>
 #include <models/errors.hpp>
 #include <platform/http_client.hpp>
 #include <sales/sql_queries.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -177,4 +179,43 @@ models::Rfq RfqComponent::FindRfqRevision(const boost::uuids::uuid& organization
         pg::ClusterHostType::kMaster, sql::kGetRfqRevision, organization, id, revision));
 }
 
+}  // namespace sales
+
+namespace sales {
+models::ProposalSuggestionResult RfqComponent::SuggestMinimumPurchase(
+    const models::Inquiry& inquiry, userver::utils::datetime::Date date,
+    std::string_view token) const try {
+    const auto items =
+        rfq_rules::CurrentRfqs(inquiry, ListRfqs(inquiry.organization_id, inquiry.id));
+    const auto currency = finance_.ApiV1FinanceSettingsGet({}, token).reporting_currency;
+    std::set<std::string> currencies;
+    for (const auto& rfq : items)
+        for (const auto& quote : rfq.input.quotes) {
+            if (quote.valid_until && *quote.valid_until < date)
+                continue;
+            for (const auto& line : quote.lines)
+                currencies.insert(line.price.currency);
+        }
+    std::map<std::string, std::int64_t> rates;
+    for (const auto& source : currencies)
+        rates[source] = source == currency
+            ? 1000000
+            : finance_
+                  .ApiV1ExchangeRatesGet(
+                      {.body = {.date = date, .from_currency = source, .to_currency = currency}},
+                      token)
+                  .rate_millionths;
+    return rfq_rules::SuggestMinimumPurchase(inquiry, items, date, currency, rates);
+} catch (const platform::http::ErrorByStatus<403>&) {
+
+    throw ApiError<403>{"reference_forbidden", "Нет доступа к справочникам расчёта"};
+} catch (const platform::http::CancelledError&) {
+    throw;
+} catch (const platform::http::ApiError&) {
+    throw ApiError<502>{"rates_unavailable", "Не удалось получить курсы для подбора"};
+} catch (const platform::http::TransportError&) {
+    throw ApiError<502>{"rates_unavailable", "Сервис курсов недоступен"};
+} catch (const platform::http::ContractError&) {
+    throw ApiError<502>{"rates_unavailable", "Некорректный ответ сервиса курсов"};
+}
 }  // namespace sales

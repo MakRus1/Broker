@@ -842,6 +842,14 @@ inline models::sales::ProposalSuggestionGap Convert(
         .segment = value.segment};
 }
 
+inline models::sales::ProposalSuggestionPrice Convert(
+    const clients::sales::models::ProposalSuggestionPrice& value) {
+    return {.currency = value.currency,
+        .net_minor = value.net_minor,
+        .reporting_net_minor = value.reporting_net_minor,
+        .source = Convert(value.source)};
+}
+
 template <typename T>
 auto Convert(
     const std::vector<T>& values) -> std::vector<decltype(Convert(std::declval<const T&>()))> {

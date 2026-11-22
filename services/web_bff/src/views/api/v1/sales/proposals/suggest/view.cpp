@@ -13,6 +13,9 @@ Response View::Handle(
         session.Access);
     return Response200{.gaps = converters::sales::Convert(result.gaps),
         .items = converters::sales::Convert(result.items),
+        .prices = converters::sales::Convert(result.prices),
+        .rates = converters::sales::Convert(result.rates),
+        .reporting_currency = result.reporting_currency,
         .selected = converters::sales::Convert(result.selected)};
 }
 }  // namespace web_bff::views::api::v1::sales::proposals::suggest

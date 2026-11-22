@@ -22,6 +22,9 @@ void AddAmounts(models::ProposalAmounts& target, const models::ProposalAmounts& 
     target.total_minor += value.total_minor;
 }
 
+}  // namespace
+
+namespace sales::proposal_rules {
 std::int64_t ConvertProposalAmount(std::int64_t amount, std::int64_t rate) {
     using Amount = userver::decimal64::Decimal<0, userver::decimal64::HalfUpRoundPolicy>;
     using Rate = userver::decimal64::Decimal<6, userver::decimal64::HalfUpRoundPolicy>;
@@ -32,9 +35,6 @@ std::int64_t ConvertProposalAmount(std::int64_t amount, std::int64_t rate) {
     return result;
 }
 
-}  // namespace
-
-namespace sales::proposal_rules {
 void ValidateInput(const models::ProposalInput& input, const models::Inquiry& inquiry) {
     if (userver::utils::text::Trim(input.title).empty())
         throw ApiError<400>{"empty_title", "Укажите название предложения"};

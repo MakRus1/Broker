@@ -10,8 +10,9 @@ SELECT ROW(
     container_ownership,
     container_number,
     type,
-    hazardous
-)::public.transportation_v4
+    hazardous,
+    route_segments
+)::public.transportation_v5
 FROM transportations
 WHERE organization_id = $1::UUID AND id = $2::UUID
 FOR UPDATE;

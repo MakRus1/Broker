@@ -10,7 +10,6 @@
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
 #include <models/pg/container_fact.hpp>
-#include <models/pg/route_segment.hpp>
 #include <models/pg/saved_command.hpp>
 #include <models/pg/transportation_event.hpp>
 #include <models/pg/transportation_raw.hpp>

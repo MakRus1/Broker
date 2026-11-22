@@ -82,8 +82,8 @@ def routes(pgsql, shipment_routes):
                 },
             }
             cursor.execute(
-                "INSERT INTO route_segments (organization_id,transportation_id,id,position,document) VALUES (%s,%s,%s,1,%s)",
-                (ORGANIZATION, identifier, rail_id, json.dumps(local)),
+                "UPDATE transportations SET route_segments=jsonb_build_array(%s::jsonb) WHERE organization_id=%s AND id=%s",
+                (json.dumps(local), ORGANIZATION, identifier),
             )
     return {
         "ids": ids,
@@ -350,3 +350,15 @@ async def test_shared_endpoint_distinguishes_catalogues(api):
         {"registry": {}, "scope": "route", "field": "mode", "candidates": ["sea"]},
         expected=400,
     )
+
+
+async def test_station_candidates_keep_empty_value_alternative(api, routes):
+    async def ids(values):
+        result = await api.post(LIST, {'route_filters': [{'filters': [
+            {'field': 'destination_station', 'values': values},
+        ]}]})
+        return {item['id'] for item in result['items']}
+
+    empty = await ids([''])
+    selected = await ids([routes['b']])
+    assert await ids(['', routes['b']]) == empty | selected

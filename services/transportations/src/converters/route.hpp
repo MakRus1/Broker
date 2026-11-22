@@ -7,10 +7,21 @@ namespace transportations::converters {
 // Морские и авиационные данные принадлежат поставке и не сохраняются в локальном маршруте.
 inline userver::formats::json::Value ToStoredRouteSegment(const models::RouteSegment& value) {
     auto local = value;
-    local.plan.reset();
-    local.sea.reset();
-    local.air.reset();
+    if (local.inherited != false) {
+        local.plan.reset();
+        local.sea.reset();
+        local.air.reset();
+    }
     return userver::formats::json::ValueBuilder(local).ExtractValue();
+}
+
+inline std::vector<userver::formats::json::Value> ToStoredRoute(
+    const std::vector<models::RouteSegment>& segments) {
+    std::vector<userver::formats::json::Value> documents;
+    documents.reserve(segments.size());
+    for (const auto& segment : segments)
+        documents.push_back(ToStoredRouteSegment(segment));
+    return documents;
 }
 
 inline models::RouteSegment Convert(const models::SetRouteSegmentsItem& source) {

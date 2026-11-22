@@ -115,9 +115,7 @@ def start():
  SELECT '{ORG}',md5('bench-shipment-'||i)::uuid,md5('bench-'||mode||'-'||i)::uuid,mode,
  jsonb_build_object('id',md5('bench-'||mode||'-'||i)::uuid,'type',mode)
  FROM generate_series(1,10000) i CROSS JOIN (VALUES('sea'),('rail')) m(mode);
- INSERT INTO route_segments (organization_id,transportation_id,id,position,document)
- SELECT organization_id,id,md5('bench-rail-'||(1+(number%10000)))::uuid,1,
- jsonb_build_object('id',md5('bench-rail-'||(1+(number%10000)))::uuid,'mode','rail','planned_departure_at','2026-11-05T00:00:00Z') FROM transportations;
+ UPDATE transportations SET route_segments=jsonb_build_array(jsonb_build_object('id',md5('bench-rail-'||(1+(number%10000)))::uuid,'mode','rail','planned_departure_at','2026-11-05T00:00:00Z'));
  ANALYZE;""",
     )
     for service in ["shipments", "transportations", "web_bff"]:

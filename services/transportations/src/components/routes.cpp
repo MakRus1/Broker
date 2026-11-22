@@ -99,10 +99,6 @@ void RoutesComponent::WriteRoute(pg::Transaction& transaction,
     route_rules::InheritRoute(result, source);
 
     std::vector<boost::uuids::uuid> used;
-    std::vector<boost::uuids::uuid> segment_ids;
-    std::vector<json::Value> documents;
-    segment_ids.reserve(segments.size());
-    documents.reserve(segments.size());
     for (std::size_t i = 0; i < segments.size(); ++i) {
         auto& stored = result.route_segments[i];
         auto value = converters::Convert(segments[i]);
@@ -116,14 +112,11 @@ void RoutesComponent::WriteRoute(pg::Transaction& transaction,
         value.actual_departure_at = stored.actual_departure_at;
         value.actual_arrival_at = stored.actual_arrival_at;
         route_rules::ValidateActualTimes(value);
-        segment_ids.push_back(value.id);
-        documents.push_back(converters::ToStoredRouteSegment(value));
         stored = std::move(value);
     }
 
     integrations_.RegisterRouteUsage(access_token, source, used);
-    if (!segment_ids.empty())
-        transaction.Execute(
-            sql::kSaveRouteSegments, organization, result.id, segment_ids, documents);
+    transaction.Execute(sql::kSaveRouteSegments, organization, result.id,
+        converters::ToStoredRoute(result.route_segments));
 }
 }  // namespace transportations

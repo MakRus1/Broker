@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <userver/storages/postgres/io/composite_types.hpp>
+#include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/io/uuid.hpp>
 
 namespace transportations::models::pg {
@@ -19,13 +20,14 @@ struct TransportationRaw {
     std::optional<std::string> ContainerNumber{};
     std::string Type{};
     bool Hazardous{};
+    userver::formats::json::Value RouteSegments;
 };
 }  // namespace transportations::models::pg
 
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::transportations::models::pg::TransportationRaw> {
-    static constexpr DBTypeName postgres_name = "public.transportation_v4";
+    static constexpr DBTypeName postgres_name = "public.transportation_v5";
 };
 
 }  // namespace userver::storages::postgres::io

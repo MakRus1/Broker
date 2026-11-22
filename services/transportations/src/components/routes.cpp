@@ -3,12 +3,14 @@
 #include <components/route_integrations.hpp>
 #include <components/route_validation.hpp>
 #include <components/routes.hpp>
+#include <components/transportations.hpp>
 #include <converters/route.hpp>
 #include <converters/transportations.hpp>
 #include <helpers/database.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/text.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
@@ -68,7 +70,11 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
 
 models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& organization,
     const platform::auth::Identity& identity, std::string_view access_token,
-    const models::SetRouteRequest& request, const models::ShipmentContext& source) const {
+    const models::SetRouteRequest& request, const models::ShipmentContext& source,
+    const models::UpdateTransportationRequest* details) const {
+    if (details)
+        ValidateTransportationDetails(details->type, details->container_type_code,
+            details->container_ownership, details->container_number);
     if (request.route_segments.size() != source.route_segments.size())
         throw ApiError<409>{"inherited_route", "Состав маршрута изменяется только в поставке"};
     for (std::size_t i = 0; i < source.route_segments.size(); ++i) {
@@ -84,6 +90,18 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
     auto result = helpers::ReadTransportation(
         transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
     helpers::CheckRevision(result.revision, request.expected_revision);
+    if (details) {
+        auto updated =
+            converters::Convert(transaction
+                                    .Execute(sql::kUpdateTransportation, organization, result.id,
+                                        models::EnumValue(details->type), details->hazardous,
+                                        details->container_type_code,
+                                        converters::ConvertOwnership(details->container_ownership),
+                                        platform::TrimToOptional(details->container_number))
+                                    .AsSingleRow<models::pg::TransportationRaw>());
+        updated.route_segments = std::move(result.route_segments);
+        result = std::move(updated);
+    }
     route_rules::InheritRoute(result, source);
 
     std::vector<boost::uuids::uuid> used;
@@ -114,11 +132,15 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
         transaction.Execute(
             sql::kSaveRouteSegments, organization, result.id, segment_ids, documents);
 
-    transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
-    ++result.revision;
-
-    helpers::WriteAudit(
-        transaction, organization, identity, "set_route", result.id, request, result);
+    if (details) {
+        helpers::WriteAudit(transaction, organization, identity, "update_transportation", result.id,
+            *details, result);
+    } else {
+        transaction.Execute(sql::kBumpTransportationRevision, organization, result.id);
+        ++result.revision;
+        helpers::WriteAudit(
+            transaction, organization, identity, "set_route", result.id, request, result);
+    }
     transaction.Commit();
     return result;
 }

@@ -22,7 +22,7 @@
   line-height: 18px;
   margin: 4px 0 0;
 }
-.shipment-route-workspace .shipment-route-heading > .shipment-route-edit {
+.shipment-route-workspace .shipment-route-edit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -54,36 +54,6 @@
   border-radius: 0;
   border-bottom: 1px solid var(--divider);
   background: transparent;
-}
-.record-workbench .shipment-route-workspace .route-stage-summary {
-  grid-template-columns: 170px minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 64px;
-  padding: 12px 24px 12px 0;
-  gap: 8px 18px;
-}
-.shipment-route-workspace .route-stage-summary > * {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.shipment-route-workspace .route-stage-summary h3 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 500;
-}
-.shipment-route-workspace .route-mode-icon {
-  flex: 0 0 20px;
-  color: var(--text-secondary);
-}
-.shipment-route-workspace .route-stage-summary h3 small {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-muted);
 }
 .shipment-route-workspace .route-summary-direction {
   display: block;
@@ -152,4 +122,12 @@
   .shipment-route-workspace .route-collapse-actions button {
     min-height: 44px;
   }
+}
+
+.shipment-route-workspace .route-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 16px;
 }

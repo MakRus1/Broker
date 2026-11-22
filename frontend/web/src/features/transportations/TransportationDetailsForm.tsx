@@ -1,3 +1,6 @@
+import { RouteEditorFields } from '../routes/RouteEditor';
+import type { Counterparty } from '../counterparties/CustomerSelect';
+import { routeSegment, routeRequest } from './transportation';
 import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { draftStorageKey, useDraftRecovery } from '../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../shared/ui/record/DraftRecovery';
@@ -6,7 +9,7 @@ import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/rec
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
 import { containerNumberWarning } from './transportation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { request } from '../../shared/api/http';
 import { transportationTypes } from '../routes/logisticsLabels';
 import { type Session } from '../../shared/api/session';
@@ -16,6 +19,8 @@ import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 
 type Props = {
   initial?: Transportation;
+  customers?: Counterparty[];
+  historicalRoute?: ReactNode;
   shipmentId: string;
   session: Session;
   onSaved: (value: Transportation) => void;
@@ -23,13 +28,16 @@ type Props = {
   onError: (error: unknown) => void;
 };
 export function TransportationDetailsForm({
-  initial,
+  initial: source,
+  customers = [],
+  historicalRoute,
   shipmentId,
   session,
   onSaved,
   onCancel,
   onError,
 }: Props) {
+  const [initial] = useState(source);
   const { translate, locale } = useLocalization();
   const [containerTypes, setContainerTypes] = useState<string[]>([]);
   const [settingsFailure, setSettingsFailure] = useState('');
@@ -47,6 +55,15 @@ export function TransportationDetailsForm({
       });
     return () => controller.abort();
   }, [session]);
+  const [routeSegments, setRouteSegments] = useState(
+    () =>
+      initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
+  );
+  const routeDirty =
+    JSON.stringify(routeSegments) !==
+    JSON.stringify(
+      initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
+    );
   const [id, setId] = useState<string>(() => crypto.randomUUID());
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
@@ -60,7 +77,8 @@ export function TransportationDetailsForm({
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const dirty =
     !saved &&
-    (type !== (initial?.type ?? 'container') ||
+    (routeDirty ||
+      type !== (initial?.type ?? 'container') ||
       hazardous !== (initial?.hazardous ?? false) ||
       containerType !== (initial?.container_type_code ?? '') ||
       ownership !== (initial?.container_ownership ?? '') ||
@@ -69,7 +87,7 @@ export function TransportationDetailsForm({
   const recovery = useDraftRecovery({
     storageKey,
     revision: initial?.revision ?? 0,
-    value: { id, type, hazardous, containerNumber, containerType, ownership },
+    value: { id, type, hazardous, containerNumber, containerType, ownership, routeSegments },
     dirty,
     enabled: !saved,
     onRestore(raw) {
@@ -80,12 +98,22 @@ export function TransportationDetailsForm({
         containerNumber: string;
         containerType: string;
         ownership: string;
+        routeSegments?: typeof routeSegments;
       };
       if (
         !value ||
         typeof value.id !== 'string' ||
         !(value.type in transportationTypes) ||
         typeof value.hazardous !== 'boolean' ||
+        (value.routeSegments !== undefined &&
+          (!Array.isArray(value.routeSegments) ||
+            value.routeSegments.length !== routeSegments.length ||
+            value.routeSegments.some(
+              (stage, index) =>
+                !stage ||
+                stage.id !== routeSegments[index].id ||
+                stage.mode !== routeSegments[index].mode,
+            ))) ||
         [value.containerNumber, value.containerType, value.ownership].some(
           (x) => typeof x !== 'string',
         )
@@ -97,6 +125,7 @@ export function TransportationDetailsForm({
       setContainerNumber(value.containerNumber);
       setContainerType(value.containerType);
       setOwnership(value.ownership);
+      if (value.routeSegments) setRouteSegments(value.routeSegments);
     },
   });
   async function submit(event: FormEvent) {
@@ -112,6 +141,12 @@ export function TransportationDetailsForm({
           ...(initial
             ? { transportation_id: initial.id, expected_revision: initial.revision }
             : { id, shipment_id: shipmentId }),
+          ...(initial && routeDirty
+            ? {
+                route_segments: routeRequest(initial.id, initial.revision, routeSegments, locale)
+                  .route_segments,
+              }
+            : {}),
           type,
           hazardous,
           ...(type === 'container' && containerNumber.trim()
@@ -212,6 +247,18 @@ export function TransportationDetailsForm({
               )}
             </div>
           </RecordSection>
+          {initial && (routeSegments.length > 0 || !historicalRoute) && (
+            <RouteEditorFields
+              initial={initial}
+              session={session}
+              customers={customers}
+              segments={routeSegments}
+              onChange={setRouteSegments}
+              disabled={busy || !!recovery.candidate}
+              onError={setFailure}
+            />
+          )}
+          {historicalRoute}
         </fieldset>
         <RecordActions
           error={failure}

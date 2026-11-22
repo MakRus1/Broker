@@ -15,9 +15,11 @@ export function RouteStageTitle({
   return (
     <h3 className="route-stage-title">
       <RouteIcon type={type} />
-      <span>
-        {title}
-        <small>{translate('route.segmentNumber', { number: index + 1 })}</small>
+      <span className="route-stage-caption">
+        <small aria-label={translate('route.segmentNumber', { number: index + 1 })}>
+          {index + 1}.
+        </small>
+        <span>{title}</span>
       </span>
     </h3>
   );

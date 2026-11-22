@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
 import { RecordHeading, RecordSection, RecordActions } from '../../shared/ui/record/RecordLayout';
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { useDraftRecovery, draftStorageKey } from '../../shared/forms/useDraftRecovery';
@@ -314,7 +313,7 @@ export function SalesPage({
           {[
             'main',
             ...(resource === 'cards'
-              ? ['interactions', 'contacts', 'inquiries']
+              ? ['contacts', 'inquiries']
               : ['contacts', 'rfqs', 'proposals']),
             'history',
           ].map((name) => (
@@ -330,15 +329,13 @@ export function SalesPage({
                   ? 'rfq.title'
                   : name === 'proposals'
                     ? 'proposal.title'
-                    : name === 'interactions'
-                      ? 'sales.interactions'
-                      : name === 'contacts'
-                        ? 'sales.contacts'
-                        : name === 'main'
-                          ? 'sales.main'
-                          : name === 'history'
-                            ? 'sales.history'
-                            : 'sales.inquiries',
+                    : name === 'contacts'
+                      ? 'sales.contacts'
+                      : name === 'main'
+                        ? 'sales.main'
+                        : name === 'history'
+                          ? 'sales.history'
+                          : 'sales.inquiries',
               )}
             </button>
           ))}
@@ -357,16 +354,6 @@ export function SalesPage({
           session={session}
           active={active}
           contactId={'status' in draft ? draft.contact_id : undefined}
-        />
-      ) : tab === 'interactions' && resource === 'cards' && !editing ? (
-        <SalesInteractions
-          card={draft as SalesCard}
-          session={session}
-          onSaved={(card) => {
-            setValue(card);
-            setDraft(card);
-            initial.current = JSON.stringify(card);
-          }}
         />
       ) : tab === 'rfqs' && inquiry && !editing ? (
         <SalesRfqs inquiry={inquiry} session={session} active={active} />
@@ -416,7 +403,7 @@ export function SalesPage({
           onInput={validation.onInput}
         >
           <DraftRecovery recovery={recovery} />
-          <RecordEditorSections>
+          <>
             <fieldset className="sales-editor-fields" disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('sales.parties')}>
                 <div className="record-fields record-fields-two">
@@ -562,6 +549,7 @@ export function SalesPage({
                     <RecordSection title={translate('sales.route')}>
                       <ShipmentRoute
                         planningOnly
+                        showHeading={false}
                         segments={draft.route_segments}
                         onChange={(segments) => set('route_segments', segments)}
                         allowedTypes={[
@@ -589,7 +577,7 @@ export function SalesPage({
                 />
               </RecordSection>
             </fieldset>
-          </RecordEditorSections>
+          </>
           <RecordActions
             status={
               creating
@@ -718,6 +706,7 @@ export function SalesPage({
               <RecordSection title={translate('sales.route')}>
                 <ShipmentRoute
                   planningOnly
+                  showHeading={false}
                   segments={draft.route_segments}
                   allowedTypes={[]}
                   types={[]}
@@ -726,6 +715,17 @@ export function SalesPage({
                 />
               </RecordSection>
             </>
+          )}
+          {'stage_id' in draft && (
+            <SalesInteractions
+              card={draft as SalesCard}
+              session={session}
+              onSaved={(card) => {
+                setValue(card);
+                setDraft(card);
+                initial.current = JSON.stringify(card);
+              }}
+            />
           )}
           <RecordSection title={translate('sales.note')}>
             <p>{draft.note || '—'}</p>

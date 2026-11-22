@@ -20,11 +20,9 @@
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text.hpp>
 
-namespace {
-namespace models = transportations::models;
-using transportations::ApiError;
+namespace transportations {
 
-void ValidateDetails(models::TransportationType type,
+void ValidateTransportationDetails(models::TransportationType type,
     const std::optional<std::string>& container_type,
     const std::optional<models::ContainerOwnership>& ownership,
     const std::optional<std::string>& container_number) {
@@ -34,9 +32,6 @@ void ValidateDetails(models::TransportationType type,
             "unexpected_container", "Контейнерные поля доступны только для контейнерной перевозки"};
 }
 
-}  // namespace
-
-namespace transportations {
 namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 
@@ -80,8 +75,8 @@ models::Transportation TransportationsComponent::CreateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::CreateTransportationRequest& request,
     const models::ShipmentContext& source) const {
-    ValidateDetails(request.type, request.container_type_code, request.container_ownership,
-        request.container_number);
+    ValidateTransportationDetails(request.type, request.container_type_code,
+        request.container_ownership, request.container_number);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockCommand, organization, request.id);
@@ -121,8 +116,8 @@ models::Transportation TransportationsComponent::UpdateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::UpdateTransportationRequest& request,
     const models::ShipmentContext& source) const {
-    ValidateDetails(request.type, request.container_type_code, request.container_ownership,
-        request.container_number);
+    ValidateTransportationDetails(request.type, request.container_type_code,
+        request.container_ownership, request.container_number);
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     auto current = helpers::ReadTransportation(

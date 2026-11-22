@@ -88,7 +88,7 @@
   display: flex;
   align-items: start;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 6px;
   max-width: 100%;
   margin: 0 0 18px;
   padding: 0;
@@ -104,11 +104,12 @@
   align-items: center;
   height: 34px;
   min-height: 34px;
-  padding: 5px 0 7px;
+  justify-content: center;
+  padding: 6px 16px 8px;
   margin: 0;
   border: 0;
   border-bottom: 2px solid transparent;
-  border-radius: 0;
+  border-radius: 8px 8px 0 0;
   background: transparent;
   box-shadow: none;
   color: var(--text-secondary);
@@ -120,6 +121,7 @@
   background: transparent;
 }
 .record-workbench .record-layout-tabs > button[aria-pressed='true'] {
+  background: var(--surface-hover);
   color: var(--text);
   border-bottom-color: var(--accent);
   font-weight: 600;
@@ -397,16 +399,6 @@
   border-radius: 8px;
   background: transparent;
 }
-.record-workbench .route-stage-summary {
-  grid-template-columns: minmax(150px, 1fr) minmax(0, 2fr);
-  align-items: center;
-  gap: 8px 20px;
-  min-height: 24px;
-}
-.record-workbench .route-stage-summary h3 {
-  font-size: 14px;
-  line-height: 22px;
-}
 .record-workbench .route-summary-meta {
   font-size: 12px;
   line-height: 18px;
@@ -455,12 +447,6 @@
   font-size: 12px;
   line-height: 20px;
 }
-@media (max-width: 600px) {
-  .record-workbench .route-stage-summary {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-}
 
 .record-workbench .record-layout-navigation {
   padding: 0;
@@ -482,10 +468,6 @@
 }
 .transportation-workbench .route-segment {
   margin: 0;
-}
-.transportation-workbench .route-summary-meta {
-  display: grid;
-  gap: 3px;
 }
 .transportation-workbench .route-fields,
 .transportation-workbench .road-details-grid,
@@ -905,38 +887,6 @@
   display: contents;
 }
 
-.record-editor-sections {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 6px;
-  margin: 0 0 20px;
-  border: 1px solid var(--divider);
-  border-radius: 7px;
-  background: var(--surface);
-  scrollbar-width: thin;
-}
-.record-editor-sections > button {
-  flex: 0 0 auto;
-  min-height: 30px;
-  padding: 4px 10px;
-  margin: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 20px;
-}
-.record-editor-sections > button:hover,
-.record-editor-sections > button[aria-current] {
-  background: var(--surface-muted);
-  color: var(--accent-text);
-}
 .record-layout-section {
   scroll-margin-top: 76px;
 }
@@ -1348,4 +1298,111 @@
 }
 .record-layout-heading .record-action-host .record-layout-save-status {
   order: initial;
+}
+
+.record-workbench .record-layout-actions > .record-guide-control {
+  align-self: flex-start;
+  flex: 0 0 34px;
+}
+.record-workbench .route-fields {
+  gap: 16px;
+  align-items: start;
+}
+.record-workbench .route-fields label {
+  min-width: 0;
+}
+
+.record-workbench .record-fields.service-calculation-fields {
+  display: grid;
+  grid-template-columns:
+    minmax(140px, 1fr) minmax(180px, 1.3fr) minmax(120px, 0.7fr) minmax(150px, 1fr)
+    minmax(140px, 1fr) minmax(120px, 0.8fr);
+  align-items: start;
+  gap: 6px 16px;
+  margin-bottom: 20px;
+}
+.record-workbench .service-charge-editor > fieldset {
+  margin: 0;
+}
+.record-workbench .service-charge-editor .record-layout-section {
+  padding: 16px 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--divider);
+}
+.record-workbench .service-charge-editor .record-layout-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.shipment-route-workspace + .record-layout-section {
+  margin-top: 24px;
+}
+
+.record-workbench .service-charge-editor .service-exchange-fields {
+  grid-template-columns: minmax(150px, 0.8fr) minmax(180px, 1fr) minmax(200px, 1.2fr);
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+@container record-page (max-width: 700px) {
+  .record-workbench .service-charge-editor .service-exchange-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container record-page (max-width: 440px) {
+  .record-workbench .service-charge-editor .service-exchange-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.record-workbench
+  .record-fields.service-calculation-fields
+  > label:not(.inline-check):not(.record-toggle):not(.check),
+.record-workbench .record-fields.service-calculation-fields > .app-select,
+.record-workbench .record-fields.service-calculation-fields > .vat-rate-select > .app-select {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  gap: 6px 16px;
+  align-items: start;
+}
+.record-workbench .record-fields.service-calculation-fields .field-label {
+  margin: 0;
+}
+
+.record-workbench .service-calculation-fields > .vat-rate-select {
+  display: contents;
+}
+@container record-page (max-width: 1100px) {
+  .record-workbench .record-fields.service-calculation-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container record-page (max-width: 700px) {
+  .record-workbench .record-fields.service-calculation-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container record-page (max-width: 440px) {
+  .record-workbench .record-fields.service-calculation-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.record-workbench .service-exchange-fields > .app-select,
+.record-workbench .service-exchange-fields > .service-exchange-rate {
+  row-gap: 6px;
+}
+
+/* Status text must not change the intrinsic width of the action buttons. */
+.record-layout-heading .record-action-host .record-layout-save {
+  position: relative;
+  padding-bottom: 24px;
+}
+.record-layout-heading .record-action-host .record-layout-save-status {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: max-content;
+  max-width: min(600px, 70vw);
+  text-align: right;
 }

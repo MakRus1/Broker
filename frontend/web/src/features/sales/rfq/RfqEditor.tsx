@@ -3,7 +3,6 @@ import { useRef, useState, type FormEvent } from 'react';
 import type { Session } from '../../../shared/api/session';
 import { request } from '../../../shared/api/http';
 import { RecordSection, RecordActions } from '../../../shared/ui/record/RecordLayout';
-import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { useDiscardConfirmation } from '../../../shared/ui/Dialog';
 import { useFieldValidation } from '../../../shared/forms/fieldValidation';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
@@ -88,7 +87,7 @@ export function RfqEditor({
     >
       {confirmation}
       <DraftRecovery recovery={recovery} />
-      <RecordEditorSections>
+      <>
         <fieldset disabled={busy || !!recovery.candidate}>
           <RecordSection title={translate('rfq.details')}>
             <div className="record-fields record-fields-two">
@@ -347,7 +346,7 @@ export function RfqEditor({
             </label>
           </RecordSection>
         </fieldset>
-      </RecordEditorSections>
+      </>
       <RecordActions
         status={
           value.revision

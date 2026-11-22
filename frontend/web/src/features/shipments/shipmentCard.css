@@ -172,3 +172,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.shipment-editor .shipment-number {
+  align-items: center;
+}
+.shipment-editor .shipment-number button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding-block: 0;
+  flex-shrink: 0;
+}

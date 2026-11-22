@@ -109,3 +109,32 @@ async def test_transportation_receives_source_plan(browser, mockserver):
     response = await browser.post('/api/v1/transportations/get', {'transportation_id': TRANSPORTATION['id']})
     assert response.status == 200, response.text
     assert response.json()['transportation']['route_segments'] == [stage]
+
+
+async def test_transportation_details_and_route_saved_together(browser, mockserver):
+    from test_proxy import TRANSPORTATION
+
+    await browser.sign_in()
+    stage = {
+        'id': str(uuid4()), 'mode': 'international_road',
+        'international_road': {'cmr_number': 'CMR-42'},
+    }
+    body = {
+        'transportation_id': TRANSPORTATION['id'], 'expected_revision': 1,
+        'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383',
+        'route_segments': [stage],
+    }
+
+    @mockserver.json_handler('/api/v1/transportations/update')
+    def save(request):
+        assert request.json == body
+        return {'transportation': {
+            **TRANSPORTATION, 'revision': 2, 'container_number': 'CSQU3054383',
+            'hazardous': True, 'route_segments': [stage],
+        }}
+
+    response = await browser.post('/api/v1/transportations/update', body)
+    assert response.status == 200, response.text
+    assert save.times_called == 1
+    assert response.json()['transportation']['route_segments'] == [stage]
+    assert response.json()['transportation']['container_number'] == 'CSQU3054383'

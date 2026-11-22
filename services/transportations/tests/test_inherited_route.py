@@ -126,6 +126,34 @@ async def test_update_details_keeps_facts_and_rejects_old_revision(api, shipment
     )
 
 
+async def test_update_details_and_route_in_one_revision(api, shipment_routes):
+    shipment = str(uuid4())
+    stage = route_segment('road')
+    shipment_routes.set(shipment, [stage])
+    created = (await api.post('/api/v1/transportations/create', {
+        'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container', 'hazardous': False,
+    }))['transportation']
+    actual = (await api.post('/api/v1/transportation-actuals/record', {
+        'transportation_id': created['id'], 'expected_revision': 1,
+        'route_segment_id': stage['id'], 'event_kind': 'departure',
+        'occurred_at': '2026-10-20T09:00:00+00:00',
+    }))['transportation']
+    update = {
+        'transportation_id': created['id'], 'expected_revision': actual['revision'],
+        'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383',
+        'route_segments': [stage],
+    }
+    saved = (await api.post('/api/v1/transportations/update', update))['transportation']
+    assert saved['revision'] == actual['revision'] + 1
+    assert saved['container_number'] == 'CSQU3054383'
+    assert saved['hazardous'] is True
+    assert saved['route_segments'][0]['origin'] == stage['origin']
+    assert saved['route_segments'][0]['actual_departure_at'] == '2026-10-20T09:00:00+00:00'
+    await api.post('/api/v1/transportations/update', update, expected=409)
+    loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
+    assert loaded == saved
+
+
 @pytest.mark.parametrize(
     'code,message',
     [
@@ -134,8 +162,9 @@ async def test_update_details_keeps_facts_and_rejects_old_revision(api, shipment
         ('another_conflict', 'Другая причина конфликта'),
     ],
 )
+@pytest.mark.parametrize('combined', [False, True])
 async def test_route_change_rejected_before_local_write(
-    api, shipment_routes, mockserver, code, message
+    api, shipment_routes, mockserver, code, message, combined
 ):
     body = command()
     operation = await api.post(PATH, body)
@@ -148,8 +177,9 @@ async def test_route_change_rejected_before_local_write(
         return mockserver.make_response(status=409, json={'error': code, 'message': message})
 
     conflict = await api.post(
-        '/api/v1/transportation-routes/set',
+        '/api/v1/transportations/update' if combined else '/api/v1/transportation-routes/set',
         {
+            **({'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383'} if combined else {}),
             'transportation_id': identifier,
             'expected_revision': 1,
             'route_segments': [stage],
@@ -162,6 +192,8 @@ async def test_route_change_rejected_before_local_write(
         'transportation'
     ]
     assert loaded['revision'] == 1
+    assert loaded['hazardous'] is False
+    assert 'container_number' not in loaded
     assert 'origin' not in loaded['route_segments'][0]
 
 

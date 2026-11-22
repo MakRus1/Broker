@@ -6,6 +6,9 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
+void ValidateTransportationDetails(models::TransportationType, const std::optional<std::string>&,
+    const std::optional<models::ContainerOwnership>&, const std::optional<std::string>&);
+
 class TransportationsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "transportations-transportations";

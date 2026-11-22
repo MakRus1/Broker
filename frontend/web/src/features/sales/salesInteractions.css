@@ -2,6 +2,7 @@
   display: grid;
   gap: 16px;
   min-width: 0;
+  margin-bottom: 24px;
 }
 .sales-interactions-heading,
 .sales-interaction-meta,

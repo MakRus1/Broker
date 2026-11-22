@@ -367,7 +367,7 @@ export function RfqQuotePicker({
               {error}
             </p>
           )}
-          {!loading && !error && !items.length && (
+          {!loading && !error && !ordered.length && (
             <p className="hint">{translate('rfq.noReadyQuotes')}</p>
           )}
           {ordered.map((rfq) => (

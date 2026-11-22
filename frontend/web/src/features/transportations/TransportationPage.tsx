@@ -36,7 +36,6 @@ import {
   utcDateTime,
   type RouteSegment,
 } from './transportation';
-import { RouteEditor } from '../routes/RouteEditor';
 import { TransportationDetailsForm } from './TransportationDetailsForm';
 
 type Props = {
@@ -107,9 +106,7 @@ export function TransportationPage({
       document.title = `${transportationTitle(transportation, locale)} · Broker`;
   }, [transportation?.container_number, transportation?.type, active, locale, catalogVersion]);
   const [failure, setFailure] = useState('');
-  const [tab, setTab] = useState<'details' | 'route' | 'finance' | 'history'>(
-    editing ? 'route' : 'details',
-  );
+  const [tab, setTab] = useState<'details' | 'finance' | 'history'>('details');
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   function switchTab(next: typeof tab, button: HTMLElement) {
     const section = button.closest('section');
@@ -157,6 +154,7 @@ export function TransportationPage({
         <button onClick={() => void refresh().catch(onError)}>{translate('filter.retry')}</button>
       </section>
     );
+  const editMode = write && (editing || editingDetails);
   const customerName = customers.find((item) => item.id === shipment?.customer_id)?.name;
   return (
     <div className="transportation-page">
@@ -178,13 +176,7 @@ export function TransportationPage({
               {translate('shipment.revision', { revision: transportation.revision })}
             </>
           }
-          mode={
-            editing
-              ? translate('transport.editingRoute')
-              : editingDetails
-                ? translate('transport.editingDetails')
-                : undefined
-          }
+          mode={editMode ? translate('record.editing') : undefined}
           actions={
             <>
               {!editing && !editingDetails && (
@@ -196,11 +188,8 @@ export function TransportationPage({
                     <button
                       className="primary"
                       onClick={() => {
-                        if (tab === 'route') location.hash = `/transportations/${id}/route`;
-                        else {
-                          setTab('details');
-                          setEditingDetails(true);
-                        }
+                        setTab('details');
+                        setEditingDetails(true);
                       }}
                     >
                       {translate('shipment.edit')}
@@ -216,37 +205,44 @@ export function TransportationPage({
             {failure}
           </p>
         )}
-        {editingDetails && (
+        {editMode && (
           <div className="panel-content transportation-edit-content">
             <TransportationDetailsForm
               initial={transportation}
+              customers={customers}
+              historicalRoute={
+                transportation.route_segments.some((stage) => stage.inherited === false) ? (
+                  <RecordSection
+                    title={translate('forms.transportationRoute')}
+                    description={translate('transport.historicalLegHint')}
+                  >
+                    <RouteView
+                      route_segments={transportation.route_segments.filter(
+                        (stage) => stage.inherited === false,
+                      )}
+                      customers={customers}
+                      session={session}
+                    />
+                  </RecordSection>
+                ) : undefined
+              }
               shipmentId={transportation.shipment_id}
               session={session}
               onSaved={(value) => {
                 setTransportation(value);
                 onChanged?.(value);
                 setEditingDetails(false);
+                if (editing) location.hash = `/transportations/${id}`;
               }}
-              onCancel={() => setEditingDetails(false)}
+              onCancel={() => {
+                setEditingDetails(false);
+                if (editing) location.hash = `/transportations/${id}`;
+              }}
               onError={onError}
             />
           </div>
         )}
-        {editing ? (
-          <RouteEditor
-            initial={transportation}
-            session={session}
-            customers={customers}
-            allowed={write}
-            onSaved={(value) => {
-              setTransportation(value);
-              onChanged?.(value);
-              if (location.hash === `#/transportations/${id}/route`)
-                location.hash = `/transportations/${id}`;
-            }}
-            onError={onError}
-          />
-        ) : editingDetails ? null : (
+        {editMode ? null : (
           <>
             <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
               <button
@@ -255,12 +251,7 @@ export function TransportationPage({
               >
                 {translate('shipment.details')}
               </button>
-              <button
-                aria-pressed={tab === 'route'}
-                onClick={(event) => switchTab('route', event.currentTarget)}
-              >
-                {translate('registryField.route')}
-              </button>
+
               {session.permissions.includes('finance.read_service_charges') && (
                 <button
                   aria-pressed={tab === 'finance'}
@@ -341,6 +332,20 @@ export function TransportationPage({
                     </div>
                   </dl>
                 </RecordSection>
+                <div className="record-wide">
+                  <RecordSection title={translate('forms.transportationRoute')}>
+                    <RouteView
+                      route_segments={transportation.route_segments}
+                      customers={customers}
+                      session={session}
+                      onActual={
+                        write
+                          ? (route_segment, kind) => setActual({ route_segment, kind })
+                          : undefined
+                      }
+                    />
+                  </RecordSection>
+                </div>
               </VisitedPanel>
               <VisitedPanel active={tab === 'finance'}>
                 <ServiceCharges
@@ -357,27 +362,6 @@ export function TransportationPage({
                   session={session}
                   customers={customers}
                   onError={onError}
-                />
-              </VisitedPanel>
-              <VisitedPanel active={tab === 'route'}>
-                <RouteView
-                  heading={
-                    <div className="section-heading">
-                      <div>
-                        <h2>{translate('forms.transportationRoute')}</h2>
-                        <p className="hint">
-                          {translate('forms.routeLegsInTravelOrderTimeZone')}{' '}
-                          {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-                        </p>
-                      </div>
-                    </div>
-                  }
-                  route_segments={transportation.route_segments}
-                  customers={customers}
-                  session={session}
-                  onActual={
-                    write ? (route_segment, kind) => setActual({ route_segment, kind }) : undefined
-                  }
                 />
               </VisitedPanel>
             </div>
@@ -460,7 +444,7 @@ export function RouteView({
             />
             <span className="route-summary-meta">
               <span>{routeDirection(route_segment, locale)}</span>
-              <span>
+              <span className="route-summary-carrier">
                 {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
                   translate('forms.carrierNotSelected')}
               </span>

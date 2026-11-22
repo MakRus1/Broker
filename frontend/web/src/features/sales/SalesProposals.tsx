@@ -14,7 +14,6 @@ import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
 import { RecordActions, RecordSection } from '../../shared/ui/record/RecordLayout';
-import { RecordEditorSections } from '../../shared/ui/record/RecordEditorSections';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { Select } from '../../shared/ui/Select';
 import { IsoDateInput } from '../../shared/dates/DateInput';
@@ -232,7 +231,7 @@ export function SalesProposals({
           data-recovery-key={recoveryKey}
         >
           <DraftRecovery recovery={recovery} />
-          <RecordEditorSections>
+          <>
             <fieldset disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('proposal.details')}>
                 <div className="record-fields record-fields-two">
@@ -573,7 +572,7 @@ export function SalesProposals({
                 {translate('proposal.addLine')}
               </button>
             </fieldset>
-          </RecordEditorSections>
+          </>
           <RecordActions
             status={translate('proposal.status.draft')}
             error={failure}

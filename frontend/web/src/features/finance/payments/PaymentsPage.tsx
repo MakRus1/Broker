@@ -7,7 +7,6 @@ import {
 
 import { RegistryPage } from '../../../shared/ui/RegistryPage';
 import { RecordPage } from '../../../shared/ui/record/RecordPage';
-import { RecordEditorSections } from '../../../shared/ui/record/RecordEditorSections';
 import { restoreDraft } from '../../../shared/forms/restoreDraft';
 import { draftStorageKey, useDraftRecovery } from '../../../shared/forms/useDraftRecovery';
 import { DraftRecovery } from '../../../shared/ui/record/DraftRecovery';
@@ -437,7 +436,7 @@ export function PaymentsPage({
           onInvalid={validation.onInvalid}
           onInput={validation.onInput}
         >
-          <RecordEditorSections>
+          <>
             <fieldset disabled={busy || !!recovery.candidate}>
               <RecordSection title={translate('record.identification')}>
                 <RecordFields>
@@ -705,7 +704,7 @@ export function PaymentsPage({
                 <p className="hint">{translate('forms.paymentPartiesHint')}</p>
               )}
             </section>
-          </RecordEditorSections>
+          </>
           <RecordActions
             error={failure}
             issues={validation.issues}

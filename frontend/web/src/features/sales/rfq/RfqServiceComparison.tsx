@@ -9,6 +9,7 @@ import {
 import type { Rfq } from './types';
 
 export type QuoteSelection = {
+  routeUnavailable?: boolean;
   selected: ReadonlySet<string>;
   added: ReadonlySet<string>;
   calculationDate: string;
@@ -59,7 +60,7 @@ export function RfqServiceComparison({
                     <label className="rfq-compare-select">
                       <input
                         type="checkbox"
-                        disabled={!available.length}
+                        disabled={!available.length || selection.routeUnavailable}
                         checked={allSelected}
                         aria-checked={partiallySelected ? 'mixed' : allSelected}
                         ref={(input) => {
@@ -112,8 +113,8 @@ export function RfqServiceComparison({
                           <input
                             type="radio"
                             name={`quote-service:${quotationServiceKey(value.input.route_segment_id, line.label_id)}`}
-                            disabled={expired || added}
-                            checked={added || (!expired && selected)}
+                            disabled={expired || added || selection.routeUnavailable}
+                            checked={added || (!expired && !selection.routeUnavailable && selected)}
                             aria-label={translate('rfq.selectService', {
                               service: service.name,
                               quote: quote.title,

@@ -1500,8 +1500,15 @@
   "rfq.quoteUpdatesHint": "The proposal retains purchase snapshots from earlier revisions. Review and select updates before applying.",
   "rfq.revisionChange": "Revision {before} → {after}",
   "rfq.previewUpdate": "Select update",
-  "rfq.updateUnavailable": "The source line was removed, the quote is not ready or has expired. Select a replacement manually.",
+  "rfq.updateUnavailable": "The source was removed, is not ready, expired or refers to a changed route. Select a valid replacement.",
   "rfq.saleRetained": "Client price and VAT settings will be retained. Amounts exclude VAT.",
   "rfq.volumeResetsSale": "Unit or quantity changed: the client price will reset to the new purchase price. Review it after applying.",
-  "rfq.assembleUpdates": "Build proposal · new revisions: {count}"
+  "rfq.assembleUpdates": "Build proposal · new revisions: {count}",
+  "rfq.routeRemoved": "The quoted segment was removed from the route",
+  "rfq.routeChanged": "Segment {number} has changed",
+  "rfq.routeChangedHint": "Prices refer to the earlier route. Confirm the quote with the supplier and save a new RFQ revision before using it.",
+  "rfq.quotedRoute": "Route when quoted",
+  "rfq.currentRoute": "Current route",
+  "rfq.routeDetailsChanged": "Also check dates and segment details: any change requires quotation confirmation.",
+  "rfq.assembleAttention": "Build proposal · review required: {count}"
 }

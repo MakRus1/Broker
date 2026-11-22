@@ -291,7 +291,7 @@ export function SalesProposals({
               <RecordSection
                 title={
                   quoteUpdateCount
-                    ? translate('rfq.assembleUpdates', { count: quoteUpdateCount })
+                    ? translate('rfq.assembleAttention', { count: quoteUpdateCount })
                     : translate('rfq.assemble')
                 }
                 collapsible

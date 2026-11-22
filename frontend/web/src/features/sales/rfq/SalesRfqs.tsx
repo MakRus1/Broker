@@ -1,3 +1,4 @@
+import { QuotationRouteNotice } from './QuotationRouteNotice';
 import { useEffect, useState } from 'react';
 import { request } from '../../../shared/api/http';
 import type { Session } from '../../../shared/api/session';
@@ -130,6 +131,7 @@ export function SalesRfqs({
               </dd>
             </div>
           </dl>
+          <QuotationRouteNotice rfq={value} inquiry={inquiry} />
           <RfqDetails value={value} showRoute={false} />
         </article>
       ))}

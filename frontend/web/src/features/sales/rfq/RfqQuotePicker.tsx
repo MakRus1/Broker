@@ -1,3 +1,5 @@
+import { quotationRouteState } from './quotationRoute';
+import { QuotationRouteNotice } from './QuotationRouteNotice';
 import { quotationUpdates } from './quotationUpdates';
 import { QuotationChangePreview } from './QuotationChangePreview';
 import { quotationLines } from './quotationImport';
@@ -80,7 +82,12 @@ export function RfqQuotePicker({
         controller.signal,
       );
       if (controller.signal.aborted) return;
-      setItems(result.items);
+      setItems((previous) => [
+        ...previous.filter(
+          (item) => !result.items.some((current) => current.input.id === item.input.id),
+        ),
+        ...result.items,
+      ]);
       setSelected(
         new Set(
           result.selected.map(
@@ -120,12 +127,24 @@ export function RfqQuotePicker({
     return () => controller.abort();
   }, [session, inquiry.id]);
 
-  const updates = quotationUpdates(lines, items, calculationDate);
+  const updates = quotationUpdates(lines, items, calculationDate, inquiry.route_segments);
+  const attentionCount = lines.filter((line) => {
+    const rfq = items.find((item) => item.input.id === line.quote_source?.rfq_id);
+    return (
+      rfq &&
+      (rfq.revision > line.quote_source!.revision ||
+        quotationRouteState(rfq, inquiry.route_segments) !== 'current')
+    );
+  }).length;
   useEffect(() => {
-    onUpdates?.(updates.length);
-  }, [onUpdates, updates.length]);
+    onUpdates?.(attentionCount);
+  }, [onUpdates, attentionCount]);
   const chosen = items
-    .filter((rfq) => rfq.input.status === 'ready')
+    .filter(
+      (rfq) =>
+        rfq.input.status === 'ready' &&
+        quotationRouteState(rfq, inquiry.route_segments) === 'current',
+    )
     .flatMap((rfq) =>
       rfq.input.quotes.flatMap((quote) => {
         if (quote.valid_until && quote.valid_until < calculationDate) return [];
@@ -355,9 +374,11 @@ export function RfqQuotePicker({
             <section key={rfq.input.id} className="rfq-import-request">
               <h3>{rfq.input.title}</h3>
               <p className="hint">{sharedRouteDirection(rfq.route_segment, locale)}</p>
+              <QuotationRouteNotice rfq={rfq} inquiry={inquiry} />
               <RfqServiceComparison
                 value={rfq}
                 selection={{
+                  routeUnavailable: quotationRouteState(rfq, inquiry.route_segments) !== 'current',
                   selected,
                   added,
                   calculationDate,

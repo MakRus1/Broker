@@ -556,3 +556,33 @@
   margin: 4px 0 0;
   font-variant-numeric: tabular-nums;
 }
+
+.rfq-route-notice {
+  display: grid;
+  gap: 10px;
+  border-left: 3px solid var(--border);
+  padding: 12px 16px;
+  margin-block: 16px;
+}
+.rfq-route-notice p,
+.rfq-route-notice dl {
+  margin: 0;
+}
+.rfq-route-notice dl {
+  display: grid;
+  gap: 12px;
+}
+.rfq-route-notice dt,
+.rfq-route-notice small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.rfq-route-notice dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.rfq-route-notice dd small {
+  display: block;
+  margin-top: 6px;
+}

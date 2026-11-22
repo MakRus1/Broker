@@ -1,6 +1,7 @@
 #include <platform/browser/login.hpp>
 #include <platform/browser/responses.hpp>
 #include <userver/components/component_context.hpp>
+#include <userver/server/handlers/exceptions.hpp>
 #include <userver/server/http/http_response.hpp>
 
 namespace platform::browser {
@@ -32,6 +33,18 @@ std::string LoginCallback::HandleRequestThrow(
     const Http& http, userver::server::request::RequestContext&) const {
     auto& response = http.GetHttpResponse();
     response.SetCookie(sessions_.Cookie(sessions_.LoginCookie, "", 0));
+    // Browser history can revisit the consumed callback after a successful login.
+    if (http.GetCookie(sessions_.CookieName(sessions_.LoginCookie)).empty()) {
+        const auto id = http.GetCookie(sessions_.CookieName(sessions_.SessionCookie));
+        if (!id.empty()) {
+            try {
+                sessions_.GetAuthenticated(id);
+                return detail::Redirect(http, "/");
+            } catch (const userver::server::handlers::Unauthorized&) {
+                // An absent or expired session still requires a fresh login.
+            }
+        }
+    }
     const auto state = http.GetArg("state");
     if (state.empty() || state != http.GetCookie(sessions_.CookieName(sessions_.LoginCookie)) ||
         http.GetArgVector("state").size() != 1 || http.GetArgVector("code").size() != 1 ||

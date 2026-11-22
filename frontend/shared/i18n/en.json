@@ -1495,5 +1495,13 @@
   "rfq.minimumPurchaseHow": "How selection works",
   "rfq.currencyBasis": "Net comparison in {currency} · rates for {date}",
   "rfq.comparisonAmount": "In {currency}, excl. VAT",
-  "rfq.minimumCost": "Lowest purchase cost"
+  "rfq.minimumCost": "Lowest purchase cost",
+  "rfq.quoteUpdates": "New quotation revisions available",
+  "rfq.quoteUpdatesHint": "The proposal retains purchase snapshots from earlier revisions. Review and select updates before applying.",
+  "rfq.revisionChange": "Revision {before} → {after}",
+  "rfq.previewUpdate": "Select update",
+  "rfq.updateUnavailable": "The source line was removed, the quote is not ready or has expired. Select a replacement manually.",
+  "rfq.saleRetained": "Client price and VAT settings will be retained. Amounts exclude VAT.",
+  "rfq.volumeResetsSale": "Unit or quantity changed: the client price will reset to the new purchase price. Review it after applying.",
+  "rfq.assembleUpdates": "Build proposal · new revisions: {count}"
 }

@@ -513,3 +513,46 @@
   color: var(--accent-text);
   margin-top: 6px;
 }
+
+.rfq-quotation-updates {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.rfq-quotation-updates h3,
+.rfq-quotation-updates p {
+  margin: 0;
+}
+.rfq-quotation-update {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.rfq-quotation-update + .rfq-quotation-update {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.rfq-quotation-update > button {
+  justify-self: start;
+}
+.rfq-change-preview {
+  display: grid;
+  gap: 8px;
+}
+.rfq-change-preview dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0;
+}
+.rfq-change-preview dt,
+.rfq-change-preview small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.rfq-change-preview dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}

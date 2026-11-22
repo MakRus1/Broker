@@ -1,3 +1,5 @@
+import { quotationUpdates } from './quotationUpdates';
+import { QuotationChangePreview } from './QuotationChangePreview';
 import { quotationLines } from './quotationImport';
 import {
   importedQuotationKeys,
@@ -24,12 +26,14 @@ export function RfqQuotePicker({
   lines,
   calculationDate,
   onAdd,
+  onUpdates,
 }: {
   inquiry: Inquiry;
   session: Session;
   lines: ProposalLine[];
   calculationDate: string;
   onAdd: (lines: ProposalLine[], names: Record<string, string>) => void;
+  onUpdates?: (count: number) => void;
 }) {
   const { translate, locale } = useLocalization();
   const root = useRef<HTMLElement>(null);
@@ -105,7 +109,7 @@ export function RfqQuotePicker({
       controller.signal,
     )
       .then(({ items }) => {
-        if (!controller.signal.aborted) setItems(items.filter((v) => v.input.status === 'ready'));
+        if (!controller.signal.aborted) setItems(items);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -116,16 +120,22 @@ export function RfqQuotePicker({
     return () => controller.abort();
   }, [session, inquiry.id]);
 
-  const chosen = items.flatMap((rfq) =>
-    rfq.input.quotes.flatMap((quote) => {
-      if (quote.valid_until && quote.valid_until < calculationDate) return [];
-      const available = quote.lines.filter((line) => {
-        const key = quotationLineKey(rfq, quote, line);
-        return selected.has(key) && !alreadyImported.has(key);
-      });
-      return available.length ? [{ rfq, quote, lines: available }] : [];
-    }),
-  );
+  const updates = quotationUpdates(lines, items, calculationDate);
+  useEffect(() => {
+    onUpdates?.(updates.length);
+  }, [onUpdates, updates.length]);
+  const chosen = items
+    .filter((rfq) => rfq.input.status === 'ready')
+    .flatMap((rfq) =>
+      rfq.input.quotes.flatMap((quote) => {
+        if (quote.valid_until && quote.valid_until < calculationDate) return [];
+        const available = quote.lines.filter((line) => {
+          const key = quotationLineKey(rfq, quote, line);
+          return selected.has(key) && !alreadyImported.has(key);
+        });
+        return available.length ? [{ rfq, quote, lines: available }] : [];
+      }),
+    );
   const pendingServices = new Set(
     chosen.flatMap(({ rfq, lines }) =>
       lines.map((line) => quotationServiceKey(rfq.input.route_segment_id, line.label_id)),
@@ -154,11 +164,13 @@ export function RfqQuotePicker({
   const routePosition = new Map(
     inquiry.route_segments.map((segment, index) => [segment.id, index]),
   );
-  const ordered = [...items].sort(
-    (a, b) =>
-      (routePosition.get(a.input.route_segment_id) ?? Infinity) -
-      (routePosition.get(b.input.route_segment_id) ?? Infinity),
-  );
+  const ordered = items
+    .filter((rfq) => rfq.input.status === 'ready')
+    .sort(
+      (a, b) =>
+        (routePosition.get(a.input.route_segment_id) ?? Infinity) -
+        (routePosition.get(b.input.route_segment_id) ?? Infinity),
+    );
   return (
     <section ref={root} className="rfq-workbench">
       <div className="rfq-workbench-intro">
@@ -173,6 +185,62 @@ export function RfqQuotePicker({
           </details>
         </div>
       </div>
+      {!!updates.length && (
+        <section className="rfq-quotation-updates" aria-label={translate('rfq.quoteUpdates')}>
+          <h3>{translate('rfq.quoteUpdates')}</h3>
+          <p className="hint">{translate('rfq.quoteUpdatesHint')}</p>
+          {updates.map((update) => (
+            <div key={update.line.id} className="rfq-quotation-update">
+              <div className="proposal-toolbar">
+                <strong>
+                  {update.replacement
+                    ? labelNames.get(update.line.label_id)
+                    : translate('proposal.service')}{' '}
+                  · {update.quote?.supplier_name ?? update.rfq.input.title}
+                </strong>
+                <span>
+                  {translate('rfq.revisionChange', {
+                    before: update.line.quote_source!.revision,
+                    after: update.rfq.revision,
+                  })}
+                </span>
+              </div>
+              {update.replacement ? (
+                <>
+                  <QuotationChangePreview before={update.line} incoming={update.replacement} />
+                  <button
+                    type="button"
+                    disabled={
+                      suggesting ||
+                      selected.has(
+                        `${update.rfq.input.id}:${update.rfq.revision}:${update.line.quote_source!.quote_id}:${update.line.quote_source!.line_id}`,
+                      )
+                    }
+                    onClick={() => {
+                      setAutomatic(false);
+                      const source = update.replacement!.quote_source!;
+                      setSelected((previous) =>
+                        selectQuotationAlternatives(
+                          previous,
+                          items,
+                          [
+                            `${source.rfq_id}:${source.revision}:${source.quote_id}:${source.line_id}`,
+                          ],
+                          true,
+                        ),
+                      );
+                    }}
+                  >
+                    {translate('rfq.previewUpdate')}
+                  </button>
+                </>
+              ) : (
+                <p className="hint">{translate('rfq.updateUnavailable')}</p>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       {automatic && suggestion && (
         <div className="rfq-automatic-result">
           <p role="status" className="rfq-result-heading">
@@ -366,6 +434,23 @@ export function RfqQuotePicker({
             {!!totals.length && <small>{translate('rfq.purchaseTotalHint')}</small>}
           </div>
           <span aria-live="polite">{translate('rfq.selectedCount', { count })}</span>
+          {replaced.map((before) => {
+            const replacement = chosen
+              .flatMap((value) => quotationLines(value.rfq, value.quote, value.lines))
+              .find(
+                (line) =>
+                  line.route_segment_id === before.route_segment_id &&
+                  line.label_id === before.label_id,
+              );
+            return (
+              replacement && (
+                <section key={before.id}>
+                  <strong>{labelNames.get(before.label_id)}</strong>
+                  <QuotationChangePreview before={before} incoming={replacement} />
+                </section>
+              )
+            );
+          })}
           {!!replaced.length && (
             <p className="hint">{translate('rfq.replaceCount', { count: replaced.length })}</p>
           )}

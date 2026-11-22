@@ -36,6 +36,9 @@
   border-bottom: 1px solid var(--divider);
   border-radius: 0;
 }
+.record-workbench .route-segment[open] {
+  padding-bottom: 16px;
+}
 @container record-page (max-width: 600px) {
   .record-workbench .route-stage-summary {
     grid-template-columns: minmax(0, 1fr);

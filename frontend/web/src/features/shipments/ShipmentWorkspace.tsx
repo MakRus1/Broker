@@ -34,6 +34,7 @@ import { type Shipment } from './types';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
 import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
+import { scrollIntent } from '../../shared/ui/scrollIntent';
 import { ShipmentPanel } from './ShipmentPanel';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { ShipmentConditionsFields, type ShipmentDictionaries } from './ShipmentConditionsFields';
@@ -163,7 +164,7 @@ function ShipmentCard({
   }, [props.route]);
   const [editing, setEditing] = useState(!initial);
   useEffect(() => {
-    if (tab !== 'route' && tab !== 'items') return;
+    if (props.active === false || (tab !== 'route' && tab !== 'items')) return;
     const frame = requestAnimationFrame(() => {
       const root = card.current;
       const selector =
@@ -171,10 +172,13 @@ function ShipmentCard({
       const target = Array.from(root?.querySelectorAll<HTMLElement>(selector) ?? []).find(
         (node) => node.getClientRects().length > 0,
       );
-      target?.scrollIntoView({ block: 'start' });
+      if (target) {
+        scrollIntent();
+        target.scrollIntoView({ block: 'start' });
+      }
     });
     return () => cancelAnimationFrame(frame);
-  }, [tab, editing, formId]);
+  }, [tab, editing, props.active, props.route]);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {

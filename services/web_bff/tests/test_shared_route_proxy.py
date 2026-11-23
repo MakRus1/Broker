@@ -20,7 +20,7 @@ async def test_shipment_shared_details(browser, mockserver):
             'origin_airport': location,
             'flight_number': 'SU123',
             'eta': '2030-01-01',
-            'documents': [{'type': 'air_waybill', 'number': '555-12345678', 'date': '2024-10-01'}],
+            'documents': [{'number': '555-12345678', 'date': '2024-10-01'}],
         },
     }
     body = {
@@ -71,7 +71,7 @@ async def test_transportation_receives_shared_fields(browser, mockserver):
         'sea': {
             'eta': '2030-01-01',
             'booking': {'status': 'confirmed'},
-            'documents': [{'type': 'bill_of_lading', 'role': 'ocean', 'number': 'DOC-42'}],
+            'documents': [{'leg': 'ocean', 'number': 'DOC-42'}],
             'original_received': {},
         },
     }

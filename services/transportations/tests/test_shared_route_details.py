@@ -22,7 +22,7 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
         ('pol' if mode == 'sea' else 'origin_airport'): location,
     }
     stage[date_field]['documents'] = [
-        {'type': 'bill_of_lading' if mode == 'sea' else 'air_waybill', 'number': 'DOC-42'},
+        {'number': 'DOC-42'},
     ]
     if mode == 'sea':
         stage['sea']['booking'] = {'number': 'BKG-42', 'status': 'confirmed'}

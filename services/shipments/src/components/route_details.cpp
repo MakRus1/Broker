@@ -46,13 +46,11 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
         "route_location_not_found", "Выберите действующий порт или аэропорт из справочника"};
 }
 
-void CheckDocuments(const std::optional<std::vector<models::RouteDocument>>& documents, bool air) {
+template <typename Document>
+void CheckDocuments(const std::optional<std::vector<Document>>& documents) {
     if (!documents)
         return;
     for (const auto& document : *documents) {
-        const auto type = models::EnumValue(document.type);
-        if (type != (air ? "air_waybill" : "bill_of_lading") || (air && document.role))
-            throw ApiError<400>{"invalid_route_document", "Тип документа не подходит участку"};
         if (document.number.find_first_not_of(" \t\r\n") == std::string::npos)
             throw ApiError<400>{"invalid_route_document", "Укажите номер документа"};
         CheckDate(document.date, true);
@@ -79,7 +77,7 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
                 CheckDate(sea.original_received->date, true);
             if (sea.telex_release)
                 CheckDate(sea.telex_release->date, true);
-            CheckDocuments(sea.documents, false);
+            CheckDocuments(sea.documents);
             CheckDate(sea.eta, false);
             CheckDate(sea.departure_date, true);
         }
@@ -88,7 +86,7 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
                 throw ApiError<400>{
                     "unexpected_air_details", "Авиационные поля доступны только участку «Авиа»"};
             const auto& air = segment.air.value();
-            CheckDocuments(air.documents, true);
+            CheckDocuments(air.documents);
             CheckDate(air.etd, false);
             CheckDate(air.eta, false);
             CheckDate(air.departure_date, true);

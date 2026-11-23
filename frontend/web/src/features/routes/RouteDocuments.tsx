@@ -2,7 +2,7 @@ import { IsoDateInput } from '../../shared/dates/DateInput';
 import { calendarDate } from '../../shared/dates/calendar';
 import { Select } from '../../shared/ui/Select';
 import { useLocalization } from '../localization/Localization';
-import type { RouteBooking, RouteDocument, SeaDetails } from './types';
+import type { AirWaybill, BillOfLading, RouteBooking, SeaDetails } from './types';
 
 const events = [
   ['original_received', 'route.documents.original'],
@@ -16,8 +16,8 @@ export function RouteDocumentsEditor({
   onSea,
 }: {
   sea?: SeaDetails;
-  documents?: RouteDocument[];
-  onDocuments: (documents?: RouteDocument[]) => void;
+  documents?: (BillOfLading | AirWaybill)[];
+  onDocuments: (documents?: (BillOfLading | AirWaybill)[]) => void;
   onSea?: (sea: SeaDetails) => void;
 }) {
   const { translate } = useLocalization();
@@ -27,7 +27,7 @@ export function RouteDocumentsEditor({
     const next = { ...booking, ...change };
     onSea({ ...sea, booking: Object.values(next).some(Boolean) ? next : undefined });
   };
-  function updateDocument(index: number, change: Partial<RouteDocument>) {
+  function updateDocument(index: number, change: Partial<BillOfLading>) {
     onDocuments(
       documents.map((document, position) =>
         position === index ? { ...document, ...change } : document,
@@ -114,7 +114,6 @@ export function RouteDocumentsEditor({
           onDocuments([
             ...documents,
             {
-              type: sea ? 'bill_of_lading' : 'air_waybill',
               number: '',
             },
           ])
@@ -131,7 +130,7 @@ export function RouteDocumentsView({
   documents = [],
 }: {
   sea?: SeaDetails;
-  documents?: RouteDocument[];
+  documents?: (BillOfLading | AirWaybill)[];
 }) {
   const { translate } = useLocalization();
   const booking = sea?.booking;
@@ -196,16 +195,16 @@ function RouteDocumentTable({
   onRemove,
 }: {
   sea: boolean;
-  documents: RouteDocument[];
-  onChange?: (index: number, change: Partial<RouteDocument>) => void;
+  documents: (BillOfLading | AirWaybill)[];
+  onChange?: (index: number, change: Partial<BillOfLading>) => void;
   onRemove?: (index: number) => void;
 }) {
   const { translate } = useLocalization();
   const title = translate(sea ? 'route.documents.bills' : 'route.documents.airWaybills');
   const numberLabel = translate(sea ? 'route.documents.billNumber' : 'route.documents.airNumber');
-  const roleLabel = translate('route.documents.role');
+  const legLabel = translate('route.documents.leg');
   const dateLabel = translate('route.documents.date');
-  const roles = [
+  const legs = [
     { value: '', label: '—' },
     { value: 'ocean', label: translate('route.documents.ocean') },
     { value: 'feeder', label: translate('route.documents.feeder') },
@@ -218,7 +217,7 @@ function RouteDocumentTable({
         <thead>
           <tr>
             <th scope="col">{numberLabel}</th>
-            {sea && <th scope="col">{roleLabel}</th>}
+            {sea && <th scope="col">{legLabel}</th>}
             <th scope="col">{dateLabel}</th>
             {onRemove && (
               <th scope="col">
@@ -228,62 +227,65 @@ function RouteDocumentTable({
           </tr>
         </thead>
         <tbody>
-          {documents.map((document, index) => (
-            <tr key={index}>
-              <td>
-                {onChange ? (
-                  <input
-                    aria-label={numberLabel}
-                    required
-                    maxLength={128}
-                    value={document.number}
-                    onChange={(event) => onChange(index, { number: event.target.value })}
-                  />
-                ) : (
-                  document.number
-                )}
-              </td>
-              {sea && (
+          {documents.map((document, index) => {
+            const leg = 'leg' in document ? (document.leg ?? '') : '';
+            return (
+              <tr key={index}>
                 <td>
                   {onChange ? (
-                    <Select
-                      label={roleLabel}
-                      hideLabel
-                      value={document.role ?? ''}
-                      options={roles}
-                      onChange={(role) =>
-                        onChange(index, {
-                          role: role === 'ocean' || role === 'feeder' ? role : undefined,
-                        })
-                      }
+                    <input
+                      aria-label={numberLabel}
+                      required
+                      maxLength={128}
+                      value={document.number}
+                      onChange={(event) => onChange(index, { number: event.target.value })}
                     />
                   ) : (
-                    roles.find(({ value }) => value === (document.role ?? ''))?.label
+                    document.number
                   )}
                 </td>
-              )}
-              <td>
-                {onChange ? (
-                  <IsoDateInput
-                    aria-label={dateLabel}
-                    value={document.date ?? ''}
-                    onChange={(value) => onChange(index, { date: value || undefined })}
-                  />
-                ) : document.date ? (
-                  calendarDate(document.date)
-                ) : (
-                  '—'
+                {sea && (
+                  <td>
+                    {onChange ? (
+                      <Select
+                        label={legLabel}
+                        hideLabel
+                        value={leg}
+                        options={legs}
+                        onChange={(leg) =>
+                          onChange(index, {
+                            leg: leg === 'ocean' || leg === 'feeder' ? leg : undefined,
+                          })
+                        }
+                      />
+                    ) : (
+                      legs.find(({ value }) => value === leg)?.label
+                    )}
+                  </td>
                 )}
-              </td>
-              {onRemove && (
-                <td className="route-document-action">
-                  <button type="button" onClick={() => onRemove(index)}>
-                    {translate('route.documents.remove')}
-                  </button>
+                <td>
+                  {onChange ? (
+                    <IsoDateInput
+                      aria-label={dateLabel}
+                      value={document.date ?? ''}
+                      onChange={(value) => onChange(index, { date: value || undefined })}
+                    />
+                  ) : document.date ? (
+                    calendarDate(document.date)
+                  ) : (
+                    '—'
+                  )}
                 </td>
-              )}
-            </tr>
-          ))}
+                {onRemove && (
+                  <td className="route-document-action">
+                    <button type="button" onClick={() => onRemove(index)}>
+                      {translate('route.documents.remove')}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

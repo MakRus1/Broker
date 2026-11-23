@@ -656,7 +656,7 @@ SeaDetails:
       type: array
       maxItems: 20
       items:
-        $ref: '#/RouteDocument'
+        $ref: '#/BillOfLading'
     original_received:
       $ref: '#/RouteDocumentEvent'
     telex_release:
@@ -694,7 +694,7 @@ AirDetails:
       type: array
       maxItems: 20
       items:
-        $ref: '#/RouteDocument'
+        $ref: '#/AirWaybill'
     carrier_id:
       type: string
       format: uuid
@@ -931,23 +931,30 @@ RouteBooking:
     confirmed_date:
       type: string
       format: date
-RouteDocument:
+BillOfLading:
   type: object
   additionalProperties: false
   required:
-  - type
   - number
   properties:
-    type:
+    number:
       type: string
-      enum:
-      - bill_of_lading
-      - air_waybill
-    role:
+      minLength: 1
+      maxLength: 128
+    date:
+      type: string
+      format: date
+    leg:
       type: string
       enum:
       - ocean
       - feeder
+AirWaybill:
+  type: object
+  additionalProperties: false
+  required:
+  - number
+  properties:
     number:
       type: string
       minLength: 1

@@ -1527,9 +1527,9 @@
   "route.documents.airNumber": "Air waybill number",
   "route.documents.date": "Document date",
   "route.documents.dateUnknown": "Date unknown",
-  "route.documents.role": "Bill of lading role",
-  "route.documents.ocean": "Ocean bill of lading",
-  "route.documents.feeder": "Feeder bill of lading",
+  "route.documents.leg": "Leg",
+  "route.documents.ocean": "Ocean",
+  "route.documents.feeder": "Feeder",
   "route.documents.remove": "Remove document",
   "route.documents.addBill": "Add bill of lading",
   "route.documents.addAir": "Add air waybill"

@@ -1527,9 +1527,9 @@
   "route.documents.airNumber": "Номер авианакладной",
   "route.documents.date": "Дата документа",
   "route.documents.dateUnknown": "Дата неизвестна",
-  "route.documents.role": "Роль коносамента",
-  "route.documents.ocean": "Океанский коносамент",
-  "route.documents.feeder": "Фидерный коносамент",
+  "route.documents.leg": "Плечо",
+  "route.documents.ocean": "Океанское",
+  "route.documents.feeder": "Фидерное",
   "route.documents.remove": "Убрать документ",
   "route.documents.addBill": "Добавить коносамент",
   "route.documents.addAir": "Добавить авианакладную"

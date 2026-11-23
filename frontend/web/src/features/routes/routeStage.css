@@ -148,12 +148,3 @@
   width: 1%;
   white-space: nowrap;
 }
-
-@media (min-width: 701px) {
-  .shared-route-values.sea-route-dates {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-.sea-route-dates .date-input-control {
-  width: min(100%, 13rem);
-}

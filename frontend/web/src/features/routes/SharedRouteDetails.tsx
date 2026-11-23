@@ -202,14 +202,12 @@ export function sharedRouteDirection(
 }
 export function SharedRouteDetailsView({
   planningOnly = false,
-  seaDischarge,
   sea,
   air,
   customers,
   session,
 }: {
   planningOnly?: boolean;
-  seaDischarge?: ReactNode;
   sea?: SeaDetails;
   air?: AirDetails;
   customers: Counterparty[];
@@ -225,12 +223,8 @@ export function SharedRouteDetailsView({
         [translate('shipment.pod'), location(sea.pod)],
         [translate('route.departureTerminal'), company(sea.departure_terminal_id)],
         [translate('route.arrivalTerminal'), company(sea.arrival_terminal_id)],
-        ...(seaDischarge === undefined
-          ? ([
-              ['ETA', calendarDate(sea.eta)],
-              [translate('route.vesselDeparture'), calendarDate(sea.departure_date)],
-            ] satisfies [string, ReactNode][])
-          : []),
+        ['ETA', calendarDate(sea.eta)],
+        [translate('route.vesselDeparture'), calendarDate(sea.departure_date)],
         [translate('registryValue.type.vessel'), sea.vessel || '—'],
         [translate('route.voyage'), sea.voyage || '—'],
       ]
@@ -246,44 +240,26 @@ export function SharedRouteDetailsView({
           [translate('route.arrivalDate'), calendarDate(air.arrival_date)],
         ]
       : [];
-  return seaDischarge !== undefined || Object.values(sea ?? air ?? {}).some(Boolean) ? (
+  return Object.values(sea ?? air ?? {}).some(Boolean) ? (
     <>
-      {rows.length > 0 && (
-        <dl className="shared-route-values">
-          {rows
-            .filter(
-              ([label]) =>
-                !planningOnly ||
-                ![
-                  translate('route.vesselDeparture'),
-                  translate('route.departureDate'),
-                  translate('route.arrivalDate'),
-                ].includes(label),
-            )
-            .map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-        </dl>
-      )}
-      {seaDischarge !== undefined && (
-        <dl className="shared-route-values sea-route-dates">
-          <div>
-            <dt>ETA</dt>
-            <dd>{calendarDate(sea?.eta)}</dd>
-          </div>
-          <div>
-            <dt>{translate('route.vesselDeparture')}</dt>
-            <dd>{calendarDate(sea?.departure_date)}</dd>
-          </div>
-          <div>
-            <dt>{translate('transport.seaUnloadingDate')}</dt>
-            <dd>{seaDischarge}</dd>
-          </div>
-        </dl>
-      )}
+      <dl className="shared-route-values">
+        {rows
+          .filter(
+            ([label]) =>
+              !planningOnly ||
+              ![
+                translate('route.vesselDeparture'),
+                translate('route.departureDate'),
+                translate('route.arrivalDate'),
+              ].includes(label),
+          )
+          .map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+      </dl>
       {!planningOnly && (
         <RouteDocumentsView sea={sea} documents={sea?.documents ?? air?.documents} />
       )}

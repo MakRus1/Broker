@@ -50,7 +50,9 @@ export function RouteEditorFields({
         <div className="section-heading">
           <div>
             <h2>{translate('forms.routeLegs')}</h2>
-            <p className="hint">{translate('forms.railLegDatesDoNotIncludeATime')}</p>
+            {segments.some(({ mode }) => mode === 'rail' || mode === 'international_rail') && (
+              <p className="hint">{translate('forms.railLegDatesDoNotIncludeATime')}</p>
+            )}
           </div>
         </div>
         <div className="route-collapse-actions">
@@ -84,6 +86,21 @@ export function RouteEditorFields({
                   {sharedRouteDirection(sharedStage(route_segment), locale)}
                 </span>
               </summary>
+              {route_segment.mode === 'sea' && (
+                <div className="route-fields">
+                  <label>
+                    {translate('transport.seaUnloadingDate')}
+                    <IsoDateInput
+                      value={route_segment.sea_unloading_date ?? ''}
+                      min="1900-01-01"
+                      max={businessDate()}
+                      onChange={(date) =>
+                        update(index, { ...route_segment, sea_unloading_date: date || null })
+                      }
+                    />
+                  </label>
+                </div>
+              )}
               <div className="shared-route-inherited">
                 <a href={`#/shipments/${initial.shipment_id}/route`}>
                   {translate('forms.openShipmentRoute')}
@@ -93,19 +110,6 @@ export function RouteEditorFields({
                   air={sharedStage(route_segment).air}
                   customers={customers}
                   session={session}
-                  seaDischarge={
-                    route_segment.mode === 'sea' ? (
-                      <IsoDateInput
-                        aria-label={translate('transport.seaUnloadingDate')}
-                        value={route_segment.sea_unloading_date ?? ''}
-                        min="1900-01-01"
-                        max={businessDate()}
-                        onChange={(date) =>
-                          update(index, { ...route_segment, sea_unloading_date: date || null })
-                        }
-                      />
-                    ) : undefined
-                  }
                 />
               </div>
             </details>

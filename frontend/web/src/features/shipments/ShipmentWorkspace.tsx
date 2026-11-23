@@ -26,7 +26,15 @@ import type { ShipmentRouteSegment } from '../routes/types';
 import { localDate } from '../../shared/dates/calendar';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import { Commands } from '../../shared/api/commands';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -159,13 +167,16 @@ function ShipmentCard({
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (props.route.endsWith('/route')) setTab('route');
   }, [props.route]);
   const [editing, setEditing] = useState(!initial);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (props.active === false || (tab !== 'route' && tab !== 'items')) return;
-    const frame = requestAnimationFrame(() => {
+    let cancelled = false;
+    // Прокрутка после восстановления позиции вкладки, до показа карточки.
+    queueMicrotask(() => {
+      if (cancelled) return;
       const root = card.current;
       const selector =
         tab === 'route' ? '.shipment-route-workspace' : '[data-workflow-panel="items"]';
@@ -174,10 +185,12 @@ function ShipmentCard({
       );
       if (target) {
         scrollIntent();
-        target.scrollIntoView({ block: 'start' });
+        target.scrollIntoView({ block: 'start', behavior: 'instant' });
       }
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelled = true;
+    };
   }, [tab, editing, props.active, props.route]);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();

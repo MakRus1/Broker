@@ -48,9 +48,9 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
 
 template <typename Document>
 void CheckDocuments(const std::optional<std::vector<Document>>& documents) {
-    if (!documents)
+    if (!documents.has_value())
         return;
-    for (const auto& document : *documents) {
+    for (const auto& document : documents.value()) {
         if (document.number.find_first_not_of(" \t\r\n") == std::string::npos)
             throw ApiError<400>{"invalid_route_document", "Укажите номер документа"};
         CheckDate(document.date, true);
@@ -65,18 +65,19 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
                 throw ApiError<400>{
                     "unexpected_sea_details", "Морские поля доступны только участку «Море»"};
             const auto& sea = segment.sea.value();
-            if (sea.booking) {
-                CheckDate(sea.booking->placed_date, true);
-                CheckDate(sea.booking->confirmed_date, true);
-                if (sea.booking->placed_date && sea.booking->confirmed_date &&
-                    *sea.booking->placed_date > *sea.booking->confirmed_date)
+            if (sea.booking.has_value()) {
+                const auto& booking = sea.booking.value();
+                CheckDate(booking.placed_date, true);
+                CheckDate(booking.confirmed_date, true);
+                if (booking.placed_date.has_value() && booking.confirmed_date.has_value() &&
+                    booking.placed_date.value() > booking.confirmed_date.value())
                     throw ApiError<400>{
                         "invalid_booking_dates", "Букинг подтверждён раньше размещения"};
             }
-            if (sea.original_received)
-                CheckDate(sea.original_received->date, true);
-            if (sea.telex_release)
-                CheckDate(sea.telex_release->date, true);
+            if (sea.original_received.has_value())
+                CheckDate(sea.original_received.value().date, true);
+            if (sea.telex_release.has_value())
+                CheckDate(sea.telex_release.value().date, true);
             CheckDocuments(sea.documents);
             CheckDate(sea.eta, false);
             CheckDate(sea.departure_date, true);

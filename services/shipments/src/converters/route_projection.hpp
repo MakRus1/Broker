@@ -26,21 +26,22 @@ inline clients::transportations::models::SeaDetails ToRouteProjection(
         result.pol = ToRouteProjection(value.pol.value());
     if (value.pod.has_value())
         result.pod = ToRouteProjection(value.pod.value());
-    if (value.booking)
+    if (value.booking.has_value())
         result.booking = broker_codegen::ParseJson<clients::transportations::models::RouteBooking>(
-            userver::formats::json::ValueBuilder(*value.booking).ExtractValue());
-    if (value.documents)
+            userver::formats::json::ValueBuilder(value.booking.value()).ExtractValue());
+    if (value.documents.has_value())
         result.documents =
             broker_codegen::ParseJson<std::vector<clients::transportations::models::BillOfLading>>(
-                userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
-    if (value.original_received)
+                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
+    if (value.original_received.has_value())
         result.original_received =
             broker_codegen::ParseJson<clients::transportations::models::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
-    if (value.telex_release)
+                userver::formats::json::ValueBuilder(value.original_received.value())
+                    .ExtractValue());
+    if (value.telex_release.has_value())
         result.telex_release =
             broker_codegen::ParseJson<clients::transportations::models::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
+                userver::formats::json::ValueBuilder(value.telex_release.value()).ExtractValue());
     return result;
 }
 
@@ -56,10 +57,10 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
         result.origin_airport = ToRouteProjection(value.origin_airport.value());
     if (value.destination_airport.has_value())
         result.destination_airport = ToRouteProjection(value.destination_airport.value());
-    if (value.documents)
+    if (value.documents.has_value())
         result.documents =
             broker_codegen::ParseJson<std::vector<clients::transportations::models::AirWaybill>>(
-                userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
+                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
     return result;
 }
 

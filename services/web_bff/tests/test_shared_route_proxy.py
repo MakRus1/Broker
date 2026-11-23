@@ -138,7 +138,12 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
     await browser.sign_in()
     stage = {
         'id': str(uuid4()), 'mode': 'international_road',
-        'international_road': {'cmr_number': 'CMR-42'},
+        'international_road': {
+            'cmr_number': 'CMR-42',
+            'loading_address': 'Склад отправителя',
+            'unloading_terminal_id': str(uuid4()),
+            'unloading_address': 'Склад получателя',
+        },
     }
     sea = {'id': str(uuid4()), 'mode': 'sea', 'sea_unloading_date': '2020-01-02'}
     cleared = {'id': str(uuid4()), 'mode': 'sea'}

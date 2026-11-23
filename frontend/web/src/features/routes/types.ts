@@ -76,6 +76,9 @@ export interface RailwayStation {
 }
 export interface InternationalRoadDetails {
   loading_terminal_id?: string;
+  loading_address?: string;
+  unloading_terminal_id?: string;
+  unloading_address?: string;
   planned_loading_date?: string;
   planned_unloading_date?: string;
   departure_date?: string;

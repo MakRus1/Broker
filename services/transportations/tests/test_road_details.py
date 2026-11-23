@@ -21,6 +21,9 @@ async def create(api, shipment_routes, mode):
 def road():
     return {
         'loading_terminal_id': str(uuid4()),
+        'loading_address': 'Склад отправителя',
+        'unloading_terminal_id': str(uuid4()),
+        'unloading_address': 'Склад получателя',
         'planned_loading_date': '2030-01-01',
         'planned_unloading_date': '2030-01-03',
         'departure_date': '2020-01-01',
@@ -122,7 +125,8 @@ async def test_invalid_details_leave_revision(api, shipment_routes, mode, field,
     ]['revision'] == 1
 
 
-async def test_terminal_must_belong_to_organization(api, shipment_routes, mockserver):
+@pytest.mark.parametrize('field', ['loading_terminal_id', 'unloading_terminal_id'])
+async def test_terminal_must_belong_to_organization(api, shipment_routes, mockserver, field):
     created, stage = await create(api, shipment_routes, 'international_road')
 
     @mockserver.json_handler('/api/v1/counterparties/get')
@@ -136,7 +140,7 @@ async def test_terminal_must_belong_to_organization(api, shipment_routes, mockse
         {
             'transportation_id': created['id'],
             'expected_revision': 1,
-            'route_segments': [{**stage, 'international_road': road()}],
+            'route_segments': [{**stage, 'international_road': {field: str(uuid4())}}],
         },
         expected=400,
     )
@@ -163,6 +167,10 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
             'id': str(uuid4()), 'shipment_id': shipment_id, 'type': 'container', 'hazardous': False,
         }))['transportation']
         details = {'vehicle_number': vehicle, date_field: date}
+        if mode == 'international_road':
+            details['loading_address'] = f'Склад отправления {vehicle}'
+            details['unloading_address'] = f'Склад назначения {vehicle}'
+            details['unloading_terminal_id'] = str(uuid4())
         saved = (await api.post('/api/v1/transportations/update', {
             'transportation_id': created['id'], 'expected_revision': created['revision'],
             'type': 'container', 'hazardous': False,

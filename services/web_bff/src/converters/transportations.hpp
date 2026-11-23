@@ -11,11 +11,14 @@ inline models::transportations::InternationalRoadDetails Convert(
     const clients::transportations::models::InternationalRoadDetails& value) {
     return {.cmr_number = value.cmr_number,
         .departure_date = value.departure_date,
+        .loading_address = value.loading_address,
         .loading_terminal_id = value.loading_terminal_id,
         .planned_loading_date = value.planned_loading_date,
         .planned_unloading_date = value.planned_unloading_date,
         .trailer_number = value.trailer_number,
+        .unloading_address = value.unloading_address,
         .unloading_date = value.unloading_date,
+        .unloading_terminal_id = value.unloading_terminal_id,
         .vehicle_number = value.vehicle_number};
 }
 
@@ -23,11 +26,14 @@ inline clients::transportations::models::InternationalRoadDetails Convert(
     const models::transportations::InternationalRoadDetails& value) {
     return {.cmr_number = value.cmr_number,
         .departure_date = value.departure_date,
+        .loading_address = value.loading_address,
         .loading_terminal_id = value.loading_terminal_id,
         .planned_loading_date = value.planned_loading_date,
         .planned_unloading_date = value.planned_unloading_date,
         .trailer_number = value.trailer_number,
+        .unloading_address = value.unloading_address,
         .unloading_date = value.unloading_date,
+        .unloading_terminal_id = value.unloading_terminal_id,
         .vehicle_number = value.vehicle_number};
 }
 

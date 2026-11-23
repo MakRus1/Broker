@@ -76,9 +76,11 @@ export function TransportationPage({
       ...new Set([
         ...(shipment ? [shipment.customer_id] : []),
         ...(transportation?.route_segments.flatMap((item) =>
-          [item.contractor_id, item.international_road?.loading_terminal_id].filter(
-            (id): id is string => Boolean(id),
-          ),
+          [
+            item.contractor_id,
+            item.international_road?.loading_terminal_id,
+            item.international_road?.unloading_terminal_id,
+          ].filter((id): id is string => Boolean(id)),
         ) ?? []),
       ]),
     ].filter((id) => !suppliedCustomers.some((item) => item.id === id));

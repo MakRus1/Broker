@@ -140,3 +140,42 @@ async def test_terminal_must_belong_to_organization(api, shipment_routes, mockse
         },
         expected=400,
     )
+
+
+@pytest.mark.parametrize(
+    'mode,field,date_field',
+    [
+        ('international_road', 'international_road', 'planned_loading_date'),
+        ('pickup', 'pickup', 'planned_pickup_date'),
+    ],
+)
+async def test_shared_plan_update_preserves_each_vehicles_details(
+    api, shipment_routes, mode, field, date_field
+):
+    shipment_id = str(uuid4())
+    stage = route_segment(mode)
+    stage['plan'] = {'destination_name': 'Москва', 'departure_date': '2030-01-10'}
+    shipment_routes.set(shipment_id, [stage])
+    details_by_id = {}
+
+    for vehicle, date in [('А123ВС', '2030-01-11'), ('В456СА', '2030-01-12')]:
+        created = (await api.post('/api/v1/transportations/create', {
+            'id': str(uuid4()), 'shipment_id': shipment_id, 'type': 'container', 'hazardous': False,
+        }))['transportation']
+        details = {'vehicle_number': vehicle, date_field: date}
+        saved = (await api.post('/api/v1/transportations/update', {
+            'transportation_id': created['id'], 'expected_revision': created['revision'],
+            'type': 'container', 'hazardous': False,
+            'route_segments': [{'id': stage['id'], 'mode': mode, field: details}],
+        }))['transportation']
+        assert saved['route_segments'][0][field] == details
+        details_by_id[created['id']] = details
+
+    stage['plan'] = {'destination_name': 'Казань', 'departure_date': '2030-01-09'}
+    shipment_routes.set(shipment_id, [stage], revision=2)
+    for transportation_id, details in details_by_id.items():
+        fetched = (await api.post('/api/v1/transportations/get', {
+            'transportation_id': transportation_id,
+        }))['transportation']['route_segments'][0]
+        assert fetched['plan'] == stage['plan']
+        assert fetched[field] == details

@@ -148,3 +148,26 @@
   width: 1%;
   white-space: nowrap;
 }
+
+.route-discharge {
+  box-sizing: border-box;
+  display: grid;
+  gap: 6px;
+  width: min(100%, 15rem);
+  margin: 16px 0 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+.route-discharge label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.route-discharge dt {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.route-discharge dd {
+  margin: 0;
+}

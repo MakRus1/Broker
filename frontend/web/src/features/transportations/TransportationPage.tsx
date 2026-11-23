@@ -486,11 +486,9 @@ export function RouteView({
                 session={session}
               />
               {route_segment.mode === 'sea' && (
-                <dl className="shared-route-values">
-                  <div>
-                    <dt>{translate('transport.seaUnloadingDate')}</dt>
-                    <dd>{calendarDate(route_segment.sea_unloading_date ?? undefined)}</dd>
-                  </div>
+                <dl className="route-discharge">
+                  <dt>{translate('transport.seaUnloadingDate')}</dt>
+                  <dd>{calendarDate(route_segment.sea_unloading_date ?? undefined)}</dd>
                 </dl>
               )}
             </>

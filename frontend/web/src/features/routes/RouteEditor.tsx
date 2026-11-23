@@ -96,7 +96,7 @@ export function RouteEditorFields({
                 />
               </div>
               {route_segment.mode === 'sea' && (
-                <div className="record-fields">
+                <div className="route-discharge">
                   <label>
                     {translate('transport.seaUnloadingDate')}
                     <IsoDateInput

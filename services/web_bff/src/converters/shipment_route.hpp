@@ -1,7 +1,6 @@
 #pragma once
 #include <clients/shipments/client.hpp>
 #include <openapi/models.hpp>
-#include <platform/route_document_conversion.hpp>
 
 namespace web_bff::converters {
 inline models::shipments::TransportLocation Convert(
@@ -36,14 +35,32 @@ inline models::shipments::SeaDetails Convert(const clients::shipments::models::S
         result.vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
-    result.booking = platform::CopyRouteBooking<models::shipments::RouteBooking>(value.booking);
-    result.documents =
-        platform::CopyBillsOfLading<models::shipments::BillOfLading>(value.documents);
-    result.original_received =
-        platform::CopyRouteDocumentEvent<models::shipments::RouteDocumentEvent>(
-            value.original_received);
-    result.telex_release = platform::CopyRouteDocumentEvent<models::shipments::RouteDocumentEvent>(
-        value.telex_release);
+    if (value.booking.has_value()) {
+        const auto& source = value.booking.value();
+        auto& booking = result.booking.emplace();
+        booking.number = source.number;
+        booking.placed_date = source.placed_date;
+        booking.confirmed_date = source.confirmed_date;
+        if (source.status.has_value())
+            booking.status = models::shipments::ParseEnumScalar(
+                EnumValue(source.status.value()), models::shipments::RouteBooking_status{});
+    }
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+            if (source.leg.has_value())
+                document.leg = models::shipments::ParseEnumScalar(
+                    EnumValue(source.leg.value()), models::shipments::BillOfLading_leg{});
+        }
+    }
+    if (value.original_received.has_value())
+        result.original_received.emplace().date = value.original_received.value().date;
+    if (value.telex_release.has_value())
+        result.telex_release.emplace().date = value.telex_release.value().date;
     return result;
 }
 
@@ -65,7 +82,15 @@ inline models::shipments::AirDetails Convert(const clients::shipments::models::A
         result.arrival_date = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
-    result.documents = platform::CopyAirWaybills<models::shipments::AirWaybill>(value.documents);
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+        }
+    }
     return result;
 }
 
@@ -101,16 +126,33 @@ inline clients::shipments::models::SeaDetails Convert(const models::shipments::S
         result.vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
-    result.booking =
-        platform::CopyRouteBooking<clients::shipments::models::RouteBooking>(value.booking);
-    result.documents =
-        platform::CopyBillsOfLading<clients::shipments::models::BillOfLading>(value.documents);
-    result.original_received =
-        platform::CopyRouteDocumentEvent<clients::shipments::models::RouteDocumentEvent>(
-            value.original_received);
-    result.telex_release =
-        platform::CopyRouteDocumentEvent<clients::shipments::models::RouteDocumentEvent>(
-            value.telex_release);
+    if (value.booking.has_value()) {
+        const auto& source = value.booking.value();
+        auto& booking = result.booking.emplace();
+        booking.number = source.number;
+        booking.placed_date = source.placed_date;
+        booking.confirmed_date = source.confirmed_date;
+        if (source.status.has_value())
+            booking.status =
+                clients::shipments::models::ParseEnumScalar(EnumValue(source.status.value()),
+                    clients::shipments::models::RouteBooking_status{});
+    }
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+            if (source.leg.has_value())
+                document.leg = clients::shipments::models::ParseEnumScalar(
+                    EnumValue(source.leg.value()), clients::shipments::models::BillOfLading_leg{});
+        }
+    }
+    if (value.original_received.has_value())
+        result.original_received.emplace().date = value.original_received.value().date;
+    if (value.telex_release.has_value())
+        result.telex_release.emplace().date = value.telex_release.value().date;
     return result;
 }
 
@@ -132,8 +174,15 @@ inline clients::shipments::models::AirDetails Convert(const models::shipments::A
         result.arrival_date = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
-    result.documents =
-        platform::CopyAirWaybills<clients::shipments::models::AirWaybill>(value.documents);
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+        }
+    }
     return result;
 }
 

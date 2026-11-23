@@ -1,7 +1,6 @@
 #pragma once
 #include <clients/transportations/client.hpp>
 #include <openapi/models.hpp>
-#include <platform/route_document_conversion.hpp>
 
 namespace web_bff::converters {
 inline models::transportations::TransportLocation Convert(
@@ -37,16 +36,32 @@ inline models::transportations::SeaDetails Convert(
         result.vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
-    result.booking =
-        platform::CopyRouteBooking<models::transportations::RouteBooking>(value.booking);
-    result.documents =
-        platform::CopyBillsOfLading<models::transportations::BillOfLading>(value.documents);
-    result.original_received =
-        platform::CopyRouteDocumentEvent<models::transportations::RouteDocumentEvent>(
-            value.original_received);
-    result.telex_release =
-        platform::CopyRouteDocumentEvent<models::transportations::RouteDocumentEvent>(
-            value.telex_release);
+    if (value.booking.has_value()) {
+        const auto& source = value.booking.value();
+        auto& booking = result.booking.emplace();
+        booking.number = source.number;
+        booking.placed_date = source.placed_date;
+        booking.confirmed_date = source.confirmed_date;
+        if (source.status.has_value())
+            booking.status = models::transportations::ParseEnumScalar(
+                EnumValue(source.status.value()), models::transportations::RouteBooking_status{});
+    }
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+            if (source.leg.has_value())
+                document.leg = models::transportations::ParseEnumScalar(
+                    EnumValue(source.leg.value()), models::transportations::BillOfLading_leg{});
+        }
+    }
+    if (value.original_received.has_value())
+        result.original_received.emplace().date = value.original_received.value().date;
+    if (value.telex_release.has_value())
+        result.telex_release.emplace().date = value.telex_release.value().date;
     return result;
 }
 
@@ -69,8 +84,15 @@ inline models::transportations::AirDetails Convert(
         result.arrival_date = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
-    result.documents =
-        platform::CopyAirWaybills<models::transportations::AirWaybill>(value.documents);
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+        }
+    }
     return result;
 }
 }  // namespace web_bff::converters

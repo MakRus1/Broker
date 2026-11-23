@@ -1,7 +1,6 @@
 #pragma once
 #include <clients/transportations/client.hpp>
 #include <openapi/models.hpp>
-#include <platform/route_document_conversion.hpp>
 
 namespace shipments::converters {
 inline clients::transportations::models::TransportLocation ToRouteProjection(
@@ -27,16 +26,34 @@ inline clients::transportations::models::SeaDetails ToRouteProjection(
         result.pol = ToRouteProjection(value.pol.value());
     if (value.pod.has_value())
         result.pod = ToRouteProjection(value.pod.value());
-    result.booking =
-        platform::CopyRouteBooking<clients::transportations::models::RouteBooking>(value.booking);
-    result.documents = platform::CopyBillsOfLading<clients::transportations::models::BillOfLading>(
-        value.documents);
-    result.original_received =
-        platform::CopyRouteDocumentEvent<clients::transportations::models::RouteDocumentEvent>(
-            value.original_received);
-    result.telex_release =
-        platform::CopyRouteDocumentEvent<clients::transportations::models::RouteDocumentEvent>(
-            value.telex_release);
+    if (value.booking.has_value()) {
+        const auto& source = value.booking.value();
+        auto& booking = result.booking.emplace();
+        booking.number = source.number;
+        booking.placed_date = source.placed_date;
+        booking.confirmed_date = source.confirmed_date;
+        if (source.status.has_value())
+            booking.status =
+                clients::transportations::models::ParseEnumScalar(EnumValue(source.status.value()),
+                    clients::transportations::models::RouteBooking_status{});
+    }
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+            if (source.leg.has_value())
+                document.leg =
+                    clients::transportations::models::ParseEnumScalar(EnumValue(source.leg.value()),
+                        clients::transportations::models::BillOfLading_leg{});
+        }
+    }
+    if (value.original_received.has_value())
+        result.original_received.emplace().date = value.original_received.value().date;
+    if (value.telex_release.has_value())
+        result.telex_release.emplace().date = value.telex_release.value().date;
     return result;
 }
 
@@ -52,8 +69,15 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
         result.origin_airport = ToRouteProjection(value.origin_airport.value());
     if (value.destination_airport.has_value())
         result.destination_airport = ToRouteProjection(value.destination_airport.value());
-    result.documents =
-        platform::CopyAirWaybills<clients::transportations::models::AirWaybill>(value.documents);
+    if (value.documents.has_value()) {
+        auto& documents = result.documents.emplace();
+        documents.reserve(value.documents.value().size());
+        for (const auto& source : value.documents.value()) {
+            auto& document = documents.emplace_back();
+            document.number = source.number;
+            document.date = source.date;
+        }
+    }
     return result;
 }
 

@@ -9,6 +9,7 @@ import {
   type RegistryColumn,
 } from '../registry/RegistryTable';
 import type { RegistrySort } from './transportationRegistry';
+import { calendarDate } from '../../shared/dates/calendar';
 import { routePoint } from './transportation';
 import { RegistryRoute } from '../routes/RegistryRoute';
 import type { ReactNode } from 'react';
@@ -61,6 +62,14 @@ function RouteRegistrySummary({ item }: { item: Transportation }) {
       segments={item.route_segments.map((stage) => ({
         id: stage.id,
         type: stage.mode,
+        detail:
+          stage.mode === 'sea'
+            ? stage.sea_unloading_date
+              ? translate('transport.seaUnloadedOn', {
+                  date: calendarDate(stage.sea_unloading_date),
+                })
+              : translate('transport.seaUnloadingMissing')
+            : undefined,
         direction: `${routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} → ${routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}`,
       }))}
     />

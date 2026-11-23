@@ -101,3 +101,54 @@ async def test_inherited_plan_is_live_and_not_overwritten_by_execution(api, ship
     shipment_routes.set(shipment, [stage], revision=2)
     fetched = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
     assert fetched['route_segments'][0]['plan'] == stage['plan']
+
+
+async def test_sea_unloading_is_a_fact_of_each_transportation(api, shipment_routes):
+    shipment = str(uuid4())
+    stage = route_segment('sea')
+    stage['sea'] = {'vessel': 'Shared vessel', 'voyage': '42', 'eta': '2020-01-01'}
+    shipment_routes.set(shipment, [stage])
+    request_stage = {'id': stage['id'], 'mode': 'sea'}
+    dates = {}
+    for date in ('2020-01-02', '2020-01-03'):
+        created = (await api.post('/api/v1/transportations/create', {
+            'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container', 'hazardous': False,
+        }))['transportation']
+        body = {
+            'transportation_id': created['id'], 'expected_revision': created['revision'],
+            'type': 'container', 'hazardous': False,
+        }
+        await api.post('/api/v1/transportations/update', {
+            **body, 'route_segments': [{**request_stage, 'sea_unloading_date': '9999-01-01'}],
+        }, expected=400)
+        saved = (await api.post('/api/v1/transportations/update', {
+            **body, 'route_segments': [{**request_stage, 'sea_unloading_date': date}],
+        }))['transportation']
+        assert saved['route_segments'][0]['sea_unloading_date'] == date
+        assert saved['route_segments'][0]['sea'] == stage['sea']
+        dates[created['id']] = date
+
+    stage['sea']['eta'] = '2020-01-02'
+    shipment_routes.set(shipment, [stage], revision=2)
+    listed = (await api.post('/api/v1/transportations/list', {
+        'filters': [{'field': 'shipment_id', 'values': [shipment]}],
+    }))['items']
+    assert {item['id']: item['route_segments'][0]['sea_unloading_date'] for item in listed} == dates
+    assert all(item['route_segments'][0]['sea'] == stage['sea'] for item in listed)
+
+    first, second = listed
+    retained = (await api.post('/api/v1/transportation-routes/set', {
+        'transportation_id': first['id'], 'expected_revision': first['revision'],
+        'route_segments': [request_stage],
+    }))['transportation']
+    assert retained['route_segments'][0]['sea_unloading_date'] == dates[first['id']]
+    cleared = (await api.post('/api/v1/transportations/update', {
+        'transportation_id': first['id'], 'expected_revision': retained['revision'],
+        'type': 'container', 'hazardous': False,
+        'route_segments': [{**request_stage, 'sea_unloading_date': None}],
+    }))['transportation']
+    assert 'sea_unloading_date' not in cleared['route_segments'][0]
+    other = (await api.post('/api/v1/transportations/get', {
+        'transportation_id': second['id'],
+    }))['transportation']
+    assert other['route_segments'][0]['sea_unloading_date'] == dates[second['id']]

@@ -15,7 +15,7 @@ bool HasRouteData(const models::RouteSegment& segment) {
         segment.rail.has_value() || filled(segment.origin) || filled(segment.destination) ||
         segment.contractor_id.has_value() || segment.planned_departure_at.has_value() ||
         segment.planned_arrival_at.has_value() || segment.actual_departure_at.has_value() ||
-        segment.actual_arrival_at.has_value();
+        segment.actual_arrival_at.has_value() || segment.sea_unloading_date.has_value();
 }
 
 const models::ShipmentContext& FindShipmentContext(

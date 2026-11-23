@@ -2,7 +2,8 @@ import { RouteStageTitle } from './RouteStageTitle';
 import { RoutePlanView } from './RoutePlan';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
-import { DateTimeInput } from '../../shared/dates/DateInput';
+import { DateTimeInput, IsoDateInput } from '../../shared/dates/DateInput';
+import { businessDate } from '../../shared/dates/calendar';
 import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
 import {
@@ -94,6 +95,21 @@ export function RouteEditorFields({
                   session={session}
                 />
               </div>
+              {route_segment.mode === 'sea' && (
+                <div className="record-fields">
+                  <label>
+                    {translate('transport.seaUnloadingDate')}
+                    <IsoDateInput
+                      value={route_segment.sea_unloading_date ?? ''}
+                      min="1900-01-01"
+                      max={businessDate()}
+                      onChange={(date) =>
+                        update(index, { ...route_segment, sea_unloading_date: date || null })
+                      }
+                    />
+                  </label>
+                </div>
+              )}
             </details>
           ) : (
             <details

@@ -123,6 +123,9 @@ export function routeSegment(value: RouteSegment): PlannedRouteSegment {
         : {}),
     ...(value.international_road ? { international_road: { ...value.international_road } } : {}),
     ...(value.pickup ? { pickup: { ...value.pickup } } : {}),
+    ...(value.mode === 'sea' && value.sea_unloading_date !== undefined
+      ? { sea_unloading_date: value.sea_unloading_date }
+      : {}),
     id: value.id,
     mode: value.mode,
     ...(value.origin && value.mode !== 'rail' && value.mode !== 'international_rail'

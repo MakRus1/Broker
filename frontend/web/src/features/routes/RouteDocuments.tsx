@@ -40,7 +40,7 @@ export function RouteDocumentsEditor({
       {sea && onSea && (
         <div className="record-fields">
           <label>
-            {translate('route.documents.bookingNumber')}
+            <span className="field-label">{translate('route.documents.bookingNumber')}</span>
             <input
               maxLength={128}
               value={booking.number ?? ''}
@@ -62,21 +62,21 @@ export function RouteDocumentsEditor({
             }
           />
           <label>
-            {translate('route.documents.placedDate')}
+            <span className="field-label">{translate('route.documents.placedDate')}</span>
             <IsoDateInput
               value={booking.placed_date ?? ''}
               onChange={(value) => updateBooking({ placed_date: value || undefined })}
             />
           </label>
           <label>
-            {translate('route.documents.confirmedDate')}
+            <span className="field-label">{translate('route.documents.confirmedDate')}</span>
             <IsoDateInput
               value={booking.confirmed_date ?? ''}
               onChange={(value) => updateBooking({ confirmed_date: value || undefined })}
             />
           </label>
           {events.map(([key, label]) => (
-            <div key={key}>
+            <div className="route-document-event" key={key}>
               <label className="inline-check">
                 <input
                   type="checkbox"
@@ -98,51 +98,15 @@ export function RouteDocumentsEditor({
           ))}
         </div>
       )}
-      {documents.map((document, index) => (
-        <div className="record-fields" key={index}>
-          {sea && (
-            <Select
-              label={translate('route.documents.role')}
-              value={document.role ?? ''}
-              options={[
-                { value: '', label: '—' },
-                { value: 'ocean', label: translate('route.documents.ocean') },
-                { value: 'feeder', label: translate('route.documents.feeder') },
-              ]}
-              onChange={(role) =>
-                updateDocument(index, {
-                  role: role === 'ocean' || role === 'feeder' ? role : undefined,
-                })
-              }
-            />
-          )}
-          <label>
-            {translate(sea ? 'route.documents.billNumber' : 'route.documents.airNumber')}
-            <input
-              required
-              maxLength={128}
-              value={document.number}
-              onChange={(event) => updateDocument(index, { number: event.target.value })}
-            />
-          </label>
-          <label>
-            {translate('route.documents.date')}
-            <IsoDateInput
-              value={document.date ?? ''}
-              onChange={(value) => updateDocument(index, { date: value || undefined })}
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              const next = documents.filter((_, position) => position !== index);
-              onDocuments(next.length ? next : undefined);
-            }}
-          >
-            {translate('route.documents.remove')}
-          </button>
-        </div>
-      ))}
+      <RouteDocumentTable
+        sea={Boolean(sea)}
+        documents={documents}
+        onChange={updateDocument}
+        onRemove={(index) => {
+          const next = documents.filter((_, position) => position !== index);
+          onDocuments(next.length ? next : undefined);
+        }}
+      />
       <button
         type="button"
         disabled={documents.length >= 20}
@@ -206,25 +170,6 @@ export function RouteDocumentsView({
             <dd>{calendarDate(booking.confirmed_date)}</dd>
           </div>
         )}
-        {documents.map((document, index) => (
-          <div key={index}>
-            <dt>
-              {translate(
-                document.type === 'air_waybill'
-                  ? 'route.documents.airNumber'
-                  : document.role === 'ocean'
-                    ? 'route.documents.ocean'
-                    : document.role === 'feeder'
-                      ? 'route.documents.feeder'
-                      : 'route.documents.billNumber',
-              )}
-            </dt>
-            <dd>
-              {document.number}
-              {document.date && ` · ${calendarDate(document.date)}`}
-            </dd>
-          </div>
-        ))}
         {events.map(
           ([key, label]) =>
             sea?.[key] && (
@@ -239,6 +184,108 @@ export function RouteDocumentsView({
             ),
         )}
       </dl>
+      <RouteDocumentTable sea={Boolean(sea)} documents={documents} />
     </section>
+  );
+}
+
+function RouteDocumentTable({
+  sea,
+  documents,
+  onChange,
+  onRemove,
+}: {
+  sea: boolean;
+  documents: RouteDocument[];
+  onChange?: (index: number, change: Partial<RouteDocument>) => void;
+  onRemove?: (index: number) => void;
+}) {
+  const { translate } = useLocalization();
+  const title = translate(sea ? 'route.documents.bills' : 'route.documents.airWaybills');
+  const numberLabel = translate(sea ? 'route.documents.billNumber' : 'route.documents.airNumber');
+  const roleLabel = translate('route.documents.role');
+  const dateLabel = translate('route.documents.date');
+  const roles = [
+    { value: '', label: '—' },
+    { value: 'ocean', label: translate('route.documents.ocean') },
+    { value: 'feeder', label: translate('route.documents.feeder') },
+  ];
+  if (!documents.length) return null;
+  return (
+    <div className="route-document-table-scroll">
+      <table className={onChange ? 'route-document-table is-editing' : 'route-document-table'}>
+        <caption>{title}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{numberLabel}</th>
+            {sea && <th scope="col">{roleLabel}</th>}
+            <th scope="col">{dateLabel}</th>
+            {onRemove && (
+              <th scope="col">
+                <span className="visually-hidden">{translate('route.documents.remove')}</span>
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {documents.map((document, index) => (
+            <tr key={index}>
+              <td>
+                {onChange ? (
+                  <input
+                    aria-label={numberLabel}
+                    required
+                    maxLength={128}
+                    value={document.number}
+                    onChange={(event) => onChange(index, { number: event.target.value })}
+                  />
+                ) : (
+                  document.number
+                )}
+              </td>
+              {sea && (
+                <td>
+                  {onChange ? (
+                    <Select
+                      label={roleLabel}
+                      hideLabel
+                      value={document.role ?? ''}
+                      options={roles}
+                      onChange={(role) =>
+                        onChange(index, {
+                          role: role === 'ocean' || role === 'feeder' ? role : undefined,
+                        })
+                      }
+                    />
+                  ) : (
+                    roles.find(({ value }) => value === (document.role ?? ''))?.label
+                  )}
+                </td>
+              )}
+              <td>
+                {onChange ? (
+                  <IsoDateInput
+                    aria-label={dateLabel}
+                    value={document.date ?? ''}
+                    onChange={(value) => onChange(index, { date: value || undefined })}
+                  />
+                ) : document.date ? (
+                  calendarDate(document.date)
+                ) : (
+                  '—'
+                )}
+              </td>
+              {onRemove && (
+                <td className="route-document-action">
+                  <button type="button" onClick={() => onRemove(index)}>
+                    {translate('route.documents.remove')}
+                  </button>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

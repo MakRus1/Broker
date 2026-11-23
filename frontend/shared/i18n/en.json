@@ -1512,6 +1512,8 @@
   "rfq.routeDetailsChanged": "Also check dates and segment details: any change requires quotation confirmation.",
   "rfq.assembleAttention": "Build proposal · review required: {count}",
   "route.documents.bookingTitle": "Booking and documents",
+  "route.documents.bills": "Bills of lading",
+  "route.documents.airWaybills": "Air waybills",
   "route.documents.title": "Transport documents",
   "route.documents.bookingNumber": "Booking number",
   "route.documents.bookingStatus": "Booking status",

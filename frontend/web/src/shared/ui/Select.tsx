@@ -28,6 +28,7 @@ export function Select({
   disabled = false,
   searchable = false,
   selectedLabel,
+  hideLabel = false,
 }: {
   label: string;
   value: string;
@@ -36,6 +37,7 @@ export function Select({
   disabled?: boolean;
   searchable?: boolean;
   selectedLabel?: string;
+  hideLabel?: boolean;
 }) {
   const { translate } = useLocalization();
   const id = useId();
@@ -118,7 +120,7 @@ export function Select({
           setOpen(false);
       }}
     >
-      <span className="field-label" id={`${id}-label`}>
+      <span className={hideLabel ? 'visually-hidden' : 'field-label'} id={`${id}-label`}>
         {label}
       </span>
       <button

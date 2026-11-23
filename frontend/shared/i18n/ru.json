@@ -1512,6 +1512,8 @@
   "rfq.routeDetailsChanged": "Также проверьте даты и подробности участка: любое изменение требует подтверждения котировки.",
   "rfq.assembleAttention": "Сборка предложения · требуют проверки: {count}",
   "route.documents.bookingTitle": "Букинг и документы",
+  "route.documents.bills": "Коносаменты",
+  "route.documents.airWaybills": "Авианакладные",
   "route.documents.title": "Транспортные документы",
   "route.documents.bookingNumber": "Номер букинга",
   "route.documents.bookingStatus": "Статус букинга",

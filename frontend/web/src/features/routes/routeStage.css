@@ -97,10 +97,12 @@
 .route-documents {
   display: grid;
   grid-column: 1 / -1;
-  gap: 12px;
-  margin-block-start: 16px;
-  padding-block-start: 12px;
-  border-top: 1px solid var(--divider);
+  gap: 16px;
+  min-width: 0;
+  margin-block-start: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface-muted);
 }
 .route-documents h4,
 .route-documents .shared-route-values {
@@ -108,4 +110,41 @@
 }
 .route-documents > button {
   justify-self: start;
+}
+.route-documents .record-fields > :is(label, .app-select),
+.route-document-event {
+  display: grid;
+  gap: 6px;
+}
+.record-workbench .route-documents .record-fields > label {
+  display: grid;
+}
+.route-document-table-scroll {
+  overflow-x: auto;
+}
+.route-document-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.route-document-table.is-editing {
+  min-width: 36rem;
+}
+.route-document-table caption {
+  padding-block-end: 8px;
+  text-align: start;
+  font-weight: 600;
+}
+.route-document-table :is(th, td) {
+  padding: 8px;
+  border-bottom: 1px solid var(--divider);
+  text-align: start;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.route-document-table th {
+  color: var(--text-secondary);
+}
+.route-document-table .route-document-action {
+  width: 1%;
+  white-space: nowrap;
 }

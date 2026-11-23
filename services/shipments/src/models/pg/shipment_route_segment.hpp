@@ -22,7 +22,7 @@ struct ShipmentRouteSegment {
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::shipments::models::pg::ShipmentRouteSegment> {
-    static constexpr DBTypeName postgres_name = "public.shipment_route_segment_v5";
+    static constexpr DBTypeName postgres_name = "public.shipment_route_segment_v6";
 };
 
 }  // namespace userver::storages::postgres::io

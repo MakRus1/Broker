@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/transportations/client.hpp>
 #include <openapi/models.hpp>
+#include <platform/route_document_conversion.hpp>
 
 namespace shipments::converters {
 inline clients::transportations::models::TransportLocation ToRouteProjection(
@@ -26,22 +27,16 @@ inline clients::transportations::models::SeaDetails ToRouteProjection(
         result.pol = ToRouteProjection(value.pol.value());
     if (value.pod.has_value())
         result.pod = ToRouteProjection(value.pod.value());
-    if (value.booking.has_value())
-        result.booking = broker_codegen::ParseJson<clients::transportations::models::RouteBooking>(
-            userver::formats::json::ValueBuilder(value.booking.value()).ExtractValue());
-    if (value.documents.has_value())
-        result.documents =
-            broker_codegen::ParseJson<std::vector<clients::transportations::models::BillOfLading>>(
-                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
-    if (value.original_received.has_value())
-        result.original_received =
-            broker_codegen::ParseJson<clients::transportations::models::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(value.original_received.value())
-                    .ExtractValue());
-    if (value.telex_release.has_value())
-        result.telex_release =
-            broker_codegen::ParseJson<clients::transportations::models::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(value.telex_release.value()).ExtractValue());
+    result.booking =
+        platform::CopyRouteBooking<clients::transportations::models::RouteBooking>(value.booking);
+    result.documents = platform::CopyBillsOfLading<clients::transportations::models::BillOfLading>(
+        value.documents);
+    result.original_received =
+        platform::CopyRouteDocumentEvent<clients::transportations::models::RouteDocumentEvent>(
+            value.original_received);
+    result.telex_release =
+        platform::CopyRouteDocumentEvent<clients::transportations::models::RouteDocumentEvent>(
+            value.telex_release);
     return result;
 }
 
@@ -57,10 +52,8 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
         result.origin_airport = ToRouteProjection(value.origin_airport.value());
     if (value.destination_airport.has_value())
         result.destination_airport = ToRouteProjection(value.destination_airport.value());
-    if (value.documents.has_value())
-        result.documents =
-            broker_codegen::ParseJson<std::vector<clients::transportations::models::AirWaybill>>(
-                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
+    result.documents =
+        platform::CopyAirWaybills<clients::transportations::models::AirWaybill>(value.documents);
     return result;
 }
 
@@ -80,8 +73,8 @@ inline clients::transportations::models::ProjectedRouteSegment ToRouteProjection
     const models::ShipmentRouteSegment& value) {
     clients::transportations::models::ProjectedRouteSegment result{
         .id = value.id, .type = value.type};
-    if (value.plan)
-        result.plan = ToRouteProjection(*value.plan);
+    if (value.plan.has_value())
+        result.plan = ToRouteProjection(value.plan.value());
     if (value.sea.has_value())
         result.sea = ToRouteProjection(value.sea.value());
     if (value.air.has_value())

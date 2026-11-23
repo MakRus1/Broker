@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/transportations/client.hpp>
 #include <openapi/models.hpp>
+#include <platform/route_document_conversion.hpp>
 
 namespace web_bff::converters {
 inline models::transportations::TransportLocation Convert(
@@ -36,22 +37,16 @@ inline models::transportations::SeaDetails Convert(
         result.vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
-    if (value.booking.has_value())
-        result.booking = broker_codegen::ParseJson<models::transportations::RouteBooking>(
-            userver::formats::json::ValueBuilder(value.booking.value()).ExtractValue());
-    if (value.documents.has_value())
-        result.documents =
-            broker_codegen::ParseJson<std::vector<models::transportations::BillOfLading>>(
-                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
-    if (value.original_received.has_value())
-        result.original_received =
-            broker_codegen::ParseJson<models::transportations::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(value.original_received.value())
-                    .ExtractValue());
-    if (value.telex_release.has_value())
-        result.telex_release =
-            broker_codegen::ParseJson<models::transportations::RouteDocumentEvent>(
-                userver::formats::json::ValueBuilder(value.telex_release.value()).ExtractValue());
+    result.booking =
+        platform::CopyRouteBooking<models::transportations::RouteBooking>(value.booking);
+    result.documents =
+        platform::CopyBillsOfLading<models::transportations::BillOfLading>(value.documents);
+    result.original_received =
+        platform::CopyRouteDocumentEvent<models::transportations::RouteDocumentEvent>(
+            value.original_received);
+    result.telex_release =
+        platform::CopyRouteDocumentEvent<models::transportations::RouteDocumentEvent>(
+            value.telex_release);
     return result;
 }
 
@@ -74,10 +69,8 @@ inline models::transportations::AirDetails Convert(
         result.arrival_date = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
-    if (value.documents.has_value())
-        result.documents =
-            broker_codegen::ParseJson<std::vector<models::transportations::AirWaybill>>(
-                userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
+    result.documents =
+        platform::CopyAirWaybills<models::transportations::AirWaybill>(value.documents);
     return result;
 }
 }  // namespace web_bff::converters

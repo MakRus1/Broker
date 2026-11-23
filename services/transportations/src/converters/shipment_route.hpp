@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/shipments/client.hpp>
 #include <openapi/models.hpp>
+#include <platform/route_document_conversion.hpp>
 
 namespace transportations::converters {
 inline models::TransportLocation Convert(
@@ -35,18 +36,12 @@ inline models::SeaDetails Convert(const clients::shipments::models::SeaDetails& 
         result.vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
-    if (value.booking.has_value())
-        result.booking = broker_codegen::ParseJson<models::RouteBooking>(
-            userver::formats::json::ValueBuilder(value.booking.value()).ExtractValue());
-    if (value.documents.has_value())
-        result.documents = broker_codegen::ParseJson<std::vector<models::BillOfLading>>(
-            userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
-    if (value.original_received.has_value())
-        result.original_received = broker_codegen::ParseJson<models::RouteDocumentEvent>(
-            userver::formats::json::ValueBuilder(value.original_received.value()).ExtractValue());
-    if (value.telex_release.has_value())
-        result.telex_release = broker_codegen::ParseJson<models::RouteDocumentEvent>(
-            userver::formats::json::ValueBuilder(value.telex_release.value()).ExtractValue());
+    result.booking = platform::CopyRouteBooking<models::RouteBooking>(value.booking);
+    result.documents = platform::CopyBillsOfLading<models::BillOfLading>(value.documents);
+    result.original_received =
+        platform::CopyRouteDocumentEvent<models::RouteDocumentEvent>(value.original_received);
+    result.telex_release =
+        platform::CopyRouteDocumentEvent<models::RouteDocumentEvent>(value.telex_release);
     return result;
 }
 
@@ -68,9 +63,7 @@ inline models::AirDetails Convert(const clients::shipments::models::AirDetails& 
         result.arrival_date = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
-    if (value.documents.has_value())
-        result.documents = broker_codegen::ParseJson<std::vector<models::AirWaybill>>(
-            userver::formats::json::ValueBuilder(value.documents.value()).ExtractValue());
+    result.documents = platform::CopyAirWaybills<models::AirWaybill>(value.documents);
     return result;
 }
 

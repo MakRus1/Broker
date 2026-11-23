@@ -36,19 +36,17 @@ inline models::shipments::SeaDetails Convert(const clients::shipments::models::S
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
     if (value.booking)
-        result.booking = broker_codegen::ParseJson<decltype(result.booking)::value_type>(
+        result.booking = broker_codegen::ParseJson<models::shipments::RouteBooking>(
             userver::formats::json::ValueBuilder(*value.booking).ExtractValue());
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+        result.documents = broker_codegen::ParseJson<std::vector<models::shipments::BillOfLading>>(
             userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     if (value.original_received)
-        result.original_received =
-            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
-                userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
+        result.original_received = broker_codegen::ParseJson<models::shipments::RouteDocumentEvent>(
+            userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
     if (value.telex_release)
-        result.telex_release =
-            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
-                userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
+        result.telex_release = broker_codegen::ParseJson<models::shipments::RouteDocumentEvent>(
+            userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
     return result;
 }
 
@@ -71,7 +69,7 @@ inline models::shipments::AirDetails Convert(const clients::shipments::models::A
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+        result.documents = broker_codegen::ParseJson<std::vector<models::shipments::AirWaybill>>(
             userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     return result;
 }
@@ -109,18 +107,19 @@ inline clients::shipments::models::SeaDetails Convert(const models::shipments::S
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
     if (value.booking)
-        result.booking = broker_codegen::ParseJson<decltype(result.booking)::value_type>(
+        result.booking = broker_codegen::ParseJson<clients::shipments::models::RouteBooking>(
             userver::formats::json::ValueBuilder(*value.booking).ExtractValue());
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
-            userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
+        result.documents =
+            broker_codegen::ParseJson<std::vector<clients::shipments::models::BillOfLading>>(
+                userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     if (value.original_received)
         result.original_received =
-            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
+            broker_codegen::ParseJson<clients::shipments::models::RouteDocumentEvent>(
                 userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
     if (value.telex_release)
         result.telex_release =
-            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
+            broker_codegen::ParseJson<clients::shipments::models::RouteDocumentEvent>(
                 userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
     return result;
 }
@@ -144,8 +143,9 @@ inline clients::shipments::models::AirDetails Convert(const models::shipments::A
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
-            userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
+        result.documents =
+            broker_codegen::ParseJson<std::vector<clients::shipments::models::AirWaybill>>(
+                userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     return result;
 }
 

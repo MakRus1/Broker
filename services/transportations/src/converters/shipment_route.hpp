@@ -36,19 +36,17 @@ inline models::SeaDetails Convert(const clients::shipments::models::SeaDetails& 
     if (value.voyage.has_value())
         result.voyage = value.voyage.value();
     if (value.booking)
-        result.booking = broker_codegen::ParseJson<decltype(result.booking)::value_type>(
+        result.booking = broker_codegen::ParseJson<models::RouteBooking>(
             userver::formats::json::ValueBuilder(*value.booking).ExtractValue());
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+        result.documents = broker_codegen::ParseJson<std::vector<models::BillOfLading>>(
             userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     if (value.original_received)
-        result.original_received =
-            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
-                userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
+        result.original_received = broker_codegen::ParseJson<models::RouteDocumentEvent>(
+            userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
     if (value.telex_release)
-        result.telex_release =
-            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
-                userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
+        result.telex_release = broker_codegen::ParseJson<models::RouteDocumentEvent>(
+            userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
     return result;
 }
 
@@ -71,7 +69,7 @@ inline models::AirDetails Convert(const clients::shipments::models::AirDetails& 
     if (value.flight_number.has_value())
         result.flight_number = value.flight_number.value();
     if (value.documents)
-        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+        result.documents = broker_codegen::ParseJson<std::vector<models::AirWaybill>>(
             userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     return result;
 }

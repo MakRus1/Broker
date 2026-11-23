@@ -47,19 +47,16 @@ inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
     if (value.Voyage.has_value())
         result.voyage = value.Voyage.value();
     if (value.Booking)
-        result.booking =
-            broker_codegen::ParseJson<decltype(result.booking)::value_type>(*value.Booking);
+        result.booking = broker_codegen::ParseJson<models::RouteBooking>(*value.Booking);
     if (value.Documents)
         result.documents =
-            broker_codegen::ParseJson<decltype(result.documents)::value_type>(*value.Documents);
+            broker_codegen::ParseJson<std::vector<models::BillOfLading>>(*value.Documents);
     if (value.OriginalReceived)
         result.original_received =
-            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
-                *value.OriginalReceived);
+            broker_codegen::ParseJson<models::RouteDocumentEvent>(*value.OriginalReceived);
     if (value.TelexRelease)
         result.telex_release =
-            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
-                *value.TelexRelease);
+            broker_codegen::ParseJson<models::RouteDocumentEvent>(*value.TelexRelease);
     return result;
 }
 
@@ -114,7 +111,7 @@ inline models::AirDetails Convert(const models::pg::AirDetails& value) {
         result.flight_number = value.FlightNumber.value();
     if (value.Documents)
         result.documents =
-            broker_codegen::ParseJson<decltype(result.documents)::value_type>(*value.Documents);
+            broker_codegen::ParseJson<std::vector<models::AirWaybill>>(*value.Documents);
     return result;
 }
 

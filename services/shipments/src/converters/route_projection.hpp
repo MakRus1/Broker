@@ -26,6 +26,20 @@ inline clients::transportations::models::SeaDetails ToRouteProjection(
         result.pol = ToRouteProjection(value.pol.value());
     if (value.pod.has_value())
         result.pod = ToRouteProjection(value.pod.value());
+    if (value.booking)
+        result.booking = broker_codegen::ParseJson<decltype(result.booking)::value_type>(
+            userver::formats::json::ValueBuilder(*value.booking).ExtractValue());
+    if (value.documents)
+        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+            userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
+    if (value.original_received)
+        result.original_received =
+            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
+                userver::formats::json::ValueBuilder(*value.original_received).ExtractValue());
+    if (value.telex_release)
+        result.telex_release =
+            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
+                userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue());
     return result;
 }
 
@@ -41,6 +55,9 @@ inline clients::transportations::models::AirDetails ToRouteProjection(
         result.origin_airport = ToRouteProjection(value.origin_airport.value());
     if (value.destination_airport.has_value())
         result.destination_airport = ToRouteProjection(value.destination_airport.value());
+    if (value.documents)
+        result.documents = broker_codegen::ParseJson<decltype(result.documents)::value_type>(
+            userver::formats::json::ValueBuilder(*value.documents).ExtractValue());
     return result;
 }
 

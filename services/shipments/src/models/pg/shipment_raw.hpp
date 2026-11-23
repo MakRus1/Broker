@@ -36,7 +36,7 @@ struct ShipmentRaw {
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::shipments::models::pg::ShipmentRaw> {
-    static constexpr DBTypeName postgres_name = "public.shipment_v5";
+    static constexpr DBTypeName postgres_name = "public.shipment_v6";
 };
 
 }  // namespace userver::storages::postgres::io

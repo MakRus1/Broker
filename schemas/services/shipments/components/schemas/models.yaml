@@ -759,6 +759,17 @@ SeaDetails:
   type: object
   additionalProperties: false
   properties:
+    booking:
+      $ref: '#/RouteBooking'
+    documents:
+      type: array
+      maxItems: 20
+      items:
+        $ref: '#/RouteDocument'
+    original_received:
+      $ref: '#/RouteDocumentEvent'
+    telex_release:
+      $ref: '#/RouteDocumentEvent'
     pol:
       $ref: '#/TransportLocation'
     pod:
@@ -788,6 +799,11 @@ AirDetails:
   type: object
   additionalProperties: false
   properties:
+    documents:
+      type: array
+      maxItems: 20
+      items:
+        $ref: '#/RouteDocument'
     carrier_id:
       type: string
       format: uuid
@@ -1106,3 +1122,52 @@ FilterValuesScope:
   - registry
   - route
   default: registry
+RouteBooking:
+  type: object
+  additionalProperties: false
+  properties:
+    number:
+      type: string
+      maxLength: 128
+    status:
+      type: string
+      enum:
+      - placed
+      - confirmed
+    placed_date:
+      type: string
+      format: date
+    confirmed_date:
+      type: string
+      format: date
+RouteDocument:
+  type: object
+  additionalProperties: false
+  required:
+  - type
+  - number
+  properties:
+    type:
+      type: string
+      enum:
+      - bill_of_lading
+      - air_waybill
+    role:
+      type: string
+      enum:
+      - ocean
+      - feeder
+    number:
+      type: string
+      minLength: 1
+      maxLength: 128
+    date:
+      type: string
+      format: date
+RouteDocumentEvent:
+  type: object
+  additionalProperties: false
+  properties:
+    date:
+      type: string
+      format: date

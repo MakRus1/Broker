@@ -46,6 +46,19 @@ void ResolveLocation(std::optional<models::TransportLocation>& value,
         "route_location_not_found", "Выберите действующий порт или аэропорт из справочника"};
 }
 
+void CheckDocuments(const std::optional<std::vector<models::RouteDocument>>& documents, bool air) {
+    if (!documents)
+        return;
+    for (const auto& document : *documents) {
+        const auto type = models::EnumValue(document.type);
+        if (type != (air ? "air_waybill" : "bill_of_lading") || (air && document.role))
+            throw ApiError<400>{"invalid_route_document", "Тип документа не подходит участку"};
+        if (document.number.find_first_not_of(" \t\r\n") == std::string::npos)
+            throw ApiError<400>{"invalid_route_document", "Укажите номер документа"};
+        CheckDate(document.date, true);
+    }
+}
+
 void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segments) {
     platform::ValidateRoutePlans(segments);
     for (const auto& segment : segments) {
@@ -54,6 +67,19 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
                 throw ApiError<400>{
                     "unexpected_sea_details", "Морские поля доступны только участку «Море»"};
             const auto& sea = segment.sea.value();
+            if (sea.booking) {
+                CheckDate(sea.booking->placed_date, true);
+                CheckDate(sea.booking->confirmed_date, true);
+                if (sea.booking->placed_date && sea.booking->confirmed_date &&
+                    *sea.booking->placed_date > *sea.booking->confirmed_date)
+                    throw ApiError<400>{
+                        "invalid_booking_dates", "Букинг подтверждён раньше размещения"};
+            }
+            if (sea.original_received)
+                CheckDate(sea.original_received->date, true);
+            if (sea.telex_release)
+                CheckDate(sea.telex_release->date, true);
+            CheckDocuments(sea.documents, false);
             CheckDate(sea.eta, false);
             CheckDate(sea.departure_date, true);
         }
@@ -62,6 +88,7 @@ void ValidateRouteDetails(const std::vector<models::ShipmentRouteSegment>& segme
                 throw ApiError<400>{
                     "unexpected_air_details", "Авиационные поля доступны только участку «Авиа»"};
             const auto& air = segment.air.value();
+            CheckDocuments(air.documents, true);
             CheckDate(air.etd, false);
             CheckDate(air.eta, false);
             CheckDate(air.departure_date, true);

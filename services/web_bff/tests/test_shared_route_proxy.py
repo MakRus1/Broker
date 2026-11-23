@@ -16,7 +16,12 @@ async def test_shipment_shared_details(browser, mockserver):
     stage = {
         'id': str(uuid4()),
         'type': 'air',
-        'air': {'origin_airport': location, 'flight_number': 'SU123', 'eta': '2030-01-01'},
+        'air': {
+            'origin_airport': location,
+            'flight_number': 'SU123',
+            'eta': '2030-01-01',
+            'documents': [{'type': 'air_waybill', 'number': '555-12345678', 'date': '2024-10-01'}],
+        },
     }
     body = {
         'shipment_id': SHIPMENT['id'],
@@ -63,7 +68,12 @@ async def test_transportation_receives_shared_fields(browser, mockserver):
     stage = {
         'id': str(uuid4()),
         'mode': 'sea',
-        'sea': {'eta': '2030-01-01', 'vessel': 'Судно', 'voyage': 'Рейс 12'},
+        'sea': {
+            'eta': '2030-01-01',
+            'booking': {'status': 'confirmed'},
+            'documents': [{'type': 'bill_of_lading', 'role': 'ocean', 'number': 'DOC-42'}],
+            'original_received': {},
+        },
     }
 
     @mockserver.json_handler('/api/v1/transportations/get')

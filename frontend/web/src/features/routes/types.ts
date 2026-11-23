@@ -6,7 +6,26 @@ export interface TransportLocation {
   country_code: string;
   code?: string;
 }
+export interface RouteBooking {
+  number?: string;
+  status?: 'placed' | 'confirmed';
+  placed_date?: string;
+  confirmed_date?: string;
+}
+export interface RouteDocument {
+  type: 'bill_of_lading' | 'air_waybill';
+  role?: 'ocean' | 'feeder';
+  number: string;
+  date?: string;
+}
+export interface RouteDocumentEvent {
+  date?: string;
+}
 export interface SeaDetails {
+  booking?: RouteBooking;
+  documents?: RouteDocument[];
+  original_received?: RouteDocumentEvent;
+  telex_release?: RouteDocumentEvent;
   pol?: TransportLocation;
   pod?: TransportLocation;
   eta?: string;
@@ -17,6 +36,7 @@ export interface SeaDetails {
   voyage?: string;
 }
 export interface AirDetails {
+  documents?: RouteDocument[];
   carrier_id?: string;
   origin_airport?: TransportLocation;
   destination_airport?: TransportLocation;

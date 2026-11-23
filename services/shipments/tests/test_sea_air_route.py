@@ -81,6 +81,18 @@ def stages(locations):
 
 async def test_shared_fields_roundtrip_and_patch(api, locations, pgsql):
     route = stages(locations)
+    route[0]['sea'].update(
+        booking={'number': 'BKG-42', 'status': 'confirmed', 'placed_date': '2020-01-01'},
+        documents=[
+            {'type': 'bill_of_lading', 'role': 'ocean', 'number': 'OCEAN-42'},
+            {'type': 'bill_of_lading', 'role': 'feeder', 'number': 'FEEDER-42'},
+        ],
+        original_received={},
+        telex_release={'date': '2020-01-02'},
+    )
+    route[1]['air']['documents'] = [
+        {'type': 'air_waybill', 'number': '123-12345675', 'date': '2020-01-01'},
+    ]
     created = (
         await api.post('/api/v1/shipments/create', creation(route_segments=route), expected=201)
     )['shipment']

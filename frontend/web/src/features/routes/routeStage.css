@@ -93,3 +93,19 @@
 .record-workbench .route-summary-carrier {
   color: var(--text-muted);
 }
+
+.route-documents {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  margin-block-start: 16px;
+  padding-block-start: 12px;
+  border-top: 1px solid var(--divider);
+}
+.route-documents h4,
+.route-documents .shared-route-values {
+  margin: 0;
+}
+.route-documents > button {
+  justify-self: start;
+}

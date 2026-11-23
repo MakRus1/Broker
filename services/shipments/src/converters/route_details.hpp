@@ -46,6 +46,20 @@ inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
         result.vessel = value.Vessel.value();
     if (value.Voyage.has_value())
         result.voyage = value.Voyage.value();
+    if (value.Booking)
+        result.booking =
+            broker_codegen::ParseJson<decltype(result.booking)::value_type>(*value.Booking);
+    if (value.Documents)
+        result.documents =
+            broker_codegen::ParseJson<decltype(result.documents)::value_type>(*value.Documents);
+    if (value.OriginalReceived)
+        result.original_received =
+            broker_codegen::ParseJson<decltype(result.original_received)::value_type>(
+                *value.OriginalReceived);
+    if (value.TelexRelease)
+        result.telex_release =
+            broker_codegen::ParseJson<decltype(result.telex_release)::value_type>(
+                *value.TelexRelease);
     return result;
 }
 
@@ -67,6 +81,16 @@ inline models::pg::SeaDetails Convert(const models::SeaDetails& value) {
         result.Vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.Voyage = value.voyage.value();
+    if (value.booking)
+        result.Booking = userver::formats::json::ValueBuilder(*value.booking).ExtractValue();
+    if (value.documents)
+        result.Documents = userver::formats::json::ValueBuilder(*value.documents).ExtractValue();
+    if (value.original_received)
+        result.OriginalReceived =
+            userver::formats::json::ValueBuilder(*value.original_received).ExtractValue();
+    if (value.telex_release)
+        result.TelexRelease =
+            userver::formats::json::ValueBuilder(*value.telex_release).ExtractValue();
     return result;
 }
 
@@ -88,6 +112,9 @@ inline models::AirDetails Convert(const models::pg::AirDetails& value) {
         result.arrival_date = value.ArrivalDate.value();
     if (value.FlightNumber.has_value())
         result.flight_number = value.FlightNumber.value();
+    if (value.Documents)
+        result.documents =
+            broker_codegen::ParseJson<decltype(result.documents)::value_type>(*value.Documents);
     return result;
 }
 
@@ -109,6 +136,8 @@ inline models::pg::AirDetails Convert(const models::AirDetails& value) {
         result.ArrivalDate = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.FlightNumber = value.flight_number.value();
+    if (value.documents)
+        result.Documents = userver::formats::json::ValueBuilder(*value.documents).ExtractValue();
     return result;
 }
 

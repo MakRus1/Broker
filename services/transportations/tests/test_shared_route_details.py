@@ -1,5 +1,6 @@
 """Море и авиа наследуются из поставки и не копируются в локальные поля перевозки."""
 
+import json
 from uuid import uuid4
 import pytest
 from test_transportations import route_segment
@@ -76,6 +77,20 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
     cursor = pgsql['db_1'].cursor()
     cursor.execute('SELECT jsonb_array_elements(route_segments) FROM transportations WHERE id=%s', (ids[0],))
     assert date_field not in cursor.fetchone()[0]
+
+    old_segment = {
+        'id': stage['id'], 'mode': mode, date_field: stage[date_field],
+        'plan': {'origin_name': 'Прежний пункт'},
+    }
+    cursor.execute('UPDATE transportations SET route_segments=%s::jsonb WHERE id=%s',
+                   (json.dumps([old_segment]), ids[0]))
+    del stage[date_field]
+    shipment_routes.set(shipment, [stage], revision=3)
+    fetched = (await api.post('/api/v1/transportations/get', {'transportation_id': ids[0]}))[
+        'transportation'
+    ]['route_segments'][0]
+    assert date_field not in fetched
+    assert 'plan' not in fetched
 
 
 @pytest.mark.parametrize('mode', ['international_road', 'road', 'rail', 'pickup'])

@@ -4,14 +4,27 @@
 #include <userver/formats/json.hpp>
 
 namespace transportations::converters {
-// Морские и авиационные данные принадлежат поставке и не сохраняются в локальном маршруте.
 inline userver::formats::json::Value ToStoredRouteSegment(const models::RouteSegment& value) {
-    auto local = value;
-    if (local.inherited != false) {
-        local.plan.reset();
-        local.sea.reset();
-        local.air.reset();
-    }
+    // InheritRoute выставляет false участкам без источника в поставке.
+    const bool is_historical = !value.inherited.value_or(true);
+    if (is_historical)
+        return userver::formats::json::ValueBuilder(value).ExtractValue();
+
+    models::RouteSegment local;
+    local.id = value.id;
+    local.mode = value.mode;
+    local.origin = value.origin;
+    local.destination = value.destination;
+    local.contractor_id = value.contractor_id;
+    local.planned_departure_at = value.planned_departure_at;
+    local.planned_arrival_at = value.planned_arrival_at;
+    local.actual_departure_at = value.actual_departure_at;
+    local.actual_arrival_at = value.actual_arrival_at;
+    local.inherited = value.inherited;
+    local.sea_unloading_date = value.sea_unloading_date;
+    local.rail = value.rail;
+    local.international_road = value.international_road;
+    local.pickup = value.pickup;
     return userver::formats::json::ValueBuilder(local).ExtractValue();
 }
 

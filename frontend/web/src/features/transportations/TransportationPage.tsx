@@ -478,20 +478,17 @@ export function RouteView({
             </section>
           )}
           {route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
-            <>
-              <SharedRouteDetailsView
-                sea={route_segment.sea}
-                air={route_segment.air}
-                customers={customers}
-                session={session}
-              />
-              {route_segment.mode === 'sea' && (
-                <dl className="route-discharge">
-                  <dt>{translate('transport.seaUnloadingDate')}</dt>
-                  <dd>{calendarDate(route_segment.sea_unloading_date ?? undefined)}</dd>
-                </dl>
-              )}
-            </>
+            <SharedRouteDetailsView
+              sea={route_segment.sea}
+              air={route_segment.air}
+              customers={customers}
+              session={session}
+              seaDischarge={
+                route_segment.mode === 'sea'
+                  ? calendarDate(route_segment.sea_unloading_date ?? undefined)
+                  : undefined
+              }
+            />
           ) : route_segment.mode === 'international_road' ||
             route_segment.mode === 'road' ||
             route_segment.mode === 'pickup' ? (

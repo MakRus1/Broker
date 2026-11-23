@@ -93,23 +93,21 @@ export function RouteEditorFields({
                   air={sharedStage(route_segment).air}
                   customers={customers}
                   session={session}
+                  seaDischarge={
+                    route_segment.mode === 'sea' ? (
+                      <IsoDateInput
+                        aria-label={translate('transport.seaUnloadingDate')}
+                        value={route_segment.sea_unloading_date ?? ''}
+                        min="1900-01-01"
+                        max={businessDate()}
+                        onChange={(date) =>
+                          update(index, { ...route_segment, sea_unloading_date: date || null })
+                        }
+                      />
+                    ) : undefined
+                  }
                 />
               </div>
-              {route_segment.mode === 'sea' && (
-                <div className="route-discharge">
-                  <label>
-                    {translate('transport.seaUnloadingDate')}
-                    <IsoDateInput
-                      value={route_segment.sea_unloading_date ?? ''}
-                      min="1900-01-01"
-                      max={businessDate()}
-                      onChange={(date) =>
-                        update(index, { ...route_segment, sea_unloading_date: date || null })
-                      }
-                    />
-                  </label>
-                </div>
-              )}
             </details>
           ) : (
             <details

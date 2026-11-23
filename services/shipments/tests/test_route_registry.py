@@ -43,7 +43,7 @@ def routes(pgsql):
             cursor.execute(
                 '''INSERT INTO shipments (organization_id,id,number,customer_id,route_segments)
                 VALUES (%s,%s,%s,%s,ARRAY(SELECT json_populate_record(
-                    NULL::public.shipment_route_segment_v4, value)
+                    NULL::public.shipment_route_segment_v6, value)
                     FROM json_array_elements(%s::json)))''',
                 (OTHER_ORGANIZATION if index == 2 else ORGANIZATION,
                  ids[index], f'Route-{index}', str(uuid4()), json.dumps(route)),

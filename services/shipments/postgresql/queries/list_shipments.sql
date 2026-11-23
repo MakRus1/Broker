@@ -17,7 +17,7 @@ SELECT
         delivery_country,
         delivery_address,
         route_segments
-    )::public.shipment_v5,
+    )::public.shipment_v7,
     {sort_key} AS text_key,
     {date_key} AS date_key
 FROM shipments

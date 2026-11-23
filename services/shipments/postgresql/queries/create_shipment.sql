@@ -35,7 +35,7 @@ SELECT
     card.delivery_country,
     card.delivery_address,
     card.route_segments
-FROM (SELECT ($2::public.shipment_data_v4).*) AS card
+FROM (SELECT ($2::public.shipment_data_v6).*) AS card
 RETURNING ROW(
     id,
     revision,
@@ -54,4 +54,4 @@ RETURNING ROW(
     delivery_country,
     delivery_address,
     route_segments
-)::public.shipment_v5;
+)::public.shipment_v7;

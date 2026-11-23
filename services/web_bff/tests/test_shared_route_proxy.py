@@ -13,25 +13,41 @@ async def test_shipment_shared_details(browser, mockserver):
         'country_code': 'RU',
         'code': 'TEST',
     }
-    stage = {
+    air = {
         'id': str(uuid4()),
         'type': 'air',
-        'air': {'origin_airport': location, 'flight_number': 'SU123', 'eta': '2030-01-01'},
+        'air': {
+            'origin_airport': location,
+            'flight_number': 'SU123',
+            'eta': '2030-01-01',
+            'documents': [{'number': '555-12345678', 'date': '2024-10-01'}],
+        },
     }
+    sea = {
+        'id': str(uuid4()),
+        'type': 'sea',
+        'sea': {
+            'booking': {'status': 'confirmed', 'number': 'BK-42', 'placed_date': '2024-10-01'},
+            'documents': [{'number': 'BL-42', 'leg': 'feeder'}],
+            'original_received': {},
+            'telex_release': {'date': '2024-10-02'},
+        },
+    }
+    route = [sea, air]
     body = {
         'shipment_id': SHIPMENT['id'],
         'expected_revision': 1,
-        'route_segments': [stage],
+        'route_segments': route,
     }
 
     @mockserver.json_handler('/api/v1/shipments/update')
     def save(request):
         assert request.json == body
-        return {'shipment': {**SHIPMENT, 'route_segments': [stage]}}
+        return {'shipment': {**SHIPMENT, 'route_segments': route}}
 
     response = await browser.post('/api/v1/shipments/update', body)
     assert response.status == 200, response.text
-    assert response.json()['shipment']['route_segments'] == [stage]
+    assert response.json()['shipment']['route_segments'] == route
 
 
 async def test_location_search(browser, mockserver):
@@ -63,7 +79,12 @@ async def test_transportation_receives_shared_fields(browser, mockserver):
     stage = {
         'id': str(uuid4()),
         'mode': 'sea',
-        'sea': {'eta': '2030-01-01', 'vessel': 'Судно', 'voyage': 'Рейс 12'},
+        'sea': {
+            'eta': '2030-01-01',
+            'booking': {'status': 'confirmed'},
+            'documents': [{'leg': 'ocean', 'number': 'DOC-42'}],
+            'original_received': {},
+        },
     }
 
     @mockserver.json_handler('/api/v1/transportations/get')

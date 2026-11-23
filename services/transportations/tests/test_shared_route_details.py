@@ -21,6 +21,11 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
         'eta': '2030-01-01',
         ('pol' if mode == 'sea' else 'origin_airport'): location,
     }
+    stage[date_field]['documents'] = [
+        {'number': 'DOC-42'},
+    ]
+    if mode == 'sea':
+        stage['sea']['booking'] = {'number': 'BKG-42', 'status': 'confirmed'}
     shipment_routes.set(shipment, [stage])
     ids = []
     for _ in range(2):
@@ -38,12 +43,13 @@ async def test_live_shared_details(api, shipment_routes, pgsql, mode):
         ids.append(result['id'])
         assert result['route_segments'][0][date_field] == stage[date_field]
     stage[date_field]['eta'] = '2030-01-02'
+    stage[date_field]['documents'][0]['number'] = 'DOC-43'
     shipment_routes.set(shipment, [stage], revision=2)
     for id in ids:
         value = (await api.post('/api/v1/transportations/get', {'transportation_id': id}))[
             'transportation'
         ]
-        assert value['route_segments'][0][date_field]['eta'] == '2030-01-02'
+        assert value['route_segments'][0][date_field] == stage[date_field]
         assert value['revision'] == 1
     await api.post(
         '/api/v1/transportation-actuals/record',

@@ -28,6 +28,73 @@ inline models::pg::TransportLocation Convert(const models::TransportLocation& va
     return result;
 }
 
+inline models::RouteBooking Convert(const models::pg::RouteBooking& value) {
+    models::RouteBooking result;
+    result.number = value.Number;
+    result.placed_date = value.PlacedDate;
+    result.confirmed_date = value.ConfirmedDate;
+    if (value.Status.has_value())
+        result.status =
+            models::ParseEnumScalar(value.Status.value(), models::RouteBooking_status{});
+    return result;
+}
+
+inline models::pg::RouteBooking Convert(const models::RouteBooking& value) {
+    models::pg::RouteBooking result;
+    result.Number = value.number;
+    result.PlacedDate = value.placed_date;
+    result.ConfirmedDate = value.confirmed_date;
+    if (value.status.has_value())
+        result.Status = models::EnumValue(value.status.value());
+    return result;
+}
+
+inline models::BillOfLading Convert(const models::pg::BillOfLading& value) {
+    models::BillOfLading result;
+    result.number = value.Number;
+    result.date = value.Date;
+    if (value.Leg.has_value())
+        result.leg = models::ParseEnumScalar(value.Leg.value(), models::BillOfLading_leg{});
+    return result;
+}
+
+inline models::pg::BillOfLading Convert(const models::BillOfLading& value) {
+    models::pg::BillOfLading result;
+    result.Number = value.number;
+    result.Date = value.date;
+    if (value.leg.has_value())
+        result.Leg = models::EnumValue(value.leg.value());
+    return result;
+}
+
+inline models::AirWaybill Convert(const models::pg::AirWaybill& value) {
+    return {.date = value.Date, .number = value.Number};
+}
+
+inline models::pg::AirWaybill Convert(const models::AirWaybill& value) {
+    return {.Number = value.number, .Date = value.date};
+}
+
+inline models::RouteDocumentEvent Convert(const models::pg::RouteDocumentEvent& value) {
+    return {.date = value.Date};
+}
+
+inline models::pg::RouteDocumentEvent Convert(const models::RouteDocumentEvent& value) {
+    return {.Date = value.date};
+}
+
+template <typename Target, typename Source>
+std::optional<std::vector<Target>> ConvertDocuments(
+    const std::optional<std::vector<Source>>& documents) {
+    if (!documents.has_value())
+        return std::nullopt;
+    std::vector<Target> result;
+    result.reserve(documents.value().size());
+    for (const auto& document : documents.value())
+        result.push_back(Convert(document));
+    return result;
+}
+
 inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
     models::SeaDetails result;
     if (value.Pol.has_value())
@@ -46,6 +113,13 @@ inline models::SeaDetails Convert(const models::pg::SeaDetails& value) {
         result.vessel = value.Vessel.value();
     if (value.Voyage.has_value())
         result.voyage = value.Voyage.value();
+    if (value.Booking.has_value())
+        result.booking = Convert(value.Booking.value());
+    result.documents = ConvertDocuments<models::BillOfLading>(value.Documents);
+    if (value.OriginalReceived.has_value())
+        result.original_received = Convert(value.OriginalReceived.value());
+    if (value.TelexRelease.has_value())
+        result.telex_release = Convert(value.TelexRelease.value());
     return result;
 }
 
@@ -67,6 +141,13 @@ inline models::pg::SeaDetails Convert(const models::SeaDetails& value) {
         result.Vessel = value.vessel.value();
     if (value.voyage.has_value())
         result.Voyage = value.voyage.value();
+    if (value.booking.has_value())
+        result.Booking = Convert(value.booking.value());
+    result.Documents = ConvertDocuments<models::pg::BillOfLading>(value.documents);
+    if (value.original_received.has_value())
+        result.OriginalReceived = Convert(value.original_received.value());
+    if (value.telex_release.has_value())
+        result.TelexRelease = Convert(value.telex_release.value());
     return result;
 }
 
@@ -88,6 +169,7 @@ inline models::AirDetails Convert(const models::pg::AirDetails& value) {
         result.arrival_date = value.ArrivalDate.value();
     if (value.FlightNumber.has_value())
         result.flight_number = value.FlightNumber.value();
+    result.documents = ConvertDocuments<models::AirWaybill>(value.Documents);
     return result;
 }
 
@@ -109,6 +191,7 @@ inline models::pg::AirDetails Convert(const models::AirDetails& value) {
         result.ArrivalDate = value.arrival_date.value();
     if (value.flight_number.has_value())
         result.FlightNumber = value.flight_number.value();
+    result.Documents = ConvertDocuments<models::pg::AirWaybill>(value.documents);
     return result;
 }
 
@@ -142,8 +225,8 @@ inline models::ShipmentRouteSegment Convert(const models::pg::ShipmentRouteSegme
     models::ShipmentRouteSegment result;
     result.id = value.Id;
     result.type = value.Type;
-    if (value.Plan)
-        result.plan = Convert(*value.Plan);
+    if (value.Plan.has_value())
+        result.plan = Convert(value.Plan.value());
     if (value.Sea.has_value())
         result.sea = Convert(value.Sea.value());
     if (value.Air.has_value())
@@ -155,8 +238,8 @@ inline models::pg::ShipmentRouteSegment Convert(const models::ShipmentRouteSegme
     models::pg::ShipmentRouteSegment result;
     result.Id = value.id;
     result.Type = value.type;
-    if (value.plan)
-        result.Plan = Convert(*value.plan);
+    if (value.plan.has_value())
+        result.Plan = Convert(value.plan.value());
     if (value.sea.has_value())
         result.Sea = Convert(value.sea.value());
     if (value.air.has_value())

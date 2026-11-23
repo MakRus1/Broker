@@ -7,6 +7,7 @@ import { type Session } from '../../shared/api/session';
 import { type SeaDetails, type AirDetails, type TransportLocation, type RoutePlan } from './types';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
 import { TransportLocationLookup } from '../directories/TransportLocationLookup';
+import { RouteDocumentsEditor, RouteDocumentsView } from './RouteDocuments';
 import { businessDate, calendarDate } from '../../shared/dates/calendar';
 
 export function SharedRouteFields({
@@ -102,6 +103,14 @@ export function SharedRouteFields({
             onChange={(event) => onSea({ ...value, voyage: event.target.value || undefined })}
           />
         </label>
+        {!planningOnly && (
+          <RouteDocumentsEditor
+            sea={value}
+            documents={value.documents}
+            onSea={onSea}
+            onDocuments={(documents) => onSea({ ...value, documents })}
+          />
+        )}
       </div>
     );
   }
@@ -143,6 +152,12 @@ export function SharedRouteFields({
         date(translate('route.arrivalDate'), value.arrival_date, true, (arrival_date) =>
           onAir({ ...value, arrival_date }),
         )}
+      {!planningOnly && (
+        <RouteDocumentsEditor
+          documents={value.documents}
+          onDocuments={(documents) => onAir({ ...value, documents })}
+        />
+      )}
     </div>
   );
 }
@@ -226,24 +241,29 @@ export function SharedRouteDetailsView({
         ]
       : [];
   return Object.values(sea ?? air ?? {}).some(Boolean) ? (
-    <dl className="shared-route-values">
-      {rows
-        .filter(
-          ([label]) =>
-            !planningOnly ||
-            ![
-              translate('route.vesselDeparture'),
-              translate('route.departureDate'),
-              translate('route.arrivalDate'),
-            ].includes(label),
-        )
-        .map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-    </dl>
+    <>
+      <dl className="shared-route-values">
+        {rows
+          .filter(
+            ([label]) =>
+              !planningOnly ||
+              ![
+                translate('route.vesselDeparture'),
+                translate('route.departureDate'),
+                translate('route.arrivalDate'),
+              ].includes(label),
+          )
+          .map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+      </dl>
+      {!planningOnly && (
+        <RouteDocumentsView sea={sea} documents={sea?.documents ?? air?.documents} />
+      )}
+    </>
   ) : (
     <p className="muted">{translate('route.emptySegment')}</p>
   );

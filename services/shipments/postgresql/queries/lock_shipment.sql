@@ -18,7 +18,7 @@ SELECT ROW(
     delivery_country,
     delivery_address,
     route_segments
-)::public.shipment_v5
+)::public.shipment_v7
 FROM shipments
 WHERE organization_id = $1::UUID AND id = $2::UUID
 FOR UPDATE;

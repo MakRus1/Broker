@@ -22,11 +22,19 @@ void ValidateRoute(const models::SetRouteRequest& request) {
     ValidateRoadDetails(request);
     const RouteDateValidation dates{"invalid_rail_date", "invalid_rail_sequence",
         "Проверьте последовательность дат ЖД-участка"};
+    const RouteDateValidation sea_dates{"invalid_sea_unloading_date", "invalid_sea_sequence",
+        "Проверьте последовательность дат морского участка"};
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
         if (!ids.insert(route_segment.id).second)
             throw ApiError<400>{"invalid_request", "ID плеч должны отличаться"};
         CheckInterval(route_segment.planned_departure_at, route_segment.planned_arrival_at);
+        if (route_segment.sea_unloading_date.has_value()) {
+            if (route_segment.mode != models::TransportMode::Sea)
+                throw ApiError<400>{"unexpected_sea_unloading_date",
+                    "Дата морской выгрузки доступна только для морского участка"};
+            sea_dates.ValidateDate(route_segment.sea_unloading_date.value(), DateKind::Actual);
+        }
         if (!route_segment.rail.has_value())
             continue;
         if (route_segment.mode != models::TransportMode::Rail &&

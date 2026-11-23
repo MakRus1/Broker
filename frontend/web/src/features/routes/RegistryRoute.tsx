@@ -7,6 +7,7 @@ export interface RegistryRouteLeg {
   id: string;
   type: string;
   direction: string;
+  detail?: string;
 }
 
 export function RegistryRoute({ segments = [] }: { segments?: RegistryRouteLeg[] }) {
@@ -29,6 +30,7 @@ export function RegistryRoute({ segments = [] }: { segments?: RegistryRouteLeg[]
       <div>
         <span>{registryValueLabel('mode', segment.type, locale) ?? segment.type}</span>
         <small>{segment.direction}</small>
+        {segment.detail && <small>{segment.detail}</small>}
       </div>
     </div>
   );

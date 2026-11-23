@@ -30,6 +30,7 @@ export interface Transportation {
     international_road?: InternationalRoadDetails;
     pickup?: PickupDetails;
     sea?: SeaDetails;
+    sea_unloading_date?: string | null;
     air?: AirDetails;
     contractor_id?: string;
     planned_departure_at?: string;

@@ -2,7 +2,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  scroll-margin-top: 150px;
+  scroll-margin-top: var(--shipment-route-scroll-offset, 150px);
 }
 .shipment-route-workspace .shipment-route-heading {
   display: flex;

@@ -1,8 +1,10 @@
 import { RouteStageTitle } from './RouteStageTitle';
+import { TransportationRouteHeading } from './TransportationRouteHeading';
 import { RoutePlanView } from './RoutePlan';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
-import { DateTimeInput } from '../../shared/dates/DateInput';
+import { DateTimeInput, IsoDateInput } from '../../shared/dates/DateInput';
+import { businessDate } from '../../shared/dates/calendar';
 import { RoadFields } from './RoadFields';
 import { SharedRouteDetailsView, sharedRouteDirection } from './SharedRouteDetails';
 import {
@@ -45,22 +47,16 @@ export function RouteEditorFields({
   const setFailure = onError;
   return (
     <div className="route-editor">
-      <div className="route-view-heading">
-        <div className="section-heading">
-          <div>
-            <h2>{translate('forms.routeLegs')}</h2>
-            <p className="hint">{translate('forms.railLegDatesDoNotIncludeATime')}</p>
-          </div>
-        </div>
-        <div className="route-collapse-actions">
-          <button type="button" onClick={collapse.expandAll}>
-            {translate('route.expandAll')}
-          </button>
-          <button type="button" onClick={collapse.collapseAll}>
-            {translate('route.collapseAll')}
-          </button>
-        </div>
-      </div>
+      <TransportationRouteHeading
+        railHint={segments.some(({ mode }) => mode === 'rail' || mode === 'international_rail')}
+        shipmentId={
+          segments.some(({ mode }) => mode === 'sea' || mode === 'air')
+            ? initial.shipment_id
+            : undefined
+        }
+        onExpand={collapse.expandAll}
+        onCollapse={collapse.collapseAll}
+      />
       <fieldset disabled={disabled}>
         {segments.map((route_segment, index) =>
           route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
@@ -83,10 +79,22 @@ export function RouteEditorFields({
                   {sharedRouteDirection(sharedStage(route_segment), locale)}
                 </span>
               </summary>
+              {route_segment.mode === 'sea' && (
+                <div className="route-fields">
+                  <label>
+                    {translate('transport.seaUnloadingDate')}
+                    <IsoDateInput
+                      value={route_segment.sea_unloading_date ?? ''}
+                      min="1900-01-01"
+                      max={businessDate()}
+                      onChange={(date) =>
+                        update(index, { ...route_segment, sea_unloading_date: date || null })
+                      }
+                    />
+                  </label>
+                </div>
+              )}
               <div className="shared-route-inherited">
-                <a href={`#/shipments/${initial.shipment_id}/route`}>
-                  {translate('forms.openShipmentRoute')}
-                </a>
                 <SharedRouteDetailsView
                   sea={sharedStage(route_segment).sea}
                   air={sharedStage(route_segment).air}

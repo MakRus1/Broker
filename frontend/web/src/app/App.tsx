@@ -35,7 +35,7 @@ import { useWorkspaceScroll } from './workspaceScroll';
 import { ShipmentWorkspace } from '../features/shipments/ShipmentWorkspace';
 import { useDiscardConfirmation } from '../shared/ui/Dialog';
 import { profileName } from '../shared/profile/profile';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, request } from '../shared/api/http';
 import { FinancialLabelsPage } from '../features/finance/labels/FinancialLabelsPage';
 import { SalesPage } from '../features/sales/SalesPage';
@@ -130,7 +130,7 @@ function WorkspaceApp() {
     workspaceHistory.current = [activeWorkspace];
   }, [storageKey]);
   const { confirmClose, confirmation } = useDiscardConfirmation();
-  useEffect(() => {
+  useLayoutEffect(() => {
     setWorkspaces((old) => openWorkspace(old, route));
   }, [route]);
   useEffect(() => {

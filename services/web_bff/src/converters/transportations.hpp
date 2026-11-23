@@ -228,6 +228,7 @@ inline models::transportations::RouteSegment Convert(
         result.sea = Convert(value.sea.value());
     if (value.air.has_value())
         result.air = Convert(value.air.value());
+    result.sea_unloading_date = value.sea_unloading_date;
     result.actual_arrival_at = value.actual_arrival_at;
     result.actual_departure_at = value.actual_departure_at;
     result.contractor_id = value.contractor_id;
@@ -358,6 +359,7 @@ inline clients::transportations::models::SetRouteSegmentsItem Convert(
         .mode = Convert(value.mode),
         .planned_arrival_at = value.planned_arrival_at,
         .planned_departure_at = value.planned_departure_at};
+    result.sea_unloading_date = value.sea_unloading_date;
     if (value.origin.has_value())
         result.origin = clients::transportations::models::SetRouteSegmentsItemOrigin{
             .country_code = value.origin.value().country_code, .name = value.origin.value().name};

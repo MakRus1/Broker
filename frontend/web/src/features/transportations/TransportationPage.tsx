@@ -1,4 +1,5 @@
 import { RouteStageTitle } from '../routes/RouteStageTitle';
+import { TransportationRouteHeading } from '../routes/TransportationRouteHeading';
 import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { RoutePlanView } from '../routes/RoutePlan';
@@ -18,7 +19,7 @@ import { RailDetailsView } from '../routes/RailFields';
 import { calendarDate } from '../../shared/dates/calendar';
 import { useRouteCollapse } from '../routes/routeCollapse';
 import { AutoLoadMore } from '../../shared/ui/AutoLoadMore';
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { request } from '../../shared/api/http';
 import { modes, transportationTypes } from '../routes/logisticsLabels';
 import { type Session } from '../../shared/api/session';
@@ -333,18 +334,17 @@ export function TransportationPage({
                   </dl>
                 </RecordSection>
                 <div className="record-wide">
-                  <RecordSection title={translate('forms.transportationRoute')}>
-                    <RouteView
-                      route_segments={transportation.route_segments}
-                      customers={customers}
-                      session={session}
-                      onActual={
-                        write
-                          ? (route_segment, kind) => setActual({ route_segment, kind })
-                          : undefined
-                      }
-                    />
-                  </RecordSection>
+                  <RouteView
+                    route_segments={transportation.route_segments}
+                    shipmentId={transportation.shipment_id}
+                    customers={customers}
+                    session={session}
+                    onActual={
+                      write
+                        ? (route_segment, kind) => setActual({ route_segment, kind })
+                        : undefined
+                    }
+                  />
                 </div>
               </VisitedPanel>
               <VisitedPanel active={tab === 'finance'}>
@@ -393,13 +393,13 @@ export function TransportationPage({
 }
 
 export function RouteView({
-  heading,
+  shipmentId,
   route_segments,
   customers,
   onActual,
   session,
 }: {
-  heading?: ReactNode;
+  shipmentId?: string;
   route_segments: RouteSegment[];
   session?: Session;
   customers: Counterparty[];
@@ -409,24 +409,35 @@ export function RouteView({
   const collapse = useRouteCollapse(route_segments.map((stage) => stage.id));
   if (!route_segments.length)
     return (
-      <div className="empty">
-        <h3>{translate('forms.noRouteYet')}</h3>
-        <p>{translate('transport.inheritRouteHint')}</p>
-      </div>
+      <>
+        {shipmentId && <TransportationRouteHeading />}
+        <div className="empty">
+          <h3>{translate('forms.noRouteYet')}</h3>
+          <p>{translate('transport.inheritRouteHint')}</p>
+        </div>
+      </>
     );
   return (
     <div className="route-list">
-      <div className="route-view-heading">
-        {heading}
-        <div className="route-collapse-actions">
-          <button type="button" onClick={collapse.expandAll}>
-            {translate('route.expandAll')}
-          </button>
-          <button type="button" onClick={collapse.collapseAll}>
-            {translate('route.collapseAll')}
-          </button>
-        </div>
-      </div>
+      <TransportationRouteHeading
+        showTitle={Boolean(shipmentId)}
+        railHint={
+          Boolean(shipmentId) &&
+          route_segments.some(
+            ({ mode, inherited }) =>
+              inherited !== false && (mode === 'rail' || mode === 'international_rail'),
+          )
+        }
+        shipmentId={
+          route_segments.some(
+            ({ mode, inherited }) => inherited !== false && (mode === 'sea' || mode === 'air'),
+          )
+            ? shipmentId
+            : undefined
+        }
+        onExpand={collapse.expandAll}
+        onCollapse={collapse.collapseAll}
+      />
       {route_segments.map((route_segment, index) => (
         <details
           className="route-segment"
@@ -478,12 +489,22 @@ export function RouteView({
             </section>
           )}
           {route_segment.mode === 'sea' || route_segment.mode === 'air' ? (
-            <SharedRouteDetailsView
-              sea={route_segment.sea}
-              air={route_segment.air}
-              customers={customers}
-              session={session}
-            />
+            <>
+              {route_segment.mode === 'sea' && (
+                <dl className="shared-route-values">
+                  <div>
+                    <dt>{translate('transport.seaUnloadingDate')}</dt>
+                    <dd>{calendarDate(route_segment.sea_unloading_date ?? undefined)}</dd>
+                  </div>
+                </dl>
+              )}
+              <SharedRouteDetailsView
+                sea={route_segment.sea}
+                air={route_segment.air}
+                customers={customers}
+                session={session}
+              />
+            </>
           ) : route_segment.mode === 'international_road' ||
             route_segment.mode === 'road' ||
             route_segment.mode === 'pickup' ? (

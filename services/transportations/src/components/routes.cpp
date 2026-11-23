@@ -101,7 +101,11 @@ void RoutesComponent::WriteRoute(pg::Transaction& transaction,
     std::vector<boost::uuids::uuid> used;
     for (std::size_t i = 0; i < segments.size(); ++i) {
         auto& stored = result.route_segments[i];
-        auto value = converters::Convert(segments[i]);
+        const auto& input = segments[i];
+        auto value = converters::Convert(input);
+        value.sea_unloading_date = input.sea_unloading_date.has_value()
+            ? input.sea_unloading_date.value()
+            : stored.sea_unloading_date;
         if (route_rules::HasRouteData(value))
             used.push_back(value.id);
 

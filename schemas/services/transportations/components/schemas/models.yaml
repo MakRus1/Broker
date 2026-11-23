@@ -134,6 +134,9 @@ RouteSegment:
       type: boolean
       description: Участок присутствует в текущем маршруте поставки. Отсутствующие
         старые участки доступны только для просмотра.
+    sea_unloading_date:
+      type: string
+      format: date
     rail:
       $ref: '#/RailDetails'
     sea:
@@ -197,6 +200,10 @@ SetRouteSegmentsItem:
     planned_arrival_at:
       type: string
       format: date-time
+    sea_unloading_date:
+      type: string
+      format: date
+      nullable: true
     rail:
       $ref: '#/RailDetails'
     international_road:

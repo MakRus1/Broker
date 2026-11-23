@@ -140,10 +140,12 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
         'id': str(uuid4()), 'mode': 'international_road',
         'international_road': {'cmr_number': 'CMR-42'},
     }
+    sea = {'id': str(uuid4()), 'mode': 'sea', 'sea_unloading_date': '2020-01-02'}
+    cleared = {'id': str(uuid4()), 'mode': 'sea'}
     body = {
         'transportation_id': TRANSPORTATION['id'], 'expected_revision': 1,
         'type': 'container', 'hazardous': True, 'container_number': 'CSQU3054383',
-        'route_segments': [stage],
+        'route_segments': [stage, sea, {**cleared, 'sea_unloading_date': None}],
     }
 
     @mockserver.json_handler('/api/v1/transportations/update')
@@ -151,11 +153,11 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
         assert request.json == body
         return {'transportation': {
             **TRANSPORTATION, 'revision': 2, 'container_number': 'CSQU3054383',
-            'hazardous': True, 'route_segments': [stage],
+            'hazardous': True, 'route_segments': [stage, sea, cleared],
         }}
 
     response = await browser.post('/api/v1/transportations/update', body)
     assert response.status == 200, response.text
     assert save.times_called == 1
-    assert response.json()['transportation']['route_segments'] == [stage]
+    assert response.json()['transportation']['route_segments'] == [stage, sea, cleared]
     assert response.json()['transportation']['container_number'] == 'CSQU3054383'

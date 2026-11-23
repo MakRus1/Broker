@@ -26,7 +26,15 @@ import type { ShipmentRouteSegment } from '../routes/types';
 import { localDate } from '../../shared/dates/calendar';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import { Commands } from '../../shared/api/commands';
 import { request } from '../../shared/api/http';
 import { type Session } from '../../shared/api/session';
@@ -34,6 +42,7 @@ import { type Shipment } from './types';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
 import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
+import { scrollIntent } from '../../shared/ui/scrollIntent';
 import { ShipmentPanel } from './ShipmentPanel';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { ShipmentConditionsFields, type ShipmentDictionaries } from './ShipmentConditionsFields';
@@ -158,23 +167,31 @@ function ShipmentCard({
   const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
   const dirty = JSON.stringify(draft) !== baseline;
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (props.route.endsWith('/route')) setTab('route');
   }, [props.route]);
   const [editing, setEditing] = useState(!initial);
-  useEffect(() => {
-    if (tab !== 'route' && tab !== 'items') return;
-    const frame = requestAnimationFrame(() => {
+  useLayoutEffect(() => {
+    if (props.active === false || (tab !== 'route' && tab !== 'items')) return;
+    let cancelled = false;
+    // Прокрутка после восстановления позиции вкладки, до показа карточки.
+    queueMicrotask(() => {
+      if (cancelled) return;
       const root = card.current;
       const selector =
         tab === 'route' ? '.shipment-route-workspace' : '[data-workflow-panel="items"]';
       const target = Array.from(root?.querySelectorAll<HTMLElement>(selector) ?? []).find(
         (node) => node.getClientRects().length > 0,
       );
-      target?.scrollIntoView({ block: 'start' });
+      if (target) {
+        scrollIntent();
+        target.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
     });
-    return () => cancelAnimationFrame(frame);
-  }, [tab, editing, formId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, editing, props.active, props.route]);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -1023,17 +1040,19 @@ function ShipmentCard({
                   customers={props.customers}
                   session={props.session}
                 />
-                <ShipmentRoute
-                  segments={initial.route_segments ?? []}
-                  allowedTypes={[]}
-                  types={dictionaries?.route_types ?? []}
-                  session={props.session}
-                  customers={props.customers}
-                />
-                {overview && containerPanel}
-                <RecordSection title={translate('shipment.note')}>
-                  <p>{initial.reference || '—'}</p>
-                </RecordSection>
+                <div className={tab === 'route' ? 'shipment-overview-route-target' : undefined}>
+                  <ShipmentRoute
+                    segments={initial.route_segments ?? []}
+                    allowedTypes={[]}
+                    types={dictionaries?.route_types ?? []}
+                    session={props.session}
+                    customers={props.customers}
+                  />
+                  {overview && containerPanel}
+                  <RecordSection title={translate('shipment.note')}>
+                    <p>{initial.reference || '—'}</p>
+                  </RecordSection>
+                </div>
               </div>
             )}
       </RecordOverview>

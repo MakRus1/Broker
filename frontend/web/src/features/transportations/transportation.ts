@@ -41,7 +41,8 @@ export function routeDirection(segment: RouteSegment, locale: Locale = 'ru'): st
       ? `${segment.plan.origin_name || translate(locale, 'transport.pointMissing')} → ${segment.plan.destination_name || translate(locale, 'transport.pointMissing')}`
       : undefined;
   if (segment.mode === 'international_road')
-    return segment.international_road?.loading_terminal_id
+    return segment.international_road?.loading_terminal_id ||
+      segment.international_road?.loading_address
       ? translate(locale, 'transport.loadingSpecified')
       : (plannedDirection ?? translate(locale, 'transport.loadingMissing'));
   if (segment.mode === 'road' || segment.mode === 'pickup')

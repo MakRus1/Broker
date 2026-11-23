@@ -13,9 +13,13 @@ std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
     for (const auto& stage : stages) {
         if (stage.contractor_id.has_value())
             ids.insert(stage.contractor_id.value());
-        if (stage.international_road.has_value() &&
-            stage.international_road.value().loading_terminal_id.has_value())
-            ids.insert(stage.international_road.value().loading_terminal_id.value());
+        if (stage.international_road.has_value()) {
+            const auto& road = stage.international_road.value();
+            if (road.loading_terminal_id.has_value())
+                ids.insert(road.loading_terminal_id.value());
+            if (road.unloading_terminal_id.has_value())
+                ids.insert(road.unloading_terminal_id.value());
+        }
     }
     return ids;
 }

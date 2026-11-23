@@ -67,6 +67,23 @@ export function RoadFields({
           session={session}
           disabled={false}
         />
+        <CustomerSelect
+          label={translate('forms.unloadingTerminal')}
+          items={customers}
+          value={value.unloading_terminal_id ?? ''}
+          onChange={(id) => onRoad({ ...value, unloading_terminal_id: id || undefined })}
+          session={session}
+          disabled={false}
+        />
+        {text(translate('forms.loadingAddress'), value.loading_address, 1024, (loading_address) =>
+          onRoad({ ...value, loading_address }),
+        )}
+        {text(
+          translate('forms.unloadingAddress'),
+          value.unloading_address,
+          1024,
+          (unloading_address) => onRoad({ ...value, unloading_address }),
+        )}
         {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
           onRoad({ ...value, cmr_number }),
         )}
@@ -178,7 +195,10 @@ export function RoadDetailsView({
   const company = (id?: string) => customers.find((item) => item.id === id)?.name ?? '—';
   const rows = road
     ? [
-        [translate('forms.loadingLocation'), company(road.loading_terminal_id)],
+        [translate('forms.loadingTerminal'), company(road.loading_terminal_id)],
+        [translate('forms.unloadingTerminal'), company(road.unloading_terminal_id)],
+        [translate('forms.loadingAddress'), road.loading_address],
+        [translate('forms.unloadingAddress'), road.unloading_address],
         [translate('forms.cmrNumber'), road.cmr_number],
         [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
         [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],

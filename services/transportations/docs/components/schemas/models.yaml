@@ -743,6 +743,16 @@ InternationalRoadDetails:
       type: string
       format: uuid
       x-cpp-type: uuid
+    loading_address:
+      type: string
+      maxLength: 1024
+    unloading_terminal_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    unloading_address:
+      type: string
+      maxLength: 1024
     planned_loading_date:
       type: string
       format: date

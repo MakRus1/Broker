@@ -2,6 +2,7 @@
 #include <components/inherited_route.hpp>
 #include <converters/shipment_route.hpp>
 #include <models/errors.hpp>
+#include <optional>
 
 namespace transportations::route_rules {
 using converters::Convert;
@@ -37,15 +38,12 @@ void InheritRoute(models::Transportation& transportation, const models::Shipment
         value.id = stage.id;
         value.inherited = true;
         value.mode = models::ParseEnumScalar(stage.type, models::TransportMode{});
-        value.plan.reset();
-        if (stage.plan)
-            value.plan = Convert(*stage.plan);
-        value.sea.reset();
-        value.air.reset();
-        if (stage.sea.has_value())
-            value.sea = Convert(stage.sea.value());
-        if (stage.air.has_value())
-            value.air = Convert(stage.air.value());
+        value.plan =
+            stage.plan.has_value() ? std::optional{Convert(stage.plan.value())} : std::nullopt;
+        value.sea =
+            stage.sea.has_value() ? std::optional{Convert(stage.sea.value())} : std::nullopt;
+        value.air =
+            stage.air.has_value() ? std::optional{Convert(stage.air.value())} : std::nullopt;
         route.push_back(std::move(value));
     }
     // Исторические данные самостоятельных маршрутов не теряем при переходе на наследование.

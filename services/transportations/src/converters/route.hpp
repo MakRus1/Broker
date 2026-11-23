@@ -5,8 +5,9 @@
 
 namespace transportations::converters {
 inline userver::formats::json::Value ToStoredRouteSegment(const models::RouteSegment& value) {
-    // Для исторического участка сохраняем документ целиком: источника в поставке уже нет.
-    if (value.inherited == false)
+    // InheritRoute выставляет false участкам без источника в поставке.
+    const bool is_historical = !value.inherited.value_or(true);
+    if (is_historical)
         return userver::formats::json::ValueBuilder(value).ExtractValue();
 
     models::RouteSegment local;

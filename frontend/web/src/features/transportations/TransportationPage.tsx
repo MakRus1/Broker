@@ -336,6 +336,7 @@ export function TransportationPage({
                   <RecordSection title={translate('forms.transportationRoute')}>
                     <RouteView
                       route_segments={transportation.route_segments}
+                      shipmentId={transportation.shipment_id}
                       customers={customers}
                       session={session}
                       onActual={
@@ -394,12 +395,14 @@ export function TransportationPage({
 
 export function RouteView({
   heading,
+  shipmentId,
   route_segments,
   customers,
   onActual,
   session,
 }: {
   heading?: ReactNode;
+  shipmentId?: string;
   route_segments: RouteSegment[];
   session?: Session;
   customers: Counterparty[];
@@ -419,6 +422,12 @@ export function RouteView({
       <div className="route-view-heading">
         {heading}
         <div className="route-collapse-actions">
+          {shipmentId &&
+            route_segments.some(
+              ({ mode, inherited }) => inherited !== false && (mode === 'sea' || mode === 'air'),
+            ) && (
+              <a href={`#/shipments/${shipmentId}/route`}>{translate('forms.openShipmentRoute')}</a>
+            )}
           <button type="button" onClick={collapse.expandAll}>
             {translate('route.expandAll')}
           </button>

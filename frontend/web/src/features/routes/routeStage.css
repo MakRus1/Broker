@@ -68,6 +68,12 @@
 .record-workbench .route-view-heading .route-collapse-actions {
   margin: 0;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.route-view-heading .route-collapse-actions a {
+  padding: 4px 8px;
+  font-size: 12px;
 }
 .route-view-heading .route-collapse-actions button {
   border: 0;

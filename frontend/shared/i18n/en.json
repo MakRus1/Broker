@@ -767,7 +767,7 @@
   "forms.backToTransportation": "Back to transportation",
   "forms.routeLegs": "Route legs",
   "forms.railLegDatesDoNotIncludeATime": "Rail leg dates do not include a time.",
-  "forms.openShipmentRoute": "Open shipment route ↗",
+  "forms.openShipmentRoute": "Shipment route ↗",
   "forms.carrierNotSelected": "Carrier not selected",
   "forms.origin": "Origin",
   "forms.destination": "Destination",

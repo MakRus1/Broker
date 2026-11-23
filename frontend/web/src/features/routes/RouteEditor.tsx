@@ -56,6 +56,11 @@ export function RouteEditorFields({
           </div>
         </div>
         <div className="route-collapse-actions">
+          {segments.some(({ mode }) => mode === 'sea' || mode === 'air') && (
+            <a href={`#/shipments/${initial.shipment_id}/route`}>
+              {translate('forms.openShipmentRoute')}
+            </a>
+          )}
           <button type="button" onClick={collapse.expandAll}>
             {translate('route.expandAll')}
           </button>
@@ -102,9 +107,6 @@ export function RouteEditorFields({
                 </div>
               )}
               <div className="shared-route-inherited">
-                <a href={`#/shipments/${initial.shipment_id}/route`}>
-                  {translate('forms.openShipmentRoute')}
-                </a>
                 <SharedRouteDetailsView
                   sea={sharedStage(route_segment).sea}
                   air={sharedStage(route_segment).air}

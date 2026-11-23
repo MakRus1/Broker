@@ -767,7 +767,7 @@
   "forms.backToTransportation": "Вернуться к перевозке",
   "forms.routeLegs": "Участки маршрута",
   "forms.railLegDatesDoNotIncludeATime": "Даты ЖД-участков указываются без времени.",
-  "forms.openShipmentRoute": "Открыть маршрут поставки ↗",
+  "forms.openShipmentRoute": "Маршрут поставки ↗",
   "forms.carrierNotSelected": "Перевозчик не выбран",
   "forms.origin": "Откуда",
   "forms.destination": "Куда",

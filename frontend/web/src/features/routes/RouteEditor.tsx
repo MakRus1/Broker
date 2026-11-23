@@ -1,4 +1,5 @@
 import { RouteStageTitle } from './RouteStageTitle';
+import { TransportationRouteHeading } from './TransportationRouteHeading';
 import { RoutePlanView } from './RoutePlan';
 import { registryValueLabel } from '../registry/registryLabels';
 import { useLocalization } from '../localization/Localization';
@@ -46,29 +47,16 @@ export function RouteEditorFields({
   const setFailure = onError;
   return (
     <div className="route-editor">
-      <div className="route-view-heading">
-        <div className="section-heading">
-          <div>
-            <h2>{translate('forms.routeLegs')}</h2>
-            {segments.some(({ mode }) => mode === 'rail' || mode === 'international_rail') && (
-              <p className="hint">{translate('forms.railLegDatesDoNotIncludeATime')}</p>
-            )}
-          </div>
-        </div>
-        <div className="route-collapse-actions">
-          {segments.some(({ mode }) => mode === 'sea' || mode === 'air') && (
-            <a href={`#/shipments/${initial.shipment_id}/route`}>
-              {translate('forms.openShipmentRoute')}
-            </a>
-          )}
-          <button type="button" onClick={collapse.expandAll}>
-            {translate('route.expandAll')}
-          </button>
-          <button type="button" onClick={collapse.collapseAll}>
-            {translate('route.collapseAll')}
-          </button>
-        </div>
-      </div>
+      <TransportationRouteHeading
+        railHint={segments.some(({ mode }) => mode === 'rail' || mode === 'international_rail')}
+        shipmentId={
+          segments.some(({ mode }) => mode === 'sea' || mode === 'air')
+            ? initial.shipment_id
+            : undefined
+        }
+        onExpand={collapse.expandAll}
+        onCollapse={collapse.collapseAll}
+      />
       <fieldset disabled={disabled}>
         {segments.map((route_segment, index) =>
           route_segment.mode === 'sea' || route_segment.mode === 'air' ? (

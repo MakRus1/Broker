@@ -1040,17 +1040,19 @@ function ShipmentCard({
                   customers={props.customers}
                   session={props.session}
                 />
-                <ShipmentRoute
-                  segments={initial.route_segments ?? []}
-                  allowedTypes={[]}
-                  types={dictionaries?.route_types ?? []}
-                  session={props.session}
-                  customers={props.customers}
-                />
-                {overview && containerPanel}
-                <RecordSection title={translate('shipment.note')}>
-                  <p>{initial.reference || '—'}</p>
-                </RecordSection>
+                <div className={tab === 'route' ? 'shipment-overview-route-target' : undefined}>
+                  <ShipmentRoute
+                    segments={initial.route_segments ?? []}
+                    allowedTypes={[]}
+                    types={dictionaries?.route_types ?? []}
+                    session={props.session}
+                    customers={props.customers}
+                  />
+                  {overview && containerPanel}
+                  <RecordSection title={translate('shipment.note')}>
+                    <p>{initial.reference || '—'}</p>
+                  </RecordSection>
+                </div>
               </div>
             )}
       </RecordOverview>

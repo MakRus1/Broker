@@ -184,3 +184,9 @@
   padding-block: 0;
   flex-shrink: 0;
 }
+
+/* Высота для перехода к маршруту доступна до загрузки плана и перевозок. */
+.shipment-overview-route-target {
+  --shipment-route-scroll-offset: 150px;
+  min-block-size: calc(100dvh - var(--shipment-route-scroll-offset));
+}

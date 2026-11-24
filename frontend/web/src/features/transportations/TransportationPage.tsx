@@ -248,7 +248,7 @@ export function TransportationPage({
         )}
         {editMode ? null : (
           <>
-            <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
+            <CardNavigation>
               <button
                 aria-pressed={tab === 'details'}
                 onClick={(event) => switchTab('details', event.currentTarget)}

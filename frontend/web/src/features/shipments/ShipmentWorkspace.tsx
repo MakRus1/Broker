@@ -1,3 +1,4 @@
+import { CardNavigation } from '../../shared/ui/CardNavigation';
 import { rememberEmployees } from '../../shared/profile/employeeDirectory';
 import { RecordPage, RecordOverview } from '../../shared/ui/record/RecordPage';
 import { ShipmentInquiryLink } from '../sales/ShipmentInquiryLink';
@@ -991,7 +992,7 @@ function ShipmentCard({
           {translate('shipment.settingsFailed', { message: settingsFailure })}
         </p>
       )}
-      <div className="tabs shipment-tabs record-layout-tabs">
+      <CardNavigation>
         {panels.map(([key, label]) => (
           <button
             key={key}
@@ -1029,7 +1030,7 @@ function ShipmentCard({
             {label}
           </button>
         ))}
-      </div>
+      </CardNavigation>
       <RecordOverview hidden={!overview}>
         {editing
           ? renderEditor()

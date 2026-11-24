@@ -474,7 +474,7 @@ export function InvoicesPage({
             }
           />
           {value && !draft && (
-            <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
+            <CardNavigation>
               <button
                 type="button"
                 aria-pressed={!historyOpen}

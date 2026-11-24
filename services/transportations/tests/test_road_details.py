@@ -24,6 +24,8 @@ def road():
         'loading_address': 'Склад отправителя',
         'unloading_terminal_id': str(uuid4()),
         'unloading_address': 'Склад получателя',
+        'customs_terminal_id': str(uuid4()),
+        'customs_arrival_date': '2020-01-02',
         'planned_loading_date': '2030-01-01',
         'planned_unloading_date': '2030-01-03',
         'departure_date': '2020-01-01',
@@ -95,6 +97,17 @@ async def test_roundtrip(api, shipment_routes, mode, field, details):
 @pytest.mark.parametrize(
     'mode,field,data',
     [
+        ('international_road', 'international_road', {'customs_arrival_date': '9999-01-01'}),
+        (
+            'international_road',
+            'international_road',
+            {'departure_date': '2020-01-02', 'customs_arrival_date': '2020-01-01'},
+        ),
+        (
+            'international_road',
+            'international_road',
+            {'customs_arrival_date': '2020-01-02', 'unloading_date': '2020-01-01'},
+        ),
         ('international_road', 'international_road', {'departure_date': '9999-01-01'}),
         (
             'international_road',
@@ -125,7 +138,9 @@ async def test_invalid_details_leave_revision(api, shipment_routes, mode, field,
     ]['revision'] == 1
 
 
-@pytest.mark.parametrize('field', ['loading_terminal_id', 'unloading_terminal_id'])
+@pytest.mark.parametrize(
+    'field', ['loading_terminal_id', 'unloading_terminal_id', 'customs_terminal_id']
+)
 async def test_terminal_must_belong_to_organization(api, shipment_routes, mockserver, field):
     created, stage = await create(api, shipment_routes, 'international_road')
 
@@ -162,7 +177,10 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
     shipment_routes.set(shipment_id, [stage])
     details_by_id = {}
 
-    for vehicle, date in [('А123ВС', '2030-01-11'), ('В456СА', '2030-01-12')]:
+    for vehicle, date, customs_arrival in [
+        ('А123ВС', '2030-01-11', '2020-01-11'),
+        ('В456СА', '2030-01-12', '2020-01-12'),
+    ]:
         created = (await api.post('/api/v1/transportations/create', {
             'id': str(uuid4()), 'shipment_id': shipment_id, 'type': 'container', 'hazardous': False,
         }))['transportation']
@@ -171,6 +189,8 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
             details['loading_address'] = f'Склад отправления {vehicle}'
             details['unloading_address'] = f'Склад назначения {vehicle}'
             details['unloading_terminal_id'] = str(uuid4())
+            details['customs_terminal_id'] = str(uuid4())
+            details['customs_arrival_date'] = customs_arrival
         saved = (await api.post('/api/v1/transportations/update', {
             'transportation_id': created['id'], 'expected_revision': created['revision'],
             'type': 'container', 'hazardous': False,

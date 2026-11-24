@@ -10,6 +10,8 @@ namespace web_bff::converters {
 inline models::transportations::InternationalRoadDetails Convert(
     const clients::transportations::models::InternationalRoadDetails& value) {
     return {.cmr_number = value.cmr_number,
+        .customs_arrival_date = value.customs_arrival_date,
+        .customs_terminal_id = value.customs_terminal_id,
         .departure_date = value.departure_date,
         .loading_address = value.loading_address,
         .loading_terminal_id = value.loading_terminal_id,
@@ -25,6 +27,8 @@ inline models::transportations::InternationalRoadDetails Convert(
 inline clients::transportations::models::InternationalRoadDetails Convert(
     const models::transportations::InternationalRoadDetails& value) {
     return {.cmr_number = value.cmr_number,
+        .customs_arrival_date = value.customs_arrival_date,
+        .customs_terminal_id = value.customs_terminal_id,
         .departure_date = value.departure_date,
         .loading_address = value.loading_address,
         .loading_terminal_id = value.loading_terminal_id,

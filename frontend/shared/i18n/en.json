@@ -806,6 +806,8 @@
   "forms.allocatedInvoices": "Allocated invoices",
   "forms.openInvoice": "Open invoice",
   "forms.loadingTerminal": "Loading terminal",
+  "forms.customsTerminal": "Customs terminal",
+  "forms.customsArrivalDate": "Actual arrival at customs terminal",
   "forms.unloadingTerminal": "Unloading terminal",
   "forms.loadingAddress": "Loading address",
   "forms.unloadingAddress": "Unloading address",

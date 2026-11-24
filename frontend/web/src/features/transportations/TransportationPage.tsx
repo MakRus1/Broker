@@ -80,6 +80,7 @@ export function TransportationPage({
             item.contractor_id,
             item.international_road?.loading_terminal_id,
             item.international_road?.unloading_terminal_id,
+            item.international_road?.customs_terminal_id,
           ].filter((id): id is string => Boolean(id)),
         ) ?? []),
       ]),

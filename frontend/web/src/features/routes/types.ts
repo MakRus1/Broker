@@ -79,6 +79,8 @@ export interface InternationalRoadDetails {
   loading_address?: string;
   unloading_terminal_id?: string;
   unloading_address?: string;
+  customs_terminal_id?: string;
+  customs_arrival_date?: string;
   planned_loading_date?: string;
   planned_unloading_date?: string;
   departure_date?: string;

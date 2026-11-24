@@ -84,6 +84,20 @@ export function RoadFields({
           1024,
           (unloading_address) => onRoad({ ...value, unloading_address }),
         )}
+        <CustomerSelect
+          label={translate('forms.customsTerminal')}
+          items={customers}
+          value={value.customs_terminal_id ?? ''}
+          onChange={(id) => onRoad({ ...value, customs_terminal_id: id || undefined })}
+          session={session}
+          disabled={false}
+        />
+        {date(
+          translate('forms.customsArrivalDate'),
+          value.customs_arrival_date,
+          true,
+          (customs_arrival_date) => onRoad({ ...value, customs_arrival_date }),
+        )}
         {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
           onRoad({ ...value, cmr_number }),
         )}
@@ -199,6 +213,8 @@ export function RoadDetailsView({
         [translate('forms.unloadingTerminal'), company(road.unloading_terminal_id)],
         [translate('forms.loadingAddress'), road.loading_address],
         [translate('forms.unloadingAddress'), road.unloading_address],
+        [translate('forms.customsTerminal'), company(road.customs_terminal_id)],
+        [translate('forms.customsArrivalDate'), calendarDate(road.customs_arrival_date)],
         [translate('forms.cmrNumber'), road.cmr_number],
         [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
         [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],

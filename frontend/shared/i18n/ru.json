@@ -806,6 +806,8 @@
   "forms.allocatedInvoices": "Оплачиваемые счета",
   "forms.openInvoice": "Открыть счёт",
   "forms.loadingTerminal": "Место погрузки · терминал",
+  "forms.customsTerminal": "Таможенный терминал",
+  "forms.customsArrivalDate": "Факт прибытия на таможенный терминал",
   "forms.unloadingTerminal": "Терминал выгрузки",
   "forms.loadingAddress": "Адрес погрузки",
   "forms.unloadingAddress": "Адрес выгрузки",

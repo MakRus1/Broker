@@ -19,6 +19,8 @@ std::set<boost::uuids::uuid> RouteCounterparties(const auto& stages) {
                 ids.insert(road.loading_terminal_id.value());
             if (road.unloading_terminal_id.has_value())
                 ids.insert(road.unloading_terminal_id.value());
+            if (road.customs_terminal_id.has_value())
+                ids.insert(road.customs_terminal_id.value());
         }
     }
     return ids;

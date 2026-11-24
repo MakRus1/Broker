@@ -1,3 +1,8 @@
+-- $1 — организация.
+-- $2 — идентификатор поставки.
+-- $3 — редакция поставки, из которой получены данные клиента.
+-- $4 — идентификатор клиента.
+
 -- Нулевая редакция маршрута означает, что пока получены только данные клиента.
 INSERT INTO shipment_projections (organization_id, shipment_id, revision, customer_revision, customer_id)
 VALUES ($1::UUID, $2::UUID, 0, $3::BIGINT, $4::UUID)

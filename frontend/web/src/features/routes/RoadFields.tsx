@@ -326,7 +326,9 @@ function BorderCrossings({
                       type="button"
                       aria-label={translate('forms.removeField', { label })}
                       disabled={rows.length === 1 && !crossing}
-                      onClick={() => onChange(crossings.filter((_, position) => position !== index))}
+                      onClick={() =>
+                        onChange(crossings.filter((_, position) => position !== index))
+                      }
                     >
                       {translate('forms.removeBorderCrossing')}
                     </button>

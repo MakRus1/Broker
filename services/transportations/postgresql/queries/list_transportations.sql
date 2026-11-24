@@ -14,9 +14,9 @@ SELECT
     )::public.transportation_v5 AS transportation,
     {sort_key} AS sort_key
 FROM transportations
-LEFT JOIN shipment_customer_projections AS shipment_customer
-    ON shipment_customer.organization_id = transportations.organization_id
-    AND shipment_customer.shipment_id = transportations.shipment_id
+LEFT JOIN shipment_route_projections AS shipment_projection
+    ON shipment_projection.organization_id = transportations.organization_id
+    AND shipment_projection.shipment_id = transportations.shipment_id
 WHERE {where}
 ORDER BY {order_by}
 LIMIT {limit};

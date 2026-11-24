@@ -382,3 +382,21 @@ async def test_customer_filter_uses_latest_projection_without_replacing_route(ap
         LIST, {"filters": filters, "route_filters": [{"filters": [{"field": "mode", "values": ["sea"]}]}]}
     )
     assert [item["id"] for item in result["items"]] == [routes["ids"][0]]
+
+    # Оба сообщения одной редакции применяются независимо в любом порядке.
+    for shipment, customer_first in zip(routes["shipments"][1:], (True, False)):
+        projection = {"organization_id": ORGANIZATION, "shipment_id": shipment, "revision": 10}
+        updates = [
+            {**projection, "customer_id": current},
+            {**projection, "route_segments": [{"id": routes["sea_id"], "type": "sea"}]},
+        ]
+        if not customer_first:
+            updates.reverse()
+        for update in updates:
+            assert (await api.post(PROJECTION, update))["applied"]
+            assert not (await api.post(PROJECTION, update))["applied"]
+
+    result = await api.post(
+        LIST, {"filters": filters, "route_filters": [{"filters": [{"field": "mode", "values": ["sea"]}]}]}
+    )
+    assert {item["id"] for item in result["items"]} == set(routes["ids"])

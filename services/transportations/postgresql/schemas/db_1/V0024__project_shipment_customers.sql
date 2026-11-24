@@ -1,10 +1,7 @@
-CREATE TABLE shipment_customer_projections (
-    organization_id UUID NOT NULL,
-    shipment_id UUID NOT NULL,
-    revision BIGINT NOT NULL,
-    customer_id UUID NOT NULL,
-    PRIMARY KEY (organization_id, shipment_id)
-);
+ALTER TABLE shipment_route_projections
+    ADD COLUMN customer_id UUID,
+    ADD COLUMN customer_revision BIGINT;
 
-CREATE INDEX shipment_customer_projections_customer_idx
-    ON shipment_customer_projections (organization_id, customer_id, shipment_id);
+CREATE INDEX shipment_route_projections_customer_idx
+    ON shipment_route_projections (organization_id, customer_id, shipment_id)
+    WHERE customer_id IS NOT NULL;

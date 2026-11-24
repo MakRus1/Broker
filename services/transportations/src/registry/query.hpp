@@ -44,7 +44,7 @@ inline constexpr registry::Field<boost::uuids::uuid> kShipment{
     "shipment_id", "transportations.shipment_id", "UUID"};
 
 inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
-    "customer_id", "shipment_customer.customer_id", "UUID"};
+    "customer_id", "shipment_projection.customer_id", "UUID"};
 
 inline constexpr registry::Field<boost::uuids::uuid> kItem{
     "item_id", "transportations.item_id", "UUID"};
@@ -62,7 +62,7 @@ inline constexpr std::array<registry::RegistryField, 10> kFields{{
         .Sortable = false,
         .Lookup = "shipments"},
     {.Field = kCustomer,
-        .ValueSql = "shipment_customer.customer_id",
+        .ValueSql = "shipment_projection.customer_id",
         .Sortable = false,
         .Lookup = "counterparties"},
     {.Field = kItem, .ValueSql = "transportations.item_id", .Sortable = false, .Visible = false},

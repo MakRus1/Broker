@@ -1585,35 +1585,6 @@ main > header {
   padding-inline: 28px;
 }
 
-.shipment-tabs {
-  display: inline-flex;
-  max-width: 100%;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0 0 24px;
-  padding: 4px;
-  border: 1px solid var(--divider);
-  border-radius: 9px;
-  background: var(--surface-hover);
-}
-.shipment-tabs button {
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  background: transparent;
-  box-shadow: none;
-}
-.shipment-tabs button:hover {
-  color: var(--text);
-  background: var(--surface-hover);
-}
-.shipment-tabs button[aria-pressed='true'] {
-  color: var(--text);
-  background: var(--surface);
-  border-color: var(--divider);
-  box-shadow: 0 1px 3px var(--shadow);
-}
 .shipment-embedded .shipment-card {
   background: transparent;
   border: 0;

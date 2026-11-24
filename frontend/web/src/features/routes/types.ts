@@ -90,6 +90,7 @@ export interface InternationalRoadDetails {
   vehicle_number?: string;
   trailer_number?: string;
   cmr_number?: string;
+  cmr_received_date?: string;
 }
 export interface PickupDetails {
   planned_pickup_date?: string;

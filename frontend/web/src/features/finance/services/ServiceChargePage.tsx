@@ -97,7 +97,7 @@ export function ServiceChargePage({
             }
           />
           {!editing && (
-            <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
+            <CardNavigation>
               <button aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
                 {translate('shipment.details')}
               </button>

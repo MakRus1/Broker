@@ -155,17 +155,32 @@
   white-space: nowrap;
 }
 
+.road-section,
 .road-border-crossings {
   grid-column: 1 / -1;
   display: grid;
   gap: 12px;
   min-inline-size: 0;
 }
-.shared-route-values + .road-border-crossings {
-  margin-block-start: 16px;
+.road-sections {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 24px;
+  min-inline-size: 0;
 }
+.route-plan-source + .road-sections {
+  margin-block-start: 24px;
+}
+.road-section > h4,
 .road-border-crossings > h4 {
   margin: 0;
+}
+.road-sections > section > h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.record-workbench .road-sections .shared-route-values {
+  margin-block: 0;
 }
 .road-border-crossings > button {
   justify-self: start;

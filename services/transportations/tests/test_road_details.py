@@ -35,6 +35,7 @@ def road():
         'vehicle_number': 'А123ВС',
         'trailer_number': 'АА1234',
         'cmr_number': 'CMR-12',
+        'cmr_received_date': '2020-01-04',
     }
 
 
@@ -103,6 +104,7 @@ async def test_roundtrip(api, shipment_routes, mode, field, details):
         ('international_road', 'international_road', {'planned_border_crossings': ['x'] * 33}),
         ('international_road', 'international_road', {'customs_arrival_date': '9999-01-01'}),
         ('international_road', 'international_road', {'customs_departure_date': '9999-01-01'}),
+        ('international_road', 'international_road', {'cmr_received_date': '9999-01-01'}),
         (
             'international_road',
             'international_road',

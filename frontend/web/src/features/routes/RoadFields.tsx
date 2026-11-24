@@ -66,82 +66,95 @@ export function RoadFields({
           : undefined,
       });
     return (
-      <div className="road-details-grid">
-        <CustomerSelect
-          label={translate('forms.loadingTerminal')}
-          items={customers}
-          value={value.loading_terminal_id ?? ''}
-          onChange={(id) => onRoad({ ...value, loading_terminal_id: id || undefined })}
-          session={session}
-          disabled={false}
-        />
-        <CustomerSelect
-          label={translate('forms.unloadingTerminal')}
-          items={customers}
-          value={value.unloading_terminal_id ?? ''}
-          onChange={(id) => onRoad({ ...value, unloading_terminal_id: id || undefined })}
-          session={session}
-          disabled={false}
-        />
-        {text(translate('forms.loadingAddress'), value.loading_address, 1024, (loading_address) =>
-          onRoad({ ...value, loading_address }),
-        )}
-        {text(
-          translate('forms.unloadingAddress'),
-          value.unloading_address,
-          1024,
-          (unloading_address) => onRoad({ ...value, unloading_address }),
-        )}
-        <div className="road-customs-terminal">
+      <div className="road-sections">
+        <div className="road-details-grid">
           <CustomerSelect
-            label={translate('forms.customsTerminal')}
+            label={translate('forms.loadingTerminal')}
             items={customers}
-            value={value.customs_terminal_id ?? ''}
-            onChange={(id) => onRoad({ ...value, customs_terminal_id: id || undefined })}
+            value={value.loading_terminal_id ?? ''}
+            onChange={(id) => onRoad({ ...value, loading_terminal_id: id || undefined })}
             session={session}
             disabled={false}
           />
+          <CustomerSelect
+            label={translate('forms.unloadingTerminal')}
+            items={customers}
+            value={value.unloading_terminal_id ?? ''}
+            onChange={(id) => onRoad({ ...value, unloading_terminal_id: id || undefined })}
+            session={session}
+            disabled={false}
+          />
+          {text(translate('forms.loadingAddress'), value.loading_address, 1024, (loading_address) =>
+            onRoad({ ...value, loading_address }),
+          )}
+          {text(
+            translate('forms.unloadingAddress'),
+            value.unloading_address,
+            1024,
+            (unloading_address) => onRoad({ ...value, unloading_address }),
+          )}
+          <div className="road-customs-terminal">
+            <CustomerSelect
+              label={translate('forms.customsTerminal')}
+              items={customers}
+              value={value.customs_terminal_id ?? ''}
+              onChange={(id) => onRoad({ ...value, customs_terminal_id: id || undefined })}
+              session={session}
+              disabled={false}
+            />
+          </div>
+          {date(
+            translate('forms.customsArrivalDate'),
+            value.customs_arrival_date,
+            true,
+            (customs_arrival_date) => onRoad({ ...value, customs_arrival_date }),
+          )}
+          {date(
+            translate('forms.customsDepartureDate'),
+            value.customs_departure_date,
+            true,
+            (customs_departure_date) => onRoad({ ...value, customs_departure_date }),
+          )}
+          {date(
+            translate('forms.plannedLoading'),
+            value.planned_loading_date,
+            false,
+            (planned_loading_date) => onRoad({ ...value, planned_loading_date }),
+          )}
+          {date(
+            translate('forms.plannedUnloading'),
+            value.planned_unloading_date,
+            false,
+            (planned_unloading_date) => onRoad({ ...value, planned_unloading_date }),
+          )}
+          {date(translate('forms.departureDate'), value.departure_date, true, (departure_date) =>
+            onRoad({ ...value, departure_date }),
+          )}
+          {date(translate('forms.unloadingDate'), value.unloading_date, true, (unloading_date) =>
+            onRoad({ ...value, unloading_date }),
+          )}
+          {text(translate('forms.vehicleNumber'), value.vehicle_number, 64, (vehicle_number) =>
+            onRoad({ ...value, vehicle_number }),
+          )}
+          {text(translate('forms.trailerNumber'), value.trailer_number, 64, (trailer_number) =>
+            onRoad({ ...value, trailer_number }),
+          )}
         </div>
-        {date(
-          translate('forms.customsArrivalDate'),
-          value.customs_arrival_date,
-          true,
-          (customs_arrival_date) => onRoad({ ...value, customs_arrival_date }),
-        )}
-        {date(
-          translate('forms.customsDepartureDate'),
-          value.customs_departure_date,
-          true,
-          (customs_departure_date) => onRoad({ ...value, customs_departure_date }),
-        )}
         <BorderCrossings crossings={crossings} onChange={changeCrossings} />
-        {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
-          onRoad({ ...value, cmr_number }),
-        )}
-        {date(
-          translate('forms.plannedLoading'),
-          value.planned_loading_date,
-          false,
-          (planned_loading_date) => onRoad({ ...value, planned_loading_date }),
-        )}
-        {date(
-          translate('forms.plannedUnloading'),
-          value.planned_unloading_date,
-          false,
-          (planned_unloading_date) => onRoad({ ...value, planned_unloading_date }),
-        )}
-        {date(translate('forms.departureDate'), value.departure_date, true, (departure_date) =>
-          onRoad({ ...value, departure_date }),
-        )}
-        {date(translate('forms.unloadingDate'), value.unloading_date, true, (unloading_date) =>
-          onRoad({ ...value, unloading_date }),
-        )}
-        {text(translate('forms.vehicleNumber'), value.vehicle_number, 64, (vehicle_number) =>
-          onRoad({ ...value, vehicle_number }),
-        )}
-        {text(translate('forms.trailerNumber'), value.trailer_number, 64, (trailer_number) =>
-          onRoad({ ...value, trailer_number }),
-        )}
+        <section className="road-section">
+          <h4>{translate('forms.cmrTitle')}</h4>
+          <div className="road-details-grid">
+            {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
+              onRoad({ ...value, cmr_number }),
+            )}
+            {date(
+              translate('forms.cmrReceivedDate'),
+              value.cmr_received_date,
+              true,
+              (cmr_received_date) => onRoad({ ...value, cmr_received_date }),
+            )}
+          </div>
+        </section>
       </div>
     );
   }
@@ -224,53 +237,83 @@ export function RoadDetailsView({
 }) {
   const { translate } = useLocalization();
   const company = (id?: string) => customers.find((item) => item.id === id)?.name ?? '—';
-  const rows = road
+  const renderRows = (rows: [string, string | undefined][]) => (
+    <dl className="shared-route-values">
+      {rows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value || '—'}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+  if (road && Object.values(road).some(Boolean)) {
+    const section = (title: string, rows: [string, string | undefined][]) => {
+      const filled = rows.filter(([, value]) => value);
+      return filled.length ? (
+        <section className="road-section">
+          <h4>{title}</h4>
+          {renderRows(filled)}
+        </section>
+      ) : null;
+    };
+    const date = (value?: string) => (value ? calendarDate(value) : undefined);
+    const details: [string, string | undefined][] = [
+      [
+        translate('forms.loadingTerminal'),
+        road.loading_terminal_id && company(road.loading_terminal_id),
+      ],
+      [
+        translate('forms.unloadingTerminal'),
+        road.unloading_terminal_id && company(road.unloading_terminal_id),
+      ],
+      [translate('forms.loadingAddress'), road.loading_address],
+      [translate('forms.unloadingAddress'), road.unloading_address],
+      [
+        translate('forms.customsTerminal'),
+        road.customs_terminal_id && company(road.customs_terminal_id),
+      ],
+      [translate('forms.customsArrivalDate'), date(road.customs_arrival_date)],
+      [translate('forms.customsDepartureDate'), date(road.customs_departure_date)],
+      [translate('forms.plannedLoading'), date(road.planned_loading_date)],
+      [translate('forms.plannedUnloading'), date(road.planned_unloading_date)],
+      [translate('forms.departureDate'), date(road.departure_date)],
+      [translate('forms.unloadingDate'), date(road.unloading_date)],
+      [translate('forms.vehicleNumber'), road.vehicle_number],
+      [translate('forms.trailerNumber'), road.trailer_number],
+    ];
+    const filledDetails = details.filter(([, value]) => value);
+    return (
+      <div className="road-sections">
+        {filledDetails.length > 0 && renderRows(filledDetails)}
+        {road.planned_border_crossings?.length ? (
+          <BorderCrossings crossings={road.planned_border_crossings} />
+        ) : null}
+        {section(translate('forms.cmrTitle'), [
+          [translate('forms.cmrNumber'), road.cmr_number],
+          [translate('forms.cmrReceivedDate'), date(road.cmr_received_date)],
+        ])}
+      </div>
+    );
+  }
+  const rows: [string, string | undefined][] = pickup
     ? [
-        [translate('forms.loadingTerminal'), company(road.loading_terminal_id)],
-        [translate('forms.unloadingTerminal'), company(road.unloading_terminal_id)],
-        [translate('forms.loadingAddress'), road.loading_address],
-        [translate('forms.unloadingAddress'), road.unloading_address],
-        [translate('forms.customsTerminal'), company(road.customs_terminal_id)],
-        [translate('forms.customsArrivalDate'), calendarDate(road.customs_arrival_date)],
-        [translate('forms.customsDepartureDate'), calendarDate(road.customs_departure_date)],
-        [translate('forms.cmrNumber'), road.cmr_number],
-        [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
-        [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],
-        [translate('forms.departureDate'), calendarDate(road.departure_date)],
-        [translate('forms.unloadingDate'), calendarDate(road.unloading_date)],
-        [translate('forms.vehicleNumber'), road.vehicle_number],
-        [translate('forms.trailerNumber'), road.trailer_number],
+        [translate('forms.plannedPickup'), calendarDate(pickup.planned_pickup_date)],
+        [translate('forms.plannedDelivery'), calendarDate(pickup.planned_delivery_date)],
+        [translate('forms.pickupDate'), calendarDate(pickup.pickup_date)],
+        [translate('forms.warehouseDelivery'), calendarDate(pickup.delivery_date)],
+        [
+          translate('shipment.deliveryCity'),
+          [pickup.delivery_city, pickup.delivery_country].filter(Boolean).join(' · '),
+        ],
+        [translate('shipment.deliveryAddress'), pickup.delivery_address],
+        [translate('forms.driver'), pickup.driver],
+        [translate('forms.vehicleNumber'), pickup.vehicle_number],
+        [translate('forms.consignmentNoteDate'), calendarDate(pickup.ttn_date)],
       ]
-    : pickup
-      ? [
-          [translate('forms.plannedPickup'), calendarDate(pickup.planned_pickup_date)],
-          [translate('forms.plannedDelivery'), calendarDate(pickup.planned_delivery_date)],
-          [translate('forms.pickupDate'), calendarDate(pickup.pickup_date)],
-          [translate('forms.warehouseDelivery'), calendarDate(pickup.delivery_date)],
-          [
-            translate('shipment.deliveryCity'),
-            [pickup.delivery_city, pickup.delivery_country].filter(Boolean).join(' · '),
-          ],
-          [translate('shipment.deliveryAddress'), pickup.delivery_address],
-          [translate('forms.driver'), pickup.driver],
-          [translate('forms.vehicleNumber'), pickup.vehicle_number],
-          [translate('forms.consignmentNoteDate'), calendarDate(pickup.ttn_date)],
-        ]
-      : [];
-  return Object.values(road ?? pickup ?? {}).some(Boolean) ? (
-    <>
-      <dl className="shared-route-values">
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value || '—'}</dd>
-          </div>
-        ))}
-      </dl>
-      {road?.planned_border_crossings?.length ? (
-        <BorderCrossings crossings={road.planned_border_crossings} />
-      ) : null}
-    </>
+    : [];
+  return Object.values(pickup ?? {}).some(Boolean) ? (
+    renderRows(rows)
   ) : (
     <p className="muted">{translate('route.emptySegment')}</p>
   );

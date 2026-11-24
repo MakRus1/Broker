@@ -1,3 +1,4 @@
+import { CardNavigation } from '../../../shared/ui/CardNavigation';
 import { RecordPage } from '../../../shared/ui/record/RecordPage';
 import { sharedRouteDirection } from '../../routes/SharedRouteDetails';
 import { registryValueLabel } from '../../registry/registryLabels';
@@ -111,7 +112,7 @@ export function RfqPage({
           />
         ) : (
           <>
-            <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
+            <CardNavigation tabsRole="tablist">
               <button role="tab" aria-selected={tab === 'main'} onClick={() => setTab('main')}>
                 {translate('sales.main')}
               </button>
@@ -122,7 +123,7 @@ export function RfqPage({
               >
                 {translate('sales.history')}
               </button>
-            </div>
+            </CardNavigation>
             {tab === 'main' ? (
               <RecordSection title={translate('rfq.quotes')}>
                 <dl className="rfq-card-meta">

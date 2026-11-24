@@ -409,7 +409,7 @@ export function PaymentsPage({
         </p>
       )}
       {value && !draft && (
-        <CardNavigation className="record-layout-navigation" tabsClassName="record-layout-tabs">
+        <CardNavigation>
           <button type="button" aria-pressed={!historyOpen} onClick={() => setHistoryOpen(false)}>
             {translate('shipment.details')}
           </button>

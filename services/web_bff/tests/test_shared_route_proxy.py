@@ -140,6 +140,7 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
         'id': str(uuid4()), 'mode': 'international_road',
         'international_road': {
             'cmr_number': 'CMR-42',
+            'cmr_received_date': '2020-01-04',
             'loading_address': 'Склад отправителя',
             'unloading_terminal_id': str(uuid4()),
             'unloading_address': 'Склад получателя',

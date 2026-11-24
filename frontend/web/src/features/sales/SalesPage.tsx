@@ -1,3 +1,4 @@
+import { CardNavigation } from '../../shared/ui/CardNavigation';
 import { RegistryPage } from '../../shared/ui/RegistryPage';
 import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { SalesRfqs } from './rfq/SalesRfqs';
@@ -309,7 +310,7 @@ export function SalesPage({
         }
       />
       {!editing && (
-        <div className="tabs shipment-tabs record-layout-tabs" role="tablist">
+        <CardNavigation tabsRole="tablist">
           {[
             'main',
             ...(resource === 'cards'
@@ -339,7 +340,7 @@ export function SalesPage({
               )}
             </button>
           ))}
-        </div>
+        </CardNavigation>
       )}
       {failure && !editing && (
         <p className="error" role="alert">

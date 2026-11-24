@@ -819,6 +819,8 @@
   "forms.unloadingAddress": "Unloading address",
   "forms.loadingLocation": "Loading location",
   "forms.cmrNumber": "CMR number",
+  "forms.cmrTitle": "CMR consignment note",
+  "forms.cmrReceivedDate": "CMR receipt date",
   "forms.plannedLoading": "Planned loading",
   "forms.plannedUnloading": "Planned unloading",
   "forms.departureDate": "Departure date",

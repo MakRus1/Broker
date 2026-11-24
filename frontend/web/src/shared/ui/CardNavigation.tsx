@@ -5,19 +5,21 @@ export function CardNavigation({
   onRefresh,
   disabled = false,
   className = '',
-  tabsClassName = '',
+  tabsRole,
 }: {
   children: ReactNode;
   onRefresh?: () => Promise<unknown>;
   disabled?: boolean;
   className?: string;
-  tabsClassName?: string;
+  tabsRole?: 'tablist';
 }) {
   const { translate } = useLocalization();
   const [refreshing, setRefreshing] = useState(false);
   return (
     <div className={`card-navigation record-layout-navigation ${className}`}>
-      <div className={`tabs record-layout-tabs ${tabsClassName}`}>{children}</div>
+      <div className="tabs record-layout-tabs" role={tabsRole}>
+        {children}
+      </div>
       {onRefresh && (
         <button
           type="button"

@@ -819,6 +819,8 @@
   "forms.unloadingAddress": "Адрес выгрузки",
   "forms.loadingLocation": "Место погрузки",
   "forms.cmrNumber": "Номер CMR",
+  "forms.cmrTitle": "Накладная CMR",
+  "forms.cmrReceivedDate": "Дата получения CMR",
   "forms.plannedLoading": "Плановая погрузка",
   "forms.plannedUnloading": "Плановая выгрузка",
   "forms.departureDate": "Дата выхода",

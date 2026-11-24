@@ -120,7 +120,7 @@
   color: var(--text);
   background: transparent;
 }
-.record-workbench .record-layout-tabs > button[aria-pressed='true'] {
+.record-workbench .record-layout-tabs > button:is([aria-pressed='true'], [aria-selected='true']) {
   background: var(--surface-hover);
   color: var(--text);
   border-bottom-color: var(--accent);
@@ -449,9 +449,14 @@
 }
 
 .record-workbench .record-layout-navigation {
+  align-items: start;
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.record-workbench .record-layout-navigation > .record-layout-tabs {
+  overflow-x: visible;
 }
 
 .transportation-workbench .route-editor,

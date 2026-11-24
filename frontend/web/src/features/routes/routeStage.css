@@ -179,7 +179,7 @@
   font-size: 14px;
   font-weight: 600;
 }
-.record-workbench .road-section > .shared-route-values {
+.record-workbench .road-sections .shared-route-values {
   margin-block: 0;
 }
 .road-border-crossings > button {

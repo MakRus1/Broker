@@ -67,7 +67,7 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
   {
     id: 'customer_name',
     labelKey: 'field.customer',
-    filterFields: false,
+    filterFields: ['customer_id'],
     width: 220,
     render: (item) => item.customer_name || <span className="registry-muted">—</span>,
   },

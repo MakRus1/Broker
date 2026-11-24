@@ -51,19 +51,26 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
     const auto& body = request;
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    const auto advanced = transaction.Execute(
-        sql::kAdvanceRouteProjection, body.organization_id, body.shipment_id, body.revision);
-    if (advanced.IsEmpty()) {
-        transaction.Commit();
-        return models::RouteProjectionResult{.applied = false};
+    bool applied = false;
+    if (body.customer_id.has_value()) {
+        const auto updated = transaction.Execute(sql::kAdvanceShipmentCustomerProjection,
+            body.organization_id, body.shipment_id, body.revision, body.customer_id.value());
+        applied = !updated.IsEmpty();
     }
-    transaction.Execute(sql::kClearRouteProjection, body.organization_id, body.shipment_id);
-    for (const auto& segment : body.route_segments)
-        transaction.Execute(sql::kSaveRouteProjectionSegment, body.organization_id,
-            body.shipment_id, segment.id, segment.type,
-            userver::formats::json::ValueBuilder(segment).ExtractValue());
+    if (body.route_segments.has_value()) {
+        const auto advanced = transaction.Execute(
+            sql::kAdvanceRouteProjection, body.organization_id, body.shipment_id, body.revision);
+        if (!advanced.IsEmpty()) {
+            transaction.Execute(sql::kClearRouteProjection, body.organization_id, body.shipment_id);
+            for (const auto& segment : body.route_segments.value())
+                transaction.Execute(sql::kSaveRouteProjectionSegment, body.organization_id,
+                    body.shipment_id, segment.id, segment.type,
+                    userver::formats::json::ValueBuilder(segment).ExtractValue());
+            applied = true;
+        }
+    }
     transaction.Commit();
-    return models::RouteProjectionResult{.applied = true};
+    return models::RouteProjectionResult{.applied = applied};
 }
 
 models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& organization,

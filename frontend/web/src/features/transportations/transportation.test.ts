@@ -137,6 +137,24 @@ it('сохраняет поля автоучастков и не подстав�
   expect(international.route_segments[0].international_road).toEqual(road);
 });
 
+it('отправляет заполненные погранпереходы в порядке следования', () => {
+  const stage = { ...route_segment, mode: 'international_road' as const };
+  const result = routeRequest('transportation', 1, [
+    {
+      ...stage,
+      international_road: { planned_border_crossings: ['  Первый переход ', '', 'Второй переход'] },
+    },
+  ]);
+  expect(result.route_segments[0].international_road?.planned_border_crossings).toEqual([
+    'Первый переход',
+    'Второй переход',
+  ]);
+  const empty = routeRequest('transportation', 1, [
+    { ...stage, international_road: { planned_border_crossings: [' '] } },
+  ]);
+  expect(empty.route_segments[0].international_road).toBeUndefined();
+});
+
 it('не называет пункты автомобильных участков станциями', async () => {
   const { routeDirection } = await import('./transportation');
   expect(routeDirection({ ...route_segment, mode: 'international_road' })).toBe(

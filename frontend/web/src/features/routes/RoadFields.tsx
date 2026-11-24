@@ -57,6 +57,14 @@ export function RoadFields({
   );
   if (international) {
     const value = road ?? {};
+    const crossings = value.planned_border_crossings ?? [];
+    const changeCrossings = (planned_border_crossings: string[]) =>
+      onRoad({
+        ...value,
+        planned_border_crossings: planned_border_crossings.length
+          ? planned_border_crossings
+          : undefined,
+      });
     return (
       <div className="road-details-grid">
         <CustomerSelect
@@ -98,6 +106,7 @@ export function RoadFields({
           true,
           (customs_arrival_date) => onRoad({ ...value, customs_arrival_date }),
         )}
+        <BorderCrossings crossings={crossings} onChange={changeCrossings} />
         {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
           onRoad({ ...value, cmr_number }),
         )}
@@ -240,15 +249,99 @@ export function RoadDetailsView({
         ]
       : [];
   return Object.values(road ?? pickup ?? {}).some(Boolean) ? (
-    <dl className="shared-route-values">
-      {rows.map(([label, value]) => (
-        <div key={label}>
-          <dt>{label}</dt>
-          <dd>{value || '—'}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      <dl className="shared-route-values">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value || '—'}</dd>
+          </div>
+        ))}
+      </dl>
+      {road?.planned_border_crossings?.length ? (
+        <BorderCrossings crossings={road.planned_border_crossings} />
+      ) : null}
+    </>
   ) : (
     <p className="muted">{translate('route.emptySegment')}</p>
+  );
+}
+
+function BorderCrossings({
+  crossings,
+  onChange,
+}: {
+  crossings: string[];
+  onChange?: (crossings: string[]) => void;
+}) {
+  const { translate } = useLocalization();
+  const title = translate('forms.plannedBorderCrossings');
+  const name = translate('forms.borderCrossing');
+  const rows = crossings.length ? crossings : [''];
+  return (
+    <section className="road-border-crossings" aria-label={title}>
+      <h4>{title}</h4>
+      <table className="route-document-table">
+        <thead>
+          <tr>
+            <th scope="col" className="route-document-action">
+              №
+            </th>
+            <th scope="col">{name}</th>
+            {onChange && (
+              <th scope="col" className="route-document-action">
+                <span className="visually-hidden">{translate('forms.removeBorderCrossing')}</span>
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((crossing, index) => {
+            const label = `${name} ${index + 1}`;
+            return (
+              <tr key={index}>
+                <td>{index + 1}</td>
+                <td>
+                  {onChange ? (
+                    <input
+                      aria-label={label}
+                      placeholder={translate('forms.borderCrossingPlaceholder')}
+                      maxLength={256}
+                      value={crossing}
+                      onChange={(event) =>
+                        onChange(
+                          rows.map((item, position) =>
+                            position === index ? event.target.value : item,
+                          ),
+                        )
+                      }
+                    />
+                  ) : (
+                    crossing
+                  )}
+                </td>
+                {onChange && (
+                  <td className="route-document-action">
+                    <button
+                      type="button"
+                      aria-label={translate('forms.removeField', { label })}
+                      disabled={rows.length === 1 && !crossing}
+                      onClick={() => onChange(crossings.filter((_, position) => position !== index))}
+                    >
+                      {translate('forms.removeBorderCrossing')}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {onChange && (
+        <button type="button" disabled={rows.length >= 32} onClick={() => onChange([...rows, ''])}>
+          {translate('forms.addBorderCrossing')}
+        </button>
+      )}
+    </section>
   );
 }

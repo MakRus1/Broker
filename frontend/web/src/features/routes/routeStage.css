@@ -154,3 +154,25 @@
   width: 1%;
   white-space: nowrap;
 }
+
+.road-border-crossings {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  min-inline-size: 0;
+}
+.shared-route-values + .road-border-crossings {
+  margin-block-start: 16px;
+}
+.road-border-crossings > h4 {
+  margin: 0;
+}
+.road-border-crossings > button {
+  justify-self: start;
+}
+.road-border-crossings td.route-document-action button {
+  white-space: nowrap;
+}
+.road-border-crossings td.route-document-action button:disabled {
+  visibility: hidden;
+}

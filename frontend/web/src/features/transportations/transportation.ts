@@ -97,6 +97,11 @@ export function formatDate(value?: string, locale: Locale = 'ru'): string {
     : '—';
 }
 export function routeSegment(value: RouteSegment): PlannedRouteSegment {
+  const road = value.international_road && { ...value.international_road };
+  if (road?.planned_border_crossings) {
+    const crossings = road.planned_border_crossings.map((name) => name.trim()).filter(Boolean);
+    road.planned_border_crossings = crossings.length ? crossings : undefined;
+  }
   return {
     ...(value.rail
       ? { rail: { ...value.rail } }
@@ -122,7 +127,9 @@ export function routeSegment(value: RouteSegment): PlannedRouteSegment {
             },
           }
         : {}),
-    ...(value.international_road ? { international_road: { ...value.international_road } } : {}),
+    ...(road && Object.values(road).some((field) => field !== undefined)
+      ? { international_road: road }
+      : {}),
     ...(value.pickup ? { pickup: { ...value.pickup } } : {}),
     ...(value.mode === 'sea' && value.sea_unloading_date !== undefined
       ? { sea_unloading_date: value.sea_unloading_date }

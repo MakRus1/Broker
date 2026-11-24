@@ -43,11 +43,14 @@ inline constexpr auto kHazardous =
 inline constexpr registry::Field<boost::uuids::uuid> kShipment{
     "shipment_id", "transportations.shipment_id", "UUID"};
 
+inline constexpr registry::Field<boost::uuids::uuid> kCustomer{
+    "customer_id", "shipment_projection.customer_id", "UUID"};
+
 inline constexpr registry::Field<boost::uuids::uuid> kItem{
     "item_id", "transportations.item_id", "UUID"};
 
 // Каталог API: доступные операции и источники отображаемых значений.
-inline constexpr std::array<registry::RegistryField, 9> kFields{{
+inline constexpr std::array<registry::RegistryField, 10> kFields{{
     {.Field = kId, .ValueSql = "transportations.id", .Visible = false},
     {.Field = kNumber, .ValueSql = "transportations.container_number", .FoldValues = true},
     {.Field = kType, .ValueSql = "transportations.type"},
@@ -58,6 +61,10 @@ inline constexpr std::array<registry::RegistryField, 9> kFields{{
         .ValueSql = "transportations.shipment_id",
         .Sortable = false,
         .Lookup = "shipments"},
+    {.Field = kCustomer,
+        .ValueSql = "shipment_projection.customer_id",
+        .Sortable = false,
+        .Lookup = "counterparties"},
     {.Field = kItem, .ValueSql = "transportations.item_id", .Sortable = false, .Visible = false},
     {.Field = kIncompleteContainer,
         .ValueSql = kIncompleteContainer.Expression,
@@ -77,6 +84,8 @@ inline registry::QueryBuilder BuildRegistryFilters(
         registry::RegistryOrderBy(kFields, request.sort), request.descending};
     query.WhereEqual(kOrganization, organization);
     registry::ApplyFilters(query, kFields, request.filters, exclude);
+    if (exclude.has_value() && exclude.value() == kCustomer.Name)
+        query.WhereEmpty(kCustomer, false);
     route_registry::ApplyGroups(query, request.route_filters);
     return query;
 }

@@ -362,3 +362,41 @@ async def test_station_candidates_keep_empty_value_alternative(api, routes):
     empty = await ids([''])
     selected = await ids([routes['b']])
     assert await ids(['', routes['b']]) == empty | selected
+
+
+async def test_customer_filter_uses_latest_projection_without_replacing_route(api, routes):
+    shipment_id = routes["shipments"][0]
+    first, current = str(uuid4()), str(uuid4())
+    body = {"organization_id": ORGANIZATION, "shipment_id": shipment_id}
+    assert (await api.post(PROJECTION, {**body, "revision": 8, "customer_id": first}))["applied"]
+    assert (await api.post(PROJECTION, {**body, "revision": 9, "customer_id": current}))["applied"]
+    assert not (await api.post(PROJECTION, {**body, "revision": 8, "customer_id": first}))["applied"]
+    filters = [{"field": "customer_id", "values": [current]}]
+    result = await api.post(LIST, {"filters": filters, "limit": 1})
+    assert [item["id"] for item in result["items"]] == [routes["ids"][0]]
+    stale = await api.post(LIST, {"filters": [{"field": "customer_id", "values": [first]}]})
+    assert stale["items"] == []
+    facets = await api.post(VALUES, {"registry": {}, "field": "customer_id"})
+    assert facets["values"] == [{"value": current, "label": current}]
+    result = await api.post(
+        LIST, {"filters": filters, "route_filters": [{"filters": [{"field": "mode", "values": ["sea"]}]}]}
+    )
+    assert [item["id"] for item in result["items"]] == [routes["ids"][0]]
+
+    # Оба сообщения одной редакции применяются независимо в любом порядке.
+    for shipment, customer_first in zip(routes["shipments"][1:], (True, False)):
+        projection = {"organization_id": ORGANIZATION, "shipment_id": shipment, "revision": 10}
+        updates = [
+            {**projection, "customer_id": current},
+            {**projection, "route_segments": [{"id": routes["sea_id"], "type": "sea"}]},
+        ]
+        if not customer_first:
+            updates.reverse()
+        for update in updates:
+            assert (await api.post(PROJECTION, update))["applied"]
+            assert not (await api.post(PROJECTION, update))["applied"]
+
+    result = await api.post(
+        LIST, {"filters": filters, "route_filters": [{"filters": [{"field": "mode", "values": ["sea"]}]}]}
+    )
+    assert {item["id"] for item in result["items"]} == set(routes["ids"])

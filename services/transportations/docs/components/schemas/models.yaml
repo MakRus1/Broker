@@ -1000,13 +1000,17 @@ RouteFilterGroup:
 ShipmentRouteProjection:
   type: object
   additionalProperties: false
-  required: [organization_id, shipment_id, revision, route_segments]
+  required: [organization_id, shipment_id, revision]
   properties:
     organization_id:
       type: string
       format: uuid
       x-cpp-type: uuid
     shipment_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    customer_id:
       type: string
       format: uuid
       x-cpp-type: uuid

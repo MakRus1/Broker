@@ -1004,13 +1004,16 @@ ShipmentRouteProjection:
   - organization_id
   - shipment_id
   - revision
-  - route_segments
   properties:
     organization_id:
       type: string
       format: uuid
       x-cpp-type: uuid
     shipment_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    customer_id:
       type: string
       format: uuid
       x-cpp-type: uuid

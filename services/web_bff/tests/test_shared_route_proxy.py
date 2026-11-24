@@ -145,6 +145,7 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
             'unloading_address': 'Склад получателя',
             'customs_terminal_id': str(uuid4()),
             'customs_arrival_date': '2020-01-02',
+            'customs_departure_date': '2020-01-03',
             'planned_border_crossings': ['Кукурыки — Козловичи', 'Красная Горка'],
         },
     }

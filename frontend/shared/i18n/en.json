@@ -813,6 +813,7 @@
   "forms.removeBorderCrossing": "Remove",
   "forms.customsTerminal": "Customs terminal",
   "forms.customsArrivalDate": "Actual arrival at customs terminal",
+  "forms.customsDepartureDate": "Departure from temporary storage",
   "forms.unloadingTerminal": "Unloading terminal",
   "forms.loadingAddress": "Loading address",
   "forms.unloadingAddress": "Unloading address",

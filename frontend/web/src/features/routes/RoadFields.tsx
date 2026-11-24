@@ -92,19 +92,27 @@ export function RoadFields({
           1024,
           (unloading_address) => onRoad({ ...value, unloading_address }),
         )}
-        <CustomerSelect
-          label={translate('forms.customsTerminal')}
-          items={customers}
-          value={value.customs_terminal_id ?? ''}
-          onChange={(id) => onRoad({ ...value, customs_terminal_id: id || undefined })}
-          session={session}
-          disabled={false}
-        />
+        <div className="road-customs-terminal">
+          <CustomerSelect
+            label={translate('forms.customsTerminal')}
+            items={customers}
+            value={value.customs_terminal_id ?? ''}
+            onChange={(id) => onRoad({ ...value, customs_terminal_id: id || undefined })}
+            session={session}
+            disabled={false}
+          />
+        </div>
         {date(
           translate('forms.customsArrivalDate'),
           value.customs_arrival_date,
           true,
           (customs_arrival_date) => onRoad({ ...value, customs_arrival_date }),
+        )}
+        {date(
+          translate('forms.customsDepartureDate'),
+          value.customs_departure_date,
+          true,
+          (customs_departure_date) => onRoad({ ...value, customs_departure_date }),
         )}
         <BorderCrossings crossings={crossings} onChange={changeCrossings} />
         {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
@@ -224,6 +232,7 @@ export function RoadDetailsView({
         [translate('forms.unloadingAddress'), road.unloading_address],
         [translate('forms.customsTerminal'), company(road.customs_terminal_id)],
         [translate('forms.customsArrivalDate'), calendarDate(road.customs_arrival_date)],
+        [translate('forms.customsDepartureDate'), calendarDate(road.customs_departure_date)],
         [translate('forms.cmrNumber'), road.cmr_number],
         [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
         [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],

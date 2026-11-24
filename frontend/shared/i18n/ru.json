@@ -813,6 +813,7 @@
   "forms.removeBorderCrossing": "Убрать",
   "forms.customsTerminal": "Таможенный терминал",
   "forms.customsArrivalDate": "Факт прибытия на таможенный терминал",
+  "forms.customsDepartureDate": "Выезд с СВХ",
   "forms.unloadingTerminal": "Терминал выгрузки",
   "forms.loadingAddress": "Адрес погрузки",
   "forms.unloadingAddress": "Адрес выгрузки",

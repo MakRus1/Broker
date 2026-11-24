@@ -26,6 +26,7 @@ def road():
         'unloading_address': 'Склад получателя',
         'customs_terminal_id': str(uuid4()),
         'customs_arrival_date': '2020-01-02',
+        'customs_departure_date': '2020-01-02',
         'planned_border_crossings': ['Кукурыки — Козловичи', 'Красная Горка'],
         'planned_loading_date': '2030-01-01',
         'planned_unloading_date': '2030-01-03',
@@ -101,6 +102,17 @@ async def test_roundtrip(api, shipment_routes, mode, field, details):
         ('international_road', 'international_road', {'planned_border_crossings': ['  ']}),
         ('international_road', 'international_road', {'planned_border_crossings': ['x'] * 33}),
         ('international_road', 'international_road', {'customs_arrival_date': '9999-01-01'}),
+        ('international_road', 'international_road', {'customs_departure_date': '9999-01-01'}),
+        (
+            'international_road',
+            'international_road',
+            {'customs_arrival_date': '2020-01-02', 'customs_departure_date': '2020-01-01'},
+        ),
+        (
+            'international_road',
+            'international_road',
+            {'customs_departure_date': '2020-01-03', 'unloading_date': '2020-01-02'},
+        ),
         (
             'international_road',
             'international_road',
@@ -180,7 +192,7 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
     shipment_routes.set(shipment_id, [stage])
     details_by_id = {}
 
-    for vehicle, date, customs_arrival in [
+    for vehicle, date, customs_departure in [
         ('А123ВС', '2030-01-11', '2020-01-11'),
         ('В456СА', '2030-01-12', '2020-01-12'),
     ]:
@@ -193,7 +205,7 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
             details['unloading_address'] = f'Склад назначения {vehicle}'
             details['unloading_terminal_id'] = str(uuid4())
             details['customs_terminal_id'] = str(uuid4())
-            details['customs_arrival_date'] = customs_arrival
+            details['customs_departure_date'] = customs_departure
             details['planned_border_crossings'] = [f'Переход {vehicle}', 'Следующий переход']
         saved = (await api.post('/api/v1/transportations/update', {
             'transportation_id': created['id'], 'expected_revision': created['revision'],

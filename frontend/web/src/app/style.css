@@ -2317,7 +2317,8 @@ details[open] > .route-stage-summary::after {
   display: grid;
   gap: 8px;
 }
-.road-address {
+.road-address,
+.road-customs-terminal {
   grid-column: 1 / -1;
 }
 @media (max-width: 700px) {

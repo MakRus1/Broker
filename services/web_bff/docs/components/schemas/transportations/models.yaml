@@ -750,6 +750,9 @@ InternationalRoadDetails:
     customs_arrival_date:
       type: string
       format: date
+    customs_departure_date:
+      type: string
+      format: date
     planned_border_crossings:
       type: array
       maxItems: 32

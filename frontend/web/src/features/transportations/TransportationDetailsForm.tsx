@@ -60,7 +60,7 @@ export function TransportationDetailsForm({
       initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
   );
   const routeDirty =
-    JSON.stringify(routeSegments) !==
+    JSON.stringify(routeSegments.map(routeSegment)) !==
     JSON.stringify(
       initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
     );

@@ -168,20 +168,19 @@
   gap: 24px;
   min-inline-size: 0;
 }
-.route-fields > .road-sections {
-  padding-block-start: 4px;
+.route-plan-source + .road-sections {
+  margin-block-start: 24px;
 }
 .road-section > h4,
 .road-border-crossings > h4 {
   margin: 0;
 }
-.road-sections h4 {
-  color: var(--text-secondary);
-  font-size: 13px;
+.road-sections > section > h4 {
+  font-size: 14px;
   font-weight: 600;
 }
 .record-workbench .road-section > .shared-route-values {
-  margin-block-start: 0;
+  margin-block: 0;
 }
 .road-border-crossings > button {
   justify-self: start;

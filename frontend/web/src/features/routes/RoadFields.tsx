@@ -273,53 +273,55 @@ export function RoadDetailsView({
     </dl>
   );
   if (road && Object.values(road).some(Boolean)) {
+    const section = (title: string, rows: [string, string | undefined][]) => {
+      const filled = rows.filter(([, value]) => value);
+      return filled.length ? (
+        <section className="road-section">
+          <h4>{title}</h4>
+          {renderRows(filled)}
+        </section>
+      ) : null;
+    };
+    const date = (value?: string) => (value ? calendarDate(value) : undefined);
     return (
       <div className="road-sections">
-        <section className="road-section">
-          <h4>{translate('forms.roadLocations')}</h4>
-          {renderRows([
-            [translate('forms.loadingTerminal'), company(road.loading_terminal_id)],
-            [translate('forms.unloadingTerminal'), company(road.unloading_terminal_id)],
-            [translate('forms.loadingAddress'), road.loading_address],
-            [translate('forms.unloadingAddress'), road.unloading_address],
-          ])}
-        </section>
-        <section className="road-section">
-          <h4>{translate('forms.roadCustoms')}</h4>
-          {renderRows([
-            [translate('forms.customsTerminal'), company(road.customs_terminal_id)],
-            [translate('forms.customsArrivalDate'), calendarDate(road.customs_arrival_date)],
-            [translate('forms.customsDepartureDate'), calendarDate(road.customs_departure_date)],
-          ])}
-        </section>
+        {section(translate('forms.roadLocations'), [
+          [
+            translate('forms.loadingTerminal'),
+            road.loading_terminal_id && company(road.loading_terminal_id),
+          ],
+          [
+            translate('forms.unloadingTerminal'),
+            road.unloading_terminal_id && company(road.unloading_terminal_id),
+          ],
+          [translate('forms.loadingAddress'), road.loading_address],
+          [translate('forms.unloadingAddress'), road.unloading_address],
+        ])}
+        {section(translate('forms.roadCustoms'), [
+          [
+            translate('forms.customsTerminal'),
+            road.customs_terminal_id && company(road.customs_terminal_id),
+          ],
+          [translate('forms.customsArrivalDate'), date(road.customs_arrival_date)],
+          [translate('forms.customsDepartureDate'), date(road.customs_departure_date)],
+        ])}
         {road.planned_border_crossings?.length ? (
           <BorderCrossings crossings={road.planned_border_crossings} />
         ) : null}
-        <section className="road-section">
-          <h4>{translate('forms.roadDates')}</h4>
-          {renderRows([
-            [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
-            [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],
-            [translate('forms.departureDate'), calendarDate(road.departure_date)],
-            [translate('forms.unloadingDate'), calendarDate(road.unloading_date)],
-          ])}
-        </section>
-        <section className="road-section">
-          <h4>{translate('forms.roadVehicle')}</h4>
-          {renderRows([
-            [translate('forms.vehicleNumber'), road.vehicle_number],
-            [translate('forms.trailerNumber'), road.trailer_number],
-          ])}
-        </section>
-        {road.cmr_number || road.cmr_received_date ? (
-          <section className="road-section">
-            <h4>{translate('forms.cmrTitle')}</h4>
-            {renderRows([
-              [translate('forms.cmrNumber'), road.cmr_number],
-              [translate('forms.cmrReceivedDate'), calendarDate(road.cmr_received_date)],
-            ])}
-          </section>
-        ) : null}
+        {section(translate('forms.roadDates'), [
+          [translate('forms.plannedLoading'), date(road.planned_loading_date)],
+          [translate('forms.plannedUnloading'), date(road.planned_unloading_date)],
+          [translate('forms.departureDate'), date(road.departure_date)],
+          [translate('forms.unloadingDate'), date(road.unloading_date)],
+        ])}
+        {section(translate('forms.roadVehicle'), [
+          [translate('forms.vehicleNumber'), road.vehicle_number],
+          [translate('forms.trailerNumber'), road.trailer_number],
+        ])}
+        {section(translate('forms.cmrTitle'), [
+          [translate('forms.cmrNumber'), road.cmr_number],
+          [translate('forms.cmrReceivedDate'), date(road.cmr_received_date)],
+        ])}
       </div>
     );
   }

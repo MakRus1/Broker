@@ -57,19 +57,29 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
 
 function RouteRegistrySummary({ item }: { item: Transportation }) {
   const { translate } = useLocalization();
+  const routeDetail = (stage: Transportation['route_segments'][number]) => {
+    if (stage.mode === 'sea')
+      return stage.sea_unloading_date
+        ? translate('transport.seaUnloadedOn', { date: calendarDate(stage.sea_unloading_date) })
+        : translate('transport.seaUnloadingMissing');
+    if (stage.mode !== 'international_road') return undefined;
+
+    const road = stage.international_road;
+    if (road?.customs_departure_date)
+      return translate('transport.customsDepartedOn', {
+        date: calendarDate(road.customs_departure_date),
+      });
+    if (road?.customs_arrival_date)
+      return translate('transport.customsArrivedOn', {
+        date: calendarDate(road.customs_arrival_date),
+      });
+  };
   return (
     <RegistryRoute
       segments={item.route_segments.map((stage) => ({
         id: stage.id,
         type: stage.mode,
-        detail:
-          stage.mode === 'sea'
-            ? stage.sea_unloading_date
-              ? translate('transport.seaUnloadedOn', {
-                  date: calendarDate(stage.sea_unloading_date),
-                })
-              : translate('transport.seaUnloadingMissing')
-            : undefined,
+        detail: routeDetail(stage),
         direction: `${routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} → ${routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}`,
       }))}
     />

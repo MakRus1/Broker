@@ -779,6 +779,9 @@ InternationalRoadDetails:
     trailer_number:
       type: string
       maxLength: 64
+    cmr_received_date:
+      type: string
+      format: date
     cmr_number:
       type: string
       maxLength: 128

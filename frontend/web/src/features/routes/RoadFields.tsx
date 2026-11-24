@@ -115,9 +115,6 @@ export function RoadFields({
           (customs_departure_date) => onRoad({ ...value, customs_departure_date }),
         )}
         <BorderCrossings crossings={crossings} onChange={changeCrossings} />
-        {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
-          onRoad({ ...value, cmr_number }),
-        )}
         {date(
           translate('forms.plannedLoading'),
           value.planned_loading_date,
@@ -142,6 +139,20 @@ export function RoadFields({
         {text(translate('forms.trailerNumber'), value.trailer_number, 64, (trailer_number) =>
           onRoad({ ...value, trailer_number }),
         )}
+        <section className="road-cmr">
+          <h4>{translate('forms.cmrTitle')}</h4>
+          <div className="road-details-grid">
+            {text(translate('forms.cmrNumber'), value.cmr_number, 128, (cmr_number) =>
+              onRoad({ ...value, cmr_number }),
+            )}
+            {date(
+              translate('forms.cmrReceivedDate'),
+              value.cmr_received_date,
+              true,
+              (cmr_received_date) => onRoad({ ...value, cmr_received_date }),
+            )}
+          </div>
+        </section>
       </div>
     );
   }
@@ -233,7 +244,6 @@ export function RoadDetailsView({
         [translate('forms.customsTerminal'), company(road.customs_terminal_id)],
         [translate('forms.customsArrivalDate'), calendarDate(road.customs_arrival_date)],
         [translate('forms.customsDepartureDate'), calendarDate(road.customs_departure_date)],
-        [translate('forms.cmrNumber'), road.cmr_number],
         [translate('forms.plannedLoading'), calendarDate(road.planned_loading_date)],
         [translate('forms.plannedUnloading'), calendarDate(road.planned_unloading_date)],
         [translate('forms.departureDate'), calendarDate(road.departure_date)],
@@ -269,6 +279,21 @@ export function RoadDetailsView({
       </dl>
       {road?.planned_border_crossings?.length ? (
         <BorderCrossings crossings={road.planned_border_crossings} />
+      ) : null}
+      {road && (road.cmr_number || road.cmr_received_date) ? (
+        <section className="road-cmr">
+          <h4>{translate('forms.cmrTitle')}</h4>
+          <dl className="shared-route-values">
+            <div>
+              <dt>{translate('forms.cmrNumber')}</dt>
+              <dd>{road.cmr_number || '—'}</dd>
+            </div>
+            <div>
+              <dt>{translate('forms.cmrReceivedDate')}</dt>
+              <dd>{calendarDate(road.cmr_received_date) || '—'}</dd>
+            </div>
+          </dl>
+        </section>
       ) : null}
     </>
   ) : (

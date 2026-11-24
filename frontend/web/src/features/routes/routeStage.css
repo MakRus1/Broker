@@ -155,15 +155,19 @@
   white-space: nowrap;
 }
 
+.road-cmr,
 .road-border-crossings {
   grid-column: 1 / -1;
   display: grid;
   gap: 12px;
   min-inline-size: 0;
 }
-.shared-route-values + .road-border-crossings {
+.shared-route-values + .road-cmr,
+.shared-route-values + .road-border-crossings,
+.road-border-crossings + .road-cmr {
   margin-block-start: 16px;
 }
+.road-cmr > h4,
 .road-border-crossings > h4 {
   margin: 0;
 }

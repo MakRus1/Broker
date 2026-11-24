@@ -18,6 +18,7 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
             dates.ValidateDate(value.customs_arrival_date, DateKind::Actual);
             dates.ValidateDate(value.customs_departure_date, DateKind::Actual);
             dates.ValidateDate(value.unloading_date, DateKind::Actual);
+            dates.ValidateDate(value.cmr_received_date, DateKind::Actual);
             dates.ValidateOrder(value.planned_loading_date, value.planned_unloading_date);
             dates.ValidateOrder(value.departure_date, value.unloading_date);
             dates.ValidateOrder(value.departure_date, value.customs_arrival_date);

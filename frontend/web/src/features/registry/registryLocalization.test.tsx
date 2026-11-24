@@ -74,3 +74,32 @@ it('translates the calendar control without changing its date format', () => {
   expect(html).toContain('DD.MM.YYYY');
   expect(html).not.toMatch(/[А-Яа-яЁё]/);
 });
+
+it('shows the latest customs milestone in the route cell', () => {
+  const route = transportationColumns.find((column) => column.id === 'route')!;
+  const renderRoad = (international_road: {
+    customs_arrival_date?: string;
+    customs_departure_date?: string;
+  }) =>
+    renderToStaticMarkup(
+      route.render({
+        id: '1',
+        route_segments: [{ id: 'road', mode: 'international_road', international_road }],
+        revision: 1,
+        shipment_id: 'shipment',
+        type: 'container',
+        hazardous: false,
+      }),
+    );
+
+  expect(renderRoad({ customs_arrival_date: '2020-01-11' })).toContain(
+    'Arrived at temporary storage on 11.01.2020',
+  );
+  const departed = renderRoad({
+    customs_arrival_date: '2020-01-11',
+    customs_departure_date: '2020-01-12',
+  });
+  expect(departed).toContain('Departed temporary storage on 12.01.2020');
+  expect(departed).not.toContain('11.01.2020');
+  expect(renderRoad({})).not.toContain('temporary storage');
+});

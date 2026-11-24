@@ -928,6 +928,8 @@
   "transport.noNumber": "Без номера",
   "transport.containerWarning": "Обычно номер содержит 4 латинские буквы и 7 цифр, например CSQU3054383. Можно сохранить и этот вариант.",
   "transport.seaUnloadingDate": "Дата выгрузки с судна",
+  "transport.customsArrivedOn": "Прибыл на СВХ {date}",
+  "transport.customsDepartedOn": "Выехал с СВХ {date}",
   "transport.seaUnloadedOn": "Выгружено с судна {date}",
   "transport.seaUnloadingMissing": "Дата выгрузки не указана",
   "transport.routeChanged": "Изменён маршрут",

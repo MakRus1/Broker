@@ -14,7 +14,7 @@ SELECT
     )::public.transportation_v5 AS transportation,
     {sort_key} AS sort_key
 FROM transportations
-LEFT JOIN shipment_route_projections AS shipment_projection
+LEFT JOIN shipment_projections AS shipment_projection
     ON shipment_projection.organization_id = transportations.organization_id
     AND shipment_projection.shipment_id = transportations.shipment_id
 WHERE {where}

@@ -9,7 +9,7 @@ PORT = str(UUID(int=200))
 
 def seed(rows):
     return f"""
-    INSERT INTO shipment_route_projections (organization_id, shipment_id, revision)
+    INSERT INTO shipment_projections (organization_id, shipment_id, revision)
     SELECT DISTINCT organization_id, shipment_id, 1 FROM transportations;
 
     INSERT INTO shipment_route_segments (organization_id, shipment_id, id, mode, document)
@@ -17,7 +17,7 @@ def seed(rows):
            jsonb_build_object('id', md5(shipment_id::text || ':' || mode)::uuid, 'type', mode,
                'sea', CASE WHEN mode = 'sea' THEN jsonb_build_object('pol',
                    jsonb_build_object('id', '{PORT}', 'name', 'Владивосток', 'country_code', 'RU', 'kind', 'sea_port')) ELSE NULL END)
-    FROM shipment_route_projections CROSS JOIN unnest(ARRAY['sea', 'rail', 'air']) AS mode;
+    FROM shipment_projections CROSS JOIN unnest(ARRAY['sea', 'rail', 'air']) AS mode;
 
     UPDATE transportations AS t
     SET route_segments = jsonb_build_array(jsonb_build_object('id',shared.id,'mode','rail','rail',jsonb_build_object('destination_station',

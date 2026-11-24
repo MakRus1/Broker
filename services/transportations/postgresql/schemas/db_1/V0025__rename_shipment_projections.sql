@@ -1,0 +1,4 @@
+ALTER TABLE shipment_route_projections RENAME TO shipment_projections;
+ALTER TABLE shipment_projections
+    RENAME CONSTRAINT shipment_route_projections_pkey TO shipment_projections_pkey;
+ALTER INDEX shipment_route_projections_customer_idx RENAME TO shipment_projections_customer_idx;

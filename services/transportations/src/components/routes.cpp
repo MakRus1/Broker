@@ -53,7 +53,7 @@ models::RouteProjectionResult RoutesComponent::ApplyShipmentRouteProjection(
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     bool applied = false;
     if (body.customer_id.has_value()) {
-        const auto updated = transaction.Execute(sql::kAdvanceShipmentCustomerProjection,
+        const auto updated = transaction.Execute(sql::kUpsertShipmentCustomerProjection,
             body.organization_id, body.shipment_id, body.revision, body.customer_id.value());
         applied = !updated.IsEmpty();
     }

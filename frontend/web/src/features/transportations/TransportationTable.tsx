@@ -19,7 +19,7 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
   {
     id: 'container_number',
     labelKey: 'entity.transportation',
-    filterFields: ['container_number', 'type', 'hazardous', 'shipment_id'],
+    filterFields: ['container_number', 'type', 'hazardous'],
     cellClassName: 'transportation-number-cell',
     width: 250,
     required: true,
@@ -45,6 +45,31 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
         )}
       </>
     ),
+  },
+  {
+    id: 'shipment_number',
+    labelKey: 'registryField.shipmentNumber',
+    filterFields: ['shipment_id'],
+    width: 160,
+    render: (item) =>
+      item.shipment_number ? (
+        <a
+          className="link"
+          href={`#/shipments/${item.shipment_id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {item.shipment_number}
+        </a>
+      ) : (
+        <span className="registry-muted">—</span>
+      ),
+  },
+  {
+    id: 'customer_name',
+    labelKey: 'field.customer',
+    filterFields: false,
+    width: 220,
+    render: (item) => item.customer_name || <span className="registry-muted">—</span>,
   },
   {
     id: 'route',
@@ -76,12 +101,18 @@ function RouteRegistrySummary({ item }: { item: Transportation }) {
   };
   return (
     <RegistryRoute
-      segments={item.route_segments.map((stage) => ({
-        id: stage.id,
-        type: stage.mode,
-        detail: routeDetail(stage),
-        direction: `${routePoint(stage, 'origin').name || translate('routeFilter.pointNotSet')} → ${routePoint(stage, 'destination').name || translate('routeFilter.pointNotSet')}`,
-      }))}
+      segments={item.route_segments.map((stage) => {
+        const missing = translate('routeFilter.pointNotSet');
+        const origin = routePoint(stage, 'origin').name || stage.plan?.origin_name || missing;
+        const destination =
+          routePoint(stage, 'destination').name || stage.plan?.destination_name || missing;
+        return {
+          id: stage.id,
+          type: stage.mode,
+          detail: routeDetail(stage),
+          direction: `${origin} → ${destination}`,
+        };
+      })}
     />
   );
 }

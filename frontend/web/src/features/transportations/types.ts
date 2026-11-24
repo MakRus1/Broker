@@ -12,6 +12,8 @@ export interface Transportation {
   id: string;
   revision: number;
   shipment_id: string;
+  shipment_number?: string;
+  customer_name?: string;
   item_id?: string;
   operation_id?: string;
   container_type_code?: string;

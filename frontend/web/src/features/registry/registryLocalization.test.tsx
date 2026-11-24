@@ -103,3 +103,33 @@ it('shows the latest customs milestone in the route cell', () => {
   expect(departed).not.toContain('11.01.2020');
   expect(renderRoad({})).not.toContain('temporary storage');
 });
+
+it('uses the shipment plan for each missing route point in the registry', () => {
+  const route = transportationColumns.find((column) => column.id === 'route')!;
+  const stages = [
+    {
+      id: 'road',
+      mode: 'international_road' as const,
+      plan: { origin_name: 'Minsk', destination_name: 'Kazan' },
+    },
+    {
+      id: 'pickup',
+      mode: 'pickup' as const,
+      plan: { origin_name: 'Kazan', destination_name: 'Samara' },
+      pickup: { delivery_city: 'Ufa' },
+    },
+  ];
+  const html = renderToStaticMarkup(
+    route.render({
+      id: '1',
+      route_segments: stages,
+      revision: 1,
+      shipment_id: 'shipment',
+      type: 'container',
+      hazardous: false,
+    }),
+  );
+
+  expect(html).toContain('Minsk → Kazan');
+  expect(html).toContain('Kazan → Ufa');
+});

@@ -164,16 +164,24 @@
 }
 .road-sections {
   display: grid;
-  gap: 16px;
+  grid-column: 1 / -1;
+  gap: 24px;
   min-inline-size: 0;
 }
-.road-sections > * + * {
-  border-block-start: 1px solid var(--divider);
-  padding-block-start: 16px;
+.route-fields > .road-sections {
+  padding-block-start: 4px;
 }
 .road-section > h4,
 .road-border-crossings > h4 {
   margin: 0;
+}
+.road-sections h4 {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.record-workbench .road-section > .shared-route-values {
+  margin-block-start: 0;
 }
 .road-border-crossings > button {
   justify-self: start;

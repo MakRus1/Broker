@@ -17,8 +17,8 @@ Response View::Handle(
     const auto source =
         deps.route_integrations->GetShipmentContext(access_token, request.body.shipment_id);
 
-    auto result =
-        deps.transportations->CreateTransportation(organization, actor, request.body, source, access_token);
+    auto result = deps.transportations->CreateTransportation(
+        organization, actor, request.body, source, access_token);
 
     return Response200{.transportation = std::move(result)};
 }

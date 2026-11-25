@@ -82,8 +82,8 @@ models::TransportationHistoryResult TransportationsComponent::GetTransportationH
 
 models::Transportation TransportationsComponent::CreateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    const models::CreateTransportationRequest& request,
-    const models::ShipmentContext& source, std::string_view access_token) const {
+    const models::CreateTransportationRequest& request, const models::ShipmentContext& source,
+    std::string_view access_token) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
         request.container_number);
 

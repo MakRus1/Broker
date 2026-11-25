@@ -201,6 +201,7 @@ export function ShipmentRoute({
               </>
             ) : segment.type === 'sea' || segment.type === 'air' ? (
               <SharedRouteDetailsView
+                mode={segment.type}
                 planningOnly={planningOnly}
                 sea={segment.sea}
                 air={segment.air}

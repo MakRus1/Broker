@@ -30,7 +30,7 @@ export function RouteEditorFields({
   disabled = false,
   onError,
 }: {
-  initial: Transportation;
+  initial: Pick<Transportation, 'shipment_id' | 'route_segments'>;
   session: Session;
   customers: Counterparty[];
   segments: PlannedRouteSegment[];
@@ -96,6 +96,7 @@ export function RouteEditorFields({
               )}
               <div className="shared-route-inherited">
                 <SharedRouteDetailsView
+                  mode={route_segment.mode}
                   sea={sharedStage(route_segment).sea}
                   air={sharedStage(route_segment).air}
                   customers={customers}

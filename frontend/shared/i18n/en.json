@@ -750,6 +750,7 @@
   "forms.ownLegalEntityRequired": "Own legal entity · required",
   "forms.ownBankAccount": "Own bank account",
   "forms.paymentTerms": "Payment terms",
+  "forms.valueNotSpecified": "Not specified",
   "forms.notSpecified": "Not specified",
   "forms.searchByPaymentNumber": "Search by payment number",
   "forms.partOfTheNumber": "Part of the number…",

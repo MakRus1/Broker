@@ -202,45 +202,52 @@ export function sharedRouteDirection(
 }
 export function SharedRouteDetailsView({
   planningOnly = false,
-  sea,
-  air,
+  mode,
+  sea: seaDetails,
+  air: airDetails,
   customers,
   session,
 }: {
   planningOnly?: boolean;
+  mode?: 'sea' | 'air';
   sea?: SeaDetails;
   air?: AirDetails;
   customers: Counterparty[];
   session?: Session;
 }) {
   const { translate } = useLocalization();
+  const missing = translate('forms.valueNotSpecified');
+  const sea = mode === 'sea' ? (seaDetails ?? {}) : seaDetails;
+  const air = mode === 'air' ? (airDetails ?? {}) : airDetails;
+  const date = (value?: string) => (value ? calendarDate(value) : missing);
   const location = (value?: TransportLocation) =>
-    value ? [value.name, value.code, value.country_code].filter(Boolean).join(' · ') : '—';
-  const company = (id?: string) => <CompanyName id={id} customers={customers} session={session} />;
+    value ? [value.name, value.code, value.country_code].filter(Boolean).join(' · ') : missing;
+  const company = (id?: string) =>
+    id ? <CompanyName id={id} customers={customers} session={session} /> : missing;
   const rows: [string, ReactNode][] = sea
     ? [
         [translate('shipment.pol'), location(sea.pol)],
         [translate('shipment.pod'), location(sea.pod)],
         [translate('route.departureTerminal'), company(sea.departure_terminal_id)],
         [translate('route.arrivalTerminal'), company(sea.arrival_terminal_id)],
-        ['ETA', calendarDate(sea.eta)],
-        [translate('route.vesselDeparture'), calendarDate(sea.departure_date)],
-        [translate('registryValue.type.vessel'), sea.vessel || '—'],
-        [translate('route.voyage'), sea.voyage || '—'],
+        ['ETA', date(sea.eta)],
+        [translate('route.vesselDeparture'), date(sea.departure_date)],
+        [translate('registryValue.type.vessel'), sea.vessel || missing],
+        [translate('route.voyage'), sea.voyage || missing],
       ]
     : air
       ? [
           [translate('registryField.origin_airport'), location(air.origin_airport)],
           [translate('registryField.destination_airport'), location(air.destination_airport)],
           [translate('registryValue.roles.carrier'), company(air.carrier_id)],
-          [translate('shipment.flight'), air.flight_number || '—'],
-          ['ETD', calendarDate(air.etd)],
-          ['ETA', calendarDate(air.eta)],
-          [translate('route.departureDate'), calendarDate(air.departure_date)],
-          [translate('route.arrivalDate'), calendarDate(air.arrival_date)],
+          [translate('shipment.flight'), air.flight_number || missing],
+          ['ETD', date(air.etd)],
+          ['ETA', date(air.eta)],
+          [translate('route.departureDate'), date(air.departure_date)],
+          [translate('route.arrivalDate'), date(air.arrival_date)],
         ]
       : [];
-  return Object.values(sea ?? air ?? {}).some(Boolean) ? (
+  return rows.length > 0 ? (
     <>
       <dl className="shared-route-values">
         {rows

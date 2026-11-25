@@ -590,6 +590,7 @@ function WorkspaceApp() {
                   />
                 ) : entry.route.startsWith('/transportations/new/') ? (
                   <NewTransportation
+                    customers={customers}
                     shipmentId={entry.route.split('/')[3]}
                     session={session}
                     onError={error}

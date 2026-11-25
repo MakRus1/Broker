@@ -52,14 +52,35 @@ export function RailFields({
 }
 export function RailDetailsView({ value }: { value: RailDetails }) {
   const { translate } = useLocalization();
-  if (!Object.values(value).some(Boolean))
-    return <p className="muted">{translate('route.emptySegment')}</p>;
+  const missing = translate('forms.valueNotSpecified');
   return (
     <dl className="rail-date-grid">
+      {(
+        [
+          ['registryField.origin_station', value.origin_station],
+          ['registryField.destination_station', value.destination_station],
+        ] as const
+      ).map(([label, station]) => (
+        <div key={label}>
+          <dt>{translate(label)}</dt>
+          <dd>
+            {station
+              ? [
+                  station.name,
+                  station.esr_code
+                    ? translate('forms.esrCode', { code: station.esr_code })
+                    : station.uic_code && `UIC ${station.uic_code}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : missing}
+          </dd>
+        </div>
+      ))}
       {railDates.map(([key, label]) => (
         <div key={key}>
           <dt>{translate(label)}</dt>
-          <dd>{calendarDate(value[key])}</dd>
+          <dd>{value[key] ? calendarDate(value[key]) : missing}</dd>
         </div>
       ))}
     </dl>

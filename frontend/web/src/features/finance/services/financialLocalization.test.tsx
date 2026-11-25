@@ -96,11 +96,17 @@ it('translates rail and road fields without translating selected directory recor
   expect(rail).toContain('Владивосток');
   expect(rail).toContain('ESR 981106');
   const road = renderToStaticMarkup(
-    <RoadDetailsView pickup={{ driver: 'Иванов Иван', vehicle_number: 'А123ВС' }} customers={[]} />,
+    <RoadDetailsView
+      international={false}
+      pickup={{ driver: 'Иванов Иван', vehicle_number: 'А123ВС' }}
+      customers={[]}
+    />,
   );
   expect(road).toContain('Driver');
   expect(road).toContain('Vehicle number');
   expect(road).toContain('Иванов Иван');
+  const international = renderToStaticMarkup(<RoadDetailsView international customers={[]} />);
+  expect(international).toContain('<dt>Trailer number</dt><dd>Not specified</dd>');
 });
 
 it('translates transportation types, ownership and container warnings together', async () => {
@@ -108,6 +114,9 @@ it('translates transportation types, ownership and container warnings together',
     await import('../../transportations/TransportationDetailsForm');
   const html = renderToStaticMarkup(
     <TransportationDetailsForm
+      shipmentRoute={[
+        { id: 'road', mode: 'international_road', plan: { origin_name: 'Test origin' } },
+      ]}
       shipmentId="shipment"
       session={session}
       onSaved={() => {}}
@@ -119,6 +128,8 @@ it('translates transportation types, ownership and container warnings together',
   expect(html).toContain('Container number');
   expect(html).toContain('Container ownership');
   expect(html).toContain('Create transportation');
+  expect(html).toContain('Test origin');
+  expect(html).toContain('CMR receipt date');
   expect(html).not.toContain('Тип перевозки');
 });
 

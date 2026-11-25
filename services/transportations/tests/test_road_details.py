@@ -225,3 +225,35 @@ async def test_shared_plan_update_preserves_each_vehicles_details(
         }))['transportation']['route_segments'][0]
         assert fetched['plan'] == stage['plan']
         assert fetched[field] == details
+
+
+async def test_create_with_route_saves_details_and_route_atomically(api, shipment_routes):
+    shipment_id = str(uuid4())
+    stage = route_segment('international_road')
+    shipment_routes.set(shipment_id, [stage])
+    transportation_id = str(uuid4())
+    create_path = '/api/v1/transportations/create'
+    body = {
+        'id': transportation_id,
+        'shipment_id': shipment_id,
+        'type': 'container',
+        'hazardous': False,
+        'route_segments': [
+            {**stage, 'international_road': {'cmr_received_date': '9999-01-01'}}
+        ],
+    }
+    await api.post(create_path, body, expected=400)
+    await api.post(
+        '/api/v1/transportations/get',
+        {'transportation_id': transportation_id},
+        expected=404,
+    )
+    road_details = {'cmr_number': 'QA-CMR', 'cmr_received_date': '2020-01-01'}
+    body['route_segments'][0]['international_road'] = road_details
+    created = (await api.post(create_path, body))['transportation']
+    assert created['revision'] == 1
+    assert created['route_segments'][0]['international_road'] == road_details
+    assert (await api.post(create_path, body))['transportation'] == created
+    assert (await api.post(
+        '/api/v1/transportations/get', {'transportation_id': transportation_id}
+    ))['transportation'] == created

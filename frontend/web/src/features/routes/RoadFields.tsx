@@ -229,94 +229,90 @@ export function RoadFields({
 export function RoadDetailsView({
   road,
   pickup,
+  international,
   customers,
 }: {
   road?: InternationalRoadDetails;
   pickup?: PickupDetails;
+  international: boolean;
   customers: Counterparty[];
 }) {
   const { translate } = useLocalization();
-  const company = (id?: string) => customers.find((item) => item.id === id)?.name ?? '—';
+  const company = (id?: string) => customers.find((item) => item.id === id)?.name;
   const renderRows = (rows: [string, string | undefined][]) => (
     <dl className="shared-route-values">
       {rows.map(([label, value]) => (
         <div key={label}>
           <dt>{label}</dt>
-          <dd>{value || '—'}</dd>
+          <dd>{value || translate('forms.valueNotSpecified')}</dd>
         </div>
       ))}
     </dl>
   );
-  if (road && Object.values(road).some(Boolean)) {
+  if (international) {
+    const detailsSource = road ?? {};
     const section = (title: string, rows: [string, string | undefined][]) => {
-      const filled = rows.filter(([, value]) => value);
-      return filled.length ? (
+      return (
         <section className="road-section">
           <h4>{title}</h4>
-          {renderRows(filled)}
+          {renderRows(rows)}
         </section>
-      ) : null;
+      );
     };
     const date = (value?: string) => (value ? calendarDate(value) : undefined);
     const details: [string, string | undefined][] = [
       [
         translate('forms.loadingTerminal'),
-        road.loading_terminal_id && company(road.loading_terminal_id),
+        detailsSource.loading_terminal_id && company(detailsSource.loading_terminal_id),
       ],
       [
         translate('forms.unloadingTerminal'),
-        road.unloading_terminal_id && company(road.unloading_terminal_id),
+        detailsSource.unloading_terminal_id && company(detailsSource.unloading_terminal_id),
       ],
-      [translate('forms.loadingAddress'), road.loading_address],
-      [translate('forms.unloadingAddress'), road.unloading_address],
+      [translate('forms.loadingAddress'), detailsSource.loading_address],
+      [translate('forms.unloadingAddress'), detailsSource.unloading_address],
       [
         translate('forms.customsTerminal'),
-        road.customs_terminal_id && company(road.customs_terminal_id),
+        detailsSource.customs_terminal_id && company(detailsSource.customs_terminal_id),
       ],
-      [translate('forms.customsArrivalDate'), date(road.customs_arrival_date)],
-      [translate('forms.customsDepartureDate'), date(road.customs_departure_date)],
-      [translate('forms.plannedLoading'), date(road.planned_loading_date)],
-      [translate('forms.plannedUnloading'), date(road.planned_unloading_date)],
-      [translate('forms.departureDate'), date(road.departure_date)],
-      [translate('forms.unloadingDate'), date(road.unloading_date)],
-      [translate('forms.vehicleNumber'), road.vehicle_number],
-      [translate('forms.trailerNumber'), road.trailer_number],
+      [translate('forms.customsArrivalDate'), date(detailsSource.customs_arrival_date)],
+      [translate('forms.customsDepartureDate'), date(detailsSource.customs_departure_date)],
+      [translate('forms.plannedLoading'), date(detailsSource.planned_loading_date)],
+      [translate('forms.plannedUnloading'), date(detailsSource.planned_unloading_date)],
+      [translate('forms.departureDate'), date(detailsSource.departure_date)],
+      [translate('forms.unloadingDate'), date(detailsSource.unloading_date)],
+      [translate('forms.vehicleNumber'), detailsSource.vehicle_number],
+      [translate('forms.trailerNumber'), detailsSource.trailer_number],
     ];
-    const filledDetails = details.filter(([, value]) => value);
     return (
       <div className="road-sections">
-        {filledDetails.length > 0 && renderRows(filledDetails)}
-        {road.planned_border_crossings?.length ? (
-          <BorderCrossings crossings={road.planned_border_crossings} />
+        {renderRows(details)}
+        {detailsSource.planned_border_crossings?.length ? (
+          <BorderCrossings crossings={detailsSource.planned_border_crossings} />
         ) : null}
         {section(translate('forms.cmrTitle'), [
-          [translate('forms.cmrNumber'), road.cmr_number],
-          [translate('forms.cmrReceivedDate'), date(road.cmr_received_date)],
+          [translate('forms.cmrNumber'), detailsSource.cmr_number],
+          [translate('forms.cmrReceivedDate'), date(detailsSource.cmr_received_date)],
         ])}
       </div>
     );
   }
-  const rows: [string, string | undefined][] = pickup
-    ? [
-        [translate('forms.plannedPickup'), calendarDate(pickup.planned_pickup_date)],
-        [translate('forms.plannedDelivery'), calendarDate(pickup.planned_delivery_date)],
-        [translate('forms.pickupDate'), calendarDate(pickup.pickup_date)],
-        [translate('forms.warehouseDelivery'), calendarDate(pickup.delivery_date)],
-        [
-          translate('shipment.deliveryCity'),
-          [pickup.delivery_city, pickup.delivery_country].filter(Boolean).join(' · '),
-        ],
-        [translate('shipment.deliveryAddress'), pickup.delivery_address],
-        [translate('forms.driver'), pickup.driver],
-        [translate('forms.vehicleNumber'), pickup.vehicle_number],
-        [translate('forms.consignmentNoteDate'), calendarDate(pickup.ttn_date)],
-      ]
-    : [];
-  return Object.values(pickup ?? {}).some(Boolean) ? (
-    renderRows(rows)
-  ) : (
-    <p className="muted">{translate('route.emptySegment')}</p>
-  );
+  const pickupDetails = pickup ?? {};
+  const date = (value?: string) => (value ? calendarDate(value) : undefined);
+  return renderRows([
+    [translate('forms.plannedPickup'), date(pickupDetails.planned_pickup_date)],
+    [translate('forms.plannedDelivery'), date(pickupDetails.planned_delivery_date)],
+    [translate('forms.pickupDate'), date(pickupDetails.pickup_date)],
+    [translate('forms.warehouseDelivery'), date(pickupDetails.delivery_date)],
+    [
+      translate('shipment.deliveryCity'),
+      [pickupDetails.delivery_city, pickupDetails.delivery_country].filter(Boolean).join(' · '),
+    ],
+    [translate('shipment.deliveryAddress'), pickupDetails.delivery_address],
+    [translate('forms.driver'), pickupDetails.driver],
+    [translate('forms.vehicleNumber'), pickupDetails.vehicle_number],
+    [translate('forms.consignmentNoteDate'), date(pickupDetails.ttn_date)],
+  ]);
 }
 
 function BorderCrossings({

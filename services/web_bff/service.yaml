@@ -1,6 +1,7 @@
 version: 1
 libraries:
 - common
+- configs
 - auth
 - browser
 postgresql:
@@ -52,3 +53,5 @@ http_logging:
   - /api/session
   - /api/logout
   - /api/preferences/**
+configs:
+- CONTAINER_CATALOG

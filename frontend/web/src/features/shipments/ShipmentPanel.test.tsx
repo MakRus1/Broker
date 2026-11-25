@@ -19,6 +19,8 @@ describe('container plan in the shipment card', () => {
       <ShipmentPanel
         embedded
         readOnly={readOnly}
+        containerTypes={['40HC']}
+        containerCatalogFailure=""
         session={session}
         initial={shipment}
         customerName="Тестовый клиент"

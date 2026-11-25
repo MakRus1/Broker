@@ -103,9 +103,7 @@ async def test_concurrent_first_save_keeps_one_revision(api):
         '40HC': {'name': '40 High Cube', 'iso_codes': ['45G1'], 'active': True},
     },
 )
-async def test_catalog_hides_inactive_groups_and_preserves_existing_inquiry_plan(api):
-    settings = await api.post('/api/v1/shipments/settings', {})
-    assert settings['container_types'] == ['40HC']
+async def test_inactive_catalog_group_preserves_existing_inquiry_plan(api):
     old_position = {
         'container_type_code': '20DC',
         'container_ownership': 'COC',

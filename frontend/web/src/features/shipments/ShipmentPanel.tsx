@@ -26,7 +26,8 @@ const operationStatusKeys = {
 type Props = {
   active?: boolean;
   initial: Shipment;
-  containerTypes?: string[];
+  containerTypes: string[];
+  containerCatalogFailure: string;
   embedded?: boolean;
   readOnly?: boolean;
   section?: 'items' | 'transportations';
@@ -39,7 +40,8 @@ type Props = {
 export function ShipmentPanel({
   active = true,
   customerName,
-  containerTypes = [],
+  containerTypes,
+  containerCatalogFailure,
   embedded = false,
   readOnly = false,
   section,
@@ -319,6 +321,7 @@ export function ShipmentPanel({
                   </button>
                 )}
               </div>
+              {containerCatalogFailure && <p className="hint">{containerCatalogFailure}</p>}
               {!!items.length && (
                 <div className="container-plan-table-scroll">
                   <table className="container-plan-table">

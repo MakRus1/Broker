@@ -239,7 +239,6 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
                 'statuses': ['Новая'],
                 'route_types': ['sea'],
                 'planned_containers': True,
-                'container_types': ['40HC'],
             },
             200,
         ),
@@ -876,3 +875,20 @@ async def test_inquiry_contact_and_counterparty_contact_ids_are_preserved(browse
     })
     assert response.status == 200, response.text
     assert response.json()['item']['contact_id'] == contact_id
+
+
+@pytest.mark.config(
+    CONTAINER_CATALOG={
+        '20DC': {'name': '20 Dry', 'iso_codes': ['22G1'], 'active': False},
+        '40HC': {'name': '40 High Cube', 'iso_codes': ['45G1'], 'active': True},
+    },
+)
+async def test_container_catalog_reads_active_groups_without_shipments(browser):
+    path = '/api/v1/container-catalog'
+    assert (await browser.get(path)).status == 401
+    await browser.sign_in()
+    response = await browser.get(path)
+    assert response.status == 200
+    assert response.json() == {
+        'items': [{'code': '40HC', 'name': '40 High Cube', 'iso_codes': ['45G1']}],
+    }

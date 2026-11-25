@@ -23,6 +23,18 @@ inline clients::shipments::models::EnsureShipmentRequest ToShipmentCommand(
     shipment.incoterms = inquiry.incoterms;
     shipment.loading = inquiry.loading;
     shipment.logist = creation.Logist;
+    if (inquiry.planned_containers.has_value()) {
+        shipment.planned_containers.emplace();
+        for (const auto& item : inquiry.planned_containers.value()) {
+            shipment.planned_containers.value().push_back({
+                .container_type_code = item.container_type_code,
+                .container_ownership =
+                    shipment_models::ParseEnumScalar(models::EnumValue(item.container_ownership),
+                        shipment_models::ContainerOwnership{}),
+                .planned_quantity = item.planned_quantity,
+            });
+        }
+    }
     shipment.route_segments.emplace();
     for (const auto& segment : creation.RouteSegments)
         shipment.route_segments->push_back(

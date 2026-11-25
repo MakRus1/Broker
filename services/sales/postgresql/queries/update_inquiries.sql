@@ -15,6 +15,7 @@ SET contact_id = value.contact_id,
     ready_date = value.ready_date,
     desired_delivery_date = value.desired_delivery_date,
     note = value.note,
+    planned_containers = COALESCE(value.planned_containers, target.planned_containers),
     route_segments = value.route_segments,
     accepted_proposal_id = NULL,
     accepted_proposal_revision = NULL,
@@ -37,6 +38,7 @@ FROM jsonb_to_record($2::JSONB) AS value (
     ready_date DATE,
     desired_delivery_date DATE,
     note TEXT,
+    planned_containers sales_planned_container_v1[],
     route_segments JSONB
 )
 WHERE target.organization_id = $1::UUID

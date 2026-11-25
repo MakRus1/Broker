@@ -320,6 +320,18 @@ Result Convert(const models::sales::SaveInquiryRequest& value) {
     result.manager_subject = value.manager_subject;
     result.note = value.note;
     result.ready_date = value.ready_date;
+    if (value.planned_containers.has_value()) {
+        result.planned_containers.emplace();
+        for (const auto& item : value.planned_containers.value()) {
+            result.planned_containers.value().push_back({
+                .container_type_code = item.container_type_code,
+                .container_ownership = clients::sales::models::ParseEnumScalar(
+                    models::sales::EnumValue(item.container_ownership),
+                    clients::sales::models::ContainerOwnership{}),
+                .planned_quantity = item.planned_quantity,
+            });
+        }
+    }
     result.route_segments.reserve(value.route_segments.size());
     for (const auto& item : value.route_segments)
         result.route_segments.push_back(Convert(item));
@@ -588,6 +600,18 @@ inline models::sales::Inquiry Convert(const clients::sales::models::Inquiry& val
     result.organization_id = value.organization_id;
     result.ready_date = value.ready_date;
     result.revision = value.revision;
+    if (value.planned_containers.has_value()) {
+        result.planned_containers.emplace();
+        for (const auto& item : value.planned_containers.value()) {
+            result.planned_containers.value().push_back({
+                .container_type_code = item.container_type_code,
+                .container_ownership = models::sales::ParseEnumScalar(
+                    clients::sales::models::EnumValue(item.container_ownership),
+                    models::sales::ContainerOwnership{}),
+                .planned_quantity = item.planned_quantity,
+            });
+        }
+    }
     result.route_segments.reserve(value.route_segments.size());
     for (const auto& item : value.route_segments)
         result.route_segments.push_back(Convert(item));

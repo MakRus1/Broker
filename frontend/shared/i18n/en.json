@@ -1294,6 +1294,7 @@
   "sales.edit": "Edit",
   "sales.save": "Save",
   "sales.creating": "Creating",
+  "sales.containerPlanSettingsUnavailable": "Could not load planned container settings",
   "sales.cargo": "Cargo description",
   "sales.readyDate": "Cargo ready date",
   "sales.deliveryDate": "Desired delivery date",

@@ -160,7 +160,8 @@ inline std::optional<std::vector<clients::shipments::models::ShipmentRouteSegmen
 
 inline clients::shipments::ApiV1ShipmentsCreate::RequestBody Convert(
     const models::shipments::CreateShipmentRequest& value) {
-    return {.cargo_description = value.cargo_description,
+    clients::shipments::ApiV1ShipmentsCreate::RequestBody result{
+        .cargo_description = value.cargo_description,
         .carriage_terms = value.carriage_terms,
         .customer_id = value.customer_id,
         .delivery_address = value.delivery_address,
@@ -176,6 +177,19 @@ inline clients::shipments::ApiV1ShipmentsCreate::RequestBody Convert(
         .route_segments = ConvertSegments(value.route_segments),
         .shipment_date = value.shipment_date,
         .status = value.status};
+    if (value.planned_containers.has_value()) {
+        result.planned_containers.emplace();
+        for (const auto& item : value.planned_containers.value()) {
+            result.planned_containers.value().push_back({
+                .container_type_code = item.container_type_code,
+                .container_ownership = clients::shipments::models::ParseEnumScalar(
+                    models::shipments::EnumValue(item.container_ownership),
+                    clients::shipments::models::ContainerOwnership{}),
+                .planned_quantity = item.planned_quantity,
+            });
+        }
+    }
+    return result;
 }
 
 inline clients::shipments::ApiV1ShipmentsGet::RequestBody Convert(

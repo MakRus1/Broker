@@ -877,16 +877,17 @@ async def test_inquiry_contact_and_counterparty_contact_ids_are_preserved(browse
     assert response.json()['item']['contact_id'] == contact_id
 
 
-@pytest.mark.config(
-    CONTAINER_CATALOG={
-        '20DC': {'name': '20 Dry', 'iso_codes': ['22G1'], 'active': False},
-        '40HC': {'name': '40 High Cube', 'iso_codes': ['45G1'], 'active': True},
-    },
-)
-async def test_container_catalog_reads_active_groups_without_shipments(browser):
+async def test_container_catalog_reads_active_groups_without_shipments(
+    browser, service_client, dynamic_config,
+):
     path = '/api/v1/container-catalog'
     assert (await browser.get(path)).status == 401
     await browser.sign_in()
+    dynamic_config.set(CONTAINER_CATALOG={
+        '20DC': {'name': '20 Dry', 'iso_codes': ['22G1'], 'active': False},
+        '40HC': {'name': '40 High Cube', 'iso_codes': ['45G1'], 'active': True},
+    })
+    await service_client.update_server_state()
     response = await browser.get(path)
     assert response.status == 200
     assert response.json() == {

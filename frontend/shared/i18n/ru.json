@@ -1294,6 +1294,7 @@
   "sales.edit": "Редактировать",
   "sales.save": "Сохранить",
   "sales.creating": "Создание",
+  "sales.containerPlanSettingsUnavailable": "Не удалось загрузить настройки плановых контейнеров",
   "sales.cargo": "Описание груза",
   "sales.readyDate": "Дата готовности груза",
   "sales.deliveryDate": "Желаемая дата доставки",

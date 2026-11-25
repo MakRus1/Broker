@@ -19,6 +19,7 @@ INSERT INTO sales_inquiries (
     ready_date,
     desired_delivery_date,
     note,
+    planned_containers,
     route_segments
 )
 SELECT
@@ -39,6 +40,7 @@ SELECT
     value.ready_date,
     value.desired_delivery_date,
     value.note,
+    value.planned_containers,
     value.route_segments
 FROM jsonb_to_record($2::JSONB) AS value (
     id UUID,
@@ -56,6 +58,7 @@ FROM jsonb_to_record($2::JSONB) AS value (
     ready_date DATE,
     desired_delivery_date DATE,
     note TEXT,
+    planned_containers sales_planned_container_v1[],
     route_segments JSONB
 )
 ON CONFLICT DO NOTHING

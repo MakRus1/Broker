@@ -113,7 +113,8 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
     segments = [{'id': str(uuid4()), 'type': 'international_road', 'plan': {
         'origin_name': 'Роттердам', 'destination_name': 'Москва',
         'departure_date': '2030-01-10', 'arrival_date': '2030-01-15'}}]
-    incoming,value=await draft(api, route_segments=segments)
+    plan = [{'container_type_code': '40HC', 'container_ownership': 'COC', 'planned_quantity': 5}]
+    incoming,value=await draft(api, route_segments=segments, planned_containers=plan)
     await api.post(BASE+'save',value)
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':1,'action':'offer'})
     await api.post(BASE+'action',{'id':value['id'],'expected_revision':2,'action':'accept'})
@@ -125,6 +126,8 @@ async def test_accepted_proposal_transfer_retries_without_changing_import(api,mo
         await asyncio.sleep(.05)
     assert item['shipment_id']==SHIPMENT
     assert commands[0]['shipment']['route_segments'] == segments
+    assert commands[0]['shipment']['planned_containers'] == plan
+    assert commands[0] == commands[1]
     assert len(deliveries)==2
     assert deliveries[0]==deliveries[1]
     lines=deliveries[0]['items']

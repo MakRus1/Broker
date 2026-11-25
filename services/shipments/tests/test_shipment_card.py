@@ -250,7 +250,13 @@ async def test_organization_settings_and_yearly_numbers(api):
     }
 )
 async def test_disabled_planned_containers_are_rejected_by_server(api):
-    shipment = (await api.post('/api/v1/shipments/create', creation(), expected=201))['shipment']
+    shipment = (await api.post(
+        '/api/v1/shipments/create', creation(planned_containers=[
+            {'container_type_code': '40HC', 'container_ownership': 'COC', 'planned_quantity': 5},
+        ]), expected=201,
+    ))['shipment']
+    result = await api.post('/api/v1/shipment-items/list', {'shipment_id': shipment['id']})
+    assert result['items'] == []
     settings = await api.post('/api/v1/shipments/settings', {})
     assert settings['planned_containers'] is False
     await api.post(
@@ -265,6 +271,17 @@ async def test_disabled_planned_containers_are_rejected_by_server(api):
         },
         expected=400,
     )
+
+
+async def test_create_shipment_imports_planned_containers_once(api):
+    item = {'container_type_code': '40HC', 'container_ownership': 'COC', 'planned_quantity': 5}
+    body = creation(planned_containers=[item])
+    shipment = (await api.post('/api/v1/shipments/create', body, expected=201))['shipment']
+    replay = (await api.post('/api/v1/shipments/create', body, expected=201))['shipment']
+    assert replay['id'] == shipment['id']
+    result = await api.post('/api/v1/shipment-items/list', {'shipment_id': shipment['id']})
+    assert len(result['items']) == 1
+    assert {key: result['items'][0][key] for key in item} == item
 
 
 async def test_route_segment_ids_are_preserved_and_duplicates_rejected(api):

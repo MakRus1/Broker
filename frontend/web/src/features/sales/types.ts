@@ -14,7 +14,13 @@ export type SalesCard = {
   revision: number;
 };
 export type InquiryStatus = 'draft' | 'in_progress' | 'agreed' | 'rejected';
+export type PlannedContainer = {
+  container_type_code: string;
+  container_ownership: 'COC' | 'SOC';
+  planned_quantity: number;
+};
 export type Inquiry = {
+  planned_containers?: PlannedContainer[];
   contact_id?: string;
   id: string;
   organization_id: string;

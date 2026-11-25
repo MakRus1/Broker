@@ -19,6 +19,7 @@ import { EmployeeName } from '../../shared/profile/EmployeeName';
 import { SalesCustomerName } from './SalesCustomerName';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { useLocalization } from '../localization/Localization';
+import { InquiryContainerPlan } from './InquiryContainerPlan';
 import { ShipmentRoute } from '../shipments/ShipmentRoute';
 import {
   ShipmentConditionsFields,
@@ -530,6 +531,13 @@ export function SalesPage({
                         </label>
                       </div>
                     </RecordSection>
+                    <InquiryContainerPlan
+                      active={active}
+                      session={session}
+                      customerId={draft.customer_id}
+                      items={draft.planned_containers}
+                      onChange={(items) => set('planned_containers', items)}
+                    />
                     <RecordSection title={translate('sales.conditions')}>
                       <ShipmentConditionsFields
                         section="terms"
@@ -685,6 +693,12 @@ export function SalesPage({
                   </div>
                 </dl>
               </RecordSection>
+              <InquiryContainerPlan
+                active={active}
+                session={session}
+                customerId={draft.customer_id}
+                items={draft.planned_containers}
+              />
               <RecordSection title={translate('sales.conditions')}>
                 <dl className="record-layout-details sales-details">
                   {(

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <boost/uuid/string_generator.hpp>
 #include <components/shipments.hpp>
 #include <configs/keys.hpp>
@@ -18,6 +19,7 @@
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <platform/http_client.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -65,6 +67,20 @@ models::Shipment InsertShipment(pg::Transaction& transaction,
 
     const auto row = transaction.Execute(sql::kCreateShipment, organization, card)
                          .AsSingleRow<models::pg::ShipmentRaw>();
+    if (settings.PlannedContainers && body.planned_containers.has_value()) {
+        std::set<std::pair<std::string, models::ContainerOwnership>> positions;
+        for (const auto& item : body.planned_containers.value()) {
+            if (!positions.emplace(item.container_type_code, item.container_ownership).second)
+                throw ApiError<400>{"duplicate_container_position",
+                    "Укажите одну позицию для каждого типа контейнера и принадлежности"};
+            if (std::find(settings.ContainerTypes.begin(), settings.ContainerTypes.end(),
+                    item.container_type_code) == settings.ContainerTypes.end())
+                throw ApiError<400>{
+                    "invalid_container_type", "Тип контейнера недоступен для организации"};
+            transaction.Execute(sql::kAddItem, organization, row.Id, item.container_type_code,
+                models::EnumValue(item.container_ownership), item.planned_quantity);
+        }
+    }
     RememberCargo(transaction, organization, row.CustomerId, row.CargoDescription);
     return shipments::converters::Convert(row);
 }

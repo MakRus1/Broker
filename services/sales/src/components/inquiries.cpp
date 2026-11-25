@@ -11,6 +11,7 @@
 #include <platform/outbox/component.hpp>
 #include <platform/route_plan.hpp>
 #include <sales/sql_queries.hpp>
+#include <set>
 #include <userver/components/component_context.hpp>
 #include <userver/formats/json.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -35,6 +36,14 @@ models::Inquiry InquiriesComponent::SaveInquiry(const boost::uuids::uuid& organi
     const platform::auth::Identity& identity, const models::SaveInquiryRequest& request) const {
     const auto& value = request;
     platform::ValidateRoutePlans(value.route_segments);
+    if (value.planned_containers.has_value()) {
+        std::set<std::pair<std::string, models::ContainerOwnership>> positions;
+        for (const auto& item : value.planned_containers.value()) {
+            if (!positions.emplace(item.container_type_code, item.container_ownership).second)
+                throw ApiError<400>{"duplicate_container_position",
+                    "Укажите одну позицию для каждого типа контейнера и принадлежности"};
+        }
+    }
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto previous = transaction.Execute(sql::kLockInquiries, organization, value.id);

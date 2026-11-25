@@ -26,6 +26,7 @@ schema:
     planned_containers:
       type: boolean
     container_types:
+      description: Устаревшее поле для совместимости с ранее опубликованными настройками.
       type: array
       maxItems: 100
       items:
@@ -37,7 +38,6 @@ schema:
   - statuses
   - route_types
   - planned_containers
-  - container_types
 default:
   number_template: S-{sequence}
   reset_number_yearly: false
@@ -52,7 +52,3 @@ default:
   - pickup
   - air
   planned_containers: true
-  container_types:
-  - 20DC
-  - 40DC
-  - 40HC

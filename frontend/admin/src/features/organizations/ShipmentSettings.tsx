@@ -8,13 +8,11 @@ type Rules = {
   statuses: string[];
   route_types: string[];
   planned_containers: boolean;
-  container_types: string[];
 };
 type Settings = {
   revision: number;
   rules: Rules;
   allowed_route_types: { code: string; name: string }[];
-  allowed_container_types: string[];
   planned_containers_allowed: boolean;
 };
 
@@ -65,12 +63,14 @@ export function ShipmentSettings({
     }
   }
   const dirty = !!draft && JSON.stringify(draft) !== JSON.stringify(settings?.rules);
-  function toggle(key: 'route_types' | 'container_types', code: string, checked: boolean) {
+  function toggle(code: string, checked: boolean) {
     setDraft((value) =>
       value
         ? {
             ...value,
-            [key]: checked ? [...value[key], code] : value[key].filter((item) => item !== code),
+            route_types: checked
+              ? [...value.route_types, code]
+              : value.route_types.filter((item) => item !== code),
           }
         : value,
     );
@@ -124,11 +124,7 @@ export function ShipmentSettings({
           </div>
           <div>
             <dt>Плановые контейнеры</dt>
-            <dd>
-              {settings.rules.planned_containers
-                ? settings.rules.container_types.join(', ')
-                : 'Отключены'}
-            </dd>
+            <dd>{settings.rules.planned_containers ? 'Включены' : 'Отключены'}</dd>
           </div>
         </dl>
       )}
@@ -189,7 +185,7 @@ export function ShipmentSettings({
                     <input
                       type="checkbox"
                       checked={draft.route_types.includes(item.code)}
-                      onChange={(event) => toggle('route_types', item.code, event.target.checked)}
+                      onChange={(event) => toggle(item.code, event.target.checked)}
                     />
                     {item.name}
                   </label>
@@ -207,18 +203,6 @@ export function ShipmentSettings({
                 />
                 Использовать плановые контейнеры
               </label>
-              <div className="shipment-rules-options">
-                {settings.allowed_container_types.map((code) => (
-                  <label key={code}>
-                    <input
-                      type="checkbox"
-                      checked={draft.container_types.includes(code)}
-                      onChange={(event) => toggle('container_types', code, event.target.checked)}
-                    />
-                    {code}
-                  </label>
-                ))}
-              </div>
             </fieldset>
             {error && (
               <p className="organization-error" role="alert">

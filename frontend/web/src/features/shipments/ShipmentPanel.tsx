@@ -39,7 +39,7 @@ type Props = {
 export function ShipmentPanel({
   active = true,
   customerName,
-  containerTypes = ['20DC', '40DC', '40HC'],
+  containerTypes = [],
   embedded = false,
   readOnly = false,
   section,
@@ -312,7 +312,7 @@ export function ShipmentPanel({
                 {write && (
                   <button
                     className="primary"
-                    disabled={loading || Boolean(failure)}
+                    disabled={loading || Boolean(failure) || containerTypes.length === 0}
                     onClick={() => setForm('item')}
                   >
                     {translate('shipment.addItemButton')}

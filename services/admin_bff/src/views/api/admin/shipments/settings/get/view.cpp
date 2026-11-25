@@ -8,11 +8,9 @@ Response View::Handle(
     namespace api = clients::shipments::ApiAdminShipmentsSettingsGet;
     const auto result = deps.shipments.ApiAdminShipmentsSettingsGet(
         api::Request{.body = {.organization_id = request.body.organization_id}}, session.Access);
-    Response200 response{.allowed_container_types = result.allowed_container_types,
-        .planned_containers_allowed = result.planned_containers_allowed,
+    Response200 response{.planned_containers_allowed = result.planned_containers_allowed,
         .revision = result.revision,
-        .rules = {.container_types = result.rules.container_types,
-            .number_template = result.rules.number_template,
+        .rules = {.number_template = result.rules.number_template,
             .planned_containers = result.rules.planned_containers,
             .reset_number_yearly = result.rules.reset_number_yearly,
             .route_types = result.rules.route_types,

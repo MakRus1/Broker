@@ -11,14 +11,13 @@ struct ShipmentBusinessRules {
     std::vector<std::string> Statuses{};
     std::vector<std::string> RouteTypes{};
     bool PlannedContainers{};
-    std::vector<std::string> ContainerTypes{};
 };
 }  // namespace shipments::models::pg
 
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::shipments::models::pg::ShipmentBusinessRules> {
-    static constexpr DBTypeName postgres_name = "public.shipment_business_rules_v1";
+    static constexpr DBTypeName postgres_name = "public.shipment_business_rules_v2";
 };
 
 }  // namespace userver::storages::postgres::io

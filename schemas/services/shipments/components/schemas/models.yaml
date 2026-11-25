@@ -644,19 +644,12 @@ ShipmentBusinessRules:
         maxLength: 64
     planned_containers:
       type: boolean
-    container_types:
-      type: array
-      maxItems: 100
-      items:
-        type: string
-        maxLength: 16
   required:
   - number_template
   - reset_number_yearly
   - statuses
   - route_types
   - planned_containers
-  - container_types
 ShipmentBusinessSettings:
   type: object
   additionalProperties: false
@@ -671,17 +664,12 @@ ShipmentBusinessSettings:
       type: array
       items:
         $ref: '#/DictionaryValue'
-    allowed_container_types:
-      type: array
-      items:
-        type: string
     planned_containers_allowed:
       type: boolean
   required:
   - revision
   - rules
   - allowed_route_types
-  - allowed_container_types
   - planned_containers_allowed
 TransportationContext:
   type: object

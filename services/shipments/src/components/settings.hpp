@@ -18,6 +18,7 @@ class SettingsComponent final : public userver::components::ComponentBase {
     configs::ShipmentSettings Effective(userver::storages::postgres::Transaction& transaction,
         const boost::uuids::uuid& organization,
         const std::optional<boost::uuids::uuid>& customer) const;
+    std::vector<std::string> GetContainerTypes(bool include_inactive = false) const;
     models::ShipmentDictionaries GetDictionaries() const;
     models::ShipmentBusinessSettings GetBusinessSettings(
         const boost::uuids::uuid& organization) const;

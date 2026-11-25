@@ -1,0 +1,38 @@
+name: CONTAINER_CATALOG
+mode: json-schema
+schema:
+  type: object
+  maxProperties: 100
+  additionalProperties: false
+  patternProperties:
+    '^[A-Z0-9]{2,16}$':
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        iso_codes:
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          items:
+            type: string
+            pattern: '^[A-Z0-9]{4}$'
+        active:
+          type: boolean
+      required: [name, iso_codes, active]
+default:
+  20DC:
+    name: 20′ Dry Container
+    iso_codes: [22G0, 22G1]
+    active: true
+  40DC:
+    name: 40′ Dry Container
+    iso_codes: [42G0, 42G1]
+    active: true
+  40HC:
+    name: 40′ High Cube
+    iso_codes: [45G0, 45G1]
+    active: true

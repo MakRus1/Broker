@@ -38,7 +38,6 @@ configs::ShipmentSettings ResolveShipmentSettings(configs::ShipmentSettings resu
         result.Statuses = rules.Statuses;
         result.RouteTypes = rules.RouteTypes;
         result.PlannedContainers = rules.PlannedContainers;
-        result.ContainerTypes = rules.ContainerTypes;
     }
     const auto intersect = [](auto& values, const auto& allowed) {
         std::erase_if(values, [&](const auto& value) {
@@ -46,7 +45,6 @@ configs::ShipmentSettings ResolveShipmentSettings(configs::ShipmentSettings resu
         });
     };
     intersect(result.RouteTypes, limits.RouteTypes);
-    intersect(result.ContainerTypes, limits.ContainerTypes);
     result.PlannedContainers = result.PlannedContainers && limits.PlannedContainers;
     return result;
 }
@@ -63,7 +61,6 @@ void ValidateBusinessRules(
     };
     unique(rules.Statuses);
     unique(rules.RouteTypes);
-    unique(rules.ContainerTypes);
     if (rules.Statuses.empty())
         throw ApiError<400>{"invalid_statuses", "Нужен хотя бы один статус поставки"};
     const auto subset = [](const auto& values, const auto& allowed) {
@@ -72,7 +69,6 @@ void ValidateBusinessRules(
         });
     };
     if (!subset(rules.RouteTypes, limits.RouteTypes) ||
-        !subset(rules.ContainerTypes, limits.ContainerTypes) ||
         (rules.PlannedContainers && !limits.PlannedContainers))
         throw ApiError<400>{
             "platform_limit", "Настройки выходят за доступные организации возможности"};
@@ -132,7 +128,6 @@ models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
     models::ShipmentBusinessSettings result;
     result.revision = revision;
     result.rules = std::move(rules);
-    result.allowed_container_types = limits.ContainerTypes;
     result.planned_containers_allowed = limits.PlannedContainers;
     for (const auto& entry : rows.AsSetOf<models::pg::ShipmentDictionaryValue>())
         if (helpers::ParseDictionary(entry.Dictionary) == helpers::ShipmentDictionary::kRouteType &&
@@ -140,6 +135,16 @@ models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(
                 limits.RouteTypes.end())
             result.allowed_route_types.push_back({.code = entry.Code, .name = entry.Name});
     return result;
+}
+
+std::vector<std::string> SettingsComponent::GetContainerTypes(bool include_inactive) const {
+    const auto catalog = configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG);
+    std::vector<std::string> types;
+    for (auto group = catalog.begin(); group != catalog.end(); ++group)
+        if (include_inactive || (*group)["active"].As<bool>())
+            types.push_back(group.GetName());
+    std::ranges::sort(types);
+    return types;
 }
 
 models::ShipmentDictionaries SettingsComponent::GetDictionaries() const {
@@ -172,8 +177,7 @@ models::ShipmentBusinessSettings SettingsComponent::GetBusinessSettings(
     const auto stored = LoadRules(organization);
     const auto effective = ResolveShipmentSettings(limits, limits, stored);
     return BuildBusinessSettings(limits,
-        {.container_types = effective.ContainerTypes,
-            .number_template = effective.NumberTemplate,
+        {.number_template = effective.NumberTemplate,
             .planned_containers = effective.PlannedContainers,
             .reset_number_yearly = effective.ResetNumberYearly,
             .route_types = effective.RouteTypes,

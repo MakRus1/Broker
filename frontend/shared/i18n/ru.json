@@ -750,6 +750,7 @@
   "forms.ownLegalEntityRequired": "Собственное юрлицо · обязательно",
   "forms.ownBankAccount": "Наш банковский счёт",
   "forms.paymentTerms": "Отсрочка",
+  "forms.valueNotSpecified": "Не указано",
   "forms.notSpecified": "Не указана",
   "forms.searchByPaymentNumber": "Поиск по номеру платежа",
   "forms.partOfTheNumber": "Часть номера…",

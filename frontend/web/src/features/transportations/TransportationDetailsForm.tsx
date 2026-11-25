@@ -14,11 +14,13 @@ import { request } from '../../shared/api/http';
 import { transportationTypes } from '../routes/logisticsLabels';
 import { type Session } from '../../shared/api/session';
 import { type Transportation } from './types';
+import type { Shipment } from '../shipments/types';
 import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 
 type Props = {
   initial?: Transportation;
+  shipmentRoute?: Transportation['route_segments'];
   customers?: Counterparty[];
   historicalRoute?: ReactNode;
   shipmentId: string;
@@ -29,6 +31,7 @@ type Props = {
 };
 export function TransportationDetailsForm({
   initial: source,
+  shipmentRoute,
   customers = [],
   historicalRoute,
   shipmentId,
@@ -55,15 +58,13 @@ export function TransportationDetailsForm({
       });
     return () => controller.abort();
   }, [session]);
-  const [routeSegments, setRouteSegments] = useState(
-    () =>
-      initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
+  const [routeSource] = useState(initial?.route_segments ?? shipmentRoute ?? []);
+  const [originalRoute] = useState(() =>
+    routeSource.filter((stage) => stage.inherited !== false).map(routeSegment),
   );
+  const [routeSegments, setRouteSegments] = useState(originalRoute);
   const routeDirty =
-    JSON.stringify(routeSegments.map(routeSegment)) !==
-    JSON.stringify(
-      initial?.route_segments.filter((stage) => stage.inherited !== false).map(routeSegment) ?? [],
-    );
+    JSON.stringify(routeSegments.map(routeSegment)) !== JSON.stringify(originalRoute);
   const [id, setId] = useState<string>(() => crypto.randomUUID());
   const [type, setType] = useState<Transportation['type']>(initial?.type ?? 'container');
   const [hazardous, setHazardous] = useState(initial?.hazardous ?? false);
@@ -141,10 +142,14 @@ export function TransportationDetailsForm({
           ...(initial
             ? { transportation_id: initial.id, expected_revision: initial.revision }
             : { id, shipment_id: shipmentId }),
-          ...(initial && routeDirty
+          ...(routeDirty
             ? {
-                route_segments: routeRequest(initial.id, initial.revision, routeSegments, locale)
-                  .route_segments,
+                route_segments: routeRequest(
+                  initial?.id ?? id,
+                  initial?.revision ?? 0,
+                  routeSegments,
+                  locale,
+                ).route_segments,
               }
             : {}),
           type,
@@ -247,9 +252,9 @@ export function TransportationDetailsForm({
               )}
             </div>
           </RecordSection>
-          {initial && (routeSegments.length > 0 || !historicalRoute) && (
+          {(routeSegments.length > 0 || !historicalRoute) && (
             <RouteEditorFields
-              initial={initial}
+              initial={{ shipment_id: shipmentId, route_segments: routeSource }}
               session={session}
               customers={customers}
               segments={routeSegments}
@@ -301,26 +306,61 @@ export function TransportationDetailsForm({
     </>
   );
 }
-export function NewTransportation(props: Omit<Props, 'initial' | 'onCancel'>) {
+export function NewTransportation(props: Omit<Props, 'initial' | 'shipmentRoute' | 'onCancel'>) {
   const { translate } = useLocalization();
+  const [shipment, setShipment] = useState<Shipment>();
+  const [failure, setFailure] = useState('');
+  const { session, shipmentId } = props;
+  useEffect(() => {
+    const controller = new AbortController();
+    request<{ shipment: Shipment }>(
+      '/api/v1/shipments/get',
+      session,
+      {
+        shipment_id: shipmentId,
+      },
+      controller.signal,
+    )
+      .then(({ shipment }) => setShipment(shipment))
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setFailure(error.message);
+      });
+    return () => controller.abort();
+  }, [session, shipmentId]);
+  const shipmentRoute = shipment?.route_segments?.map(({ type, ...stage }) => ({
+    ...stage,
+    mode: type as Transportation['route_segments'][number]['mode'],
+  }));
   return (
-    <RecordPage className="creation-page transportation-workbench">
+    <RecordPage className="transportation-workbench">
       <RecordHeading
         guide="transportation"
         kind={translate('forms.transportation')}
         title={translate('entity.newTransportation')}
-        actions={
-          <a className="button" href={`#/shipments/${props.shipmentId}`}>
-            {translate('forms.backToShipment')}
+        mode={translate('record.creating')}
+        metadata={
+          <a className="record-layout-reference" href={`#/shipments/${shipmentId}`}>
+            {translate('registryField.shipment_id')} {shipment?.number || '↗'}
           </a>
         }
       />
-      <TransportationDetailsForm
-        {...props}
-        onCancel={() => {
-          location.hash = `/shipments/${props.shipmentId}`;
-        }}
-      />
+      {shipment ? (
+        <div className="panel-content transportation-edit-content">
+          <TransportationDetailsForm
+            {...props}
+            shipmentRoute={shipmentRoute}
+            onCancel={() => {
+              location.hash = `/shipments/${shipmentId}`;
+            }}
+          />
+        </div>
+      ) : failure ? (
+        <p role="alert" className="error">
+          {failure}
+        </p>
+      ) : (
+        <p role="status">{translate('common.loading')}</p>
+      )}
     </RecordPage>
   );
 }

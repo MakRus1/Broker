@@ -526,6 +526,13 @@ CreateTransportationRequest:
       maxLength: 64
       description: Фактический номер контейнера. Необязателен; нестандартный формат
         не запрещает сохранение.
+    route_segments:
+      type: array
+      minItems: 1
+      maxItems: 32
+      description: Данные участков маршрута, сохраняемые вместе с перевозкой.
+      items:
+        $ref: '#/SetRouteSegmentsItem'
   required:
   - id
   - shipment_id

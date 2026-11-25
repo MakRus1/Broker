@@ -502,6 +502,7 @@ export function RouteView({
                 </dl>
               )}
               <SharedRouteDetailsView
+                mode={route_segment.mode}
                 sea={route_segment.sea}
                 air={route_segment.air}
                 customers={customers}
@@ -512,21 +513,13 @@ export function RouteView({
             route_segment.mode === 'road' ||
             route_segment.mode === 'pickup' ? (
             <RoadDetailsView
+              international={route_segment.mode === 'international_road'}
               road={route_segment.international_road}
               pickup={route_segment.pickup}
               customers={customers}
             />
           ) : route_segment.mode === 'rail' || route_segment.mode === 'international_rail' ? (
-            <>
-              {(route_segment.rail?.origin_station || route_segment.rail?.destination_station) && (
-                <p className="rail-stations-meta">
-                  {translate('forms.esr')}
-                  {route_segment.rail?.origin_station?.esr_code ?? '—'} →{' '}
-                  {route_segment.rail?.destination_station?.esr_code ?? '—'}
-                </p>
-              )}
-              <RailDetailsView value={routeSegment(route_segment).rail ?? {}} />
-            </>
+            <RailDetailsView value={routeSegment(route_segment).rail ?? {}} />
           ) : (
             <div className="route-segment-dates">
               {(['departure', 'arrival'] as const).map((kind) => {

@@ -171,3 +171,31 @@ async def test_transportation_details_and_route_saved_together(browser, mockserv
     assert save.times_called == 1
     assert response.json()['transportation']['route_segments'] == [stage, sea, cleared]
     assert response.json()['transportation']['container_number'] == 'CSQU3054383'
+
+
+async def test_create_transportation_forwards_route(browser, mockserver):
+    from test_proxy import TRANSPORTATION
+
+    await browser.sign_in()
+    stage = {
+        'id': str(uuid4()),
+        'mode': 'international_road',
+        'international_road': {'cmr_number': 'CMR-42', 'cmr_received_date': '2020-01-04'},
+    }
+    body = {
+        'id': TRANSPORTATION['id'],
+        'shipment_id': TRANSPORTATION['shipment_id'],
+        'type': 'container',
+        'hazardous': False,
+        'route_segments': [stage],
+    }
+
+    @mockserver.json_handler('/api/v1/transportations/create')
+    def create(request):
+        assert request.json == body
+        return {'transportation': {**TRANSPORTATION, 'route_segments': [stage]}}
+
+    response = await browser.post('/api/v1/transportations/create', body)
+    assert response.status == 200, response.text
+    assert create.times_called == 1
+    assert response.json()['transportation']['route_segments'] == [stage]

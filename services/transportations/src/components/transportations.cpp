@@ -1,5 +1,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <components/inherited_route.hpp>
+#include <components/route_integrations.hpp>
+#include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <components/transportations.hpp>
 #include <converters/container_facts.hpp>
@@ -46,7 +48,8 @@ TransportationsComponent::TransportationsComponent(
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()),
-      routes_(context.FindComponent<RoutesComponent>()) {}
+      routes_(context.FindComponent<RoutesComponent>()),
+      route_integrations_(context.FindComponent<RouteIntegrations>()) {}
 
 models::Transportation TransportationsComponent::FindTransportation(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
@@ -79,8 +82,8 @@ models::TransportationHistoryResult TransportationsComponent::GetTransportationH
 
 models::Transportation TransportationsComponent::CreateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    const models::CreateTransportationRequest& request,
-    const models::ShipmentContext& source) const {
+    const models::CreateTransportationRequest& request, const models::ShipmentContext& source,
+    std::string_view access_token) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
         request.container_number);
 
@@ -109,6 +112,16 @@ models::Transportation TransportationsComponent::CreateTransportation(
                                     platform::TrimToOptional(request.container_number))
                                 .AsSingleRow<models::pg::TransportationRaw>());
     route_rules::InheritRoute(result, source);
+    if (request.route_segments.has_value()) {
+        models::SetRouteRequest route;
+        route.transportation_id = result.id;
+        route.expected_revision = result.revision;
+        route.route_segments = request.route_segments.value();
+        route_rules::ValidateRoute(route);
+        route_integrations_.PrepareRoute(access_token, route, result);
+        routes_.WriteRoute(
+            transaction, organization, access_token, route.route_segments, source, result);
+    }
     transaction.Execute(sql::kInsertCommand, organization, request.id, helpers::Document(request),
         helpers::Document(result));
 

@@ -45,6 +45,7 @@ import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
 import { scrollIntent } from '../../shared/ui/scrollIntent';
 import { ShipmentPanel } from './ShipmentPanel';
+import { ShipmentOverview } from './ShipmentOverview';
 import { DirectoryLookup } from '../directories/DirectoryLookup';
 import { ShipmentConditionsFields, type ShipmentDictionaries } from './ShipmentConditionsFields';
 import './shipmentCard.css';
@@ -172,27 +173,27 @@ function ShipmentCard({
     if (props.route.endsWith('/route')) setTab('route');
   }, [props.route]);
   const [editing, setEditing] = useState(!initial);
+  const scrollToSection = useCallback((section: 'route' | 'items') => {
+    const selector =
+      section === 'route' ? '.shipment-route-workspace' : '[data-workflow-panel="items"]';
+    const target = Array.from(card.current?.querySelectorAll<HTMLElement>(selector) ?? []).find(
+      (node) => node.getClientRects().length > 0,
+    );
+    if (!target) return;
+    scrollIntent();
+    target.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }, []);
   useLayoutEffect(() => {
     if (props.active === false || (tab !== 'route' && tab !== 'items')) return;
     let cancelled = false;
     // Прокрутка после восстановления позиции вкладки, до показа карточки.
     queueMicrotask(() => {
-      if (cancelled) return;
-      const root = card.current;
-      const selector =
-        tab === 'route' ? '.shipment-route-workspace' : '[data-workflow-panel="items"]';
-      const target = Array.from(root?.querySelectorAll<HTMLElement>(selector) ?? []).find(
-        (node) => node.getClientRects().length > 0,
-      );
-      if (target) {
-        scrollIntent();
-        target.scrollIntoView({ block: 'start', behavior: 'instant' });
-      }
+      if (!cancelled) scrollToSection(tab);
     });
     return () => {
       cancelled = true;
     };
-  }, [tab, editing, props.active, props.route]);
+  }, [tab, editing, props.active, props.route, scrollToSection]);
   const [settings, setSettings] = useState<ShipmentSettings>();
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
@@ -496,6 +497,31 @@ function ShipmentCard({
       ? [['finance', translate('home.finance')]]
       : []),
   ];
+  const openPanel = (key: string) => {
+    if (busy) return;
+    if (key === tab) {
+      if (key === 'route') scrollToSection(key);
+      return;
+    }
+    if (editing && (key === 'details' || key === 'route')) {
+      setTab(key);
+      return;
+    }
+    const section = card.current;
+    if (section?.querySelector('form[data-busy="true"]')) return;
+    const switchTab = () => {
+      if (initial && editing) {
+        setDraft(JSON.parse(baseline) as CardDraft);
+        setEditing(false);
+        validation.reset();
+        setFailure('');
+      }
+      setTab(key);
+      // Ссылка на маршрут должна работать и для уже открытой карточки.
+      if (initial) location.hash = `/shipments/${initial.id}${key === 'route' ? '/route' : ''}`;
+    };
+    confirmDiscard(dirty || Boolean(section?.querySelector('form[data-dirty="true"]')), switchTab);
+  };
   const overview = ['details', 'route', 'items'].includes(tab);
   const renderEditor = () => (
     <form
@@ -1001,31 +1027,7 @@ function ShipmentCard({
             aria-pressed={
               tab === key || (key === 'details' && (tab === 'route' || tab === 'items'))
             }
-            onClick={(event) => {
-              if (key === tab || busy) return;
-              if (editing && (key === 'details' || key === 'route')) {
-                setTab(key);
-                return;
-              }
-              const section = event.currentTarget.closest('section');
-              if (section?.querySelector('form[data-busy="true"]')) return;
-              const switchTab = () => {
-                if (initial && editing) {
-                  setDraft(JSON.parse(baseline) as CardDraft);
-                  setEditing(false);
-                  validation.reset();
-                  setFailure('');
-                }
-                setTab(key);
-                // Ссылка на маршрут должна работать и для уже открытой карточки.
-                if (initial)
-                  location.hash = `/shipments/${initial.id}${key === 'route' ? '/route' : ''}`;
-              };
-              confirmDiscard(
-                dirty || Boolean(section?.querySelector('form[data-dirty="true"]')),
-                switchTab,
-              );
-            }}
+            onClick={() => openPanel(key)}
           >
             {label}
           </button>
@@ -1036,12 +1038,22 @@ function ShipmentCard({
           ? renderEditor()
           : initial && (
               <div className="shipment-overview-main">
+                {overview && (
+                  <ShipmentOverview
+                    key={initial.id}
+                    active={props.active !== false}
+                    shipment={initial}
+                    plannedContainers={settingsFailure ? false : settings?.planned_containers}
+                    session={props.session}
+                    onOpen={openPanel}
+                  />
+                )}
                 <ShipmentSummary
                   shipment={initial}
                   customers={props.customers}
                   session={props.session}
                 />
-                <div className={tab === 'route' ? 'shipment-overview-route-target' : undefined}>
+                <div>
                   <ShipmentRoute
                     segments={initial.route_segments ?? []}
                     allowedTypes={[]}

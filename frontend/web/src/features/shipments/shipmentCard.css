@@ -185,8 +185,59 @@
   flex-shrink: 0;
 }
 
-/* Высота для перехода к маршруту доступна до загрузки плана и перевозок. */
-.shipment-overview-route-target {
-  --shipment-route-scroll-offset: 150px;
-  min-block-size: calc(100dvh - var(--shipment-route-scroll-offset));
+.shipment-overview-facts {
+  margin-block: 0 20px;
+  padding-block: 0 16px;
+  border-block-end: 1px solid var(--divider);
+}
+.shipment-overview-facts h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.shipment-overview-facts dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+.shipment-overview-facts dl > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-inline-size: 0;
+}
+.shipment-overview-facts dl > div + div {
+  border-inline-start: 1px solid var(--divider);
+  padding-inline-start: 24px;
+}
+.shipment-overview-facts dd {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.shipment-overview-facts .link-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: start;
+}
+.shipment-overview-facts .link-button:hover {
+  text-decoration: underline;
+}
+@media (max-width: 760px) {
+  .shipment-overview-facts dl {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .shipment-overview-facts dl > div + div {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
 }

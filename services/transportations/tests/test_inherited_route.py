@@ -263,13 +263,12 @@ async def test_conflicting_save_does_not_register_route_usage_twice(
 @pytest.mark.parametrize('path', [
     '/api/v1/transportation-routes/set',
     '/api/v1/transportation-actuals/record',
+    '/api/v1/transportations/create',
 ])
 async def test_usage_waits_for_registered_save_to_commit_or_rollback(
     api, shipment_routes, mockserver, pgsql, rollback, path
 ):
     body = command()
-    created = await api.post(PATH, body)
-    identifier = created['operation']['transportation_ids'][0]
     stage = route_segment('road')
     shipment_routes.set(body['shipment_id'], [stage])
     registered = asyncio.Event()
@@ -293,12 +292,20 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
         await asyncio.wait_for(release_registration.wait(), 5)
         return {'registered': True}
 
-    change = {'transportation_id': identifier, 'expected_revision': 1}
-    if path.endswith('/set'):
-        change['route_segments'] = [stage]
+    if path.endswith('/create'):
+        change = {
+            'id': str(uuid4()), 'shipment_id': body['shipment_id'],
+            'type': 'container', 'hazardous': False, 'route_segments': [stage],
+        }
     else:
-        change.update(route_segment_id=stage['id'], event_kind='departure',
-                      occurred_at='2026-10-20T09:00:00+00:00')
+        created = await api.post(PATH, body)
+        identifier = created['operation']['transportation_ids'][0]
+        change = {'transportation_id': identifier, 'expected_revision': 1}
+        if path.endswith('/set'):
+            change['route_segments'] = [stage]
+        else:
+            change.update(route_segment_id=stage['id'], event_kind='departure',
+                          occurred_at='2026-10-20T09:00:00+00:00')
 
     save = asyncio.create_task(api.post(path, change, expected=500 if rollback else 200))
     usage = None

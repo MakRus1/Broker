@@ -33,6 +33,7 @@ models::RouteUsageResult RoutesComponent::FindRouteUsage(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    transaction.Execute(sql::kLockShipmentRouteUsage, organization, shipment_id);
     // Отдельное чтение после блокировки видит зафиксированные за время ожидания изменения.
     transaction.Execute(sql::kLockShipmentTransportations, organization, shipment_id);
     const auto rows = transaction.Execute(sql::kRouteUsage, organization, shipment_id)

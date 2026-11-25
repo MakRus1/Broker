@@ -103,6 +103,9 @@ models::Transportation TransportationsComponent::CreateTransportation(
         return result;
     }
 
+    if (request.route_segments.has_value())
+        transaction.Execute(sql::kLockShipmentRouteUsage, organization, request.shipment_id);
+
     auto result =
         converters::Convert(transaction
                                 .Execute(sql::kCreateManualTransportation, organization, request.id,

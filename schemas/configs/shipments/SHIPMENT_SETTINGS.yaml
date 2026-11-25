@@ -25,13 +25,6 @@ schema:
         maxLength: 64
     planned_containers:
       type: boolean
-    container_types:
-      description: Устаревшее поле для совместимости с ранее опубликованными настройками.
-      type: array
-      maxItems: 100
-      items:
-        type: string
-        maxLength: 16
   required:
   - number_template
   - reset_number_yearly

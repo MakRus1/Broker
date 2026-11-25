@@ -1,5 +1,7 @@
--- Старое поле сохраняется для совместимости с предыдущей версией сервиса.
-ALTER TABLE organization_shipment_rules ALTER COLUMN container_types SET DEFAULT '{}';
+ALTER TABLE organization_shipment_rules DROP COLUMN container_types;
+
+DROP TYPE public.organization_shipment_rules_v1;
+DROP TYPE public.shipment_business_rules_v1;
 
 CREATE TYPE public.shipment_business_rules_v2 AS (
     number_template TEXT,

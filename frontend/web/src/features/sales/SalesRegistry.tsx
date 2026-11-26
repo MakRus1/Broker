@@ -19,6 +19,8 @@ import { useRegistryPage } from '../registry/useRegistryPage';
 import { RegistryResultState } from '../../shared/ui/RegistryExperience';
 import { useLocalization } from '../localization/Localization';
 import type { Inquiry, SalesCard, SalesEntity, SalesResource, SalesSettings } from './types';
+type SalesRegistryItem = SalesEntity & { shipment_number?: string };
+
 const baseRoute = (resource: SalesResource) => (resource === 'cards' ? '/sales' : '/inquiries');
 export function SalesRegistry({
   resource,
@@ -82,12 +84,38 @@ export function SalesRegistry({
         },
         signal,
       );
-      return { items: result.items, next: result.next_cursor };
+      const shipmentIds =
+        resource === 'inquiries' && session.permissions.includes('shipments.read')
+          ? [
+              ...new Set(
+                result.items.flatMap((item) => {
+                  const id = (item as Inquiry).shipment_id;
+                  return id ? [id] : [];
+                }),
+              ),
+            ]
+          : [];
+      if (!shipmentIds.length) return { items: result.items, next: result.next_cursor };
+
+      const shipments = await request<{ items: { id: string; number: string }[] }>(
+        '/api/v1/shipments/list',
+        session,
+        { filters: [{ field: 'id', values: shipmentIds }], limit: shipmentIds.length },
+        signal,
+      ).catch(() => ({ items: [] }));
+      const numbers = new Map(shipments.items.map(({ id, number }) => [id, number]));
+      return {
+        items: result.items.map((item) => {
+          const shipmentId = (item as Inquiry).shipment_id;
+          return shipmentId ? { ...item, shipment_number: numbers.get(shipmentId) } : item;
+        }),
+        next: result.next_cursor,
+      };
     },
     [resource, session, customer, query],
   );
   const page = useRegistryPage<
-    SalesEntity,
+    SalesRegistryItem,
     { id: string; scope: string; text_value?: string; date_value?: string }
   >({
     active,
@@ -112,7 +140,7 @@ export function SalesRegistry({
       .catch(() => {});
     return () => controller.abort();
   }, [page.items, session]);
-  const definitions: RegistryColumn<SalesEntity>[] = [
+  const definitions: RegistryColumn<SalesRegistryItem>[] = [
     ...(resource === 'inquiries'
       ? [
           {
@@ -190,15 +218,16 @@ export function SalesRegistry({
           {
             id: 'shipment',
             filterFields: false as const,
-            labelKey: 'field.shipment' as const,
+            labelKey: 'registryField.shipmentNumber' as const,
             width: 160,
-            render: (item: SalesEntity) =>
-              (item as Inquiry).shipment_id ? (
+            render: (item: SalesRegistryItem) =>
+              (item as Inquiry).shipment_id && session.permissions.includes('shipments.read') ? (
                 <a
+                  className="link"
                   href={`#/shipments/${(item as Inquiry).shipment_id}`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {translate('sales.openShipment')}
+                  {item.shipment_number ?? translate('sales.openShipment')}
                 </a>
               ) : (
                 '—'

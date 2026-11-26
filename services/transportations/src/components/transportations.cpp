@@ -12,6 +12,7 @@
 #include <helpers/database.hpp>
 #include <helpers/revision.hpp>
 #include <helpers/transportations.hpp>
+#include <map>
 #include <models/pg/container_fact.hpp>
 #include <models/pg/saved_command.hpp>
 #include <models/pg/transportation_event.hpp>
@@ -27,6 +28,21 @@
 namespace {
 namespace models = transportations::models;
 using transportations::ApiError;
+
+std::optional<boost::uuids::uuid> CurrentSegmentId(const userver::formats::json::Value& route) {
+    // Последний участок с фактом определяет положение перевозки.
+    for (auto index = route.GetSize(); index > 0; --index) {
+        const auto segment = transportations::converters::Convert(route[index - 1]);
+        if (!segment.inherited.value_or(true))
+            continue;
+
+        if (segment.actual_arrival_at.has_value())
+            return std::nullopt;
+        if (segment.actual_departure_at.has_value())
+            return segment.id;
+    }
+    return std::nullopt;
+}
 
 void ValidateDetails(models::TransportationType type,
     const std::optional<std::string>& container_type,
@@ -198,6 +214,23 @@ models::Transportation TransportationsComponent::UpdateTransportation(
     helpers::WriteAudit(
         transaction, organization, identity, "update_transportation", result.id, request, result);
     transaction.Commit();
+    return result;
+}
+
+models::ShipmentRouteProgress TransportationsComponent::GetShipmentRouteProgress(
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
+    const auto routes = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kShipmentRouteProgress, organization, shipment_id);
+    models::ShipmentRouteProgress result{};
+    std::map<boost::uuids::uuid, std::int64_t> counts;
+    for (const auto& route : routes.AsSetOf<userver::formats::json::Value>()) {
+        ++result.total;
+        const auto segment_id = CurrentSegmentId(route);
+        if (segment_id.has_value())
+            ++counts[segment_id.value()];
+    }
+    for (const auto& [segment_id, quantity] : counts)
+        result.current.push_back({.quantity = quantity, .route_segment_id = segment_id});
     return result;
 }
 

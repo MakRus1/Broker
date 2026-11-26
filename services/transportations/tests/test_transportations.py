@@ -1,6 +1,7 @@
 """Inbox-повторы и модель плеч с реальными транзакциями PostgreSQL."""
 
 import asyncio
+import json
 from uuid import uuid4
 import pytest
 from conftest import ORGANIZATION, OTHER_ORGANIZATION
@@ -333,3 +334,31 @@ async def test_existing_plan_group_outside_catalog_can_be_kept(api):
     }))['transportation']
     assert saved['container_type_code'] == 'LEGACY'
     assert 'container_iso_code' not in saved
+
+
+async def test_shipment_route_progress_counts_only_current_legs(api, pgsql):
+    plan = {**command(), 'quantity': 3}
+    created = await api.post(PATH, plan)
+    first, second, third = created['operation']['transportation_ids']
+    road, sea = str(uuid4()), str(uuid4())
+    with pgsql['db_1'].cursor() as cursor:
+        for transportation, stages in [
+            (first, [{'id': road, 'mode': 'international_road',
+                      'actual_departure_at': '2026-11-25T08:00:00Z',
+                      'international_road': {'unloading_date': '2026-11-26'}}]),
+            (second, [{'id': road, 'mode': 'international_road',
+                       'actual_departure_at': '2026-11-25T08:00:00Z'},
+                      {'id': sea, 'mode': 'sea', 'actual_arrival_at': '2026-11-26T08:00:00Z'}]),
+            (third, [{'id': road, 'mode': 'international_road',
+                      'international_road': {'departure_date': '2026-11-25'}}]),
+        ]:
+            cursor.execute('UPDATE transportations SET route_segments = %s::jsonb WHERE id = %s',
+                           (json.dumps(stages), transportation))
+    path = '/api/v1/transportations/shipment-route-progress'
+    query = {'shipment_id': plan['shipment_id']}
+    result = await api.post(path, query, roles=['transportations.read', 'transport_locations.read'])
+    assert result == {'total': 3, 'current': [{'route_segment_id': road, 'quantity': 1}]}
+    assert await api.post(path, query, user='other', roles=['transportations.read', 'transport_locations.read']) == {
+        'total': 0, 'current': [],
+    }
+    await api.post(path, query, roles=['shipments.read'], expected=403)

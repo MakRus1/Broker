@@ -15,10 +15,16 @@ import type { Session } from '../../shared/api/session';
 import type { ShipmentRouteSegment } from '../routes/types';
 import type { Counterparty } from '../counterparties/CustomerSelect';
 
+export type ShipmentRouteProgress = {
+  total: number;
+  current: { route_segment_id: string; quantity: number }[];
+};
+
 type RouteType = { code: string; name: string };
 export function ShipmentRoute({
   segments,
   planningOnly = false,
+  progress,
   showHeading = true,
   onChange,
   onEdit,
@@ -28,6 +34,7 @@ export function ShipmentRoute({
   customers,
 }: {
   planningOnly?: boolean;
+  progress?: ShipmentRouteProgress | null;
   showHeading?: boolean;
   segments: ShipmentRouteSegment[];
   onEdit?: () => void;
@@ -39,6 +46,12 @@ export function ShipmentRoute({
 }) {
   const { translate, locale } = useLocalization();
   const collapse = useRouteCollapse(segments.map((stage) => stage.id));
+  const counts = new Map(
+    progress?.current.map(({ route_segment_id, quantity }) => [route_segment_id, quantity]),
+  );
+  const unassigned =
+    (progress?.total ?? 0) -
+    segments.reduce((total, segment) => total + (counts.get(segment.id) ?? 0), 0);
   const title = (type: string) =>
     registryValueLabel('mode', type, locale) ??
     types.find((item) => item.code === type)?.name ??
@@ -104,6 +117,11 @@ export function ShipmentRoute({
               <RouteStageTitle type={segment.type} title={title(segment.type)} index={index} />
               <span className="route-summary-meta route-summary-direction">
                 {sharedRouteDirection(segment, locale)}
+                {!!counts.get(segment.id) && (
+                  <span className="route-current-label">
+                    {translate('shipment.routeInTransit', { count: counts.get(segment.id) ?? 0 })}
+                  </span>
+                )}
               </span>
               <span className="route-summary-dates">
                 {segment.plan?.departure_date || segment.plan?.arrival_date
@@ -215,6 +233,14 @@ export function ShipmentRoute({
         ))}
       </div>
       {!segments.length && <p className="muted">{translate('shipment.addSegmentsHint')}</p>}
+      {unassigned > 0 && (
+        <p className="hint">
+          {translate('shipment.routeWithoutCurrentLeg', { count: unassigned })}
+        </p>
+      )}
+      {progress === null && (
+        <p className="hint">{translate('shipment.routeProgressUnavailable')}</p>
+      )}
       {onChange && (
         <button
           className="shipment-route-add"

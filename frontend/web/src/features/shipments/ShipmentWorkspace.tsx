@@ -23,7 +23,7 @@ import { CalendarDate } from '../../shared/dates/CalendarDate';
 import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { IsoDateInput } from '../../shared/dates/DateInput';
-import { ShipmentRoute } from './ShipmentRoute';
+import { ShipmentRoute, type ShipmentRouteProgress } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from '../routes/types';
 import { localDate } from '../../shared/dates/calendar';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
@@ -527,6 +527,30 @@ function ShipmentCard({
     confirmDiscard(dirty || Boolean(section?.querySelector('form[data-dirty="true"]')), switchTab);
   };
   const overview = ['details', 'route', 'items'].includes(tab);
+  const shipmentId = initial?.id;
+  const [routeProgress, setRouteProgress] = useState<{
+    shipmentId: string;
+    value: ShipmentRouteProgress | null;
+  }>();
+  const canReadRouteProgress = props.session.permissions.includes('transportations.read');
+  const loadRouteProgress = props.active !== false && overview && !editing && canReadRouteProgress;
+  useEffect(() => {
+    if (!loadRouteProgress || !shipmentId) return;
+    const controller = new AbortController();
+    request<ShipmentRouteProgress>(
+      '/api/v1/transportations/shipment-route-progress',
+      props.session,
+      { shipment_id: shipmentId },
+      controller.signal,
+    )
+      .then((value) => {
+        if (!controller.signal.aborted) setRouteProgress({ shipmentId, value });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRouteProgress({ shipmentId, value: null });
+      });
+    return () => controller.abort();
+  }, [loadRouteProgress, props.session, shipmentId]);
   const renderEditor = () => (
     <form
       hidden={!editing}
@@ -1061,6 +1085,11 @@ function ShipmentCard({
                 <div>
                   <ShipmentRoute
                     segments={initial.route_segments ?? []}
+                    progress={
+                      canReadRouteProgress && routeProgress?.shipmentId === shipmentId
+                        ? routeProgress?.value
+                        : undefined
+                    }
                     allowedTypes={[]}
                     types={dictionaries?.route_types ?? []}
                     session={props.session}

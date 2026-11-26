@@ -10,10 +10,8 @@ export function currentRouteSegmentId(segments: readonly RouteSegment[]) {
   for (let index = segments.length - 1; index >= 0; index -= 1) {
     const stage = segments[index];
     if (stage.inherited === false) continue;
-    const road = stage.mode === 'international_road' ? stage.international_road : undefined;
-    const departed = stage.actual_departure_at || road?.departure_date;
-    const arrived = stage.actual_arrival_at || road?.unloading_date;
-    if (departed || arrived) return departed && !arrived ? stage.id : undefined;
+    if (stage.actual_arrival_at) return undefined;
+    if (stage.actual_departure_at) return stage.id;
   }
   return undefined;
 }

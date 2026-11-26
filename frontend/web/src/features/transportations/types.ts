@@ -39,6 +39,8 @@ export interface Transportation {
     planned_departure_at?: string;
     planned_arrival_at?: string;
     actual_departure_at?: string;
+    actual_departure_date?: string;
+    actual_arrival_date?: string;
     actual_arrival_at?: string;
     origin?: { name: string; country_code: string };
     destination?: { name: string; country_code: string };

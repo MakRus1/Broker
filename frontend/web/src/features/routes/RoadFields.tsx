@@ -7,19 +7,27 @@ import type { InternationalRoadDetails, PickupDetails } from './types';
 import type { Session } from '../../shared/api/session';
 
 export function RoadFields({
+  actualDepartureDate,
+  actualArrivalDate,
   road,
   pickup,
   international,
   session,
   customers,
+  onActualDepartureDate,
+  onActualArrivalDate,
   onRoad,
   onPickup,
 }: {
+  actualDepartureDate?: string;
+  actualArrivalDate?: string;
   road?: InternationalRoadDetails;
   pickup?: PickupDetails;
   international: boolean;
   session: Session;
   customers: Counterparty[];
+  onActualDepartureDate: (value?: string) => void;
+  onActualArrivalDate: (value?: string) => void;
   onRoad: (value: InternationalRoadDetails) => void;
   onPickup: (value: PickupDetails) => void;
 }) {
@@ -127,12 +135,8 @@ export function RoadFields({
             false,
             (planned_unloading_date) => onRoad({ ...value, planned_unloading_date }),
           )}
-          {date(translate('forms.departureDate'), value.departure_date, true, (departure_date) =>
-            onRoad({ ...value, departure_date }),
-          )}
-          {date(translate('forms.unloadingDate'), value.unloading_date, true, (unloading_date) =>
-            onRoad({ ...value, unloading_date }),
-          )}
+          {date(translate('forms.departureDate'), actualDepartureDate, true, onActualDepartureDate)}
+          {date(translate('forms.unloadingDate'), actualArrivalDate, true, onActualArrivalDate)}
           {text(translate('forms.vehicleNumber'), value.vehicle_number, 64, (vehicle_number) =>
             onRoad({ ...value, vehicle_number }),
           )}
@@ -227,11 +231,15 @@ export function RoadFields({
   );
 }
 export function RoadDetailsView({
+  actualDepartureDate,
+  actualArrivalDate,
   road,
   pickup,
   international,
   customers,
 }: {
+  actualDepartureDate?: string;
+  actualArrivalDate?: string;
   road?: InternationalRoadDetails;
   pickup?: PickupDetails;
   international: boolean;
@@ -279,8 +287,8 @@ export function RoadDetailsView({
       [translate('forms.customsDepartureDate'), date(detailsSource.customs_departure_date)],
       [translate('forms.plannedLoading'), date(detailsSource.planned_loading_date)],
       [translate('forms.plannedUnloading'), date(detailsSource.planned_unloading_date)],
-      [translate('forms.departureDate'), date(detailsSource.departure_date)],
-      [translate('forms.unloadingDate'), date(detailsSource.unloading_date)],
+      [translate('forms.departureDate'), date(actualDepartureDate)],
+      [translate('forms.unloadingDate'), date(actualArrivalDate)],
       [translate('forms.vehicleNumber'), detailsSource.vehicle_number],
       [translate('forms.trailerNumber'), detailsSource.trailer_number],
     ];

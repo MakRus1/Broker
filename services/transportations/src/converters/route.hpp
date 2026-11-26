@@ -21,6 +21,8 @@ inline userver::formats::json::Value ToStoredRouteSegment(const models::RouteSeg
     local.actual_departure_at = value.actual_departure_at;
     local.actual_arrival_at = value.actual_arrival_at;
     local.inherited = value.inherited;
+    local.actual_departure_date = value.actual_departure_date;
+    local.actual_arrival_date = value.actual_arrival_date;
     local.sea_unloading_date = value.sea_unloading_date;
     local.rail = value.rail;
     local.international_road = value.international_road;
@@ -39,6 +41,8 @@ inline std::vector<userver::formats::json::Value> ToStoredRoute(
 
 inline models::RouteSegment Convert(const models::SetRouteSegmentsItem& source) {
     models::RouteSegment result;
+    result.actual_departure_date = source.actual_departure_date;
+    result.actual_arrival_date = source.actual_arrival_date;
     result.rail = source.rail;
     result.international_road = source.international_road;
     result.pickup = source.pickup;

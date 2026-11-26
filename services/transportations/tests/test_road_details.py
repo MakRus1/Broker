@@ -54,6 +54,11 @@ def pickup():
     }
 
 
+def extract_actual_dates(details):
+    fields = {'departure_date': 'actual_departure_date', 'unloading_date': 'actual_arrival_date'}
+    return {target: details.pop(source) for source, target in fields.items() if source in details}
+
+
 @pytest.mark.parametrize(
     'mode,field,details',
     [
@@ -65,17 +70,22 @@ def pickup():
 async def test_roundtrip(api, shipment_routes, mode, field, details):
     created, stage = await create(api, shipment_routes, mode)
     data = details()
+    actual_dates = {'actual_departure_date': '2020-01-01', 'actual_arrival_date': '2020-01-03'}
+    if mode == 'international_road':
+        assert extract_actual_dates(data) == actual_dates
     saved = (
         await api.post(
             '/api/v1/transportation-routes/set',
             {
                 'transportation_id': created['id'],
                 'expected_revision': 1,
-                'route_segments': [{**stage, field: data, 'contractor_id': str(uuid4())}],
+                'route_segments': [{**stage, **actual_dates, field: data, 'contractor_id': str(uuid4())}],
             },
         )
     )['transportation']
     assert saved['route_segments'][0][field] == data
+    for key, value in actual_dates.items():
+        assert saved['route_segments'][0][key] == value
     assert (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))[
         'transportation'
     ] == saved
@@ -141,12 +151,14 @@ async def test_roundtrip(api, shipment_routes, mode, field, details):
 )
 async def test_invalid_details_leave_revision(api, shipment_routes, mode, field, data):
     created, stage = await create(api, shipment_routes, mode)
+    data = dict(data)
+    actual_dates = extract_actual_dates(data) if mode == 'international_road' else {}
     await api.post(
         '/api/v1/transportation-routes/set',
         {
             'transportation_id': created['id'],
             'expected_revision': 1,
-            'route_segments': [{**stage, field: data}],
+            'route_segments': [{**stage, **actual_dates, field: data}],
         },
         expected=400,
     )

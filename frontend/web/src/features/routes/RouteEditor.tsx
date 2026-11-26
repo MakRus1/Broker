@@ -165,6 +165,14 @@ export function RouteEditorFields({
                 route_segment.mode === 'pickup' ? (
                   <RoadFields
                     international={route_segment.mode === 'international_road'}
+                    actualDepartureDate={route_segment.actual_departure_date}
+                    actualArrivalDate={route_segment.actual_arrival_date}
+                    onActualDepartureDate={(actual_departure_date) =>
+                      update(index, { ...route_segment, actual_departure_date })
+                    }
+                    onActualArrivalDate={(actual_arrival_date) =>
+                      update(index, { ...route_segment, actual_arrival_date })
+                    }
                     road={route_segment.international_road}
                     pickup={route_segment.pickup}
                     session={session}

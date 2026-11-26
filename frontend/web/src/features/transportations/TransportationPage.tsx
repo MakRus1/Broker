@@ -525,6 +525,8 @@ export function RouteView({
             route_segment.mode === 'pickup' ? (
             <RoadDetailsView
               international={route_segment.mode === 'international_road'}
+              actualDepartureDate={route_segment.actual_departure_date}
+              actualArrivalDate={route_segment.actual_arrival_date}
               road={route_segment.international_road}
               pickup={route_segment.pickup}
               customers={customers}

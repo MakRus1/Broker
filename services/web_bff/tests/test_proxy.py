@@ -935,3 +935,25 @@ async def test_shipment_route_progress_proxy(browser, mockserver):
     response = await browser.post(path, query)
     assert response.status == 200, response.text
     assert response.json() == result
+
+
+async def test_transportation_calendar_actuals_proxy(browser, mockserver):
+    await browser.sign_in()
+    path = '/api/v1/transportation-routes/set'
+    segment = {
+        'id': ID,
+        'mode': 'international_road',
+        'actual_departure_date': '2020-01-01',
+        'actual_arrival_date': '2020-01-03',
+    }
+    body = {'transportation_id': ID, 'expected_revision': 1, 'route_segments': [segment]}
+    result = {'transportation': {**TRANSPORTATION, 'revision': 2, 'route_segments': [segment]}}
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json == body
+        return result
+
+    response = await browser.post(path, body)
+    assert response.status == 200, response.text
+    assert response.json() == result

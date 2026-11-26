@@ -210,7 +210,7 @@ describe('Текущий участок перевозки', () => {
     expect(currentRouteSegmentId([{ ...road, international_road }, second])).toBeUndefined();
     expect(
       currentRouteSegmentId([
-        { ...road, international_road, actual_departure_at: departure },
+        { ...road, international_road, actual_departure_date: departure.slice(0, 10) },
         second,
       ]),
     ).toBe('first');

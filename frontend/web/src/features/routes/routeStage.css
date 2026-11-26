@@ -192,13 +192,16 @@
   visibility: hidden;
 }
 
-.record-workbench .route-stage-summary[aria-current='step'] {
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  box-shadow: inset 3px 0 var(--accent);
-  padding-inline-start: 10px;
+.record-workbench .route-segment[open] > .route-stage-summary[aria-current='step'] {
+  margin-block-end: 12px;
 }
 
 .route-current-label {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent-text);
+  font-size: 12px;
   font-weight: 600;
 }

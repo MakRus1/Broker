@@ -465,9 +465,6 @@ export function RouteView({
               index={index}
             />
             <span className="route-summary-meta">
-              {route_segment.id === currentStageId && (
-                <span className="route-current-label">{translate('route.currentSegment')}</span>
-              )}
               <span>{routeDirection(route_segment, locale)}</span>
               <span className="route-summary-carrier">
                 {customers.find((item) => item.id === route_segment.contractor_id)?.name ||
@@ -481,6 +478,9 @@ export function RouteView({
                 </>
               )}
             </span>
+            {route_segment.id === currentStageId && (
+              <span className="route-current-label">{translate('route.currentSegment')}</span>
+            )}
           </summary>
           {(routePoint(route_segment, 'origin').country_code ||
             routePoint(route_segment, 'destination').country_code) && (

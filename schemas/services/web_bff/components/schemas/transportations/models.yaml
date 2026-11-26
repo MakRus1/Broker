@@ -138,6 +138,12 @@ RouteSegment:
       type: boolean
       description: Участок присутствует в текущем маршруте поставки. Отсутствующие
         старые участки доступны только для просмотра.
+    actual_departure_date:
+      type: string
+      format: date
+    actual_arrival_date:
+      type: string
+      format: date
     sea_unloading_date:
       type: string
       format: date
@@ -204,6 +210,12 @@ SetRouteSegmentsItem:
     planned_arrival_at:
       type: string
       format: date-time
+    actual_departure_date:
+      type: string
+      format: date
+    actual_arrival_date:
+      type: string
+      format: date
     sea_unloading_date:
       type: string
       format: date

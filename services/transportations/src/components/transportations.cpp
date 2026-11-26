@@ -36,9 +36,9 @@ std::optional<boost::uuids::uuid> CurrentSegmentId(const userver::formats::json:
         if (!segment.inherited.value_or(true))
             continue;
 
-        if (segment.actual_arrival_at.has_value())
+        if (segment.actual_arrival_at.has_value() || segment.actual_arrival_date.has_value())
             return std::nullopt;
-        if (segment.actual_departure_at.has_value())
+        if (segment.actual_departure_at.has_value() || segment.actual_departure_date.has_value())
             return segment.id;
     }
     return std::nullopt;

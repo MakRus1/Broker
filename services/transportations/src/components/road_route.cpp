@@ -7,25 +7,34 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
     const RouteDateValidation dates{"invalid_road_date", "invalid_road_sequence",
         "Проверьте последовательность дат автоучастка"};
     for (const auto& segment : request.route_segments) {
+        if (segment.mode == models::TransportMode::InternationalRoad) {
+            dates.ValidateDate(segment.actual_departure_date, DateKind::Actual);
+            dates.ValidateDate(segment.actual_arrival_date, DateKind::Actual);
+            dates.ValidateOrder(segment.actual_departure_date, segment.actual_arrival_date);
+        } else if (segment.actual_departure_date.has_value() ||
+            segment.actual_arrival_date.has_value()) {
+            throw ApiError<400>{"unexpected_actual_dates",
+                "Календарные факты пока доступны только для международного авто"};
+        }
         if (segment.international_road.has_value()) {
             if (segment.mode != models::TransportMode::InternationalRoad)
                 throw ApiError<400>{"unexpected_road_details",
                     "Поля международного авто доступны только соответствующему участку"};
             const auto& value = segment.international_road.value();
+            if (value.departure_date.has_value() || value.unloading_date.has_value())
+                throw ApiError<400>{
+                    "legacy_road_actual_dates", "Укажите фактические даты в общих полях участка"};
             dates.ValidateDate(value.planned_loading_date, DateKind::Planned);
             dates.ValidateDate(value.planned_unloading_date, DateKind::Planned);
-            dates.ValidateDate(value.departure_date, DateKind::Actual);
             dates.ValidateDate(value.customs_arrival_date, DateKind::Actual);
             dates.ValidateDate(value.customs_departure_date, DateKind::Actual);
-            dates.ValidateDate(value.unloading_date, DateKind::Actual);
             dates.ValidateDate(value.cmr_received_date, DateKind::Actual);
             dates.ValidateOrder(value.planned_loading_date, value.planned_unloading_date);
-            dates.ValidateOrder(value.departure_date, value.unloading_date);
-            dates.ValidateOrder(value.departure_date, value.customs_arrival_date);
-            dates.ValidateOrder(value.customs_arrival_date, value.unloading_date);
-            dates.ValidateOrder(value.departure_date, value.customs_departure_date);
+            dates.ValidateOrder(segment.actual_departure_date, value.customs_arrival_date);
+            dates.ValidateOrder(value.customs_arrival_date, segment.actual_arrival_date);
+            dates.ValidateOrder(segment.actual_departure_date, value.customs_departure_date);
             dates.ValidateOrder(value.customs_arrival_date, value.customs_departure_date);
-            dates.ValidateOrder(value.customs_departure_date, value.unloading_date);
+            dates.ValidateOrder(value.customs_departure_date, segment.actual_arrival_date);
         }
         if (segment.pickup.has_value()) {
             if (segment.mode != models::TransportMode::Road &&

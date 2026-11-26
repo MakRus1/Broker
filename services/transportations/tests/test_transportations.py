@@ -344,7 +344,7 @@ async def test_shipment_route_progress_counts_only_current_legs(api, pgsql):
     with pgsql['db_1'].cursor() as cursor:
         for transportation, stages in [
             (first, [{'id': road, 'mode': 'international_road',
-                      'actual_departure_at': '2026-11-25T08:00:00Z',
+                      'actual_departure_date': '2026-11-25',
                       'international_road': {'unloading_date': '2026-11-26'}}]),
             (second, [{'id': road, 'mode': 'international_road',
                        'actual_departure_at': '2026-11-25T08:00:00Z'},

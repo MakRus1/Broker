@@ -10,8 +10,8 @@ export function currentRouteSegmentId(segments: readonly RouteSegment[]) {
   for (let index = segments.length - 1; index >= 0; index -= 1) {
     const stage = segments[index];
     if (stage.inherited === false) continue;
-    if (stage.actual_arrival_at) return undefined;
-    if (stage.actual_departure_at) return stage.id;
+    if (stage.actual_arrival_at || stage.actual_arrival_date) return undefined;
+    if (stage.actual_departure_at || stage.actual_departure_date) return stage.id;
   }
   return undefined;
 }
@@ -144,6 +144,8 @@ export function routeSegment(value: RouteSegment): PlannedRouteSegment {
     ...(value.mode === 'sea' && value.sea_unloading_date !== undefined
       ? { sea_unloading_date: value.sea_unloading_date }
       : {}),
+    actual_departure_date: value.actual_departure_date,
+    actual_arrival_date: value.actual_arrival_date,
     id: value.id,
     mode: value.mode,
     ...(value.origin && value.mode !== 'rail' && value.mode !== 'international_rail'

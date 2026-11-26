@@ -13,78 +13,83 @@ import type { Item, Shipment } from './types';
 
 const countLimit = 51;
 
-type TransportationFacts =
-  { planned: number; created: number; pending: number; remaining: number } | { count: number };
+type ContainerPlanFacts = { planned: number; created: number; pending: number; remaining: number };
 
-async function loadTransportationFacts(
+async function loadContainerPlan(
   shipmentId: string,
-  plannedContainers: boolean,
   session: Session,
   signal: AbortSignal,
-): Promise<TransportationFacts> {
-  if (plannedContainers) {
-    const totals = { planned: 0, created: 0, pending: 0, remaining: 0 };
-    let after: string | undefined;
-    for (;;) {
-      const { items } = await request<{ items: Item[] }>(
-        '/api/v1/shipment-items/list',
-        session,
-        { shipment_id: shipmentId, limit: 100, after },
-        signal,
+  loadFirstItemPage: () => Promise<{ items: Item[] }>,
+): Promise<ContainerPlanFacts | null> {
+  const totals = { planned: 0, created: 0, pending: 0, remaining: 0 };
+  let after: string | undefined;
+  for (;;) {
+    const { items } = after
+      ? await request<{ items: Item[] }>(
+          '/api/v1/shipment-items/list',
+          session,
+          { shipment_id: shipmentId, limit: 100, after },
+          signal,
+        )
+      : await loadFirstItemPage();
+    signal.throwIfAborted();
+    for (const item of items) {
+      totals.planned += item.planned_quantity;
+      totals.created += item.created_quantity;
+      totals.pending += item.pending_quantity;
+      totals.remaining += Math.max(
+        0,
+        item.planned_quantity - item.created_quantity - item.pending_quantity,
       );
-      for (const item of items) {
-        totals.planned += item.planned_quantity;
-        totals.created += item.created_quantity;
-        totals.pending += item.pending_quantity;
-        totals.remaining += Math.max(
-          0,
-          item.planned_quantity - item.created_quantity - item.pending_quantity,
-        );
-      }
-      if (items.length < 100) break;
-      after = items[99].id;
     }
-    if (totals.planned > 0) return totals;
+    if (items.length < 100) break;
+    after = items[99].id;
   }
-  const { items } = await request<{ items: { id: string }[] }>(
-    '/api/v1/transportations/list',
-    session,
-    { filters: [{ field: 'shipment_id', values: [shipmentId] }], limit: countLimit },
-    signal,
-  );
-  return { count: items.length };
+  return totals.planned > 0 ? totals : null;
 }
 
 export function ShipmentOverview({
   active,
   shipment,
+  loadFirstItemPage,
   plannedContainers,
+  transportationCount,
   session,
   onOpen,
 }: {
   active: boolean;
   shipment: Shipment;
+  loadFirstItemPage: () => Promise<{ items: Item[] }>;
   plannedContainers?: boolean;
+  transportationCount?: number | null;
   session: Session;
   onOpen: (tab: 'transportations' | 'route' | 'finance') => void;
 }) {
   const { translate } = useLocalization();
-  const [transport, setTransport] = useState<TransportationFacts | null>();
+  const [plan, setPlan] = useState<ContainerPlanFacts | null | 'unavailable'>();
+  const [fallbackCount, setFallbackCount] = useState<number | null>();
   const [finance, setFinance] = useState<CurrencyTotal[] | null>();
   const shipmentId = shipment.id;
   const canReadTransport = session.permissions.includes('transportations.read');
   const canReadFinance = session.permissions.includes('finance.read_service_charges');
-  const loadTransport = useCallback(
+  const loadPlan = useCallback(
     async (signal: AbortSignal) => {
-      const facts = await loadTransportationFacts(
-        shipmentId,
-        plannedContainers === true,
+      const facts = await loadContainerPlan(shipmentId, session, signal, loadFirstItemPage);
+      if (!signal.aborted) setPlan(facts);
+    },
+    [shipmentId, session, loadFirstItemPage],
+  );
+  const loadFallbackCount = useCallback(
+    async (signal: AbortSignal) => {
+      const { items } = await request<{ items: { id: string }[] }>(
+        '/api/v1/transportations/list',
         session,
+        { filters: [{ field: 'shipment_id', values: [shipmentId] }], limit: countLimit },
         signal,
       );
-      if (!signal.aborted) setTransport(facts);
+      if (!signal.aborted) setFallbackCount(items.length);
     },
-    [shipmentId, plannedContainers, session],
+    [shipmentId, session],
   );
   const loadFinance = useCallback(
     async (signal: AbortSignal) => {
@@ -109,10 +114,14 @@ export function ShipmentOverview({
     },
     [shipmentId, session],
   );
+  const useCount = plannedContainers === false || (plannedContainers === true && plan === null);
+  useActivationLoad(active && canReadTransport && plannedContainers === true, loadPlan, () =>
+    setPlan('unavailable'),
+  );
   useActivationLoad(
-    active && canReadTransport && plannedContainers !== undefined,
-    loadTransport,
-    () => setTransport(null),
+    active && canReadTransport && useCount && transportationCount === null,
+    loadFallbackCount,
+    () => setFallbackCount(null),
   );
   useActivationLoad(active && canReadFinance, loadFinance, () => setFinance(null));
 
@@ -126,29 +135,29 @@ export function ShipmentOverview({
   );
   const unavailable = translate('shipment.overviewUnavailable');
   const loading = translate('common.loading');
-  const transportText =
-    transport === null
-      ? unavailable
-      : transport === undefined
-        ? loading
-        : 'planned' in transport
-          ? [
-              translate('shipment.overviewContainerPlan', {
-                created: transport.created,
-                planned: transport.planned,
-              }),
-              transport.pending > 0 &&
-                translate('shipment.overviewPending', { count: transport.pending }),
-              transport.remaining > 0 &&
-                translate('shipment.overviewRemaining', { count: transport.remaining }),
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          : transport.count === 0
-            ? translate('shipment.noTransportations')
-            : translate('shipment.overviewTransportCount', {
-                count: transport.count >= countLimit ? `${countLimit - 1}+` : transport.count,
-              });
+  const count = transportationCount === null ? fallbackCount : transportationCount;
+  let transportText = loading;
+  if (plannedContainers === true && plan === 'unavailable') {
+    transportText = unavailable;
+  } else if (plannedContainers === true && typeof plan === 'object' && plan) {
+    transportText = [
+      translate('shipment.overviewContainerPlan', { created: plan.created, planned: plan.planned }),
+      plan.pending > 0 && translate('shipment.overviewPending', { count: plan.pending }),
+      plan.remaining > 0 && translate('shipment.overviewRemaining', { count: plan.remaining }),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  } else if (useCount && count !== undefined) {
+    transportText =
+      count === null
+        ? unavailable
+        : count === 0
+          ? translate('shipment.noTransportations')
+          : translate('shipment.overviewTransportCount', {
+              count:
+                transportationCount === null && count >= countLimit ? `${countLimit - 1}+` : count,
+            });
+  }
 
   return (
     <section className="shipment-overview-facts">

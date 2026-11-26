@@ -112,7 +112,10 @@ export function ShipmentOverview({
   );
   useActivationLoad(active && canReadFinance, loadFinance, () => setFinance(null));
 
-  const documents = (shipment.route_segments ?? []).reduce(
+  const stages = shipment.route_segments ?? [];
+  const seaStages = stages.filter((stage) => stage.type === 'sea');
+  const confirmedBookings = seaStages.filter((stage) => stage.sea?.booking?.status === 'confirmed');
+  const documents = stages.reduce(
     (count, stage) =>
       count + (stage.sea?.documents?.length ?? 0) + (stage.air?.documents?.length ?? 0),
     0,
@@ -145,6 +148,30 @@ export function ShipmentOverview({
     <section className="shipment-overview-facts">
       <h2>{translate('shipment.overviewTitle')}</h2>
       <dl>
+        <div>
+          <dt>
+            <button type="button" className="link-button" onClick={() => onOpen('route')}>
+              {translate('shipment.routeTitle')}
+            </button>
+          </dt>
+          <dd>
+            {stages.length ? (
+              <>
+                <span>{translate('shipment.overviewRouteStages', { count: stages.length })}</span>
+                {seaStages.length > 0 && (
+                  <span>
+                    {translate('shipment.overviewBookings', {
+                      confirmed: confirmedBookings.length,
+                      total: seaStages.length,
+                    })}
+                  </span>
+                )}
+              </>
+            ) : (
+              translate('shipment.overviewNoRoute')
+            )}
+          </dd>
+        </div>
         {canReadTransport && (
           <div>
             <dt>

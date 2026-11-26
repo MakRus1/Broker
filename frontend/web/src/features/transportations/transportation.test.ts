@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   containerNumberWarning,
+  currentRouteSegmentId,
   transportationTitle,
   localDateTime,
   routeRequest,
@@ -179,4 +180,61 @@ it('localizes unnamed transportation titles and container hints', () => {
   expect(containerNumberWarning('123', 'en')).toContain('4 Latin letters and 7 digits');
   expect(containerNumberWarning('ABCD1234567', 'en')).toBe('');
   expect(() => utcDateTime('invalid', 'en')).toThrow('Enter a valid date and time');
+});
+
+describe('Текущий участок перевозки', () => {
+  const first = { ...route_segment, id: 'first' };
+  const second = { ...route_segment, id: 'second' };
+  const departure = '2026-10-21T10:00:00Z';
+  const arrival = '2026-10-23T10:00:00Z';
+
+  it('выделяет участок между фактическим отправлением и прибытием', () => {
+    expect(currentRouteSegmentId([first, second])).toBeUndefined();
+    expect(currentRouteSegmentId([{ ...first, actual_departure_at: departure }, second])).toBe(
+      'first',
+    );
+  });
+
+  it('не возвращается к предыдущему участку, если на следующем есть факт прибытия', () => {
+    expect(
+      currentRouteSegmentId([
+        { ...first, actual_departure_at: departure },
+        { ...second, actual_arrival_at: arrival },
+      ]),
+    ).toBeUndefined();
+  });
+
+  it('учитывает отправление и выгрузку из данных международного авто', () => {
+    const road = { ...first, mode: 'international_road' as const };
+    expect(
+      currentRouteSegmentId([
+        { ...road, international_road: { planned_loading_date: '2026-11-25' } },
+        second,
+      ]),
+    ).toBeUndefined();
+    expect(
+      currentRouteSegmentId([
+        { ...road, international_road: { departure_date: '2026-11-25' } },
+        second,
+      ]),
+    ).toBe('first');
+    expect(
+      currentRouteSegmentId([
+        {
+          ...road,
+          international_road: { departure_date: '2026-11-25', unloading_date: '2026-11-26' },
+        },
+        second,
+      ]),
+    ).toBeUndefined();
+  });
+
+  it('игнорирует исключённые из маршрута участки', () => {
+    expect(
+      currentRouteSegmentId([
+        { ...first, actual_departure_at: departure },
+        { ...second, inherited: false, actual_arrival_at: arrival },
+      ]),
+    ).toBe('first');
+  });
 });

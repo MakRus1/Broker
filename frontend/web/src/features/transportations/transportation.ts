@@ -6,6 +6,18 @@ import { type Transportation } from './types';
 export type RouteSegment = Transportation['route_segments'][number];
 export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'actual_arrival_at'>;
 
+export function currentRouteSegmentId(segments: readonly RouteSegment[]) {
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const stage = segments[index];
+    if (stage.inherited === false) continue;
+    const road = stage.mode === 'international_road' ? stage.international_road : undefined;
+    const departed = stage.actual_departure_at || road?.departure_date;
+    const arrived = stage.actual_arrival_at || road?.unloading_date;
+    if (departed || arrived) return departed && !arrived ? stage.id : undefined;
+  }
+  return undefined;
+}
+
 // Вычисляем подписи, не копируя станции в свободные пункты маршрута.
 export function routePoint(segment: RouteSegment, point: 'origin' | 'destination') {
   if (segment.mode === 'sea')

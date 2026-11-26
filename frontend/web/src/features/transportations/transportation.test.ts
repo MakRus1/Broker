@@ -204,29 +204,16 @@ describe('Текущий участок перевозки', () => {
     ).toBeUndefined();
   });
 
-  it('учитывает отправление и выгрузку из данных международного авто', () => {
+  it('использует общие факты для международного авто', () => {
     const road = { ...first, mode: 'international_road' as const };
+    const international_road = { departure_date: '2026-11-25', unloading_date: '2026-11-26' };
+    expect(currentRouteSegmentId([{ ...road, international_road }, second])).toBeUndefined();
     expect(
       currentRouteSegmentId([
-        { ...road, international_road: { planned_loading_date: '2026-11-25' } },
-        second,
-      ]),
-    ).toBeUndefined();
-    expect(
-      currentRouteSegmentId([
-        { ...road, international_road: { departure_date: '2026-11-25' } },
+        { ...road, international_road, actual_departure_at: departure },
         second,
       ]),
     ).toBe('first');
-    expect(
-      currentRouteSegmentId([
-        {
-          ...road,
-          international_road: { departure_date: '2026-11-25', unloading_date: '2026-11-26' },
-        },
-        second,
-      ]),
-    ).toBeUndefined();
   });
 
   it('игнорирует исключённые из маршрута участки', () => {

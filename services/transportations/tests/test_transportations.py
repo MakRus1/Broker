@@ -339,15 +339,18 @@ async def test_existing_plan_group_outside_catalog_can_be_kept(api):
 async def test_shipment_route_progress_counts_only_current_legs(api, pgsql):
     plan = {**command(), 'quantity': 3}
     created = await api.post(PATH, plan)
-    first, second, _ = created['operation']['transportation_ids']
+    first, second, third = created['operation']['transportation_ids']
     road, sea = str(uuid4()), str(uuid4())
     with pgsql['db_1'].cursor() as cursor:
         for transportation, stages in [
             (first, [{'id': road, 'mode': 'international_road',
-                      'international_road': {'departure_date': '2026-11-25'}}]),
+                      'actual_departure_at': '2026-11-25T08:00:00Z',
+                      'international_road': {'unloading_date': '2026-11-26'}}]),
             (second, [{'id': road, 'mode': 'international_road',
-                       'international_road': {'departure_date': '2026-11-25'}},
+                       'actual_departure_at': '2026-11-25T08:00:00Z'},
                       {'id': sea, 'mode': 'sea', 'actual_arrival_at': '2026-11-26T08:00:00Z'}]),
+            (third, [{'id': road, 'mode': 'international_road',
+                      'international_road': {'departure_date': '2026-11-25'}}]),
         ]:
             cursor.execute('UPDATE transportations SET route_segments = %s::jsonb WHERE id = %s',
                            (json.dumps(stages), transportation))

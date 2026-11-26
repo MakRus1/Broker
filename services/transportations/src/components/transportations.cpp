@@ -36,14 +36,9 @@ std::optional<boost::uuids::uuid> CurrentSegmentId(const userver::formats::json:
         if (!segment.inherited.value_or(true))
             continue;
 
-        const auto& road = segment.international_road;
-        const bool has_road_details =
-            segment.mode == models::TransportMode::InternationalRoad && road.has_value();
-        if (segment.actual_arrival_at.has_value() ||
-            (has_road_details && road.value().unloading_date.has_value()))
+        if (segment.actual_arrival_at.has_value())
             return std::nullopt;
-        if (segment.actual_departure_at.has_value() ||
-            (has_road_details && road.value().departure_date.has_value()))
+        if (segment.actual_departure_at.has_value())
             return segment.id;
     }
     return std::nullopt;

@@ -201,6 +201,25 @@ models::Transportation TransportationsComponent::UpdateTransportation(
     return result;
 }
 
+models::ShipmentRouteProgress TransportationsComponent::GetShipmentRouteProgress(
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
+    struct Count {
+        std::optional<boost::uuids::uuid> SegmentId;
+        std::int64_t Quantity;
+    };
+
+    const auto counts = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kShipmentRouteProgress, organization, shipment_id);
+    models::ShipmentRouteProgress result{};
+    for (const auto& count : counts.AsSetOf<Count>(pg::kRowTag)) {
+        result.total += count.Quantity;
+        if (count.SegmentId.has_value())
+            result.current.push_back(
+                {.quantity = count.Quantity, .route_segment_id = count.SegmentId.value()});
+    }
+    return result;
+}
+
 models::ContainerFactsResult TransportationsComponent::GetContainerFacts(
     const boost::uuids::uuid& organization, const models::ContainerFactsRequest& request) const {
     const auto rows = cluster_->Execute(pg::ClusterHostType::kMaster, sql::kContainerFacts,

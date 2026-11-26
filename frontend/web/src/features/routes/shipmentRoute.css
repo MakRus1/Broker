@@ -60,6 +60,10 @@
   line-height: 20px;
   overflow-wrap: anywhere;
 }
+.shipment-route-workspace .route-summary-direction .route-current-label {
+  display: inline-block;
+  margin-inline-start: 8px;
+}
 .shipment-route-workspace .route-summary-dates {
   color: var(--text-secondary);
   font-size: 12px;

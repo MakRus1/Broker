@@ -25,6 +25,8 @@ class TransportationsComponent final : public userver::components::ComponentBase
     models::Transportation UpdateTransportation(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, const models::UpdateTransportationRequest&,
         const models::ShipmentContext&, std::string_view access_token) const;
+    models::ShipmentRouteProgress GetShipmentRouteProgress(
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
     models::ContainerFactsResult GetContainerFacts(
         const boost::uuids::uuid& organization, const models::ContainerFactsRequest&) const;
     models::EnsureTransportationsResult CreateTransportationsFromCommand(

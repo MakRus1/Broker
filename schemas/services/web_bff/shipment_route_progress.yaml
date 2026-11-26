@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Прогресс перевозок по маршруту поставки
+  version: '1'
+paths:
+  /api/v1/transportations/shipment-route-progress:
+    post:
+      summary: Число перевозок на текущих участках маршрута
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                shipment_id:
+                  type: string
+                  format: uuid
+                  x-cpp-type: uuid
+              required:
+              - shipment_id
+      responses:
+        '200':
+          description: Прогресс перевозок поставки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentRouteProgress'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/transportations/models.yaml#/ApiError
+components:
+  schemas:
+    RouteProgressCount:
+      type: object
+      additionalProperties: false
+      properties:
+        route_segment_id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - route_segment_id
+      - quantity
+    ShipmentRouteProgress:
+      type: object
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+        current:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteProgressCount'
+      required:
+      - total
+      - current
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

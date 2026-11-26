@@ -919,3 +919,19 @@ async def test_transportation_iso_update_preserves_value_or_explicit_clear(brows
     response = await browser.post(path, body)
     assert response.status == 200, response.text
     assert response.json() == {'transportation': item}
+
+
+async def test_shipment_route_progress_proxy(browser, mockserver):
+    await browser.sign_in()
+    path = '/api/v1/transportations/shipment-route-progress'
+    query = {'shipment_id': ID}
+    result = {'total': 3, 'current': [{'route_segment_id': ID, 'quantity': 1}]}
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json == query
+        return result
+
+    response = await browser.post(path, query)
+    assert response.status == 200, response.text
+    assert response.json() == result

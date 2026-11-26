@@ -14,6 +14,7 @@ auth:
     /api/internal/v1/transportations/ensure-created: transportations.create
     /api/v1/transportations/get: transportations.read
     /api/v1/transportations/list: transportations.read
+    /api/v1/transportations/shipment-route-progress: transportations.read
     /api/v1/transportation-routes/set: transportations.write
     /api/v1/transportation-actuals/record: transportations.write
     /api/v1/transportation-actuals/correct: transportations.write

@@ -14,7 +14,7 @@ import type { Item, Shipment } from './types';
 const countLimit = 51;
 
 type TransportationFacts =
-  { planned: number; created: number; pending: number } | { count: number };
+  { planned: number; created: number; pending: number; remaining: number } | { count: number };
 
 async function loadTransportationFacts(
   shipmentId: string,
@@ -23,7 +23,7 @@ async function loadTransportationFacts(
   signal: AbortSignal,
 ): Promise<TransportationFacts> {
   if (plannedContainers) {
-    const totals = { planned: 0, created: 0, pending: 0 };
+    const totals = { planned: 0, created: 0, pending: 0, remaining: 0 };
     let after: string | undefined;
     for (;;) {
       const { items } = await request<{ items: Item[] }>(
@@ -36,6 +36,10 @@ async function loadTransportationFacts(
         totals.planned += item.planned_quantity;
         totals.created += item.created_quantity;
         totals.pending += item.pending_quantity;
+        totals.remaining += Math.max(
+          0,
+          item.planned_quantity - item.created_quantity - item.pending_quantity,
+        );
       }
       if (items.length < 100) break;
       after = items[99].id;
@@ -135,6 +139,8 @@ export function ShipmentOverview({
               }),
               transport.pending > 0 &&
                 translate('shipment.overviewPending', { count: transport.pending }),
+              transport.remaining > 0 &&
+                translate('shipment.overviewRemaining', { count: transport.remaining }),
             ]
               .filter(Boolean)
               .join(' · ')

@@ -8,8 +8,7 @@ inline models::pg::ShipmentBusinessRules Convert(const models::ShipmentBusinessR
         .ResetNumberYearly = value.reset_number_yearly,
         .Statuses = value.statuses,
         .RouteTypes = value.route_types,
-        .PlannedContainers = value.planned_containers,
-        .ContainerTypes = value.container_types};
+        .PlannedContainers = value.planned_containers};
 }
 
 }  // namespace shipments::converters

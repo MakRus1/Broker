@@ -44,9 +44,9 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};
-    if (std::find(settings.ContainerTypes.begin(), settings.ContainerTypes.end(),
-            request.container_type_code) == settings.ContainerTypes.end())
-        throw ApiError<400>{"invalid_container_type", "Тип контейнера недоступен для организации"};
+    const auto types = settings_.GetContainerTypes();
+    if (std::ranges::find(types, request.container_type_code) == types.end())
+        throw ApiError<400>{"invalid_container_type", "Тип контейнера недоступен в справочнике"};
 
     const auto row =
         transaction

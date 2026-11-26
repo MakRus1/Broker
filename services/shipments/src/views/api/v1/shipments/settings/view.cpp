@@ -16,8 +16,7 @@ Response View::Handle(
         ? deps.shipments->GetCustomerLogist(access_token, customer.value())
         : std::nullopt;
 
-    return Response200{.container_types = std::move(settings.ContainerTypes),
-        .customer_logist = std::move(customer_logist),
+    return Response200{.customer_logist = std::move(customer_logist),
         .number_template = std::move(settings.NumberTemplate),
         .planned_containers = settings.PlannedContainers,
         .reset_number_yearly = settings.ResetNumberYearly,

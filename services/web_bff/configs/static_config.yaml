@@ -86,6 +86,12 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 0
             response_data_size_log_limit: 0
+        handler-api-v1-container_catalog:
+            path: /api/v1/container-catalog
+            method: GET
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         handler-api-v1-contracts-filter_values:
             path: /api/v1/contracts/filter-values
             method: POST

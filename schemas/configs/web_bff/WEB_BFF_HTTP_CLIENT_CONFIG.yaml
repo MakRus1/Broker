@@ -15,6 +15,7 @@ paths:
 - /api/preferences/roles/save
 - /api/preferences/save
 - /api/session
+- /api/v1/container-catalog
 - /api/v1/contracts/filter-values
 - /api/v1/contracts/get
 - /api/v1/contracts/list

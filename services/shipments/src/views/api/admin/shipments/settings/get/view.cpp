@@ -11,8 +11,7 @@ Response View::Handle(
 
     const auto organization = request.body.organization_id;
     auto result = deps.settings->GetBusinessSettings(organization);
-    return Response200{.allowed_container_types = std::move(result.allowed_container_types),
-        .allowed_route_types = std::move(result.allowed_route_types),
+    return Response200{.allowed_route_types = std::move(result.allowed_route_types),
         .planned_containers_allowed = std::move(result.planned_containers_allowed),
         .revision = std::move(result.revision),
         .rules = std::move(result.rules)};

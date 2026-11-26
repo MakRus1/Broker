@@ -188,7 +188,6 @@ def settings_value(**overrides):
         'statuses': ['Новая'],
         'route_types': ['sea', 'rail', 'pickup'],
         'planned_containers': True,
-        'container_types': ['20DC', '40DC', '40HC'],
         **overrides,
     }
 

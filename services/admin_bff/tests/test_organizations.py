@@ -79,7 +79,6 @@ async def test_shipment_rules_proxy_preserves_cookie_csrf_and_token(browser, moc
         'statuses': ['Новая'],
         'route_types': ['sea'],
         'planned_containers': True,
-        'container_types': ['40HC'],
     }
     body = {'organization_id': ORG}
     if action == 'update':
@@ -88,7 +87,6 @@ async def test_shipment_rules_proxy_preserves_cookie_csrf_and_token(browser, moc
         'revision': 1,
         'rules': rules,
         'allowed_route_types': [{'code': 'sea', 'name': 'Море'}],
-        'allowed_container_types': ['40HC'],
         'planned_containers_allowed': True,
     }
     path = '/api/admin/shipments/settings/' + action

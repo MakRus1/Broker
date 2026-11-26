@@ -1,3 +1,4 @@
+import { useContainerTypes } from '../../shared/api/useContainerTypes';
 import { CardNavigation } from '../../shared/ui/CardNavigation';
 import { rememberEmployees } from '../../shared/profile/employeeDirectory';
 import { RecordPage, RecordOverview } from '../../shared/ui/record/RecordPage';
@@ -56,7 +57,6 @@ export interface ShipmentSettings {
   statuses: string[];
   route_types: string[];
   planned_containers: boolean;
-  container_types: string[];
   customer_logist?: string | null;
 }
 type DictionaryValue = { code: string; name: string };
@@ -195,6 +195,10 @@ function ShipmentCard({
     };
   }, [tab, editing, props.active, props.route, scrollToSection]);
   const [settings, setSettings] = useState<ShipmentSettings>();
+  const { types: containerTypes, failure: containerCatalogFailure } = useContainerTypes(
+    props.session,
+    props.active !== false && Boolean(initial) && settings?.planned_containers === true,
+  );
   const [dictionaries, setDictionaries] = useState<ShipmentDictionaries>();
   useEffect(() => {
     const controller = new AbortController();
@@ -830,7 +834,8 @@ function ShipmentCard({
                   ['details', 'route', 'items'].includes(tab)))
             }
             readOnly={editing}
-            containerTypes={settings?.container_types}
+            containerTypes={containerTypes}
+            containerCatalogFailure={containerCatalogFailure}
             section={tab === 'transportations' ? 'transportations' : 'items'}
             initial={initial}
             session={props.session}

@@ -13,7 +13,7 @@ struct OrganizationShipmentRules {
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::shipments::models::pg::OrganizationShipmentRules> {
-    static constexpr DBTypeName postgres_name = "public.organization_shipment_rules_v1";
+    static constexpr DBTypeName postgres_name = "public.organization_shipment_rules_v2";
 };
 
 }  // namespace userver::storages::postgres::io

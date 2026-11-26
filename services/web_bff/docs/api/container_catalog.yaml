@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Справочник контейнеров
+  version: '1'
+paths:
+  /api/v1/container-catalog:
+    get:
+      summary: Активные коммерческие группы контейнеров
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContainerGroup'
+                required: [items]
+        '401':
+          description: Требуется вход
+          content:
+            application/json:
+              schema:
+                $ref: ../components/schemas/geography.yaml#/GeographyError
+components:
+  schemas:
+    ContainerGroup:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        iso_codes:
+          type: array
+          items:
+            type: string
+      required: [code, name, iso_codes]
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

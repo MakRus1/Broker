@@ -30,6 +30,7 @@ def auth_key(tmp_path_factory):
 @pytest.fixture(scope='session')
 def configure_web(mockserver_info, service_source_dir):
     def patch(config, config_vars):
+        config_vars['config-updates-enabled'] = True
         config_vars['auth-issuer'] = ISSUER
         config_vars['auth-jwks-url'] = mockserver_info.url('/auth/jwks')
         config_vars['web-token-url'] = mockserver_info.url('/auth/token')

@@ -26,7 +26,8 @@ const operationStatusKeys = {
 type Props = {
   active?: boolean;
   initial: Shipment;
-  containerTypes?: string[];
+  containerTypes: string[];
+  containerCatalogFailure: string;
   embedded?: boolean;
   readOnly?: boolean;
   section?: 'items' | 'transportations';
@@ -39,7 +40,8 @@ type Props = {
 export function ShipmentPanel({
   active = true,
   customerName,
-  containerTypes = ['20DC', '40DC', '40HC'],
+  containerTypes,
+  containerCatalogFailure,
   embedded = false,
   readOnly = false,
   section,
@@ -312,13 +314,14 @@ export function ShipmentPanel({
                 {write && (
                   <button
                     className="primary"
-                    disabled={loading || Boolean(failure)}
+                    disabled={loading || Boolean(failure) || containerTypes.length === 0}
                     onClick={() => setForm('item')}
                   >
                     {translate('shipment.addItemButton')}
                   </button>
                 )}
               </div>
+              {containerCatalogFailure && <p className="hint">{containerCatalogFailure}</p>}
               {!!items.length && (
                 <div className="container-plan-table-scroll">
                   <table className="container-plan-table">

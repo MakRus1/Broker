@@ -25,19 +25,12 @@ schema:
         maxLength: 64
     planned_containers:
       type: boolean
-    container_types:
-      type: array
-      maxItems: 100
-      items:
-        type: string
-        maxLength: 16
   required:
   - number_template
   - reset_number_yearly
   - statuses
   - route_types
   - planned_containers
-  - container_types
 default:
   number_template: S-{sequence}
   reset_number_yearly: false
@@ -52,7 +45,3 @@ default:
   - pickup
   - air
   planned_containers: true
-  container_types:
-  - 20DC
-  - 40DC
-  - 40HC

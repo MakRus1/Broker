@@ -64,4 +64,5 @@ service_accounts:
       enabled: dispatcher-enabled
 configs:
 - SHIPMENT_SETTINGS
+- CONTAINER_CATALOG
 - CARGO_SUGGESTIONS_RETENTION

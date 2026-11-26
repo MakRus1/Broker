@@ -1,3 +1,4 @@
+import { useContainerTypes } from '../../shared/api/useContainerTypes';
 import { RouteEditorFields } from '../routes/RouteEditor';
 import type { Counterparty } from '../counterparties/CustomerSelect';
 import { routeSegment, routeRequest } from './transportation';
@@ -42,22 +43,7 @@ export function TransportationDetailsForm({
 }: Props) {
   const [initial] = useState(source);
   const { translate, locale } = useLocalization();
-  const [containerTypes, setContainerTypes] = useState<string[]>([]);
-  const [settingsFailure, setSettingsFailure] = useState('');
-  useEffect(() => {
-    const controller = new AbortController();
-    request<{ container_types: string[] }>(
-      '/api/v1/shipments/settings',
-      session,
-      {},
-      controller.signal,
-    )
-      .then((settings) => setContainerTypes(settings.container_types))
-      .catch((error) => {
-        if (!controller.signal.aborted) setSettingsFailure(error.message);
-      });
-    return () => controller.abort();
-  }, [session]);
+  const { types: containerTypes, failure: catalogFailure } = useContainerTypes(session);
   const [routeSource] = useState(initial?.route_segments ?? shipmentRoute ?? []);
   const [originalRoute] = useState(() =>
     routeSource.filter((stage) => stage.inherited !== false).map(routeSegment),
@@ -232,10 +218,10 @@ export function TransportationDetailsForm({
                     ]}
                     onChange={setContainerType}
                   />
-                  {settingsFailure && (
+                  {catalogFailure && (
                     <p role="alert" className="error">
                       {translate('forms.containerTypesUnavailable')}
-                      {settingsFailure}
+                      {catalogFailure}
                     </p>
                   )}
                   <Select

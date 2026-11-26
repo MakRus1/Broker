@@ -53,7 +53,7 @@ void RememberCargo(pg::Transaction& transaction, const boost::uuids::uuid& organ
 
 models::Shipment InsertShipment(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, const models::CreateShipmentRequest& body,
-    const configs::ShipmentSettings& settings) {
+    const configs::ShipmentSettings& settings, const std::vector<std::string>& container_types) {
     auto card = shipments::helpers::CreateShipmentCard(body, settings);
     const auto dictionaries = transaction.Execute(sql::kListShipmentDictionaries)
                                   .AsContainer<std::vector<models::pg::ShipmentDictionaryValue>>();
@@ -73,10 +73,10 @@ models::Shipment InsertShipment(pg::Transaction& transaction,
             if (!positions.emplace(item.container_type_code, item.container_ownership).second)
                 throw ApiError<400>{"duplicate_container_position",
                     "Укажите одну позицию для каждого типа контейнера и принадлежности"};
-            if (std::find(settings.ContainerTypes.begin(), settings.ContainerTypes.end(),
-                    item.container_type_code) == settings.ContainerTypes.end())
+            if (std::ranges::find(container_types, item.container_type_code) ==
+                container_types.end())
                 throw ApiError<400>{
-                    "invalid_container_type", "Тип контейнера недоступен для организации"};
+                    "invalid_container_type", "Тип контейнера отсутствует в справочнике"};
             transaction.Execute(sql::kAddItem, organization, row.Id, item.container_type_code,
                 models::EnumValue(item.container_ownership), item.planned_quantity);
         }
@@ -198,7 +198,8 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(
         return shipment;
     }
 
-    const auto result = InsertShipment(transaction, organization, body, settings);
+    const auto result = InsertShipment(transaction, organization, body, settings,
+        settings_.GetContainerTypes(/* include_inactive = */ true));
     transaction.Execute(sql::kLinkSourceShipment, organization, source.Producer, source.Type,
         source.Id, source.ManualIdempotencyKey, result.id, document);
 

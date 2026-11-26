@@ -50,8 +50,17 @@ async def test_values_and_history(service_client, admin_client, pgsql):
     assert await current(service_client) == values
 
 
+async def test_publish_container_catalog(service_client, admin_client):
+    catalog = {'20DC': {'name': '20 Dry', 'iso_codes': ['22G1'], 'active': True}}
+    published = await publish_one(admin_client, 'CONTAINER_CATALOG', catalog)
+    values = await current(service_client)
+    assert values['revision'] == published['published_revision']
+    assert values['configs']['CONTAINER_CATALOG'] == catalog
+
+
 @pytest.mark.parametrize('name,value', [
     ('invalid-name', {}),
+    ('CONTAINER_CATALOG', {'20DC': {'name': '20 Dry', 'iso_codes': ['ISO'], 'active': True}}),
     ('SHIPMENT_TERMS_CONFIG', {'clauses': [], 'default': {'max_days': 30}}),
     ('SHIPMENT_TERMS_CONFIG', terms(True, 0)),
     ('BROKER_HTTP_CLIENT_CONFIG', {'**default**': {'timeout': 0, 'max_retries': 0}}),

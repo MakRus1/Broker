@@ -1,3 +1,4 @@
+import { useContainerTypes } from '../../shared/api/useContainerTypes';
 import { useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
 import type { Session } from '../../shared/api/session';
@@ -46,13 +47,18 @@ export function InquiryContainerPlan({
     return () => controller.abort();
   }, [active, canRead, customerId, session]);
 
+  const settings = loaded?.customerId === customerId ? loaded.settings : undefined;
+  const { types, failure: catalogFailure } = useContainerTypes(
+    session,
+    active && Boolean(onChange) && settings?.planned_containers === true,
+  );
+
   if (!customerId || !canRead) return null;
   if (failed === customerId)
     return <p className="hint">{translate('sales.containerPlanSettingsUnavailable')}</p>;
-  const settings = loaded?.customerId === customerId ? loaded.settings : undefined;
   if (!settings?.planned_containers || (!onChange && items.length === 0)) return null;
 
-  const choices = settings.container_types.flatMap((container_type_code) =>
+  const choices = types.flatMap((container_type_code) =>
     ownerships.map((container_ownership) => ({ container_type_code, container_ownership })),
   );
   const next = choices.find(
@@ -65,6 +71,7 @@ export function InquiryContainerPlan({
   );
   return (
     <RecordSection title={translate('shipment.plannedContainers')}>
+      {catalogFailure && <p className="hint">{catalogFailure}</p>}
       {onChange ? (
         <>
           {items.map((item, index) => {
@@ -77,9 +84,10 @@ export function InquiryContainerPlan({
                 <Select
                   label={translate('registryField.container_type')}
                   value={item.container_type_code}
-                  options={[
-                    ...new Set([...settings.container_types, item.container_type_code]),
-                  ].map((value) => ({ value, label: value }))}
+                  options={[...new Set([...types, item.container_type_code])].map((value) => ({
+                    value,
+                    label: value,
+                  }))}
                   onChange={(container_type_code) => update({ container_type_code })}
                 />
                 <Select

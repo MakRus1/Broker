@@ -899,7 +899,7 @@
   "forms.stateAfterChange": "Состояние после изменения",
   "forms.couldNotSaveTheTransportation": "Не удалось сохранить перевозку",
   "forms.containerTypesUnavailable": "Типы контейнеров недоступны:",
-  "forms.containerIsoCode": "Код ISO 6346",
+  "forms.containerIsoCode": "Код ISO",
   "forms.containerOwnership": "Принадлежность контейнера",
   "forms.createTransportation": "Создать перевозку",
   "forms.backToShipment": "← К поставке",

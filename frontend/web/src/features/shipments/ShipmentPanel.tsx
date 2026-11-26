@@ -26,6 +26,7 @@ const operationStatusKeys = {
 type Props = {
   active?: boolean;
   initial: Shipment;
+  loadFirstItemPage?: () => Promise<{ items: Item[]; unplanned_items: ContainerFact[] }>;
   containerTypes: string[];
   containerCatalogFailure: string;
   embedded?: boolean;
@@ -45,14 +46,14 @@ export function ShipmentPanel({
   embedded = false,
   readOnly = false,
   section,
-  initial,
+  initial: shipment,
+  loadFirstItemPage,
   session,
   onClose,
   onError,
   onUpdate,
 }: Props) {
   const { translate } = useLocalization();
-  const [shipment, setShipment] = useState(initial);
   const updateCallback = useRef(onUpdate);
   updateCallback.current = onUpdate;
   useEffect(() => {
@@ -62,10 +63,8 @@ export function ShipmentPanel({
   const [unplanned, setUnplanned] = useState<ContainerFact[]>([]);
   const [editPlan, setEditPlan] = useState<Item | null>(null);
   const [transportations, setTransportations] = useState<Transportation[]>([]);
-  const [tab, setTab] = useState<'items' | 'transportations'>('items');
-  useEffect(() => {
-    if (section) setTab(section);
-  }, [section]);
+  const [selectedTab, setTab] = useState<'items' | 'transportations'>('items');
+  const tab = section ?? selectedTab;
   const [form, setForm] = useState<'item' | Item | null>(null);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,50 +74,60 @@ export function ShipmentPanel({
   const panel = useRef<HTMLElement>(null);
   const { confirmDiscard, confirmation } = useDiscardConfirmation();
   const commands = useRef(new Commands());
-  const storageKey = operationStorageKey(session.actor, initial.id);
+  const storageKey = operationStorageKey(session.actor, shipment.id);
   const [ids, setIds] = useState(() => readOperationIds(storageKey));
   const write = session.permissions.includes('shipments.write') && !readOnly;
   const canReadTransportations = session.permissions.includes('transportations.read');
+  const loadDeliveries = canReadTransportations && tab === 'transportations';
   const refresh = useCallback(
-    async (signal?: AbortSignal) => {
+    async (signal?: AbortSignal, activation = false) => {
       const [selected, positions, deliveries] = await Promise.all([
-        request<{ shipment: Shipment }>(
-          '/api/v1/shipments/get',
-          session,
-          { shipment_id: initial.id },
-          signal,
-        ),
-        request<{ items: Item[]; unplanned_items: ContainerFact[] }>(
-          '/api/v1/shipment-items/list',
-          session,
-          { shipment_id: initial.id, limit: 100 },
-          signal,
-        ),
-        canReadTransportations
+        activation && embedded
+          ? undefined
+          : request<{ shipment: Shipment }>(
+              '/api/v1/shipments/get',
+              session,
+              { shipment_id: shipment.id },
+              signal,
+            ),
+        tab === 'transportations'
+          ? undefined
+          : activation && loadFirstItemPage
+            ? loadFirstItemPage()
+            : request<{ items: Item[]; unplanned_items: ContainerFact[] }>(
+                '/api/v1/shipment-items/list',
+                session,
+                { shipment_id: shipment.id, limit: 100 },
+                signal,
+              ),
+        loadDeliveries
           ? request<{ items: Transportation[] }>(
               '/api/v1/transportations/list',
               session,
-              { filters: [{ field: 'shipment_id', values: [initial.id] }], limit: 50 },
+              { filters: [{ field: 'shipment_id', values: [shipment.id] }], limit: 50 },
               signal,
             )
-          : Promise.resolve({ items: [] }),
+          : undefined,
       ]);
       if (signal?.aborted) return;
-      setShipment(selected.shipment);
-      updateCallback.current(selected.shipment);
-      setItems(positions.items);
-      setUnplanned(positions.unplanned_items);
-      setTransportations(deliveries.items);
-      setMoreItems(positions.items.length === 100);
-      setMoreTransportations(deliveries.items.length === 50);
+      if (selected) updateCallback.current(selected.shipment);
+      if (positions) {
+        setItems(positions.items);
+        setUnplanned(positions.unplanned_items);
+        setMoreItems(positions.items.length === 100);
+      }
+      if (deliveries) {
+        setTransportations(deliveries.items);
+        setMoreTransportations(deliveries.items.length === 50);
+      }
       setFailure('');
     },
-    [session, initial.id, canReadTransportations],
+    [session, shipment.id, tab, loadDeliveries, loadFirstItemPage, embedded],
   );
   const load = useCallback(
     async (signal: AbortSignal) => {
       try {
-        await refresh(signal);
+        await refresh(signal, true);
       } finally {
         if (!signal.aborted) setLoading(false);
       }

@@ -39,8 +39,9 @@ import {
 } from 'react';
 import { Commands } from '../../shared/api/commands';
 import { request } from '../../shared/api/http';
+import { useActivationLoad } from '../../shared/api/useActivationLoad';
 import { type Session } from '../../shared/api/session';
-import { type Shipment } from './types';
+import { type ContainerFact, type Item, type Shipment } from './types';
 import { CustomerSelect, type Counterparty } from '../counterparties/CustomerSelect';
 import { Select } from '../../shared/ui/Select';
 import { useDiscardConfirmation } from '../../shared/ui/Dialog';
@@ -78,23 +79,24 @@ export function ShipmentWorkspace(props: Props) {
   const id = creating ? undefined : props.route.split('/')[2];
   const [shipment, setShipment] = useState<Shipment>();
   const [failure, setFailure] = useState('');
-  useEffect(() => {
-    if (!id) return;
-    const controller = new AbortController();
-    request<{ shipment: Shipment }>(
-      '/api/v1/shipments/get',
-      props.session,
-      { shipment_id: id },
-      controller.signal,
-    )
-      .then(({ shipment }) => {
+  const loadShipment = useCallback(
+    async (signal: AbortSignal) => {
+      const { shipment } = await request<{ shipment: Shipment }>(
+        '/api/v1/shipments/get',
+        props.session,
+        { shipment_id: id },
+        signal,
+      );
+      if (!signal.aborted) {
         setShipment(shipment);
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setFailure(error.message);
-      });
-    return () => controller.abort();
-  }, [id, props.session]);
+        setFailure('');
+      }
+    },
+    [id, props.session],
+  );
+  useActivationLoad(Boolean(id) && props.active !== false, loadShipment, (error) =>
+    setFailure(error instanceof Error ? error.message : String(error)),
+  );
   const titleCallback = useRef(props.onTitle);
   titleCallback.current = props.onTitle;
   useEffect(() => {
@@ -107,14 +109,23 @@ export function ShipmentWorkspace(props: Props) {
     },
     [props.onUpdate],
   );
-  if (failure)
+  if (failure && !shipment)
     return (
       <p className="error" role="alert">
         {failure}
       </p>
     );
   if (!creating && !shipment) return <p role="status">{translate('shipment.opening')}</p>;
-  return <ShipmentCard key={id ?? props.route} {...props} initial={shipment} onSaved={onSaved} />;
+  return (
+    <>
+      {failure && (
+        <p className="error" role="alert">
+          {failure}
+        </p>
+      )}
+      <ShipmentCard key={id ?? props.route} {...props} initial={shipment} onSaved={onSaved} />
+    </>
+  );
 }
 type CardDraft = {
   number: string;
@@ -235,6 +246,13 @@ function ShipmentCard({
     initial ? 'shipments.write' : 'shipments.create',
   );
   const [revision, setRevision] = useState(initial?.revision);
+  useEffect(() => {
+    if (!initial || dirty) return;
+    const next = draftOf(initial);
+    setDraft(next);
+    setBaseline(JSON.stringify(next));
+    setRevision(initial.revision);
+  }, [initial, dirty]);
   const set = <K extends keyof CardDraft>(key: K, value: CardDraft[K]) =>
     setDraft((old) => ({ ...old, [key]: value }));
   const recovery = useDraftRecovery({
@@ -838,6 +856,32 @@ function ShipmentCard({
       </fieldset>
     </form>
   );
+  const itemPageRequest = useRef<AbortController | undefined>(undefined);
+  const pendingItemPage = useRef<
+    Promise<{ items: Item[]; unplanned_items: ContainerFact[] }> | undefined
+  >(undefined);
+  const loadFirstItemPage = useCallback(() => {
+    if (pendingItemPage.current) return pendingItemPage.current;
+    const controller = new AbortController();
+    itemPageRequest.current = controller;
+    const pending = request<{ items: Item[]; unplanned_items: ContainerFact[] }>(
+      '/api/v1/shipment-items/list',
+      props.session,
+      { shipment_id: shipmentId, limit: 100 },
+      controller.signal,
+    ).finally(() => {
+      if (pendingItemPage.current === pending) pendingItemPage.current = undefined;
+    });
+    pendingItemPage.current = pending;
+    return pending;
+  }, [props.session, shipmentId]);
+  useEffect(
+    () => () => {
+      itemPageRequest.current?.abort();
+      pendingItemPage.current = undefined;
+    },
+    [loadFirstItemPage],
+  );
   const containerPanel = (
     <>
       {initial && (
@@ -860,6 +904,7 @@ function ShipmentCard({
             readOnly={editing}
             containerTypes={containerTypes}
             containerCatalogFailure={containerCatalogFailure}
+            loadFirstItemPage={loadFirstItemPage}
             section={tab === 'transportations' ? 'transportations' : 'items'}
             initial={initial}
             session={props.session}
@@ -1072,6 +1117,12 @@ function ShipmentCard({
                     key={initial.id}
                     active={props.active !== false}
                     shipment={initial}
+                    loadFirstItemPage={loadFirstItemPage}
+                    transportationCount={
+                      routeProgress?.shipmentId === shipmentId
+                        ? (routeProgress?.value?.total ?? null)
+                        : undefined
+                    }
                     plannedContainers={settingsFailure ? false : settings?.planned_containers}
                     session={props.session}
                     onOpen={openPanel}

@@ -275,6 +275,7 @@ export function SalesPage({
                 <>
                   {' · '}
                   <InquiryShipmentLink
+                    active={active}
                     key={inquiry.shipment_id}
                     id={inquiry.shipment_id}
                     session={session}

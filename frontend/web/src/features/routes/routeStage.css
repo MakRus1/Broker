@@ -191,3 +191,14 @@
 .road-border-crossings td.route-document-action button:disabled {
   visibility: hidden;
 }
+
+.record-workbench .route-stage-summary[aria-current='step'] {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  box-shadow: inset 3px 0 var(--accent);
+  padding-inline-start: 10px;
+}
+
+.route-current-label {
+  color: var(--accent-text);
+  font-weight: 600;
+}

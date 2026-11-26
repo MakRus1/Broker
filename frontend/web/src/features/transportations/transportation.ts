@@ -6,6 +6,16 @@ import { type Transportation } from './types';
 export type RouteSegment = Transportation['route_segments'][number];
 export type PlannedRouteSegment = Omit<RouteSegment, 'actual_departure_at' | 'actual_arrival_at'>;
 
+export function currentRouteSegmentId(segments: readonly RouteSegment[]) {
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const stage = segments[index];
+    if (stage.inherited === false || (!stage.actual_departure_at && !stage.actual_arrival_at))
+      continue;
+    return stage.actual_departure_at && !stage.actual_arrival_at ? stage.id : undefined;
+  }
+  return undefined;
+}
+
 // Вычисляем подписи, не копируя станции в свободные пункты маршрута.
 export function routePoint(segment: RouteSegment, point: 'origin' | 'destination') {
   if (segment.mode === 'sea')

@@ -14,7 +14,7 @@ import { ServiceCharges } from '../finance/FinancePanel';
 import { DateTimeInput } from '../../shared/dates/DateInput';
 import { RoadDetailsView } from '../routes/RoadFields';
 import { SharedRouteDetailsView } from '../routes/SharedRouteDetails';
-import { routePoint, routeDirection } from './transportation';
+import { currentRouteSegmentId, routePoint, routeDirection } from './transportation';
 import { RailDetailsView } from '../routes/RailFields';
 import { calendarDate } from '../../shared/dates/calendar';
 import { useRouteCollapse } from '../routes/routeCollapse';
@@ -414,6 +414,7 @@ export function RouteView({
 }) {
   const { translate, locale, catalogVersion } = useLocalization();
   const collapse = useRouteCollapse(route_segments.map((stage) => stage.id));
+  const currentStageId = currentRouteSegmentId(route_segments);
   if (!route_segments.length)
     return (
       <>
@@ -452,7 +453,10 @@ export function RouteView({
           open={!collapse.collapsed.has(route_segment.id)}
           onToggle={(event) => collapse.toggle(route_segment.id, !event.currentTarget.open)}
         >
-          <summary className="route-stage-summary">
+          <summary
+            className="route-stage-summary"
+            aria-current={route_segment.id === currentStageId ? 'step' : undefined}
+          >
             <RouteStageTitle
               type={route_segment.mode}
               title={
@@ -461,6 +465,9 @@ export function RouteView({
               index={index}
             />
             <span className="route-summary-meta">
+              {route_segment.id === currentStageId && (
+                <span className="route-current-label">{translate('route.currentSegment')}</span>
+              )}
               <span>{routeDirection(route_segment, locale)}</span>
               <span className="route-summary-carrier">
                 {customers.find((item) => item.id === route_segment.contractor_id)?.name ||

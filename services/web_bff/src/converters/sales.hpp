@@ -324,10 +324,10 @@ Result Convert(const models::sales::SaveInquiryRequest& value) {
         result.planned_containers.emplace();
         for (const auto& item : value.planned_containers.value()) {
             result.planned_containers.value().push_back({
-                .container_type_code = item.container_type_code,
                 .container_ownership = clients::sales::models::ParseEnumScalar(
                     models::sales::EnumValue(item.container_ownership),
                     clients::sales::models::ContainerOwnership{}),
+                .container_type_code = item.container_type_code,
                 .planned_quantity = item.planned_quantity,
             });
         }
@@ -604,10 +604,10 @@ inline models::sales::Inquiry Convert(const clients::sales::models::Inquiry& val
         result.planned_containers.emplace();
         for (const auto& item : value.planned_containers.value()) {
             result.planned_containers.value().push_back({
-                .container_type_code = item.container_type_code,
                 .container_ownership = models::sales::ParseEnumScalar(
                     clients::sales::models::EnumValue(item.container_ownership),
                     models::sales::ContainerOwnership{}),
+                .container_type_code = item.container_type_code,
                 .planned_quantity = item.planned_quantity,
             });
         }

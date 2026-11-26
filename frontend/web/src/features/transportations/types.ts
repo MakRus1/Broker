@@ -17,6 +17,7 @@ export interface Transportation {
   item_id?: string;
   operation_id?: string;
   container_type_code?: string;
+  container_iso_code?: string;
   container_ownership?: 'SOC' | 'COC';
   type: 'consolidated' | 'container' | 'air' | 'oversized' | 'rail' | 'vessel';
   hazardous: boolean;

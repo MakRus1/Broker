@@ -66,6 +66,10 @@ Transportation:
       type: string
       format: uuid
       x-cpp-type: uuid
+    container_iso_code:
+      type: string
+      pattern: '^[A-Z0-9]{4}$'
+      description: Фактический код размера и типа контейнера по ISO 6346.
     container_type_code:
       type: string
       minLength: 1
@@ -516,6 +520,10 @@ CreateTransportationRequest:
       $ref: '#/TransportationType'
     hazardous:
       type: boolean
+    container_iso_code:
+      type: string
+      pattern: '^[A-Z0-9]{4}$'
+      description: Фактический код размера и типа контейнера по ISO 6346.
     container_type_code:
       type: string
       pattern: ^[A-Z0-9]{2,16}$
@@ -554,6 +562,11 @@ UpdateTransportationRequest:
       $ref: '#/TransportationType'
     hazardous:
       type: boolean
+    container_iso_code:
+      type: string
+      pattern: '^[A-Z0-9]{4}$'
+      description: Фактический код размера и типа контейнера по ISO 6346. Пропуск сохраняет значение для прежней группы; null очищает его.
+      nullable: true
     container_type_code:
       type: string
       pattern: ^[A-Z0-9]{2,16}$

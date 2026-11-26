@@ -5,10 +5,10 @@ import type { Session } from './session';
 type ContainerGroup = { code: string; name: string; iso_codes: string[] };
 
 export function useContainerTypes(session: Session, enabled = true) {
-  const [types, setTypes] = useState<string[]>([]);
+  const [groups, setGroups] = useState<ContainerGroup[]>([]);
   const [failure, setFailure] = useState('');
   useEffect(() => {
-    setTypes([]);
+    setGroups([]);
     setFailure('');
     if (!enabled) return;
     const controller = new AbortController();
@@ -19,12 +19,12 @@ export function useContainerTypes(session: Session, enabled = true) {
       controller.signal,
     )
       .then(({ items }) => {
-        if (!controller.signal.aborted) setTypes(items.map(({ code }) => code));
+        if (!controller.signal.aborted) setGroups(items);
       })
       .catch((error: Error) => {
         if (!controller.signal.aborted) setFailure(error.message);
       });
     return () => controller.abort();
   }, [session, enabled]);
-  return { types, failure };
+  return { groups, types: groups.map(({ code }) => code), failure };
 }

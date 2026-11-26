@@ -300,6 +300,10 @@ export function TransportationPage({
                           <dd>{transportation.container_type_code || '—'}</dd>
                         </div>
                         <div>
+                          <dt>{translate('forms.containerIsoCode')}</dt>
+                          <dd>{transportation.container_iso_code || '—'}</dd>
+                        </div>
+                        <div>
                           <dt>{translate('forms.containerOwnership')}</dt>
                           <dd>{transportation.container_ownership || '—'}</dd>
                         </div>

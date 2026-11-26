@@ -43,7 +43,7 @@ export function TransportationDetailsForm({
 }: Props) {
   const [initial] = useState(source);
   const { translate, locale } = useLocalization();
-  const { types: containerTypes, failure: catalogFailure } = useContainerTypes(session);
+  const { groups, types: containerTypes, failure: catalogFailure } = useContainerTypes(session);
   const [routeSource] = useState(initial?.route_segments ?? shipmentRoute ?? []);
   const [originalRoute] = useState(() =>
     routeSource.filter((stage) => stage.inherited !== false).map(routeSegment),
@@ -57,6 +57,8 @@ export function TransportationDetailsForm({
   const [containerNumber, setContainerNumber] = useState(initial?.container_number ?? '');
   const numberWarning = containerNumberWarning(containerNumber, locale);
   const [containerType, setContainerType] = useState(initial?.container_type_code ?? '');
+  const [isoCode, setIsoCode] = useState(initial?.container_iso_code ?? '');
+  const isoCodes = groups.find(({ code }) => code === containerType)?.iso_codes ?? [];
   const [ownership, setOwnership] = useState(initial?.container_ownership ?? '');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
@@ -68,13 +70,23 @@ export function TransportationDetailsForm({
       type !== (initial?.type ?? 'container') ||
       hazardous !== (initial?.hazardous ?? false) ||
       containerType !== (initial?.container_type_code ?? '') ||
+      isoCode !== (initial?.container_iso_code ?? '') ||
       ownership !== (initial?.container_ownership ?? '') ||
       containerNumber !== (initial?.container_number ?? ''));
   const storageKey = draftStorageKey(session, 'transportation', initial?.id ?? `new-${shipmentId}`);
   const recovery = useDraftRecovery({
     storageKey,
     revision: initial?.revision ?? 0,
-    value: { id, type, hazardous, containerNumber, containerType, ownership, routeSegments },
+    value: {
+      id,
+      type,
+      hazardous,
+      containerNumber,
+      containerType,
+      isoCode,
+      ownership,
+      routeSegments,
+    },
     dirty,
     enabled: !saved,
     onRestore(raw) {
@@ -84,6 +96,7 @@ export function TransportationDetailsForm({
         hazardous: boolean;
         containerNumber: string;
         containerType: string;
+        isoCode?: string;
         ownership: string;
         routeSegments?: typeof routeSegments;
       };
@@ -92,6 +105,7 @@ export function TransportationDetailsForm({
         typeof value.id !== 'string' ||
         !(value.type in transportationTypes) ||
         typeof value.hazardous !== 'boolean' ||
+        (value.isoCode !== undefined && typeof value.isoCode !== 'string') ||
         (value.routeSegments !== undefined &&
           (!Array.isArray(value.routeSegments) ||
             value.routeSegments.length !== routeSegments.length ||
@@ -111,6 +125,12 @@ export function TransportationDetailsForm({
       setHazardous(value.hazardous);
       setContainerNumber(value.containerNumber);
       setContainerType(value.containerType);
+      setIsoCode(
+        value.isoCode ??
+          (value.containerType === initial?.container_type_code
+            ? (initial.container_iso_code ?? '')
+            : ''),
+      );
       setOwnership(value.ownership);
       if (value.routeSegments) setRouteSegments(value.routeSegments);
     },
@@ -145,6 +165,9 @@ export function TransportationDetailsForm({
             : {}),
           ...(type === 'container' && containerType
             ? { container_type_code: containerType.trim().toUpperCase() }
+            : {}),
+          ...(type === 'container' && (isoCode || initial?.container_iso_code)
+            ? { container_iso_code: isoCode || null }
             : {}),
           ...(type === 'container' && ownership ? { container_ownership: ownership } : {}),
         },
@@ -216,7 +239,25 @@ export function TransportationDetailsForm({
                         ...new Set([...containerTypes, ...(containerType ? [containerType] : [])]),
                       ].map((value) => ({ value, label: value })),
                     ]}
-                    onChange={setContainerType}
+                    onChange={(value) => {
+                      setContainerType(value);
+                      setIsoCode('');
+                    }}
+                  />
+                  <Select
+                    label={translate('forms.containerIsoCode')}
+                    value={isoCode}
+                    disabled={!containerType || (!isoCodes.length && !isoCode)}
+                    options={[
+                      { value: '', label: translate('forms.notSpecified') },
+                      ...[...new Set([...isoCodes, ...(isoCode ? [isoCode] : [])])].map(
+                        (value) => ({
+                          value,
+                          label: value,
+                        }),
+                      ),
+                    ]}
+                    onChange={setIsoCode}
                   />
                   {catalogFailure && (
                     <p role="alert" className="error">

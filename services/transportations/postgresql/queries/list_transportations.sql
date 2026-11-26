@@ -10,8 +10,9 @@ SELECT
         container_number,
         type,
         hazardous,
-        route_segments
-    )::public.transportation_v5 AS transportation,
+        route_segments,
+        container_iso_code
+    )::public.transportation_v6 AS transportation,
     {sort_key} AS sort_key
 FROM transportations
 LEFT JOIN shipment_projections AS shipment_projection

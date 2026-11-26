@@ -271,6 +271,7 @@ inline models::transportations::Transportation Convert(
     if (value.container_ownership.has_value())
         result.container_ownership = Convert(value.container_ownership.value());
     result.container_type_code = value.container_type_code;
+    result.container_iso_code = value.container_iso_code;
     result.id = value.id;
     result.item_id = value.item_id;
     result.type = Convert(value.type);
@@ -453,6 +454,7 @@ inline clients::transportations::ApiV1TransportationsCreate::RequestBody Convert
     result.id = value.id;
     result.shipment_id = value.shipment_id;
     result.container_type_code = value.container_type_code;
+    result.container_iso_code = value.container_iso_code;
     result.container_number = value.container_number;
     result.hazardous = value.hazardous;
     result.type = Convert(value.type);
@@ -472,6 +474,7 @@ inline clients::transportations::ApiV1TransportationsUpdate::RequestBody Convert
     result.transportation_id = value.transportation_id;
     result.expected_revision = value.expected_revision;
     result.container_type_code = value.container_type_code;
+    result.container_iso_code = value.container_iso_code;
     result.container_number = value.container_number;
     result.hazardous = value.hazardous;
     result.type = Convert(value.type);

@@ -4,6 +4,7 @@
 #include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <components/transportations.hpp>
+#include <configs/keys.hpp>
 #include <converters/container_facts.hpp>
 #include <converters/saved_transportation.hpp>
 #include <converters/transportation_history.hpp>
@@ -19,6 +20,7 @@
 #include <platform/text.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
+#include <userver/dynamic_config/storage/component.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/utils/text.hpp>
 
@@ -29,11 +31,30 @@ using transportations::ApiError;
 void ValidateDetails(models::TransportationType type,
     const std::optional<std::string>& container_type,
     const std::optional<models::ContainerOwnership>& ownership,
-    const std::optional<std::string>& container_number) {
+    const std::optional<std::string>& container_number, bool has_iso_code) {
     if (type != models::TransportationType::Container &&
-        (container_type.has_value() || ownership.has_value() || container_number.has_value()))
+        (container_type.has_value() || ownership.has_value() || container_number.has_value() ||
+            has_iso_code))
         throw ApiError<400>{
             "unexpected_container", "Контейнерные поля доступны только для контейнерной перевозки"};
+}
+
+void ValidateContainerCatalog(const platform::configs::Json& catalog,
+    const std::optional<std::string>& group_code, const std::optional<std::string>& iso_code,
+    bool group_changed) {
+    const bool known = group_code.has_value() && catalog.HasMember(group_code.value());
+    if (group_changed && group_code.has_value() &&
+        (!known || !catalog[group_code.value()]["active"].As<bool>()))
+        throw ApiError<400>{"invalid_container_type", "Выберите активный тип контейнера"};
+    if (!iso_code.has_value())
+        return;
+    if (known) {
+        for (const auto& allowed : catalog[group_code.value()]["iso_codes"])
+            if (allowed.As<std::string>() == iso_code.value())
+                return;
+    }
+    throw ApiError<400>{
+        "invalid_container_iso_code", "Код ISO не соответствует выбранному типу контейнера"};
 }
 
 }  // namespace
@@ -48,6 +69,7 @@ TransportationsComponent::TransportationsComponent(
     : ComponentBase(config, context),
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()),
+      configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
       routes_(context.FindComponent<RoutesComponent>()),
       route_integrations_(context.FindComponent<RouteIntegrations>()) {}
 
@@ -85,7 +107,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
     const models::CreateTransportationRequest& request, const models::ShipmentContext& source,
     std::string_view access_token) const {
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
-        request.container_number);
+        request.container_number, request.container_iso_code.has_value());
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     transaction.Execute(sql::kLockCommand, organization, request.id);
@@ -103,17 +125,21 @@ models::Transportation TransportationsComponent::CreateTransportation(
         return result;
     }
 
+    if (request.container_type_code.has_value() || request.container_iso_code.has_value())
+        ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
+            request.container_type_code, request.container_iso_code, true);
+
     if (request.route_segments.has_value())
         transaction.Execute(sql::kLockShipmentRouteUsage, organization, request.shipment_id);
 
-    auto result =
-        converters::Convert(transaction
-                                .Execute(sql::kCreateManualTransportation, organization, request.id,
-                                    request.shipment_id, models::EnumValue(request.type),
-                                    request.hazardous, request.container_type_code,
-                                    converters::ConvertOwnership(request.container_ownership),
-                                    platform::TrimToOptional(request.container_number))
-                                .AsSingleRow<models::pg::TransportationRaw>());
+    auto result = converters::Convert(
+        transaction
+            .Execute(sql::kCreateManualTransportation, organization, request.id,
+                request.shipment_id, models::EnumValue(request.type), request.hazardous,
+                request.container_type_code,
+                converters::ConvertOwnership(request.container_ownership),
+                platform::TrimToOptional(request.container_number), request.container_iso_code)
+            .AsSingleRow<models::pg::TransportationRaw>());
     route_rules::InheritRoute(result, source);
     if (request.route_segments.has_value()) {
         models::SetRouteRequest route;
@@ -138,20 +164,29 @@ models::Transportation TransportationsComponent::UpdateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
     const models::UpdateTransportationRequest& request, const models::ShipmentContext& source,
     std::string_view access_token) const {
+    const auto requested_iso = request.container_iso_code.value_or(std::nullopt);
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
-        request.container_number);
+        request.container_number, requested_iso.has_value());
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     auto current = helpers::ReadTransportation(
         transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
     helpers::CheckRevision(current.revision, request.expected_revision);
+    const bool group_changed = current.container_type_code != request.container_type_code;
+    const auto iso_code = request.container_iso_code.has_value() || group_changed ||
+            request.type != models::TransportationType::Container
+        ? requested_iso
+        : current.container_iso_code;
+    if (group_changed || iso_code != current.container_iso_code)
+        ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
+            request.container_type_code, iso_code, group_changed);
 
     auto result = converters::Convert(
         transaction
             .Execute(sql::kUpdateTransportation, organization, request.transportation_id,
                 models::EnumValue(request.type), request.hazardous, request.container_type_code,
                 converters::ConvertOwnership(request.container_ownership),
-                platform::TrimToOptional(request.container_number))
+                platform::TrimToOptional(request.container_number), iso_code)
             .AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(current.route_segments);
     if (request.route_segments)

@@ -21,13 +21,14 @@ struct TransportationRaw {
     std::string Type{};
     bool Hazardous{};
     userver::formats::json::Value RouteSegments;
+    std::optional<std::string> ContainerIsoCode{};
 };
 }  // namespace transportations::models::pg
 
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::transportations::models::pg::TransportationRaw> {
-    static constexpr DBTypeName postgres_name = "public.transportation_v5";
+    static constexpr DBTypeName postgres_name = "public.transportation_v6";
 };
 
 }  // namespace userver::storages::postgres::io

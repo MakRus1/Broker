@@ -899,6 +899,7 @@
   "forms.stateAfterChange": "State after change",
   "forms.couldNotSaveTheTransportation": "Could not save the transportation",
   "forms.containerTypesUnavailable": "Container types unavailable:",
+  "forms.containerIsoCode": "ISO 6346 code",
   "forms.containerOwnership": "Container ownership",
   "forms.createTransportation": "Create transportation",
   "forms.backToShipment": "← Back to shipment",

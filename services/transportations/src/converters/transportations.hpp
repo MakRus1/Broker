@@ -22,6 +22,7 @@ inline models::RouteSegment Convert(const userver::formats::json::Value& documen
 inline models::Transportation Convert(const models::pg::TransportationRaw& row) {
     models::Transportation result;
     result.container_number = row.ContainerNumber;
+    result.container_iso_code = row.ContainerIsoCode;
     result.id = row.Id;
     result.revision = row.Revision;
     result.shipment_id = row.ShipmentId;

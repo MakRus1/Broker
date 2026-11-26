@@ -290,3 +290,46 @@ async def test_history_read_permission_does_not_grant_writes(api):
         roles=['transportations.read', 'transport_locations.read'],
         expected=403,
     )
+
+
+async def test_actual_container_iso_code_roundtrip_and_validation(api):
+    create = '/api/v1/transportations/create'
+    update = '/api/v1/transportations/update'
+    body = {
+        'id': str(uuid4()), 'shipment_id': str(uuid4()), 'type': 'container',
+        'hazardous': False, 'container_type_code': '40HC', 'container_iso_code': '45G1',
+    }
+    invalid = await api.post(create, {**body, 'container_iso_code': '22G1'}, expected=400)
+    assert invalid['error'] == 'invalid_container_iso_code'
+    invalid = await api.post(create, {**body, 'container_type_code': 'OTHER'}, expected=400)
+    assert invalid['error'] == 'invalid_container_type'
+    created = (await api.post(create, body))['transportation']
+    assert created['container_iso_code'] == '45G1'
+    assert (await api.post(create, body))['transportation'] == created
+
+    change = {
+        'transportation_id': body['id'], 'expected_revision': 1,
+        'type': 'container', 'hazardous': True, 'container_type_code': '40HC',
+    }
+    saved = (await api.post(update, change))['transportation']
+    assert saved['container_iso_code'] == '45G1'
+    saved = (await api.post(
+        update, {**change, 'expected_revision': 2, 'container_iso_code': None},
+    ))['transportation']
+    assert 'container_iso_code' not in saved
+    listed = await api.post('/api/v1/transportations/list', {
+        'filters': [{'field': 'shipment_id', 'values': [body['shipment_id']]}],
+    })
+    assert 'container_iso_code' not in listed['items'][0]
+
+
+async def test_existing_plan_group_outside_catalog_can_be_kept(api):
+    plan = {**command(), 'container_type_code': 'LEGACY', 'quantity': 1}
+    created = await api.post(PATH, plan)
+    item_id = created['operation']['transportation_ids'][0]
+    saved = (await api.post('/api/v1/transportations/update', {
+        'transportation_id': item_id, 'expected_revision': 1, 'type': 'container',
+        'hazardous': True, 'container_type_code': 'LEGACY', 'container_ownership': 'COC',
+    }))['transportation']
+    assert saved['container_type_code'] == 'LEGACY'
+    assert 'container_iso_code' not in saved

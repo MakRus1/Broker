@@ -11,7 +11,8 @@ SELECT ROW(
     container_number,
     type,
     hazardous,
-    route_segments
-)::public.transportation_v5
+    route_segments,
+    container_iso_code
+)::public.transportation_v6
 FROM transportations
 WHERE organization_id = $1::UUID AND id = $2::UUID;

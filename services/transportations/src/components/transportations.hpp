@@ -2,6 +2,7 @@
 #include <models/shipment_context.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/configs/runtime.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 
@@ -31,6 +32,7 @@ class TransportationsComponent final : public userver::components::ComponentBase
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;
+    platform::configs::Source configs_;
     RoutesComponent& routes_;
     RouteIntegrations& route_integrations_;
 };

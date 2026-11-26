@@ -1,6 +1,7 @@
 version: 1
 libraries:
 - common
+- configs
 postgresql:
   enabled: true
   cluster: transportations
@@ -35,3 +36,5 @@ clients:
   transport_locations:
     service: transport_locations
     transport: http
+configs:
+- CONTAINER_CATALOG

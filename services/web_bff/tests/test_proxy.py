@@ -893,3 +893,29 @@ async def test_container_catalog_reads_active_groups_without_shipments(
     assert response.json() == {
         'items': [{'code': '40HC', 'name': '40 High Cube', 'iso_codes': ['45G1']}],
     }
+
+
+@pytest.mark.parametrize('iso_code', ['45G1', None])
+async def test_transportation_iso_update_preserves_value_or_explicit_clear(browser, mockserver, iso_code):
+    await browser.sign_in()
+    path = '/api/v1/transportations/update'
+    body = {
+        'transportation_id': ID,
+        'expected_revision': 1,
+        'type': 'container',
+        'hazardous': False,
+        'container_type_code': '40HC',
+        'container_iso_code': iso_code,
+    }
+    item = {**TRANSPORTATION, 'revision': 2}
+    if iso_code is not None:
+        item['container_iso_code'] = iso_code
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json == body
+        return {'transportation': item}
+
+    response = await browser.post(path, body)
+    assert response.status == 200, response.text
+    assert response.json() == {'transportation': item}

@@ -181,10 +181,10 @@ inline clients::shipments::ApiV1ShipmentsCreate::RequestBody Convert(
         result.planned_containers.emplace();
         for (const auto& item : value.planned_containers.value()) {
             result.planned_containers.value().push_back({
-                .container_type_code = item.container_type_code,
                 .container_ownership = clients::shipments::models::ParseEnumScalar(
                     models::shipments::EnumValue(item.container_ownership),
                     clients::shipments::models::ContainerOwnership{}),
+                .container_type_code = item.container_type_code,
                 .planned_quantity = item.planned_quantity,
             });
         }

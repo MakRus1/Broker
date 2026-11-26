@@ -70,7 +70,9 @@ def extract_actual_dates(details):
 async def test_roundtrip(api, shipment_routes, mode, field, details):
     created, stage = await create(api, shipment_routes, mode)
     data = details()
-    actual_dates = extract_actual_dates(data) if mode == 'international_road' else {}
+    actual_dates = {'actual_departure_date': '2020-01-01', 'actual_arrival_date': '2020-01-03'}
+    if mode == 'international_road':
+        assert extract_actual_dates(data) == actual_dates
     saved = (
         await api.post(
             '/api/v1/transportation-routes/set',

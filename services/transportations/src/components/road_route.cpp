@@ -7,15 +7,6 @@ void ValidateRoadDetails(const models::SetRouteRequest& request) {
     const RouteDateValidation dates{"invalid_road_date", "invalid_road_sequence",
         "Проверьте последовательность дат автоучастка"};
     for (const auto& segment : request.route_segments) {
-        if (segment.mode == models::TransportMode::InternationalRoad) {
-            dates.ValidateDate(segment.actual_departure_date, DateKind::Actual);
-            dates.ValidateDate(segment.actual_arrival_date, DateKind::Actual);
-            dates.ValidateOrder(segment.actual_departure_date, segment.actual_arrival_date);
-        } else if (segment.actual_departure_date.has_value() ||
-            segment.actual_arrival_date.has_value()) {
-            throw ApiError<400>{"unexpected_actual_dates",
-                "Календарные факты пока доступны только для международного авто"};
-        }
         if (segment.international_road.has_value()) {
             if (segment.mode != models::TransportMode::InternationalRoad)
                 throw ApiError<400>{"unexpected_road_details",

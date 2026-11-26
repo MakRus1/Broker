@@ -24,11 +24,17 @@ void ValidateRoute(const models::SetRouteRequest& request) {
         "Проверьте последовательность дат ЖД-участка"};
     const RouteDateValidation sea_dates{"invalid_sea_unloading_date", "invalid_sea_sequence",
         "Проверьте последовательность дат морского участка"};
+    const RouteDateValidation actual_dates{
+        "invalid_actual_date", "invalid_actual_sequence", "Отправление позже прибытия"};
     std::set<boost::uuids::uuid> ids;
     for (const auto& route_segment : request.route_segments) {
         if (!ids.insert(route_segment.id).second)
             throw ApiError<400>{"invalid_request", "ID плеч должны отличаться"};
         CheckInterval(route_segment.planned_departure_at, route_segment.planned_arrival_at);
+        actual_dates.ValidateDate(route_segment.actual_departure_date, DateKind::Actual);
+        actual_dates.ValidateDate(route_segment.actual_arrival_date, DateKind::Actual);
+        actual_dates.ValidateOrder(
+            route_segment.actual_departure_date, route_segment.actual_arrival_date);
         if (route_segment.sea_unloading_date.has_value()) {
             if (route_segment.mode != models::TransportMode::Sea)
                 throw ApiError<400>{"unexpected_sea_unloading_date",

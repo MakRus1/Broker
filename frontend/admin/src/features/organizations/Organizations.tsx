@@ -262,7 +262,7 @@ export function Organizations({
       setNotice(role ? 'Роль обновлена.' : 'Роль создана.');
     });
   }
-  async function saveOrganization(name: string, enabled: boolean) {
+  async function saveOrganization(name: string, enabled: boolean, lineOperations: boolean) {
     if (editor?.kind !== 'organization') return;
     const previous = editor.organization;
     await run(async () => {
@@ -270,8 +270,14 @@ export function Organizations({
         '/api/admin/organizations/' + (previous ? 'update' : 'create'),
         session,
         previous
-          ? { id: previous.id, name, enabled, expected_revision: previous.revision }
-          : { id: crypto.randomUUID(), name },
+          ? {
+              id: previous.id,
+              name,
+              enabled,
+              line_operations_enabled: lineOperations,
+              expected_revision: previous.revision,
+            }
+          : { id: crypto.randomUUID(), name, line_operations_enabled: lineOperations },
       );
       closeEditor();
       await loadOrganizations();
@@ -653,12 +659,18 @@ function OrganizationEditor({
   organization?: Organization;
   busy: boolean;
   error: string;
-  save: (name: string, enabled: boolean) => Promise<void>;
+  save: (name: string, enabled: boolean, lineOperations: boolean) => Promise<void>;
   close: () => void;
 }) {
   const [name, setName] = useState(organization?.name ?? '');
   const [enabled, setEnabled] = useState(organization?.enabled ?? true);
-  const dirty = name !== (organization?.name ?? '') || enabled !== (organization?.enabled ?? true);
+  const [lineOperations, setLineOperations] = useState(
+    organization?.line_operations_enabled ?? false,
+  );
+  const dirty =
+    lineOperations !== (organization?.line_operations_enabled ?? false) ||
+    name !== (organization?.name ?? '') ||
+    enabled !== (organization?.enabled ?? true);
   return (
     <EditorPanel
       title={organization ? 'Изменить организацию' : 'Новая организация'}
@@ -670,7 +682,7 @@ function OrganizationEditor({
         className="organization-form"
         onSubmit={(event) => {
           event.preventDefault();
-          void save(name.trim(), enabled);
+          void save(name.trim(), enabled, lineOperations);
         }}
       >
         {error && (
@@ -687,6 +699,15 @@ function OrganizationEditor({
             disabled={busy}
             onChange={(event) => setName(event.target.value)}
           />
+        </label>
+        <label className="member-access">
+          <input
+            type="checkbox"
+            checked={lineOperations}
+            disabled={busy}
+            onChange={(event) => setLineOperations(event.target.checked)}
+          />
+          Рабочее место морской линии
         </label>
         {organization && (
           <label className="member-access">

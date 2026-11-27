@@ -12,13 +12,14 @@ struct OrganizationRaw {
     std::string Name{};
     bool Enabled{};
     std::int64_t Revision{};
+    bool LineOperationsEnabled{};
 };
 }  // namespace organizations::models::pg
 
 namespace userver::storages::postgres::io {
 
 template <> struct CppToUserPg<::organizations::models::pg::OrganizationRaw> {
-    static constexpr DBTypeName postgres_name = "public.organization_v1";
+    static constexpr DBTypeName postgres_name = "public.organization_v2";
 };
 
 }  // namespace userver::storages::postgres::io

@@ -1,4 +1,5 @@
 const paths: Record<string, string> = {
+  '/voyages': 'M3 14l9-3 9 3-3 6H6z M6 13V7h12v6 M10 7V4h4v3',
   '/sales': 'M4 4h16v4H4z M6 8v12h12V8 M9 12h6 M9 16h4',
   '/inquiries': 'M4 5h16v14H4z M4 6l8 7 8-7',
   '/shipments': 'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10',

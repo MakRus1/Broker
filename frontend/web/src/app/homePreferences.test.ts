@@ -66,6 +66,10 @@ it('requires section access for registry, direct links and related forms', () =>
   }
   expect(canOpenWorkspace(`/rfqs/${card}`, ['sales.read'])).toBe(true);
   expect(canOpenWorkspace(`/rfqs/${card}`, [])).toBe(false);
+  for (const route of ['/voyages', `/voyages/${card}`]) {
+    expect(canOpenWorkspace(route, ['shipments.read'])).toBe(false);
+    expect(canOpenWorkspace(route, ['shipments.read', 'shipments.read_voyages'])).toBe(true);
+  }
   expect(canOpenWorkspace(`/bank-accounts/new/${card}`, ['counterparties.read'])).toBe(true);
   expect(canOpenWorkspace(`/contracts/${card}`, ['counterparties.read'])).toBe(false);
 });

@@ -1,0 +1,206 @@
+openapi: 3.0.3
+info:
+  title: Морские рейсы
+  version: '1'
+paths:
+  /api/v1/voyages/list:
+    post:
+      summary: Морские рейсы
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+      responses:
+        '200':
+          description: Морские рейсы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoyageList'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/voyages/get:
+    post:
+      summary: Карточка рейса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                voyage_id:
+                  type: string
+                  format: uuid
+                  x-cpp-type: uuid
+              required:
+              - voyage_id
+      responses:
+        '200':
+          description: Карточка рейса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoyageDetail'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipments/models.yaml#/ApiError
+        '404':
+          description: Рейс не найден
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipments/models.yaml#/ApiError
+  /api/v1/voyages/by-shipment:
+    post:
+      summary: Рейсы морских участков поставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                shipment_id:
+                  type: string
+                  format: uuid
+                  x-cpp-type: uuid
+              required:
+              - shipment_id
+      responses:
+        '200':
+          description: Рейсы морских участков поставки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentVoyageLinks'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: components/schemas/shipments/models.yaml#/ApiError
+components:
+  schemas:
+    VoyageSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        number:
+          type: string
+      required:
+      - id
+      - number
+    VoyageBooking:
+      type: object
+      additionalProperties: false
+      properties:
+        booking_number:
+          type: string
+        discharge_port:
+          type: string
+        load_port:
+          type: string
+        shipment_id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        shipment_number:
+          type: string
+      required:
+      - booking_number
+      - discharge_port
+      - load_port
+      - shipment_id
+      - shipment_number
+    ShipmentVoyageLink:
+      type: object
+      additionalProperties: false
+      properties:
+        discharge_port:
+          type: string
+        load_port:
+          type: string
+        segment_id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        voyage_id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        voyage_number:
+          type: string
+      required:
+      - discharge_port
+      - load_port
+      - segment_id
+      - voyage_id
+      - voyage_number
+    VoyageList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoyageSummary'
+      required:
+      - items
+    ShipmentVoyageLinks:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentVoyageLink'
+      required:
+      - items
+    VoyageDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoyageBooking'
+        id:
+          type: string
+          format: uuid
+          x-cpp-type: uuid
+        number:
+          type: string
+        ports:
+          type: array
+          items:
+            type: string
+      required:
+      - bookings
+      - id
+      - number
+      - ports
+  securitySchemes:
+    BrowserSession:
+      type: apiKey
+      in: cookie
+      name: broker_web
+security:
+- BrowserSession: []

@@ -935,3 +935,29 @@ async def test_shipment_route_progress_proxy(browser, mockserver):
     response = await browser.post(path, query)
     assert response.status == 200, response.text
     assert response.json() == result
+
+
+@pytest.mark.parametrize(('operation', 'query', 'result'), [
+    ('list', {}, {'items': [{'id': ID, 'number': 'L-043'}]}),
+    ('get', {'voyage_id': ID}, {
+        'id': ID, 'number': 'L-043', 'ports': ['Ningbo', 'Vostochny'],
+        'bookings': [{'booking_number': 'B-1', 'shipment_id': ID, 'shipment_number': 'S-1',
+                      'load_port': 'Ningbo', 'discharge_port': 'Vostochny'}],
+    }),
+    ('by-shipment', {'shipment_id': ID}, {'items': [{
+        'segment_id': ID, 'voyage_id': ID, 'voyage_number': 'L-043',
+        'load_port': 'Ningbo', 'discharge_port': 'Vostochny',
+    }]}),
+])
+async def test_voyage_proxy(browser, mockserver, operation, query, result):
+    await browser.sign_in()
+    path = '/api/v1/voyages/' + operation
+
+    @mockserver.json_handler(path)
+    def upstream(request):
+        assert request.json == query
+        return result
+
+    response = await browser.post(path, query)
+    assert response.status == 200, response.text
+    assert response.json() == result

@@ -21,6 +21,9 @@ paths:
 - /api/v1/shipments/update
 - /api/v1/transportation-operations/create
 - /api/v1/transportation-operations/get
+- /api/v1/voyages/by-shipment
+- /api/v1/voyages/get
+- /api/v1/voyages/list
 default:
   '**default**':
     timeout: 1000

@@ -61,7 +61,8 @@ models::OrganizationResult OrganizationsComponent::CreateOrganization(
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto organization =
-            Convert(transaction.Execute(sql::kCreateOrganization, request.id, name)
+            Convert(transaction.Execute(sql::kCreateOrganization, request.id, name,
+                        request.line_operations_enabled.value_or(false))
                         .AsSingleRow<models::pg::OrganizationRaw>());
         transaction.Execute(sql::kCreateDefaultRoles, organization.id);
         WriteAudit(transaction, organization.id, identity, "organization.created", organization);
@@ -88,7 +89,8 @@ models::OrganizationResult OrganizationsComponent::UpdateOrganization(
         if (rows.AsSingleRow<models::pg::OrganizationRaw>().Revision != request.expected_revision)
             throw ApiError<409>{"revision_conflict", "Организация уже изменена"};
         const auto organization =
-            Convert(transaction.Execute(sql::kUpdateOrganization, request.id, name, request.enabled)
+            Convert(transaction.Execute(sql::kUpdateOrganization, request.id, name, request.enabled,
+                        request.line_operations_enabled)
                         .AsSingleRow<models::pg::OrganizationRaw>());
         WriteAudit(transaction, organization.id, identity, "organization.updated", organization);
 

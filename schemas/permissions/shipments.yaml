@@ -23,3 +23,9 @@ shipments.ensure_created:
   group: Служебные операции
   scope: service
   requires: []
+shipments.read_voyages:
+  name: Просмотр рейсов морской линии
+  group: Морская линия
+  scope: organization
+  requires:
+  - shipments.read

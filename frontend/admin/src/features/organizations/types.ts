@@ -1,6 +1,7 @@
 export interface Organization {
   id: string;
   name: string;
+  line_operations_enabled: boolean;
   enabled: boolean;
   revision: number;
 }

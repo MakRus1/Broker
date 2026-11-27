@@ -17,9 +17,15 @@ ORG = '11111111-1111-4111-8111-111111111111'
         ('/api/admin/organizations/list', {}, {'items': []}, 200),
         (
             '/api/admin/organizations/create',
-            {'id': ORG, 'name': 'Компания'},
-            {'organization': {'id': ORG, 'name': 'Компания', 'enabled': True, 'revision': 1}},
+            {'id': ORG, 'name': 'Компания', 'line_operations_enabled': True},
+            {'organization': {'id': ORG, 'name': 'Компания', 'enabled': True, 'line_operations_enabled': True, 'revision': 1}},
             201,
+        ),
+        (
+            '/api/admin/organizations/update',
+            {'id': ORG, 'name': 'Компания', 'enabled': True, 'line_operations_enabled': True, 'expected_revision': 1},
+            {'organization': {'id': ORG, 'name': 'Компания', 'enabled': True, 'line_operations_enabled': True, 'revision': 2}},
+            200,
         ),
     ],
 )
@@ -60,7 +66,7 @@ async def test_organization_admin_has_no_implicit_config_permissions(browser, oi
     def own_organization(request):
         return {
             'platform_admin': False,
-            'organizations': [{'id': ORG, 'name': 'Своя компания', 'enabled': True, 'revision': 1}],
+            'organizations': [{'id': ORG, 'name': 'Своя компания', 'enabled': True, 'line_operations_enabled': False, 'revision': 1}],
             'managed_organization_ids': [ORG],
         }
 

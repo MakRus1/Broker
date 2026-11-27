@@ -1,3 +1,4 @@
+import { useShipmentVoyages } from '../voyages/Voyages';
 import '../routes/shipmentRoute.css';
 import { RouteStageTitle } from '../routes/RouteStageTitle';
 import { calendarDate } from '../../shared/dates/calendar';
@@ -23,6 +24,8 @@ export type ShipmentRouteProgress = {
 type RouteType = { code: string; name: string };
 export function ShipmentRoute({
   segments,
+  shipmentId,
+  active = true,
   planningOnly = false,
   progress,
   showHeading = true,
@@ -33,6 +36,8 @@ export function ShipmentRoute({
   session,
   customers,
 }: {
+  shipmentId?: string;
+  active?: boolean;
   planningOnly?: boolean;
   progress?: ShipmentRouteProgress | null;
   showHeading?: boolean;
@@ -45,6 +50,12 @@ export function ShipmentRoute({
   customers: Counterparty[];
 }) {
   const { translate, locale } = useLocalization();
+  const voyages = useShipmentVoyages(
+    session,
+    shipmentId,
+    active && segments.some((s) => s.type === 'sea'),
+  );
+  const links = new Map(voyages.data?.items.map((link) => [link.segment_id, link]));
   const collapse = useRouteCollapse(segments.map((stage) => stage.id));
   const counts = new Map(
     progress?.current.map(({ route_segment_id, quantity }) => [route_segment_id, quantity]),
@@ -219,6 +230,7 @@ export function ShipmentRoute({
               </>
             ) : segment.type === 'sea' || segment.type === 'air' ? (
               <SharedRouteDetailsView
+                confirmedVoyage={links.get(segment.id)}
                 mode={segment.type}
                 planningOnly={planningOnly}
                 sea={segment.sea}
@@ -232,6 +244,7 @@ export function ShipmentRoute({
           </details>
         ))}
       </div>
+      {voyages.failure && <p role="alert">{voyages.failure}</p>}
       {!segments.length && <p className="muted">{translate('shipment.addSegmentsHint')}</p>}
       {unassigned > 0 && (
         <p className="hint">

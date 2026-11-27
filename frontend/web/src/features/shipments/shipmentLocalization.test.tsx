@@ -36,7 +36,7 @@ describe('shipment route localization', () => {
         segments={[{ id: 'leg', type: 'sea', sea }]}
         allowedTypes={[]}
         types={[{ code: 'sea', name: 'Море' }]}
-        session={{} as Session}
+        session={{ permissions: [] } as Session}
         customers={[]}
       />,
     );

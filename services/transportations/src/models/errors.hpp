@@ -8,6 +8,6 @@ class RevisionConflict final : public ApiError<409> {
   public:
     RevisionConflict()
         : ApiError<409>{"revision_conflict",
-                        "Перевозка изменилась. Обновите карточку и повторите сохранение"} {}
+              "Перевозка изменилась. Обновите карточку и повторите сохранение"} {}
 };
 }  // namespace transportations

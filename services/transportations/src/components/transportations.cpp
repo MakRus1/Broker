@@ -146,7 +146,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
     try {
         if (request.container_type_code.has_value() || request.container_iso_code.has_value())
             ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
-                                     request.container_type_code, request.container_iso_code, true);
+                request.container_type_code, request.container_iso_code, true);
 
         if (request.route_segments.has_value()) {
             models::SetRouteRequest route;

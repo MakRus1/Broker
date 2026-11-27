@@ -8,6 +8,7 @@
 #include <converters/saved_transportation.hpp>
 #include <converters/transportation_history.hpp>
 #include <converters/transportations.hpp>
+#include <exception>
 #include <helpers/database.hpp>
 #include <helpers/json.hpp>
 #include <helpers/revision.hpp>
@@ -138,21 +139,27 @@ models::Transportation TransportationsComponent::CreateTransportation(
     if (!previous.IsEmpty())
         return replay(previous);
 
-    if (request.container_type_code.has_value() || request.container_iso_code.has_value())
-        ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
-            request.container_type_code, request.container_iso_code, true);
-
     models::Transportation prepared{};
     prepared.id = request.id;
     std::optional<std::int64_t> usage_check_version;
-    if (request.route_segments.has_value()) {
-        models::SetRouteRequest route;
-        route.transportation_id = request.id;
-        route.route_segments = request.route_segments.value();
-        usage_check_version =
-            routes_.PrepareRouteWrite(organization, access_token, route, source, prepared);
-    } else {
-        route_rules::InheritRoute(prepared, source);
+    std::exception_ptr preparation_error;
+    try {
+        if (request.container_type_code.has_value() || request.container_iso_code.has_value())
+            ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
+                                     request.container_type_code, request.container_iso_code, true);
+
+        if (request.route_segments.has_value()) {
+            models::SetRouteRequest route;
+            route.transportation_id = request.id;
+            route.route_segments = request.route_segments.value();
+            usage_check_version =
+                routes_.PrepareRouteWrite(organization, access_token, route, source, prepared);
+        } else {
+            route_rules::InheritRoute(prepared, source);
+        }
+    } catch (const platform::http::HandlerErrorBase&) {
+        // Пока шла подготовка, другой запрос мог сохранить команду с тем же ключом.
+        preparation_error = std::current_exception();
     }
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
@@ -163,6 +170,8 @@ models::Transportation TransportationsComponent::CreateTransportation(
         transaction.Commit();
         return result;
     }
+    if (preparation_error)
+        std::rethrow_exception(preparation_error);
     helpers::CheckRouteWrite(transaction, organization, source.shipment_id, usage_check_version);
     auto result = converters::Convert(
         transaction

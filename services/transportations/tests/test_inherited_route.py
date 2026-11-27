@@ -378,3 +378,40 @@ async def test_full_route_write_keeps_historical_documents(api, shipment_routes,
     })
     loaded = (await api.post('/api/v1/transportations/get', {'transportation_id': created['id']}))['transportation']
     assert loaded['route_segments'][-1] == historical
+
+
+@pytest.mark.parametrize('same_payload', [True, False])
+async def test_create_rechecks_saved_command_after_registration_failure(
+    api, shipment_routes, mockserver, same_payload
+):
+    shipment = str(uuid4())
+    stage = route_segment('road')
+    shipment_routes.set(shipment, [stage])
+    command = {
+        'id': str(uuid4()), 'shipment_id': shipment, 'type': 'container',
+        'hazardous': False, 'route_segments': [stage],
+    }
+    path = '/api/v1/transportations/create'
+    pending_registration = asyncio.Event()
+    committed = asyncio.Event()
+
+    @mockserver.json_handler('/api/v1/shipments/route-segments/register-usage')
+    async def register(request):
+        if pending_registration.is_set():
+            return {'registered': True}
+        pending_registration.set()
+        await asyncio.wait_for(committed.wait(), 5)
+        return mockserver.make_response(status=503, json={'error': 'unavailable', 'message': 'retry'})
+
+    pending = asyncio.create_task(api.post(path, command, expected=200 if same_payload else 409))
+    try:
+        await asyncio.wait_for(pending_registration.wait(), 5)
+        saved = await api.post(path, {**command, 'hazardous': not same_payload})
+    finally:
+        committed.set()
+        response = await pending
+
+    if same_payload:
+        assert response == saved
+    else:
+        assert response['error'] == 'idempotency_conflict'

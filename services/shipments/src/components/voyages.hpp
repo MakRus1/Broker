@@ -12,8 +12,9 @@ class VoyagesComponent final : public userver::components::ComponentBase {
     models::VoyageList ListVoyages(const boost::uuids::uuid& org) const;
     models::VoyageDetail GetVoyage(
         const boost::uuids::uuid& org, const boost::uuids::uuid& id) const;
-    static void LoadShipmentVoyages(userver::storages::postgres::Transaction& transaction,
-        const boost::uuids::uuid& organization, models::Shipment& shipment);
+    std::optional<std::vector<models::ShipmentVoyageLink>> GetConfirmedVoyages(
+        userver::storages::postgres::Transaction& transaction,
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

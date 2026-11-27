@@ -223,7 +223,7 @@ models::Transportation TransportationsComponent::UpdateTransportation(
         request.container_type_code, converters::ConvertOwnership(request.container_ownership),
         platform::TrimToOptional(request.container_number), iso_code, request.expected_revision);
     if (updated.IsEmpty())
-        helpers::RevisionConflict();
+        throw RevisionConflict{};
     auto result = converters::Convert(updated.AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(current.route_segments);
     result.incoterms = source.incoterms;

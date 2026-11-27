@@ -35,7 +35,7 @@ models::Transportation ActualsComponent::ApplyActualChange(const boost::uuids::u
     const pg::ResultSet updated = transaction.Execute(sql::kUpdateRouteSegments, organization,
         result.id, request.expected_revision, converters::ToStoredRoute(result.route_segments));
     if (updated.IsEmpty())
-        helpers::RevisionConflict();
+        throw RevisionConflict{};
     result.revision = updated.AsSingleRow<std::int64_t>();
 
     helpers::WriteAudit(transaction, organization, identity,

@@ -84,7 +84,7 @@ models::Transportation RoutesComponent::SaveRoute(const boost::uuids::uuid& orga
     const auto updated = transaction.Execute(sql::kUpdateRouteSegments, organization, result.id,
         request.expected_revision, converters::ToStoredRoute(result.route_segments));
     if (updated.IsEmpty())
-        helpers::RevisionConflict();
+        throw RevisionConflict{};
     result.revision = updated.AsSingleRow<std::int64_t>();
     helpers::WriteAudit(
         transaction, organization, identity, "set_route", result.id, request, result);

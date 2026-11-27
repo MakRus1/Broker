@@ -1,5 +1,6 @@
 -- $1 — идентификатор организации.
 -- $2 — название организации.
-INSERT INTO organizations AS o (id, name)
-VALUES ($1::UUID, $2)
-RETURNING ROW(o.id, o.name, o.enabled, o.revision)::public.organization_v1;
+-- $3 — включить рабочее место морской линии.
+INSERT INTO organizations AS o (id, name, line_operations_enabled)
+VALUES ($1::UUID, $2, $3)
+RETURNING ROW(o.id, o.name, o.enabled, o.revision, o.line_operations_enabled)::public.organization_v2;

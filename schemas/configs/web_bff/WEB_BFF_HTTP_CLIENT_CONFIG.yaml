@@ -110,6 +110,8 @@ paths:
 - /api/v1/transportations/list
 - /api/v1/transportations/shipment-route-progress
 - /api/v1/transportations/update
+- /api/v1/voyages/get
+- /api/v1/voyages/list
 - /localization/catalog
 default:
   '**default**':

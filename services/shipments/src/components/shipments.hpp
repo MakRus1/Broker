@@ -12,6 +12,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace shipments {
+class VoyagesComponent;
+
 class ShipmentsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "shipments-shipments";
@@ -22,8 +24,8 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     void ValidateLogist(const boost::uuids::uuid& organization, std::string_view access_token,
         const std::optional<std::string>& subject) const;
 
-    models::Shipment GetShipment(
-        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
+    models::Shipment GetShipment(const boost::uuids::uuid& organization,
+        const boost::uuids::uuid& shipment_id, bool include_voyages) const;
     std::vector<models::TransportationContext> GetTransportationContexts(
         const boost::uuids::uuid& organization,
         const std::vector<boost::uuids::uuid>& shipment_ids) const;
@@ -46,6 +48,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     SettingsComponent& settings_;
+    const VoyagesComponent& voyages_;
     clients::counterparties::Client counterparties_;
     clients::organizations::Client organizations_;
 };

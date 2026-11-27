@@ -73,6 +73,7 @@ def api(service_client, auth_key):
                     'counterparties.read',
                     'organizations.read_employees',
                     'shipments.read',
+                    'shipments.read_voyages',
                     'shipments.write', 'shipments.create',
                     'transportations.create',
                     'transport_locations.read',

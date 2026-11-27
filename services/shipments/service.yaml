@@ -28,6 +28,8 @@ auth:
   roles-client: broker-logistics
   protected-prefix: /api/
   permissions:
+    /api/v1/voyages/list: shipments.read_voyages
+    /api/v1/voyages/get: shipments.read_voyages
     /api/v1/shipments/create: shipments.create
     /api/v1/shipments/get: shipments.read
     /api/v1/shipments/list: shipments.read

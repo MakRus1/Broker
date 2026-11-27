@@ -29,6 +29,13 @@ export const workspaceGroups = [
         permission: 'shipments.read',
       },
       {
+        route: '/voyages',
+        icon: '⚓',
+        title: 'nav.voyages',
+        description: 'home.voyages',
+        permission: 'shipments.read_voyages',
+      },
+      {
         route: '/transportations',
         icon: '⇄',
         title: 'nav.transportations',

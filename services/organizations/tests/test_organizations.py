@@ -10,7 +10,7 @@ ADMIN = '/api/admin/organizations'
 async def test_platform_creates_and_updates_organization(api):
     body = {'id': str(uuid4()), 'name': '  Новая компания  '}
     organization = (await api.call(ADMIN + '/create', body, expected=201))['organization']
-    assert organization == {**body, 'name': 'Новая компания', 'enabled': True, 'revision': 1}
+    assert organization == {**body, 'name': 'Новая компания', 'line_operations_enabled': False, 'enabled': True, 'revision': 1}
     changed = await api.call(
         ADMIN + '/update',
         {
@@ -676,3 +676,16 @@ async def test_sales_role_can_read_references_without_operational_data(api, pgsq
         await api.call('/api/organizations/access', {
             'organization_id': ORGANIZATION, 'permission': permission,
         }, user='sales-manager', expected=403)
+
+
+async def test_voyage_access_requires_enabled_workplace_and_employee_grant(api):
+    access = {'organization_id': ORGANIZATION, 'permission': 'shipments.read_voyages'}
+    await api.call('/api/organizations/access', access, user='org-admin', expected=403)
+    change = {'id': ORGANIZATION, 'name': 'Линия', 'enabled': True, 'expected_revision': 1}
+    await api.call(ADMIN + '/update', {**change, 'line_operations_enabled': True})
+    await api.call('/api/organizations/access', access, user='org-admin')
+    await api.call('/api/organizations/access', access, user='viewer', expected=403)
+    renamed = await api.call(ADMIN + '/update', {**change, 'name': 'Переименованная линия', 'expected_revision': 2})
+    assert renamed['organization']['line_operations_enabled'] is True
+    await api.call(ADMIN + '/update', {**change, 'expected_revision': 3, 'line_operations_enabled': False})
+    await api.call('/api/organizations/access', access, user='org-admin', expected=403)

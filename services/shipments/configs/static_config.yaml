@@ -9,6 +9,7 @@ components_manager:
         shipment-routes: {}
         shipments-shipments: {}
         shipment-registry: {}
+        voyages: {}
         shipments-settings: {}
         shipments-container-plan: {}
         shipments-transportation-operations: {}
@@ -128,6 +129,18 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
+        handler-api-v1-voyages-get:
+            path: /api/v1/voyages/get
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
+        handler-api-v1-voyages-list:
+            path: /api/v1/voyages/list
+            method: POST
+            task_processor: main-task-processor
+            request_body_size_log_limit: 32768
+            response_data_size_log_limit: 32768
         # OPENAPI_HANDLERS_END
         # SERVICE_CONFIG_BEGIN
         client-counterparties:
@@ -183,6 +196,8 @@ components_manager:
                 /api/v1/shipments/update: shipments.write
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read
+                /api/v1/voyages/get: shipments.read_voyages
+                /api/v1/voyages/list: shipments.read_voyages
             permission-dependencies:
                 shipments.create:
                 - shipments.read
@@ -190,6 +205,8 @@ components_manager:
                 - organizations.read_employees
                 - counterparties.read
                 - transport_locations.read
+                shipments.read_voyages:
+                - shipments.read
                 shipments.write:
                 - shipments.read
                 transportations.read:

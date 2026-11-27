@@ -1,3 +1,4 @@
+import { VoyageCard, VoyageRegistry } from '../features/voyages/Voyages';
 import { SidebarHints } from './SidebarHints';
 import { NavigationAppearance } from './NavigationAppearance';
 import { NavigationIcon } from './NavigationIcon';
@@ -564,6 +565,20 @@ function WorkspaceApp() {
                       setWorkspaces((old) => replaceWorkspace(old, entry.id, next, value.name));
                       location.hash = next;
                     }}
+                  />
+                ) : entry.route === '/voyages' ? (
+                  <VoyageRegistry
+                    key={session.organization_id}
+                    session={session}
+                    active={activeWorkspace === entry.id}
+                  />
+                ) : entry.route.startsWith('/voyages/') ? (
+                  <VoyageCard
+                    onTitle={renameWorkspace}
+                    key={session.organization_id}
+                    id={entry.route.split('/')[2]}
+                    session={session}
+                    active={activeWorkspace === entry.id}
                   />
                 ) : entry.route.startsWith('/shipments') ? (
                   <ShipmentWorkspace

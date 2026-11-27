@@ -4,7 +4,6 @@ import { translate } from '../../../../shared/i18n/catalog';
 import { SharedRouteDetailsView, sharedRouteDirection } from '../routes/SharedRouteDetails';
 import { ShipmentRoute } from './ShipmentRoute';
 import type { SeaDetails } from '../routes/types';
-import type { Session } from '../../shared/api/session';
 
 vi.mock('../localization/Localization', () => ({
   useLocalization: () => ({
@@ -36,7 +35,14 @@ describe('shipment route localization', () => {
         segments={[{ id: 'leg', type: 'sea', sea }]}
         allowedTypes={[]}
         types={[{ code: 'sea', name: 'Море' }]}
-        session={{} as Session}
+        session={{
+          actor: 'tester',
+          subject: 'tester',
+          display_name: 'Tester',
+          organization_id: 'org',
+          csrf_token: '',
+          permissions: [],
+        }}
         customers={[]}
       />,
     );

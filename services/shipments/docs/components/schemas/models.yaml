@@ -42,10 +42,39 @@ CreationOperation:
   - quantity
   - status
   - transportation_ids
+ShipmentVoyageLink:
+  type: object
+  additionalProperties: false
+  properties:
+    discharge_port:
+      type: string
+    load_port:
+      type: string
+    segment_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    voyage_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    voyage_number:
+      type: string
+  required:
+  - discharge_port
+  - load_port
+  - segment_id
+  - voyage_id
+  - voyage_number
 Shipment:
   type: object
   additionalProperties: false
   properties:
+    confirmed_voyages:
+      description: Назначения подтверждённых броней в карточке поставки, доступные сотруднику линии.
+      type: array
+      items:
+        $ref: '#/ShipmentVoyageLink'
     id:
       type: string
       format: uuid

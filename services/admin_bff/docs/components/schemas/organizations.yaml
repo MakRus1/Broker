@@ -6,7 +6,10 @@ Organization:
   - name
   - enabled
   - revision
+  - line_operations_enabled
   properties:
+    line_operations_enabled:
+      type: boolean
     id:
       type: string
       format: uuid
@@ -95,6 +98,8 @@ CreateOrganizationRequest:
   - id
   - name
   properties:
+    line_operations_enabled:
+      type: boolean
     id:
       type: string
       format: uuid
@@ -112,6 +117,8 @@ UpdateOrganizationRequest:
   - enabled
   - expected_revision
   properties:
+    line_operations_enabled:
+      type: boolean
     id:
       type: string
       format: uuid

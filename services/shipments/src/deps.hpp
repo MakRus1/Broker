@@ -6,6 +6,7 @@
 #include <components/shipment_routes.hpp>
 #include <components/shipments.hpp>
 #include <components/transportation_operations.hpp>
+#include <components/voyages.hpp>
 
 #include <userver/components/component_context.hpp>
 // SERVICE_DEPS_INCLUDES_BEGIN
@@ -28,6 +29,7 @@ namespace shipments {
 
 struct Deps {
     ShipmentsComponent* shipments;
+    VoyagesComponent* voyages;
     ShipmentRegistryComponent* shipment_registry;
     SettingsComponent* settings;
     ShipmentRoutes* shipment_routes;
@@ -49,6 +51,7 @@ struct Deps {
 inline Deps ResolveDeps(const userver::components::ComponentContext& component_context) {
     return Deps{
         .shipments = &component_context.FindComponent<ShipmentsComponent>(),
+        .voyages = &component_context.FindComponent<VoyagesComponent>(),
         .shipment_registry = &component_context.FindComponent<ShipmentRegistryComponent>(),
         .settings = &component_context.FindComponent<SettingsComponent>(),
         .shipment_routes = &component_context.FindComponent<ShipmentRoutes>(),

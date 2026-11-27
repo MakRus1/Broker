@@ -203,6 +203,7 @@ export function sharedRouteDirection(
 export function SharedRouteDetailsView({
   planningOnly = false,
   mode,
+  confirmedVoyage,
   sea: seaDetails,
   air: airDetails,
   customers,
@@ -210,6 +211,12 @@ export function SharedRouteDetailsView({
 }: {
   planningOnly?: boolean;
   mode?: 'sea' | 'air';
+  confirmedVoyage?: {
+    voyage_id: string;
+    voyage_number: string;
+    load_port: string;
+    discharge_port: string;
+  };
   sea?: SeaDetails;
   air?: AirDetails;
   customers: Counterparty[];
@@ -233,7 +240,17 @@ export function SharedRouteDetailsView({
         ['ETA', date(sea.eta)],
         [translate('route.vesselDeparture'), date(sea.departure_date)],
         [translate('registryValue.type.vessel'), sea.vessel || missing],
-        [translate('route.voyage'), sea.voyage || missing],
+        [
+          translate('route.voyage'),
+          confirmedVoyage ? (
+            <a href={'#/voyages/' + confirmedVoyage.voyage_id}>
+              {confirmedVoyage.voyage_number} · {confirmedVoyage.load_port} →{' '}
+              {confirmedVoyage.discharge_port}
+            </a>
+          ) : (
+            sea.voyage || missing
+          ),
+        ],
       ]
     : air
       ? [

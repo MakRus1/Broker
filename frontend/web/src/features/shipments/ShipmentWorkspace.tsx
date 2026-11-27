@@ -24,8 +24,7 @@ import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { ShipmentRoute, type ShipmentRouteProgress } from './ShipmentRoute';
-import type { ShipmentRouteSegment } from '../routes/types';
-import { localDate } from '../../shared/dates/calendar';
+import { createPayload, draftOf, updatePayload, type CardDraft } from './shipmentDraft';
 import { useFieldValidation } from '../../shared/forms/fieldValidation';
 import { changeShipmentCustomer } from './shipmentParticipants';
 import {
@@ -127,43 +126,6 @@ export function ShipmentWorkspace(props: Props) {
     </>
   );
 }
-type CardDraft = {
-  number: string;
-  shipment_date: string;
-  customer_id: string;
-  recipient_id: string;
-  logist: string;
-  cargo_description: string;
-  status: string;
-  incoterms: string;
-  carriage_terms: string;
-  loading: string;
-  delivery_city: string;
-  delivery_country: string;
-  delivery_address: string;
-  reference: string;
-  route_segments: ShipmentRouteSegment[];
-};
-
-function draftOf(initial?: Shipment): CardDraft {
-  return {
-    number: initial?.number ?? '',
-    shipment_date: initial?.shipment_date ?? localDate(),
-    customer_id: initial?.customer_id ?? '',
-    recipient_id: initial?.recipient_id ?? '',
-    logist: initial?.logist ?? '',
-    cargo_description: initial?.cargo_description ?? '',
-    status: initial?.status ?? '',
-    incoterms: initial?.incoterms ?? '',
-    carriage_terms: initial?.carriage_terms ?? '',
-    loading: initial?.loading ?? '',
-    delivery_city: initial?.delivery_city ?? '',
-    delivery_country: initial?.delivery_country ?? '',
-    delivery_address: initial?.delivery_address ?? '',
-    reference: initial?.reference ?? '',
-    route_segments: initial?.route_segments ?? [],
-  };
-}
 function ShipmentCard({
   initial,
   onSaved,
@@ -176,9 +138,9 @@ function ShipmentCard({
     setTab(field.closest('[data-edit-tab]')?.getAttribute('data-edit-tab') ?? 'details');
   });
   const storageKey = draftStorageKey(props.session, 'shipment', initial?.id ?? 'new');
-  const [draft, setDraft] = useState<CardDraft>(() => draftOf(initial));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(draftOf(initial)));
-  const dirty = JSON.stringify(draft) !== baseline;
+  const [baseline, setBaseline] = useState(() => draftOf(initial));
+  const [draft, setDraft] = useState(baseline);
+  const dirty = draft !== baseline && JSON.stringify(draft) !== JSON.stringify(baseline);
   const [tab, setTab] = useState(props.route.endsWith('/route') ? 'route' : 'details');
   useLayoutEffect(() => {
     if (props.route.endsWith('/route')) setTab('route');
@@ -250,7 +212,7 @@ function ShipmentCard({
     if (!initial || dirty) return;
     const next = draftOf(initial);
     setDraft(next);
-    setBaseline(JSON.stringify(next));
+    setBaseline(next);
     setRevision(initial.revision);
   }, [initial, dirty]);
   const set = <K extends keyof CardDraft>(key: K, value: CardDraft[K]) =>
@@ -304,13 +266,11 @@ function ShipmentCard({
         setSettings(value);
         if (!initial && !defaultSettingsApplied.current) {
           defaultSettingsApplied.current = true;
-          setBaseline((previous) =>
-            JSON.stringify({
-              ...JSON.parse(previous),
-              status: value.statuses[0],
-              logist: value.customer_logist ?? '',
-            }),
-          );
+          setBaseline((previous) => ({
+            ...previous,
+            status: value.statuses[0],
+            logist: value.customer_logist ?? '',
+          }));
         }
         if (!initial) {
           const previousAutomaticLogist = automaticLogist.current;
@@ -393,45 +353,22 @@ function ShipmentCard({
     }
     setBusy(true);
     setFailure('');
-    const payload = {
-      ...draft,
-      number: manualNumber ? draft.number.trim() : undefined,
-      recipient_id: draft.recipient_id || null,
-      logist: draft.logist.trim() || null,
-      cargo_description: draft.cargo_description.trim() || null,
-      incoterms: draft.incoterms || null,
-      carriage_terms: draft.carriage_terms || null,
-      loading: draft.loading || null,
-      delivery_city: draft.delivery_city.trim() || null,
-      delivery_country: draft.delivery_country || null,
-      delivery_address: draft.delivery_address.trim() || null,
-    };
-    const { route_segments, ...detailsPayload } = payload;
-    const original = JSON.parse(baseline) as CardDraft;
-    const updatePayload = {
-      ...detailsPayload,
-      logist: draft.logist === (initial?.logist ?? '') ? undefined : payload.logist,
-      route_segments:
-        JSON.stringify(route_segments) === JSON.stringify(original.route_segments)
-          ? undefined
-          : route_segments,
-    };
     try {
       const result = initial
         ? await request<{ shipment: Shipment }>('/api/v1/shipments/update', props.session, {
-            ...updatePayload,
+            ...updatePayload(draft, baseline, initial.logist, manualNumber),
             shipment_id: initial.id,
             expected_revision: revision,
           })
         : await commands.current.send<{ shipment: Shipment }>(
             '/api/v1/shipments/create',
             props.session,
-            payload,
+            createPayload(draft, manualNumber),
           );
       validation.reset();
       const next = draftOf(result.shipment);
       setDraft(next);
-      setBaseline(JSON.stringify(next));
+      setBaseline(next);
       setRevision(result.shipment.revision);
       recovery.markSaved();
       if (initial) {
@@ -450,7 +387,7 @@ function ShipmentCard({
       if (!dirty) {
         const next = draftOf(value);
         setDraft(next);
-        setBaseline(JSON.stringify(next));
+        setBaseline(next);
         setRevision(value.revision);
       }
       onSaved(value);
@@ -490,7 +427,7 @@ function ShipmentCard({
               manualLogist.current = false;
               manualStatus.current = false;
               setManualNumber(Boolean(initial));
-              setDraft(JSON.parse(baseline) as CardDraft);
+              setDraft(baseline);
               setFailure('');
             })
           }
@@ -533,7 +470,7 @@ function ShipmentCard({
     if (section?.querySelector('form[data-busy="true"]')) return;
     const switchTab = () => {
       if (initial && editing) {
-        setDraft(JSON.parse(baseline) as CardDraft);
+        setDraft(baseline);
         setEditing(false);
         validation.reset();
         setFailure('');
@@ -1052,7 +989,7 @@ function ShipmentCard({
                           Boolean(root?.querySelector('form[data-dirty="true"]')),
                           () => {
                             if (editing) {
-                              setDraft(JSON.parse(baseline) as CardDraft);
+                              setDraft(baseline);
                               setEditing(false);
                               validation.reset();
                               setFailure('');

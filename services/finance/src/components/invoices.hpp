@@ -63,7 +63,13 @@ class InvoicesComponent final : public userver::components::ComponentBase {
     void ValidateInvoiceSettlement(userver::storages::postgres::Transaction& transaction,
         const boost::uuids::uuid& organization, const models::pg::InvoiceRaw& invoice) const;
 
-    void RemoveInvoiceServiceCharge(userver::storages::postgres::Transaction& transaction,
+    models::InvoiceDetails WriteInvoiceHistory(
+        userver::storages::postgres::Transaction& transaction,
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& invoice_id,
+        const platform::auth::Identity& identity) const;
+
+    models::InvoiceDetails RemoveInvoiceServiceCharge(
+        userver::storages::postgres::Transaction& transaction,
         const boost::uuids::uuid& organization, const boost::uuids::uuid& invoice_id,
         const boost::uuids::uuid& service_charge_id,
         const platform::auth::Identity& identity) const;

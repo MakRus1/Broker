@@ -9,6 +9,9 @@ class VoyagesComponent final : public userver::components::ComponentBase {
     static constexpr std::string_view kName = "voyages";
     VoyagesComponent(const userver::components::ComponentConfig& config,
         const userver::components::ComponentContext& context);
+    void ApplyAssignments(userver::storages::postgres::Transaction& transaction,
+        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment,
+        const std::vector<models::VoyageAssignmentChange>& changes) const;
     models::VoyageList ListVoyages(const boost::uuids::uuid& org) const;
     models::VoyageDetail GetVoyage(
         const boost::uuids::uuid& org, const boost::uuids::uuid& id) const;

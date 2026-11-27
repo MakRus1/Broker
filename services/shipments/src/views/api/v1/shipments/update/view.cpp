@@ -16,6 +16,8 @@ Response View::Handle(
     const auto& access_token = platform::auth::GetAccessToken(context);
 
     auto& body = request.body;
+    if (body.voyage_assignment_changes.has_value())
+        platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ_VOYAGES);
     if (body.logist.has_value())
         deps.shipments->ValidateLogist(
             organization, access_token, platform::TrimToOptional(body.logist.value()));

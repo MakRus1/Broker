@@ -132,3 +132,15 @@
   justify-content: flex-end;
   gap: 8px 16px;
 }
+
+.booking-voyage-fields {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.booking-voyage-fields label {
+  min-width: min(12rem, 100%);
+}

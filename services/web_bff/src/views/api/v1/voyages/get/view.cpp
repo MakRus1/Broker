@@ -10,7 +10,8 @@ Response View::Handle(
     Response200 result{};
     result.id = data.id;
     result.number = data.number;
-    result.ports = data.ports;
+    for (const auto& call : data.ports)
+        result.ports.push_back({.name = call.name, .position = call.position});
     for (const auto& row : data.bookings)
         result.bookings.push_back({.booking_number = row.booking_number,
             .discharge_port = row.discharge_port,

@@ -18,8 +18,10 @@ export function SharedRouteFields({
   customers,
   onSea,
   onAir,
+  bookingAssignment,
   planningOnly = false,
 }: {
+  bookingAssignment?: ReactNode;
   planningOnly?: boolean;
   type: string;
   sea?: SeaDetails;
@@ -105,6 +107,7 @@ export function SharedRouteFields({
         </label>
         {!planningOnly && (
           <RouteDocumentsEditor
+            bookingAssignment={bookingAssignment}
             sea={value}
             documents={value.documents}
             onSea={onSea}

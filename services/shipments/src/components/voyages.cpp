@@ -1,5 +1,6 @@
 #include <components/voyages.hpp>
 #include <helpers/database.hpp>
+#include <set>
 
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -12,6 +13,33 @@ VoyagesComponent::VoyagesComponent(const userver::components::ComponentConfig& c
     : ComponentBase(config, context),
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()) {
+}
+
+void VoyagesComponent::ApplyAssignments(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment,
+    const std::vector<models::VoyageAssignmentChange>& changes) const {
+    std::set<boost::uuids::uuid> seen;
+    for (const auto& change : changes) {
+        if (!seen.insert(change.segment_id).second)
+            throw ApiError<400>{"duplicate_assignment", "Участок указан дважды"};
+        if (!change.voyage_id.has_value() && !change.loading_call.has_value() &&
+            !change.discharge_call.has_value()) {
+            transaction.Execute(
+                sql::kRemoveVoyageAssignment, organization, shipment, change.segment_id);
+            continue;
+        }
+        if (!change.voyage_id.has_value() || !change.loading_call.has_value() ||
+            !change.discharge_call.has_value() ||
+            change.loading_call.value() >= change.discharge_call.value())
+            throw ApiError<400>{
+                "invalid_calls", "Выберите рейс и два последовательных по маршруту захода"};
+        const auto rows = transaction.Execute(sql::kAssignVoyage, organization, shipment,
+            change.segment_id, change.voyage_id.value(), change.loading_call.value(),
+            change.discharge_call.value());
+        if (rows.IsEmpty())
+            throw ApiError<400>{
+                "invalid_assignment", "Проверьте подтверждение букинга и заходы выбранного рейса"};
+    }
 }
 
 models::VoyageList VoyagesComponent::ListVoyages(const boost::uuids::uuid& org) const {
@@ -33,7 +61,9 @@ models::VoyageDetail VoyagesComponent::GetVoyage(
     models::VoyageDetail result{};
     result.id = id;
     result.number = rows.AsSingleRow<std::string>();
-    result.ports = tx.Execute(sql::kVoyagePorts, org, id).AsContainer<decltype(result.ports)>();
+    for (const auto& row : tx.Execute(sql::kVoyagePorts, org, id))
+        result.ports.push_back(
+            {.name = row["name"].As<std::string>(), .position = row["position"].As<int>()});
     const auto records = tx.Execute(sql::kVoyageBookings, org, id);
     for (const auto& row : records) {
         result.bookings.push_back({.booking_number = row["booking_number"].As<std::string>(),

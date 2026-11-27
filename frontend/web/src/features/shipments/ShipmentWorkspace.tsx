@@ -23,6 +23,7 @@ import { CalendarDate } from '../../shared/dates/CalendarDate';
 import { useLocalization } from '../localization/Localization';
 import { ServiceCharges } from '../finance/FinancePanel';
 import { IsoDateInput } from '../../shared/dates/DateInput';
+import type { VoyageChange } from '../voyages/Voyages';
 import { ShipmentRoute, type ShipmentRouteProgress } from './ShipmentRoute';
 import type { ShipmentRouteSegment } from '../routes/types';
 import { localDate } from '../../shared/dates/calendar';
@@ -142,6 +143,7 @@ type CardDraft = {
   delivery_country: string;
   delivery_address: string;
   reference: string;
+  voyage_assignment_changes?: VoyageChange[];
   route_segments: ShipmentRouteSegment[];
 };
 
@@ -406,10 +408,20 @@ function ShipmentCard({
       delivery_country: draft.delivery_country || null,
       delivery_address: draft.delivery_address.trim() || null,
     };
-    const { route_segments, ...detailsPayload } = payload;
+    const { route_segments, voyage_assignment_changes, ...detailsPayload } = payload;
+    const changes = voyage_assignment_changes?.filter((change) =>
+      route_segments.some(
+        (segment) =>
+          segment.id === change.segment_id &&
+          segment.type === 'sea' &&
+          segment.sea?.booking?.status === 'confirmed',
+      ),
+    );
+
     const original = JSON.parse(baseline) as CardDraft;
     const updatePayload = {
       ...detailsPayload,
+      voyage_assignment_changes: changes?.length ? changes : undefined,
       logist: draft.logist === (initial?.logist ?? '') ? undefined : payload.logist,
       route_segments:
         JSON.stringify(route_segments) === JSON.stringify(original.route_segments)
@@ -830,6 +842,23 @@ function ShipmentCard({
         </fieldset>
         <fieldset className="shipment-edit-section" data-edit-tab="route">
           <ShipmentRoute
+            confirmedVoyages={initial?.confirmed_voyages}
+            assignmentChanges={draft.voyage_assignment_changes}
+            onAssignmentChange={
+              !initial
+                ? undefined
+                : (segmentId, change) =>
+                    setDraft((previous) => {
+                      const { voyage_assignment_changes, ...rest } = previous;
+                      const changes = (voyage_assignment_changes ?? []).filter(
+                        (item) => item.segment_id !== segmentId,
+                      );
+                      if (change) changes.push(change);
+                      return changes.length
+                        ? { ...rest, voyage_assignment_changes: changes }
+                        : rest;
+                    })
+            }
             segments={draft.route_segments}
             onChange={(values) => set('route_segments', values)}
             allowedTypes={settings?.route_types ?? []}

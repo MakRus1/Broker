@@ -212,7 +212,9 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
         ),
         (
             'shipments/update',
-            {'shipment_id': ID, 'expected_revision': 1, 'reference': 'Тест'},
+            {'shipment_id': ID, 'expected_revision': 1, 'reference': 'Тест',
+             'voyage_assignment_changes': [{'segment_id': ID, 'voyage_id': CUSTOMER,
+                                           'loading_call': 2, 'discharge_call': 9}]},
             {'shipment': SHIPMENT},
             200,
         ),
@@ -940,7 +942,7 @@ async def test_shipment_route_progress_proxy(browser, mockserver):
 @pytest.mark.parametrize(('operation', 'query', 'result'), [
     ('list', {}, {'items': [{'id': ID, 'number': 'L-043'}]}),
     ('get', {'voyage_id': ID}, {
-        'id': ID, 'number': 'L-043', 'ports': ['Ningbo', 'Vostochny'],
+        'id': ID, 'number': 'L-043', 'ports': [{'name': 'Ningbo', 'position': 2}, {'name': 'Vostochny', 'position': 9}],
         'bookings': [{'booking_number': 'B-1', 'shipment_id': ID, 'shipment_number': 'S-1',
                       'load_port': 'Ningbo', 'discharge_port': 'Vostochny'}],
     }),

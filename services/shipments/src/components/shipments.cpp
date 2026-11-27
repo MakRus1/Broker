@@ -292,6 +292,11 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
                                     .Execute(sql::kUpdateShipment, organization,
                                         request.shipment_id, request.expected_revision, card)
                                     .AsSingleRow<models::pg::ShipmentRaw>());
+        if (request.route_segments.has_value())
+            transaction.Execute(sql::kRemoveUnconfirmedVoyageAssignments, organization, result.id);
+        if (request.voyage_assignment_changes.has_value())
+            voyages_.ApplyAssignments(
+                transaction, organization, result.id, request.voyage_assignment_changes.value());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
             RememberCargo(transaction, organization, card.CustomerId, card.CargoDescription);

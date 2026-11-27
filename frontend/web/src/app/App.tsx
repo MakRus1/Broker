@@ -575,7 +575,7 @@ function WorkspaceApp() {
                 ) : entry.route.startsWith('/voyages/') ? (
                   <VoyageCard
                     onTitle={renameWorkspace}
-                    key={session.organization_id}
+                    key={session.organization_id + shipmentRegistryVersion}
                     id={entry.route.split('/')[2]}
                     session={session}
                     active={activeWorkspace === entry.id}

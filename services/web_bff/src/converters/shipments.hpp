@@ -230,7 +230,8 @@ inline clients::shipments::ApiV1ShipmentsList::RequestBody Convert(
 
 inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
     const models::shipments::UpdateShipmentRequest& value) {
-    return {.cargo_description = value.cargo_description,
+    clients::shipments::ApiV1ShipmentsUpdate::RequestBody result{
+        .cargo_description = value.cargo_description,
         .carriage_terms = value.carriage_terms,
         .customer_id = value.customer_id,
         .delivery_address = value.delivery_address,
@@ -247,6 +248,15 @@ inline clients::shipments::ApiV1ShipmentsUpdate::RequestBody Convert(
         .shipment_date = value.shipment_date,
         .shipment_id = value.shipment_id,
         .status = value.status};
+    if (value.voyage_assignment_changes.has_value()) {
+        auto& changes = result.voyage_assignment_changes.emplace();
+        for (const auto& change : value.voyage_assignment_changes.value())
+            changes.push_back({.discharge_call = change.discharge_call,
+                .loading_call = change.loading_call,
+                .segment_id = change.segment_id,
+                .voyage_id = change.voyage_id});
+    }
+    return result;
 }
 
 inline clients::shipments::ApiV1ShipmentItemsAdd::RequestBody Convert(

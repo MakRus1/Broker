@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { IsoDateInput } from '../../shared/dates/DateInput';
 import { calendarDate } from '../../shared/dates/calendar';
 import { Select } from '../../shared/ui/Select';
@@ -11,10 +12,12 @@ const events = [
 
 export function RouteDocumentsEditor({
   sea,
+  bookingAssignment,
   documents = [],
   onDocuments,
   onSea,
 }: {
+  bookingAssignment?: ReactNode;
   sea?: SeaDetails;
   documents?: (BillOfLading | AirWaybill)[];
   onDocuments: (documents?: (BillOfLading | AirWaybill)[]) => void;
@@ -75,6 +78,7 @@ export function RouteDocumentsEditor({
               onChange={(value) => updateBooking({ confirmed_date: value || undefined })}
             />
           </label>
+          {bookingAssignment}
           {events.map(([key, label]) => (
             <div className="route-document-event" key={key}>
               <label className="inline-check">

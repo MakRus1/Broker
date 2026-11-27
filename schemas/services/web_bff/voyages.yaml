@@ -110,6 +110,18 @@ components:
             $ref: '#/components/schemas/VoyageSummary'
       required:
       - items
+    VoyageCall:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - position
+      properties:
+        name:
+          type: string
+        position:
+          type: integer
+          minimum: 1
     VoyageDetail:
       type: object
       additionalProperties: false
@@ -127,7 +139,7 @@ components:
         ports:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/VoyageCall'
       required:
       - bookings
       - id

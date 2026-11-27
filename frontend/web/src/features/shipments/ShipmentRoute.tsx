@@ -1,4 +1,5 @@
 import type { ShipmentVoyageLink } from './types';
+import { BookingVoyage, type VoyageChange } from '../voyages/Voyages';
 import '../routes/shipmentRoute.css';
 import { RouteStageTitle } from '../routes/RouteStageTitle';
 import { calendarDate } from '../../shared/dates/calendar';
@@ -30,11 +31,15 @@ export function ShipmentRoute({
   showHeading = true,
   onChange,
   onEdit,
+  assignmentChanges,
+  onAssignmentChange,
   allowedTypes,
   types,
   session,
   customers,
 }: {
+  assignmentChanges?: VoyageChange[];
+  onAssignmentChange?: (segmentId: string, change?: VoyageChange) => void;
   confirmedVoyages?: ShipmentVoyageLink[];
   planningOnly?: boolean;
   progress?: ShipmentRouteProgress | null;
@@ -183,6 +188,22 @@ export function ShipmentRoute({
                 </div>
                 {segment.type === 'sea' || segment.type === 'air' ? (
                   <SharedRouteFields
+                    bookingAssignment={
+                      segment.type === 'sea' &&
+                      segment.sea?.booking?.status === 'confirmed' &&
+                      session.permissions.includes('shipments.read_voyages') &&
+                      onAssignmentChange && (
+                        <BookingVoyage
+                          session={session}
+                          segmentId={segment.id}
+                          current={links.get(segment.id)}
+                          change={assignmentChanges?.find(
+                            (change) => change.segment_id === segment.id,
+                          )}
+                          onChange={(change) => onAssignmentChange(segment.id, change)}
+                        />
+                      )
+                    }
                     planningOnly={planningOnly}
                     type={segment.type}
                     sea={segment.sea}

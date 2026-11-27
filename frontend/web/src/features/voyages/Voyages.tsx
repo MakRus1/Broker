@@ -1,3 +1,4 @@
+import type { ShipmentVoyageLink } from '../shipments/types';
 import { RecordPage } from '../../shared/ui/record/RecordPage';
 import { useCallback, useEffect, useState } from 'react';
 import { request } from '../../shared/api/http';
@@ -14,7 +15,8 @@ type Booking = {
   load_port: string;
   discharge_port: string;
 };
-type Detail = Voyage & { ports: string[]; bookings: Booking[] };
+type PortCall = { name: string; position: number };
+type Detail = Voyage & { ports: PortCall[]; bookings: Booking[] };
 
 function useVoyages<T>(operation: string, session: Session, active: boolean, voyageId?: string) {
   const [data, setData] = useState<T>();
@@ -36,6 +38,153 @@ function useVoyages<T>(operation: string, session: Session, active: boolean, voy
   );
   useActivationLoad(active, load, (error) => setFailure(String(error)));
   return { data, failure };
+}
+
+export type VoyageChange = {
+  segment_id: string;
+  voyage_id?: string;
+  loading_call?: number;
+  discharge_call?: number;
+};
+
+function BookingCalls({
+  session,
+  change,
+  onChange,
+}: {
+  session: Session;
+  change: VoyageChange;
+  onChange: (change: VoyageChange) => void;
+}) {
+  const { translate } = useLocalization();
+  const { data, failure } = useVoyages<Detail>('get', session, true, change.voyage_id);
+  const choices = (calls: PortCall[]) =>
+    calls.map((call) => (
+      <option key={call.position} value={call.position}>
+        {call.position}. {call.name}
+      </option>
+    ));
+  return (
+    <>
+      <label>
+        {translate('voyage.load')}
+        <select
+          required
+          value={change.loading_call ?? ''}
+          onChange={(e) =>
+            onChange({
+              ...change,
+              loading_call: Number(e.target.value) || undefined,
+              discharge_call: undefined,
+            })
+          }
+        >
+          <option value="">{translate('voyage.chooseCall')}</option>
+          {choices(data?.ports.slice(0, -1) ?? [])}
+        </select>
+      </label>
+      <label>
+        {translate('voyage.discharge')}
+        <select
+          required
+          value={change.discharge_call ?? ''}
+          onChange={(e) =>
+            onChange({ ...change, discharge_call: Number(e.target.value) || undefined })
+          }
+        >
+          <option value="">{translate('voyage.chooseCall')}</option>
+          {choices(
+            data?.ports.filter(
+              (call) => change.loading_call !== undefined && call.position > change.loading_call,
+            ) ?? [],
+          )}
+        </select>
+      </label>
+      {failure && <p role="alert">{failure}</p>}
+    </>
+  );
+}
+
+export function BookingVoyage({
+  session,
+  segmentId,
+  current,
+  change,
+  onChange,
+}: {
+  session: Session;
+  segmentId: string;
+  current?: ShipmentVoyageLink;
+  change?: VoyageChange;
+  onChange: (change?: VoyageChange) => void;
+}) {
+  const { translate } = useLocalization();
+  const [editing, setEditing] = useState(false);
+  const selecting = editing || change !== undefined;
+  const { data, failure } = useVoyages<{ items: Voyage[] }>('list', session, selecting);
+  return (
+    <div className="booking-voyage-fields">
+      {selecting ? (
+        <>
+          <label>
+            {translate('voyage.title')}
+            <select
+              value={change?.voyage_id ?? (current && !change ? '__current' : '')}
+              onChange={(e) =>
+                onChange({ segment_id: segmentId, voyage_id: e.target.value || undefined })
+              }
+            >
+              {current && !change && (
+                <option value="__current">
+                  {current.voyage_number} · {current.load_port} → {current.discharge_port}
+                </option>
+              )}
+              <option value="">{translate('voyage.external')}</option>
+              {data?.items.map((voyage) => (
+                <option key={voyage.id} value={voyage.id}>
+                  {voyage.number}
+                </option>
+              ))}
+            </select>
+          </label>
+          {change?.voyage_id && (
+            <BookingCalls
+              key={change.voyage_id}
+              session={session}
+              change={change}
+              onChange={onChange}
+            />
+          )}
+          {failure && <p role="alert">{failure}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              onChange(undefined);
+              setEditing(false);
+            }}
+          >
+            {translate('action.cancel')}
+          </button>
+        </>
+      ) : (
+        <>
+          {current && (
+            <span>
+              {current.voyage_number} · {current.load_port} → {current.discharge_port}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(true);
+            }}
+          >
+            {translate(current ? 'voyage.changeAssignment' : 'voyage.assign')}
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
 
 type Props = { session: Session; active: boolean };
@@ -82,8 +231,8 @@ export function VoyageCard({
       <RecordHeading kind={translate('voyage.title')} title={data.number} />
       <RecordSection title={translate('voyage.calls')}>
         <ol>
-          {data.ports.map((port, index) => (
-            <li key={index}>{port}</li>
+          {data.ports.map((port) => (
+            <li key={port.position}>{port.name}</li>
           ))}
         </ol>
       </RecordSection>

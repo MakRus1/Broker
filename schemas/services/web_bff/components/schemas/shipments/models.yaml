@@ -333,10 +333,37 @@ ListShipmentsRequest:
       items:
         $ref: '#/RouteFilterGroup'
   required: []
+VoyageAssignmentChange:
+  type: object
+  additionalProperties: false
+  required:
+  - segment_id
+  properties:
+    segment_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    voyage_id:
+      type: string
+      format: uuid
+      x-cpp-type: uuid
+    loading_call:
+      type: integer
+      minimum: 1
+    discharge_call:
+      type: integer
+      minimum: 1
 UpdateShipmentRequest:
   type: object
   additionalProperties: false
   properties:
+    voyage_assignment_changes:
+      description: Изменения привязок участков. Один segment_id без рейса и заходов
+        снимает назначение.
+      type: array
+      maxItems: 30
+      items:
+        $ref: '#/VoyageAssignmentChange'
     shipment_id:
       type: string
       format: uuid

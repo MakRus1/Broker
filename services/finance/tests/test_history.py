@@ -218,3 +218,40 @@ async def test_reference_name_change_is_visible_without_changing_id(api, charge,
     assert change['before']['value'] == change['after']['value'] == body['counterparty_id']
     assert change['before']['display_name'] == 'Предыдущее название'
     assert change['after']['display_name'] != 'Предыдущее название'
+
+
+async def test_invoice_history_matches_each_saved_revision(api, charge, invoice_references, pgsql):
+    body, item = await saved_entry(api, charge)
+    document = invoice([])
+    invoice_id = document['id']
+    saved = await api.post('/api/v1/invoices/save', document)
+    assignment = dict(invoice_id=invoice_id, service_charge_id=item['id'])
+    added = await api.post('/api/v1/invoices/add-service-charge', {**assignment, 'expected_revision': 1})
+    await api.post('/api/v1/service-charges/save', {**body, 'expected_revision': 1, 'price_minor': 20000})
+    refreshed = await api.post('/api/v1/invoices/get', {'id': invoice_id})
+    detached = await api.post('/api/v1/invoices/detach-service-charge', assignment)
+
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('SELECT revision, snapshot FROM invoice_history WHERE invoice_id = %s ORDER BY revision',
+                       (invoice_id,))
+        assert cursor.fetchall() == [
+            (revision, {**details, 'actor_name': 'author'})
+            for revision, details in enumerate([saved, added, refreshed, detached], start=1)
+        ]
+
+
+async def test_invoice_detach_rolls_back_if_history_write_fails(api, charge, invoice_references, pgsql):
+    _, item = await saved_entry(api, charge)
+    document = invoice([item['id']])
+    saved = await api.post('/api/v1/invoices/save', document)
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('ALTER TABLE invoice_history ADD CONSTRAINT reject_next_revision CHECK (revision < 2)')
+    try:
+        await api.post('/api/v1/invoices/detach-service-charge',
+                       dict(invoice_id=document['id'], service_charge_id=item['id']), expected=500)
+        assert await api.post('/api/v1/invoices/get', {'id': document['id']}) == saved
+        events = (await history(api, 'invoices', document['id']))['items']
+        assert [event['cursor']['revision'] for event in events] == [1]
+    finally:
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute('ALTER TABLE invoice_history DROP CONSTRAINT reject_next_revision')

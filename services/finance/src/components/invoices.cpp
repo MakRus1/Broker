@@ -161,9 +161,7 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const boost::uuids::uuid& 
         std::optional<boost::uuids::uuid>{});
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, snapshots, value.Archived);
-    auto result = FindInvoice(transaction, organization, request.id);
-    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), helpers::HistorySnapshot(result, identity));
+    auto result = WriteInvoiceHistory(transaction, organization, value.Id, identity);
     transaction.Commit();
     return result;
 }
@@ -246,8 +244,8 @@ models::InvoiceDetails InvoicesComponent::DetachServiceCharge(
         throw ApiError<404>{"service_charge_not_found", "Услуга не найдена"};
     const auto charge = charges.AsSingleRow<models::pg::ServiceChargeRaw>();
     CheckInvoiceAssignment(transaction, organization, charge.Id, std::optional{request.invoice_id});
-    RemoveInvoiceServiceCharge(transaction, organization, request.invoice_id, charge.Id, identity);
-    auto result = FindInvoice(transaction, organization, request.invoice_id);
+    auto result = RemoveInvoiceServiceCharge(
+        transaction, organization, request.invoice_id, charge.Id, identity);
     transaction.Commit();
     return result;
 }
@@ -304,7 +302,16 @@ models::InvoiceDetails InvoicesComponent::FindInvoice(pg::Transaction& transacti
         .invoice = converters::Convert(rows.AsSingleRow<models::pg::InvoiceRaw>())};
 }
 
-void InvoicesComponent::RemoveInvoiceServiceCharge(pg::Transaction& transaction,
+models::InvoiceDetails InvoicesComponent::WriteInvoiceHistory(pg::Transaction& transaction,
+    const boost::uuids::uuid& organization, const boost::uuids::uuid& invoice_id,
+    const platform::auth::Identity& identity) const {
+    auto details = FindInvoice(transaction, organization, invoice_id);
+    transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id,
+        details.invoice.revision, identity.ActorId(), helpers::HistorySnapshot(details, identity));
+    return details;
+}
+
+models::InvoiceDetails InvoicesComponent::RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, const boost::uuids::uuid& invoice_id,
     const boost::uuids::uuid& service_charge_id, const platform::auth::Identity& identity) const {
     auto invoice = transaction.Execute(sql::kLockInvoices, organization, std::vector{invoice_id})
@@ -321,9 +328,7 @@ void InvoicesComponent::RemoveInvoiceServiceCharge(pg::Transaction& transaction,
     const auto revision = invoice.Revision++;
     ValidateInvoiceSettlement(transaction, organization, invoice);
     transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
-    const auto details = FindInvoice(transaction, organization, invoice_id);
-    transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-        identity.ActorId(), helpers::HistorySnapshot(details, identity));
+    return WriteInvoiceHistory(transaction, organization, invoice_id, identity);
 }
 
 void InvoicesComponent::CheckInvoiceAssignment(pg::Transaction& transaction,
@@ -380,10 +385,7 @@ models::InvoiceDetails InvoicesComponent::IncludeServiceCharge(pg::Transaction& 
     transaction.Execute(sql::kUpdateInvoice, organization, value, expected_revision);
     transaction.Execute(
         sql::kCreateInvoiceServiceCharge, organization, value.Id, std::vector{charge}, false);
-    auto result = FindInvoice(transaction, organization, invoice_id);
-    transaction.Execute(sql::kWriteInvoiceHistory, organization, value.Id, value.Revision,
-        identity.ActorId(), helpers::HistorySnapshot(result, identity));
-    return result;
+    return WriteInvoiceHistory(transaction, organization, invoice_id, identity);
 }
 
 void InvoicesComponent::UpdateServiceChargeSnapshot(pg::Transaction& transaction,
@@ -412,8 +414,6 @@ void InvoicesComponent::UpdateServiceChargeSnapshot(pg::Transaction& transaction
         updated_charge.Id, updated_charge);
     ValidateInvoiceSettlement(transaction, organization, invoice);
     transaction.Execute(sql::kUpdateInvoice, organization, invoice, revision);
-    const auto details = FindInvoice(transaction, organization, invoice_id);
-    transaction.Execute(sql::kWriteInvoiceHistory, organization, invoice_id, invoice.Revision,
-        identity.ActorId(), helpers::HistorySnapshot(details, identity));
+    WriteInvoiceHistory(transaction, organization, invoice_id, identity);
 }
 }  // namespace finance

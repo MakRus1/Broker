@@ -1,5 +1,3 @@
-#include <components/inherited_route.hpp>
-#include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <helpers/revision.hpp>
 #include <permissions/permissions.hpp>
@@ -21,12 +19,8 @@ Response View::Handle(
     const auto& access_token = platform::auth::GetAccessToken(context);
     const auto source =
         deps.route_integrations->GetShipmentContext(access_token, loaded.shipment_id);
-    route_rules::InheritRoute(loaded, source);
-    auto& body = request.body;
-    route_rules::ValidateRoute(body);
-    deps.route_integrations->PrepareRoute(access_token, body, loaded);
-
-    auto result = deps.routes->SaveRoute(organization, actor, access_token, body, source);
+    auto result = deps.routes->SaveRoute(
+        organization, actor, access_token, request.body, source, std::move(loaded));
 
     return Response200{.transportation = std::move(result)};
 }

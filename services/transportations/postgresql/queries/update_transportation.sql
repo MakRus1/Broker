@@ -6,6 +6,7 @@
 -- $6 — принадлежность контейнера.
 -- $7 — номер контейнера.
 -- $8 — фактический код ISO контейнера.
+-- $9 — ожидаемая редакция перевозки.
 UPDATE transportations
 SET type = $3,
     hazardous = $4,
@@ -14,6 +15,6 @@ SET type = $3,
     container_number = $7,
     container_iso_code = $8,
     revision = revision + 1
-WHERE organization_id = $1::UUID AND id = $2::UUID
+WHERE organization_id = $1::UUID AND id = $2::UUID AND revision = $9
 RETURNING ROW(id, revision, shipment_id, item_id, operation_id, container_type_code,
     container_ownership, container_number, type, hazardous, route_segments, container_iso_code)::public.transportation_v6;

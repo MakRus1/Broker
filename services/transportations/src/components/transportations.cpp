@@ -1,17 +1,18 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <components/inherited_route.hpp>
-#include <components/route_integrations.hpp>
-#include <components/route_validation.hpp>
 #include <components/routes.hpp>
 #include <components/transportations.hpp>
 #include <configs/keys.hpp>
 #include <converters/container_facts.hpp>
+#include <converters/route.hpp>
 #include <converters/saved_transportation.hpp>
 #include <converters/transportation_history.hpp>
 #include <converters/transportations.hpp>
+#include <exception>
 #include <helpers/database.hpp>
+#include <helpers/json.hpp>
 #include <helpers/revision.hpp>
-#include <helpers/transportations.hpp>
+#include <helpers/route_usage.hpp>
 #include <map>
 #include <models/pg/container_fact.hpp>
 #include <models/pg/saved_command.hpp>
@@ -86,19 +87,16 @@ TransportationsComponent::TransportationsComponent(
       cluster_(context.FindComponent<userver::components::Postgres>("postgres-transportations")
                    .GetCluster()),
       configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()),
-      routes_(context.FindComponent<RoutesComponent>()),
-      route_integrations_(context.FindComponent<RouteIntegrations>()) {}
+      routes_(context.FindComponent<RoutesComponent>()) {}
 
 models::Transportation TransportationsComponent::FindTransportation(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& id) const {
 
-    auto transaction =
-        cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
-
-    auto result =
-        helpers::ReadTransportation(transaction, organization, id, helpers::ReadMode::Snapshot);
-    transaction.Commit();
-    return result;
+    const auto rows =
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kGetTransportation, organization, id);
+    if (rows.IsEmpty())
+        throw ApiError<404>{"not_found", "Перевозка не найдена"};
+    return converters::Convert(rows.AsSingleRow<models::pg::TransportationRaw>());
 }
 
 models::TransportationHistoryResult TransportationsComponent::GetTransportationHistory(
@@ -125,10 +123,7 @@ models::Transportation TransportationsComponent::CreateTransportation(
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
         request.container_number, request.container_iso_code.has_value());
 
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    transaction.Execute(sql::kLockCommand, organization, request.id);
-    const auto saved = transaction.Execute(sql::kFindCommand, organization, request.id);
-    if (!saved.IsEmpty()) {
+    const auto replay = [&](const pg::ResultSet& saved) {
         const auto command = saved.AsSingleRow<models::pg::SavedCommand>();
         if (command.Payload != helpers::Document(request) &&
             helpers::Document(models::ParseModelJson(
@@ -136,18 +131,48 @@ models::Transportation TransportationsComponent::CreateTransportation(
                 helpers::Document(request))
             throw ApiError<409>{"idempotency_conflict", "Содержимое команды создания изменено"};
         auto result = converters::RestoreTransportation(command.Result);
-        transaction.Commit();
         route_rules::InheritRoute(result, source);
         return result;
+    };
+    const auto previous = cluster_->Execute(
+        pg::ClusterHostType::kMaster, sql::kFindCommand, organization, request.id);
+    if (!previous.IsEmpty())
+        return replay(previous);
+
+    models::Transportation prepared{};
+    prepared.id = request.id;
+    std::optional<std::int64_t> usage_check_version;
+    std::exception_ptr preparation_error;
+    try {
+        if (request.container_type_code.has_value() || request.container_iso_code.has_value())
+            ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
+                request.container_type_code, request.container_iso_code, true);
+
+        if (request.route_segments.has_value()) {
+            models::SetRouteRequest route;
+            route.transportation_id = request.id;
+            route.route_segments = request.route_segments.value();
+            usage_check_version =
+                routes_.PrepareRouteWrite(organization, access_token, route, source, prepared);
+        } else {
+            route_rules::InheritRoute(prepared, source);
+        }
+    } catch (const platform::http::HandlerErrorBase&) {
+        // Пока шла подготовка, другой запрос мог сохранить команду с тем же ключом.
+        preparation_error = std::current_exception();
     }
 
-    if (request.container_type_code.has_value() || request.container_iso_code.has_value())
-        ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
-            request.container_type_code, request.container_iso_code, true);
-
-    if (request.route_segments.has_value())
-        transaction.Execute(sql::kLockShipmentRouteUsage, organization, request.shipment_id);
-
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    transaction.Execute(sql::kLockCommand, organization, request.id);
+    const auto saved = transaction.Execute(sql::kFindCommand, organization, request.id);
+    if (!saved.IsEmpty()) {
+        auto result = replay(saved);
+        transaction.Commit();
+        return result;
+    }
+    if (preparation_error)
+        std::rethrow_exception(preparation_error);
+    helpers::CheckRouteWrite(transaction, organization, source.shipment_id, usage_check_version);
     auto result = converters::Convert(
         transaction
             .Execute(sql::kCreateManualTransportation, organization, request.id,
@@ -156,17 +181,13 @@ models::Transportation TransportationsComponent::CreateTransportation(
                 converters::ConvertOwnership(request.container_ownership),
                 platform::TrimToOptional(request.container_number), request.container_iso_code)
             .AsSingleRow<models::pg::TransportationRaw>());
-    route_rules::InheritRoute(result, source);
-    if (request.route_segments.has_value()) {
-        models::SetRouteRequest route;
-        route.transportation_id = result.id;
-        route.expected_revision = result.revision;
-        route.route_segments = request.route_segments.value();
-        route_rules::ValidateRoute(route);
-        route_integrations_.PrepareRoute(access_token, route, result);
-        routes_.WriteRoute(
-            transaction, organization, access_token, route.route_segments, source, result);
-    }
+    result.route_segments = std::move(prepared.route_segments);
+    result.incoterms = source.incoterms;
+    result.loading = source.loading;
+    result.carriage_terms = source.carriage_terms;
+    if (request.route_segments.has_value())
+        transaction.Execute(sql::kSaveRouteSegments, organization, result.id,
+            converters::ToStoredRoute(result.route_segments));
     transaction.Execute(sql::kInsertCommand, organization, request.id, helpers::Document(request),
         helpers::Document(result));
 
@@ -178,16 +199,12 @@ models::Transportation TransportationsComponent::CreateTransportation(
 
 models::Transportation TransportationsComponent::UpdateTransportation(
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity,
-    const models::UpdateTransportationRequest& request, const models::ShipmentContext& source,
-    std::string_view access_token) const {
+    models::UpdateTransportationRequest& request, const models::ShipmentContext& source,
+    std::string_view access_token, models::Transportation current) const {
     const auto requested_iso = request.container_iso_code.value_or(std::nullopt);
     ValidateDetails(request.type, request.container_type_code, request.container_ownership,
         request.container_number, requested_iso.has_value());
 
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    auto current = helpers::ReadTransportation(
-        transaction, organization, request.transportation_id, helpers::ReadMode::ForUpdate);
-    helpers::CheckRevision(current.revision, request.expected_revision);
     const bool group_changed = current.container_type_code != request.container_type_code;
     const auto iso_code = request.container_iso_code.has_value() || group_changed ||
             request.type != models::TransportationType::Container
@@ -197,19 +214,33 @@ models::Transportation TransportationsComponent::UpdateTransportation(
         ValidateContainerCatalog(configs_.GetSnapshot().Get(configs::CONTAINER_CATALOG),
             request.container_type_code, iso_code, group_changed);
 
-    auto result = converters::Convert(
-        transaction
-            .Execute(sql::kUpdateTransportation, organization, request.transportation_id,
-                models::EnumValue(request.type), request.hazardous, request.container_type_code,
-                converters::ConvertOwnership(request.container_ownership),
-                platform::TrimToOptional(request.container_number), iso_code)
-            .AsSingleRow<models::pg::TransportationRaw>());
+    std::optional<std::int64_t> usage_check_version;
+    if (request.route_segments.has_value()) {
+        models::SetRouteRequest route{.expected_revision = request.expected_revision,
+            .route_segments = std::move(request.route_segments.value()),
+            .transportation_id = request.transportation_id};
+        usage_check_version =
+            routes_.PrepareRouteWrite(organization, access_token, route, source, current);
+        request.route_segments = std::move(route.route_segments);
+    } else {
+        route_rules::InheritRoute(current, source);
+    }
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    helpers::CheckRouteWrite(transaction, organization, source.shipment_id, usage_check_version);
+    const auto updated = transaction.Execute(sql::kUpdateTransportation, organization,
+        request.transportation_id, models::EnumValue(request.type), request.hazardous,
+        request.container_type_code, converters::ConvertOwnership(request.container_ownership),
+        platform::TrimToOptional(request.container_number), iso_code, request.expected_revision);
+    if (updated.IsEmpty())
+        throw RevisionConflict{};
+    auto result = converters::Convert(updated.AsSingleRow<models::pg::TransportationRaw>());
     result.route_segments = std::move(current.route_segments);
-    if (request.route_segments)
-        routes_.WriteRoute(
-            transaction, organization, access_token, *request.route_segments, source, result);
-    else
-        route_rules::InheritRoute(result, source);
+    result.incoterms = source.incoterms;
+    result.loading = source.loading;
+    result.carriage_terms = source.carriage_terms;
+    if (request.route_segments.has_value())
+        transaction.Execute(sql::kSaveRouteSegments, organization, result.id,
+            converters::ToStoredRoute(result.route_segments));
 
     helpers::WriteAudit(
         transaction, organization, identity, "update_transportation", result.id, request, result);

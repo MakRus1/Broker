@@ -8,7 +8,7 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace transportations {
-class RouteIntegrations;
+class RoutesComponent;
 
 class ActualsComponent final : public userver::components::ComponentBase {
   public:
@@ -17,18 +17,21 @@ class ActualsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     models::Transportation RecordActual(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
-        const models::RecordActualRequest&, const models::ShipmentContext&) const;
+        const models::RecordActualRequest&, const models::ShipmentContext&,
+        models::Transportation current) const;
     models::Transportation CorrectActual(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token,
-        const models::CorrectActualRequest&, const models::ShipmentContext&) const;
+        const models::CorrectActualRequest&, const models::ShipmentContext&,
+        models::Transportation current) const;
 
   private:
     template <typename Request>
     models::Transportation ApplyActualChange(const boost::uuids::uuid& organization,
         const platform::auth::Identity&, std::string_view access_token, const Request&,
-        const models::ShipmentContext&, route_rules::ActualChange) const;
+        const models::ShipmentContext&, route_rules::ActualChange,
+        models::Transportation current) const;
     userver::storages::postgres::ClusterPtr cluster_;
-    RouteIntegrations& integrations_;
+    RoutesComponent& routes_;
 };
 }  // namespace transportations
 

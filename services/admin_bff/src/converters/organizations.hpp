@@ -4,9 +4,11 @@
 
 namespace admin_bff::converters {
 inline models::Organization Convert(const clients::organizations::models::Organization& value) {
-    return {
-        .enabled = value.enabled, .id = value.id, .line_operations_enabled = value.line_operations_enabled,
-        .name = value.name, .revision = value.revision};
+    return {.enabled = value.enabled,
+        .id = value.id,
+        .line_operations_enabled = value.line_operations_enabled,
+        .name = value.name,
+        .revision = value.revision};
 }
 
 inline models::Member Convert(const clients::organizations::models::Member& value) {
@@ -48,7 +50,9 @@ template <typename Value> auto ConvertOrganizations(const std::vector<Value>& va
 
 inline clients::organizations::ApiAdminOrganizationsCreate::RequestBody Convert(
     const models::CreateOrganizationRequest& value) {
-    return {.id = value.id, .line_operations_enabled = value.line_operations_enabled, .name = value.name};
+    return {.id = value.id,
+        .line_operations_enabled = value.line_operations_enabled,
+        .name = value.name};
 }
 
 inline clients::organizations::ApiAdminOrganizationsUpdate::RequestBody Convert(

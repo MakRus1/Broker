@@ -7,7 +7,7 @@
 namespace shipments::views::api::v1::voyages::get {
 class View {
   public:
-    static Response Handle(Request&& request, userver::server::request::RequestContext& context,
-                           Deps deps);
+    static Response Handle(
+        Request&& request, userver::server::request::RequestContext& context, Deps deps);
 };
 }  // namespace shipments::views::api::v1::voyages::get

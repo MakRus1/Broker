@@ -9,8 +9,11 @@
 
 namespace organizations::converters {
 inline models::Organization Convert(const models::pg::OrganizationRaw& row) {
-    return {.enabled = row.Enabled, .id = row.Id, .line_operations_enabled = row.LineOperationsEnabled,
-        .name = row.Name, .revision = row.Revision};
+    return {.enabled = row.Enabled,
+        .id = row.Id,
+        .line_operations_enabled = row.LineOperationsEnabled,
+        .name = row.Name,
+        .revision = row.Revision};
 }
 
 inline models::OrganizationEmployee Convert(const models::pg::OrganizationEmployeeRaw& row) {

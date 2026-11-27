@@ -60,10 +60,10 @@ models::OrganizationResult OrganizationsComponent::CreateOrganization(
             throw ApiError<400>{"empty_name", "Укажите название организации"};
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-        const auto organization =
-            Convert(transaction.Execute(sql::kCreateOrganization, request.id, name,
-                        request.line_operations_enabled.value_or(false))
-                        .AsSingleRow<models::pg::OrganizationRaw>());
+        const auto organization = Convert(transaction
+                                              .Execute(sql::kCreateOrganization, request.id, name,
+                                                  request.line_operations_enabled.value_or(false))
+                                              .AsSingleRow<models::pg::OrganizationRaw>());
         transaction.Execute(sql::kCreateDefaultRoles, organization.id);
         WriteAudit(transaction, organization.id, identity, "organization.created", organization);
 
@@ -88,10 +88,10 @@ models::OrganizationResult OrganizationsComponent::UpdateOrganization(
             throw ApiError<404>{"organization_not_found", "Организация не найдена"};
         if (rows.AsSingleRow<models::pg::OrganizationRaw>().Revision != request.expected_revision)
             throw ApiError<409>{"revision_conflict", "Организация уже изменена"};
-        const auto organization =
-            Convert(transaction.Execute(sql::kUpdateOrganization, request.id, name, request.enabled,
-                        request.line_operations_enabled)
-                        .AsSingleRow<models::pg::OrganizationRaw>());
+        const auto organization = Convert(transaction
+                                              .Execute(sql::kUpdateOrganization, request.id, name,
+                                                  request.enabled, request.line_operations_enabled)
+                                              .AsSingleRow<models::pg::OrganizationRaw>());
         WriteAudit(transaction, organization.id, identity, "organization.updated", organization);
 
         transaction.Commit();

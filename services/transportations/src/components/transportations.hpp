@@ -8,7 +8,6 @@
 
 namespace transportations {
 class RoutesComponent;
-class RouteIntegrations;
 
 class TransportationsComponent final : public userver::components::ComponentBase {
   public:
@@ -23,8 +22,9 @@ class TransportationsComponent final : public userver::components::ComponentBase
         const platform::auth::Identity&, const models::CreateTransportationRequest&,
         const models::ShipmentContext&, std::string_view access_token) const;
     models::Transportation UpdateTransportation(const boost::uuids::uuid& organization,
-        const platform::auth::Identity&, const models::UpdateTransportationRequest&,
-        const models::ShipmentContext&, std::string_view access_token) const;
+        const platform::auth::Identity&, models::UpdateTransportationRequest&,
+        const models::ShipmentContext&, std::string_view access_token,
+        models::Transportation current) const;
     models::ShipmentRouteProgress GetShipmentRouteProgress(
         const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
     models::ContainerFactsResult GetContainerFacts(
@@ -36,7 +36,6 @@ class TransportationsComponent final : public userver::components::ComponentBase
     userver::storages::postgres::ClusterPtr cluster_;
     platform::configs::Source configs_;
     RoutesComponent& routes_;
-    RouteIntegrations& route_integrations_;
 };
 }  // namespace transportations
 

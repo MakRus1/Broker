@@ -333,8 +333,7 @@ void ShipmentsComponent::RegisterRouteUsage(const boost::uuids::uuid& organizati
         if (found == shipment.RouteSegments.end())
             throw ApiError<409>{"route_changed", "Маршрут поставки изменён. Обновите перевозку"};
     }
-    transaction.Execute(
-        sql::kRegisterRouteUsage, organization, request.shipment_id, request.segment_ids);
+    transaction.Execute(sql::kRegisterRouteUsage, organization, request.shipment_id);
     transaction.Commit();
 }
 }  // namespace shipments

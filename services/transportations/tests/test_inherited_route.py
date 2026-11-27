@@ -222,7 +222,7 @@ async def test_invalid_actual_does_not_protect_segment(api, shipment_routes):
     '/api/v1/transportation-routes/set',
     '/api/v1/transportation-actuals/record',
 ])
-async def test_conflicting_save_does_not_register_route_usage_twice(
+async def test_competing_route_writes_commit_one_revision(
     api, shipment_routes, mockserver, path
 ):
     body = command()
@@ -256,17 +256,21 @@ async def test_conflicting_save_does_not_register_route_usage_twice(
         api.post(path, change, expected=(200, 409)) for _ in range(2)
     ))
     assert sum('transportation' in response for response in responses) == 1
-    assert len(shipment_routes.registrations) == 1
+    assert 1 <= len(shipment_routes.registrations) <= 2
+    assert all(entry['segment_ids'] == [stage['id']] for entry in shipment_routes.registrations)
+    current = (await api.post('/api/v1/transportations/get', {'transportation_id': identifier}))['transportation']
+    assert current['revision'] == 2
 
 
-@pytest.mark.parametrize('rollback', [False, True])
+@pytest.mark.parametrize('failure', ['concurrent_usage_check', 'local_rollback', 'remote_failure'])
 @pytest.mark.parametrize('path', [
     '/api/v1/transportation-routes/set',
     '/api/v1/transportation-actuals/record',
     '/api/v1/transportations/create',
+    '/api/v1/transportations/update',
 ])
-async def test_usage_waits_for_registered_save_to_commit_or_rollback(
-    api, shipment_routes, mockserver, pgsql, rollback, path
+async def test_failed_route_write_leaves_no_usage_and_can_be_retried(
+    api, shipment_routes, mockserver, pgsql, failure, path
 ):
     body = command()
     stage = route_segment('road')
@@ -274,7 +278,7 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
     registered = asyncio.Event()
     release_registration = asyncio.Event()
 
-    if rollback:
+    if failure == 'local_rollback':
         with pgsql['db_1'].cursor() as cursor:
             cursor.execute('''
                 CREATE FUNCTION reject_route_write() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -286,11 +290,18 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
                 FOR EACH ROW EXECUTE FUNCTION reject_route_write();
             ''')
 
-    @mockserver.json_handler('/api/v1/shipments/route-segments/register-usage')
+    attempts = 0
+
+    @mockserver.handler('/api/v1/shipments/route-segments/register-usage')
     async def register(request):
-        registered.set()
-        await asyncio.wait_for(release_registration.wait(), 5)
-        return {'registered': True}
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            registered.set()
+            await asyncio.wait_for(release_registration.wait(), 5)
+            if failure == 'remote_failure':
+                return mockserver.make_response(status=503, json={'error': 'unavailable', 'message': 'retry'})
+        return mockserver.make_response(status=200, json={'registered': True})
 
     if path.endswith('/create'):
         change = {
@@ -301,34 +312,42 @@ async def test_usage_waits_for_registered_save_to_commit_or_rollback(
         created = await api.post(PATH, body)
         identifier = created['operation']['transportation_ids'][0]
         change = {'transportation_id': identifier, 'expected_revision': 1}
-        if path.endswith('/set'):
+        if path.endswith('/update'):
+            change.update(type='container', hazardous=True, route_segments=[stage])
+        elif path.endswith('/set'):
             change['route_segments'] = [stage]
         else:
             change.update(route_segment_id=stage['id'], event_kind='departure',
                           occurred_at='2026-10-20T09:00:00+00:00')
 
-    save = asyncio.create_task(api.post(path, change, expected=500 if rollback else 200))
-    usage = None
+    status = {'concurrent_usage_check': 409, 'local_rollback': 500, 'remote_failure': 503}[failure]
+    save = asyncio.create_task(api.post(path, change, expected=status))
+
+    async def read_usage():
+        return (await api.post('/api/v1/transportation-routes/usage', {'shipment_id': body['shipment_id']},
+            roles=['shipments.write', 'shipments.read', 'organizations.read_employees',
+                   'counterparties.read', 'transport_locations.read']))['segment_ids']
+
     try:
         await asyncio.wait_for(registered.wait(), 5)
-        usage = asyncio.create_task(api.post(
-            '/api/v1/transportation-routes/usage', {'shipment_id': body['shipment_id']},
-            roles=['shipments.write', 'shipments.read', 'organizations.read_employees',
-                   'counterparties.read', 'transport_locations.read'],
-        ))
-        with pytest.raises(asyncio.TimeoutError):
-            await asyncio.wait_for(asyncio.shield(usage), 0.2)
+        if failure == 'concurrent_usage_check':
+            # Shipments получает снимок, пока HTTP-регистрация ещё не ответила.
+            assert await asyncio.wait_for(read_usage(), 2) == []
     finally:
         release_registration.set()
         try:
-            results = await asyncio.gather(save, *([usage] if usage is not None else []))
+            response = await save
         finally:
-            if rollback:
+            if failure == 'local_rollback':
                 with pgsql['db_1'].cursor() as cursor:
                     cursor.execute('DROP TRIGGER reject_route_write ON transportations')
                     cursor.execute('DROP FUNCTION reject_route_write()')
 
-    assert results[1]['segment_ids'] == ([] if rollback else [stage['id']])
+    if failure == 'concurrent_usage_check':
+        assert response['error'] == 'route_usage_changed'
+    assert await read_usage() == []
+    await api.post(path, change)
+    assert await read_usage() == [stage['id']]
 
 
 async def test_full_route_write_keeps_historical_documents(api, shipment_routes, pgsql):

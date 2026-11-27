@@ -5,7 +5,6 @@
 #include <string_view>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
-#include <userver/storages/postgres/transaction.hpp>
 
 namespace transportations {
 class RouteIntegrations;
@@ -20,13 +19,14 @@ class RoutesComponent final : public userver::components::ComponentBase {
     models::RouteProjectionResult ApplyShipmentRouteProjection(
         const models::ShipmentRouteProjection&) const;
     models::Transportation SaveRoute(const boost::uuids::uuid& organization,
-        const platform::auth::Identity&, std::string_view access_token,
-        const models::SetRouteRequest&, const models::ShipmentContext&) const;
-    // Запись участков в транзакции вызывающей операции, без отдельной редакции и аудита.
-    void WriteRoute(userver::storages::postgres::Transaction&,
-        const boost::uuids::uuid& organization, std::string_view access_token,
-        const std::vector<models::SetRouteSegmentsItem>&, const models::ShipmentContext&,
+        const platform::auth::Identity&, std::string_view access_token, models::SetRouteRequest&,
+        const models::ShipmentContext&, models::Transportation current) const;
+    std::optional<std::int64_t> PrepareRouteWrite(const boost::uuids::uuid& organization,
+        std::string_view access_token, models::SetRouteRequest&, const models::ShipmentContext&,
         models::Transportation&) const;
+    std::optional<std::int64_t> RegisterUse(const boost::uuids::uuid& organization,
+        std::string_view access_token, const models::ShipmentContext& source,
+        const std::vector<boost::uuids::uuid>& used) const;
 
   private:
     userver::storages::postgres::ClusterPtr cluster_;

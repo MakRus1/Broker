@@ -13,7 +13,7 @@ Response View::Handle(
     const auto& actor = platform::auth::GetIdentity(context);
     const auto organization = platform::auth::GetOrganization(actor);
 
-    const auto transportation =
+    auto transportation =
         deps.transportations->FindTransportation(organization, request.body.transportation_id);
     helpers::CheckRevision(transportation.revision, request.body.expected_revision);
 
@@ -21,8 +21,8 @@ Response View::Handle(
     const auto source =
         deps.route_integrations->GetShipmentContext(access_token, transportation.shipment_id);
 
-    auto result =
-        deps.actuals->RecordActual(organization, actor, access_token, request.body, source);
+    auto result = deps.actuals->RecordActual(
+        organization, actor, access_token, request.body, source, std::move(transportation));
 
     return Response200{.transportation = std::move(result)};
 }

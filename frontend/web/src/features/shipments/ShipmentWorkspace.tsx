@@ -1136,8 +1136,7 @@ function ShipmentCard({
                 <div>
                   <ShipmentRoute
                     key={props.session.organization_id + initial.id + initial.revision}
-                    shipmentId={initial.id}
-                    active={props.active !== false}
+                    confirmedVoyages={initial.confirmed_voyages}
                     segments={initial.route_segments ?? []}
                     progress={
                       canReadRouteProgress && routeProgress?.shipmentId === shipmentId

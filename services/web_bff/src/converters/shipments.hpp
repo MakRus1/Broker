@@ -46,6 +46,15 @@ inline models::shipments::Shipment Convert(const clients::shipments::models::Shi
     result.delivery_address = value.delivery_address;
     for (const auto& segment : value.route_segments)
         result.route_segments.push_back(Convert(segment));
+    if (value.confirmed_voyages.has_value()) {
+        auto& links = result.confirmed_voyages.emplace();
+        for (const auto& link : value.confirmed_voyages.value())
+            links.push_back({.discharge_port = link.discharge_port,
+                .load_port = link.load_port,
+                .segment_id = link.segment_id,
+                .voyage_id = link.voyage_id,
+                .voyage_number = link.voyage_number});
+    }
     result.revision = value.revision;
     return result;
 }

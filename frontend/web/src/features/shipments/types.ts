@@ -1,5 +1,13 @@
 import type { ShipmentRouteSegment } from '../routes/types';
+export type ShipmentVoyageLink = {
+  segment_id: string;
+  voyage_id: string;
+  voyage_number: string;
+  load_port: string;
+  discharge_port: string;
+};
 export interface Shipment {
+  confirmed_voyages?: ShipmentVoyageLink[];
   id: string;
   revision: number;
   number: string;

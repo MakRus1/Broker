@@ -26,6 +26,7 @@
 #include <components/shipments.hpp>
 #include <components/transportation_dispatcher.hpp>
 #include <components/transportation_operations.hpp>
+#include <components/voyages.hpp>
 #include <openapi/handlers.hpp>
 #include <platform/notifications/dispatcher.hpp>
 
@@ -92,6 +93,7 @@ int main(int argc, char* argv[]) {
     component_list.Append<shipments::CargoSuggestionsCleanup>();
     component_list.Append<shipments::ShipmentRoutes>();
     component_list.Append<shipments::ShipmentsComponent>();
+    component_list.Append<shipments::VoyagesComponent>();
     component_list.Append<shipments::ShipmentRegistryComponent>();
     component_list.Append<shipments::SettingsComponent>();
     component_list.Append<shipments::ContainerPlanComponent>();

@@ -22,8 +22,8 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
     void ValidateLogist(const boost::uuids::uuid& organization, std::string_view access_token,
         const std::optional<std::string>& subject) const;
 
-    models::Shipment GetShipment(
-        const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const;
+    models::Shipment GetShipment(const boost::uuids::uuid& organization,
+        const boost::uuids::uuid& shipment_id, bool include_voyages) const;
     std::vector<models::TransportationContext> GetTransportationContexts(
         const boost::uuids::uuid& organization,
         const std::vector<boost::uuids::uuid>& shipment_ids) const;

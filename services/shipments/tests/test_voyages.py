@@ -43,12 +43,14 @@ async def test_voyage_from_both_workplaces(api, pgsql):
             number=f'TEST-{index}', route_segments=route), expected=201))['shipment']
         visible = await api.post('/api/v1/shipments/get', {'shipment_id': shipment['id']}, roles=forwarder_permissions)
         assert visible['shipment']['route_segments'][0]['sea']['voyage'] == 'Carrier-043'
-        assert (await api.post('/api/v1/voyages/by-shipment', {'shipment_id': shipment['id']}))['items'] == []
+        assert 'confirmed_voyages' not in visible['shipment']
         with db.cursor() as cursor:
             cursor.execute("INSERT INTO voyage_assignments VALUES (%s,%s,%s,%s,1,2)",
                            (ORGANIZATION, shipment['id'], segment, voyage))
-        links = await api.post('/api/v1/voyages/by-shipment', {'shipment_id': shipment['id']})
-        assert links['items'] == [{'segment_id': segment, 'voyage_id': voyage,
+        linked = (await api.post('/api/v1/shipments/get', {'shipment_id': shipment['id']}))['shipment']
+        external = (await api.post('/api/v1/shipments/get', {'shipment_id': shipment['id']}, roles=forwarder_permissions))['shipment']
+        assert 'confirmed_voyages' not in external
+        assert linked['confirmed_voyages'] == [{'segment_id': segment, 'voyage_id': voyage,
                                    'voyage_number': 'L-043', 'load_port': 'Ningbo',
                                    'discharge_port': 'Vostochny'}]
         bookings.append({'booking_number': reference, 'shipment_id': shipment['id'],
@@ -62,6 +64,4 @@ async def test_voyage_from_both_workplaces(api, pgsql):
     assert (await api.post('/api/v1/voyages/list', {}, user='other'))['items'] == [
         {'id': other_voyage, 'number': 'L-043'}]
     await api.post('/api/v1/voyages/get', {'voyage_id': voyage}, user='other', expected=404)
-    assert (await api.post('/api/v1/voyages/by-shipment', {'shipment_id': bookings[0]['shipment_id']},
-                           user='other'))['items'] == []
     await api.post('/api/v1/voyages/get', {'voyage_id': voyage}, roles=['transportations.read'], expected=403)

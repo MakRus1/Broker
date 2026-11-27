@@ -15,21 +15,8 @@ type Booking = {
   discharge_port: string;
 };
 type Detail = Voyage & { ports: string[]; bookings: Booking[] };
-type Link = {
-  segment_id: string;
-  voyage_id: string;
-  voyage_number: string;
-  load_port: string;
-  discharge_port: string;
-};
 
-function useVoyages<T>(
-  operation: string,
-  session: Session,
-  active: boolean,
-  voyageId?: string,
-  shipmentId?: string,
-) {
+function useVoyages<T>(operation: string, session: Session, active: boolean, voyageId?: string) {
   const [data, setData] = useState<T>();
   const [failure, setFailure] = useState('');
   const load = useCallback(
@@ -37,7 +24,7 @@ function useVoyages<T>(
       const value = await request<T>(
         '/api/v1/voyages/' + operation,
         session,
-        { voyage_id: voyageId, shipment_id: shipmentId },
+        { voyage_id: voyageId },
         signal,
       );
       if (!signal.aborted) {
@@ -45,26 +32,10 @@ function useVoyages<T>(
         setFailure('');
       }
     },
-    [operation, session, voyageId, shipmentId],
+    [operation, session, voyageId],
   );
   useActivationLoad(active, load, (error) => setFailure(String(error)));
   return { data, failure };
-}
-
-export function useShipmentVoyages(
-  session: Session,
-  shipmentId: string | undefined,
-  active: boolean,
-) {
-  const allowed = session.permissions.includes('shipments.read_voyages');
-  const links = useVoyages<{ items: Link[] }>(
-    'by-shipment',
-    session,
-    allowed && Boolean(shipmentId) && active,
-    undefined,
-    shipmentId,
-  );
-  return allowed ? links : { data: undefined, failure: '' };
 }
 
 type Props = { session: Session; active: boolean };

@@ -10,6 +10,6 @@ Response View::Handle(
     platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
     return Response200{
-        .shipment = deps.shipments->GetShipment(organization, request.body.shipment_id)};
+        .shipment = deps.shipments->GetShipment(organization, request.body.shipment_id, platform::auth::HasPermission(context, permissions::SHIPMENTS_READ_VOYAGES))};
 }
 }  // namespace shipments::views::api::v1::shipments::get

@@ -9,6 +9,7 @@ components_manager:
         shipment-routes: {}
         shipments-shipments: {}
         shipment-registry: {}
+        voyages: {}
         shipments-settings: {}
         shipments-container-plan: {}
         shipments-transportation-operations: {}
@@ -128,12 +129,6 @@ components_manager:
             task_processor: main-task-processor
             request_body_size_log_limit: 32768
             response_data_size_log_limit: 32768
-        handler-api-v1-voyages-by_shipment:
-            path: /api/v1/voyages/by-shipment
-            method: POST
-            task_processor: main-task-processor
-            request_body_size_log_limit: 32768
-            response_data_size_log_limit: 32768
         handler-api-v1-voyages-get:
             path: /api/v1/voyages/get
             method: POST
@@ -201,7 +196,6 @@ components_manager:
                 /api/v1/shipments/update: shipments.write
                 /api/v1/transportation-operations/create: shipments.write
                 /api/v1/transportation-operations/get: shipments.read
-                /api/v1/voyages/by-shipment: shipments.read_voyages
                 /api/v1/voyages/get: shipments.read_voyages
                 /api/v1/voyages/list: shipments.read_voyages
             permission-dependencies:

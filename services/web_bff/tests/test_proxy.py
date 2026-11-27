@@ -944,10 +944,7 @@ async def test_shipment_route_progress_proxy(browser, mockserver):
         'bookings': [{'booking_number': 'B-1', 'shipment_id': ID, 'shipment_number': 'S-1',
                       'load_port': 'Ningbo', 'discharge_port': 'Vostochny'}],
     }),
-    ('by-shipment', {'shipment_id': ID}, {'items': [{
-        'segment_id': ID, 'voyage_id': ID, 'voyage_number': 'L-043',
-        'load_port': 'Ningbo', 'discharge_port': 'Vostochny',
-    }]}),
+
 ])
 async def test_voyage_proxy(browser, mockserver, operation, query, result):
     await browser.sign_in()

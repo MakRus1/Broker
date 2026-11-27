@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <boost/uuid/string_generator.hpp>
 #include <components/shipments.hpp>
+#include <components/voyages.hpp>
 #include <configs/keys.hpp>
 #include <converters/route_details.hpp>
 #include <converters/shipments.hpp>
@@ -16,6 +17,7 @@
 #include <models/shipment_route_snapshot_row.hpp>
 #include <models/shipment_source_record.hpp>
 #include <openapi/models.hpp>
+#include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
 #include <platform/document_number.hpp>
 #include <platform/http_client.hpp>
@@ -221,13 +223,17 @@ std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
     return FindCreatedShipment(organization, source, document);
 }
 
-models::Shipment ShipmentsComponent::GetShipment(
-    const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
-    const auto rows = cluster_->Execute(
-        pg::ClusterHostType::kMaster, sql::kGetShipment, organization, shipment_id);
+models::Shipment ShipmentsComponent::GetShipment(const boost::uuids::uuid& organization,
+    const boost::uuids::uuid& shipment_id, bool include_voyages) const {
+    auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
+    const auto rows = tx.Execute(sql::kGetShipment, organization, shipment_id);
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
-    return converters::Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
+    auto shipment = converters::Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
+    if (include_voyages)
+        VoyagesComponent::LoadShipmentVoyages(tx, organization, shipment);
+    tx.Commit();
+    return shipment;
 }
 
 models::ShipmentRouteSnapshot ShipmentsComponent::GetShipmentRouteSnapshot(
@@ -275,7 +281,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
         helpers::ValidateCard(card, settings_.Effective(transaction, organization, card.CustomerId),
             dictionaries, &previous);
 
-        const auto result =
+        auto result =
             converters::Convert(transaction
                                     .Execute(sql::kUpdateShipment, organization,
                                         request.shipment_id, request.expected_revision, card)
@@ -288,6 +294,8 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
         helpers::QueueRouteProjection(transaction, organization, result);
         helpers::QueueRouteChanged(
             transaction, organization, actor, converters::Convert(previous), result);
+        if (actor.Permissions.contains(std::string(permissions::SHIPMENTS_READ_VOYAGES)))
+            VoyagesComponent::LoadShipmentVoyages(transaction, organization, result);
         transaction.Commit();
         return result;
     } catch (const userver::storages::postgres::UniqueViolation&) {

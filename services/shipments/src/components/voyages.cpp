@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <components/voyages.hpp>
 #include <helpers/database.hpp>
 #include <set>
@@ -18,7 +17,7 @@ VoyagesComponent::VoyagesComponent(const userver::components::ComponentConfig& c
 
 void VoyagesComponent::ApplyAssignments(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment,
-    const std::vector<models::VoyageAssignmentChange>& changes) {
+    const std::vector<models::VoyageAssignmentChange>& changes) const {
     std::set<boost::uuids::uuid> seen;
     for (const auto& change : changes) {
         if (!seen.insert(change.segment_id).second)
@@ -77,15 +76,13 @@ models::VoyageDetail VoyagesComponent::GetVoyage(
     return result;
 }
 
-void VoyagesComponent::LoadShipmentVoyages(
-    pg::Transaction& transaction, const boost::uuids::uuid& org, models::Shipment& shipment) {
-    if (std::ranges::none_of(
-            shipment.route_segments, [](const auto& leg) { return leg.sea.has_value(); }))
-        return;
-    const auto records = transaction.Execute(sql::kShipmentVoyages, org, shipment.id);
+std::optional<std::vector<models::ShipmentVoyageLink>> VoyagesComponent::GetConfirmedVoyages(
+    pg::Transaction& transaction, const boost::uuids::uuid& org,
+    const boost::uuids::uuid& shipment_id) const {
+    const auto records = transaction.Execute(sql::kShipmentVoyages, org, shipment_id);
     if (records.IsEmpty())
-        return;
-    auto& links = shipment.confirmed_voyages.emplace();
+        return std::nullopt;
+    std::vector<models::ShipmentVoyageLink> links;
     for (const auto& row : records) {
         links.push_back({.discharge_port = row["discharge_port"].As<std::string>(),
             .load_port = row["load_port"].As<std::string>(),
@@ -93,5 +90,6 @@ void VoyagesComponent::LoadShipmentVoyages(
             .voyage_id = row["voyage_id"].As<boost::uuids::uuid>(),
             .voyage_number = row["voyage_number"].As<std::string>()});
     }
+    return links;
 }
 }  // namespace shipments

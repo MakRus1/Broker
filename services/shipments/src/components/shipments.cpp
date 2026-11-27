@@ -34,6 +34,11 @@ namespace pg = userver::storages::postgres;
 namespace json = userver::formats::json;
 using shipments::ApiError;
 
+bool HasSeaSegment(const models::Shipment& shipment) {
+    return std::ranges::any_of(
+        shipment.route_segments, [](const auto& leg) { return leg.sea.has_value(); });
+}
+
 std::string GenerateShipmentNumber(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, userver::utils::datetime::Date date,
     const auto& settings) {
@@ -116,6 +121,7 @@ ShipmentsComponent::ShipmentsComponent(const userver::components::ComponentConfi
       cluster_(
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       settings_(context.FindComponent<SettingsComponent>()),
+      voyages_(context.FindComponent<VoyagesComponent>()),
       counterparties_(context.FindComponent<clients::counterparties::Component>().GetClient()),
       organizations_(context.FindComponent<clients::organizations::Component>().GetClient()) {}
 
@@ -230,8 +236,8 @@ models::Shipment ShipmentsComponent::GetShipment(const boost::uuids::uuid& organ
     if (rows.IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
     auto shipment = converters::Convert(rows.AsSingleRow<models::pg::ShipmentRaw>());
-    if (include_voyages)
-        VoyagesComponent::LoadShipmentVoyages(tx, organization, shipment);
+    if (include_voyages && HasSeaSegment(shipment))
+        shipment.confirmed_voyages = voyages_.GetConfirmedVoyages(tx, organization, shipment.id);
     tx.Commit();
     return shipment;
 }
@@ -289,7 +295,7 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
         if (request.route_segments.has_value())
             transaction.Execute(sql::kRemoveUnconfirmedVoyageAssignments, organization, result.id);
         if (request.voyage_assignment_changes.has_value())
-            VoyagesComponent::ApplyAssignments(
+            voyages_.ApplyAssignments(
                 transaction, organization, result.id, request.voyage_assignment_changes.value());
         if (card.CargoDescription != previous.CargoDescription ||
             card.CustomerId != previous.CustomerId)
@@ -299,8 +305,10 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
         helpers::QueueRouteProjection(transaction, organization, result);
         helpers::QueueRouteChanged(
             transaction, organization, actor, converters::Convert(previous), result);
-        if (actor.Permissions.contains(std::string(permissions::SHIPMENTS_READ_VOYAGES)))
-            VoyagesComponent::LoadShipmentVoyages(transaction, organization, result);
+        if (actor.Permissions.contains(std::string(permissions::SHIPMENTS_READ_VOYAGES)) &&
+            HasSeaSegment(result))
+            result.confirmed_voyages =
+                voyages_.GetConfirmedVoyages(transaction, organization, result.id);
         transaction.Commit();
         return result;
     } catch (const userver::storages::postgres::UniqueViolation&) {

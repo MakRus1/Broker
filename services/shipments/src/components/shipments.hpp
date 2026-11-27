@@ -12,6 +12,8 @@
 #include <userver/storages/postgres/cluster.hpp>
 
 namespace shipments {
+class VoyagesComponent;
+
 class ShipmentsComponent final : public userver::components::ComponentBase {
   public:
     static constexpr std::string_view kName = "shipments-shipments";
@@ -46,6 +48,7 @@ class ShipmentsComponent final : public userver::components::ComponentBase {
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     SettingsComponent& settings_;
+    const VoyagesComponent& voyages_;
     clients::counterparties::Client counterparties_;
     clients::organizations::Client organizations_;
 };

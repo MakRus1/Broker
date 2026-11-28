@@ -1,4 +1,5 @@
-#include <converters.hpp>
+#include <converters/items.hpp>
+#include <converters/transportations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/v1/transportations/list/view.hpp>
 
@@ -16,6 +17,8 @@ Response View::Handle(
         cursor = models::transportations::RegistryCursor{.id = result.next_cursor.value().id,
             .scope = result.next_cursor.value().scope,
             .value = result.next_cursor.value().value};
-    return Response200{.items = Convert(result.items), .next_cursor = cursor};
+    return Response200{
+        .items = ConvertItems(result.items, [](const auto& item) { return Convert(item); }),
+        .next_cursor = cursor};
 }
 }  // namespace web_bff::views::api::v1::transportations::list

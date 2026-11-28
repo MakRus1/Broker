@@ -127,19 +127,10 @@ std::optional<std::string> ShipmentsComponent::GetCustomerLogist(
 } catch (const platform::http::ErrorByStatus<404>&) {
 
     throw ApiError<400>{"invalid_customer", "Клиент не найден в организации"};
-} catch (const platform::http::ApiError&) {
-    throw ApiError<503>{"customer_directory_unavailable", "Не удалось получить карточку клиента"};
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{"customer_directory_unavailable", "Не удалось получить карточку клиента"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{
-        "customer_directory_unavailable", "Некорректный ответ справочника контрагентов"};
 }
 
 void ShipmentsComponent::ValidateLogist(const boost::uuids::uuid& organization,
-    std::string_view access_token, const std::optional<std::string>& subject) const try {
+    std::string_view access_token, const std::optional<std::string>& subject) const {
     if (!subject)
         return;
 
@@ -147,18 +138,6 @@ void ShipmentsComponent::ValidateLogist(const boost::uuids::uuid& organization,
         {.body = {.limit = 1, .organization_id = organization, .subject = subject}}, access_token);
     if (employees.items.empty())
         throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
-} catch (const platform::http::ApiError&) {
-
-    throw ApiError<503>{"employee_directory_unavailable",
-        "Не удалось проверить сотрудника. Повторите сохранение позже"};
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{"employee_directory_unavailable",
-        "Не удалось проверить сотрудника. Повторите сохранение позже"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{
-        "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
 }
 
 std::optional<models::Shipment> ShipmentsComponent::FindCreatedShipment(

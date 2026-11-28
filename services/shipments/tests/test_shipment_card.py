@@ -408,7 +408,7 @@ async def test_employee_directory_outage_is_explicit_and_does_not_create_shipmen
     result = await api.post(
         '/api/v1/shipments/create', creation(logist='logist-author'), expected=503
     )
-    assert result['error'] == 'employee_directory_unavailable'
+    assert result['error'] == 'dependency_unavailable'
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT COUNT(*) FROM shipments')
         assert cursor.fetchone()[0] == 0

@@ -45,6 +45,25 @@ class CodegenTest(unittest.TestCase):
         self.assertNotIn('HandlerError<404>', source)
         self.assertNotIn('catch (const std::exception&)', source.split('const auto response')[1])
 
+    def test_declared_503_maps_dependency_failures(self):
+        data = spec()
+        responses = data['paths']['/items/{id}/create']['post']['responses']
+        error = {'type': 'object', 'required': ['error', 'message'],
+                 'properties': {'error': {'type': 'string', 'maxLength': 128},
+                                'message': {'type': 'string', 'maxLength': 1000}}}
+        responses['503'] = {'description': 'Зависимость недоступна',
+                            'content': {'application/json': {'schema': error}}}
+        source = outputs('demo', parse_spec(data), {})['src/views/items/by_id/create/handler.cpp']
+        handled = source.split('const auto response')[1]
+        self.assertIn('#include <platform/http_client.hpp>', source)
+        self.assertIn('"dependency_unavailable"', handled)
+        # Отмена проходит дальше, неожиданный 4xx соседа уходит наружу как 500.
+        self.assertLess(handled.index('CancelledError'), handled.index('TransportError'))
+        self.assertRegex(handled, r'if \(error.GetStatus\(\) < 500\)\s+throw;')
+
+        without = outputs('demo', parse_spec(spec()), {})['src/views/items/by_id/create/handler.cpp']
+        self.assertNotIn('dependency_unavailable', without)
+
     def test_unrelated_permission_does_not_change_generated_header_or_lock(self):
         from unittest.mock import patch
         import generate

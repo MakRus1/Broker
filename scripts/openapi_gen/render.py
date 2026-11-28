@@ -332,6 +332,7 @@ public:
     if bad_request and bad_request.media == 'application/json' and bad_request.body and {field.name for field in bad_request.body.fields} == {'error', 'message'} and all(field.required and field.type.schema == {'type': 'string'} for field in bad_request.body.fields):
         parse_error = 'http.SetResponseStatus(userver::server::http::HttpStatus::kBadRequest); http.GetHttpResponse().SetHeader(std::string_view{"Content-Type"}, "application/json"); return ToJson(Response400{.error = "invalid_request", .message = "Invalid request"});'
     error_catches = []
+    dependency_catches = False
     for response in op.responses:
         if (response.status >= 400 and response.media == 'application/json' and response.body
                 and {field.name for field in response.body.fields} == {'error', 'message'}
@@ -339,12 +340,25 @@ public:
             error_catches.append(f'catch (const ::platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
             if op.authenticated and response.status == 403:
                 error_catches.append('catch (const ::platform::auth::Forbidden&) { return Response403{.error = "forbidden", .message = "Permission denied"}; }')
+            if response.status == 503:
+                dependency_catches = True
+    if dependency_catches:
+        # Сбой соседа (нет ответа, ответ не по контракту или 5xx) одинаково становится 503.
+        # Неожиданный 4xx соседа означает ошибку в нашем запросе и уходит наружу как 500.
+        unavailable = 'return Response503{.error = "dependency_unavailable", .message = ::platform::http::kDependencyUnavailableMessage};'
+        error_catches += [
+            'catch (const ::platform::http::CancelledError&) { throw; }',
+            f'catch (const ::platform::http::TransportError&) {{ {unavailable} }}',
+            f'catch (const ::platform::http::ContractError&) {{ {unavailable} }}',
+            f'catch (const ::platform::http::ApiError& error) {{ if (error.GetStatus() < 500) throw; {unavailable} }}',
+        ]
     invoke = "View::Handle(std::move(request), context" + (", deps_" if deps else "") + ")"
     response_call = ('[&]() -> Response { try { return ' + invoke + '; } '
                      + ' '.join(error_catches) + ' }()') if error_catches else invoke
     auth_include = '#include <platform/auth/identity.hpp>\n' if op.authenticated else ''
+    dependency_include = '#include <platform/http_client.hpp>\n' if dependency_catches else ''
     auth_check = '(void)::platform::auth::GetIdentity(context);' if op.authenticated else ''
-    source = f'''{auth_include}#include <views/{op.rel}/handler.hpp>
+    source = f'''{auth_include}{dependency_include}#include <views/{op.rel}/handler.hpp>
 #include <views/{op.rel}/view.hpp>
 #include <openapi/runtime.hpp>
 #include <platform/handler_error.hpp>

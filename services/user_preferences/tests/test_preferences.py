@@ -71,7 +71,7 @@ async def test_concurrent_save_has_one_winner(api, revision):
     assert (await api.post(LIST, {'organization_id': ORGANIZATION}))['preferences'] == winners
 
 
-@pytest.mark.parametrize('failure,expected', [(403, 403), (404, 403), (500, 502), ('invalid_json', 502)])
+@pytest.mark.parametrize('failure,expected', [(403, 403), (404, 403), (500, 503), ('invalid_json', 503)])
 @pytest.mark.parametrize('operation', ['list', 'save'])
 async def test_membership_failure_preserves_preferences(api, mockserver, pgsql, failure, expected, operation):
     await api.post(SAVE, setting())
@@ -85,7 +85,7 @@ async def test_membership_failure_preserves_preferences(api, mockserver, pgsql, 
 
     body = {'organization_id': ORGANIZATION} if operation == 'list' else setting(expected_revision=1, value={'value': 'changed'})
     error = await api.post(LIST if operation == 'list' else SAVE, body, expected=expected)
-    assert error['error'] == ('organization_access_denied' if expected == 403 else 'organizations_unavailable')
+    assert error['error'] == ('organization_access_denied' if expected == 403 else 'dependency_unavailable')
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT value, revision FROM user_preferences WHERE organization_id=%s AND key=%s',
                        (ORGANIZATION, setting()['key']))

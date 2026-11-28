@@ -55,7 +55,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ContractError
-        '502':
+        '503':
           description: Справочник контрагентов недоступен
           content:
             application/json:
@@ -115,7 +115,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ContractError
-        '502':
+        '503':
           description: Справочник контрагентов недоступен
           content:
             application/json:
@@ -179,7 +179,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ContractError
-        '502':
+        '503':
           description: Справочник контрагентов недоступен
           content:
             application/json:

@@ -59,14 +59,6 @@ models::DocumentParties DocumentPartiesComponent::ResolveDocumentParties(
         throw ApiError<403>{"forbidden_reference", "Нет доступа к сторонам или договору документа"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<404>{"reference_not_found", "Сторона или договор не найдены в организации"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{"reference_unavailable", "Не удалось проверить стороны документа"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
     }
     return result;
 }
@@ -102,14 +94,6 @@ models::InvoicePrintData DocumentPartiesComponent::PrepareInvoicePrintData(
         throw ApiError<403>{"forbidden_reference", "Нет доступа к реквизитам для печатной формы"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<404>{"reference_not_found", "Реквизиты для печатной формы не найдены"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{"reference_unavailable", "Не удалось получить реквизиты счёта"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис реквизитов недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса реквизитов"};
     }
     return data;
 }

@@ -64,12 +64,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/finance/models.yaml#/FinancialLabelError
-        '502':
-          description: Не удалось проверить стороны или договор
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/finance/models.yaml#/FinancialLabelError
         '503':
           description: Сервис авторизации временно недоступен
           content:

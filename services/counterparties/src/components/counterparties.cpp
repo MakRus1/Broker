@@ -6,7 +6,6 @@
 #include <models/pg/counterparty_event.hpp>
 #include <models/pg/counterparty_raw.hpp>
 #include <platform/auth/identity.hpp>
-#include <platform/http_client.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 
@@ -48,25 +47,9 @@ void CounterpartiesComponent::ValidateLogist(const boost::uuids::uuid& organizat
     if (!subject.has_value())
         return;
 
-    bool exists;
-    try {
-        const auto response = organizations_.ApiOrganizationsEmployeesList(
-            {.body = {.limit = 1, .organization_id = organization, .subject = subject}}, token);
-        exists = !response.items.empty();
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<503>{"employee_directory_unavailable",
-            "Не удалось проверить сотрудника. Повторите сохранение позже"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<503>{"employee_directory_unavailable",
-            "Не удалось проверить сотрудника. Повторите сохранение позже"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<503>{
-            "employee_directory_unavailable", "Некорректный ответ справочника сотрудников"};
-    }
-
-    if (!exists)
+    const auto response = organizations_.ApiOrganizationsEmployeesList(
+        {.body = {.limit = 1, .organization_id = organization, .subject = subject}}, token);
+    if (response.items.empty())
         throw ApiError<400>{"invalid_logist", "Выберите действующего сотрудника организации"};
 }
 

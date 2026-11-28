@@ -67,12 +67,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
   /api/admin/organizations/list:
     post:
       summary: Получить организации
@@ -135,12 +129,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
   /api/admin/organizations/create:
     post:
       summary: Создать организацию
@@ -199,12 +187,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
   /api/admin/organizations/update:
     post:
       summary: Изменить организацию
@@ -259,12 +241,6 @@ paths:
                 $ref: components/schemas/organizations.yaml#/ApiError
         '503':
           description: Провайдер пользователей временно недоступен
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
           content:
             application/json:
               schema:
@@ -331,12 +307,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
   /api/admin/organizations/members/create:
     post:
       summary: Создать учётную запись и добавить сотрудника
@@ -391,12 +361,6 @@ paths:
                 $ref: components/schemas/organizations.yaml#/ApiError
         '503':
           description: Провайдер пользователей временно недоступен
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
           content:
             application/json:
               schema:
@@ -459,12 +423,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
   /api/admin/organizations/members/update:
     post:
       summary: Изменить доступ сотрудника в организации
@@ -519,12 +477,6 @@ paths:
                 $ref: components/schemas/organizations.yaml#/ApiError
         '503':
           description: Провайдер пользователей временно недоступен
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
           content:
             application/json:
               schema:
@@ -964,12 +916,6 @@ paths:
                 $ref: components/schemas/organizations.yaml#/ApiError
         '503':
           description: Провайдер пользователей временно недоступен
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/organizations.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа сервиса
           content:
             application/json:
               schema:

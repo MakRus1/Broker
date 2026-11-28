@@ -35,15 +35,6 @@ Response View::Handle(
         throw ApiError<403>{"forbidden_reference", "Нет доступа к связанным данным услуги"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<404>{"reference_not_found", "Связанный объект не найден в организации"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{
-            "reference_unavailable", "Не удалось проверить связанные данные услуги"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"reference_unavailable", "Сервис связанных данных недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"reference_unavailable", "Некорректный ответ сервиса связанных данных"};
     }
 
     auto result = deps.service_charges->ListServiceCharges(organization, request.body);

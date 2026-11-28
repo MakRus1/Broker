@@ -49,7 +49,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/FinancialLabelError
-        '502':
+        '503':
           description: Сервис реквизитов недоступен
           content:
             application/json:

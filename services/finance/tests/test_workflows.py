@@ -87,7 +87,7 @@ async def test_standalone_service_can_be_edited_after_creating_its_invoice(api, 
 @pytest.mark.parametrize('status, expected, code', [
     (403, 403, 'forbidden_reference'),
     (404, 404, 'reference_not_found'),
-    (503, 502, 'reference_unavailable'),
+    (503, 503, 'dependency_unavailable'),
 ])
 async def test_document_reference_failure_does_not_create_document(
     api, mockserver, pgsql, invoice_references, kind, status, expected, code,

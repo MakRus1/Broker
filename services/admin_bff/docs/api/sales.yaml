@@ -49,12 +49,6 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/sales/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: ../components/schemas/sales/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -102,12 +96,6 @@ paths:
               schema:
                 $ref: ../components/schemas/sales/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: ../components/schemas/sales/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:

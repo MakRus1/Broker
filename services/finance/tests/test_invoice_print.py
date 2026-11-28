@@ -60,7 +60,7 @@ async def test_print_captures_selected_bank_and_retries_failed_lookup(api, invoi
     await api.post(BASE + 'save', body)
     query = dict(id=body['id'], revision=1)
     state['status'] = 503
-    await api.post(BASE + 'print-data', query, expected=502)
+    await api.post(BASE + 'print-data', query, expected=503)
     state['status'] = 200
     printed = await api.post(BASE + 'print-data', query)
     assert printed['supplier_bank']['number'] == bank['number']

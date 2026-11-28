@@ -75,15 +75,6 @@ void ContractsComponent::ValidateContractParties(
         throw ApiError<403>{"forbidden_party", "Нет доступа к сторонам или счетам договора"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<404>{"party_not_found", "Сторона договора не найдена в организации"};
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{"counterparty_unavailable", "Не удалось проверить стороны договора"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"counterparty_unavailable", "Справочник контрагентов недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{
-            "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
     }
 }
 

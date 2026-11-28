@@ -68,7 +68,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/notifications.yaml#/ApiError
-        '502':
+        '503':
           description: Ошибка запроса или доступа
           content:
             application/json:
@@ -140,7 +140,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/notifications.yaml#/ApiError
-        '502':
+        '503':
           description: Ошибка запроса или доступа
           content:
             application/json:

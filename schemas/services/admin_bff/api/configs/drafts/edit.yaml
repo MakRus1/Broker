@@ -74,12 +74,6 @@ paths:
             application/json:
               schema:
                 $ref: ../../../components/schemas/errors.yaml#/ApiError
-        '502':
-          description: Нарушен контракт ответа Configs
-          content:
-            application/json:
-              schema:
-                $ref: ../../../components/schemas/errors.yaml#/ApiError
 components:
   securitySchemes:
     BrowserSession:

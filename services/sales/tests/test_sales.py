@@ -352,7 +352,7 @@ async def test_work_filters_and_contact_presence_are_composable(api):
 @pytest.mark.parametrize('status, expected_status, code', [
     (403, 403, 'reference_forbidden'),
     (404, 404, 'reference_not_found'),
-    (503, 502, 'reference_unavailable'),
+    (503, 503, 'dependency_unavailable'),
 ])
 async def test_creation_reference_failure_keeps_inquiry_editable(
         api, mockserver, status, expected_status, code):

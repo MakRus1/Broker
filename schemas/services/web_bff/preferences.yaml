@@ -51,7 +51,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/preferences/models.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис организаций недоступен
           content:
             application/json:
@@ -105,7 +105,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/preferences/models.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис организаций недоступен
           content:
             application/json:

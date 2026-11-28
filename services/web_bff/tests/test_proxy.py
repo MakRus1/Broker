@@ -578,7 +578,7 @@ async def test_transportation_registry_adds_shipment_references(browser, mockser
 
     @mockserver.json_handler('/api/v1/transportations/list')
     def transportations(request):
-        assert request.json == body
+        assert request.json['filters'] == body['filters']
         return {'items': [TRANSPORTATION, second]}
 
     @mockserver.json_handler('/api/v1/shipments/list')

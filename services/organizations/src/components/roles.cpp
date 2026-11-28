@@ -21,7 +21,7 @@ RolesComponent::RolesComponent(const userver::components::ComponentConfig& confi
 
 models::RolesListResult RolesComponent::ListRoles(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
     RequireAdministrator(transaction, request.organization_id, identity);
     const auto roles = ConvertRows<models::pg::OrganizationRoleRaw>(
         transaction.Execute(sql::kListRoles, request.organization_id));
@@ -63,6 +63,7 @@ models::OrganizationRoleResult RolesComponent::UpdateRole(
             throw ApiError<400>{"empty_role_name", "Укажите название роли"};
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        LockOrganization(transaction, request.organization_id);
         RequireAdministrator(transaction, request.organization_id, identity);
         const auto previous = RequireRole(transaction, request.organization_id, request.id);
         ValidatePermissions(transaction, request.permissions, previous.Permissions);

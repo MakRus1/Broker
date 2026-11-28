@@ -1,6 +1,8 @@
 """Права платформы и организации, выдача доступа и безопасные повторы создания."""
 
+import asyncio
 from uuid import uuid4
+
 import pytest
 from conftest import ORGANIZATION, OTHER_ORGANIZATION, insert_member
 
@@ -107,6 +109,53 @@ async def test_last_administrator_cannot_be_disabled_or_demoted(api):
             expected=409,
         )
         assert result['error'] == 'last_administrator'
+
+
+async def test_parallel_demotions_keep_one_administrator(api, pgsql):
+    # Проверка «последнего администратора» держится только на блокировке организации.
+    with pgsql['db_1'].cursor() as cursor:
+        insert_member(cursor, ORGANIZATION, 'second-admin', 'administrator')
+
+    async def demote(subject, revision):
+        status, body = await api.call(ADMIN + '/members/update', {
+            'organization_id': ORGANIZATION, 'subject': subject, 'expected_revision': revision,
+            'role': 'viewer', 'enabled': True,
+        }, expected=None)
+        return status if status == 200 else (status, body['error'])
+
+    for _ in range(10):
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute(
+                "UPDATE memberships SET role = 'administrator' "
+                "WHERE organization_id = %s AND subject IN ('org-admin', 'second-admin') "
+                'RETURNING subject, revision',
+                (ORGANIZATION,),
+            )
+            revisions = dict(cursor.fetchall())
+        results = await asyncio.gather(*(demote(subject, revision) for subject, revision in revisions.items()))
+        assert sorted(results, key=str) == [(409, 'last_administrator'), 200]
+        with pgsql['db_1'].cursor() as cursor:
+            cursor.execute(
+                "SELECT count(*) FROM memberships WHERE organization_id = %s AND role = 'administrator'",
+                (ORGANIZATION,),
+            )
+            assert cursor.fetchone()[0] == 1
+
+
+async def test_read_and_check_do_not_wait_for_organization_lock(api, pgsql):
+    # Списки и межсервисная проверка прав не должны ждать изменений состава администраторов.
+    with pgsql['db_1'].cursor() as cursor:
+        cursor.execute('BEGIN')
+        cursor.execute('SELECT 1 FROM organizations WHERE id = %s FOR UPDATE', (ORGANIZATION,))
+        try:
+            calls = [
+                api.call('/api/organizations/administration/check', {'organization_id': ORGANIZATION}, user='org-admin'),
+                api.call(ADMIN + '/roles/list', {'organization_id': ORGANIZATION}, user='org-admin'),
+                api.call(ADMIN + '/members/list', {'organization_id': ORGANIZATION}, user='org-admin'),
+            ]
+            await asyncio.wait_for(asyncio.gather(*calls), timeout=5)
+        finally:
+            cursor.execute('ROLLBACK')
 
 
 async def test_disabling_membership_revokes_access_without_disabling_other_organizations(api):

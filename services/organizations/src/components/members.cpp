@@ -27,7 +27,7 @@ MembersComponent::MembersComponent(const userver::components::ComponentConfig& c
 
 models::MembersListResult MembersComponent::ListMembers(
     const models::ListMembersRequest& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
     RequireAdministrator(transaction, request.organization_id, identity);
     const auto scope = registry::CursorScope(request, request.organization_id);
     if (!registry::CursorMatches(request, scope, EnumValue(request.sort) == "subject"))
@@ -128,8 +128,7 @@ models::MemberResult MembersComponent::AddExistingMember(
     const models::AddMemberRequest& request, const platform::auth::Identity& identity) const {
     try {
         {
-            auto transaction =
-                cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+            auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
             RequireAdministrator(transaction, request.organization_id, identity);
             RequireRole(transaction, request.organization_id, request.role);
             transaction.Commit();
@@ -159,6 +158,7 @@ models::MemberResult MembersComponent::UpdateMemberAccess(
     try {
 
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        LockOrganization(transaction, request.organization_id);
         RequireAdministrator(transaction, request.organization_id, identity);
         const auto rows = transaction.Execute(
             sql::kGetMembership, request.organization_id, identity.Issuer, request.subject);

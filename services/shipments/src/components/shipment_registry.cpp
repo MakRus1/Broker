@@ -3,7 +3,6 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <models/shipment_registry_row.hpp>
-#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
@@ -63,30 +62,11 @@ models::ShipmentsFilterValuesResult ShipmentRegistryComponent::GetShipmentFilter
 
 models::ShipmentsListResult ShipmentRegistryComponent::FindShipments(
     const models::ListShipmentsRequest& request, const boost::uuids::uuid& organization) const {
-    try {
-        const auto scope = platform::registry::CursorScope(request, organization);
-        const auto order =
-            registry::RegistryOrderBy(registry_query::registry_fields::kFields, request.sort);
-        const bool date_sort = order.CursorType == registry::CursorKeyType::Date;
-        if (request.after.has_value() &&
-            (request.cursor.has_value() || !order.ById || request.descending))
-            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        platform::registry::ValidateListCursor(request.cursor, scope, date_sort);
-        const auto query =
-            platform::registry::BuildPage(registry_query::kRegistry, request, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::ShipmentRegistryRow>>(pg::kRowTag);
-        const auto cursor = platform::registry::FinishListPage<models::ShipmentRegistryCursor>(
-            rows, request.limit, scope, [](const auto& row) { return row.Shipment.Id; }, date_sort);
-        transaction.Commit();
-        return models::ShipmentsListResult{
-            .items = converters::Convert(rows), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::ShipmentRegistryRow>(cluster_,
+        registry_query::kRegistry, request, organization,
+        [](const auto& row) { return row.Shipment.Id; });
+    return models::ShipmentsListResult{
+        .items = converters::Convert(page.Rows), .next_cursor = page.NextCursor};
 }
 
 }  // namespace shipments

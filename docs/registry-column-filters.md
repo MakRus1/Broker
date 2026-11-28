@@ -58,9 +58,15 @@ API списков и `filter-values` принимают одну модель �
 счёта и группы участков) берутся из запроса.
 
 ```cpp
-const auto page = registry::BuildPage(kRegistry, request.body, organization);
+const auto page = registry::ReadPage<models::ShipmentRegistryRow>(cluster_, kRegistry, request,
+    organization, [](const auto& row) { return row.Shipment.Id; });
 const auto values = registry::BuildFilterValues(kRegistry, request.body, organization);
 ```
+
+`ReadPage` (`platform/registry_read.hpp`) читает страницу целиком: проверяет курсор и
+`after`, собирает запрос через `BuildPage`, выполняет его с custom plan и возвращает строки
+и курсор следующей страницы. Ошибка фильтра становится ответом 400 `invalid_filter`.
+Транзакция внутри нужна только для `SET LOCAL plan_cache_mode` и наружу не передаётся.
 
 Во втором вызове передаётся тело запроса вариантов фильтра: библиотека сама
 извлекает реестровый запрос, поле, поиск, курсор, лимит и кандидатов. Текущее

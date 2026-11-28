@@ -99,8 +99,8 @@ models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
         response.items.pop_back();
         response.next_after = response.items.back().id;
     }
-    response.invoices =
-        helpers::LoadServiceChargeInvoices(transaction, organization, response.items);
+    response.invoices = helpers::ConvertServiceChargeInvoices(transaction.Execute(
+        sql::kListServiceChargeInvoices, organization, helpers::ServiceChargeIds(response.items)));
     if (!scope.shipment_id.has_value()) {
         transaction.Commit();
         const auto settings = helpers::LoadFinanceSettings(cluster_, organization);
@@ -205,33 +205,18 @@ bool ServiceChargesComponent::ApplyServiceChargeImport(const platform::auth::Ide
 models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRegistry(
     const boost::uuids::uuid& organization,
     const models::ServiceChargeRegistryRequest& request) const {
-    try {
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = platform::registry::RegistryOrderBy(
-            registry_query::service_charges::fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
-        platform::registry::ValidateListCursor(body.cursor, scope, date_sort);
-        const auto query = platform::registry::BuildPage(
-            registry_query::service_charges::kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::ServiceChargeRegistryRow>>(pg::kRowTag);
-        const auto cursor = platform::registry::FinishListPage<models::ServiceChargeRegistryCursor>(
-            rows, body.limit, scope, [](const auto& row) { return row.Charge.Id; }, date_sort);
-        models::ServiceChargeRegistryResult response;
-        for (const auto& row : rows)
-            response.items.push_back(converters::Convert(row.Charge));
-        response.invoices =
-            helpers::LoadServiceChargeInvoices(transaction, organization, response.items);
-        response.next_cursor = cursor;
-        transaction.Commit();
-        return response;
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::ServiceChargeRegistryRow>(cluster_,
+        registry_query::service_charges::kRegistry, request, organization,
+        [](const auto& row) { return row.Charge.Id; });
+    models::ServiceChargeRegistryResult response;
+    for (const auto& row : page.Rows)
+        response.items.push_back(converters::Convert(row.Charge));
+    // Привязки к счетам дочитываются отдельным запросом по id строк страницы.
+    response.invoices = helpers::ConvertServiceChargeInvoices(
+        cluster_->Execute(pg::ClusterHostType::kMaster, sql::kListServiceChargeInvoices,
+            organization, helpers::ServiceChargeIds(response.items)));
+    response.next_cursor = page.NextCursor;
+    return response;
 }
 
 models::ServiceChargeFilterValuesResult ServiceChargesComponent::GetServiceChargeFilterValues(

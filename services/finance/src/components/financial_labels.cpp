@@ -6,7 +6,6 @@
 #include <models/errors.hpp>
 #include <models/pg/financial_label_raw.hpp>
 #include <platform/auth/identity.hpp>
-#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/financial_label_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -74,25 +73,10 @@ models::FinancialLabel FinancialLabelsComponent::FindFinancialLabel(
 models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
     const boost::uuids::uuid& organization,
     const models::ListFinancialLabelsRequest& request) const {
-    try {
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        platform::registry::ValidateListCursor(body.cursor, scope);
-        const auto query =
-            platform::registry::BuildPage(registry_query::labels::kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::FinancialLabelRegistryRow>>(pg::kRowTag);
-        const auto cursor =
-            platform::registry::FinishListPage<models::FinancialLabelRegistryCursor>(
-                rows, body.limit, scope, [](const auto& row) { return row.Label.Id; });
-        transaction.Commit();
-        return models::FinancialLabelListResult{
-            .items = converters::Convert(rows), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::FinancialLabelRegistryRow>(cluster_,
+        registry_query::labels::kRegistry, request, organization,
+        [](const auto& row) { return row.Label.Id; });
+    return models::FinancialLabelListResult{
+        .items = converters::Convert(page.Rows), .next_cursor = page.NextCursor};
 }
 }  // namespace finance

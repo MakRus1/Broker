@@ -2,7 +2,6 @@
 #include <converters/counterparties.hpp>
 #include <models/counterparty_registry_row.hpp>
 #include <models/errors.hpp>
-#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
@@ -22,32 +21,14 @@ CounterpartyRegistry::CounterpartyRegistry(const userver::components::ComponentC
 models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
     const boost::uuids::uuid& organization,
     const models::ListCounterpartiesRequest& request) const {
-    try {
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = registry::RegistryOrderBy(registry_fields::kFields, body.sort);
-        if (body.after.has_value() && (body.cursor.has_value() || !order.ById || body.descending))
-            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        platform::registry::ValidateListCursor(body.cursor, scope);
-
-        const auto query = platform::registry::BuildPage(kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::CounterpartyRegistryRow>>(pg::kRowTag);
-        const auto cursor = platform::registry::FinishListPage<models::CounterpartyRegistryCursor>(
-            rows, body.limit, scope, [](const auto& row) { return row.Counterparty.Id; });
-        transaction.Commit();
-
-        std::vector<models::Counterparty> items;
-        items.reserve(rows.size());
-        for (const auto& row : rows)
-            items.push_back(Convert(row.Counterparty));
-        return models::CounterpartyListResult{.items = std::move(items), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::CounterpartyRegistryRow>(cluster_,
+        kRegistry, request, organization, [](const auto& row) { return row.Counterparty.Id; });
+    std::vector<models::Counterparty> items;
+    items.reserve(page.Rows.size());
+    for (const auto& row : page.Rows)
+        items.push_back(Convert(row.Counterparty));
+    return models::CounterpartyListResult{
+        .items = std::move(items), .next_cursor = page.NextCursor};
 }
 
 models::CounterpartyFilterValuesResult CounterpartyRegistry::GetCounterpartyFilterValues(

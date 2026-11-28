@@ -296,12 +296,6 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
             {'transportation': TRANSPORTATION},
             200,
         ),
-        (
-            'transportations/list',
-            {'filters': [{'field': 'shipment_id', 'values': [ID]}]},
-            {'items': [TRANSPORTATION]},
-            200,
-        ),
     ],
 )
 async def test_typed_proxy(browser, mockserver, path, body, result, status):
@@ -575,6 +569,85 @@ async def test_session_uses_profile_name(browser, oidc, claims, expected):
     oidc['claims'].update(claims)
     session = await browser.sign_in()
     assert session['display_name'] == expected
+
+
+async def test_transportation_registry_adds_shipment_references(browser, mockserver):
+    await browser.sign_in()
+    second = {**TRANSPORTATION, 'id': str(uuid4())}
+    body = {'filters': [{'field': 'shipment_id', 'values': [ID]}]}
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        assert request.json == body
+        return {'items': [TRANSPORTATION, second]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        assert request.headers['Authorization'].startswith('Bearer ')
+        assert request.json['filters'] == [{'field': 'id', 'values': [ID]}]
+        assert request.json['limit'] == 1
+        return {'items': [SHIPMENT]}
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        assert request.json['filters'] == [{'field': 'id', 'values': [SHIPMENT['customer_id']]}]
+        assert request.json['limit'] == 1
+        return {'items': [{**COUNTERPARTY, 'id': SHIPMENT['customer_id']}]}
+
+    response = await browser.post('/api/v1/transportations/list', body)
+    assert response.status == 200, response.text
+    assert response.json() == {
+        'items': [TRANSPORTATION, second],
+        'shipments': [{'id': ID, 'number': 'S-1', 'customer_name': 'Клиент'}],
+    }
+    assert transportations.times_called == 1
+    assert shipments.times_called == 1
+    assert counterparties.times_called == 1
+
+
+async def test_transportation_registry_keeps_rows_without_references(browser, mockserver):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        return {'items': [TRANSPORTATION]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        return mockserver.make_response(
+            status=403, json={'error': 'forbidden', 'message': 'Нет доступа'}
+        )
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        return {'items': []}
+
+    response = await browser.post('/api/v1/transportations/list', {})
+    assert response.status == 200, response.text
+    assert response.json() == {'items': [TRANSPORTATION]}
+    assert counterparties.times_called == 0
+
+
+async def test_transportation_registry_keeps_numbers_without_customers(browser, mockserver):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        return {'items': [TRANSPORTATION]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        return {'items': [SHIPMENT]}
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        return mockserver.make_response(
+            status=500, json={'error': 'internal', 'message': 'Ошибка'}
+        )
+
+    response = await browser.post('/api/v1/transportations/list', {})
+    assert response.status == 200, response.text
+    assert response.json()['shipments'] == [{'id': ID, 'number': 'S-1'}]
 
 
 async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):

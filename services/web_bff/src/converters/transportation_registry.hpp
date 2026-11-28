@@ -20,26 +20,27 @@ inline std::set<boost::uuids::uuid> ShipmentIds(
     return result;
 }
 
-inline std::set<boost::uuids::uuid> CustomerIds(
-    const std::vector<clients::shipments::models::Shipment>& shipments) {
+using Shipments = std::optional<std::vector<clients::shipments::models::Shipment>>;
+using Customers = std::optional<std::vector<clients::counterparties::models::Counterparty>>;
+
+inline std::set<boost::uuids::uuid> CustomerIds(const Shipments& shipments) {
     std::set<boost::uuids::uuid> result;
-    for (const auto& shipment : shipments)
+    for (const auto& shipment : shipments.value_or(Shipments::value_type{}))
         result.insert(shipment.customer_id);
     return result;
 }
 
 // Без поставок поле не возвращается, без клиента у ссылки нет customer_name.
 inline std::optional<std::vector<models::transportations::TransportationShipmentReference>>
-ToShipmentReferences(const std::vector<clients::shipments::models::Shipment>& shipments,
-    const std::vector<clients::counterparties::models::Counterparty>& customers) {
-    if (shipments.empty())
+ToShipmentReferences(const Shipments& shipments, const Customers& customers) {
+    if (!shipments.has_value() || shipments->empty())
         return std::nullopt;
     std::map<boost::uuids::uuid, std::string> customer_names;
-    for (const auto& customer : customers)
+    for (const auto& customer : customers.value_or(Customers::value_type{}))
         customer_names.emplace(customer.id, customer.name);
     std::vector<models::transportations::TransportationShipmentReference> result;
-    result.reserve(shipments.size());
-    for (const auto& shipment : shipments) {
+    result.reserve(shipments->size());
+    for (const auto& shipment : *shipments) {
         auto& reference = result.emplace_back();
         reference.id = shipment.id;
         reference.number = shipment.number;
@@ -47,6 +48,20 @@ ToShipmentReferences(const std::vector<clients::shipments::models::Shipment>& sh
             name != customer_names.end())
             reference.customer_name = name->second;
     }
+    return result;
+}
+
+// Что не загрузилось из-за сбоя соседа. Пустой список — значит, всё на месте.
+inline std::optional<std::vector<models::transportations::RegistryReferenceKind>>
+UnavailableReferences(const Shipments& shipments, const Customers& customers) {
+    using Kind = models::transportations::RegistryReferenceKind;
+    std::vector<Kind> result;
+    if (!shipments.has_value())
+        result.push_back(Kind::Shipments);
+    if (!customers.has_value())
+        result.push_back(Kind::Customers);
+    if (result.empty())
+        return std::nullopt;
     return result;
 }
 }  // namespace web_bff::converters

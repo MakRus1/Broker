@@ -44,15 +44,23 @@ export function TransportationRegistry({
         items: Transportation[];
         next_cursor?: RegistryCursor;
         shipments?: { id: string; number: string; customer_name?: string }[];
+        unavailable?: ('shipments' | 'customers')[];
       }>('/api/v1/transportations/list', session, registryRequest(query, cursor), signal);
       const shipmentById = new Map((page.shipments ?? []).map((item) => [item.id, item]));
+      const shipmentsUnavailable = page.unavailable?.includes('shipments') ?? false;
+      const customersUnavailable = page.unavailable?.includes('customers') ?? false;
       return {
         next_cursor: page.next_cursor,
         items: page.items.map((item) => {
           const shipment = shipmentById.get(item.shipment_id);
-          return shipment
-            ? { ...item, shipment_number: shipment.number, customer_name: shipment.customer_name }
-            : item;
+          return {
+            ...item,
+            shipment_number: shipment?.number,
+            customer_name: shipment?.customer_name,
+            shipment_unavailable: shipmentsUnavailable,
+            customer_unavailable:
+              shipmentsUnavailable || (Boolean(shipment) && customersUnavailable),
+          };
         }),
       };
     },
@@ -95,6 +103,11 @@ export function TransportationRegistry({
     >
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         {routeFilters.editor}
+        {page.items.some((item) => item.shipment_unavailable || item.customer_unavailable) && (
+          <p className="route-notice" role="status">
+            {translate('transportations.referencesUnavailable')}
+          </p>
+        )}
         <TransportationTable
           routeFilter={routeFilters.button}
           routeFilterSummary={routeFilters.toolbar}

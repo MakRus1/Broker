@@ -21,7 +21,8 @@ Response View::Handle(
             .scope = result.next_cursor.value().scope,
             .value = result.next_cursor.value().value};
 
-    // Номер поставки и клиент нужны строкам реестра. Без права чтения их просто нет.
+    // Номер поставки и клиент нужны строкам реестра. Без права чтения их просто нет,
+    // а сбой соседа отмечается в unavailable, и реестр открывается без них.
     const auto shipments =
         clients::shipments::ListByIds(deps.shipments, ShipmentIds(result.items), session.Access);
     const auto customers = clients::counterparties::ListByIds(
@@ -30,6 +31,7 @@ Response View::Handle(
     return Response200{
         .items = ConvertItems(result.items, [](const auto& item) { return Convert(item); }),
         .next_cursor = cursor,
-        .shipments = ToShipmentReferences(shipments, customers)};
+        .shipments = ToShipmentReferences(shipments, customers),
+        .unavailable = UnavailableReferences(shipments, customers)};
 }
 }  // namespace web_bff::views::api::v1::transportations::list

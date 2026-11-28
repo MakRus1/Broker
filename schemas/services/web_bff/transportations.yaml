@@ -93,6 +93,13 @@ paths:
                       без права чтения или временно недоступные в массив не попадают.
                     items:
                       $ref: components/schemas/transportations/models.yaml#/TransportationShipmentReference
+                  unavailable:
+                    type: array
+                    maxItems: 2
+                    description: Что не загрузилось из-за сбоя соседнего сервиса.
+                      При отсутствии права чтения поле не заполняется.
+                    items:
+                      $ref: components/schemas/transportations/models.yaml#/RegistryReferenceKind
                 required:
                 - items
         '400':

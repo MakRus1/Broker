@@ -14,6 +14,9 @@ export interface Transportation {
   shipment_id: string;
   shipment_number?: string;
   customer_name?: string;
+  /** Номер поставки или клиент не загрузились из-за сбоя сервиса. */
+  shipment_unavailable?: boolean;
+  customer_unavailable?: boolean;
   item_id?: string;
   operation_id?: string;
   container_type_code?: string;

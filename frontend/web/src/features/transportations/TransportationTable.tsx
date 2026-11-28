@@ -15,6 +15,13 @@ import { RegistryRoute } from '../routes/RegistryRoute';
 import type { ReactNode } from 'react';
 import { ownership } from '../routes/logisticsLabels';
 import { type Transportation } from './types';
+function MissingReference({ unavailable }: { unavailable?: boolean }) {
+  const { translate } = useLocalization();
+  return (
+    <span className="registry-muted">{unavailable ? translate('registry.notLoaded') : '—'}</span>
+  );
+}
+
 export const transportationColumns: RegistryColumn<Transportation>[] = [
   {
     id: 'container_number',
@@ -61,7 +68,7 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
           {item.shipment_number}
         </a>
       ) : (
-        <span className="registry-muted">—</span>
+        <MissingReference unavailable={item.shipment_unavailable} />
       ),
   },
   {
@@ -69,7 +76,8 @@ export const transportationColumns: RegistryColumn<Transportation>[] = [
     labelKey: 'field.customer',
     filterFields: ['customer_id'],
     width: 220,
-    render: (item) => item.customer_name || <span className="registry-muted">—</span>,
+    render: (item) =>
+      item.customer_name || <MissingReference unavailable={item.customer_unavailable} />,
   },
   {
     id: 'route',

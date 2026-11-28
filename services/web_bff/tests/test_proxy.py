@@ -625,7 +625,10 @@ async def test_transportation_registry_keeps_rows_without_references(browser, mo
 
     response = await browser.post('/api/v1/transportations/list', {})
     assert response.status == 200, response.text
-    assert response.json() == {'items': [TRANSPORTATION]}
+    expected = {'items': [TRANSPORTATION]}
+    if status != 403:
+        expected['unavailable'] = ['shipments']
+    assert response.json() == expected
     assert counterparties.times_called == 0
 
 
@@ -650,6 +653,7 @@ async def test_transportation_registry_keeps_numbers_without_customers(browser, 
     response = await browser.post('/api/v1/transportations/list', {})
     assert response.status == 200, response.text
     assert response.json()['shipments'] == [{'id': ID, 'number': 'S-1'}]
+    assert response.json().get('unavailable') == (None if status == 403 else ['customers'])
 
 
 async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):

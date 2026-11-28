@@ -1570,5 +1570,7 @@
   "route.documents.feeder": "Feeder",
   "route.documents.remove": "Remove document",
   "route.documents.addBill": "Add bill of lading",
-  "route.documents.addAir": "Add air waybill"
+  "route.documents.addAir": "Add air waybill",
+  "registry.notLoaded": "Not loaded",
+  "transportations.referencesUnavailable": "Shipment numbers or customers are temporarily unavailable. Refresh the registry later."
 }

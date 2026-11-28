@@ -1042,3 +1042,8 @@ TransportationShipmentReference:
       type: string
       minLength: 1
       maxLength: 256
+RegistryReferenceKind:
+  type: string
+  enum:
+  - shipments
+  - customers

@@ -134,6 +134,8 @@ def api(service_client, auth_key):
                 'GET' if body is None else 'POST', path, json=body,
                 headers={'Authorization': 'Bearer ' + token},
             )
+            if expected is None:
+                return response.status, response.json()
             assert response.status == expected, response.text
             return response.json()
     return Client()

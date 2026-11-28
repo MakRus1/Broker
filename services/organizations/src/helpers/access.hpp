@@ -7,6 +7,7 @@
 #include <platform/auth/identity.hpp>
 #include <set>
 #include <userver/storages/postgres/cluster.hpp>
+#include <userver/storages/postgres/io/array_types.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/storages/postgres/transaction.hpp>
 
@@ -22,19 +23,29 @@ inline void RequirePlatformAdmin(const platform::auth::Identity& identity) {
         throw ApiError<403>{"platform_admin_required", "Нужны права администратора платформы"};
 }
 
+// Транзакция только для чтения: проверки прав и списки не блокируют организацию.
+inline constexpr pg::TransactionOptions kReadOnlyTransaction{
+    pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
+
+// Проверяет права одним запросом и без блокировки. Сценарии, которые меняют состав
+// администраторов, сначала вызывают LockOrganization.
 inline void RequireAdministrator(pg::Transaction& transaction,
     const boost::uuids::uuid& organization, const platform::auth::Identity& identity) {
-    const auto organizations = transaction.Execute(sql::kLockOrganization, organization);
-    if (organizations.IsEmpty())
+    const auto access = transaction.Execute(
+        sql::kGetAdministratorAccess, organization, identity.Issuer, identity.Subject);
+    if (access.IsEmpty())
         throw ApiError<404>{"organization_not_found", "Организация не найдена"};
     if (IsPlatformAdmin(identity))
         return;
-    const auto membership = transaction.Execute(
-        sql::kGetAdministratorPermissions, organization, identity.Issuer, identity.Subject);
-    if (membership.IsEmpty() ||
-        !ManagesOrganization(membership.AsSingleRow<std::vector<std::string>>()))
+    if (!ManagesOrganization(access.AsSingleRow<std::vector<std::string>>()))
         throw ApiError<403>{"organization_admin_required",
             "Нужны права управления сотрудниками и ролями организации"};
+}
+
+// Сериализует изменения, после которых в организации может не остаться администратора.
+inline void LockOrganization(pg::Transaction& transaction, const boost::uuids::uuid& organization) {
+    if (transaction.Execute(sql::kLockOrganization, organization).IsEmpty())
+        throw ApiError<404>{"organization_not_found", "Организация не найдена"};
 }
 
 inline models::pg::OrganizationRoleRaw RequireRole(

@@ -127,7 +127,7 @@ models::AccessEmployeesResult AccessComponent::ListEmployees(
     const models::AccessEmployeesRequest& request, const platform::auth::Identity& identity) const {
     if (IsPlatformAdmin(identity) && request.organization_id.has_value()) {
 
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
         try {
             RequireAdministrator(transaction, request.organization_id.value(), identity);
         } catch (const ApiError<404>& error) {
@@ -160,7 +160,7 @@ models::AccessEmployeesResult AccessComponent::ListEmployees(
 
 models::OrganizationIdentity AccessComponent::CheckAdministrator(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
     RequireAdministrator(transaction, request.organization_id, identity);
 
     transaction.Commit();

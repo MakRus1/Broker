@@ -12,6 +12,10 @@ $(addprefix test-all-,$(PRESETS)): CMAKE_SERVICES = all
 $(addprefix test-all-,$(PRESETS)): CMAKE_SHARED_CONTRACTS = ON
 $(addprefix ci-build-,$(PRESETS)): CMAKE_SERVICES = $(CI_BUILD_SERVICES)
 $(addprefix ci-build-,$(PRESETS)): CMAKE_SHARED_CONTRACTS = $(if $(filter false,$(CI_SHARED_CONTRACTS)),OFF,ON)
+# В CI хватает таблиц строк для стеков ASan/UBSan; объекты меньше, ccache вмещает полную сборку.
+CMAKE_DEBUG_INFO ?= full
+$(addprefix ci-build-,$(PRESETS)): CMAKE_DEBUG_INFO = line-tables
+CCACHE_MAXSIZE ?= 512M
 DOCKER_IMAGE ?= $(shell $(PYTHON3) $(REPO_ROOT)/scripts/container-images.py ref --variant $(if $(filter %-sanitize,$(MAKECMDGOALS)),sanitize,dev))
 DOCKER_PLATFORM ?= $(shell docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
 DOCKER_VOLUME_PREFIX = broker-$(subst /,-,$(DOCKER_PLATFORM))
@@ -43,7 +47,7 @@ doctor:
 
 $(addprefix cmake-,$(PRESETS)): cmake-%:
 	@PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh >/dev/null
-	$(REPO_ROOT)/.venv-gen/bin/cmake --preset $* -DBROKER_SERVICES="$(CMAKE_SERVICES)" -DBROKER_SHARED_CONTRACTS=$(CMAKE_SHARED_CONTRACTS) -DCMAKE_MAKE_PROGRAM=$(REPO_ROOT)/.venv-gen/bin/ninja -DPython3_EXECUTABLE=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh)
+	$(REPO_ROOT)/.venv-gen/bin/cmake --preset $* -DBROKER_SERVICES="$(CMAKE_SERVICES)" -DBROKER_SHARED_CONTRACTS=$(CMAKE_SHARED_CONTRACTS) -DBROKER_DEBUG_INFO=$(CMAKE_DEBUG_INFO) -DCMAKE_MAKE_PROGRAM=$(REPO_ROOT)/.venv-gen/bin/ninja -DPython3_EXECUTABLE=$$(PYTHON3="$(PYTHON3)" scripts/openapi_gen/ensure_venv.sh)
 $(addprefix build-,$(PRESETS)): build-%: cmake-%
 	$(REPO_ROOT)/.venv-gen/bin/cmake --build build-$* -j $(NPROCS) --target $(SERVICE)
 $(addprefix test-,$(PRESETS)): test-%: cmake-%
@@ -82,7 +86,7 @@ docker-pull:
 docker-image:
 	docker build --platform $(DOCKER_PLATFORM) --target dev -f tools/Dockerfile -t $(BROKER_IMAGE) .
 docker-%:
-	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e CCACHE_DIR=/workspaces/broker/.ccache -e CCACHE_BASEDIR=/workspaces/broker -e CCACHE_MAXSIZE=512M -e CCACHE_COMPILERCHECK=content -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS) TEST_SHARED_CONTRACTS=$(TEST_SHARED_CONTRACTS)
+	docker run --rm --init --platform $(DOCKER_PLATFORM) --network=host $(DOCKER_STATE_VOLUMES) -e CCACHE_DIR=/workspaces/broker/.ccache -e CCACHE_BASEDIR=/workspaces/broker -e CCACHE_MAXSIZE=$(CCACHE_MAXSIZE) -e CCACHE_COMPILERCHECK=content -e PIP_CACHE_DIR=/workspaces/broker/.cache/pip -e ASAN_OPTIONS -e UBSAN_OPTIONS -e CI_SERVICES -e CI_BUILD_SERVICES -e CI_RESULTS_DIR -e CI_SHARED_CONTRACTS -v "$(REPO_ROOT):/workspaces/broker" -w /workspaces/broker -e SERVICE=$(SERVICE) $(DOCKER_IMAGE) make $* SERVICE=$(SERVICE) NPROCS=$(NPROCS) TEST_SHARED_CONTRACTS=$(TEST_SHARED_CONTRACTS)
 
 .PHONY: db-up db-down testsuite-clean dist-clean
 db-up:

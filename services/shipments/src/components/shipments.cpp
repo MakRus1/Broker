@@ -249,6 +249,7 @@ models::ShipmentRouteSnapshot ShipmentsComponent::GetShipmentRouteSnapshot(
 models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& organization,
     const platform::auth::Identity& actor, const models::UpdateShipmentRequest& request,
     const std::optional<std::int64_t>& route_usage_version) const {
+    const auto rules = settings_.LoadRules(organization);
     try {
         auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
         const auto current =
@@ -272,8 +273,8 @@ models::Shipment ShipmentsComponent::UpdateShipment(const boost::uuids::uuid& or
                     "Данные участков изменились. Обновите поставку и повторите сохранение"};
         }
 
-        helpers::ValidateCard(card, settings_.Effective(transaction, organization, card.CustomerId),
-            dictionaries, &previous);
+        helpers::ValidateCard(
+            card, settings_.Resolve(organization, card.CustomerId, rules), dictionaries, &previous);
 
         const auto result =
             converters::Convert(transaction

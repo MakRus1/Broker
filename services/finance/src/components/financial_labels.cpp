@@ -6,6 +6,7 @@
 #include <models/errors.hpp>
 #include <models/pg/financial_label_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/financial_label_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -80,9 +81,8 @@ models::FinancialLabelListResult FinancialLabelsComponent::ListFinancialLabels(
         const auto query =
             platform::registry::BuildPage(registry_query::labels::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::FinancialLabelRegistryRow>>(pg::kRowTag);
         const auto cursor =

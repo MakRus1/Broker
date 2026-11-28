@@ -4,6 +4,7 @@
 #include <configs/sql_queries.hpp>
 #include <converters/draft_document.hpp>
 #include <converters/rows.hpp>
+#include <platform/db.hpp>
 #include <userver/logging/log.hpp>
 #include <userver/storages/postgres/io/json_types.hpp>
 #include <userver/utils/regex.hpp>
@@ -61,9 +62,8 @@ std::vector<CatalogEntry> ConfigStore::Catalog() const {
 Config ConfigStore::GetConfig(const std::string& name) const {
     ValidateName(name);
     // Значение, версия и активный драфт читаются согласованно, без блокировки публикации.
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto current = Current(transaction);
     const auto version = transaction.Execute(sql::kConfigVersion, name).AsSingleRow<std::int64_t>();
     const auto active = transaction.Execute(sql::kActiveDraft, name);

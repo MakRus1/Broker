@@ -6,6 +6,7 @@
 #include <models/financial_history_row.hpp>
 #include <models/invoice_name_row.hpp>
 #include <openapi/models.hpp>
+#include <platform/db.hpp>
 #include <set>
 #include <span>
 #include <userver/components/component_context.hpp>
@@ -343,9 +344,8 @@ FinancialHistoryComponent::FinancialHistoryComponent(
 models::FinancialHistoryResponse FinancialHistoryComponent::GetHistory(
     const boost::uuids::uuid& organization, const models::FinancialHistoryRequest& body,
     models::FinancialHistorySource source, const models::FinancialHistoryAccess& access) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto exists = source == Source::ServiceCharge ? sql::kGetServiceCharge
         : source == Source::Invoice                     ? sql::kGetInvoice
                                                         : sql::kGetPayment;

@@ -5,6 +5,4 @@
 
 namespace transport_locations::helpers {
 namespace pg = userver::storages::postgres;
-inline constexpr pg::TransactionOptions kReadSnapshot{
-    pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 }  // namespace transport_locations::helpers

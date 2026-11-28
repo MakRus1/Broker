@@ -12,8 +12,6 @@
 namespace shipments {
 namespace helpers {
 namespace pg = userver::storages::postgres;
-inline constexpr pg::TransactionOptions kReadOnlySnapshotTransaction{
-    pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
 
 template <typename Request, typename Result, typename Id>
 void WriteAudit(pg::Transaction& transaction, const boost::uuids::uuid& organization,

@@ -16,6 +16,7 @@
 #include <platform/auth/identity.hpp>
 #include <platform/charge_amounts.hpp>
 #include <platform/date_validation.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/service_charge_query.hpp>
 #include <set>
@@ -88,9 +89,8 @@ models::ServiceChargeListResult ServiceChargesComponent::ListServiceCharges(
     const boost::uuids::uuid& organization,
     const models::ListServiceChargesRequest& request) const {
     const auto& scope = request.scope;
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto rows = transaction.Execute(sql::kListServiceCharges, organization, scope.shipment_id,
         scope.transportation_id, request.after, request.include_archived, request.limit + 1);
     models::ServiceChargeListResult response;
@@ -215,9 +215,8 @@ models::ServiceChargeRegistryResult ServiceChargesComponent::ListServiceChargeRe
         const auto query = platform::registry::BuildPage(
             registry_query::service_charges::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::ServiceChargeRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::ServiceChargeRegistryCursor>(

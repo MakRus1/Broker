@@ -15,9 +15,12 @@ class SettingsComponent final : public userver::components::ComponentBase {
         const userver::components::ComponentConfig&, const userver::components::ComponentContext&);
     configs::ShipmentSettings Effective(
         const boost::uuids::uuid&, const std::optional<boost::uuids::uuid>& = std::nullopt) const;
-    configs::ShipmentSettings Effective(userver::storages::postgres::Transaction& transaction,
-        const boost::uuids::uuid& organization,
-        const std::optional<boost::uuids::uuid>& customer) const;
+    // Правила организации читаются отдельно от транзакции сценария: сценарий загружает их до
+    // Begin и применяет к данным, которые прочитал под своей блокировкой.
+    using StoredRules = std::optional<models::pg::OrganizationShipmentRules>;
+    StoredRules LoadRules(const boost::uuids::uuid& organization) const;
+    configs::ShipmentSettings Resolve(const boost::uuids::uuid& organization,
+        const std::optional<boost::uuids::uuid>& customer, const StoredRules& rules) const;
     std::vector<std::string> GetContainerTypes(bool include_inactive = false) const;
     models::ShipmentDictionaries GetDictionaries() const;
     models::ShipmentBusinessSettings GetBusinessSettings(
@@ -29,7 +32,6 @@ class SettingsComponent final : public userver::components::ComponentBase {
   private:
     userver::storages::postgres::ClusterPtr cluster_;
     platform::configs::Source configs_;
-    std::optional<models::pg::OrganizationShipmentRules> LoadRules(const boost::uuids::uuid&) const;
     models::ShipmentBusinessSettings BuildBusinessSettings(const configs::ShipmentSettings& limits,
         models::ShipmentBusinessRules rules, std::int64_t revision) const;
 };

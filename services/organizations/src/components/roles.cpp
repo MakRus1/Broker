@@ -3,6 +3,7 @@
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
 #include <models/pg/organization_role_raw.hpp>
+#include <platform/db.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -21,7 +22,8 @@ RolesComponent::RolesComponent(const userver::components::ComponentConfig& confi
 
 models::RolesListResult RolesComponent::ListRoles(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     RequireAdministrator(transaction, request.organization_id, identity);
     const auto roles = ConvertRows<models::pg::OrganizationRoleRaw>(
         transaction.Execute(sql::kListRoles, request.organization_id));

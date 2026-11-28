@@ -176,27 +176,11 @@ models::InvoiceDetails InvoicesComponent::FindInvoice(
 
 models::InvoiceListResult InvoicesComponent::ListInvoices(
     const boost::uuids::uuid& organization, const models::ListInvoicesRequest& request) const {
-    try {
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = platform::registry::RegistryOrderBy(
-            registry_query::invoices::registry_fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
-        platform::registry::ValidateListCursor(body.cursor, scope, date_sort);
-        const auto query =
-            platform::registry::BuildPage(registry_query::invoices::kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::InvoiceRegistryRow>>(pg::kRowTag);
-        const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
-            rows, body.limit, scope, [](const auto& row) { return row.Invoice.Id; }, date_sort);
-        transaction.Commit();
-        return models::InvoiceListResult{.items = converters::Convert(rows), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::InvoiceRegistryRow>(cluster_,
+        registry_query::invoices::kRegistry, request, organization,
+        [](const auto& row) { return row.Invoice.Id; });
+    return models::InvoiceListResult{
+        .items = converters::Convert(page.Rows), .next_cursor = page.NextCursor};
 }
 
 models::InvoiceCandidatesResult InvoicesComponent::ListServiceChargeCandidates(

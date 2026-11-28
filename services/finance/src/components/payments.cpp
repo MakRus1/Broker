@@ -178,27 +178,11 @@ models::PaymentDetails PaymentsComponent::FindPayment(
 
 models::PaymentListResult PaymentsComponent::ListPayments(
     const boost::uuids::uuid& organization, const models::ListPaymentsRequest& request) const {
-    try {
-        const auto& body = request;
-        const auto scope = platform::registry::CursorScope(body, organization);
-        const auto order = platform::registry::RegistryOrderBy(
-            registry_query::payments::registry_fields::kFields, body.sort);
-        const bool date_sort = order.CursorType == platform::registry::CursorKeyType::Date;
-        platform::registry::ValidateListCursor(body.cursor, scope, date_sort);
-        const auto query =
-            platform::registry::BuildPage(registry_query::payments::kRegistry, body, organization);
-        // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::PaymentRegistryRow>>(pg::kRowTag);
-        const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
-            rows, body.limit, scope, [](const auto& row) { return row.Payment.Id; }, date_sort);
-        transaction.Commit();
-        return models::PaymentListResult{.items = converters::Convert(rows), .next_cursor = cursor};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    const auto page = platform::registry::ReadPage<models::PaymentRegistryRow>(cluster_,
+        registry_query::payments::kRegistry, request, organization,
+        [](const auto& row) { return row.Payment.Id; });
+    return models::PaymentListResult{
+        .items = converters::Convert(page.Rows), .next_cursor = page.NextCursor};
 }
 
 models::PaymentFilterValuesResult PaymentsComponent::GetPaymentFilterValues(

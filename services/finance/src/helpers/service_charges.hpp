@@ -16,16 +16,20 @@ inline std::vector<models::ServiceCharge> ConvertServiceCharges(const pg::Result
     return result;
 }
 
-inline std::vector<models::ServiceChargeInvoice> LoadServiceChargeInvoices(
-    pg::Transaction& transaction, const boost::uuids::uuid& organization,
+inline std::vector<boost::uuids::uuid> ServiceChargeIds(
     const std::vector<models::ServiceCharge>& items) {
-    std::vector<models::ServiceChargeInvoice> result;
-    std::vector<boost::uuids::uuid> service_charge_ids;
+    std::vector<boost::uuids::uuid> result;
+    result.reserve(items.size());
     for (const auto& charge : items)
-        service_charge_ids.push_back(charge.id);
-    const auto invoices =
-        transaction.Execute(sql::kListServiceChargeInvoices, organization, service_charge_ids);
-    for (const auto& row : invoices) {
+        result.push_back(charge.id);
+    return result;
+}
+
+// Строки sql::kListServiceChargeInvoices.
+inline std::vector<models::ServiceChargeInvoice> ConvertServiceChargeInvoices(
+    const pg::ResultSet& rows) {
+    std::vector<models::ServiceChargeInvoice> result;
+    for (const auto& row : rows) {
         const auto assignment = row.As<models::ServiceChargeInvoiceRow>(pg::kRowTag);
         result.push_back(models::ServiceChargeInvoice{
             .direction = models::ParseEnumScalar(assignment.Direction, models::InvoiceDirection{}),

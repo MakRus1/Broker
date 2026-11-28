@@ -22,35 +22,13 @@ TransportationRegistry::TransportationRegistry(const userver::components::Compon
 models::TransportationListResult TransportationRegistry::ListTransportations(
     const boost::uuids::uuid& organization,
     const models::ListTransportationsRequest& request) const {
-    try {
-        const auto scope = platform::registry::CursorScope(request, organization);
-        const auto order =
-            registry::RegistryOrderBy(registry_query::registry_fields::kFields, request.sort);
-        if (request.after.has_value() &&
-            (request.cursor.has_value() || !order.ById || request.descending))
-            throw ApiError<400>{"invalid_cursor", "Для выбранной сортировки используйте cursor"};
-        if (request.cursor.has_value() && request.cursor.value().scope != scope)
-            throw ApiError<400>{
-                "invalid_cursor", "Фильтры или сортировка изменились. Начните с первой страницы"};
-
-        const auto query =
-            platform::registry::BuildPage(registry_query::kRegistry, request, organization);
-
-        // Все данные карточек страницы читаются одним запросом.
-        auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-        auto page = platform::registry::ExecuteWithCustomPlan(transaction, query)
-                        .AsContainer<std::vector<models::TransportationRegistryRow>>(pg::kRowTag);
-        const auto next_cursor = platform::registry::FinishListPage<models::RegistryCursor>(
-            page, request.limit, scope, [](const auto& row) { return row.Transportation.Id; });
-
-        auto result = converters::Convert(converters::Convert(page));
-        transaction.Commit();
-        return models::TransportationListResult{
-            .items = std::move(result), .next_cursor = std::move(next_cursor)};
-    } catch (const platform::registry::FilterError& error) {
-        throw ApiError<400>{"invalid_filter", error.what()};
-    }
+    // Все данные карточек страницы читаются одним запросом.
+    const auto page = platform::registry::ReadPage<models::TransportationRegistryRow>(cluster_,
+        registry_query::kRegistry, request, organization,
+        [](const auto& row) { return row.Transportation.Id; });
+    return models::TransportationListResult{
+        .items = converters::Convert(converters::Convert(page.Rows)),
+        .next_cursor = page.NextCursor};
 }
 
 models::RegistryValuesResult TransportationRegistry::GetFilterValues(

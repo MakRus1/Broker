@@ -27,7 +27,6 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     const auto organization = platform::auth::GetOrganization(actor);
     const auto rules = settings_.LoadRules(organization);
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
-    helpers::LockReplay(transaction, organization, "add_item", request);
     const auto replay =
         helpers::FindReplay<models::ShipmentItem>(transaction, organization, "add_item", request);
     if (replay.has_value()) {

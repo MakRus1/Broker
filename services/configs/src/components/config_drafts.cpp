@@ -64,7 +64,7 @@ Config ConfigStore::GetConfig(const std::string& name) const {
     // Значение, версия и активный драфт читаются согласованно, без блокировки публикации.
     auto transaction =
         cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
-    const auto current = LoadRevision(transaction);
+    const auto current = Current(transaction);
     const auto version = transaction.Execute(sql::kConfigVersion, name).AsSingleRow<std::int64_t>();
     const auto active = transaction.Execute(sql::kActiveDraft, name);
     const auto draft_id =
@@ -140,7 +140,7 @@ Draft ConfigStore::CreateDraft(const models::CreateConfigDraftRequest& request,
     transaction.Execute(sql::kLockRevision);
     if (!transaction.Execute(sql::kActiveDraft, request.config_name).IsEmpty())
         throw RevisionConflict("Config already has an active draft");
-    const auto current = LoadRevision(transaction);
+    const auto current = Current(transaction);
     const auto version =
         transaction.Execute(sql::kConfigVersion, request.config_name).AsSingleRow<std::int64_t>();
     if (request.expected_config_version != version)
@@ -243,7 +243,7 @@ Draft ConfigStore::ApproveDraft(const models::ConfigDraftActionRequest& request,
         throw DraftForbidden("Author cannot approve");
     if (draft.Value.has_value())
         ValidateConfig(draft.ConfigName, draft.Value.value());
-    const auto current = LoadRevision(transaction);
+    const auto current = Current(transaction);
     const auto version =
         transaction.Execute(sql::kConfigVersion, draft.ConfigName).AsSingleRow<std::int64_t>();
     const auto value = current.Values.HasMember(draft.ConfigName)

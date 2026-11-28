@@ -214,7 +214,7 @@ models::Shipment ShipmentsComponent::CreateShipmentFromSource(
 std::optional<models::Shipment> ShipmentsComponent::FindManualShipmentReplay(
     const boost::uuids::uuid& organization, const models::CreateShipmentRequest& request,
     const ShipmentSource& source, const json::Value& document) const {
-    if (const auto saved = helpers::FindReplay<models::Shipment>(
+    if (const auto saved = helpers::FindSavedReplay<models::Shipment>(
             cluster_, organization, "create_shipment", request);
         saved.has_value())
         return saved;

@@ -70,23 +70,12 @@ void ShipmentRoutes::ValidateRouteCounterparties(std::string_view access_token,
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};
         } catch (const platform::http::ErrorByStatus<404>&) {
             throw ApiError<400>{"invalid_route_counterparty", "Контрагент не найден в организации"};
-        } catch (const platform::http::ApiError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
-        } catch (const platform::http::CancelledError&) {
-            throw;
-        } catch (const platform::http::TransportError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
-        } catch (const platform::http::ContractError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
         }
     }
 }
 
 route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_view access_token,
-    const std::vector<models::ShipmentRouteSegment>& segments) const try {
+    const std::vector<models::ShipmentRouteSegment>& segments) const {
     std::set<boost::uuids::uuid> ids;
     const auto add = [&](const auto& location) {
         if (location.has_value())
@@ -117,23 +106,10 @@ route_details::RouteLocations ShipmentRoutes::LoadRouteLocations(std::string_vie
     }
 
     return result;
-} catch (const platform::http::CancelledError&) {
-
-    throw;
-} catch (const platform::http::ApiError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Не удалось проверить транспортные пункты"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Справочник транспортных пунктов недоступен"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Некорректный ответ справочника транспортных пунктов"};
 }
 
 void ShipmentRoutes::CheckExistingRouteUsage(std::string_view access_token,
-    const boost::uuids::uuid& shipment_id, const std::vector<boost::uuids::uuid>& changed) const
-    try {
+    const boost::uuids::uuid& shipment_id, const std::vector<boost::uuids::uuid>& changed) const {
     if (changed.empty())
         return;
 
@@ -145,14 +121,6 @@ void ShipmentRoutes::CheckExistingRouteUsage(std::string_view access_token,
         if (std::find(changed.begin(), changed.end(), id) != changed.end())
             throw ApiError<409>{"route_segment_in_use",
                 "Нельзя удалить или изменить тип участка с данными перевозок"};
-} catch (const platform::http::HandlerErrorBase&) {
-
-    throw;
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const std::exception&) {
-    throw ApiError<503>{
-        "transportations_unavailable", "Не удалось проверить данные участков перевозок"};
 }
 
 }  // namespace shipments

@@ -77,4 +77,4 @@ async def test_unavailable_fact_does_not_look_like_zero(api, mockserver):
     def unavailable(request):
         return mockserver.make_response(status=503, json={'error':'unavailable','message':'Retry'})
     result = await api.post('/api/v1/shipment-items/list', {'shipment_id': shipment['id']}, expected=503)
-    assert result['error'] == 'container_fact_unavailable'
+    assert result['error'] == 'dependency_unavailable'

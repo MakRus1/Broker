@@ -4,13 +4,12 @@
 #include <models/errors.hpp>
 #include <permissions/permissions.hpp>
 #include <platform/auth/identity.hpp>
-#include <platform/http_client.hpp>
 #include <utility>
 #include <views/api/v1/shipment_items/list/view.hpp>
 
 namespace shipments::views::api::v1::shipment_items::list {
 Response View::Handle(
-    Request&& request, userver::server::request::RequestContext& context, Deps deps) try {
+    Request&& request, userver::server::request::RequestContext& context, Deps deps) {
     platform::auth::CheckPermission(context, permissions::SHIPMENTS_READ);
     const auto organization = platform::auth::GetOrganization(platform::auth::GetIdentity(context));
 
@@ -28,15 +27,5 @@ Response View::Handle(
     auto result = container_plan::BuildPlanPage(snapshot, facts, body.after, body.limit);
     return Response200{
         .items = std::move(result.items), .unplanned_items = std::move(result.unplanned_items)};
-} catch (const platform::http::ApiError&) {
-
-    throw ApiError<503>{"container_fact_unavailable",
-        "Не удалось получить фактические перевозки. Повторите загрузку"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{"container_fact_unavailable",
-        "Не удалось получить фактические перевозки. Повторите загрузку"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{"container_fact_unavailable",
-        "Не удалось получить фактические перевозки. Повторите загрузку"};
 }
 }  // namespace shipments::views::api::v1::shipment_items::list

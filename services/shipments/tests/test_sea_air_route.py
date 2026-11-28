@@ -251,7 +251,7 @@ async def test_location_dependency_failure_does_not_create_shipment(api, locatio
     def unavailable(request):
         return mockserver.make_response(status=503)
     result = await api.post('/api/v1/shipments/create', creation(route_segments=stages(locations)), expected=503)
-    assert result['error'] == 'transport_locations_unavailable'
+    assert result['error'] == 'dependency_unavailable'
     with pgsql['db_1'].cursor() as cursor:
         cursor.execute('SELECT count(*) FROM shipments')
         assert cursor.fetchone()[0] == 0

@@ -57,6 +57,11 @@ class ContractError : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+// Текст ответа 503 dependency_unavailable, который сгенерированный handler отдаёт при сбое
+// соседнего сервиса. Какой сервис не ответил, видно в логах и метриках HTTP-клиента.
+inline constexpr const char* kDependencyUnavailableMessage =
+    "Связанный сервис временно недоступен. Повторите запрос позже";
+
 // Штатные исключения сохраняют различие таймаута, отмены и ошибки транспорта.
 using TimeoutError = userver::clients::http::TimeoutException;
 using CancelledError = userver::clients::http::CancelException;

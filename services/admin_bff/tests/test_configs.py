@@ -16,7 +16,7 @@ async def test_catalog(browser, mockserver):
     assert response.json()['items'][0]['config_name'] == 'EXAMPLE'
 
 
-@pytest.mark.parametrize('status', [400, 401, 403, 404, 409, 503])
+@pytest.mark.parametrize('status', [400, 401, 403, 404, 409])
 async def test_upstream_errors(browser, mockserver, status):
     await browser.sign_in()
 
@@ -27,6 +27,18 @@ async def test_upstream_errors(browser, mockserver, status):
     response = await browser.post('/api/configs/current', {'config_name': 'EXAMPLE'})
     assert response.status == status
     assert response.json()['message'] == 'Конфликт'
+
+
+async def test_upstream_outage_is_dependency_unavailable(browser, mockserver):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/admin/configs/current')
+    def current(request):
+        return mockserver.make_response(status=503, json={'error': 'example', 'message': 'Недоступен'})
+
+    response = await browser.post('/api/configs/current', {'config_name': 'EXAMPLE'})
+    assert response.status == 503
+    assert response.json()['error'] == 'dependency_unavailable'
 
 
 async def test_request_validation(browser, mockserver):

@@ -2,6 +2,9 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Полная сборка после слияния прогревает ccache: PR восстанавливают кеш последнего main.
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -34,7 +37,8 @@ jobs:
       - name: Определение затронутых сервисов
         id: detect
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # Вне PR база не передаётся: собираются и проверяются все сервисы.
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: python scripts/ci-tests.py plan --base "${BASE:-missing-base}"
 
   tools:
@@ -117,6 +121,7 @@ jobs:
             preset: debug
     runs-on: ${{ matrix.runner }}
     env:
+      CCACHE_MAXSIZE: 2G
       ASAN_OPTIONS: detect_leaks=1
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
       CI_SHARED_CONTRACTS: ${{ needs.plan.outputs.shared_contracts }}
@@ -157,12 +162,17 @@ jobs:
         uses: actions/cache/restore@v6.1.0
         with:
           path: .ccache
-          key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-${{ github.sha }}
+          key: ccache-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-${{ github.sha }}
           restore-keys: |
-            ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-
+            ccache-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json') }}-
+      - name: Кеш пакетов pip для venv userver
+        uses: actions/cache@v6.1.0
+        with:
+          path: .cache/pip
+          key: pip-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('tools/container-images.json', 'tools/python-constraints.txt', 'requirements.txt') }}
       - name: Права рабочего каталога для контейнера
         run: |
-          mkdir -p .ccache
+          mkdir -p .ccache .cache/pip
           sudo chown -R 1001:1001 "$GITHUB_WORKSPACE"
       - name: Сборка выбранных сервисов
         id: compile
@@ -171,7 +181,7 @@ jobs:
           DOCKER_IMAGE: ${{ steps.image.outputs.ref }}
           CI_BUILD_SERVICES: ${{ needs.plan.outputs.build_services }}
         run: |
-          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE=512M "$DOCKER_IMAGE" ccache --zero-stats
+          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE "$DOCKER_IMAGE" ccache --zero-stats
           make "docker-ci-build-$PRESET"
       - name: Статистика кеша компиляции
         if: ${{ always() && steps.image.outcome == 'success' }}
@@ -179,7 +189,7 @@ jobs:
           IMAGE: ${{ steps.image.outputs.ref }}
         run: |
           mkdir -p .ccache
-          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE=512M "$IMAGE" ccache --show-stats
+          docker run --rm -v "$PWD/.ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_MAXSIZE "$IMAGE" ccache --show-stats
       - name: Сохранить кеш успешной сборки
         if: ${{ !cancelled() && steps.compile.outcome == 'success' && steps.compile-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v6.1.0

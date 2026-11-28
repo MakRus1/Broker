@@ -3,6 +3,7 @@
 #include <converters/contracts.hpp>
 #include <models/contract_registry_row.hpp>
 #include <models/errors.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/contract_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -30,9 +31,8 @@ models::ContractListResult ContractRegistry::ListContracts(
         const auto query =
             platform::registry::BuildPage(registry_query::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::ContractRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::ContractRegistryCursor>(

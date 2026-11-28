@@ -3,6 +3,7 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <models/pg/railway_station_raw.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/stations.hpp>
 #include <userver/components/component_context.hpp>
@@ -29,7 +30,8 @@ models::StationListResult RailwayStationsComponent::List(
     if (!registry::CursorMatches(request, scope, false))
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
     const auto query = StationQuery(request);
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     auto rows =
         platform::registry::ExecuteWithCustomPlan(transaction, query)
             .AsContainer<std::vector<registry::Row<models::pg::RailwayStationRaw>>>(pg::kRowTag);

@@ -5,6 +5,7 @@
 #include <helpers/audit.hpp>
 #include <models/pg/organization_role_raw.hpp>
 #include <models/registry_default_row.hpp>
+#include <platform/db.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 
@@ -48,7 +49,8 @@ models::RegistryDefaultsGetResult RegistryDefaultsComponent::GetOwnRegistryDefau
 
 models::RegistryDefaultsListResult RegistryDefaultsComponent::ListRoleRegistryDefaults(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     RequireAdministrator(transaction, request.organization_id, identity);
     models::RegistryDefaultsListResult response{
         .items = converters::ConvertRegistryDefaults(

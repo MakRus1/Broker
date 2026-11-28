@@ -12,6 +12,7 @@
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/payment_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/payment_query.hpp>
 #include <userver/components/component_context.hpp>
@@ -168,9 +169,8 @@ models::PaymentDetails PaymentsComponent::SavePayment(const boost::uuids::uuid& 
 
 models::PaymentDetails PaymentsComponent::FindPayment(
     const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     auto result = LoadPayment(transaction, organization, request.id);
     transaction.Commit();
     return result;
@@ -188,9 +188,8 @@ models::PaymentListResult PaymentsComponent::ListPayments(
         const auto query =
             platform::registry::BuildPage(registry_query::payments::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::PaymentRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(
@@ -249,9 +248,8 @@ models::PaymentInvoiceCandidatesResult PaymentsComponent::ListInvoiceCandidates(
 
 models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
     const boost::uuids::uuid& organization, const models::InvoiceBalanceRequest& request) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     auto result = LoadInvoiceBalance(transaction, organization, request.id);
     transaction.Commit();
     return result;
@@ -260,9 +258,8 @@ models::PaymentInvoice PaymentsComponent::GetInvoiceBalance(
 models::AvailablePayments PaymentsComponent::ListPaymentCandidates(
     const boost::uuids::uuid& organization, const models::PaymentCandidatesRequest& request) const {
     const auto& body = request;
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto invoices = transaction.Execute(sql::kGetInvoice, organization, body.invoice_id);
     if (invoices.IsEmpty())
         throw ApiError<404>{"invoice_not_found", "Счёт не найден"};

@@ -23,10 +23,6 @@ inline void RequirePlatformAdmin(const platform::auth::Identity& identity) {
         throw ApiError<403>{"platform_admin_required", "Нужны права администратора платформы"};
 }
 
-// Транзакция только для чтения: проверки прав и списки не блокируют организацию.
-inline constexpr pg::TransactionOptions kReadOnlyTransaction{
-    pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly};
-
 // Проверяет права одним запросом и без блокировки. Сценарии, которые меняют состав
 // администраторов, сначала вызывают LockOrganization.
 inline void RequireAdministrator(pg::Transaction& transaction,

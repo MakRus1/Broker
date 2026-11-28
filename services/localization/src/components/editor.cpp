@@ -4,6 +4,7 @@
 #include <localization/sql_queries.hpp>
 #include <models/editor_catalogs_row.hpp>
 #include <models/editor_row.hpp>
+#include <platform/db.hpp>
 #include <platform/handler_error.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
@@ -47,9 +48,7 @@ models::CatalogEditorState EditorComponent::GetEditorState(
     const models::GetEditorRequest& request) const {
     const auto scope =
         request.organization_id ? userver::utils::ToString(*request.organization_id) : "global";
-    auto tx = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto tx = cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto source = tx.Execute(sql::kGetSourceCatalog).AsSingleRow<json::Value>();
     auto result = ReadEditorSnapshot(tx, scope, source);
     tx.Commit();

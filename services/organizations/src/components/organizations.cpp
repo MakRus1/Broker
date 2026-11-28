@@ -3,6 +3,7 @@
 #include <helpers/access.hpp>
 #include <helpers/audit.hpp>
 #include <models/pg/organization_raw.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/admin.hpp>
 #include <userver/components/component_context.hpp>
@@ -30,9 +31,8 @@ models::OrganizationsListResult OrganizationsComponent::ListOrganizations(
 
     const auto query = OrganizationQuery(request);
 
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     auto rows =
         platform::registry::ExecuteWithCustomPlan(transaction, query)
             .AsContainer<std::vector<registry::Row<models::pg::OrganizationRaw>>>(pg::kRowTag);

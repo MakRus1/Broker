@@ -19,6 +19,7 @@
 #include <models/pg/transportation_event.hpp>
 #include <models/pg/transportation_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <platform/text.hpp>
 #include <set>
 #include <userver/components/component_context.hpp>
@@ -104,7 +105,7 @@ models::TransportationHistoryResult TransportationsComponent::GetTransportationH
     // Наличие перевозки и её история проверяются в одном снимке.
 
     auto transaction =
-        cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     if (transaction.Execute(sql::kGetTransportation, organization, request.transportation_id)
             .IsEmpty())
         throw ApiError<404>{"not_found", "Перевозка не найдена"};

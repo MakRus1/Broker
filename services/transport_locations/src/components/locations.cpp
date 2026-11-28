@@ -3,6 +3,7 @@
 #include <helpers/database.hpp>
 #include <models/errors.hpp>
 #include <models/pg/transport_location_raw.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/locations.hpp>
 #include <userver/components/component_context.hpp>
@@ -28,7 +29,8 @@ models::LocationListResult LocationsComponent::List(
     if (!registry::CursorMatches(request, scope, EnumValue(request.sort) == "id"))
         throw ApiError<400>{"invalid_cursor", "Курсор не соответствует фильтрам или сортировке"};
     const auto query = LocationQuery(request);
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadSnapshot);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     auto rows =
         platform::registry::ExecuteWithCustomPlan(transaction, query)
             .AsContainer<std::vector<registry::Row<models::pg::TransportLocationRaw>>>(pg::kRowTag);

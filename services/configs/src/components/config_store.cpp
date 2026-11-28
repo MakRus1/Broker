@@ -22,12 +22,11 @@ ConfigStore::ConfigStore(const userver::components::ComponentConfig& config,
       allow_self_approval_(context.FindComponent<DraftPolicy>().AllowSelfApproval()) {}
 
 Revision ConfigStore::Current() const {
-    return cluster_->Execute(pg::ClusterHostType::kMaster, sql::kLastRevision)
-        .AsSingleRow<Revision>(pg::kRowTag);
+    return LoadRevision(cluster_);
 }
 
-Revision ConfigStore::Current(pg::Transaction& transaction) const {
-    return transaction.Execute(sql::kLastRevision).AsSingleRow<Revision>(pg::kRowTag);
+Revision ConfigStore::LoadRevision(platform::db::Executor executor) const {
+    return executor.Execute(sql::kLastRevision).AsSingleRow<Revision>(pg::kRowTag);
 }
 
 ConfigValues ConfigStore::Values(const std::optional<std::vector<std::string>>& ids) const {

@@ -8,6 +8,7 @@
 #include <models/pg/shipment_item.hpp>
 #include <models/pg/shipment_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 
@@ -23,8 +24,10 @@ ContainerPlanComponent::ContainerPlanComponent(const userver::components::Compon
 
 models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     const models::AddItemRequest& request, const platform::auth::Identity& actor) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto organization = platform::auth::GetOrganization(actor);
+    const auto rules = settings_.LoadRules(organization);
+    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
+    helpers::LockReplay(transaction, organization, "add_item", request);
     const auto replay =
         helpers::FindReplay<models::ShipmentItem>(transaction, organization, "add_item", request);
     if (replay.has_value()) {
@@ -40,7 +43,7 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
     const auto previous = shipment.AsSingleRow<models::pg::ShipmentRaw>();
     helpers::CheckRevision(previous.Revision, request.expected_revision);
 
-    const auto settings = settings_.Effective(transaction, organization, previous.CustomerId);
+    const auto settings = settings_.Resolve(organization, previous.CustomerId, rules);
     if (!settings.PlannedContainers)
         throw ApiError<400>{
             "planned_containers_disabled", "Плановые контейнеры отключены для организации"};
@@ -65,7 +68,7 @@ models::ShipmentItem ContainerPlanComponent::AddPlannedContainer(
 ContainerPlanSnapshot ContainerPlanComponent::LoadPlan(
     const boost::uuids::uuid& organization, const boost::uuids::uuid& shipment_id) const {
     auto transaction =
-        cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     if (transaction.Execute(sql::kGetShipment, organization, shipment_id).IsEmpty())
         throw ApiError<404>{"not_found", "Поставка не найдена"};
     auto rows = transaction.Execute(sql::kListItems, organization, shipment_id)

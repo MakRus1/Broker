@@ -10,6 +10,7 @@
 #include <models/pg/invoice_raw.hpp>
 #include <models/pg/service_charge_raw.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <platform/document_number.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/invoice_query.hpp>
@@ -79,9 +80,7 @@ InvoicesComponent::InvoicesComponent(const userver::components::ComponentConfig&
 models::InvoicePrintSnapshot InvoicesComponent::ReadInvoicePrintSnapshot(
     const boost::uuids::uuid& organization, const models::InvoicePrintRequest& request) const {
     const auto& body = request;
-    auto read = cluster_->Begin(pg::ClusterHostType::kMaster,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto read = cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     const auto details = FindInvoice(read, organization, body.id);
     if (details.invoice.revision != body.revision)
         throw ApiError<409>{
@@ -168,9 +167,8 @@ models::InvoiceDetails InvoicesComponent::SaveInvoice(const boost::uuids::uuid& 
 
 models::InvoiceDetails InvoicesComponent::FindInvoice(
     const boost::uuids::uuid& organization, const models::GetInvoiceRequest& request) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kSlave,
-        pg::TransactionOptions{
-            pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kSlave, platform::db::kReadOnlySnapshot);
     auto result = FindInvoice(transaction, organization, request.id);
     transaction.Commit();
     return result;
@@ -188,9 +186,8 @@ models::InvoiceListResult InvoicesComponent::ListInvoices(
         const auto query =
             platform::registry::BuildPage(registry_query::invoices::kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::InvoiceRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::InvoiceRegistryCursor>(

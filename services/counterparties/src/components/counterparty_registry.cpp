@@ -2,6 +2,7 @@
 #include <converters/counterparties.hpp>
 #include <models/counterparty_registry_row.hpp>
 #include <models/errors.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
@@ -31,9 +32,8 @@ models::CounterpartyListResult CounterpartyRegistry::ListCounterparties(
 
         const auto query = platform::registry::BuildPage(kRegistry, body, organization);
         // Транзакция ограничивает SET LOCAL; HTTP-вызовов и записи внутри нет.
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster,
-            pg::TransactionOptions{
-                pg::IsolationLevel::kRepeatableRead, pg::TransactionOptions::kReadOnly});
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::CounterpartyRegistryRow>>(pg::kRowTag);
         const auto cursor = platform::registry::FinishListPage<models::CounterpartyRegistryCursor>(

@@ -8,6 +8,7 @@
 #include <models/pg/organization_raw.hpp>
 #include <models/pg/platform_access_raw.hpp>
 #include <permissions/permissions.hpp>
+#include <platform/db.hpp>
 #include <userver/components/component_context.hpp>
 #include <userver/storages/postgres/component.hpp>
 #include <userver/storages/postgres/exceptions.hpp>
@@ -127,7 +128,8 @@ models::AccessEmployeesResult AccessComponent::ListEmployees(
     const models::AccessEmployeesRequest& request, const platform::auth::Identity& identity) const {
     if (IsPlatformAdmin(identity) && request.organization_id.has_value()) {
 
-        auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+        auto transaction =
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         try {
             RequireAdministrator(transaction, request.organization_id.value(), identity);
         } catch (const ApiError<404>& error) {
@@ -160,7 +162,8 @@ models::AccessEmployeesResult AccessComponent::ListEmployees(
 
 models::OrganizationIdentity AccessComponent::CheckAdministrator(
     const models::OrganizationIdentity& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     RequireAdministrator(transaction, request.organization_id, identity);
 
     transaction.Commit();

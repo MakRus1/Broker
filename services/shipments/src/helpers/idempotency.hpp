@@ -3,6 +3,7 @@
 #include <helpers/json.hpp>
 #include <models/pg/idempotent_result.hpp>
 #include <openapi/models.hpp>
+#include <platform/db.hpp>
 
 namespace shipments::helpers {
 template <typename Result, typename Request>
@@ -18,23 +19,20 @@ std::optional<Result> ReadReplay(const pg::ResultSet& rows, const Request& reque
     return models::ParseModelJson(saved.Result, std::type_identity<Result>{});
 }
 
-template <typename Result, typename Request>
-std::optional<Result> FindReplay(pg::Transaction& transaction,
-    const boost::uuids::uuid& organization, const std::string& action, const Request& request) {
+// Повтор без блокировки годится для быстрого ответа до транзакции. Внутри транзакции записи
+// сначала берётся LockReplay, чтобы параллельный запрос с тем же ключом дождался результата.
+template <typename Request>
+void LockReplay(pg::Transaction& transaction, const boost::uuids::uuid& organization,
+    const std::string& action, const Request& request) {
     transaction.Execute(sql::kLockIdempotency, organization, action, request.idempotency_key);
-    const auto rows =
-        transaction.Execute(sql::kFindIdempotency, organization, action, request.idempotency_key);
-    return ReadReplay<Result>(rows, request);
 }
 
-// Быстрый повтор не зависит от доступности внешних справочников. Запись и гонки
-// по-прежнему защищены FindReplay внутри транзакции создания.
 template <typename Result, typename Request>
-std::optional<Result> FindSavedReplay(const pg::ClusterPtr& cluster,
+std::optional<Result> FindReplay(platform::db::Executor executor,
     const boost::uuids::uuid& organization, const std::string& action, const Request& request) {
-    const auto rows = cluster->Execute(pg::ClusterHostType::kMaster, sql::kFindIdempotency,
-        organization, action, request.idempotency_key);
-    return ReadReplay<Result>(rows, request);
+    return ReadReplay<Result>(
+        executor.Execute(sql::kFindIdempotency, organization, action, request.idempotency_key),
+        request);
 }
 
 template <typename Request, typename Result>

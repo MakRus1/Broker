@@ -101,7 +101,7 @@ SettingsComponent::SettingsComponent(const userver::components::ComponentConfig&
           context.FindComponent<userver::components::Postgres>("postgres-shipments").GetCluster()),
       configs_(context.FindComponent<userver::components::DynamicConfig>().GetSource()) {}
 
-std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRules(
+SettingsComponent::StoredRules SettingsComponent::LoadRules(
     const boost::uuids::uuid& organization) const {
     return ReadStoredRules(cluster_->Execute(
         pg::ClusterHostType::kMaster, sql::kGetOrganizationShipmentRules, organization));
@@ -109,15 +109,12 @@ std::optional<models::pg::OrganizationShipmentRules> SettingsComponent::LoadRule
 
 configs::ShipmentSettings SettingsComponent::Effective(const boost::uuids::uuid& organization,
     const std::optional<boost::uuids::uuid>& customer) const {
-    return ResolveEffectiveSettings(
-        configs_.GetSnapshot(), organization, customer, LoadRules(organization));
+    return Resolve(organization, customer, LoadRules(organization));
 }
 
-configs::ShipmentSettings SettingsComponent::Effective(pg::Transaction& transaction,
-    const boost::uuids::uuid& organization,
-    const std::optional<boost::uuids::uuid>& customer) const {
-    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization, customer,
-        ReadStoredRules(transaction.Execute(sql::kGetOrganizationShipmentRules, organization)));
+configs::ShipmentSettings SettingsComponent::Resolve(const boost::uuids::uuid& organization,
+    const std::optional<boost::uuids::uuid>& customer, const StoredRules& rules) const {
+    return ResolveEffectiveSettings(configs_.GetSnapshot(), organization, customer, rules);
 }
 
 models::ShipmentBusinessSettings SettingsComponent::BuildBusinessSettings(

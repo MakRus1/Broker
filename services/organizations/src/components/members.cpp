@@ -5,6 +5,7 @@
 #include <models/pg/member_raw.hpp>
 #include <models/provisioning_row.hpp>
 #include <platform/contact_validation.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <platform/text.hpp>
 #include <registry/admin.hpp>
@@ -27,7 +28,8 @@ MembersComponent::MembersComponent(const userver::components::ComponentConfig& c
 
 models::MembersListResult MembersComponent::ListMembers(
     const models::ListMembersRequest& request, const platform::auth::Identity& identity) const {
-    auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+    auto transaction =
+        cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
     RequireAdministrator(transaction, request.organization_id, identity);
     const auto scope = registry::CursorScope(request, request.organization_id);
     if (!registry::CursorMatches(request, scope, EnumValue(request.sort) == "subject"))
@@ -128,7 +130,8 @@ models::MemberResult MembersComponent::AddExistingMember(
     const models::AddMemberRequest& request, const platform::auth::Identity& identity) const {
     try {
         {
-            auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, kReadOnlyTransaction);
+            auto transaction =
+                cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
             RequireAdministrator(transaction, request.organization_id, identity);
             RequireRole(transaction, request.organization_id, request.role);
             transaction.Commit();

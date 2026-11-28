@@ -39,6 +39,7 @@ models::CreationOperation TransportationOperationsComponent::RequestTransportati
 
     auto transaction = cluster_->Begin(pg::ClusterHostType::kMaster, pg::TransactionOptions{});
     const auto organization = platform::auth::GetOrganization(identity);
+    helpers::LockReplay(transaction, organization, "create_operation", request);
     const auto replay = helpers::FindReplay<models::CreationOperation>(
         transaction, organization, "create_operation", request);
     if (replay.has_value()) {

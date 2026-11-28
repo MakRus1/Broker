@@ -7,6 +7,7 @@
 #include <models/revision.hpp>
 #include <openapi/models.hpp>
 #include <platform/auth/identity.hpp>
+#include <platform/db.hpp>
 #include <userver/components/component_base.hpp>
 #include <userver/storages/postgres/cluster.hpp>
 #include <userver/storages/postgres/transaction.hpp>
@@ -41,7 +42,7 @@ class ConfigStore final : public userver::components::ComponentBase {
 
   private:
     void ValidateConfig(const std::string& name, const Json& value) const;
-    Revision Current(userver::storages::postgres::Transaction& transaction) const;
+    Revision LoadRevision(platform::db::Executor executor) const;
     Revision PublishLocked(userver::storages::postgres::Transaction&, const Revision& current,
         const Json& values) const;
     Draft LoadActiveDraft(userver::storages::postgres::Transaction&, std::int64_t id,

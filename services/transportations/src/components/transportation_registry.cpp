@@ -3,6 +3,7 @@
 #include <converters/transportations.hpp>
 #include <helpers/database.hpp>
 #include <models/transportation_registry_row.hpp>
+#include <platform/db.hpp>
 #include <platform/registry_read.hpp>
 #include <registry/query.hpp>
 #include <userver/components/component_context.hpp>
@@ -37,7 +38,7 @@ models::TransportationListResult TransportationRegistry::ListTransportations(
 
         // Все данные карточек страницы читаются одним запросом.
         auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         auto page = platform::registry::ExecuteWithCustomPlan(transaction, query)
                         .AsContainer<std::vector<models::TransportationRegistryRow>>(pg::kRowTag);
         const auto next_cursor = platform::registry::FinishListPage<models::RegistryCursor>(
@@ -84,7 +85,7 @@ models::RegistryValuesResult TransportationRegistry::GetFilterValues(
                   registry_query::kRegistry, request, organization);
         // Custom plan сохраняет селективность условий и вариантов связанной коллекции.
         auto transaction =
-            cluster_->Begin(pg::ClusterHostType::kMaster, helpers::kReadOnlySnapshotTransaction);
+            cluster_->Begin(pg::ClusterHostType::kMaster, platform::db::kReadOnlySnapshot);
         const auto rows = platform::registry::ExecuteWithCustomPlan(transaction, query)
                               .AsContainer<std::vector<registry::ValueRow>>(pg::kRowTag);
         transaction.Commit();

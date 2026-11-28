@@ -605,7 +605,8 @@ async def test_transportation_registry_adds_shipment_references(browser, mockser
     assert counterparties.times_called == 1
 
 
-async def test_transportation_registry_keeps_rows_without_references(browser, mockserver):
+@pytest.mark.parametrize('status', [403, 500])
+async def test_transportation_registry_keeps_rows_without_references(browser, mockserver, status):
     await browser.sign_in()
 
     @mockserver.json_handler('/api/v1/transportations/list')
@@ -615,7 +616,7 @@ async def test_transportation_registry_keeps_rows_without_references(browser, mo
     @mockserver.json_handler('/api/v1/shipments/list')
     def shipments(request):
         return mockserver.make_response(
-            status=403, json={'error': 'forbidden', 'message': 'Нет доступа'}
+            status=status, json={'error': 'failure', 'message': 'Ошибка'}
         )
 
     @mockserver.json_handler('/api/v1/counterparties/list')
@@ -628,7 +629,8 @@ async def test_transportation_registry_keeps_rows_without_references(browser, mo
     assert counterparties.times_called == 0
 
 
-async def test_transportation_registry_keeps_numbers_without_customers(browser, mockserver):
+@pytest.mark.parametrize('status', [403, 500])
+async def test_transportation_registry_keeps_numbers_without_customers(browser, mockserver, status):
     await browser.sign_in()
 
     @mockserver.json_handler('/api/v1/transportations/list')
@@ -642,7 +644,7 @@ async def test_transportation_registry_keeps_numbers_without_customers(browser, 
     @mockserver.json_handler('/api/v1/counterparties/list')
     def counterparties(request):
         return mockserver.make_response(
-            status=403, json={'error': 'forbidden', 'message': 'Нет доступа'}
+            status=status, json={'error': 'failure', 'message': 'Ошибка'}
         )
 
     response = await browser.post('/api/v1/transportations/list', {})

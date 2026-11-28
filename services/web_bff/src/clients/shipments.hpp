@@ -1,6 +1,7 @@
 #pragma once
 #include <clients/shipments/client.hpp>
 #include <platform/http_client.hpp>
+#include <userver/logging/log.hpp>
 #include <userver/utils/boost_uuid4.hpp>
 
 #include <set>
@@ -9,7 +10,8 @@
 #include <vector>
 
 namespace web_bff::clients::shipments {
-// Поставки по ID одной страницы реестра. Без права чтения поставок список пуст.
+// Поставки по ID одной страницы реестра. Номер и клиент в реестре необязательны: без права чтения
+// или при сбое сервиса поставок список пуст, и строки реестра приходят без них.
 inline std::vector<models::Shipment> ListByIds(const Client& client,
     const std::set<boost::uuids::uuid>& ids, std::string_view access_token) try {
     if (ids.empty())
@@ -23,8 +25,19 @@ inline std::vector<models::Shipment> ListByIds(const Client& client,
                                  .limit = static_cast<std::int64_t>(ids.size())}},
             access_token)
         .items;
-} catch (const ::platform::http::ErrorByStatus<403>&) {
+} catch (const ::platform::http::CancelledError&) {
 
+    throw;
+} catch (const ::platform::http::ErrorByStatus<403>&) {
+    return {};
+} catch (const ::platform::http::ApiError& error) {
+    LOG_WARNING() << "shipments unavailable for registry, HTTP " << error.GetStatus();
+    return {};
+} catch (const ::platform::http::TransportError& error) {
+    LOG_WARNING() << "shipments unavailable for registry: " << error.what();
+    return {};
+} catch (const ::platform::http::ContractError& error) {
+    LOG_WARNING() << "shipments invalid response for registry: " << error.what();
     return {};
 }
 }  // namespace web_bff::clients::shipments

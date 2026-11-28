@@ -61,7 +61,7 @@ async def test_public_catalog_excludes_organization_and_private_keys(service_cli
     assert (await service_client.get('/localization/catalog?locale=de')).status == 400
 
 
-@pytest.mark.parametrize('failure,expected', [(403, 403), (404, 403), (500, 502), ('invalid_json', 502)])
+@pytest.mark.parametrize('failure,expected', [(403, 403), (404, 403), (500, 503), ('invalid_json', 503)])
 async def test_catalog_requires_successful_membership_check(api, mockserver, failure, expected):
     @mockserver.handler('/api/organizations/membership/get')
     def unavailable(request):
@@ -71,4 +71,4 @@ async def test_catalog_requires_successful_membership_check(api, mockserver, fai
         return mockserver.make_response(status=failure, json={'error': 'test', 'message': 'test'})
 
     error = await api.post(PATH, {'organization_id': ORGANIZATION, 'locale': 'ru'}, expected=expected)
-    assert error['error'] == ('organization_access_denied' if expected == 403 else 'organizations_unavailable')
+    assert error['error'] == ('organization_access_denied' if expected == 403 else 'dependency_unavailable')

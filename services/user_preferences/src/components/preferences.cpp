@@ -30,15 +30,6 @@ void PreferencesComponent::CheckOrganization(
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<403>{"organization_access_denied", "Нет доступа к организации"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<502>{
-            "organizations_unavailable", "Не удалось проверить доступ к организации"};
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<502>{"organizations_unavailable", "Сервис организаций недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<502>{"organizations_unavailable", "Некорректный ответ сервиса организаций"};
     }
 }
 

@@ -55,7 +55,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/finance/models.yaml#/FinancialLabelError
-        '502':
+        '503':
           description: Не удалось проверить поставку, перевозку или стороны начисления
           content:
             application/json:
@@ -134,7 +134,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/finance/models.yaml#/FinancialLabelError
-        '502':
+        '503':
           description: Не удалось проверить поставку, перевозку или стороны начисления
           content:
             application/json:
@@ -194,7 +194,7 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/finance/models.yaml#/FinancialLabelError
-        '502':
+        '503':
           description: Не удалось проверить поставку, перевозку или стороны начисления
           content:
             application/json:

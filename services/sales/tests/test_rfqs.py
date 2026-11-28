@@ -146,7 +146,7 @@ async def test_combine_suppliers_for_different_legs_and_reject_changed_route(api
 @pytest.mark.parametrize('status, expected_status, code', [
     (403, 403, 'reference_forbidden'),
     (404, 404, 'reference_not_found'),
-    (503, 502, 'reference_unavailable'),
+    (503, 503, 'dependency_unavailable'),
 ])
 async def test_rfq_reference_failure_does_not_save(api, mockserver, status, expected_status, code):
     incoming, value = await setup_rfq(api)
@@ -426,8 +426,8 @@ async def test_suggestion_does_not_choose_partial_result_when_rates_fail(api, mo
         return mockserver.make_response(status=503)
     error = await api.post('/api/v1/sales/proposals/suggest', {
         'strategy': 'minimum_purchase', 'inquiry_id': incoming['id'], 'calculation_date': '2026-11-08',
-    }, expected=502)
-    assert error['error'] == 'rates_unavailable'
+    }, expected=503)
+    assert error['error'] == 'dependency_unavailable'
 
 
 async def test_suggestion_loads_each_currency_once_and_skips_expired_currency(api, mockserver):

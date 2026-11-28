@@ -176,9 +176,9 @@ async def test_calculation_dependency_failure_does_not_save_proposal(api, mockse
             return mockserver.make_response('invalid-response', status=status)
         return mockserver.make_response(status=status, json={'error': 'unavailable', 'message': 'Ошибка справочника'})
 
-    expected = status if status in (403, 404) else 502
+    expected = status if status in (403, 404) else 503
     result = await api.post(BASE + 'save', value, expected=expected)
-    assert result['error'] in ('reference_forbidden', 'reference_not_found', 'reference_unavailable')
+    assert result['error'] in ('reference_forbidden', 'reference_not_found', 'dependency_unavailable')
     assert (await api.post(BASE + 'list', {'id': incoming['id']}))['items'] == []
 
 async def test_repeated_lines_load_each_reference_once(api, finance, mockserver):

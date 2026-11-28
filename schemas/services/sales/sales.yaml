@@ -55,12 +55,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -114,12 +108,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -187,12 +175,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -248,12 +230,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -317,12 +293,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -376,12 +346,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -449,12 +413,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -510,12 +468,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -579,12 +531,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -632,12 +578,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -695,12 +635,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -748,12 +682,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -1076,12 +1004,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1135,12 +1057,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -1208,12 +1124,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1269,12 +1179,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -1342,12 +1246,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1408,12 +1306,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1469,12 +1361,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:
@@ -1542,12 +1428,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1610,12 +1490,6 @@ paths:
             application/json:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
-        '502':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
         '503':
           description: Ошибка запроса
           content:
@@ -1665,12 +1539,6 @@ paths:
               schema:
                 $ref: components/schemas/models.yaml#/ApiError
         '409':
-          description: Ошибка запроса
-          content:
-            application/json:
-              schema:
-                $ref: components/schemas/models.yaml#/ApiError
-        '502':
           description: Ошибка запроса
           content:
             application/json:

@@ -43,7 +43,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/errors.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис прав недоступен
           content:
             application/json:
@@ -91,7 +91,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/errors.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис прав недоступен
           content:
             application/json:
@@ -139,7 +139,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/errors.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис прав недоступен
           content:
             application/json:

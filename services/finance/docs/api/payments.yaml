@@ -50,7 +50,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/models.yaml#/FinancialLabelError
-        '502':
+        '503':
           description: Не удалось проверить стороны или банковские счета
           content:
             application/json:

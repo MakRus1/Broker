@@ -185,18 +185,18 @@ async def test_dependency_errors_do_not_create_entry(api, charge, references, sc
     references['status'] = 404
     await api.post(BASE+'save', value, expected=404)
     references['status'] = 503
-    await api.post(BASE+'save', value, expected=502)
+    await api.post(BASE+'save', value, expected=503)
     references['status'] = 200
     assert (await listing(api, scope))['items'] == []
 
 
 @pytest.mark.parametrize('target', ['status', 'transport_status', 'party_status', 'contract_status'])
-@pytest.mark.parametrize('status,expected', [(403,403),(404,404),(503,502)])
+@pytest.mark.parametrize('status,expected', [(403,403),(404,404),(503,503)])
 async def test_shared_http_status_errors(api, charge, references, target, status, expected):
     value = await charge(**({'transportation_id': TRANSPORT} if target == 'transport_status' else {}))
     references[target] = status
     result = await api.post(BASE+'save', value, expected=expected)
-    assert result['error'] == {403:'forbidden_reference',404:'reference_not_found',502:'reference_unavailable'}[expected]
+    assert result['error'] == {403:'forbidden_reference',404:'reference_not_found',503:'dependency_unavailable'}[expected]
 
 @pytest.mark.parametrize('transportation_id', [None, TRANSPORT])
 @pytest.mark.parametrize('direction', ['income', 'expense'])

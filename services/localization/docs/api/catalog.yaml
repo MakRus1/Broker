@@ -45,7 +45,7 @@ paths:
             application/json:
               schema:
                 $ref: ../components/schemas/errors.yaml#/ApiError
-        '502':
+        '503':
           description: Сервис организаций недоступен
           content:
             application/json:

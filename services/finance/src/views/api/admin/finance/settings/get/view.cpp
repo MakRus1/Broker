@@ -17,15 +17,6 @@ Response View::Handle(
         throw ApiError<403>{"forbidden", "Нет права управления организацией"};
     } catch (const platform::http::ErrorByStatus<404>&) {
         throw ApiError<404>{"organization_not_found", "Организация не найдена"};
-    } catch (const platform::http::CancelledError&) {
-        throw;
-    } catch (const platform::http::ApiError&) {
-        throw ApiError<503>{
-            "organizations_unavailable", "Не удалось проверить доступ к организации"};
-    } catch (const platform::http::TransportError&) {
-        throw ApiError<503>{"organizations_unavailable", "Сервис организаций недоступен"};
-    } catch (const platform::http::ContractError&) {
-        throw ApiError<503>{"organizations_unavailable", "Некорректный ответ сервиса организаций"};
     }
 
     auto result = deps.settings->GetSettings(request.body.organization_id);

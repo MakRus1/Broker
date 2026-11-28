@@ -46,22 +46,13 @@ models::ShipmentContext RouteIntegrations::GetShipmentContext(
 }
 
 std::vector<ShipmentContext> RouteIntegrations::FindShipmentContexts(
-    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const {
     namespace api = clients::shipments::ApiV1ShipmentsRouteContexts;
     if (ids.empty())
         return {};
     return shipments_
         .ApiV1ShipmentsRouteContexts(api::Request{.body = {.shipment_ids = ids}}, access_token)
         .items;
-} catch (const platform::http::CancelledError&) {
-
-    throw;
-} catch (const platform::http::ApiError&) {
-    throw ApiError<503>{"shipment_unavailable", "Не удалось получить маршрут поставки"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{"shipment_unavailable", "Сервис поставок недоступен"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{"shipment_unavailable", "Некорректный ответ сервиса поставок"};
 }
 
 void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
@@ -77,14 +68,6 @@ void RouteIntegrations::RegisterRouteUsage(std::string_view access_token,
 } catch (const clients::shipments::ApiV1ShipmentsRouteSegmentsRegisterUsage::Error409& error) {
 
     throw ApiError<409>{error.response.error, error.response.message};
-} catch (const platform::http::ApiError&) {
-    throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
-} catch (const platform::http::CancelledError&) {
-    throw;
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{"shipment_unavailable", "Не удалось защитить участок поставки от удаления"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{"shipment_unavailable", "Некорректный ответ сервиса поставок"};
 }
 
 void RouteIntegrations::PrepareRoute(std::string_view access_token,
@@ -111,23 +94,12 @@ void RouteIntegrations::ValidateRouteCounterparties(std::string_view access_toke
                     "invalid_route_counterparty", "Выберите действующего контрагента организации"};
         } catch (const platform::http::ErrorByStatus<404>&) {
             throw ApiError<400>{"invalid_route_counterparty", "Контрагент не найден в организации"};
-        } catch (const platform::http::ApiError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
-        } catch (const platform::http::CancelledError&) {
-            throw;
-        } catch (const platform::http::TransportError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Не удалось проверить контрагента участка"};
-        } catch (const platform::http::ContractError&) {
-            throw ApiError<503>{
-                "counterparty_unavailable", "Некорректный ответ справочника контрагентов"};
         }
     }
 }
 
 models::RailwayStations RouteIntegrations::FindRailwayStations(
-    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const try {
+    std::string_view access_token, const std::vector<boost::uuids::uuid>& ids) const {
     models::RailwayStations stations;
     if (ids.empty())
         return stations;
@@ -136,17 +108,5 @@ models::RailwayStations RouteIntegrations::FindRailwayStations(
     for (const auto& value : response.items)
         stations.emplace(value.id, converters::Convert(value));
     return stations;
-} catch (const platform::http::CancelledError&) {
-
-    throw;
-} catch (const platform::http::ApiError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Не удалось проверить транспортные пункты"};
-} catch (const platform::http::TransportError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Справочник транспортных пунктов недоступен"};
-} catch (const platform::http::ContractError&) {
-    throw ApiError<503>{
-        "transport_locations_unavailable", "Некорректный ответ справочника транспортных пунктов"};
 }
 }  // namespace transportations

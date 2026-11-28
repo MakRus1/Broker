@@ -85,6 +85,20 @@ paths:
                       $ref: ../components/schemas/transportations/models.yaml#/Transportation
                   next_cursor:
                     $ref: ../components/schemas/transportations/models.yaml#/RegistryCursor
+                  shipments:
+                    type: array
+                    maxItems: 100
+                    description: Номера поставок и клиенты строк страницы. Поставки без права
+                      чтения или временно недоступные в массив не попадают.
+                    items:
+                      $ref: ../components/schemas/transportations/models.yaml#/TransportationShipmentReference
+                  unavailable:
+                    type: array
+                    maxItems: 2
+                    description: Что не загрузилось из-за сбоя соседнего сервиса. При отсутствии
+                      права чтения поле не заполняется.
+                    items:
+                      $ref: ../components/schemas/transportations/models.yaml#/RegistryReferenceKind
                 required:
                 - items
         '400':

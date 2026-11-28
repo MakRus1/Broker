@@ -296,12 +296,6 @@ PAYMENT_DETAILS={'payment':PAYMENT,'allocations':PAYMENT_SAVE['allocations'],'al
             {'transportation': TRANSPORTATION},
             200,
         ),
-        (
-            'transportations/list',
-            {'filters': [{'field': 'shipment_id', 'values': [ID]}]},
-            {'items': [TRANSPORTATION]},
-            200,
-        ),
     ],
 )
 async def test_typed_proxy(browser, mockserver, path, body, result, status):
@@ -575,6 +569,91 @@ async def test_session_uses_profile_name(browser, oidc, claims, expected):
     oidc['claims'].update(claims)
     session = await browser.sign_in()
     assert session['display_name'] == expected
+
+
+async def test_transportation_registry_adds_shipment_references(browser, mockserver):
+    await browser.sign_in()
+    second = {**TRANSPORTATION, 'id': str(uuid4())}
+    body = {'filters': [{'field': 'shipment_id', 'values': [ID]}]}
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        assert request.json['filters'] == body['filters']
+        return {'items': [TRANSPORTATION, second]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        assert request.headers['Authorization'].startswith('Bearer ')
+        assert request.json['filters'] == [{'field': 'id', 'values': [ID]}]
+        assert request.json['limit'] == 1
+        return {'items': [SHIPMENT]}
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        assert request.json['filters'] == [{'field': 'id', 'values': [SHIPMENT['customer_id']]}]
+        assert request.json['limit'] == 1
+        return {'items': [{**COUNTERPARTY, 'id': SHIPMENT['customer_id']}]}
+
+    response = await browser.post('/api/v1/transportations/list', body)
+    assert response.status == 200, response.text
+    assert response.json() == {
+        'items': [TRANSPORTATION, second],
+        'shipments': [{'id': ID, 'number': 'S-1', 'customer_name': 'Клиент'}],
+    }
+    assert transportations.times_called == 1
+    assert shipments.times_called == 1
+    assert counterparties.times_called == 1
+
+
+@pytest.mark.parametrize('status', [403, 500])
+async def test_transportation_registry_keeps_rows_without_references(browser, mockserver, status):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        return {'items': [TRANSPORTATION]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'failure', 'message': 'Ошибка'}
+        )
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        return {'items': []}
+
+    response = await browser.post('/api/v1/transportations/list', {})
+    assert response.status == 200, response.text
+    expected = {'items': [TRANSPORTATION]}
+    if status != 403:
+        expected['unavailable'] = ['shipments']
+    assert response.json() == expected
+    assert counterparties.times_called == 0
+
+
+@pytest.mark.parametrize('status', [403, 500])
+async def test_transportation_registry_keeps_numbers_without_customers(browser, mockserver, status):
+    await browser.sign_in()
+
+    @mockserver.json_handler('/api/v1/transportations/list')
+    def transportations(request):
+        return {'items': [TRANSPORTATION]}
+
+    @mockserver.json_handler('/api/v1/shipments/list')
+    def shipments(request):
+        return {'items': [SHIPMENT]}
+
+    @mockserver.json_handler('/api/v1/counterparties/list')
+    def counterparties(request):
+        return mockserver.make_response(
+            status=status, json={'error': 'failure', 'message': 'Ошибка'}
+        )
+
+    response = await browser.post('/api/v1/transportations/list', {})
+    assert response.status == 200, response.text
+    assert response.json()['shipments'] == [{'id': ID, 'number': 'S-1'}]
+    assert response.json().get('unavailable') == (None if status == 403 else ['customers'])
 
 
 async def test_registry_query_and_cursor_are_forwarded(browser, mockserver):

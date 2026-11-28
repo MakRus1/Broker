@@ -39,46 +39,28 @@ export function TransportationRegistry({
   );
   const loadPage = useCallback(
     async (cursor: RegistryCursor | undefined, signal: AbortSignal) => {
-      const page = await request<{ items: Transportation[]; next_cursor?: RegistryCursor }>(
-        '/api/v1/transportations/list',
-        session,
-        registryRequest(query, cursor),
-        signal,
-      );
-      const shipmentIds = [...new Set(page.items.map((item) => item.shipment_id))];
-      if (!shipmentIds.length || !session.permissions.includes('shipments.read')) return page;
-
-      const shipments = await request<{
-        items: { id: string; number: string; customer_id: string }[];
-      }>(
-        '/api/v1/shipments/list',
-        session,
-        { filters: [{ field: 'id', values: shipmentIds }], limit: shipmentIds.length },
-        signal,
-      ).catch(() => ({ items: [] }));
-      const shipmentById = new Map(shipments.items.map((item) => [item.id, item]));
-      const customerIds = [...new Set(shipments.items.map((item) => item.customer_id))];
-      const customers =
-        customerIds.length && session.permissions.includes('counterparties.read')
-          ? await request<{ items: { id: string; name: string }[] }>(
-              '/api/v1/counterparties/list',
-              session,
-              { filters: [{ field: 'id', values: customerIds }], limit: customerIds.length },
-              signal,
-            ).catch(() => ({ items: [] }))
-          : { items: [] };
-      const customerById = new Map(customers.items.map((item) => [item.id, item.name]));
+      // Web BFF сам подставляет номер поставки и клиента, учитывая права пользователя.
+      const page = await request<{
+        items: Transportation[];
+        next_cursor?: RegistryCursor;
+        shipments?: { id: string; number: string; customer_name?: string }[];
+        unavailable?: ('shipments' | 'customers')[];
+      }>('/api/v1/transportations/list', session, registryRequest(query, cursor), signal);
+      const shipmentById = new Map((page.shipments ?? []).map((item) => [item.id, item]));
+      const shipmentsUnavailable = page.unavailable?.includes('shipments') ?? false;
+      const customersUnavailable = page.unavailable?.includes('customers') ?? false;
       return {
-        ...page,
+        next_cursor: page.next_cursor,
         items: page.items.map((item) => {
           const shipment = shipmentById.get(item.shipment_id);
-          return shipment
-            ? {
-                ...item,
-                shipment_number: shipment.number,
-                customer_name: customerById.get(shipment.customer_id),
-              }
-            : item;
+          return {
+            ...item,
+            shipment_number: shipment?.number,
+            customer_name: shipment?.customer_name,
+            shipment_unavailable: shipmentsUnavailable,
+            customer_unavailable:
+              shipmentsUnavailable || (Boolean(shipment) && customersUnavailable),
+          };
         }),
       };
     },
@@ -121,6 +103,11 @@ export function TransportationRegistry({
     >
       <section className="surface registry-workbench-surface" aria-busy={page.loading}>
         {routeFilters.editor}
+        {page.items.some((item) => item.shipment_unavailable || item.customer_unavailable) && (
+          <p className="route-notice" role="status">
+            {translate('transportations.referencesUnavailable')}
+          </p>
+        )}
         <TransportationTable
           routeFilter={routeFilters.button}
           routeFilterSummary={routeFilters.toolbar}

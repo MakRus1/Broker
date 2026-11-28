@@ -642,7 +642,7 @@ async def test_transportation_registry_keeps_numbers_without_customers(browser, 
     @mockserver.json_handler('/api/v1/counterparties/list')
     def counterparties(request):
         return mockserver.make_response(
-            status=500, json={'error': 'internal', 'message': 'Ошибка'}
+            status=403, json={'error': 'forbidden', 'message': 'Нет доступа'}
         )
 
     response = await browser.post('/api/v1/transportations/list', {})

@@ -1,4 +1,5 @@
-#include <converters.hpp>
+#include <converters/items.hpp>
+#include <converters/transportations.hpp>
 #include <platform/browser/session.hpp>
 #include <views/api/v1/transportations/history/view.hpp>
 
@@ -11,6 +12,7 @@ Response View::Handle(
     namespace api = clients::transportations::ApiV1TransportationsHistory;
     const auto result = deps.transportations.ApiV1TransportationsHistory(
         api::Request{.body = Convert(request.body)}, session.Access);
-    return Response200{.items = Convert(result.items)};
+    return Response200{
+        .items = ConvertItems(result.items, [](const auto& item) { return Convert(item); })};
 }
 }  // namespace web_bff::views::api::v1::transportations::history

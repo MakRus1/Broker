@@ -109,11 +109,6 @@ def write(path, text):
         path.write_text(text)
 
 
-def dependency_errors(spec):
-    """Браузерный BFF сам пересылает ответы сервисов (libs/browser), общий 503 ему не нужен."""
-    return 'browser' not in (spec.get('libraries') or [])
-
-
 def run(service, check=False, output=None):
     feature_files = prepare(service, UniqueLoader)
     feature_files.update(configs.auto_files(service, UniqueLoader))
@@ -148,7 +143,7 @@ def run(service, check=False, output=None):
         generated_clients = client_outputs(service, UniqueLoader, load)
         generated_clients.update(configs.outputs(service, UniqueLoader))
         generated_clients.update(permissions.outputs(service, UniqueLoader))
-        generated = outputs(service.name, ops, dependencies, logging_policy(spec), dependency_errors(spec))
+        generated = outputs(service.name, ops, dependencies, logging_policy(spec))
         generated.update(generated_clients)
         # Удаляем только файлы, ранее созданные этим генератором.
         manifest = output / 'manifest.json'
@@ -206,7 +201,7 @@ def main():
             deps = {op.rel for op in ops if (service / 'src/deps.hpp').exists()}
             manifest = service / 'service.yaml'
             spec = yaml.load(manifest.read_text(), Loader=UniqueLoader) if manifest.exists() else {}
-            generated = outputs(service.name, ops, deps, logging_policy(spec), dependency_errors(spec))
+            generated = outputs(service.name, ops, deps, logging_policy(spec))
             generated.update(client_outputs(service, UniqueLoader, load))
             generated.update(configs.outputs(service, UniqueLoader))
             generated.update(permissions.outputs(service, UniqueLoader))

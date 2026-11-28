@@ -133,8 +133,8 @@ async def test_upstream_contract_errors(browser, mockserver, status, body):
         return mockserver.make_response(status=status, json=body)
 
     response = await browser.post('/api/configs/current', {'config_name': 'EXAMPLE'})
-    assert response.status == 502
-    assert response.json()['error'] == 'invalid_upstream'
+    assert response.status == 503
+    assert response.json()['error'] == 'dependency_unavailable'
 
 
 @pytest.mark.parametrize('method,path', [

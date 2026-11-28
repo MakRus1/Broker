@@ -64,10 +64,6 @@ class CodegenTest(unittest.TestCase):
         without = outputs('demo', parse_spec(spec()), {})['src/views/items/by_id/create/handler.cpp']
         self.assertNotIn('dependency_unavailable', without)
 
-        # Браузерный BFF пересылает ответ сервиса как есть и общий 503 не получает.
-        bff = outputs('demo', parse_spec(data), {}, dependency_errors=False)
-        self.assertNotIn('dependency_unavailable', bff['src/views/items/by_id/create/handler.cpp'])
-
     def test_unrelated_permission_does_not_change_generated_header_or_lock(self):
         from unittest.mock import patch
         import generate

@@ -251,7 +251,7 @@ template <typename T> T ParseJson(const userver::formats::json::Value& value) {
 COMMON += VALIDATION_RUNTIME
 
 
-def handler(service, op, deps, redact_fields=()):
+def handler(service, op, deps, redact_fields=(), dependency_errors=True):
     dep_include = '#include <deps.hpp>\n' if deps else ''
     ctor = 'using HttpHandlerBase::HttpHandlerBase;'
     private = ''
@@ -340,7 +340,7 @@ public:
             error_catches.append(f'catch (const ::platform::http::HandlerError<{response.status}>& error) {{ return Response{response.status}{{.error = error.Code, .message = error.what()}}; }}')
             if op.authenticated and response.status == 403:
                 error_catches.append('catch (const ::platform::auth::Forbidden&) { return Response403{.error = "forbidden", .message = "Permission denied"}; }')
-            if response.status == 503:
+            if response.status == 503 and dependency_errors:
                 dependency_catches = True
     if dependency_catches:
         # Сбой соседа (нет ответа, ответ не по контракту или 5xx) одинаково становится 503.
@@ -389,7 +389,7 @@ std::string Handler::HandleRequestThrow(const userver::server::http::HttpRequest
     return format_cpp(header), format_cpp(source)
 
 
-def outputs(service, operations, dependencies, logging=None):
+def outputs(service, operations, dependencies, logging=None, dependency_errors=True):
     from http_logging import redacted_fields
     from models_render import render_models, bind_operation
     result = {'include/openapi/runtime.hpp': COMMON,
@@ -402,7 +402,7 @@ def outputs(service, operations, dependencies, logging=None):
         result[f'{base}/types.hpp'] = preamble(service, op, include_types=False) + ''.join(enums(typ) for typ in enum_types(op)) + f'\n}}  // namespace {service}::views::{op.ns}\n'
         result[f'{base}/requests.hpp'] = requests(service, op)
         result[f'{base}/responses.hpp'] = responses(service, op)
-        hpp, cpp = handler(service, op, op.rel in dependencies, redacted_fields(op.path, logging))
+        hpp, cpp = handler(service, op, op.rel in dependencies, redacted_fields(op.path, logging), dependency_errors)
         result[f'{base}/handler.hpp'] = hpp
         result[f'src/views/{op.rel}/handler.cpp'] = cpp
         includes.append(f'#include <views/{op.rel}/handler.hpp>')
